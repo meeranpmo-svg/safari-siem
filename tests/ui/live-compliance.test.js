@@ -17,7 +17,7 @@ let n = 0, bad = 0;
 const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 
 (async () => {
-  global.window = { ZYB_ORG: require('../../brand/index') }; eval(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'));
+  global.window = { ZYB_ORG: Object.assign({}, require('../../brand/index'), { frameworks_all: true }) }; eval(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'));
   const FW = window.ZYB_FW;
   const col = () => ({ get() { return null; }, put() {}, set() {}, all() { return []; }, list() { return []; }, find() { return []; } });
   const sama = createSamaCompliance({ state: { collection: col }, config: {} });

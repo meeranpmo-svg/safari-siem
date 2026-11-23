@@ -78,7 +78,7 @@ const ENG = [{ id: 'network', name: 'AI Network Engineer' }, { id: 'security', n
   ok(await page.evaluate(() => document.getElementById('orgBrand').media === 'not all' && document.getElementById('brandsw').getAttribute('aria-checked') === 'false'), ('brand: the platform design (' + ZYB_ORG.short + ' colours off)'));
   await page.click('#brandsw');
   ok(await page.evaluate(() => document.getElementById('orgBrand').media === 'all' && document.documentElement.classList.contains('org-brand') && JSON.parse(localStorage.getItem('zyb-dash-prefs') || '{}').brand === 'org'), ('brand: switched to the ' + ZYB_ORG.short + ' colours and saved'));
-  ok(await page.evaluate(() => getComputedStyle(document.querySelector('main .btn.pri')).backgroundColor) === 'rgb(23, 64, 129)', ('brand: the primary action is in the ' + ZYB_ORG.short + ' colour'));
+  ok(await page.evaluate(() => getComputedStyle(document.querySelector('main .btn.pri')).backgroundColor) === 'rgb(' + [1, 3, 5].map((i) => parseInt(ZYB_ORG.colors.primary.slice(i, i + 2), 16)).join(', ') + ')', ('brand: the primary action is in the ' + ZYB_ORG.short + ' colour (brand setting colors.primary)'));
   await page.click('#brandsw');
   ok(await page.evaluate(() => document.getElementById('orgBrand').media === 'not all' && JSON.parse(localStorage.getItem('zyb-dash-prefs') || '{}').brand === 'off'), 'brand: switched back to the platform design and saved');
   // the same switch in the menu: one choice for the menu and the page

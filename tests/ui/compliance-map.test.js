@@ -12,7 +12,7 @@ let n = 0, bad = 0;
 const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 
 (async () => {
-  global.window = { ZYB_ORG: require('../../brand/index') }; eval(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'));
+  global.window = { ZYB_ORG: Object.assign({}, require('../../brand/index'), { frameworks_all: true }) }; eval(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'));
   const G = window.ZYB_NAV, FW = window.ZYB_FW, pages = G.flatMap((a) => a.pages);
   const withK = (k) => pages.filter((p) => p.fw[k].length).length;
   const cov = (k) => Object.keys(FW[k].domains).filter((c) => pages.some((p) => p.fw[k].includes(c))).length;

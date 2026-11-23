@@ -16,7 +16,7 @@ const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 
 (async () => {
   // the menu lists the page once, under Applications & Business Services
-  const w = { ZYB_ORG: require('../../brand/index') }; vm.runInNewContext(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'), { window: w });
+  const w = { ZYB_ORG: Object.assign({}, require('../../brand/index'), { frameworks_all: true }) }; vm.runInNewContext(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'), { window: w });
   const hits = w.ZYB_NAV.filter((a) => a.pages.some((p) => p.h === 'business-services.html'));
   ok(hits.length === 1 && hits[0].id === 'app', 'menu: once, in Applications & Business Services');
 

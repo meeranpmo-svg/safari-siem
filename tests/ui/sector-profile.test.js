@@ -82,6 +82,12 @@ const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
   ok(home.foot.includes(ZYB_ORG.name), 'the footer names the company');
   ok(!/\{\{org\./.test(home.text + home.title), 'no brand token is left on the page');
   ok(/NCA/.test(home.regs) === ZYB_ORG.frameworks.includes('nca') && /SAMA/.test(home.regs) === ZYB_ORG.frameworks.includes('sama') && /Insurance/.test(home.regs) === ZYB_ORG.frameworks.includes('ia'), 'the frameworks shown are the ones in the brand setting: ' + home.regs);
+  // the company look follows the public website: a white page, the brand colour on the primary action, the site's typeface, and only the organisation's framework tags
+  const look = await p.evaluate(() => ({ bg: getComputedStyle(document.body).backgroundColor, btn: getComputedStyle(document.querySelector('main .btn.pri')).backgroundColor, font: getComputedStyle(document.querySelector('.greet')).fontFamily, foot: getComputedStyle(document.querySelector('footer.foot')).backgroundColor,
+    tags: [...new Set([...document.querySelectorAll('main .fw *')].map((x) => (x.textContent || '').trim().split(' ')[0]).filter(Boolean))] }));
+  const rgb = (h) => 'rgb(' + [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)).join(', ') + ')';
+  if (ZYB_ORG.company_look !== false) ok(look.bg === 'rgb(255, 255, 255)' && look.btn === rgb(ZYB_ORG.colors.primary) && /^"?Raleway/.test(look.font) && look.foot === 'rgb(136, 138, 147)', 'the home page wears the website look: ' + JSON.stringify(look));
+  ok(!look.tags.includes('SAMA') && !look.tags.includes('IA'), 'no framework tag outside the brand setting: ' + look.tags.join(', '));
   ok(home.look === (ZYB_ORG.company_look !== false), 'the company look is ' + (ZYB_ORG.company_look !== false ? 'on' : 'off') + ' by default');
   await p.context().close();
 

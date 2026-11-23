@@ -85,7 +85,7 @@ const PROG = { note: 'fully enforceable since 14 September 2024', penalties: { f
 
     // menu: one area holds the eight pages
     const nav = fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8');
-    { const w = { ZYB_ORG: require('../../brand/index') }; new Function('window', nav)(w); const area = (id) => w.ZYB_NAV.find((a) => a.id === id).pages.map((x) => x.h);
+    { const w = { ZYB_ORG: Object.assign({}, require('../../brand/index'), { frameworks_all: true }) }; new Function('window', nav)(w); const area = (id) => w.ZYB_NAV.find((a) => a.id === id).pages.map((x) => x.h);
       ok(area('ai').includes('ai-pdpl.html') && !area('pdpl').includes('ai-pdpl.html'), 'AI PDPL Consultant sits in the AI section, apart from the PDPL menu'); }
     ok(['pdpl-programme', 'pdpl-governance', 'pdpl-policies', 'pdpl-ropa', 'pdpl-sensitive', 'pdpl-dsar', 'pdpl-dpia', 'pdpl-transfers', 'pdpl-breach', 'pdpl-processors'].every((x) => nav.includes('"h": "' + x + '.html"')), 'every page has a menu entry');
 

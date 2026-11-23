@@ -12,7 +12,7 @@ let n = 0, bad = 0;
 const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 
 (async () => {
-  global.window = { ZYB_ORG: require('../../brand/index') }; eval(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'));
+  global.window = { ZYB_ORG: Object.assign({}, require('../../brand/index'), { frameworks_all: true }) }; eval(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'));
   const G = window.ZYB_NAV, all = [].concat(...G.map((a) => a.pages.map((p) => p.h)));
   const area = (h) => (G.find((a) => a.pages.some((p) => p.h === h)) || {}).id;
   ok(G.length === 19, 'areas: ' + G.map((a) => a.id).join(' '));

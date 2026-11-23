@@ -28,7 +28,7 @@ let WHO = { user: 'syed.syn', role: 'admin' }, ORG = { modules: null, resp: {}, 
   const base = 'http://127.0.0.1:' + srv.address().port;
   const { chromium } = require(process.env.PLAYWRIGHT || 'playwright'); const browser = await chromium.launch(); const errs = [];
   const wait = (p, fn, a) => p.waitForFunction(fn, a === undefined ? null : a, { timeout: 25000 }).then(() => true, () => false);
-  global.window = { ZYB_ORG: require('../../brand/index') }; eval(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8')); const NAV = window.ZYB_NAV;
+  global.window = { ZYB_ORG: Object.assign({}, require('../../brand/index'), { frameworks_all: true }) }; eval(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8')); const NAV = window.ZYB_NAV;
   const portal = fs.readFileSync(path.join(LIVE, 'app.js'), 'utf8'), dm = /var DASHMOD = (\{[\s\S]*?\n  \});/.exec(portal)[1];
   const DASHMOD = Function('return ' + dm)(), CATIDS = [...portal.matchAll(/\['([a-z0-9-]+)', '[A-Z][^']+', '[^']+', '[^']+', \[/g)].map((x) => x[1]);
   ok(NAV.every((w) => DASHMOD[w.id]), 'every dashboard workspace maps to a module: ' + NAV.filter((w) => !DASHMOD[w.id]).map((w) => w.id).join(','));

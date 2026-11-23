@@ -24,7 +24,7 @@ const DATA_LIKE = (t) => !/\s/.test(t) || /^[\w.@#+-]+(\s*,\s*[\w.@#+ -]+)+$/.te
 const english = (t) => { if (DATA_LIKE(t)) return false; const r = t.replace(CODE, ' ').replace(KEEP, ' ').replace(LOWER_OK, ' '); return /[\u0600-\u06ff]/.test(t) ? (r.match(/\b[a-z]{3,}\b/g) || []).length >= 3 && /\b[a-z]{3,} [a-z]{3,} [a-z]{3,}\b/.test(r) : /[A-Za-z]{3,}/.test(r.replace(/\([^)]*\)/g, (m) => (/[a-z]{4,}/.test(m) ? m : ' '))); };
 (async () => {
   const ONLY = process.argv[2] ? new RegExp(process.argv[2]) : null;
-  const W = { ZYB_ORG: require('../../brand/index') }; require('vm').runInNewContext(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'), { window: W, document: {} });
+  const W = { ZYB_ORG: Object.assign({}, require('../../brand/index'), { frameworks_all: true }) }; require('vm').runInNewContext(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'), { window: W, document: {} });
   const pages = [...new Set(['index.html'].concat(...W.ZYB_NAV.map((a) => a.pages.map((p) => p.h))))].filter((h) => fs.existsSync(path.join(DASH, h)) && (!ONLY || ONLY.test(h)));
   const srv = http.createServer((req, res) => { const u = new URL(req.url, 'http://x');
     if (u.pathname === '/dashboards/whoami.json') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end('{"user":"syn.admin","role":"admin"}'); }

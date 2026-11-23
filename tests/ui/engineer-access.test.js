@@ -13,7 +13,7 @@ const AC = require('../../backend/itam/engine/access-scopes');
 let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 const ON_PURPOSE = /^soc\/(search|top|histogram)(\/|$)/;
 
-global.window = { ZYB_ORG: require('../../brand/index') }; global.document = { addEventListener() {}, readyState: 'complete' };
+global.window = { ZYB_ORG: Object.assign({}, require('../../brand/index'), { frameworks_all: true }) }; global.document = { addEventListener() {}, readyState: 'complete' };
 eval(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'));   // the page registry, as the pages load it
 const NAV = window.ZYB_NAV; delete global.window; delete global.document;
 const area = (id) => NAV.find((a) => a.id === id).pages.map((p) => p.h.replace(/\.html$/, ''));

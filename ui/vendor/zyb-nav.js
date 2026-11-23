@@ -7957,6 +7957,10 @@ window.ZYB_NAV = [
   var f = function (s) { return s.replace(/\{\{org\.([a-z_]+)\}\}/g, function (m, k) { return typeof o[k] === 'string' ? o[k] : m; }); };
   window.ZYB_NAV.forEach(function (a) {
     ['name', 'sn', 'd'].forEach(function (k) { if (typeof a[k] === 'string') a[k] = f(a[k]); });
-    (a.pages || []).forEach(function (p) { ['s', 't', 'd'].forEach(function (k) { if (typeof p[k] === 'string') p[k] = f(p[k]); }); });
+    (a.pages || []).forEach(function (p) {
+      ['s', 't', 'd'].forEach(function (k) { if (typeof p[k] === 'string') p[k] = f(p[k]); });
+      // framework tags: only the frameworks the organisation follows (brand setting: frameworks); a page keeps the rest of its record
+      if (p.fw && Array.isArray(o.frameworks) && o.frameworks.length && !o.frameworks_all) Object.keys(p.fw).forEach(function (k) { if (o.frameworks.indexOf(k) < 0) delete p.fw[k]; });
+    });
   });
 })(ZYB_ORG);

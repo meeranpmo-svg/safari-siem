@@ -24,7 +24,7 @@
   // the brand colours chosen on the main page (Zyberon Sentra blue by default, the organisation colours when switched on)
   // the sign-in page always wears the the organisation colours (greens over a deep canvas), whatever the dashboards use
   var ASB = true;
-  var C1 = ASB ? '#174081' : '#3B82F6', C2 = ASB ? '#568ADD' : '#22D3EE', RGB = ASB ? '38,87,166' : '59,130,246';
+  var C1 = ASB ? '#01579B' : '#3B82F6', C2 = ASB ? '#568ADD' : '#22D3EE', RGB = ASB ? '38,87,166' : '59,130,246';
   var AR = {
     'IT Operations & Cyber Security Automation and Monitoring Platform': '\u0645\u0646\u0635\u0629 \u0623\u062a\u0645\u062a\u0629 \u0648\u0645\u0631\u0627\u0642\u0628\u0629 \u0639\u0645\u0644\u064a\u0627\u062a \u062a\u0642\u0646\u064a\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062a \u0648\u0627\u0644\u0623\u0645\u0646 \u0627\u0644\u0633\u064a\u0628\u0631\u0627\u0646\u064a',
     'Enterprise Risk & Compliance': '\u0627\u0644\u0645\u062e\u0627\u0637\u0631 \u0627\u0644\u0645\u0624\u0633\u0633\u064a\u0629 \u0648\u0627\u0644\u0627\u0644\u062a\u0632\u0627\u0645',
@@ -177,7 +177,7 @@
   ].concat(ASB ? [
     /* the organisation colours (switch on the main page, saved in zyb-dash-prefs.brand): the same layout in the brand colours */
     'html.zl-on,html.zl-on body{background:#060B12!important}',
-    '.zl{box-sizing:border-box!important;--zb:#174081;--zb2:#0F2C5B;--zt:#E5E9F0;--zm:#919CAD;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(380px,440px);align-items:center;column-gap:clamp(40px,6vw,96px);row-gap:28px;min-height:100vh;padding:32px max(48px,calc((100vw - 1320px) / 2));background:radial-gradient(900px 600px at 0% 0%,rgba(23,64,129,.24),transparent 60%),radial-gradient(800px 600px at 100% 100%,rgba(15,44,91,.18),transparent 60%),linear-gradient(160deg,#050A11 0%,#0A1220 55%,#060B12 100%)!important;color:var(--zt)}',
+    '.zl{box-sizing:border-box!important;--zb:#01579B;--zb2:#0F2C5B;--zt:#E5E9F0;--zm:#919CAD;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(380px,440px);align-items:center;column-gap:clamp(40px,6vw,96px);row-gap:28px;min-height:100vh;padding:32px max(48px,calc((100vw - 1320px) / 2));background:radial-gradient(900px 600px at 0% 0%,rgba(23,64,129,.24),transparent 60%),radial-gradient(800px 600px at 100% 100%,rgba(15,44,91,.18),transparent 60%),linear-gradient(160deg,#050A11 0%,#0A1220 55%,#060B12 100%)!important;color:var(--zt)}',
     '.zl:before{content:"";position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.07) 1px,transparent 1.2px);background-size:24px 24px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 85%);mask-image:linear-gradient(180deg,#000,transparent 85%)}',
     '.zl:after{content:"";position:fixed;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,transparent,var(--zb) 30%,#4472BB 70%,transparent)}',
     '.zl-side{width:100%;max-width:660px;justify-self:end;padding:0!important;background:none!important;gap:22px!important;justify-content:center!important;overflow:visible!important}.zl-side:before,.zl-side:after{display:none!important}',
@@ -287,7 +287,7 @@
     '.zl form input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]){height:50px!important;border-radius:13px!important;background-color:#F6F7F9!important;border-color:#DBDFE6!important;box-shadow:inset 0 1px 2px rgba(15,23,42,.04)!important}.zl form input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):focus{border-color:' + C1 + '!important;box-shadow:0 0 0 4px rgba(' + RGB + ',.16),inset 0 1px 2px rgba(15,23,42,.04)!important}',
     '.zl form button.zl-eye{top:3px!important}',
     '.zl form button:not(.zl-eye),.zl form input[type=submit]{position:relative!important;overflow:hidden!important;height:52px!important;border:0!important;border-radius:14px!important;font-weight:650!important;letter-spacing:.02em!important;background-color:' + C1 + '!important;background-image:linear-gradient(180deg,#1B4FA3 0%,' + C1 + ' 48%,#0F2C5B 100%)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.18),0 14px 30px -8px rgba(' + RGB + ',.65)!important}',
-    '.zl form button:not(.zl-eye):hover,.zl form input[type=submit]:hover{background-color:' + C1 + '!important;background-image:linear-gradient(180deg,#1E55AE 0%,#174081 48%,#0D254D 100%)!important}',
+    '.zl form button:not(.zl-eye):hover,.zl form input[type=submit]:hover{background-color:' + C1 + '!important;background-image:linear-gradient(180deg,#1E55AE 0%,#01579B 48%,#0D254D 100%)!important}',
     '.zl form button:not(.zl-eye):before{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-18deg);animation:zl-sheen 5.5s ease-in-out infinite;pointer-events:none}@keyframes zl-sheen{0%,62%{left:-60%}100%{left:130%}}',
     '.zl-note{border-radius:12px!important;background:linear-gradient(180deg,#F4F6F9,#EDF1F6)!important;border-color:#D8DEE9!important}',
     '.zl-help{font-size:13.5px!important}',
@@ -343,7 +343,7 @@
     ok: '<svg class="zl-i" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6zM9 12l2 2 4-4"/></svg>',
     rec: '<svg class="zl-i" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8l4 4v12H4V4zM8 13h8M8 17h5"/></svg>',
     eye: '<svg class="zl-i" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
-    note: '<svg class="zl-i" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="' + (ASB ? '#174081' : '#2F7BF6') + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/></svg>'
+    note: '<svg class="zl-i" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="' + (ASB ? '#01579B' : '#2F7BF6') + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/></svg>'
   };
   // the brand mark: a hexagon carrying an "S" drawn as a circuit trace with a node at each end (Zyberon Sentra's own mark)
   var HEX = 'M32 5 L55 18.5 V45.5 L32 59 L9 45.5 V18.5 Z';

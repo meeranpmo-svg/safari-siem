@@ -19,7 +19,7 @@ const DATA = {
   ex_large_mailboxes: [{ name: 'Synthetic Big User', database: 'DB01', size_gb: 112.4, items: 900000 }],
 };
 (async () => {
-  const w = { ZYB_ORG: require('../../brand/index') }; vm.runInNewContext(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'), { window: w });
+  const w = { ZYB_ORG: Object.assign({}, require('../../brand/index'), { frameworks_all: true }) }; vm.runInNewContext(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8'), { window: w });
   const hit = w.ZYB_NAV.filter((a) => a.pages.some((p) => p.h === 'exchange-hybrid.html'));
   ok(hit.length === 1 && hit[0].id === 'usr', 'menu: once, under Identity & Microsoft 365');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sentra-hybp-')), sec = path.join(dir, 's.json'); fs.writeFileSync(sec, '{}', { mode: 0o600 });
