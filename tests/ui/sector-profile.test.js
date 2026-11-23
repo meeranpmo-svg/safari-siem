@@ -82,11 +82,28 @@ const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
   ok(home.foot.includes(ZYB_ORG.name), 'the footer names the company');
   ok(!/\{\{org\./.test(home.text + home.title), 'no brand token is left on the page');
   ok(/NCA/.test(home.regs) === ZYB_ORG.frameworks.includes('nca') && /SAMA/.test(home.regs) === ZYB_ORG.frameworks.includes('sama') && /Insurance/.test(home.regs) === ZYB_ORG.frameworks.includes('ia'), 'the frameworks shown are the ones in the brand setting: ' + home.regs);
-  // the company look follows the public website: a white page, the brand colour on the primary action, the site's typeface, and only the organisation's framework tags
-  const look = await p.evaluate(() => ({ bg: getComputedStyle(document.body).backgroundColor, btn: getComputedStyle(document.querySelector('main .btn.pri')).backgroundColor, font: getComputedStyle(document.querySelector('.greet')).fontFamily, foot: getComputedStyle(document.querySelector('footer.foot')).backgroundColor,
-    tags: [...new Set([...document.querySelectorAll('main .fw *')].map((x) => (x.textContent || '').trim().split(' ')[0]).filter(Boolean))] }));
+  // the company look has two faces. The default is the dark one in the brand colour; the second follows the public website:
+  // a white page, the brand colour on the primary action, the site's typeface, a grey footer, a light menu and top bar
   const rgb = (h) => 'rgb(' + [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)).join(', ') + ')';
-  if (ZYB_ORG.company_look !== false) ok(look.bg === 'rgb(255, 255, 255)' && look.btn === rgb(ZYB_ORG.colors.primary) && /^"?Raleway/.test(look.font) && look.foot === 'rgb(136, 138, 147)', 'the home page wears the website look: ' + JSON.stringify(look));
+  const lookOf = () => p.evaluate(() => ({ cls: document.documentElement.className, dark: document.getElementById('orgBrand').media, light: document.getElementById('orgLight').media, bg: getComputedStyle(document.body).backgroundColor, btn: getComputedStyle(document.querySelector('main .btn.pri')).backgroundColor,
+    font: getComputedStyle(document.querySelector('.greet')).fontFamily, foot: getComputedStyle(document.querySelector('footer.foot')).backgroundColor, side: getComputedStyle(document.getElementById('zyb-side')).backgroundColor, bar: getComputedStyle(document.getElementById('zyb-bar')).backgroundColor,
+    sw: [document.getElementById('looksw').getAttribute('aria-checked'), document.querySelector('#zyb-side [data-zyb-looksw]').getAttribute('aria-checked')], pref: JSON.parse(localStorage.getItem('zyb-dash-prefs') || '{}').brandLook || '',
+    tags: [...new Set([...document.querySelectorAll('main .fw *')].map((x) => (x.textContent || '').trim().split(' ')[0]).filter(Boolean))] }));
+  let look = await lookOf();
+  const lum = (c) => { const m = /(\d+), (\d+), (\d+)/.exec(c); return m ? (+m[1] + +m[2] + +m[3]) / 3 : 255; };
+  if (ZYB_ORG.company_look !== false) {
+    ok(look.dark === 'all' && look.light === 'not all' && !/org-light/.test(look.cls) && lum(look.bg) < 60 && lum(look.side) < 60 && look.btn === rgb(ZYB_ORG.colors.primary) && look.sw.join() === 'false,false', 'the default company look is the dark one in the brand colour: ' + JSON.stringify(look));
+    await p.click('#looksw'); await p.waitForTimeout(400); look = await lookOf();
+    ok(look.light === 'all' && look.dark === 'not all' && /org-light/.test(look.cls) && look.pref === 'light' && look.sw.join() === 'true,true', 'the Light switch turns on the website look, on the page and in the menu, and saves it: ' + JSON.stringify(look));
+    ok(look.bg === 'rgb(255, 255, 255)' && look.btn === rgb(ZYB_ORG.colors.primary) && /^"?Raleway/.test(look.font) && look.foot === 'rgb(136, 138, 147)' && look.side === 'rgb(255, 255, 255)' && look.bar === 'rgb(255, 255, 255)', 'the light look: white page, menu and top bar, the brand colour, the site typeface, the grey footer');
+    await p.reload(); await p.waitForFunction(() => window.ZybModules && document.getElementById('zyb-side')); await p.waitForTimeout(500); look = await lookOf();
+    ok(look.light === 'all' && /org-light/.test(look.cls), 'the light look is kept after a reload');
+    await p.click('#zyb-side [data-zyb-looksw]'); await p.waitForTimeout(400); look = await lookOf();
+    ok(look.dark === 'all' && look.light === 'not all' && look.pref === 'dark' && look.sw.join() === 'false,false' && lum(look.bg) < 60, 'the menu switch goes back to the dark look, and the page switch follows');
+    await p.click('#brandsw'); await p.waitForTimeout(300); look = await lookOf();
+    ok(look.dark === 'not all' && look.light === 'not all' && !/org-brand/.test(look.cls) && await p.evaluate(() => document.getElementById('looksw').hidden), 'company look off: the platform design, and the Light switch is not offered');
+    await p.click('#brandsw'); await p.waitForTimeout(300);
+  }
   ok(!look.tags.includes('SAMA') && !look.tags.includes('IA'), 'no framework tag outside the brand setting: ' + look.tags.join(', '));
   ok(home.look === (ZYB_ORG.company_look !== false), 'the company look is ' + (ZYB_ORG.company_look !== false ? 'on' : 'off') + ' by default');
   await p.context().close();

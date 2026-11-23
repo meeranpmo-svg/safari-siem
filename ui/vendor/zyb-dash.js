@@ -14,11 +14,21 @@
     window.zybBrand = function (on) {
       var p = bp(); p.brand = on ? 'org' : 'off';
       try { localStorage.setItem('zyb-dash-prefs', JSON.stringify(p)); } catch (e) { /* no storage: this visit only */ }
-      document.documentElement.classList.toggle('org-brand', !!on);
+      document.documentElement.classList.toggle('org-brand', !!on); document.documentElement.classList.toggle('org-light', !!on && window.zybBrandLookIs() === 'light');
       [].forEach.call(document.querySelectorAll('[data-zyb-brandsw]'), function (b) { b.setAttribute('aria-checked', String(!!on)); });
-      try { window.dispatchEvent(new CustomEvent('zyb-brand', { detail: { on: !!on } })); } catch (e) { /* very old browser: the page repaints on the next load */ }
+      [].forEach.call(document.querySelectorAll('[data-zyb-looksw]'), function (b) { b.hidden = !on; });   // dark / light is a choice within the company look
+      try { window.dispatchEvent(new CustomEvent('zyb-brand', { detail: { on: !!on, look: window.zybBrandLookIs() } })); } catch (e) { /* very old browser: the page repaints on the next load */ }
     };
-    if (window.zybBrandOn()) document.documentElement.classList.add('org-brand');
+    // the company look has two faces: dark (the default) or light like the company website; saved in zyb-dash-prefs.brandLook
+    window.zybBrandLookIs = function () { return bp().brandLook === 'light' ? 'light' : 'dark'; };
+    window.zybBrandLook = function (look) {
+      var p = bp(); p.brandLook = look === 'light' ? 'light' : 'dark';
+      try { localStorage.setItem('zyb-dash-prefs', JSON.stringify(p)); } catch (e) { /* no storage: this visit only */ }
+      var on = window.zybBrandOn(); document.documentElement.classList.toggle('org-light', on && p.brandLook === 'light');
+      [].forEach.call(document.querySelectorAll('[data-zyb-looksw]'), function (b) { b.setAttribute('aria-checked', String(p.brandLook === 'light')); });
+      try { window.dispatchEvent(new CustomEvent('zyb-brand', { detail: { on: on, look: p.brandLook } })); } catch (e) { /* very old browser: the page repaints on the next load */ }
+    };
+    if (window.zybBrandOn()) { document.documentElement.classList.add('org-brand'); if (window.zybBrandLookIs() === 'light') document.documentElement.classList.add('org-light'); }
   } catch (e) { /* the default design */ }
   // display controls + data freshness (vendor/zyb-display.js), loaded while the head is parsed so it sees the page's
   // first data requests too
@@ -335,7 +345,7 @@
     + '.zs-it.on{color:#fff;background:color-mix(in srgb,' + ACC + ' 14%,#12141a);font-weight:600}.zs-it.on::before{content:"";position:absolute;left:-13px;top:6px;bottom:6px;width:2px;border-radius:2px;background:' + ACC + '}'
     + '.zs-it mark{background:rgba(227,179,65,.3);color:inherit;border-radius:3px}.zs-empty{color:#6b7280;padding:14px 10px;font-size:12.5px}'
     + '.zs-best{margin:0 12px 8px;border:1px solid #23272f;border-radius:10px;background:#0b0d12;padding:4px}.zs-bh{display:flex;justify-content:space-between;font-size:10.5px;color:#6f7685;padding:4px 8px;text-transform:uppercase;letter-spacing:.4px}.zs-best a{display:block;padding:6px 8px;border-radius:7px;color:#e6e9ef;text-decoration:none}.zs-best a b{display:block;font-weight:600;font-size:13px}.zs-best a small{display:block;color:#7c8394;font-size:11px}.zs-best a.on,.zs-best a:hover{background:#1a1f29}body.zyb-rail .zs-best{display:none!important}'
-    + '.zs-brandsw{flex:1 1 100%;display:flex;align-items:center;gap:9px;height:32px;padding:0 10px;border-radius:8px;border:1px solid #23272f;background:transparent;color:#aab1bd;font:500 12.5px inherit;font-family:inherit;cursor:pointer}.zs-brandsw:hover{color:#fff}'
+    + '.zs-brandsw[hidden]{display:none!important}.zs-brandsw{flex:1 1 100%;display:flex;align-items:center;gap:9px;height:32px;padding:0 10px;border-radius:8px;border:1px solid #23272f;background:transparent;color:#aab1bd;font:500 12.5px inherit;font-family:inherit;cursor:pointer}.zs-brandsw:hover{color:#fff}'
     + '.zs-brandsw i{position:relative;width:26px;height:14px;border-radius:999px;background:#2a2e35;flex:0 0 auto}.zs-brandsw i:after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:#fff;transition:left .15s}'
     + '.zs-brandsw[aria-checked=true] i{background:#1E7A44}.zs-brandsw[aria-checked=true] i:after{left:14px}.zs-brandsw:focus-visible{outline:2px solid #4CB37A;outline-offset:2px}body.zyb-rail .zs-brandsw span{display:none!important}'
     + '.zs-foot{border-top:1px solid #1a1d25;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px}.zs-foot a{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:32px;border-radius:8px;border:1px solid #23272f;color:#aab1bd;text-decoration:none;font-size:12.5px}.zs-foot a:hover{color:#fff;border-color:#3a404d}'
@@ -422,10 +432,11 @@
           + '<button type="button" class="zs-ah" aria-expanded="' + (!!open[a.id]) + '" title="' + esc0(a.name) + '"><span class="zs-ic">' + ic(a.icon) + '</span><span class="zs-an">' + esc0(a.sn || a.name) + '</span><i class="zs-n">' + pages.length + '</i>' + ic(ICO.chev, 'zi zs-ch') + '</button>'
           + '<div class="zs-items">' + sgItems(a, pages) + '</div></div>';
       }).join('') + '<div class="zs-empty" id="zs-empty" hidden>No page matches.</div></nav>'
-      + '<div class="zs-foot"><button type="button" class="zs-brandsw" data-zyb-brandsw role="switch" aria-checked="' + (!!(window.zybBrandOn && window.zybBrandOn())) + ('" title="Brand colours: Zyberon Sentra or ' + ZYB_ORG.short + '"><i></i><span>' + ZYB_ORG.short + ' colours</span></button>')
+      + '<div class="zs-foot"><button type="button" class="zs-brandsw" data-zyb-brandsw role="switch" aria-checked="' + (!!(window.zybBrandOn && window.zybBrandOn())) + ('" title="Brand colours: Zyberon Sentra or ' + ZYB_ORG.short + '"><i></i><span>' + ZYB_ORG.short + ' colours</span></button>') + '<button type="button" class="zs-brandsw" data-zyb-looksw role="switch" aria-checked="' + (!!(window.zybBrandLookIs && window.zybBrandLookIs() === 'light')) + '" title="Company look: dark, or light like the company website"' + (window.zybBrandOn && window.zybBrandOn() ? '' : ' hidden') + '><i></i><span>Light look</span></button>'
       + '<a href="/?zybportal=1" title="Portal home">' + ic(ICO.back) + '<span>Portal home</span></a></div>';
     var el = document.createElement('aside'); el.id = 'zyb-side'; el.setAttribute('aria-label', 'Dashboards menu'); el.innerHTML = h;
     var bsw = el.querySelector('[data-zyb-brandsw]'); if (bsw) bsw.addEventListener('click', function () { if (window.zybBrand) window.zybBrand(!window.zybBrandOn()); });
+    var lsw = el.querySelector('[data-zyb-looksw]'); if (lsw) lsw.addEventListener('click', function () { if (window.zybBrandLook) window.zybBrandLook(window.zybBrandLookIs() === 'light' ? 'dark' : 'light'); });
     var scrim = document.createElement('div'); scrim.id = 'zyb-scrim';
     document.body.insertBefore(scrim, document.body.firstChild); document.body.insertBefore(el, document.body.firstChild);
     document.body.classList.add('zyb-has-side'); if (st.rail) document.body.classList.add('zyb-rail');
