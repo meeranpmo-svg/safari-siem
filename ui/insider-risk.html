@@ -1,0 +1,137 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Insider Risk</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1600px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12.3px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.btn:hover{border-color:#3a4258}.btn.pri{background:#2b4b8f;border-color:#3d63b5}.btn.sm2{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:default}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:14px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.card h2 .c{font-weight:400;font-size:12px;color:var(--d-mute)}
+.card h3{margin:14px 0 6px;font-size:12px;color:var(--d-mute);text-transform:uppercase;letter-spacing:.05em}
+.hero{display:grid;grid-template-columns:240px 1fr;gap:14px}@media(max-width:1000px){.hero{grid-template-columns:1fr}}
+.ring{text-align:center}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px}
+.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:25px;font-weight:800}.kpi .l{font-size:12px;color:var(--d-mute)}.kpi.bad .n{color:var(--bad)}.kpi.warn .n{color:var(--warn)}.kpi.ok .n{color:var(--ok)}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}@media(max-width:1100px){.g2,.g3{grid-template-columns:1fr}}
+.apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.app{background:var(--d-raise);border:1px solid var(--d-line);border-left:4px solid #3a4258;border-radius:12px;padding:12px}.app.due{border-left-color:#f5b544}.app.hot{border-left-color:#e5484d}.app.okk{border-left-color:#2fb344}
+.app .nm{font-weight:800;font-size:15px}.riskbar{height:7px;background:#232837;border-radius:4px;overflow:hidden;margin:6px 0}.riskbar i{display:block;height:100%}
+.sevs{display:flex;gap:4px;margin-top:6px}.sevs span{flex:1;text-align:center;border-radius:6px;padding:3px 0;font-size:11.5px;font-weight:700;background:#232837}.sevs .c{background:rgba(180,35,24,.35)}.sevs .h{background:rgba(229,72,77,.25)}.sevs .m{background:rgba(245,159,0,.2)}.sevs .l{background:rgba(91,141,239,.15)}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:700;margin:1px 2px;white-space:nowrap}.v-bad{background:rgba(229,72,77,.15);color:var(--bad)}.v-crit{background:rgba(180,35,24,.35);color:#ffb3b5}.v-warn{background:rgba(245,159,0,.15);color:var(--warn)}.v-ok{background:rgba(47,179,68,.15);color:var(--ok)}.v-mute{background:#232837;color:var(--d-mute)}.v-info{background:rgba(91,141,239,.15);color:var(--info)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:12px;white-space:nowrap}
+tr[data-f]{cursor:pointer}tr[data-f]:hover td{background:rgba(255,255,255,.03)}
+.att{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--d-line);cursor:pointer}.att:last-child{border:0}.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.bad{background:var(--bad)}.dot.warn{background:var(--warn)}.dot.info{background:var(--info)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.chips button[aria-pressed="true"]{border-color:#3d63b5;background:rgba(61,99,181,.25)}
+.flow{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:8px;overflow-x:auto}.col{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:8px;min-height:90px}.col h4{margin:0 0 6px;font-size:11.5px;color:var(--d-mute);text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between}
+.eng{background:#0f131b;border:1px solid var(--d-line);border-radius:10px;padding:8px;margin-bottom:6px;cursor:pointer;font-size:12.5px}.eng:hover{border-color:#3d63b5}.eng b{display:block;font-size:13px}
+.heat{border-collapse:separate;border-spacing:3px}.heat td,.heat th{border:0;padding:0;text-align:center}.heat th{font-size:10.5px;padding:0 2px}.heat td.h{width:30px;height:22px;border-radius:5px}.heat td.nm{text-align:left;padding-right:8px;font-size:12.5px;white-space:nowrap}
+.hb-t{background:rgba(47,179,68,.55)}.hb-n{background:#2a2f3c}.hb-g{background:rgba(229,72,77,.45)}
+.hbar{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12.5px}.hbar .lb{width:46%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hbar .tr{flex:1;height:10px;background:#232837;border-radius:5px;overflow:hidden}.hbar .tr i{display:block;height:100%;background:#5b8def}
+input,select,textarea{background:#0d1017;color:inherit;border:1px solid var(--d-line);border-radius:8px;padding:7px 10px;font:inherit}textarea{width:100%;resize:vertical;font-size:13px}
+.frm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--d-mute)}
+.banner{border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}.banner.bad{background:rgba(229,72,77,.12);border:1px solid #7a2b2e}.banner.inf{background:rgba(91,141,239,.08);border:1px solid #2b4a6b}
+pre.snip{background:#0d1017;border:1px solid var(--d-line);border-radius:8px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;font-size:12px;margin:6px 0}
+.ans{white-space:pre-wrap;border:1px solid var(--d-line);border-radius:10px;padding:12px;margin-top:10px;background:var(--d-raise)}
+.cov{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}.cov div{background:var(--d-raise);border:1px solid var(--d-line);border-radius:8px;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12.5px}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;z-index:95;overflow:auto}#dlg>div{background:var(--d-panel);border:1px solid var(--d-line);border-radius:14px;max-width:1100px;width:100%;padding:18px}
+.toast{position:fixed;right:18px;bottom:18px;background:#1d2330;border:1px solid #3a4258;border-radius:10px;padding:10px 14px;z-index:96;max-width:520px}
+.empty{color:var(--d-mute);padding:8px 0}
+.fws{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.fw{display:block;background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:12px;color:inherit;text-decoration:none}.fw:hover{border-color:#3d63b5}.fw .nm{font-weight:700}.fw .big{font-size:28px;font-weight:800}
+.stack{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#232837;margin-top:6px}.stack i{display:block;height:100%}.b-fully{background:#2fb344}.b-partially{background:#f5b544}.b-not{background:#e5484d}.b-not_assessed{background:#4a5162}
+.mx td.c{white-space:normal;min-width:120px}.mx tr.dis td{background:rgba(245,159,0,.06)}input[type=search]{min-width:260px}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Security operations · insider risk</div><h1>Insider Risk</h1><div class="mute sm">Live, from what the SIEM already learns - behaviour against each person's own history and peers (UEBA), DLP incidents, and context a manager recorded for a limited time (departing, privileged role, role change) approved by a second person. Every score is itemised.</div></div>
+<div class="sp"></div><span class="mute sm" id="asof"></span><button type="button" class="btn" id="refresh">Refresh</button></div>
+<div class="banner inf" id="frame">Behavioural indicators, not proof of wrongdoing (PDPL). People are pseudonymised; a name is shown only inside an authorised case, to the person who asked for it or the person who authorised it, and every look is recorded.</div>
+<div class="banner bad" id="err" hidden></div>
+<div id="main" hidden>
+<div class="card"><div class="kpis" id="kpis"></div><div class="sm mute" id="notes" style="margin-top:8px"></div></div>
+<div class="card"><h2>People with indicators <span class="c">highest score first · click a row for the indicators</span></h2><div class="frm"><div class="chips" id="tch"></div><input type="search" id="q" placeholder="Search pseudonym or department"></div><div id="pl" style="overflow-x:auto"></div></div>
+<div class="g2">
+<div class="card"><h2>Cases <span class="c">requested → authorised by a different administrator → investigating → closed with an outcome</span></h2><div id="cs"></div></div>
+<div class="card"><h2>Departments <span class="c">average score of the people with indicators</span></h2><div id="dp"></div></div>
+</div>
+<div class="card"><h2>Watchlist context <span class="c">time-bound, with a reason, approved by a second person · at most 90 days</span></h2><div id="wl"></div><div id="wf"></div></div>
+</div>
+<div id="dlg" hidden><div id="dlgb"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer';
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc'+u);x.withCredentials=true;x.timeout=300000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){/* not JSON: reported below with the status */}if(x.status>=200&&x.status<300&&j!==null)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=function(){bad(new Error('The SIEM did not answer'));};x.ontimeout=function(){bad(new Error('The SIEM took too long to answer'));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5500);}
+  function fmt(t){return t?String(t).slice(0,16).replace('T',' '):'—';}
+  var LV={fully:['v-ok','met'],partially:['v-warn','partly'],not:['v-bad','gap'],not_assessed:['v-mute','not assessed'],na:['v-mute','n/a']};
+  function lvPill(l,txt){var x=LV[l]||LV.not_assessed;return '<span class="pill '+x[0]+'" title="'+esc(x[1])+'">'+esc(txt||x[1])+'</span>';}
+  function kpi(l,v,cls,t){return '<div class="kpi '+(cls||'')+'" title="'+esc(t||'')+'"><div class="n">'+esc(String(v))+'</div><div class="l">'+esc(l)+'</div></div>';}
+  var FWP={ecc:'nca-ecc.html',sama:'sama-audit.html',iso:'iso27001.html',ndmo:'ndmo.html',pdpl:'pdpl-assessment.html'};
+  function fwCards(F,names){return Object.keys(names).map(function(k){var f=F[k]||{},c=f.counts||{},n=f.items||0;
+    var bar=n?['fully','partially','not','not_assessed'].map(function(l){var w=Math.round(100*(c[l]||0)/n);return w?'<i class="b-'+l+'" style="width:'+w+'%" title="'+esc((LV[l]||[])[1]+' '+(c[l]||0))+'"></i>':'';}).join(''):'';
+    return '<a class="fw" href="'+esc(FWP[k])+'"><div class="nm">'+esc(names[k])+'</div>'+(!f.available?'<div class="big mute">—</div><div class="sm mute">'+esc(f.reason||'not available')+'</div>':f.assessed===false?'<div class="big mute">—</div><div class="sm mute">'+esc(f.reason)+'</div>':'<div class="big">'+(f.pct_fully==null?'—':f.pct_fully+'%')+'</div><div class="sm mute">fully compliant · '+(f.gaps||0)+' gap(s) of '+n+'</div><div class="stack">'+bar+'</div>')+'</a>';}).join('');}
+  function aiBox(ai,ph){return !can('operator')?'<div class="empty">The analyst is shown to operators and administrators.</div>':!ai.enabled?'<div class="empty">Not available: '+esc(ai.reason)+'</div>':'<div class="frm"><input id="aiq" style="flex:1" maxlength="2000" placeholder="'+esc(ph)+'"><button class="btn pri" type="button" id="aigo">Ask</button></div><div id="aiout"></div>';}
+  function aiGo(t,url){var qq=$('aiq'),out=$('aiout'),q=qq.value.trim();if(q.length<5){out.innerHTML='<div class="empty">Ask a question (5 characters or more).</div>';return;}t.disabled=true;out.innerHTML='<div class="empty">The analyst is reading the registers…</div>';
+    req('POST',url||'/crosswalk/ask',{question:q}).then(function(r){out.innerHTML='<div class="ans">'+esc(r.answer)+'</div><div class="sm mute">'+esc(r.steps.length+' read(s) · '+r.model)+(r.injection_signals.length?' · instructions found in the data were ignored':'')+'</div>';}).catch(function(e){out.innerHTML='<div class="banner bad">'+esc(e.message)+'</div>';}).then(function(){t.disabled=false;});}
+  function who(cb){var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.withCredentials=true;w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText);if(RANK[j.role]!=null)ROLE=j.role;}catch(e){/* no identity: viewer, the server decides anyway */}cb();};w.onerror=function(){cb();};w.send();}
+
+  var V=null,TF='all',Q='',ME='';
+  var TC={high:'v-bad',elevated:'v-warn',low:'v-mute'};
+  function load(){return req('GET','/soc/insider').then(function(v){V=v;$('err').hidden=true;$('main').hidden=false;draw();$('asof').textContent='as of '+fmt(new Date(v.generated_at).toISOString())+' UTC';})
+    .catch(function(e){$('err').hidden=false;$('main').hidden=true;$('err').textContent=e.status===403?'The insider-risk programme is for operators and administrators (it is about people - PDPL).':e.status===404?'This SIEM does not have Insider Risk yet - run the update.':'Could not load Insider Risk: '+e.message;});}
+  function draw(){var k=V.kpis;
+    $('kpis').innerHTML=kpi('People with indicators',k.people,'')+kpi('High',k.high,k.high?'bad':'ok')+kpi('Elevated',k.elevated,k.elevated?'warn':'ok')+kpi('Behaviour AND data',k.two_signals,k.two_signals?'warn':'ok','both UEBA and DLP indicators - the strongest lead')+kpi('Unusual for their peers',k.unusual,k.unusual?'warn':'ok')+kpi('Open cases',k.cases_open,'')+kpi('Waiting for approval',k.awaiting,k.awaiting?'warn':'')+kpi('Active context',k.watch_active,'');
+    $('notes').textContent=V.notes.length?'Not read: '+V.notes.join('; ')+'.':'';
+    $('tch').innerHTML=[['all','All'],['high','High'],['elevated','Elevated'],['two','Behaviour AND data'],['unusual','Unusual for peers']].map(function(c){return '<button type="button" class="btn sm2" data-t="'+c[0]+'" aria-pressed="'+(TF===c[0])+'">'+esc(c[1])+'</button>';}).join('');
+    drawPeople();
+    $('cs').innerHTML=V.cases.length?'<table><thead><tr><th>Case</th><th>Person</th><th>Status</th><th></th></tr></thead><tbody>'+V.cases.map(function(c){
+      var acts='';if(c.status==='requested'&&can('admin')&&c.requested_by!==ME)acts+='<button class="btn sm2 pri" data-cd="authorise" data-id="'+esc(c.id)+'">Authorise</button> <button class="btn sm2" data-cd="reject" data-id="'+esc(c.id)+'">Reject…</button>';
+      var team=(c.requested_by===ME||c.authorised_by===ME);if(['authorised','investigating'].indexOf(c.status)>=0&&team)acts+='<button class="btn sm2" data-cr="'+esc(c.id)+'">Show name</button> <button class="btn sm2" data-cn="'+esc(c.id)+'">Note…</button> <button class="btn sm2" data-cc="'+esc(c.id)+'">Close…</button>';
+      return '<tr><td><b>'+esc(c.id)+'</b><div class="sm mute">'+esc(c.basis.replace('_',' '))+' · '+esc(c.reason)+'</div><div class="sm mute">requested by '+esc(c.requested_by)+(c.authorised_by?' · authorised by '+esc(c.authorised_by):'')+'</div><div class="sm" id="nm-'+esc(c.id)+'"></div></td><td class="mono">'+esc(c.pseudonym)+'</td><td><span class="pill '+(c.status==='closed'?'v-mute':c.status==='requested'?'v-warn':'v-info')+'">'+esc(c.status)+'</span>'+(c.outcome?'<div class="sm">'+esc(c.outcome.replace('_',' '))+'</div>':'')+'</td><td>'+acts+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No case yet. A case starts from a person\'s indicators (open one from the person).</div>';
+    var mx=Math.max.apply(null,V.departments.map(function(d){return d.avg;}).concat([1]));
+    $('dp').innerHTML=V.departments.length?V.departments.map(function(d){return '<div class="hbar"><span class="lb">'+esc(d.dept)+' <span class="mute">('+d.people+(d.high?', '+d.high+' high':'')+')</span></span><span class="tr"><i style="width:'+Math.round(100*d.avg/mx)+'%"></i></span><b>'+d.avg+'</b></div>';}).join(''):'<div class="empty">No indicators yet.</div>';
+    $('wl').innerHTML=V.watchlist.length?'<table><thead><tr><th>Person</th><th>Context</th><th>Until</th><th>Status</th><th></th></tr></thead><tbody>'+V.watchlist.map(function(w){return '<tr><td class="mono">'+esc(w.pseudonym)+'</td><td>'+esc(w.context.replace('_',' '))+(w.last_day?' · last day '+esc(w.last_day):'')+'<div class="sm mute">'+esc(w.reason)+' · asked by '+esc(w.requested_by)+'</div></td><td>'+esc(w.until)+'</td><td><span class="pill '+(w.status==='active'?'v-info':w.status==='requested'?'v-warn':'v-mute')+'">'+esc(w.status)+'</span></td><td>'+(w.status==='requested'&&can('admin')&&w.requested_by!==ME?'<button class="btn sm2 pri" data-wd="approve" data-id="'+esc(w.id)+'">Approve</button> <button class="btn sm2" data-wd="reject" data-id="'+esc(w.id)+'">Reject…</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No context recorded.</div>';
+    $('wf').innerHTML='<details style="margin-top:8px"><summary class="sm" style="cursor:pointer;color:var(--info)">Record context for a person</summary><form class="frm" id="wform"><label>Sign-in name<input name="user" required maxlength="120"></label><label>Context<select name="context"><option value="departing">departing</option><option value="privileged">privileged role</option><option value="role_change">role change</option></select></label><label>Last working day<input type="date" name="last_day"></label><label>Until<input type="date" name="until" required></label><label style="flex:1">Reason<input name="reason" required minlength="10" maxlength="1000"></label><button class="btn pri" type="submit">Request</button></form><div class="sm mute">The name is stored for matching only and shown as a pseudonym; a second person approves before it counts.</div></details>';}
+  function show(p){if(TF==='high'&&p.tier!=='high')return false;if(TF==='elevated'&&p.tier!=='elevated')return false;if(TF==='two'&&!p.two_signals)return false;if(TF==='unusual'&&!(p.peer&&p.peer.unusual))return false;if(Q&&(p.pseudonym+' '+p.dept).toLowerCase().indexOf(Q)<0)return false;return true;}
+  function drawPeople(){var L=V.people.filter(show);
+    $('pl').innerHTML=L.length?'<table><thead><tr><th>Person</th><th>Department</th><th>Score</th><th>Indicators</th><th>Signals</th><th></th></tr></thead><tbody>'+L.map(function(p){var c=p.score>=70?'#e5484d':p.score>=40?'#f5b544':'#5b8def';
+      return '<tr data-f="'+esc(p.pseudonym)+'"><td class="mono"><b>'+esc(p.pseudonym)+'</b></td><td>'+esc(p.dept)+'</td><td><div class="riskbar" style="width:90px"><i style="width:'+p.score+'%;background:'+c+'"></i></div><b>'+p.score+'</b> <span class="pill '+TC[p.tier]+'">'+esc(p.tier)+'</span></td><td class="sm">'+p.why.slice(0,3).map(function(w){return esc(w.why.slice(0,90))+' <b>+'+w.points+'</b>';}).join('<br>')+'</td><td class="sm">'+(p.two_signals?'<span class="pill v-warn">behaviour AND data</span>':'')+(p.peer&&p.peer.unusual?'<span class="pill v-warn">unusual for peers</span>':'')+['ueba','dlp','watch'].filter(function(s){return p.sources[s];}).map(function(s){return '<span class="pill v-mute">'+s+'</span>';}).join('')+'</td><td>'+(p.open_case?'<span class="pill v-info">case open</span>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(V.people.length?'Nobody in this view.':'No indicators: UEBA and DLP report nothing that scores. That is a good state, not a missing feed - unless the notes above say a source was not read.')+'</div>';}
+  function openP(ps){req('GET','/soc/insider/people/'+encodeURIComponent(ps)).then(function(p){
+    $('dlgb').innerHTML='<div class="frm" style="justify-content:space-between"><h2 style="margin:0"><span class="mono">'+esc(p.pseudonym)+'</span> · '+esc(p.dept)+' · '+p.score+' <span class="pill '+TC[p.tier]+'">'+esc(p.tier)+'</span></h2><button class="btn" type="button" data-close>Close</button></div>'
+      +'<div class="banner inf">Indicators to look into, not proof. Rule out ordinary explanations first.</div>'
+      +'<h3>Why this score</h3><table><tbody>'+p.why.map(function(w){return '<tr><td class="sm">'+esc(w.why)+'</td><td><b>+'+w.points+'</b></td></tr>';}).join('')+'</tbody></table>'
+      +(p.peer?'<div class="sm">'+esc(p.peer.why)+'</div>':'')
+      +(p.dlp?'<h3>DLP (30 days)</h3><div class="sm">'+p.dlp.incidents+' incident(s), '+p.dlp.left+' where data left'+(p.dlp.sensitive&&p.dlp.sensitive.length?', sensitive: '+esc(p.dlp.sensitive.join(', ')):'')+(p.dlp.tamper?', DLP agent disabled '+p.dlp.tamper+' time(s)':'')+'</div>':'')
+      +(p.context.length?'<h3>Context</h3><div class="sm">'+p.context.map(function(c){return esc(c.context+(c.last_day?' (last day '+c.last_day+')':'')+' until '+c.until);}).join('<br>')+'</div>':'')
+      +(p.cases.length?'<h3>Cases</h3><div class="sm">'+p.cases.map(function(c){return esc(c.id+' · '+c.status+(c.outcome?' · '+c.outcome:''));}).join('<br>')+'</div>':'')
+      +'<div class="frm" style="margin-top:10px">'+(!p.cases.some(function(c){return ['closed','rejected'].indexOf(c.status)<0;})?'<button class="btn pri" data-open="'+esc(p.pseudonym)+'">Request a case…</button>':'')+(V.ai.enabled?'<button class="btn" data-ask="'+esc(p.pseudonym)+'">AI indicator note</button>':'<span class="sm mute">AI note not available: '+esc(V.ai.reason)+'</span>')+'</div><div id="aiout"></div>';
+    $('dlg').hidden=false;}).catch(function(e){toast(e.message);});}
+  function ask(msg){var t=window.prompt(msg,'');return t===null?null:t.trim();}
+  function act(p,ok){p.then(function(r){toast(ok);return load().then(function(){return r;});}).catch(function(e){toast(e.message);});}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    x=t.closest('[data-t]');if(x){TF=x.getAttribute('data-t');draw();return;}
+    x=t.closest('[data-close]');if(x||t.id==='dlg'){$('dlg').hidden=true;return;}
+    x=t.closest('tr[data-f]');if(x){openP(x.getAttribute('data-f'));return;}
+    x=t.closest('[data-open]');if(x){var basis=ask('Basis: indicators, hr_referral, legal_request or incident');if(basis===null)return;var reason=ask('Reason (at least 20 characters) - what makes this proportionate?');if(reason===null)return;
+      act(req('POST','/soc/insider/cases',{pseudonym:x.getAttribute('data-open'),basis:basis,reason:reason}),'Case requested - a different administrator authorises it');$('dlg').hidden=true;return;}
+    x=t.closest('[data-cd]');if(x){var d=x.getAttribute('data-cd'),n=d==='reject'?ask('Why is it rejected?'):'';if(n===null)return;act(req('POST','/soc/insider/cases/'+x.getAttribute('data-id')+'/decide',{decision:d,note:n||undefined}),'Case '+d+(d==='authorise'?'d':'ed'));return;}
+    x=t.closest('[data-cr]');if(x){var id=x.getAttribute('data-cr');req('GET','/soc/insider/cases/'+id+'/subject').then(function(r){$('nm-'+id).innerHTML='<span class="pill v-info">'+esc(r.user)+'</span> <span class="mute">'+esc(r.note)+'</span>';}).catch(function(e){toast(e.message);});return;}
+    x=t.closest('[data-cn]');if(x){var tx=ask('Case note');if(!tx)return;act(req('POST','/soc/insider/cases/'+x.getAttribute('data-cn')+'/note',{text:tx}),'Note added');return;}
+    x=t.closest('[data-cc]');if(x){var o=ask('Outcome: no_concern, policy_reminder, hr_referral or security_incident');if(o===null)return;var nt=ask('Closing note (at least 10 characters)');if(nt===null)return;act(req('POST','/soc/insider/cases/'+x.getAttribute('data-cc')+'/close',{outcome:o,note:nt}),'Case closed');return;}
+    x=t.closest('[data-wd]');if(x){var wd=x.getAttribute('data-wd'),wn=wd==='reject'?ask('Why is it rejected?'):'';if(wn===null)return;act(req('POST','/soc/insider/watch/'+x.getAttribute('data-id')+'/decide',{decision:wd,note:wn||undefined}),'Context '+wd+'d');return;}
+    x=t.closest('[data-ask]');if(x){x.disabled=true;$('aiout').innerHTML='<div class="empty">Reading the indicators…</div>';req('POST','/soc/insider/people/'+x.getAttribute('data-ask')+'/ask',{}).then(function(r){
+      $('aiout').innerHTML='<div class="ans">'+esc(r.summary)+(r.benign_explanations.length?'\n\nRule out first:\n- '+r.benign_explanations.map(esc).join('\n- '):'')+(r.questions.length?'\n\nQuestions:\n- '+r.questions.map(esc).join('\n- '):'')+'\n\nRecommendation: '+esc(r.recommendation.replace('_',' '))+'</div><div class="sm mute">'+esc(r.framing)+(r.unverified?' · '+r.unverified+' reference(s) not found in the indicators':'')+'</div>';}).catch(function(e){$('aiout').innerHTML='<div class="banner bad">'+esc(e.message)+'</div>';}).then(function(){x.disabled=false;});return;}
+    if(t.id==='refresh')load();});
+  document.addEventListener('submit',function(ev){var f=ev.target;if(f.id!=='wform')return;ev.preventDefault();var b={user:f.user.value.trim(),context:f.context.value,until:f.until.value,reason:f.reason.value.trim()};if(f.last_day.value)b.last_day=f.last_day.value;
+    act(req('POST','/soc/insider/watch',b),'Context requested - a second person approves it');f.reset();});
+  $('q').addEventListener('input',function(){Q=this.value.trim().toLowerCase();if(V)drawPeople();});
+  window.addEventListener('keydown',function(e){if(e.key==='Escape')$('dlg').hidden=true;});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.withCredentials=true;w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText);if(RANK[j.role]!=null)ROLE=j.role;ME=j.user||'';}catch(e){/* no identity: the server decides anyway */}load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

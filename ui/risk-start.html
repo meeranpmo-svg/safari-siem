@@ -1,0 +1,197 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Start a Risk Assessment</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:20px;font-weight:700;margin-top:3px}.t .s{font-size:11.5px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button:disabled{opacity:.5;cursor:default}
+button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button.dang{color:var(--bad)}button.sm{padding:4px 9px;font-size:12px}
+input,select,textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px}textarea{width:100%;min-height:70px;resize:vertical}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+tr[data-id]{cursor:pointer}tr[data-id]:hover td{background:rgba(255,255,255,.03)}
+.tw{overflow-x:auto;max-height:560px;overflow-y:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;border:1px solid var(--edge);color:var(--mute);margin:2px 4px 2px 0;white-space:nowrap}
+.s-open,.s-in_progress{color:var(--info);border-color:rgba(121,184,255,.45)}.s-awaiting_approval,.s-returned,.s-fulfilled{color:var(--warn);border-color:rgba(227,179,65,.45)}.s-closed{color:var(--ok);border-color:rgba(63,185,80,.45)}.s-rejected,.s-cancelled{color:var(--mute)}.late{color:var(--bad);border-color:rgba(255,123,114,.45)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button[aria-selected="true"]{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.cat{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.ci{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px;cursor:pointer;text-align:left;font-weight:400}.ci:hover,.ci.sel{border-color:#1f6feb}.ci b{display:block;color:var(--title);margin-bottom:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+label.f{display:block;font-size:12px;color:var(--mute);margin-top:8px}label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:3px}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--panel);border-left:1px solid var(--edge);box-shadow:-20px 0 60px rgba(0,0,0,.5);z-index:80;overflow:auto;padding:16px;display:none}.drawer.open{display:block}
+.drawer h3{margin:0 0 6px;color:var(--title);font-size:17px}.drawer h4{margin:14px 0 6px;font-size:13px;color:var(--title)}
+dl.kv{display:grid;grid-template-columns:140px 1fr;gap:4px 10px;margin:0;font-size:13px}dl.kv dt{color:var(--mute)}dl.kv dd{margin:0}
+.hist{font-size:12px;color:var(--mute);border-left:2px solid var(--edge);padding-left:10px}.hist div{margin:3px 0}
+.pre{white-space:pre-wrap;background:var(--raise);border:1px solid var(--edge);border-radius:8px;padding:8px 10px;font-size:13px}
+.dlg-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:90}.dlg-bg.open{display:flex}
+.dlg{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;max-width:560px;width:calc(100% - 32px);max-height:90vh;overflow:auto}.dlg h3{margin:0 0 10px;color:#fff;font-size:16px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.okb{border:1px solid rgba(63,185,80,.45);background:rgba(63,185,80,.07);border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:13px}
+.wiz{display:grid;grid-template-columns:270px minmax(0,1fr);gap:14px}@media(max-width:900px){.wiz{grid-template-columns:1fr}}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.steps button{width:100%;text-align:left;display:flex;gap:10px;align-items:flex-start;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:9px 10px;font-weight:500}
+.steps button[aria-current="step"]{border-color:#1f6feb;box-shadow:0 0 0 1px #1f6feb inset}
+.steps .n{flex:0 0 24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:#2a2f3a;color:var(--mute)}
+.steps .done .n{background:rgba(63,185,80,.2);color:var(--ok)}.steps .now .n{background:#1f6feb;color:#fff}
+.steps .t1{display:block;color:var(--title);font-size:13px}.steps .t2{display:block;font-size:11.5px;color:var(--mute);margin-top:2px}
+.teams{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}.teams button[aria-pressed="true"]{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.block{border:1px solid rgba(227,179,65,.45);background:rgba(227,179,65,.07);border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:13px}
+.gd{border-left:3px solid #1f6feb;padding:2px 0 2px 10px;margin:0 0 10px;color:var(--mute);font-size:13px}
+.res button{margin-right:4px}.res button.on{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.sugg{font-size:11.5px;color:var(--mute)}.sugg b{color:var(--text)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Enterprise risk · guided · identify → assess → treat → sign off → approve → report</div><h1>Start a Risk Assessment</h1></div><span class="sp" style="flex:1"></span><span class="muted" id="me"></span><button type="button" id="refresh">↻ Refresh</button></div>
+<div class="okb">A step-by-step path through a risk and control self-assessment (RCSA) on the Business Risk register: add new risks with machine-learning suggestions, open the cycle, re-assess every risk with your own methodology (likelihood × impact, exposure after controls → Class I-IV), decide the treatment of Class III / IV risks, have each department signed off by someone who did not assess it, and have the risk committee approve the cycle. The ratings are calculated on the server, never typed; every step is in the audit trail.</div>
+<div class="wiz"><ol class="steps" id="steps"></ol><section id="panel"></section></div>
+</main>
+<div class="dlg-bg" id="dlgbg" role="dialog" aria-modal="true" aria-labelledby="dlgt"><div class="dlg"><h3 id="dlgt"></h3><div id="dlgb"></div><div class="bar" style="margin-top:12px;justify-content:flex-end"><button type="button" id="dlgno">Cancel</button><button type="button" class="pri" id="dlgok">OK</button></div></div></div>
+<script>
+(function(){'use strict';
+  var $=function(i){return document.getElementById(i);},esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,u);x.withCredentials=true;x.timeout=90000;x.zybQuiet=true;if(b!==undefined)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: the status explains */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||j.message))||('HTTP '+x.status)),{status:x.status}));};x.onerror=function(){bad(Object.assign(new Error('the server did not answer'),{status:0}));};x.ontimeout=x.onerror;x.send(b===undefined?null:JSON.stringify(b));});}
+  var api=function(m,p,b){return req(m,'/api/itam/brisk'+p,b);};
+  function toast(m){var t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove();},5000);}
+  var DLG=null;function ask(t,h,lab,fn){DLG=fn;$('dlgt').textContent=t;$('dlgb').innerHTML=h;$('dlgok').textContent=lab;$('dlgbg').classList.add('open');setTimeout(function(){var f=$('dlgb').querySelector('input,select,textarea');(f||$('dlgok')).focus();},30);}
+  $('dlgno').addEventListener('click',function(){$('dlgbg').classList.remove('open');DLG=null;});
+  $('dlgok').addEventListener('click',function(){var f=DLG;if(!f)return;if(f()===false)return;$('dlgbg').classList.remove('open');DLG=null;});
+  var fld=function(id,label,type,extra,v){return '<label class="f">'+esc(label)+(type==='textarea'?'<textarea id="'+id+'" maxlength="4000">'+esc(v||'')+'</textarea>':type==='select'?'<select id="'+id+'">'+extra+'</select>':'<input id="'+id+'" type="'+(type||'text')+'"'+(extra||'')+' value="'+esc(v==null?'':v)+'">')+'</label>';};
+  var val=function(id){var e=$(id);return e?String(e.value||'').trim():'';};
+  var st=function(s){return '<span class="pill s-'+esc(s)+'">'+esc(String(s).replace(/_/g,' '))+'</span>';};
+  var table=function(h,rows,none){return rows.length?'<div class="tw"><table><thead><tr>'+h.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':'<div class="empty">'+esc(none)+'</div>';};
+  var card=function(t,c,h){return '<div class="card"><h2 style="margin:0'+(h?' 0 10px':'')+'">'+esc(t)+(c?' <span class="muted" style="font-weight:400;font-size:12px">'+esc(c)+'</span>':'')+'</h2>'+(h||'')+'</div>';};
+  function act(p,b,msg){return api('POST',p,b).then(function(r){toast(msg||'Done');return load().then(function(){return r;});},function(e){toast('Not done: '+e.message);return null; /* the engine's reason is shown; nothing waits on it */});}
+  // the department's methodology, the same table the server uses - shown as a preview while you rate; the server's calculation is the record
+  var EXPOSURE=['Minor','Limited','Medium','Significant','Major'],IMPACT=['Negligible','Minor','Moderate','Significant','Major'],LIKE=['Unlikely','Rare','Possible','Likely','Almost certain'];
+  var RES=[[1,1,2,2],[1,2,2,3],[2,2,3,3],[3,3,3,4],[3,4,4,4]],CLS=['','Class I','Class II','Class III','Class IV'];
+  var CTRL={fully_effective:'Fully effective',partially_effective:'Partially effective',manual:'Manual',not_effective:'Not effective'},TREAT={in_place:'In place',partial:'Partial',not_in_place:'Not in place',none_needed:'None needed'};
+  function rate(L,I,E){L=+L;I=+I;E=+E;if(!(L>=1&&L<=5&&I>=1&&I<=5))return null;var s=L*I,b=s<=4?0:s<=9?1:s<=12?2:3;return {inherent:s,band:['Low','Low-Medium','Medium','High'][b],cls:E>=1&&E<=5?CLS[RES[E-1][b]]:null};}
+  var opts=function(L,cur,start){return L.map(function(x,i){var v=(start||0)+i;return '<option value="'+v+'"'+(String(v)===String(cur)?' selected':'')+'>'+esc(v+' - '+x)+'</option>';}).join('');};
+  var oo=function(M,cur){return Object.keys(M).map(function(k){return '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+esc(M[k])+'</option>';}).join('');};
+
+  var S={me:'',risks:[],cycles:[],depts:[],cycle:null,step:0,err:null,dept:'',report:null};
+  function load(){S.err=null;
+    return Promise.all([api('GET','/risks').catch(function(e){return {__e:e};}),api('GET','/cycles').catch(function(){return {cycles:[],departments:[]};})]).then(function(r){
+      if(r[0]&&r[0].__e){S.err=r[0].__e;S.risks=[];}else S.risks=r[0].risks||[];S.cycles=r[1].cycles||[];S.depts=r[1].departments||[];
+      var cur=S.cycles.filter(function(c){return ['open','review','returned'].indexOf(c.state)>=0;})[0]||S.cycles.slice().sort(function(a,b){return String(b.opened_at).localeCompare(String(a.opened_at));})[0];
+      if(!cur){S.cycle=null;return;}return api('GET','/cycles/'+encodeURIComponent(cur.id)).then(function(c){S.cycle=c;},function(){S.cycle=null;});}).then(draw);}
+  var openRisks=function(){return S.risks.filter(function(r){return r.status!=='solved';});};
+  var inCycle=function(){if(!S.cycle)return [];var ids={};S.cycle.items.forEach(function(i){ids[i.risk]=1;});return S.risks.filter(function(r){return ids[r.id];});};
+  var high=function(){return inCycle().filter(function(r){return r.residual>=3;});};
+  function status(){var C=S.cycle,P=C?C.progress:null,H=high();
+    var treated=H.filter(function(r){return r.response&&(r.response!=='accept'||(r.acceptance&&r.acceptance.status==='approved'));});
+    return [
+      {t:'Scope and method',d:S.risks.length?openRisks().length+' open risk(s) in '+S.depts.length+' department(s)':'the register is empty',done:openRisks().length>0},
+      {t:'Identify new risks',d:'add risks before the cycle opens',done:false,optional:true},
+      {t:'Open the assessment cycle',d:C?C.id+' · '+C.state+' · due '+C.due:'no cycle open',done:!!C},
+      {t:'Assess every risk',d:P?P.submitted+' / '+P.risks+' assessed ('+P.pct+'%)':'—',done:!!P&&P.risks>0&&P.submitted===P.risks},
+      {t:'Treat Class III / IV risks',d:C?treated.length+' / '+H.length+' decided':'—',done:!!C&&treated.length===H.length,optional:true},
+      {t:'Department sign-off',d:P?P.signed+' / '+P.departments+' signed off':'—',done:!!P&&P.departments>0&&P.signed===P.departments},
+      {t:'Risk committee approval',d:C?(C.state==='approved'?'approved by '+(C.decision&&C.decision.by||''):C.state==='review'?'waiting for the committee':C.state):'—',done:!!C&&C.state==='approved'},
+      {t:'Reports',d:'committee · board · regulator',done:false,optional:true}];}
+  function draw(){var L=status();if(!S.step){S.step=1;for(var i=0;i<L.length;i++){if(!L[i].done&&!L[i].optional){S.step=i+1;break;}}}
+    $('steps').innerHTML=L.map(function(s,i){var n=i+1,cls=s.done?'done':(n===S.step?'now':'');return '<li class="'+cls+'"><button type="button" data-step="'+n+'"'+(n===S.step?' aria-current="step"':'')+'><span class="n">'+(s.done?'✓':n)+'</span><span><span class="t1">'+esc(s.t)+(s.optional?' <span class="muted" style="font-weight:400">(optional)</span>':'')+'</span><span class="t2">'+esc(s.d)+'</span></span></button></li>';}).join('');
+    var h=S.err?'<div class="block">'+esc(S.err.status===404?'Business Risk is not installed on this server - run the update.':S.err.message)+'</div>':'';
+    $('panel').innerHTML=h+(S.err?'':[p1,p2,p3,p4,p5,p6,p7,p8][S.step-1](L));}
+  var next=function(lbl){return '<div class="bar" style="margin-top:12px"><button type="button" class="pri" data-go="'+(S.step+1)+'">'+esc(lbl||'Next step →')+'</button></div>';};
+  var needCycle=function(){return '<div class="block">Open the assessment cycle first (step 3).</div><div class="bar"><button type="button" data-step="3">Go to step 3</button></div>';};
+  var cid=function(){return '/cycles/'+encodeURIComponent(S.cycle.id);};
+
+  // 1 scope and method
+  function p1(L){var R=openRisks(),by={};R.forEach(function(r){by[r.department||'(none)']=(by[r.department||'(none)']||0)+1;});
+    var cls={};R.forEach(function(r){cls[r.class||'not rated']=(cls[r.class||'not rated']||0)+1;});
+    var m='<div class="tw"><table><thead><tr><th>Exposure after controls ↓ / inherent →</th><th>Low (≤4)</th><th>Low-Medium (5-9)</th><th>Medium (10-12)</th><th>High (≥15)</th></tr></thead><tbody>'+EXPOSURE.map(function(e,i){return '<tr><td>'+esc((i+1)+' - '+e)+'</td>'+RES[i].map(function(c){return '<td>'+esc(CLS[c])+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
+    return card('1 · Scope and method','your risk department\'s own methodology, applied by the server')+'<div class="gd">Inherent risk = likelihood (1-5) × impact (1-5). Residual = the exposure that remains after the controls, read against the inherent band, giving Class I-IV. Class I / II: business as usual · Class III: enhanced oversight · Class IV: action necessary. Accepting a Class III / IV risk needs a second administrator.</div>'
+      +card('Residual matrix','',m)+'<div class="grid2">'+card('Open risks by department','',table(['Department','Risks'],Object.keys(by).sort().map(function(k){return '<tr><td>'+esc(k)+'</td><td>'+esc(by[k])+'</td></tr>';}),'The register is empty - add risks in step 2, or import the risk register workbook on Business Risk.'))
+      +card('Current position','',table(['Class','Risks'],Object.keys(cls).sort().map(function(k){return '<tr><td>'+esc(k)+'</td><td>'+esc(cls[k])+'</td></tr>';}),'—'))+'</div>'+next(L[0].done?'Next step →':'Add risks →');}
+  // 2 identify
+  function p2(){var d=S.depts.map(function(x){return '<option>'+esc(x)+'</option>';}).join('');
+    return card('2 · Identify new risks','machine learning suggests the area, category, starting rating and possible duplicates - you decide')+'<div class="gd">Describe the risk as cause → event → consequence. "Suggest" reads the register\'s own risks: it proposes the area and category, a starting likelihood and impact from the most similar risks, and warns when it looks like a risk you already have. Risks added now are part of the next cycle you open.</div>'
+      +'<div class="card"><div class="grid2"><div>'+fld('n-title','Title','text',' maxlength="300" placeholder="Fraudulent claims paid without detection"')+fld('n-desc','Description (cause → event → consequence)','textarea')
+      +'<label class="f">Department<input id="n-dept" list="n-depts" maxlength="80"><datalist id="n-depts">'+d+'</datalist></label>'+fld('n-owner','Risk owner','text',' maxlength="80"')+'</div><div>'
+      +fld('n-l','Likelihood','select',opts(LIKE,3,1))+fld('n-i','Impact','select',opts(IMPACT,3,1))+fld('n-e','Exposure after controls','select',opts(EXPOSURE,3,1))+fld('n-c','Control rating','select',oo(CTRL,'partially_effective'))
+      +'<div class="sugg" id="n-rate" style="margin-top:6px"></div></div></div><div class="bar" style="margin-top:10px"><button type="button" id="n-sugg">Suggest (machine learning)</button><button type="button" class="pri" id="n-add">Add to the register</button></div><div id="n-out"></div></div>'+next();}
+  // 3 open cycle
+  function p3(){var C=S.cycle,h=card('3 · Open the assessment cycle','an administrator opens it for a period; every open risk of the chosen departments is in it');
+    if(C&&['open','review','returned'].indexOf(C.state)>=0)return h+'<div class="okb">'+esc(C.id+' - '+C.name)+' · '+st(C.state)+' · due '+esc(C.due)+' · '+esc(C.progress.risks)+' risk(s) in '+esc(C.progress.departments)+' department(s) · opened by '+esc(C.opened_by)+'</div>'+next();
+    var y=new Date().getUTCFullYear(),q='Q'+(Math.floor(new Date().getUTCMonth()/3)+1);
+    h+='<div class="gd">One cycle runs at a time. The person who opens it cannot approve it at the end (four eyes).</div>'+(C?'<div class="sugg" style="margin-bottom:8px">Last cycle: '+esc(C.id)+' '+esc(C.state)+'</div>':'')
+      +'<div class="card"><div class="grid2"><div>'+fld('c-period','Period (YYYY-Qn or YYYY-MM)','text',' maxlength="7"',y+'-'+q)+fld('c-name','Name (optional)','text',' maxlength="120"')+fld('c-due','Due date','date')+'</div><div><label class="f">Departments (none ticked = every department)<span style="display:block;margin-top:4px">'
+      +S.depts.map(function(x){return '<label style="display:flex;gap:6px;color:var(--text)"><input type="checkbox" data-cdept="'+esc(x)+'" style="width:auto">'+esc(x)+'</label>';}).join('')+'</span></label></div></div><div class="bar" style="margin-top:10px"><button type="button" class="pri" id="c-open">Open the cycle</button><span class="muted">administrators only</span></div></div>';
+    return h;}
+  // 4 assess
+  function p4(){if(!S.cycle)return needCycle();var C=S.cycle,deps=C.by_department.map(function(d){return d.department;});if(!S.dept||deps.indexOf(S.dept)<0)S.dept=deps[0]||'';
+    var R={};S.risks.forEach(function(r){R[r.id]=r;});
+    var items=C.items.filter(function(i){return i.department===S.dept;}),signed=(C.by_department.filter(function(d){return d.department===S.dept;})[0]||{}).signed;
+    var h=card('4 · Assess every risk',C.progress.submitted+' / '+C.progress.risks+' assessed · '+C.progress.up+' up · '+C.progress.down+' down · '+C.progress.unchanged+' unchanged')+'<div class="gd">For each risk: re-rate it (likelihood, impact, exposure after controls, control rating, treatment status) with a note on what changed - or confirm it is unchanged, with a note on why. The class shown while you rate is a preview; the server calculates the record. A department signed off is locked.</div>';
+    h+='<div class="bar">'+C.by_department.map(function(d){return '<button type="button" class="sm'+(d.department===S.dept?' pri':'')+'" data-dept="'+esc(d.department)+'">'+esc(d.department)+' '+esc(d.submitted+'/'+d.risks)+(d.signed?' ✓':'')+'</button>';}).join('')+'</div>';
+    h+=table(['Risk','Before','Your assessment','State',''],items.map(function(i){var r=R[i.risk]||{},b=i.before||{},k='a-'+i.risk.replace(/[^A-Za-z0-9]/g,'');
+      var form=i.state==='pending'&&!signed?'<div class="grid2" style="min-width:420px"><div>'+fld(k+'-l','Likelihood','select',opts(LIKE,b.likelihood,1))+fld(k+'-i','Impact','select',opts(IMPACT,b.impact,1))+fld(k+'-e','Exposure','select',opts(EXPOSURE,b.exposure,1))+'</div><div>'+fld(k+'-c','Controls','select','<option value="">—</option>'+oo(CTRL,r.control_rating))+fld(k+'-t','Treatment','select','<option value="">—</option>'+oo(TREAT,r.treatment_status))+fld(k+'-n','Note','text',' maxlength="500"')+'</div></div><div class="sugg" data-prev="'+k+'"></div>':'<span class="sugg">'+esc(i.movement?'moved '+i.movement:'')+'</span>';
+      return '<tr><td><b>'+esc(i.title)+'</b><div class="sugg">'+esc(i.code+' · '+(i.owner||r.owner||'no owner'))+'</div></td><td class="sugg">'+esc(b.label||'—')+'<br>'+esc(b.class||'')+'</td><td>'+form+'</td><td>'+st(i.state)+'</td><td>'+(i.state==='pending'&&!signed?'<button type="button" class="sm pri" data-sub="'+esc(i.risk)+'" data-k="'+k+'">Submit</button> <button type="button" class="sm" data-unch="'+esc(i.risk)+'" data-k="'+k+'">Unchanged</button>':'')+'</td></tr>';}),'No risks for this department in the cycle.');
+    return h+next();}
+  // 5 treat
+  function p5(){if(!S.cycle)return needCycle();var H=high();
+    var h=card('5 · Treat Class III / IV risks','decide the response, the plan, its owner and the target')+'<div class="gd">Class III needs enhanced oversight, Class IV action. Mitigate, transfer or avoid with a plan and an owner - or accept; accepting a Class III / IV risk waits for a second administrator who did not request it.</div>';
+    h+=table(['Risk','Residual','Response and plan',''],H.map(function(r){var k='t-'+r.id.replace(/[^A-Za-z0-9]/g,''),acc=r.acceptance;
+      return '<tr><td><b>'+esc(r.title)+'</b><div class="sugg">'+esc(r.code+' · '+r.department+' · owner '+(r.owner||'—'))+'</div></td><td>'+esc(r.class)+'<div class="sugg">'+esc(r.label||'')+'</div></td><td style="min-width:360px">'
+        +fld(k+'-r','Response','select','<option value="">—</option>'+['mitigate','transfer','avoid','accept'].map(function(x){return '<option'+(r.response===x?' selected':'')+'>'+x+'</option>';}).join(''))+fld(k+'-p','Treatment plan','textarea',null,r.treatment_plan)+'<div class="grid2">'+fld(k+'-o','Treatment owner','text',' maxlength="120"',r.treatment_owner)+fld(k+'-g','Target','text',' maxlength="60" placeholder="2027-03-31 / Q1 2027"',r.target)+'</div>'
+        +(acc?'<div class="sugg">acceptance '+esc(acc.status)+' · requested by '+esc(acc.by)+'</div>':'')+'</td><td><button type="button" class="sm pri" data-treat="'+esc(r.id)+'" data-k="'+k+'">Save</button>'
+        +(acc&&acc.status==='pending'?'<div style="margin-top:6px"><button type="button" class="sm" data-accd="approve" data-id="'+esc(r.id)+'">Approve acceptance</button> <button type="button" class="sm dang" data-accd="reject" data-id="'+esc(r.id)+'">Reject…</button></div>':'')+'</td></tr>';}),'No Class III / IV risk in this cycle.');
+    return h+next();}
+  // 6 sign-off
+  function p6(){if(!S.cycle)return needCycle();var C=S.cycle;
+    return card('6 · Department sign-off','by a person who assessed none of that department\'s risks')+'<div class="gd">Once every risk of a department is assessed, someone who did not assess any of them signs the department off; it is then locked. When every department is signed off the cycle goes to the risk committee.</div>'
+      +table(['Department','Assessed','Signed off',''],C.by_department.map(function(d){return '<tr><td><b>'+esc(d.department)+'</b></td><td>'+esc(d.submitted+' / '+d.risks)+'</td><td>'+(d.signed?esc(d.signed.by||'')+' <span class="sugg">'+esc(String(d.signed.at||'').slice(0,10))+'</span>':'—')+'</td><td>'+(!d.signed&&C.state==='open'?'<button type="button" class="sm pri" data-sign="'+esc(d.department)+'">Sign off…</button>':'')+'</td></tr>';}),'No departments.')+next();}
+  // 7 committee
+  function p7(){if(!S.cycle)return needCycle();var C=S.cycle,cp=C.compare||{};
+    var h=card('7 · Risk committee approval','an administrator who did not open the cycle and signed no department off')+'<div class="gd">Approval freezes the cycle: every rating, the class counts and every movement against the previous approved cycle. Returning it needs a note and re-opens the work.</div>';
+    h+='<dl class="kv"><dt>Cycle</dt><dd>'+esc(C.id+' · '+C.name)+' '+st(C.state)+'</dd><dt>Progress</dt><dd>'+esc(C.progress.submitted+' / '+C.progress.risks+' assessed · '+C.progress.signed+' / '+C.progress.departments+' departments signed off')+'</dd><dt>Movement</dt><dd>'+esc(C.progress.up+' up · '+C.progress.down+' down · '+C.progress.unchanged+' unchanged')+'</dd><dt>Compared with</dt><dd>'+esc(cp.previous?cp.previous.id||cp.previous:'—')+(cp.note?' <span class="sugg">'+esc(cp.note)+'</span>':'')+'</dd>'+(C.decision?'<dt>Decision</dt><dd>'+esc((C.decision.by||'')+' '+String(C.decision.at||'').slice(0,10)+(C.decision.note?' - '+C.decision.note:''))+'</dd>':'')+'</dl>';
+    if(C.state==='review')h+='<div class="bar" style="margin-top:10px"><button type="button" class="pri" data-dec="approve">Approve the cycle</button><button type="button" class="dang" data-dec="return">Return…</button></div>';
+    else if(C.state==='open')h+='<div class="block" style="margin-top:10px">The cycle reaches the committee when every department is signed off (step 6).</div>';
+    else if(C.state==='approved')h+='<div class="okb" style="margin-top:10px">Approved - the cycle is frozen.</div>'+next('Reports →');
+    return h;}
+  // 8 reports
+  function p8(){var R=S.report,h=card('8 · Reports','built from the register at the moment you ask · every export is in the audit trail')+'<div class="bar"><button type="button" data-rep="committee">Risk Committee pack</button><button type="button" data-rep="board">Board report</button><button type="button" data-rep="regulator">Regulator (Insurance Authority) pack</button><a href="risk-reports.html" style="margin-left:8px">Open Risk Reports to print ↗</a></div>';
+    if(R){var keys=Object.keys(R.data||{}).filter(function(k){var v=R.data[k];return v!=null&&typeof v!=='object';});
+      h+=card(R.kind+' report','',(keys.length?'<dl class="kv">'+keys.slice(0,20).map(function(k){return '<dt>'+esc(k.replace(/_/g,' '))+'</dt><dd>'+esc(R.data[k])+'</dd>';}).join('')+'</dl>':'')+'<div class="sugg" style="margin-top:6px">Sections: '+esc(Object.keys(R.data||{}).join(', '))+'</div>');}
+    return h;}
+
+  // ---------- events
+  $('steps').addEventListener('click',function(e){var b=e.target.closest('[data-step]');if(b){S.step=Number(b.getAttribute('data-step'));draw();}});
+  function preview(k){var el=document.querySelector('[data-prev="'+k+'"]');if(!el)return;var r=rate(val(k+'-l'),val(k+'-i'),val(k+'-e'));el.textContent=r?'Preview: inherent '+r.band+' ('+r.inherent+')'+(r.cls?' → '+r.cls:''):'';}
+  $('panel').addEventListener('change',function(e){var id=e.target.id||'';var m=/^(a-[A-Za-z0-9]+)-[lie]$/.exec(id);if(m)preview(m[1]);if(/^n-[lie]$/.test(id)){var r=rate(val('n-l'),val('n-i'),val('n-e'));$('n-rate').textContent=r?'Preview: inherent '+r.band+' ('+r.inherent+') → '+r.cls:'';}});
+  $('panel').addEventListener('click',function(e){var t=e.target,b;
+    if((b=t.closest('[data-step]'))){S.step=Number(b.getAttribute('data-step'));draw();return;}
+    if((b=t.closest('[data-go]'))){S.step=Number(b.getAttribute('data-go'));draw();window.scrollTo(0,0);return;}
+    if(t.id==='n-sugg'){if(!val('n-title')){toast('Write the title first.');return;}api('POST','/suggest',{title:val('n-title'),description:val('n-desc')}).then(function(s){
+        var top=function(L){return L&&L[0]?L[0].label+' ('+Math.round(L[0].p*100)+'%)':'—';};
+        if(s.likelihood)$('n-l').value=String(s.likelihood);if(s.impact)$('n-i').value=String(s.impact);if(!val('n-dept')&&s.department&&s.department[0])$('n-dept').value=s.department[0].label;
+        $('n-out').innerHTML='<div class="card" style="margin-top:10px"><div><b>Suggested</b> area '+esc(top(s.area))+' · category '+esc(top(s.primary_cat))+' · department '+esc(top(s.department))+(s.likelihood?' · starting likelihood '+esc(s.likelihood)+', impact '+esc(s.impact):'')+'</div><div class="sugg">'+esc(s.why||'')+'</div>'
+          +((s.similar||[]).length?'<div style="margin-top:6px">'+s.similar.slice(0,5).map(function(x){return (x.possible_duplicate?'<span class="pill late">possible duplicate</span> ':'')+esc(x.code+' · '+x.title+' · '+x.department)+' <span class="sugg">'+Math.round(x.sim*100)+'% similar</span>';}).join('<br>')+'</div>':'')+'</div>';
+        var r=rate(val('n-l'),val('n-i'),val('n-e'));$('n-rate').textContent=r?'Preview: inherent '+r.band+' ('+r.inherent+') → '+r.cls:'';},function(er){toast('No suggestion: '+er.message);});return;}
+    if(t.id==='n-add'){var nb={title:val('n-title'),description:val('n-desc'),department:val('n-dept'),owner:val('n-owner'),likelihood:Number(val('n-l')),impact:Number(val('n-i')),exposure:Number(val('n-e')),control_rating:val('n-c'),status:'open',identified:new Date().toISOString().slice(0,10)};
+      if(!nb.title||!nb.department||!nb.owner){toast('Title, department and owner are needed.');return;}act('/risks',nb,'Risk added to the register').then(function(r){if(r){['n-title','n-desc','n-owner'].forEach(function(i){var x=$(i);if(x)x.value='';});}});return;}
+    if(t.id==='c-open'){var cb={period:val('c-period'),due:val('c-due')};if(val('c-name'))cb.name=val('c-name');var ds=Array.prototype.map.call(document.querySelectorAll('[data-cdept]:checked'),function(x){return x.getAttribute('data-cdept');});if(ds.length)cb.departments=ds;
+      if(!cb.period||!cb.due){toast('Period and due date are needed.');return;}act('/cycles',cb,'Cycle opened').then(function(r){if(r){S.step=4;draw();}});return;}
+    if((b=t.closest('[data-dept]'))){S.dept=b.getAttribute('data-dept');draw();return;}
+    if((b=t.closest('[data-sub]'))){var k=b.getAttribute('data-k'),sb={risk:b.getAttribute('data-sub'),likelihood:Number(val(k+'-l')),impact:Number(val(k+'-i')),exposure:Number(val(k+'-e')),note:val(k+'-n')};if(val(k+'-c'))sb.control_rating=val(k+'-c');if(val(k+'-t'))sb.treatment_status=val(k+'-t');
+      if(!sb.note){toast('Note: say what changed and why.');return;}act(cid()+'/submit',sb,'Assessed');return;}
+    if((b=t.closest('[data-unch]'))){var k2=b.getAttribute('data-k');if(!val(k2+'-n')){toast('Note: say why it is unchanged.');return;}act(cid()+'/submit',{risk:b.getAttribute('data-unch'),unchanged:true,note:val(k2+'-n')},'Confirmed unchanged');return;}
+    if((b=t.closest('[data-treat]'))){var k3=b.getAttribute('data-k'),tb={id:b.getAttribute('data-treat')};if(val(k3+'-r'))tb.response=val(k3+'-r');tb.treatment_plan=val(k3+'-p');tb.treatment_owner=val(k3+'-o');tb.target=val(k3+'-g');
+      if(!tb.response){toast('Choose the response.');return;}if(tb.response!=='accept'&&!tb.treatment_plan){toast('Treatment plan: what will be done.');return;}act('/risks',tb,tb.response==='accept'?'Saved - acceptance waits for a second administrator':'Treatment saved');return;}
+    if((b=t.closest('[data-accd]'))){var rid=b.getAttribute('data-id'),dd=b.getAttribute('data-accd');if(dd==='approve')act('/risks/'+encodeURIComponent(rid)+'/acceptance',{decision:'approve'},'Acceptance approved');
+      else ask('Reject the acceptance of '+rid,fld('d-note','Reason','textarea'),'Reject',function(){if(!val('d-note')){toast('Reason: needed.');return false;}act('/risks/'+encodeURIComponent(rid)+'/acceptance',{decision:'reject',note:val('d-note')},'Acceptance rejected');});return;}
+    if((b=t.closest('[data-sign]'))){var dep=b.getAttribute('data-sign');ask('Sign off '+dep,fld('d-note','Note (optional)','textarea'),'Sign off',function(){var o={department:dep};if(val('d-note'))o.note=val('d-note');act(cid()+'/signoff',o,dep+' signed off');});return;}
+    if((b=t.closest('[data-dec]'))){var dc=b.getAttribute('data-dec');if(dc==='approve')ask('Approve '+S.cycle.id,fld('d-note','Committee note (optional)','textarea'),'Approve',function(){var o={decision:'approve'};if(val('d-note'))o.note=val('d-note');act(cid()+'/decision',o,'Cycle approved - frozen');});
+      else ask('Return '+S.cycle.id,fld('d-note','What must be redone','textarea'),'Return',function(){if(!val('d-note')){toast('A note is needed to return the cycle.');return false;}act(cid()+'/decision',{decision:'return',note:val('d-note')},'Cycle returned');});return;}
+    if((b=t.closest('[data-rep]'))){var kd=b.getAttribute('data-rep');api('GET','/reports/'+kd).then(function(r){S.report={kind:kd,data:r};draw();toast('Report built: '+kd);},function(er){toast('Not built: '+er.message);});return;}
+  });
+  $('refresh').addEventListener('click',load);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')$('dlgbg').classList.remove('open');});
+  req('GET','/api/itam/roles/me').then(function(r){S.me=(r&&r.user)||'';$('me').textContent=S.me;},function(){ /* the name is only shown; the engine decides */ });
+  load();
+})();
+</script></body></html>

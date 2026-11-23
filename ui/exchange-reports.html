@@ -1,0 +1,313 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exchange Reports</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+[hidden]{display:none!important}
+.banner{border:1px solid var(--edge);border-left:3px solid var(--warn);border-radius:10px;padding:10px 12px;margin:0 0 12px;background:var(--panel)}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px}.g2>.card{margin:0}.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3>.card{margin:0}
+.vb{display:flex;align-items:flex-end;gap:2px;height:140px;border-bottom:1px solid var(--edge)}.vb i{flex:1;display:flex;flex-direction:column-reverse;min-width:2px;height:100%}.vb b{display:block;border-radius:2px 2px 0 0}
+.ax{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:3px}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:6px}.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;background:var(--c)}
+.hb{display:grid;grid-template-columns:minmax(90px,34%) 1fr 92px;gap:8px;align-items:center;margin:5px 0;font-size:13px}.hb .tr{height:9px;border-radius:5px;background:rgba(127,127,127,.18);overflow:hidden;display:flex}.hb .tr i{display:block;height:100%}.hb .n{text-align:right;font-variant-numeric:tabular-nums}
+.c1{background:#2f81f7}.c2{background:#a371f7}.c3{background:#3fb950}.c4{background:#f85149}.c5{background:#d29922}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--edge);border-radius:8px;overflow:hidden}.seg button{border:0;border-radius:0;background:transparent;padding:6px 11px;font-weight:600}.seg button.on{background:#1f6feb;color:#fff}
+.fil{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 10px}.fil input[type=search]{min-width:240px}
+.mem{font-size:12px;color:var(--mute)}.priv{border:1px dashed var(--border);border-radius:9px;padding:10px;color:var(--mute);font-size:13px}
+.st{font-size:12px;color:var(--mute);display:flex;gap:10px;flex-wrap:wrap;margin:-4px 0 10px}.st b{color:var(--text);font-weight:600}.st .x{color:var(--bad)}
+details.set summary{cursor:pointer;font-weight:600}.set .form{margin-top:8px}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Messaging · Exchange</div><h1>Exchange Reports</h1><div class="muted small">Mailboxes, access, distribution lists, mail traffic, OWA and ActiveSync, and Exchange Online - read with the Exchange administrator's read-only checks and the logs in the SIEM. Names are shown to administrators only; message subjects and bodies are never read.</div></div>
+<div class="sp"></div><span class="muted small" id="up"></span><button type="button" id="collect" hidden>Collect now</button><button type="button" id="xls">Excel</button><button type="button" id="refresh">Refresh</button></div>
+<div class="banner" id="nc" hidden></div>
+<div class="st" id="parts"></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="mb" class="on">Mailboxes</button><button type="button" role="tab" data-tab="pm">Permissions</button><button type="button" role="tab" data-tab="dl">Distribution lists</button><button type="button" role="tab" data-tab="tr">Traffic</button><button type="button" role="tab" data-tab="cl">OWA &amp; ActiveSync</button><button type="button" role="tab" data-tab="on">Online</button></div>
+
+<section id="tab-mb">
+<div class="k" id="mb-k"><div class="empty">Loading…</div></div>
+<div class="g3">
+<div class="card"><h2>Mailbox data over time <span class="c" id="mb-tc">one bar per daily inventory</span></h2><div id="mb-trend"></div></div>
+<div class="card"><h2>By database <span class="c">mailbox data · database file</span></h2><div id="mb-db"></div></div>
+<div class="card"><h2>Mailbox sizes <span class="c">how many mailboxes in each band</span></h2><div id="mb-bands"></div></div>
+</div>
+<div class="card" id="mb-card"><h2>Mailbox reports <span class="c" id="mb-cnt"></span></h2>
+<div class="seg" role="group" aria-label="Mailbox report" id="mb-seg"><button type="button" data-mv="largest" class="on">Largest</button><button type="button" data-mv="growing">Fastest growing</button><button type="button" data-mv="quota">Near quota</button><button type="button" data-mv="inactive">Inactive</button><button type="button" data-mv="hidden">Hidden</button><button type="button" data-mv="forwarding">Forwarding</button><button type="button" data-mv="features">Protocols</button><button type="button" data-mv="all">All</button></div>
+<div class="fil"><input type="search" id="mb-q" placeholder="Search name or address" aria-label="Search mailboxes"><select id="mb-type" aria-label="Mailbox type"><option value="">All types</option></select><select id="mb-db2" aria-label="Database"><option value="">All databases</option></select>
+<select id="mb-days" aria-label="Days"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="180">180 days</option><option value="365">365 days</option></select>
+<select id="mb-feat" aria-label="Protocol"><option value="">POP or IMAP</option><option value="pop">POP</option><option value="imap">IMAP</option><option value="owa">OWA</option><option value="eas">ActiveSync</option><option value="mapi">MAPI (Outlook)</option><option value="ews">EWS</option></select></div>
+<div class="tw" id="mb-t"></div></div>
+<div class="card" id="pf-card"><h2>Public folders <span class="c" id="pf-c"></span></h2><div class="tw" id="pf-t"></div></div>
+</section>
+
+<section id="tab-pm" hidden>
+<div class="k" id="pm-k"></div>
+<div class="card" id="pm-card"><h2>Who can open or send as which mailbox <span class="c" id="pm-cnt"></span></h2>
+<div class="seg" role="group" aria-label="Permissions view" id="pm-seg"><button type="button" data-pv="mailbox" class="on">By mailbox</button><button type="button" data-pv="holders">By person (non-owner access)</button></div>
+<div class="fil"><input type="search" id="pm-q" placeholder="Search mailbox or person" aria-label="Search permissions"><select id="pm-right" aria-label="Right"><option value="">All rights</option><option value="full_access">Full Access</option><option value="send_as">Send As</option><option value="send_on_behalf">Send on Behalf</option></select></div>
+<div class="tw" id="pm-t"></div><p class="note">Explicit grants only: rights inherited from Exchange administrator groups and the mailbox's own account are left out. Full Access from Get-MailboxPermission, Send As from Get-ADPermission, Send on Behalf from the mailbox.</p></div>
+</section>
+
+<section id="tab-dl" hidden>
+<div class="k" id="dl-k"></div>
+<div class="g2" style="margin-bottom:12px"><div class="card"><h2>List sizes <span class="c">people after nested lists are expanded</span></h2><div id="dl-bands"></div></div>
+<div class="card"><h2>Lists at a glance</h2><div id="dl-glance"></div></div></div>
+<div class="card" id="dl-card"><h2>Distribution lists <span class="c" id="dl-cnt"></span></h2>
+<div class="seg" role="group" aria-label="Lists view" id="dl-seg"><button type="button" data-lv="all" class="on">All</button><button type="button" data-lv="external">External members</button><button type="button" data-lv="empty">Empty</button><button type="button" data-lv="nested">Nested</button><button type="button" data-lv="dynamic">Dynamic</button></div>
+<div class="fil"><input type="search" id="dl-q" placeholder="Search list or member" aria-label="Search lists"></div>
+<div class="tw" id="dl-t"></div><p class="note">Nested lists are followed up to 5 levels and 5,000 people; a list that loops back into itself is counted once.</p></div>
+</section>
+
+<section id="tab-tr" hidden>
+<div class="fil"><select id="tr-range" aria-label="Period"><option value="1">Last 24 hours</option><option value="7" selected>Last 7 days</option><option value="30">Last 30 days</option></select>
+<input id="tr-dom" placeholder="Our mail domains, comma-separated" aria-label="Our mail domains" style="min-width:260px"><input id="tr-pd" placeholder="One domain to look at, e.g. partner.com" aria-label="Domain to look at" style="min-width:230px">
+<select id="tr-dir" aria-label="Direction"><option value="all">In and out</option><option value="in">From the Internet</option><option value="out">To the Internet</option></select><button type="button" id="tr-go">Apply</button></div>
+<div class="k" id="tr-k"><div class="empty">Loading…</div></div>
+<div class="g2"><div class="card"><h2>Messages over time <span class="c" id="tr-bk"></span></h2><div id="tr-series"></div></div>
+<div class="card"><h2>Delivered or failed - why <span class="c">SMTP status, addresses removed</span></h2><div class="tw" id="tr-why"></div></div></div>
+<div class="g3" style="margin-top:12px"><div class="card"><h2>By hour of day <span class="c">Riyadh time</span></h2><div id="tr-hour"></div></div><div class="card"><h2>By day of week</h2><div id="tr-dow"></div></div><div class="card"><h2>Message sizes <span class="c" id="tr-avg"></span></h2><div id="tr-size"></div></div></div>
+<div class="g2" id="tr-named"><div class="card"><h2>Top senders <span class="c">by address</span></h2><div class="tw" id="tr-snd"></div></div><div class="card"><h2>Top recipients <span class="c">by address</span></h2><div class="tw" id="tr-rcp"></div></div></div>
+<p class="note" id="tr-note"></p>
+</section>
+
+<section id="tab-cl" hidden>
+<div class="fil"><select id="cl-range" aria-label="Period"><option value="1">Last 24 hours</option><option value="7" selected>Last 7 days</option><option value="30">Last 30 days</option></select></div>
+<div class="k" id="cl-k"><div class="empty">Loading…</div></div>
+<div class="g2"><div class="card"><h2>Use over time <span class="c">from the Exchange IIS logs</span></h2><div id="cl-series"></div></div>
+<div class="card"><h2>Mobile devices <span class="c">operating systems and access state</span></h2><div id="cl-os"></div></div></div>
+<div class="card" id="cl-users-card" style="margin-top:12px"><h2>Logons per person <span class="c">OWA sign-ins, ActiveSync syncs, failed logons</span></h2><div class="fil"><input type="search" id="cl-q" placeholder="Search account" aria-label="Search accounts"></div><div class="tw" id="cl-users"></div></div>
+<div class="card" id="cl-fail-card"><h2>Failed logons <span class="c">HTTP 401 that names the account</span></h2><div class="tw" id="cl-fail"></div></div>
+<div class="card" id="dv-card"><h2>Mobile devices <span class="c" id="dv-cnt"></span></h2>
+<div class="seg" role="group" aria-label="Devices view" id="dv-seg"><button type="button" data-dv="all" class="on">All</button><button type="button" data-dv="stale">Stale</button><button type="button" data-dv="unapproved">Unapproved models</button><button type="button" data-dv="blocked">Blocked or quarantined</button></div>
+<div class="fil"><input type="search" id="dv-q" placeholder="Search owner, model or OS" aria-label="Search devices"></div><div class="tw" id="dv-t"></div></div>
+<p class="note" id="cl-note"></p>
+</section>
+
+<section id="tab-on" hidden>
+<div class="k" id="on-k"><div class="empty">Loading…</div></div>
+<div class="card" id="on-card"><h2>Exchange Online mailboxes <span class="c" id="on-cnt"></span></h2>
+<div class="seg" role="group" aria-label="Online view" id="on-seg"><button type="button" data-ov="all" class="on">All</button><button type="button" data-ov="inactive">No activity in 30 days</button><button type="button" data-ov="quota">Near quota</button></div>
+<div class="fil"><input type="search" id="on-q" placeholder="Search name or address" aria-label="Search Exchange Online mailboxes"></div><div class="tw" id="on-t"></div></div>
+<p class="note" id="on-note"></p>
+</section>
+
+<details class="card set" id="set" hidden><summary>Report settings</summary>
+<form class="form" id="setf"><label>Inactive after (days)<input type="number" name="inactive_days" min="7" max="730" required></label><label>Device stale after (days)<input type="number" name="stale_device_days" min="7" max="365" required></label>
+<label>Near quota from (%)<input type="number" name="near_quota_pct" min="50" max="100" required></label><label>Daily inventory at (hour, Riyadh)<input type="number" name="collect_hour" min="0" max="23" required></label>
+<label>Approved device models (comma-separated)<input name="approved_models" maxlength="4000" placeholder="iPhone, SM-S9"></label><label>Our mail domains (comma-separated)<input name="internal_domains" maxlength="4000" placeholder="empty = the domains of our mailboxes"></label>
+<div><button type="submit">Save settings</button></div></form></details>
+<p class="note" id="foot"></p>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc,esc=Z.esc,$=function(i){return document.getElementById(i);};
+  var TAB='mb',SUM=null,V={mb:null,pf:null,pm:null,dl:null,tr:null,cl:null,dv:null,on:null},F={mv:'largest',pv:'mailbox',lv:'all',dv:'all',ov:'all'},POLL=null,QT=null;
+  var ADMIN=function(){return Z.can('admin');};
+  function why(e){return e.status===404?'Exchange Reports are not installed on the SIEM yet - run the update.':e.status===403?'Your role cannot see this.':e.message;}
+  var n=function(v){return v==null?'–':Z.n(v);};
+  var gbf=function(v){return v==null?'–':(Math.round(v*10)/10).toLocaleString('en-US')+' GB';};
+  var mbf=function(v){return v==null?'–':v>=1024?(Math.round(v/102.4)/10).toLocaleString('en-US')+' GB':Math.round(v).toLocaleString('en-US')+' MB';};
+  var day=function(v){return v?String(v).slice(0,10):'never';};
+  function tbl(head,rows,empty){return rows.length?'<table><thead><tr>'+head.map(function(h){return '<th>'+esc(h)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table>':'<div class="empty">'+esc(empty)+'</div>';}
+  function td(v,cls){return '<td'+(cls?' class="'+cls+'"':'')+'>'+esc(v==null?'–':v)+'</td>';}
+  function priv(what){return '<div class="priv">'+esc(what)+' name people: they are shown to administrators only (PDPL). The counts above are for everyone.</div>';}
+  // charts: vertical bars (stacked series) and horizontal bars
+  function vbars(items,series,label){if(!items.length)return '<div class="empty">No data yet.</div>';var mx=Math.max(1,Math.max.apply(null,items.map(function(x){return series.reduce(function(a,s){return a+(+x[s[0]]||0);},0);})));
+    return '<div class="vb">'+items.map(function(x){return '<i title="'+esc(label(x)+': '+series.map(function(s){return s[1]+' '+n(x[s[0]]);}).join(' · '))+'">'+series.map(function(s){var v=+x[s[0]]||0;return v?'<b class="'+s[2]+'" style="height:'+(v/mx*100)+'%"></b>':'';}).join('')+'</i>';}).join('')+'</div>'
+      +'<div class="ax"><span>'+esc(label(items[0]))+'</span><span>'+esc(label(items[items.length-1]))+'</span></div><div class="lg">'+series.map(function(s){return '<span style="--c:'+({c1:'#2f81f7',c2:'#a371f7',c3:'#3fb950',c4:'#f85149',c5:'#d29922'}[s[2]])+'">'+esc(s[1])+'</span>';}).join('')+'</div>';}
+  function hbars(rows,empty){if(!rows.length)return '<div class="empty">'+esc(empty||'No data yet.')+'</div>';var mx=Math.max(1,Math.max.apply(null,rows.map(function(r){return r.v;})));
+    return rows.map(function(r){return '<div class="hb"><span>'+esc(r.l)+'</span><span class="tr"><i class="'+(r.c||'c1')+'" style="width:'+(r.v/mx*100)+'%"></i></span><span class="n">'+esc(r.t!=null?r.t:n(r.v))+'</span></div>';}).join('');}
+  function tile(l,v,s,cls){return Z.tile(l,v,s,cls);}
+  function ago(p){return p&&p.at?Z.ago(p.at):'not read yet';}
+
+  /* ---- header: what was read, when, errors */
+  function header(){var S=SUM.status,P=S.parts||{};
+    $('nc').hidden=S.connected;if(!S.connected)$('nc').textContent=S.reason;
+    var L={databases:'Databases',mailboxes:'Mailboxes',cas:'Protocols',permissions:'Permissions',groups:'Lists',public_folders:'Public folders',mobile:'Devices',online:'Exchange Online'};
+    $('parts').innerHTML=Object.keys(L).map(function(k){var p=P[k]||{};return '<span>'+esc(L[k])+': <b>'+esc(p.never?'not read yet':ago(p))+'</b>'+(p.error?' <span class="x" title="'+esc(p.error)+'">⚠ '+esc(p.ok?'':'failed - last good copy kept')+'</span>':'')+'</span>';}).join('')+(S.running?'<span><b>reading now…</b></span>':'');
+    $('up').textContent=S.servers&&S.servers.length?'from '+S.servers.join(', ')+' · '+(S.days_held||0)+' day(s) of history':'';
+    $('collect').hidden=!Z.can('operator')||!S.connected;$('collect').disabled=!!S.running;$('collect').textContent=S.running?'Reading…':'Collect now';
+    var st=S.settings||{};$('set').hidden=!ADMIN();
+    if(ADMIN()&&!$('set').dataset.filled){var f=$('setf');['inactive_days','stale_device_days','near_quota_pct','collect_hour'].forEach(function(k){f.elements[k].value=st[k];});f.elements.approved_models.value=(st.approved_models||[]).join(', ');f.elements.internal_domains.value=(st.internal_domains||[]).join(', ');$('set').dataset.filled='1';}
+    if(!$('tr-dom').value)$('tr-dom').value=(SUM.domains||[]).join(',');
+    $('foot').textContent='Read-only: the inventory runs the Exchange administrator\'s allow-listed Get- checks once a day ('+String(st.collect_hour==null?2:st.collect_hour).padStart(2,'0')+':00 Riyadh) and on Collect now; nothing on Exchange is changed. A part that fails keeps its last good copy and says so.';}
+
+  /* ---- Mailboxes */
+  function drawMb(){var M=SUM.mailboxes;
+    if(!M){$('mb-k').innerHTML='<div class="empty">'+esc(SUM.status.connected?'The mailbox inventory has not been read yet - use Collect now, or wait for the daily run.':'Not connected: '+SUM.status.reason)+'</div>';['mb-trend','mb-db','mb-bands'].forEach(function(i){$(i).innerHTML='<div class="empty">No inventory yet.</div>';});}
+    else{var f=M.features||{},th=M.thresholds||{};
+      $('mb-k').innerHTML=tile('Mailboxes',n(M.total),Object.keys(M.by_type||{}).length+' types')+tile('Mailbox data',gbf(M.size_gb),'items in all mailboxes')+tile('Growth',M.growth_30d?gbf(M.growth_30d.gb):'–',M.growth_30d?'since '+M.growth_30d.since:'needs a second daily inventory',M.growth_30d?'':'na')
+        +tile('Near quota',n(M.near_quota),'≥ '+th.near_quota_pct+' % of the send quota',M.near_quota?'warn':'ok')+tile('Inactive',n(M.inactive),'no logon for '+th.inactive_days+' days',M.inactive?'warn':'ok')+tile('Hidden',n(M.hidden),'from address lists')
+        +tile('Forwarding outside',n(M.forwarding_outside),n(M.forwarding)+' forward in total',M.forwarding_outside?'bad':'ok')+tile('POP / IMAP on',f.pop==null?'–':n(f.pop+f.imap),'legacy protocols',f.pop==null?'na':(f.pop+f.imap)?'warn':'ok');
+      $('mb-tc').textContent=SUM.trend.length+' daily inventories';
+      $('mb-trend').innerHTML=vbars(SUM.trend,[['size_gb','GB','c1']],function(x){return x.day;});
+      var dmx=M.by_database||[];$('mb-db').innerHTML=hbars(dmx.map(function(d){return {l:d.database+(d.mounted===false?' (dismounted)':''),v:d.size_gb||0,t:gbf(d.size_gb)+' · '+n(d.mailboxes),c:d.mounted===false?'c4':'c1'};}),'No database read yet.')
+        +(dmx.some(function(d){return d.file_gb!=null;})?'<div class="note">'+dmx.map(function(d){return esc(d.database)+': file '+esc(gbf(d.file_gb))+', white space '+esc(gbf(d.whitespace_gb));}).join(' · ')+'</div>':'');
+      $('mb-bands').innerHTML=hbars((M.size_bands||[]).map(function(b){return {l:b.label,v:b.n,c:'c2'};}));}
+    var named=ADMIN();$('mb-seg').hidden=!named;$('mb-q').parentNode.hidden=!named;$('pf-card').hidden=!named;
+    if(!named){$('mb-t').innerHTML=priv('Mailbox reports');$('mb-cnt').textContent='';return;}
+    $('mb-days').hidden=!(F.mv==='growing'||F.mv==='inactive');$('mb-feat').hidden=F.mv!=='features';
+    var R=V.mb;if(!R){$('mb-t').innerHTML='<div class="empty">Loading…</div>';return;}if(R.err){$('mb-t').innerHTML='<p class="err">'+esc(R.err)+'</p>';return;}
+    var opt=function(sel,list,first){var cur=$(sel).value;$(sel).innerHTML='<option value="">'+esc(first)+'</option>'+list.map(function(x){return '<option'+(x===cur?' selected':'')+'>'+esc(x)+'</option>';}).join('');};
+    opt('mb-type',R.types||[],'All types');opt('mb-db2',R.databases||[],'All databases');
+    $('mb-cnt').textContent=n(R.total)+' mailbox(es)'+(R.total>R.items.length?' · first '+R.items.length+' shown (Excel has them all up to 5,000)':'')+(F.mv==='growing'?(R.growth.since?' · growth since '+R.growth.since+' ('+R.growth.days+' days)':' · growth needs a second daily inventory'):'');
+    var feat=function(x){var f=x.features;if(!f)return '<span class="muted">not read</span>';return ['owa','eas','pop','imap','mapi'].filter(function(k){return f[k]===true;}).map(function(k){return Z.pill({owa:'OWA',eas:'ActiveSync',pop:'POP',imap:'IMAP',mapi:'MAPI'}[k],k==='pop'||k==='imap'?'warn':'');}).join('')||'<span class="muted">none</span>';};
+    $('mb-t').innerHTML=tbl(['Mailbox','Address','Type','Database','Size','Items','Quota used','Growth','Last logon','Flags','Protocols'],R.items.map(function(x){
+      var flags=[x.hidden?Z.pill('hidden'):'',x.litigation_hold?Z.pill('litigation hold','info'):'',x.archive?Z.pill('archive'):'',x.forwarding?Z.pill('forwards to '+x.forwarding,x.forwarding_outside?'bad':''):''].join('');
+      return '<tr>'+td(x.name)+td(x.address,'mono')+td(x.type)+td(x.database)+td(mbf(x.size_mb),'num')+td(x.items==null?'–':Z.n(x.items),'num')+'<td class="num">'+(x.used_pct==null?'<span class="muted">no quota</span>':'<span class="'+(x.used_pct>=(R.thresholds.near_quota_pct||90)?'sev high':'')+'">'+esc(x.used_pct)+' %</span>')+'</td>'
+        +td(x.growth_mb==null?'–':(x.growth_mb>0?'+':'')+mbf(x.growth_mb)+(x.growth_pct!=null?' ('+x.growth_pct+' %)':''),'num')+td(x.last_logon?day(x.last_logon)+(x.inactive_days!=null?' · '+x.inactive_days+' d':''):'never')+'<td>'+flags+'</td><td>'+feat(x)+'</td></tr>';}),
+      {largest:'No mailbox read yet.',growing:'No growth yet: it needs two daily inventories.',quota:'No mailbox is near its quota.',inactive:'Every person\'s mailbox was used recently.',hidden:'No mailbox is hidden from the address lists.',forwarding:'No mailbox forwards mail.',features:'No mailbox has this protocol on.',all:'No mailbox matches.'}[F.mv]);
+    var P=V.pf;$('pf-c').textContent=P?(P.present===false?'none in this organisation':P.present==null?'not read yet':n(P.total)+' folder(s)'):'';
+    $('pf-t').innerHTML=!P?'<div class="empty">Loading…</div>':P.present===false?'<div class="empty">This organisation has no public folders.</div>':tbl(['Folder','Mail-enabled','Items','Size','Last change','Content mailbox'],P.items.map(function(f){return '<tr>'+td(f.path,'mono')+td(f.mail_enabled?'yes':'no')+td(f.items==null?'–':Z.n(f.items),'num')+td(mbf(f.size_mb),'num')+td(day(f.last_modified))+td(f.content_mailbox)+'</tr>';}),'Public folders have not been read yet.');}
+  function mbQuery(){var q='/exchange/reports/mailboxes?view='+F.mv+'&limit=500';var s=$('mb-q').value.trim();if(s)q+='&q='+encodeURIComponent(s);if($('mb-type').value)q+='&type='+encodeURIComponent($('mb-type').value);if($('mb-db2').value)q+='&database='+encodeURIComponent($('mb-db2').value);
+    if(F.mv==='growing'||(F.mv==='inactive'&&$('mb-days').dataset.set))q+='&days='+$('mb-days').value;   /* inactive: the administrator's setting unless a period is picked */if(F.mv==='features'&&$('mb-feat').value)q+='&feature='+$('mb-feat').value;return q;}
+  function loadMb(){drawMb();if(!ADMIN())return Promise.resolve();
+    return Promise.all([Z.req('GET',mbQuery()).then(function(r){V.mb=r;},function(e){V.mb={err:why(e)};}),
+      Z.req('GET','/exchange/reports/public-folders?limit=500').then(function(r){V.pf=r;},function(){V.pf={present:null,items:[],total:0};/* shown as not read */})]).then(drawMb);}
+
+  /* ---- Permissions */
+  function drawPm(){var P=SUM.permissions;
+    $('pm-k').innerHTML=!P?'<div class="empty">Mailbox permissions have not been read yet.</div>':tile('Mailboxes read',n(P.mailboxes_read),'')+tile('Others can open',n(P.mailboxes_with_delegates),'mailboxes with a delegate')+tile('Full Access',n(P.full_access),'grants')+tile('Send As',n(P.send_as),'grants',P.send_as?'warn':'')+tile('Send on Behalf',n(P.send_on_behalf),'grants')+tile('People with access',n(P.holders),'to someone else\'s mailbox')+tile('Over 10 mailboxes',n(P.holders_over_10),'people',P.holders_over_10?'warn':'ok');
+    var named=ADMIN();$('pm-seg').hidden=!named;$('pm-q').parentNode.hidden=!named;
+    if(!named){$('pm-t').innerHTML=priv('Permissions');return;}
+    var R=V.pm;if(!R){$('pm-t').innerHTML='<div class="empty">Loading…</div>';return;}
+    var list=function(a){return a&&a.length?a.map(function(x){return '<div class="mono">'+esc(x)+'</div>';}).join(''):'<span class="muted">–</span>';};
+    $('pm-cnt').textContent=n(R.total)+(R.view==='holders'?' person / account(s)':' mailbox(es) with delegates');
+    $('pm-t').innerHTML=R.view==='holders'?tbl(['Who','Mailboxes','Full Access','Send As','Send on Behalf','Mailboxes they can reach'],R.items.map(function(h){return '<tr>'+td(h.holder,'mono')+td(h.mailboxes,'num')+td(h.full_access,'num')+td(h.send_as,'num')+td(h.send_on_behalf,'num')+'<td class="mem">'+h.grants.slice(0,12).map(function(g){return esc(g.mailbox)+' ('+esc({full_access:'Full Access',send_as:'Send As',send_on_behalf:'on behalf'}[g.right])+')';}).join(', ')+(h.grants.length>12?' +'+(h.grants.length-12):'')+'</td></tr>';}),'Nobody has access to another person\'s mailbox.')
+      :tbl(['Mailbox','Type','Full Access','Send As','Send on Behalf'],R.items.map(function(p){return '<tr><td><b>'+esc(p.name)+'</b><div class="mono mem">'+esc(p.mailbox)+'</div></td>'+td(p.type)+'<td>'+list(p.full_access)+'</td><td>'+list(p.send_as)+'</td><td>'+list(p.send_on_behalf)+'</td></tr>';}),'No mailbox has a delegate.');}
+  function loadPm(){drawPm();if(!ADMIN())return Promise.resolve();var q='/exchange/reports/permissions?view='+F.pv+'&limit=500',s=$('pm-q').value.trim();if(s)q+='&q='+encodeURIComponent(s);if($('pm-right').value)q+='&right='+$('pm-right').value;
+    return Z.req('GET',q).then(function(r){V.pm=r;drawPm();},function(e){$('pm-t').innerHTML='<p class="err">'+esc(why(e))+'</p>';});}
+
+  /* ---- Distribution lists */
+  function drawDl(){var G=SUM.groups;
+    $('dl-k').innerHTML=!G?'<div class="empty">Distribution lists have not been read yet.</div>':tile('Lists',n(G.total),n(G.dynamic)+' dynamic')+tile('External members',n(G.with_external),'lists',G.with_external?'warn':'ok')+tile('Empty',n(G.empty),'lists with no member',G.empty?'warn':'ok')+tile('Nested',n(G.nested),'lists containing lists')+tile('Open to outside senders',n(G.accepts_external),'lists',G.accepts_external?'warn':'')+tile('Hidden',n(G.hidden),'from address lists');
+    $('dl-bands').innerHTML=G?hbars(G.size_bands.map(function(b){return {l:b.label,v:b.n,c:'c3'};})):'<div class="empty">No list read yet.</div>';
+    $('dl-glance').innerHTML=G?hbars([{l:'External members',v:G.with_external,c:'c5'},{l:'Empty',v:G.empty,c:'c4'},{l:'Nested',v:G.nested,c:'c2'},{l:'Open to outside senders',v:G.accepts_external,c:'c5'},{l:'Expansion cut at the limit',v:G.truncated,c:'c4'}]):'<div class="empty">No list read yet.</div>';
+    var named=ADMIN();$('dl-seg').hidden=!named;$('dl-q').parentNode.hidden=!named;
+    if(!named){$('dl-t').innerHTML=priv('List members');return;}
+    var R=V.dl;if(!R){$('dl-t').innerHTML='<div class="empty">Loading…</div>';return;}
+    $('dl-cnt').textContent=n(R.total)+' list(s)'+(R.domains_derived?' · "external" = outside the domains of our mailboxes':'');
+    if(R.view==='dynamic'){$('dl-t').innerHTML=tbl(['List','Address','Hidden','Outside senders'],R.items.map(function(g){return '<tr>'+td(g.name)+td(g.address,'mono')+td(g.hidden?'yes':'no')+td(g.accepts_external?'accepted':'refused')+'</tr>';}),'No dynamic list.');return;}
+    $('dl-t').innerHTML=tbl(['List','Address','People','Direct','External','Nested lists','Outside senders','Members'],R.items.map(function(g){
+      var mem=g.people.slice(0,8).map(function(p){return '<span class="'+(p.external?'sev high':'')+'">'+esc(p.name||p.address)+'</span>';}).join(', ')+(g.people.length>8?' +'+(g.members-8):'');
+      return '<tr><td><b>'+esc(g.name)+'</b>'+(g.hidden?' '+Z.pill('hidden'):'')+(g.truncated?' '+Z.pill('cut at the limit','warn'):'')+'</td>'+td(g.address,'mono')+td(g.members,'num')+td(g.direct,'num')+'<td class="num">'+(g.external.length?Z.pill(n(g.external.length),'bad'):'0')+'</td>'+td(g.nested.length,'num')+td(g.accepts_external?'accepted':'refused')+'<td class="mem">'+(mem||'<span class="muted">empty</span>')+'</td></tr>';}),
+      {all:'No distribution list.',external:'No list has a member outside the organisation.',empty:'No empty list.',nested:'No list contains another list.'}[R.view]||'No list.');}
+  function loadDl(){drawDl();if(!ADMIN())return Promise.resolve();var q='/exchange/reports/groups?view='+F.lv+'&limit=500',s=$('dl-q').value.trim();if(s)q+='&q='+encodeURIComponent(s);
+    return Z.req('GET',q).then(function(r){V.dl=r;drawDl();},function(e){$('dl-t').innerHTML='<p class="err">'+esc(why(e))+'</p>';});}
+
+  /* ---- Traffic */
+  function trQuery(){var q='/mail/traffic?range='+$('tr-range').value+'&limit=25',d=$('tr-dom').value.replace(/\s+/g,''),p=$('tr-pd').value.trim();if(d)q+='&domains='+encodeURIComponent(d);if(p)q+='&domain='+encodeURIComponent(p);if($('tr-dir').value!=='all')q+='&dir='+$('tr-dir').value;return q;}
+  function drawTr(){var T=V.tr;if(!T)return;var s=T.status,sp=T.split,pd=T.partner;
+    if(!T.exchange){$('tr-k').innerHTML='<div class="empty">'+esc(T.note)+'</div>';['tr-series','tr-why','tr-hour','tr-dow','tr-size','tr-snd','tr-rcp'].forEach(function(i){$(i).innerHTML='<div class="empty">No message tracking for this period.</div>';});$('tr-note').textContent='';return;}
+    var fl=s.failed+s.dropped;
+    $('tr-k').innerHTML=tile('Received',n(s.received),'unique messages')+tile('Delivered',n(s.delivered),'to mailboxes','ok')+tile('Sent out',n(s.sent),'to other servers')+tile('Failed',n(fl),'failed or dropped',fl?'bad':'ok')+tile('Deferred',n(s.deferred),'delivery retried',s.deferred?'warn':'')
+      +(sp?tile('From the Internet',n(sp.received_external),'')+tile('To the Internet',n(sp.sent_external),'')+tile('Internal',n(sp.internal),''):tile('Internal / Internet','–','add our mail domains','na'))
+      +(pd?tile(pd.domain,n(pd.received_from)+' / '+n(pd.sent_to),'received from / sent to'+(pd.failed_to?' · '+pd.failed_to+' failed':''),pd.failed_to?'warn':''):'');
+    $('tr-bk').textContent=T.bucket_ms>=86400000?'daily':'hourly';
+    var lab=function(x){var d=new Date(x.t);return T.bucket_ms>=86400000?d.toISOString().slice(5,10):d.toISOString().slice(11,16)+' UTC';};
+    $('tr-series').innerHTML=vbars(T.series,[['received','received','c1'],['sent','sent out','c2'],['failed','failed','c4']],lab);
+    $('tr-why').innerHTML=tbl(['Status','Code','Reason','Messages'],T.reasons.map(function(r){return '<tr><td>'+Z.pill(r.status,r.status==='defer'?'warn':'bad')+'</td>'+td(r.code||'–','mono')+td(r.reason,'small')+td(Z.n(r.n),'num')+'</tr>';}),'No failed or deferred message in this period.');
+    $('tr-hour').innerHTML=vbars(T.by_hour,[['n','received','c1']],function(x){return String(x.hour).padStart(2,'0')+':00';});
+    $('tr-dow').innerHTML=hbars(T.by_weekday.map(function(d){return {l:d.day,v:d.n,c:'c2'};}));
+    $('tr-avg').textContent=T.average_kb==null?'':'average '+T.average_kb+' KB';
+    $('tr-size').innerHTML=hbars(T.sizes.map(function(b){return {l:b.label,v:b.n,c:'c3'};}));
+    $('tr-named').hidden=!T.named;
+    if(T.named){$('tr-snd').innerHTML=tbl(['Sender','Messages','MB'],T.top_senders.map(function(x){return '<tr>'+td(x.address,'mono')+td(Z.n(x.n),'num')+td(x.mb,'num')+'</tr>';}),'No sender in this period.');
+      $('tr-rcp').innerHTML=tbl(['Recipient','Messages'],T.top_recipients.map(function(x){return '<tr>'+td(x.address,'mono')+td(Z.n(x.n),'num')+'</tr>';}),'No recipient in this period.');}
+    $('tr-note').textContent=T.note;}
+  function loadTr(){$('tr-k').innerHTML='<div class="empty">Loading…</div>';return Z.req('GET',trQuery()).then(function(r){V.tr=r;drawTr();},function(e){V.tr=null;$('tr-k').innerHTML='<p class="err">'+esc(why(e))+'</p>';});}
+
+  /* ---- OWA & ActiveSync */
+  function drawCl(){var C=V.cl,M=SUM.mobile;
+    var t=C&&C.totals;
+    $('cl-k').innerHTML=(t?tile('OWA users',n(t.owa_users),n(t.owa_signins)+' sign-ins')+tile('ActiveSync users',n(t.eas_users),'')+tile('Devices syncing',n(t.eas_devices),'seen in the logs')+tile('Failed logons',n(t.failed),n(t.failed_users)+' account(s) · '+n(t.failed_ips)+' address(es)',t.failed?'warn':'ok')
+      :tile('OWA / ActiveSync logs','–',C&&!C.configured?'not connected':'loading','na'))
+      +(M?tile('Mobile devices',n(M.devices),'in Exchange')+tile('Stale',n(M.stale),'no sync for '+M.stale_days+' days',M.stale?'warn':'ok')+tile('Unapproved models',M.unapproved==null?'–':n(M.unapproved),M.unapproved==null?'set the approved models':'',M.unapproved==null?'na':M.unapproved?'bad':'ok')+tile('Blocked / quarantined',n(M.blocked+M.quarantined),'')
+        :tile('Mobile devices','–','not read yet','na'));
+    $('cl-series').innerHTML=C&&C.configured?vbars(C.series,[['owa_users','OWA users','c1'],['eas_devices','ActiveSync devices','c2'],['failed','failed logons','c4']],function(x){var d=new Date(x.t);return C.bucket_ms>=86400000?d.toISOString().slice(5,10):d.toISOString().slice(11,16)+' UTC';})+(C.by_service||[]).map(function(s){return '<div class="note">'+esc(s.service)+': '+esc(Z.n(s.requests))+' requests · '+esc(Z.n(s.failed))+' failed logons · '+esc(Z.n(s.errors))+' server errors</div>';}).join(''):'<div class="empty">'+esc(C?C.note:'Loading…')+'</div>';
+    $('cl-os').innerHTML=M?hbars(M.by_os.map(function(o){return {l:o.label,v:o.n,c:'c2'};}),'No device.')+'<div class="note">'+M.by_access.map(function(a){return esc(a.label)+' '+esc(a.n);}).join(' · ')+'</div>':'<div class="empty">The mobile device inventory has not been read yet.</div>';
+    var named=ADMIN();['cl-users-card','cl-fail-card'].forEach(function(i){$(i).hidden=!named||!(C&&C.configured);});$('dv-seg').hidden=!named;$('dv-q').parentNode.hidden=!named;
+    if(named&&C&&C.users){var q=$('cl-q').value.trim().toLowerCase();
+      $('cl-users').innerHTML=tbl(['Account','OWA sign-ins','OWA requests','ActiveSync syncs','Devices','Failed','Addresses','Last seen'],C.users.filter(function(u){return !q||u.user.toLowerCase().indexOf(q)>=0;}).map(function(u){return '<tr>'+td((u.domain?u.domain+'\\':'')+u.user,'mono')+td(Z.n(u.owa_signins),'num')+td(Z.n(u.owa_requests),'num')+td(Z.n(u.eas_syncs),'num')+td(u.devices,'num')+'<td class="num">'+(u.failed?Z.pill(Z.n(u.failed),'warn'):'0')+'</td>'+td(u.ips,'num')+td(String(u.last).slice(0,16))+'</tr>';}),'No logon in this period.');
+      $('cl-fail').innerHTML=tbl(['Account','From address','Service','Failed','Last'],C.failed.map(function(f){return '<tr>'+td(f.user,'mono')+td(f.ip,'mono')+td(f.service)+td(Z.n(f.n),'num')+td(String(f.last).slice(0,16))+'</tr>';}),'No failed logon in this period.');}
+    if(!named){$('dv-t').innerHTML=priv('Device owners');}
+    else{var D=V.dv;if(!D){$('dv-t').innerHTML='<div class="empty">Loading…</div>';}
+      else{$('dv-cnt').textContent=n(D.total)+' device(s) · stale after '+D.stale_days+' days'+(D.approved_models&&D.approved_models.length?' · approved: '+D.approved_models.join(', '):' · no approved-model list set');
+        $('dv-t').innerHTML=tbl(['Owner','Model','Type','OS','Client','Access','Policy','First sync','Last sync'],D.items.map(function(d){return '<tr>'+td(d.owner)+'<td>'+esc(d.model||'–')+(d.unapproved?' '+Z.pill('unapproved','bad'):'')+'</td>'+td(d.type)+td(d.os)+td(d.client)+'<td>'+Z.pill(d.access||'unknown',/blocked|quarantined/i.test(d.access)?'bad':/allowed/i.test(d.access)?'ok':'')+'</td>'+td(d.policy+(d.policy_status?' · '+d.policy_status:''))+td(day(d.first_sync))+'<td>'+esc(day(d.last_sync))+(d.stale?' '+Z.pill(d.days_since_sync==null?'never synced':d.days_since_sync+' d','warn'):'')+'</td></tr>';}),
+          {all:'No mobile device in Exchange.',stale:'Every device synced recently.',unapproved:D.approved_models&&D.approved_models.length?'Every device is an approved model.':'Set the approved device models in Report settings first.',blocked:'No device is blocked or quarantined.'}[D.view]);}}
+    $('cl-note').textContent=C?C.note:'';}
+  function loadCl(){V.cl=null;drawCl();var a=Z.req('GET','/exchange/reports/clients?range='+$('cl-range').value).then(function(r){V.cl=r;},function(e){V.cl={configured:false,note:why(e),series:[]};});
+    var b=ADMIN()?Z.req('GET','/exchange/reports/devices?view='+F.dv+'&limit=500'+($('dv-q').value.trim()?'&q='+encodeURIComponent($('dv-q').value.trim()):'')).then(function(r){V.dv=r;},function(e){V.dv=null;$('dv-t').innerHTML='<p class="err">'+esc(why(e))+'</p>';}):Promise.resolve();
+    return Promise.all([a,b]).then(drawCl);}
+
+  /* ---- Exchange Online */
+  function drawOn(){var O=V.on;if(!O)return;var S=O.summary;
+    if(O.state!=='ok'){$('on-k').innerHTML='<div class="empty">'+esc(O.note)+'</div>';$('on-card').hidden=true;$('on-note').textContent='';return;}
+    $('on-k').innerHTML=tile('Mailboxes',n(S.mailboxes),'in Exchange Online')+tile('Mailbox data',gbf(S.size_gb),'')+tile('Near quota',n(S.near_quota),'',S.near_quota?'warn':'ok')+tile('No activity',n(S.inactive_30d),'in 30 days',S.inactive_30d?'warn':'ok')+tile('Sent',n(S.sent),'30 days')+tile('Received',n(S.received),'30 days')+tile('Read',n(S.read),'30 days');
+    $('on-card').hidden=!O.named;
+    if(O.named){$('on-cnt').textContent=n(O.total)+' mailbox(es) · report of '+(S.refreshed||'–');
+      $('on-t').innerHTML=tbl(['Mailbox','Address','Type','Size','Items','Quota used','Archive','Last activity','Sent','Received','Read'],O.items.map(function(x){return '<tr>'+td(x.name)+td(x.upn,'mono')+td(x.type)+td(mbf(x.size_mb),'num')+td(x.items==null?'–':Z.n(x.items),'num')+td(x.used_pct==null?'–':x.used_pct+' %','num')+td(x.has_archive?'yes':'no')+td(x.last_activity||'never')+td(x.sent==null?'–':Z.n(x.sent),'num')+td(x.received==null?'–':Z.n(x.received),'num')+td(x.read==null?'–':Z.n(x.read),'num')+'</tr>';}),'No Exchange Online mailbox matches.');}
+    $('on-note').textContent=O.note+' From Microsoft 365 usage reports (Microsoft Graph, Reports.Read.All).';}
+  function loadOn(){var q='/exchange/reports/online?view='+F.ov+'&limit=500',s=$('on-q').value.trim();if(s)q+='&q='+encodeURIComponent(s);
+    return Z.req('GET',q).then(function(r){V.on=r;drawOn();},function(e){$('on-k').innerHTML='<p class="err">'+esc(why(e))+'</p>';});}
+
+  var LOAD={mb:loadMb,pm:loadPm,dl:loadDl,tr:loadTr,cl:loadCl,on:loadOn};
+  function show(t){TAB=t;[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===t);b.setAttribute('aria-selected',b.getAttribute('data-tab')===t?'true':'false');});
+    Object.keys(LOAD).forEach(function(k){$('tab-'+k).hidden=k!==t;});if(SUM)LOAD[t]();}
+  function load(){return Z.req('GET','/exchange/reports/summary').then(function(s){SUM=s;header();LOAD[TAB]();if(s.status.running)poll();},function(e){$('nc').hidden=false;$('nc').textContent=why(e);$('up').textContent='not reachable';
+    ['mb-k','pm-k','dl-k','tr-k','cl-k','on-k'].forEach(function(i){$(i).innerHTML='<div class="empty">The SIEM did not answer - nothing is shown rather than old or invented figures.</div>';});});}
+  function poll(){clearTimeout(POLL);POLL=setTimeout(function(){Z.req('GET','/exchange/reports/status').then(function(st){if(st.running){SUM.status=st;header();poll();}else{V.mb=V.pf=V.pm=V.dl=V.dv=V.on=null;load();Z.toast('The Exchange inventory has been read.');}},function(){poll();});},5000);}
+
+  /* ---- Excel: the open tab, with what was filtered */
+  function sheetsOf(){var S=SUM||{},sh=[],flt='';
+    var sum=function(name,o){if(!o)return;sh.push({name:name,columns:[{h:'Measure',w:34},{h:'Value',w:16}],rows:Object.keys(o).filter(function(k){return o[k]==null||typeof o[k]!=='object';}).map(function(k){return [k.replace(/_/g,' '),o[k]];})});};
+    if(TAB==='mb'){sum('Summary',S.mailboxes);if(S.mailboxes)sh.push({name:'By database',columns:[{h:'Database',w:20},{h:'Server',w:16},{h:'Mailboxes',t:'n'},{h:'Mailbox data GB',t:'n'},{h:'File GB',t:'n'},{h:'White space GB',t:'n'}],rows:S.mailboxes.by_database.map(function(d){return [d.database,d.server,d.mailboxes,d.size_gb,d.file_gb,d.whitespace_gb];})});
+      sh.push({name:'Trend',columns:[{h:'Day',t:'d'},{h:'Mailboxes',t:'n'},{h:'Mailbox data GB',t:'n'}],rows:(S.trend||[]).map(function(d){return [d.day,d.mailboxes,d.size_gb];})});
+      if(V.mb&&ADMIN()){flt=F.mv+($('mb-q').value?' · "'+$('mb-q').value+'"':'')+($('mb-type').value?' · '+$('mb-type').value:'')+($('mb-db2').value?' · '+$('mb-db2').value:'');
+        sh.push({name:'Mailboxes ('+F.mv+')',columns:[{h:'Name',w:28},{h:'Address',w:34},{h:'Type',w:18},{h:'Database',w:14},{h:'Size MB',t:'n'},{h:'Items',t:'n'},{h:'Quota MB',t:'n'},{h:'Used %',t:'n'},{h:'Growth MB',t:'n'},{h:'Last logon',t:'d'},{h:'Hidden'},{h:'Litigation hold'},{h:'Archive'},{h:'Forwards to',w:30},{h:'Forwards outside'},{h:'POP'},{h:'IMAP'},{h:'OWA'},{h:'ActiveSync'}],
+          rows:V.mb.items.map(function(x){var f=x.features||{},yn=function(v){return v===true?'yes':v===false?'no':'';};return [x.name,x.address,x.type,x.database,x.size_mb,x.items,x.quota_mb,x.used_pct,x.growth_mb,x.last_logon?x.last_logon.slice(0,10):'',yn(x.hidden),yn(x.litigation_hold),yn(x.archive),x.forwarding||'',yn(x.forwarding_outside),yn(f.pop),yn(f.imap),yn(f.owa),yn(f.eas)];})});
+        if(V.pf&&V.pf.items.length)sh.push({name:'Public folders',columns:[{h:'Folder',w:40},{h:'Mail-enabled'},{h:'Items',t:'n'},{h:'Size MB',t:'n'},{h:'Last change',t:'d'}],rows:V.pf.items.map(function(f){return [f.path,f.mail_enabled?'yes':'no',f.items,f.size_mb,f.last_modified?f.last_modified.slice(0,10):''];})});}}
+    if(TAB==='pm'){sum('Summary',S.permissions);if(V.pm&&ADMIN()){flt=F.pv+($('pm-right').value?' · '+$('pm-right').value:'')+($('pm-q').value?' · "'+$('pm-q').value+'"':'');
+      if(V.pm.view==='holders')sh.push({name:'By person',columns:[{h:'Who',w:30},{h:'Mailboxes',t:'n'},{h:'Full Access',t:'n'},{h:'Send As',t:'n'},{h:'Send on Behalf',t:'n'},{h:'Mailboxes they can reach',w:60}],rows:V.pm.items.map(function(h){return [h.holder,h.mailboxes,h.full_access,h.send_as,h.send_on_behalf,h.grants.map(function(g){return g.mailbox+' ('+g.right+')';}).join('; ')];})});
+      else sh.push({name:'By mailbox',columns:[{h:'Mailbox',w:34},{h:'Name',w:26},{h:'Type',w:16},{h:'Full Access',w:40},{h:'Send As',w:30},{h:'Send on Behalf',w:30}],rows:V.pm.items.map(function(p){return [p.mailbox,p.name,p.type,p.full_access.join('; '),p.send_as.join('; '),p.send_on_behalf.join('; ')];})});}}
+    if(TAB==='dl'){sum('Summary',S.groups);if(V.dl&&ADMIN()){flt=F.lv+($('dl-q').value?' · "'+$('dl-q').value+'"':'');
+      if(V.dl.view==='dynamic')sh.push({name:'Dynamic lists',columns:[{h:'List',w:30},{h:'Address',w:34},{h:'Hidden'},{h:'Outside senders'}],rows:V.dl.items.map(function(g){return [g.name,g.address,g.hidden?'yes':'no',g.accepts_external?'accepted':'refused'];})});
+      else{sh.push({name:'Lists',columns:[{h:'List',w:30},{h:'Address',w:34},{h:'People',t:'n'},{h:'Direct members',t:'n'},{h:'External',t:'n'},{h:'Nested lists',w:30},{h:'Outside senders'},{h:'Hidden'},{h:'Managed by',w:30}],rows:V.dl.items.map(function(g){return [g.name,g.address,g.members,g.direct,g.external.length,g.nested.join('; '),g.accepts_external?'accepted':'refused',g.hidden?'yes':'no',(g.managed_by||[]).join('; ')];})});
+        var mem=[];V.dl.items.forEach(function(g){g.people.forEach(function(p){mem.push([g.address,p.name,p.address,p.type,p.external?'yes':'no',p.via||'']);});});
+        sh.push({name:'Members',columns:[{h:'List',w:30},{h:'Member',w:28},{h:'Address',w:34},{h:'Type',w:18},{h:'External'},{h:'Through list',w:24}],rows:mem});}}}
+    if(TAB==='tr'&&V.tr&&V.tr.exchange){var T=V.tr;flt='last '+T.range_days+' day(s)'+(T.domain?' · '+T.domain:'')+(T.dir!=='all'?' · '+T.dir:'');
+      sh.push({name:'Status',columns:[{h:'Status',w:20},{h:'Messages',t:'n'}],rows:Object.keys(T.status).map(function(k){return [k,T.status[k]];}).concat(T.split?[['received from the Internet',T.split.received_external],['sent to the Internet',T.split.sent_external],['internal',T.split.internal]]:[]).concat(T.partner?[['received from '+T.partner.domain,T.partner.received_from],['sent to '+T.partner.domain,T.partner.sent_to],['failed to '+T.partner.domain,T.partner.failed_to]]:[])});
+      sh.push({name:'Over time',columns:[{h:'Time',t:'d'},{h:'Received',t:'n'},{h:'Delivered',t:'n'},{h:'Sent',t:'n'},{h:'Failed',t:'n'}],rows:T.series.map(function(x){return [new Date(x.t).toISOString().slice(0,16),x.received,x.delivered,x.sent,x.failed];})});
+      sh.push({name:'Reasons',columns:[{h:'Status',w:10},{h:'Code',w:10},{h:'Reason',w:70},{h:'Messages',t:'n'}],rows:T.reasons.map(function(r){return [r.status,r.code,r.reason,r.n];})});
+      sh.push({name:'By hour',columns:[{h:'Hour (Riyadh)',t:'n'},{h:'Received',t:'n'}],rows:T.by_hour.map(function(x){return [x.hour,x.n];})});
+      sh.push({name:'Sizes',columns:[{h:'Size',w:16},{h:'Messages',t:'n'}],rows:T.sizes.map(function(x){return [x.label,x.n];})});
+      if(T.named){sh.push({name:'Top senders',columns:[{h:'Sender',w:36},{h:'Messages',t:'n'},{h:'MB',t:'n'}],rows:T.top_senders.map(function(x){return [x.address,x.n,x.mb];})});sh.push({name:'Top recipients',columns:[{h:'Recipient',w:36},{h:'Messages',t:'n'}],rows:T.top_recipients.map(function(x){return [x.address,x.n];})});}}
+    if(TAB==='cl'){if(V.cl&&V.cl.totals)sum('Logons',V.cl.totals);sum('Devices',S.mobile);flt='last '+$('cl-range').value+' day(s) · devices: '+F.dv;
+      if(ADMIN()&&V.cl&&V.cl.users)sh.push({name:'Logons per person',columns:[{h:'Account',w:28},{h:'OWA sign-ins',t:'n'},{h:'OWA requests',t:'n'},{h:'ActiveSync syncs',t:'n'},{h:'Devices',t:'n'},{h:'Failed',t:'n'},{h:'Addresses',t:'n'},{h:'Last seen',w:18}],rows:V.cl.users.map(function(u){return [(u.domain?u.domain+'\\':'')+u.user,u.owa_signins,u.owa_requests,u.eas_syncs,u.devices,u.failed,u.ips,u.last];})});
+      if(ADMIN()&&V.cl&&V.cl.failed)sh.push({name:'Failed logons',columns:[{h:'Account',w:28},{h:'From',w:18},{h:'Service',w:12},{h:'Failed',t:'n'},{h:'Last',w:18}],rows:V.cl.failed.map(function(f){return [f.user,f.ip,f.service,f.n,f.last];})});
+      if(ADMIN()&&V.dv)sh.push({name:'Mobile devices',columns:[{h:'Owner',w:26},{h:'Model',w:18},{h:'Type',w:14},{h:'OS',w:16},{h:'Access',w:14},{h:'Policy',w:16},{h:'Last sync',t:'d'},{h:'Days since sync',t:'n'},{h:'Stale'},{h:'Unapproved'}],rows:V.dv.items.map(function(d){return [d.owner,d.model,d.type,d.os,d.access,d.policy,d.last_sync?d.last_sync.slice(0,10):'',d.days_since_sync,d.stale?'yes':'no',d.unapproved===true?'yes':d.unapproved===false?'no':''];})});}
+    if(TAB==='on'&&V.on&&V.on.state==='ok'){sum('Summary',V.on.summary);flt=F.ov;if(V.on.named)sh.push({name:'Exchange Online',columns:[{h:'Name',w:28},{h:'Address',w:34},{h:'Type',w:12},{h:'Size MB',t:'n'},{h:'Items',t:'n'},{h:'Used %',t:'n'},{h:'Last activity',t:'d'},{h:'Sent',t:'n'},{h:'Received',t:'n'},{h:'Read',t:'n'}],rows:V.on.items.map(function(x){return [x.name,x.upn,x.type,x.size_mb,x.items,x.used_pct,x.last_activity||'',x.sent,x.received,x.read];})});}
+    return {sheets:sh,filter:flt};}
+  function excel(){var x=sheetsOf();if(!x.sheets.length)return Z.toast('Nothing to export on this tab yet.');
+    var names={mb:'mailboxes',pm:'permissions',dl:'distribution-lists',tr:'traffic',cl:'owa-activesync',on:'exchange-online'};
+    window.zybXlsx.download('exchange-'+names[TAB]+'-'+new Date().toISOString().slice(0,10)+'.xlsx',x.sheets,{title:('Exchange Reports - ' + ZYB_ORG.short),filter:(x.filter||'summary')+(ADMIN()?'':' (counts only - names are for administrators)'),by:Z.user()||Z.role()});}
+
+  /* ---- events (delegated; no inline handlers) */
+  document.addEventListener('click',function(ev){var t=ev.target.closest('[data-tab],[data-mv],[data-pv],[data-lv],[data-dv],[data-ov],button[id]');if(!t)return;
+    var seg=function(attr,key,fn){[].forEach.call(t.parentNode.querySelectorAll('['+attr+']'),function(b){b.classList.toggle('on',b===t);});F[key]=t.getAttribute(attr);fn();};
+    if(t.hasAttribute('data-tab'))return show(t.getAttribute('data-tab'));
+    if(t.hasAttribute('data-mv')){V.mb=null;return seg('data-mv','mv',loadMb);}if(t.hasAttribute('data-pv')){V.pm=null;return seg('data-pv','pv',loadPm);}if(t.hasAttribute('data-lv')){V.dl=null;return seg('data-lv','lv',loadDl);}
+    if(t.hasAttribute('data-dv')){V.dv=null;return seg('data-dv','dv',loadCl);}if(t.hasAttribute('data-ov'))return seg('data-ov','ov',loadOn);
+    if(t.id==='refresh'){V.mb=V.pf=V.pm=V.dl=V.dv=V.on=null;return load();}
+    if(t.id==='xls')return excel();
+    if(t.id==='tr-go')return loadTr();
+    if(t.id==='collect'){t.disabled=true;return Z.req('POST','/exchange/reports/collect',{}).then(function(){Z.toast('Reading the Exchange organisation - this can take several minutes.');SUM.status.running=true;header();poll();},function(e){t.disabled=false;Z.toast(why(e));});}
+  });
+  var typed=function(fn){return function(){clearTimeout(QT);QT=setTimeout(fn,350);};};
+  $('mb-q').addEventListener('input',typed(loadMb));$('pm-q').addEventListener('input',typed(loadPm));$('dl-q').addEventListener('input',typed(loadDl));$('dv-q').addEventListener('input',typed(loadCl));$('on-q').addEventListener('input',typed(loadOn));$('cl-q').addEventListener('input',typed(drawCl));
+  ['mb-type','mb-db2','mb-feat'].forEach(function(i){$(i).addEventListener('change',loadMb);});$('mb-days').addEventListener('change',function(){$('mb-days').dataset.set='1';loadMb();});
+  $('pm-right').addEventListener('change',loadPm);$('tr-range').addEventListener('change',loadTr);$('tr-dir').addEventListener('change',loadTr);$('cl-range').addEventListener('change',loadCl);
+  $('setf').addEventListener('submit',function(ev){ev.preventDefault();var f=ev.target,list=function(v){return v.split(',').map(function(x){return x.trim();}).filter(Boolean);};
+    var b={inactive_days:+f.elements.inactive_days.value,stale_device_days:+f.elements.stale_device_days.value,near_quota_pct:+f.elements.near_quota_pct.value,collect_hour:+f.elements.collect_hour.value,approved_models:list(f.elements.approved_models.value),internal_domains:list(f.elements.internal_domains.value)};
+    Z.req('PUT','/exchange/reports/settings',b).then(function(){Z.toast('Settings saved.');V.mb=V.dl=V.dv=null;load();},function(e){Z.toast(why(e));});});
+  Z.ready(load);
+})();
+</script></body></html>

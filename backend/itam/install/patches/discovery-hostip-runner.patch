@@ -1,0 +1,18 @@
+diff --git a/engine/discovery/runner.js b/engine/discovery/runner.js
+index 81c0e9f..cc16b2c 100644
+--- a/engine/discovery/runner.js
++++ b/engine/discovery/runner.js
+@@ -107,9 +107,10 @@ async function execute({ run, scope, allowed, ctx }) {
+         if (!r.ok) { stat('vcenter', { ok: false, error_class: r.error_class }); continue; }
+         const vres = deps.resolve || ctx.resolve || makeResolver(ctx, []);
+         for (const h of r.hosts) {   // physical ESXi hosts: vCenter knows them by name - resolve it to an address
+-          let ip = ip4.parseIp(h.name) !== null ? h.name : null;
+-          if (!ip && vres && /\./.test(h.name)) { try { ip = await vres(h.name); } catch { ip = null; } }
+-          obs({ method: 'vcenter', hostname: ip4.parseIp(h.name) === null ? h.name : '', ip, uid: `vc-host:${h.id}`, os: 'VMware ESXi', extra: { vcenter: { kind: 'host', state: h.state } } });
++          // the management VMkernel address vCenter reported; else the name when it is an address; else DNS
++          let ip = h.ip && ip4.parseIp(h.ip) !== null ? h.ip : ip4.parseIp(h.name) !== null ? h.name : null, from = ip ? 'vcenter' : null;
++          if (!ip && vres && /\./.test(h.name)) { try { ip = await vres(h.name); if (ip) from = 'dns'; } catch { ip = null; } }
++          obs({ method: 'vcenter', hostname: ip4.parseIp(h.name) === null ? h.name : '', ip, uid: `vc-host:${h.id}`, os: 'VMware ESXi', extra: { vcenter: { kind: 'host', state: h.state, vmk: h.vmk || null, ip_from: from } } });
+         }
+         for (const v of r.vms) obs({ method: 'vcenter', hostname: v.hostname || v.name, ips: v.ips, macs: v.macs, os: v.guest_os, uid: `vc:${v.uuid || v.id}`, extra: { vcenter: { kind: 'vm', host: v.host_name, power_state: v.power_state, uuid: v.uuid, name: v.name } } });
+         stat('vcenter', { ok: true, seen: r.hosts.length + r.vms.length, hosts: r.hosts.length, vms: r.vms.length, ms: Date.now() - t0 });

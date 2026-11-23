@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WAN Optimization</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- WAN Optimization (HPE Aruba EdgeConnect / Silver Peak) over /api/soc/netops/wanopt: bytes saved and reduction per appliance and
+     per application, tunnel loss / latency / jitter against the thresholds, Orchestrator alarms, a drop against each appliance's own
+     usual reduction, ranked actions. Read only. A counter the Orchestrator does not report is "not reported", never zero. -->
+<style>
+.grid2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px}@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.bar{display:inline-block;width:90px;height:8px;border-radius:5px;background:rgba(255,255,255,.08);vertical-align:middle;overflow:hidden;margin-right:6px}.bar i{display:block;height:100%;background:#2fb344}
+.act{border-left:3px solid #4299e1;padding:6px 10px;margin:6px 0;cursor:pointer;border-radius:4px;background:rgba(255,255,255,.02)}.act.bad{border-color:#e5484d}.act.warn{border-color:#f59f00}
+.chip{display:inline-block;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:2px 9px;font-size:12px;cursor:pointer;background:transparent;color:inherit}.chip.on{background:var(--accent,#5794f2);border-color:var(--accent,#5794f2);color:#fff}
+.mut{color:#8b93a4}.sm{font-size:12px}.nr{color:#8b93a4;font-style:italic}
+.th{display:flex;gap:10px;flex-wrap:wrap}.th label{font-size:12px;color:#8b93a4;display:flex;flex-direction:column;gap:3px;width:120px}.th input{width:100%}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · WAN · HPE Aruba EdgeConnect (Silver Peak)</div><h1>WAN Optimization</h1></div><span class="sp"></span><span class="muted" id="up"></span><a class="btn" href="sdwan.html">SD-WAN</a><a class="btn" href="branch-connectivity.html">Branch Connectivity</a><button type="button" id="rf">⟳ Refresh</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div id="body"></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var S = window.zybSoc, esc = S.esc, $ = function (i) { return document.getElementById(i); }, V = null, TF = '';
+  function bytes(n) { if (n == null) return '<span class="nr">not reported</span>'; var u = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'], i = 0; while (n >= 1000 && i < u.length - 1) { n /= 1000; i++; } return esc((Math.round(n * 10) / 10) + ' ' + u[i]); }
+  function redc(r) { return r == null ? '<span class="nr">not reported</span>' : '<span class="bar"><i style="width:' + Math.max(0, Math.min(100, r)) + '%"></i></span>' + esc(r) + ' %'; }
+  function num(v, u) { return v == null ? '<span class="nr">–</span>' : esc(v) + (u || ''); }
+  function load() {
+    return S.req('GET', '/netops/wanopt').then(function (v) { V = v; $('up').textContent = 'read ' + S.ago(v.at); draw(); })
+      .catch(function (e) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card">' + (e.status === 404 ? '<div class="empty">WAN Optimization is not on this SIEM yet - run the SIEM update.</div>' : S.errHtml(e, 'WAN Optimization')) + '</div>'; });
+  }
+  function draw() {
+    if (!V.configured) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(V.reason) + '</div><p><a class="btn" href="network-onboarding.html">Network Onboarding</a></p></div>'; return; }
+    var k = V.kpis;
+    $('kp').innerHTML = S.tile('Data reduction', k.reduction == null ? '–' : k.reduction + ' %', k.measured + ' of ' + k.appliances + ' appliances measured', k.reduction == null ? '' : 'ok', 'go:x-app')
+      + S.tile('Bytes saved', k.saved_bytes == null ? '–' : bytes(k.saved_bytes).replace(/<[^>]+>/g, ''), 'over the last statistics window', '', 'go:x-app')
+      + S.tile('Appliances down', k.down, 'of ' + k.appliances, k.down ? 'bad' : 'ok', 'go:x-app')
+      + S.tile('Tunnels critical', k.tunnels_critical, k.tunnels_warning + ' warning · ' + k.tunnels + ' total', k.tunnels_critical ? 'bad' : k.tunnels_warning ? 'warn' : 'ok', 'go:x-tun')
+      + S.tile('Critical / major alarms', k.alarms_critical + k.alarms_major, 'active on the Orchestrator', k.alarms_critical ? 'bad' : k.alarms_major ? 'warn' : 'ok', 'go:x-alm')
+      + S.tile('Optimisation dropped', k.dropped, 'against each appliance’s own usual', k.dropped ? 'warn' : 'ok', 'go:x-app');
+    var acts = V.actions.length ? V.actions.map(function (a) { return '<div class="act ' + (a.priority >= 80 ? 'bad' : a.priority >= 40 ? 'warn' : '') + '" data-act="go:x-' + esc({ appliances: 'app', tunnels: 'tun', alarms: 'alm', applications: 'aps', connections: 'con' }[a.filter] || 'app') + '"><b>' + esc(a.title) + '</b><div class="mut sm">' + esc(a.detail) + '</div></div>'; }).join('') : '<div class="empty">Nothing to do: every appliance is up, every tunnel within the thresholds and no critical alarm.</div>';
+    var app = V.appliances.length ? '<div class="tw"><table><thead><tr><th>Appliance</th><th>State</th><th>LAN bytes</th><th>WAN bytes</th><th>Saved</th><th>Reduction</th><th>Usual</th></tr></thead><tbody>' + V.appliances.map(function (a) {
+      return '<tr><td><b>' + esc(a.name) + '</b><div class="mut sm">' + esc([a.site, a.model, a.version].filter(Boolean).join(' · ') || a.orchestrator) + '</div></td><td>' + (a.up == null ? S.pill('stats only', '') : S.pill(a.up ? 'up' : (a.state || 'down'), a.up ? 'ok' : 'bad')) + '</td>'
+        + '<td>' + bytes(a.lan_bytes) + '</td><td>' + bytes(a.wan_bytes) + '</td><td>' + bytes(a.saved_bytes) + '</td><td>' + redc(a.reduction) + '</td><td>' + (a.usual != null ? esc(a.usual) + ' %' + (a.dropped ? ' ' + S.pill('dropped', 'warn') : '') : '<span class="mut sm">' + esc(a.learning || '') + '</span>') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">The Orchestrator reported no appliance yet.</div>';
+    var tl = V.tunnels.filter(function (t) { return !TF || t.level === TF; });
+    var tun = '<div style="margin-bottom:8px">' + [['', 'All'], ['critical', 'Critical'], ['warning', 'Warning'], ['ok', 'OK']].map(function (c) { return '<button type="button" class="chip' + (TF === c[0] ? ' on' : '') + '" data-tf="' + c[0] + '">' + esc(c[1]) + '</button>'; }).join(' ') + '</div>'
+      + (tl.length ? '<div class="tw"><table><thead><tr><th>Tunnel</th><th>Appliance</th><th>Loss</th><th>Latency</th><th>Jitter</th><th>State</th></tr></thead><tbody>' + tl.slice(0, 200).map(function (t) {
+        return '<tr><td><b>' + esc(t.name) + '</b><div class="mut sm">' + esc(t.why) + '</div></td><td>' + esc(t.appliance) + '</td><td>' + num(t.loss_pct, ' %') + '</td><td>' + num(t.latency_ms, ' ms') + '</td><td>' + num(t.jitter_ms, ' ms') + '</td><td>' + S.pill(t.level, t.level === 'critical' ? 'bad' : t.level === 'warning' ? 'warn' : 'ok') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">' + (V.tunnels.length ? 'No tunnel at this level.' : 'No tunnel statistics reported yet.') + '</div>');
+    var aps = V.applications.length ? '<div class="tw"><table><thead><tr><th>Application</th><th>LAN</th><th>WAN</th><th>Reduction</th></tr></thead><tbody>' + V.applications.map(function (a) { return '<tr><td>' + esc(a.name) + '</td><td>' + bytes(a.lan_bytes) + '</td><td>' + bytes(a.wan_bytes) + '</td><td>' + redc(a.reduction) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">No per-application statistics reported.</div>';
+    var alm = V.alarms.length ? V.alarms.slice(0, 50).map(function (a) { return '<div class="sm" style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05)">' + S.sev(/crit/i.test(a.severity) ? 'critical' : /major/i.test(a.severity) ? 'high' : /minor|warn/i.test(a.severity) ? 'medium' : 'info') + ' <b>' + esc(a.appliance) + '</b> ' + esc(a.text) + '</div>'; }).join('') : '<div class="empty">No active alarm.</div>';
+    var T = V.thresholds, keys = Object.keys(V.keys || {}).map(function (k) { return '<div class="sm"><b>' + esc(k) + '</b>: ' + esc([].concat(V.keys[k] || []).filter(function (x, i, a) { return a.indexOf(x) === i; }).join(', ') || '–') + '</div>'; }).join('');
+    var con = '<div class="sm mut">Fields the Orchestrator returned (they differ between releases):</div>' + (keys || '<div class="sm mut">none yet</div>')
+      + (V.errors.length ? '<div class="sm" style="margin-top:6px;color:#ff8a8e">' + V.errors.map(esc).join('<br>') + '</div>' : '')
+      + '<h3 style="margin-top:12px">Tunnel thresholds</h3><div class="th">' + [['loss_warn', 'Loss warn %'], ['loss_crit', 'Loss critical %'], ['lat_warn', 'Latency warn ms'], ['lat_crit', 'Latency critical ms'], ['jit_warn', 'Jitter warn ms'], ['jit_crit', 'Jitter critical ms']].map(function (f) { return '<label>' + esc(f[1]) + '<input type="number" id="th-' + f[0] + '" value="' + esc(T[f[0]]) + '"' + (S.can('admin') ? '' : ' disabled') + '></label>'; }).join('') + '</div>'
+      + (S.can('admin') ? '<p><button type="button" id="ths">Save thresholds</button></p>' : '<p class="mut sm">An administrator sets the thresholds.</p>');
+    $('body').innerHTML = '<div class="grid2"><div class="card" id="x-act"><h2>🧭 What to do first</h2>' + acts + '</div><div class="card" id="x-alm"><h2>🔔 Orchestrator alarms <span class="c">' + V.alarms.length + ' active</span></h2>' + alm + '</div></div>'
+      + '<div class="card" id="x-app"><h2>📦 Appliances <span class="c">reduction = 1 − WAN / LAN bytes</span></h2>' + app + '</div>'
+      + '<div class="card" id="x-tun"><h2>🔗 Tunnels <span class="c">loss · latency · jitter against the thresholds</span></h2>' + tun + '</div>'
+      + '<div class="grid2"><div class="card" id="x-aps"><h2>📊 Top applications</h2>' + aps + '</div><div class="card" id="x-con"><h2>⚙ Connection &amp; thresholds</h2>' + con + '</div></div><p class="mut sm">' + esc(V.note) + '</p>';
+  }
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-act^="go:"]'); if (b) { var t = $(b.getAttribute('data-act').slice(3)); if (t) t.scrollIntoView({ behavior: 'smooth' }); return; }
+    if ((b = ev.target.closest('[data-tf]'))) { TF = b.getAttribute('data-tf'); draw(); return; }
+    if (ev.target.closest('#ths')) { var o = {}; ['loss_warn', 'loss_crit', 'lat_warn', 'lat_crit', 'jit_warn', 'jit_crit'].forEach(function (k) { o[k] = Number($('th-' + k).value); });
+      S.req('POST', '/netops/wanopt/config', o).then(function () { S.toast('Thresholds saved'); load(); }).catch(function (e) { S.toast(e.message); }); }
+  });
+  $('rf').addEventListener('click', load);
+  S.ready(load); setInterval(function () { if (!document.hidden) load(); }, 120000);
+})();
+</script></body></html>

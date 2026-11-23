@@ -1,0 +1,100 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AIOps Center</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:26px;font-weight:800;margin-top:3px}.t .s{font-size:11.5px;color:var(--mute);margin-top:2px}
+.t.ok .v{color:var(--ok)}.t.warn .v{color:var(--warn)}.t.bad .v{color:var(--bad)}.t.info .v{color:var(--info)}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;margin:0 0 12px;min-width:0}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}a{color:var(--info)}
+.p{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.pok{background:rgba(63,185,80,.15);color:var(--ok)}.pwarn{background:rgba(227,179,65,.15);color:var(--warn)}.pbad{background:rgba(255,123,114,.16);color:var(--bad)}.pmut{background:rgba(140,147,161,.15);color:var(--mute)}.pinfo{background:rgba(121,184,255,.13);color:var(--info)}
+.fun{display:flex;flex-direction:column;gap:8px}.fr{display:grid;grid-template-columns:150px 1fr 90px;gap:10px;align-items:center;font-size:13px}.fb{height:22px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden}.fb i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#3274d9,#5794f2)}
+.fr b{text-align:right}
+@media print{.top button{display:none}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">AI &amp; Automation · operations intelligence</div><h1>AIOps Center</h1><div class="muted" style="font-size:13px">Noise reduction · correlated incidents · MTTD / MTTA / MTTR · predictive alerts · approved self-healing — from the SIEM, XDR, the AI engineers and capacity, live.</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="print">🖨 Report</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="k" id="kk"></div>
+<div class="g2">
+ <div class="card"><h2>Noise reduction <span class="c">last 30 days · raw events → alerts → correlated incidents</span></h2><div id="funnel"><div class="empty">Loading…</div></div>
+  <p class="note">Events are what the collectors received; alerts are what the detection rules raised (repeats folded into one alert); incidents are what XDR correlated across sources by shared users, hosts and addresses.</p></div>
+ <div class="card"><h2>Response times <span class="c">last 30 days</span></h2><div id="times"><div class="empty">Loading…</div></div></div>
+</div>
+<div class="card"><h2>Correlated incidents <span class="c" id="incc"></span></h2><div class="tw" id="inc"><div class="empty">Loading…</div></div></div>
+<div class="g2">
+ <div class="card"><h2>Predictive alerts <span class="c">before it breaks</span></h2><div class="tw" id="pred"><div class="empty">Loading…</div></div>
+  <p class="note">Capacity: a straight-line trend of the daily samples to the configured limit; "early estimate" until it rests on 30 days. Cases: open cases with less than 25 % of their response time left.</p></div>
+ <div class="card"><h2>Noise to tune <span class="c">rules raising the most alerts, and their false-positive rate</span></h2><div class="tw" id="noisy"><div class="empty">Loading…</div></div></div>
+</div>
+<div class="card"><h2>Self-healing, with approval <span class="c">what the AI engineers found, fixed and verified</span></h2><div class="tw" id="heal"><div class="empty">Loading…</div></div>
+ <p class="note">An AI engineer finds the problem, investigates it and proposes the fix; a named person approves it (never the requester, never an AI account) and a person applies it; the engineer then re-checks and closes it only when the problem is gone. Nothing changes a system without that approval. <a href="ai-team.html">AI Engineering Team →</a> · <a href="automation-org.html">How the automation works →</a></p></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  function get(u){return new Promise(function(ok){var x=new XMLHttpRequest();x.open('GET',u);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }ok({status:x.status,json:x.status===200?j:null});};x.onerror=x.ontimeout=function(){ok({status:0,json:null});};x.send();});}
+  var why=function(r,what){return r.status===404?what+' is not installed - run the update':r.status===403?'needs the operator role':r.status?what+' answered HTTP '+r.status:what+' is not reachable';};
+  var dur=function(ms){if(ms==null)return '—';var s=ms/1000;return s<90?Math.round(s)+' s':s<5400?Math.round(s/60)+' min':s<172800?(s/3600).toFixed(1)+' h':(s/86400).toFixed(1)+' d';};
+  var num=function(n){return n==null?'—':Number(n).toLocaleString('en-GB');};
+  var SEV=['info','low','medium','high','critical'],SEVP={critical:'pbad',high:'pbad',medium:'pwarn',low:'pmut',info:'pmut'};
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function load(){
+    Promise.all([get('/api/soc/metrics'),get('/api/soc/xdr/incidents?scope=correlated&limit=15'),get('/api/soc/duty/engineers'),get('/api/itam/duty/engineers'),get('/api/itam/virt/capacity')]).then(function(R){
+      var M=R[0].json, X=R[1].json, E=[].concat((R[2].json&&R[2].json.engineers)||[],(R[3].json&&R[3].json.engineers)||[]), C=R[4].json;
+      // ---- KPIs
+      var tot=M&&M.totals||{}, sx=X&&X.summary||{};
+      var red=M&&tot.events>0&&tot.alerts!=null?Math.round((1-tot.alerts/tot.events)*1000)/10:null;
+      var mtta=M&&M.mtta&&M.mtta.cases&&M.mtta.cases.avg_ms!=null?M.mtta.cases.avg_ms:(M&&M.mtta&&M.mtta.alerts?M.mtta.alerts.avg_ms:null);
+      var fixed=E.reduce(function(n,e){return n+(e.resolved_24h||0);},0), waiting=E.reduce(function(n,e){var b=e.by_status||{};return n+(b['awaiting-approval']||0);},0);
+      $('kk').innerHTML=tile('Noise reduction',red==null?'—':red+'%',M?num(tot.events)+' events → '+num(tot.alerts)+' alerts':why(R[0],'The SIEM'),red==null?'':'ok')
+        +tile('Correlated incidents',X?num(sx.open):'—',X?num(sx.incidents)+' in total · '+num(sx.cross_domain)+' across domains':why(R[1],'XDR'),X&&sx.high?'bad':'info')
+        +tile('MTTD',M?dur(M.mttd_s==null?null:M.mttd_s*1000):'—','first event → alert','info')
+        +tile('MTTA',M?dur(mtta):'—','alert → acknowledged','info')
+        +tile('MTTR',M?dur(M.mttr_s==null?null:M.mttr_s*1000):'—','case opened → resolved','info')
+        +tile('Fixed & verified (24 h)',E.length?num(fixed):'—',E.length?num(waiting)+' waiting for a person’s approval':'AI engineers not reachable',fixed?'ok':'');
+      // ---- funnel
+      if(M||X){var mx=Math.max(tot.events||0,tot.alerts||0,sx.incidents||0,1),row=function(l,v){return '<div class="fr"><span>'+esc(l)+'</span><div class="fb"><i style="width:'+(v==null?0:Math.max(1.5,Math.log10(v+1)/Math.log10(mx+1)*100))+'%"></i></div><b>'+num(v)+'</b></div>';};
+        $('funnel').innerHTML='<div class="fun">'+row('Raw events',M?tot.events:null)+row('Alerts raised',M?tot.alerts:null)+row('Correlated incidents',X?sx.incidents:null)+row('Open incidents',X?sx.open:null)+'</div>'+(M?'':'<p class="note">'+esc(why(R[0],'The SIEM'))+'</p>')+(X?'':'<p class="note">'+esc(why(R[1],'XDR'))+'</p>')+'<p class="note">Bar lengths are logarithmic, so a small last stage is still visible.</p>';}
+      else $('funnel').innerHTML='<div class="empty">'+esc(why(R[0],'The SIEM'))+'.</div>';
+      // ---- response times
+      if(M){var d=M.mttd||{},sl=M.sla||{};
+        $('times').innerHTML='<table><tr><th></th><th>Average</th><th>Median</th><th>90 %</th><th>Measured</th></tr>'
+          +'<tr><td>Detect (MTTD)</td><td>'+dur(d.avg_ms)+'</td><td>'+dur(d.median_ms)+'</td><td>'+dur(d.p90_ms)+'</td><td>'+num(d.n)+' alerts</td></tr>'
+          +['alerts','cases'].map(function(k){var a=(M.mtta||{})[k]||{};return '<tr><td>Acknowledge '+k+' (MTTA)</td><td>'+dur(a.avg_ms)+'</td><td>'+dur(a.median_ms)+'</td><td>'+dur(a.p90_ms)+'</td><td>'+num(a.n)+'</td></tr>';}).join('')
+          +['alerts','cases'].map(function(k){var a=(M.mttr||{})[k]||{};return '<tr><td>Resolve '+k+' (MTTR)</td><td>'+dur(a.avg_ms)+'</td><td>'+dur(a.median_ms)+'</td><td>'+dur(a.p90_ms)+'</td><td>'+num(a.n)+'</td></tr>';}).join('')+'</table>'
+          +'<p class="note">Response SLA: acknowledged in time '+(sl.ack_compliance_pct==null?'— (no case yet)':esc(sl.ack_compliance_pct)+'%')+' · resolved in time '+(sl.resolve_compliance_pct==null?'—':esc(sl.resolve_compliance_pct)+'%')+' of '+num(sl.cases)+' case(s). "—" means nothing to measure, never zero.</p>';}
+      else $('times').innerHTML='<div class="empty">'+esc(why(R[0],'The SIEM'))+'.</div>';
+      // ---- incidents
+      if(X){$('incc').textContent=num(X.total)+' correlated · showing the latest '+Math.min(15,(X.items||[]).length);
+        $('inc').innerHTML=(X.items||[]).length?'<table><tr><th>Incident</th><th>Severity</th><th>Score</th><th>Alerts</th><th>Sources</th><th>Status</th></tr>'+X.items.map(function(i){var s=SEV[i.severity]||'info';
+          return '<tr><td><a href="soc-xdr.html#'+esc(i.id)+'">'+esc(i.id)+'</a><div>'+esc(i.title)+'</div></td><td><span class="p '+SEVP[s]+'">'+esc(s)+'</span></td><td>'+esc(i.score)+'</td><td>'+esc(i.alerts)+'</td><td>'+esc(Object.keys(i.domains||{}).map(function(k){return (X.domain_names||{})[k]||k;}).join(', '))+'</td><td>'+esc(i.status)+'</td></tr>';}).join('')+'</table>'
+          :'<div class="empty">No correlated incident in the window - correlation needs alerts from the connected sources.</div>';}
+      else {$('incc').textContent='';$('inc').innerHTML='<div class="empty">'+esc(why(R[1],'XDR'))+'.</div>';}
+      // ---- predictive
+      var P=[];
+      if(C&&C.clusters)C.clusters.forEach(function(c){['memory','cpu','storage'].forEach(function(k){var f=c.forecast&&c.forecast[k];if(f&&f.days_to_limit!=null&&f.days_to_limit<=180)P.push({sev:f.days_to_limit<=30?'high':f.days_to_limit<=90?'medium':'low',what:(c.platform||'')+' '+(c.name||'')+': '+k+' reaches its limit',when:f.days_to_limit===0?'now':'in about '+f.days_to_limit+' days',why:(f.per_month!=null?'+'+f.per_month+' points / month · ':'')+(f.reliable?'trend over '+f.days_of_history+' days':'early estimate ('+f.days_of_history+' days of history)')});});});
+      if(M&&M.sla&&M.sla.at_risk)P.push({sev:'high',what:M.sla.at_risk+' open case(s) about to breach the response SLA',when:'within their remaining time',why:'under 25 % of the response time left'});
+      P.sort(function(a,b){return {high:0,medium:1,low:2}[a.sev]-{high:0,medium:1,low:2}[b.sev];});
+      $('pred').innerHTML=P.length?'<table><tr><th>Impact</th><th>Prediction</th><th>When</th><th>Based on</th></tr>'+P.map(function(p){return '<tr><td><span class="p '+(p.sev==='high'?'pbad':p.sev==='medium'?'pwarn':'pmut')+'">'+esc(p.sev)+'</span></td><td>'+esc(p.what)+'</td><td>'+esc(p.when)+'</td><td class="muted">'+esc(p.why)+'</td></tr>';}).join('')+'</table>'
+        :'<div class="empty">'+(C||M?'Nothing predicted to break in the next 180 days'+(C&&C.clusters&&C.clusters.length?'':' (no virtualization capacity collected yet - add vCenter / Prism on Virtualization)')+'.':esc(why(R[4],'Capacity'))+'.')+'</div>';
+      // ---- noisy rules
+      if(M){var fp={};(M.fp_rate||[]).forEach(function(r){fp[r.rule_id]=r;});var N=(M.noisy_rules||[]).slice(0,10);
+        $('noisy').innerHTML=N.length?'<table><tr><th>Rule</th><th>Alerts / day</th><th>False positive</th><th></th></tr>'+N.map(function(r){var f=fp[r.rule_id];return '<tr><td>'+esc(r.rule_name||r.rule_id)+'</td><td>'+esc(r.per_day)+'</td><td>'+(f?esc(Math.round(f.fp_rate*100))+'% of '+esc(f.closed||'')+' closed':'<span class="muted">not enough closed</span>')+'</td><td>'+(r.noisy?'<span class="p pwarn">tune</span>':'')+'</td></tr>';}).join('')+'</table>'
+          :'<div class="empty">No alerts in the window.</div>';}
+      else $('noisy').innerHTML='<div class="empty">'+esc(why(R[0],'The SIEM'))+'.</div>';
+      // ---- self-healing
+      $('heal').innerHTML=E.length?'<table><tr><th>AI engineer</th><th>On duty</th><th>Open</th><th>Waiting for approval</th><th>Fixed &amp; verified (24 h)</th></tr>'+E.map(function(e){var b=e.by_status||{},w=b['awaiting-approval']||0;
+        return '<tr><td>'+esc(e.name)+'</td><td>'+(!e.on_duty?'<span class="p pmut">off duty</span>':e.not_connected?'<span class="p pwarn">source not connected</span>':'<span class="p pok">patrolling</span>')+'</td><td>'+esc(e.open||0)+'</td><td>'+(w?'<b>'+esc(w)+'</b>':'0')+'</td><td>'+esc(e.resolved_24h||0)+'</td></tr>';}).join('')+'</table>'
+        :'<div class="empty">The AI engineers are not reachable ('+esc(why(R[2],'The SIEM'))+').</div>';
+      $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    });
+  }
+  $('refresh').addEventListener('click',load);$('print').addEventListener('click',function(){window.print();});
+  load();setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script></body></html>

@@ -1,0 +1,184 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Alarm Inbox Rules</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:26px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button:disabled{opacity:.5;cursor:default}
+button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button.dang{color:var(--bad)}
+input,select,textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}textarea{width:100%;font-family:Consolas,monospace;font-size:12.5px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+tr.rr{cursor:pointer}tr.rr:hover td{background:rgba(255,255,255,.03)}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;border:1px solid var(--edge);color:var(--mute);margin:2px 4px 2px 0;white-space:nowrap}
+.h-broken,.h-fp-heavy{color:var(--bad);border-color:rgba(255,123,114,.45)}.h-noisy,.h-burst{color:var(--warn);border-color:rgba(227,179,65,.45)}.h-silent{color:#9aa4b2}.h-healthy{color:var(--ok);border-color:rgba(63,185,80,.45)}.h-disabled{color:#6b7280}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button[aria-selected=true]{border-color:var(--info);color:var(--title)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.spark{display:inline-flex;align-items:flex-end;gap:1px;height:22px}.spark i{display:block;width:3px;background:#2f81f7;border-radius:1px;min-height:1px}
+.step{border:1px solid var(--edge);border-left:4px solid var(--info);border-radius:10px;padding:9px 12px;margin:0 0 8px;background:var(--raise)}.step b{color:var(--title)}
+.step.k-fix,.step.k-exclude,.step.k-tune{border-left-color:var(--bad)}.step.k-noise,.step.k-burst,.step.k-overlap{border-left-color:var(--warn)}.step.k-gap{border-left-color:#a371f7}.step .k2{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute)}
+.cov{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.cov div{border:1px solid var(--edge);border-radius:9px;padding:9px 10px;background:var(--raise)}.cov .gap{border-color:rgba(255,123,114,.55)}.cov .quiet{border-color:rgba(227,179,65,.45)}.cov .covered{border-color:rgba(63,185,80,.45)}
+.cov b{display:block;color:var(--title);font-size:13px}.cov span{font-size:11.5px;color:var(--mute)}
+.ai{border:1px solid rgba(121,184,255,.35);background:rgba(121,184,255,.06);border-radius:10px;padding:10px 12px}.ai .lbl{font:600 11px ui-monospace,Consolas,monospace;color:var(--info);letter-spacing:.06em}
+#ed{position:fixed;top:0;right:0;bottom:0;width:min(760px,100%);background:var(--panel);border-left:1px solid var(--border);box-shadow:-12px 0 30px rgba(0,0,0,.4);z-index:50;overflow-y:auto;padding:16px;display:none}#ed.open{display:block}
+#ed h3{margin:0 0 4px;color:var(--title);font-size:17px}.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:10px 0}.fg label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.cond{display:grid;grid-template-columns:90px 1fr 130px 1fr 34px;gap:6px;margin:0 0 6px}@media(max-width:700px){.cond{grid-template-columns:1fr 1fr}}
+.msg{min-height:18px;font-size:12.5px;margin:8px 0}.msg.bad{color:var(--bad)}.msg.ok{color:var(--ok)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.banner{border:1px solid rgba(121,184,255,.35);background:rgba(121,184,255,.06);border-radius:10px;padding:10px 12px;margin:0 0 12px;font-size:13px}
+@media print{.top button,.tabs,#ed{display:none}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security operations · detection engine · rules that raise alarms</div><h1>Alarm Inbox Rules</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <button type="button" id="newrule">➕ New rule</button><button type="button" id="print">🖨 Report</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="banner">These are the SIEM engine's rules: they run on the server around the clock and every alarm in the inbox comes from one of them. Nothing on this page is changed until you save it - saving, enabling and disabling a rule need the <b>admin</b> role and are audited; backtesting needs <b>operator</b>.</div>
+<div class="k" id="kk"></div>
+<div class="tabs" role="tablist" id="tabs">
+  <button type="button" role="tab" data-t="next" aria-selected="true">What to do next</button><button type="button" role="tab" data-t="rules">Rules</button>
+  <button type="button" role="tab" data-t="tune">Tuning (ML)</button><button type="button" role="tab" data-t="cov">ATT&amp;CK coverage</button>
+  <button type="button" role="tab" data-t="ai">AI rule assistant</button><button type="button" role="tab" data-t="old">Rules in this browser</button></div>
+<div class="card" id="panel"><div class="empty">Loading…</div></div>
+<p class="note" id="model"></p>
+</main>
+<aside id="ed" aria-label="Rule editor"></aside>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var V=null, TAB='next', FILTER={q:'',health:'',tactic:''}, ED=null, AIOUT=null;
+  var TACTICS=['reconnaissance','resource-development','initial-access','execution','persistence','privilege-escalation','stealth','defense-impairment','credential-access','discovery','lateral-movement','collection','command-and-control','exfiltration','impact'];
+  var OPS=['eq','neq','in','contains','startswith','endswith','re','exists','gt','gte','lt','lte','cidr'];
+  var TYPES=[['single','Single event'],['threshold','Threshold (N per window)'],['distinct','Distinct values (N different per window)'],['sequence','Sequence (A then B)'],['new_value','New value (first time seen)'],['scheduled','Scheduled search']];
+  var SEV=['Info','Low','Medium','High','Critical'];
+  var HL={broken:'Broken','fp-heavy':'Mostly false positives',noisy:'Noisy',burst:'Burst today',silent:'Silent 30 days',healthy:'Healthy',disabled:'Disabled'};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc'+p);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(m==='POST')x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: reported below as the HTTP status */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('The SIEM engine is not reachable'));};x.send(m==='POST'?JSON.stringify(b||{}):null);});}
+  function why(e,what){return e.status===403?what+' is not part of your role.':e.status===404&&/no route|HTTP 404/.test(e.message)?'The engine on the server does not have this yet - run the update.':e.message;}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function tile(l,v,s,cls,f){return '<button type="button" class="t '+(cls||'')+'" data-f="'+esc(f||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function pill(h){return '<span class="pill h-'+esc(h)+'">'+esc(HL[h]||h)+'</span>';}
+  function spark(a){var mx=Math.max.apply(null,a.concat([1]));return '<span class="spark" title="alerts per day, last 30 days">'+a.map(function(v){return '<i style="height:'+Math.max(1,Math.round(v/mx*22))+'px"></i>';}).join('')+'</span>';}
+  function tbl(h,rows,empty){return rows.length?'<div class="tw"><table><thead><tr>'+h.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':'<div class="empty">'+esc(empty)+'</div>';}
+  function load(){return req('GET','/rules/intel').then(function(r){V=r;draw();}).catch(function(e){V=null;$('kk').innerHTML='';$('panel').innerHTML='<p class="err">'+esc(why(e,'Reading the detection rules'))+'</p>';$('model').textContent='';});}
+  function draw(){var c=V.counts||{};
+    $('kk').innerHTML=tile('Rules',c.total||0,(c.enabled||0)+' enabled','info','')+tile('Broken',c.broken||0,'do not load',c.broken?'bad':'ok','broken')+tile('Mostly false positives',c['fp-heavy']||0,'≥ 50 % of closures',c['fp-heavy']?'bad':'ok','fp-heavy')
+      +tile('Noisy',c.noisy||0,'≥ '+(V.model.noisy_per_day)+' alerts / day',c.noisy?'warn':'ok','noisy')+tile('Burst today',c.burst||0,'against its own normal',c.burst?'warn':'ok','burst')+tile('Silent',c.silent||0,'no alert in 30 days','','silent')
+      +tile('ATT&CK gaps',(V.coverage||[]).filter(function(x){return x.state==='gap';}).length,'tactics with no rule',(V.coverage||[]).some(function(x){return x.state==='gap';})?'bad':'ok','cov');
+    $('up').textContent='as of '+new Date(V.at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    var M=V.model||{};$('model').textContent='Model: a false-positive rate needs '+M.min_closures+' closures (benign never counts as a false positive); a burst is |z| ≥ '+M.z_burst+' against the rule’s own last 14 days; an exclusion is proposed when one entity is ≥ '+M.exclusion_share+' % of the false positives; an overlap is ≥ '+M.overlap_share+' % of alerts on the same entity in the same hour. '+(V.note||'');
+    panel();}
+  function panel(){[].forEach.call(document.querySelectorAll('#tabs button'),function(b){b.setAttribute('aria-selected',b.getAttribute('data-t')===TAB?'true':'false');});
+    var el=$('panel');if(TAB==='ai')return drawAi();if(TAB==='old')return drawOld();if(!V)return;
+    if(TAB==='next'){var N=V.next||[];el.innerHTML='<h2>What to do next <span class="c">ranked from this engine’s own alerts - each step says the evidence</span></h2>'+(N.length?N.map(function(n){return '<div class="step k-'+esc(n.kind)+'"><div class="k2">'+esc({fix:'Fix',exclude:'Proposed exclusion',tune:'Tune',noise:'Noise',burst:'Burst',overlap:'Overlap',gap:'ATT&CK gap',silent:'Silent rules'}[n.kind]||n.kind)+'</div><b>'+esc(n.name)+'</b><div>'+esc(n.why)+'</div><div class="muted" style="font-size:12.5px;margin-top:3px">'+esc(n.do)+'</div>'
+      +(n.rule?'<div style="margin-top:6px"><button type="button" data-open="'+esc(n.rule)+'">Open the rule</button></div>':n.kind==='gap'?'<div style="margin-top:6px"><button type="button" data-gap="'+esc(n.name)+'">Draft a rule with AI</button></div>':'')+'</div>';}).join(''):'<div class="empty">Nothing to do: no rule is broken, noisy or mostly false positives, and every ATT&CK tactic has a rule.</div>');return;}
+    if(TAB==='rules'){var q=FILTER.q.toLowerCase(),I=(V.items||[]).filter(function(x){return (!q||(x.id+' '+x.name+' '+x.tactic+' '+(x.mitre||[]).join(' ')).toLowerCase().indexOf(q)>=0)&&(!FILTER.health||x.health===FILTER.health||(FILTER.health==='burst'&&x.flags.indexOf('burst')>=0))&&(!FILTER.tactic||x.tactic===FILTER.tactic);});
+      el.innerHTML='<div class="bar"><input type="search" id="q" placeholder="Search rules, tactics, techniques…" style="flex:1;min-width:220px" value="'+esc(FILTER.q)+'"><select id="fh"><option value="">Any health</option>'+Object.keys(HL).map(function(k){return '<option value="'+k+'"'+(FILTER.health===k?' selected':'')+'>'+esc(HL[k])+'</option>';}).join('')+'</select>'
+        +'<select id="ft"><option value="">Any tactic</option>'+TACTICS.map(function(t){return '<option'+(FILTER.tactic===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select><span class="muted">'+I.length+' of '+(V.items||[]).length+'</span></div><div id="rtab"></div>';
+      drawRules(I);var qi=$('q');qi.addEventListener('input',function(){FILTER.q=qi.value;var p=qi.selectionStart;panel();var n=$('q');n.focus();n.setSelectionRange(p,p);});
+      $('fh').addEventListener('change',function(){FILTER.health=this.value;panel();});$('ft').addEventListener('change',function(){FILTER.tactic=this.value;panel();});return;}
+    if(TAB==='tune'){var T=(V.items||[]).filter(function(x){return x.tune_score>0||x.exclusion;}).slice(0,60);
+      el.innerHTML='<h2>Tuning <span class="c">false-positive rate, noise and bursts from each rule’s own closures</span></h2>'+tbl(['Rule','Priority','Per day (7 d)','Closures tp / fp / benign','False-positive rate','Burst','Proposed exclusion'],T.map(function(x){var c=x.closures;
+        return '<tr class="rr" data-open="'+esc(x.id)+'"><td><b>'+esc(x.name)+'</b><div class="muted mono">'+esc(x.id)+'</div></td><td><b>'+x.tune_score+'</b></td><td>'+x.per_day_7d+'</td><td>'+c.tp+' / '+c.fp+' / '+c.benign+'</td><td>'+(x.fp_rate==null?'<span class="muted">withheld (&lt; '+V.model.min_closures+' closures)</span>':'<b class="'+(x.fp_rate>=50?'err':'')+'">'+x.fp_rate+' %</b>')+'</td><td>'+(x.burst_z==null?'<span class="muted">learning</span>':'z '+x.burst_z)+'</td><td>'+(x.exclusion?'<span class="mono">'+esc(x.exclusion.field)+' = '+esc(x.exclusion.value)+'</span> <span class="muted">('+x.exclusion.pct+' % of '+x.exclusion.of+')</span>':'<span class="muted">none</span>')+'</td></tr>';}),'No rule needs tuning: none is noisy or mostly false positives.')
+        +'<h2 style="margin-top:14px">Overlapping rules <span class="c">one activity raising two alarms</span></h2>'+tbl(['Rule A','Rule B','Shared','Of the smaller'],(V.overlaps||[]).map(function(o){return '<tr><td>'+esc(o.a_name)+'</td><td>'+esc(o.b_name)+'</td><td>'+o.shared+'</td><td><b>'+o.pct+' %</b></td></tr>';}),'No two rules keep firing on the same entity in the same hour.');return;}
+    if(TAB==='cov'){var C=V.coverage||[];el.innerHTML='<h2>ATT&amp;CK coverage <span class="c">from the rule catalogue, not from what fired - red means nothing covers it</span></h2><div class="cov">'+C.map(function(c){return '<div class="'+esc(c.state)+'"><b>'+esc(c.tactic)+'</b><span>'+(c.state==='gap'?'no enabled rule':c.rules+' rule(s) · '+c.fired+' fired in 30 d')+'</span>'+(c.state==='gap'?'<div style="margin-top:6px"><button type="button" data-gap="'+esc(c.tactic)+'">Draft with AI</button></div>':'')+'</div>';}).join('')+'</div><p class="note">Amber (a rule exists, none fired) is not a failure: backtest it to tell a quiet condition from a rule whose log source never arrives.</p>';}
+  }
+  function drawRules(I){$('rtab').innerHTML=tbl(['Rule','Type','Severity','Tactic','30 days','Fires 7 d','FP rate','Health'],I.map(function(x){return '<tr class="rr" data-open="'+esc(x.id)+'"><td><b>'+esc(x.name)+'</b><div class="muted mono">'+esc(x.id)+' · '+esc(x.origin)+'</div></td><td>'+esc(x.type)+'</td><td>'+esc(SEV[x.severity]||x.severity)+'</td><td>'+esc(x.tactic||'—')+'</td><td>'+spark(x.series)+'</td><td>'+x.fires_7d+'</td><td>'+(x.fp_rate==null?'<span class="muted">—</span>':x.fp_rate+' %')+'</td><td>'+pill(x.health)+(x.flags.indexOf('burst')>=0&&x.health!=='burst'?pill('burst'):'')+'</td></tr>';}),'No rule matches the filter.');}
+  // ---- editor: a form over the rule; the JSON is one tab of it, not the only way in
+  function openRule(id){Promise.all([req('GET','/rules/'+encodeURIComponent(id)),req('GET','/rules/intel/'+encodeURIComponent(id)).catch(function(){return null;})]).then(function(r){var d=r[0];['stats','alerts_24h','noisy','prefilter_query','origin','builtin','overridden','pack_file'].forEach(function(k){delete d[k];});ED={rule:d,intel:r[1],isNew:false,json:false,msg:''};drawEd();}).catch(function(e){toast(why(e,'Reading the rule'));});}
+  function newRule(base,label){ED={rule:base||{id:'CUSTOM-'+Date.now().toString(36).toUpperCase(),name:'',description:'',type:'threshold',severity:2,tactic:'',enabled:false,match:{all:[{field:'action',op:'eq',value:''}]},group_by:['user'],window_s:300,count:5,suppress_s:3600},intel:null,isNew:true,json:false,msg:label||''};drawEd();}
+  function leaf(c){return c&&typeof c==='object'&&'field' in c&&!c.all&&!c.any&&!c.none;}
+  function flatConds(m){var out=[],ok=true;['all','any','none'].forEach(function(s){((m&&m[s])||[]).forEach(function(c){if(leaf(c))out.push({s:s,field:c.field,op:c.op,value:Array.isArray(c.value)?c.value.join(', '):c.value==null?'':String(c.value)});else ok=false;});});return {rows:out,ok:ok&&!(m&&(m.not||m.field))};}
+  function drawEd(){var r=ED.rule,I=ED.intel,f=flatConds(r.match||{}),sch=r.type==='scheduled'||r.type==='sequence';
+    var h='<div style="display:flex;gap:8px;align-items:center"><h3>'+(ED.isNew?'New rule':'Edit rule')+'</h3><span class="sp"></span><button type="button" id="edx">✕ Close</button></div><div class="muted mono">'+esc(r.id)+'</div>';
+    if(I)h+='<div style="margin:8px 0">'+pill(I.health)+'<span class="pill">'+I.fires_30d+' alerts in 30 d</span><span class="pill">closures '+I.closures.tp+' tp / '+I.closures.fp+' fp / '+I.closures.benign+' benign</span><span class="pill">FP rate '+(I.fp_rate==null?'withheld':I.fp_rate+' %')+'</span>'+spark(I.series)+'</div>'
+      +(I.exclusion?'<div class="step k-exclude"><div class="k2">Proposed exclusion (ML)</div>'+I.exclusion.covers+' of '+I.exclusion.of+' false-positive closures were <span class="mono">'+esc(I.exclusion.field)+' = '+esc(I.exclusion.value)+'</span>. <button type="button" id="edexcl">Add it to the draft</button></div>':'')
+      +(I.load_error?'<p class="err">Does not load: '+esc(I.load_error)+'</p>':'');
+    h+='<div class="tabs" style="margin-top:10px"><button type="button" id="edform" aria-selected="'+(!ED.json)+'">Form</button><button type="button" id="edjson" aria-selected="'+ED.json+'">JSON</button></div>';
+    if(ED.json)h+='<textarea id="edj" rows="22" spellcheck="false">'+esc(JSON.stringify(r,null,2))+'</textarea>';
+    else{h+='<div class="fg"><label>Name<input id="f-name" value="'+esc(r.name||'')+'"></label><label>Type<select id="f-type">'+TYPES.map(function(t){return '<option value="'+t[0]+'"'+(r.type===t[0]?' selected':'')+'>'+esc(t[1])+'</option>';}).join('')+'</select></label>'
+      +'<label>Severity<select id="f-sev">'+SEV.map(function(s,i){return '<option value="'+i+'"'+(Number(r.severity==null?2:r.severity)===i?' selected':'')+'>'+s+'</option>';}).join('')+'</select></label><label>ATT&amp;CK tactic<select id="f-tac"><option value="">—</option>'+TACTICS.map(function(t){return '<option'+(r.tactic===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select></label>'
+      +'<label>Techniques (comma)<input id="f-mitre" value="'+esc((r.mitre||[]).join(', '))+'"></label><label>Group by (comma)<input id="f-group" value="'+esc((r.group_by||r.by||[]).join(', '))+'"></label>'
+      +'<label>Window (seconds)<input id="f-win" type="number" min="1" value="'+esc(r.window_s==null?'':r.window_s)+'"></label>'
+      +(r.type==='threshold'?'<label>Count ≥<input id="f-count" type="number" min="1" value="'+esc(r.count==null?'':r.count)+'"></label>':'')
+      +(r.type==='distinct'?'<label>Distinct field<input id="f-dfield" value="'+esc(r.distinct_field||'')+'"></label><label>Distinct values ≥<input id="f-dcount" type="number" min="1" value="'+esc(r.distinct_count==null?'':r.distinct_count)+'"></label>':'')
+      +(r.type==='new_value'?'<label>New value of<input id="f-nfield" value="'+esc(r.new_field||'')+'"></label>':'')
+      +'<label>Suppress repeats (seconds)<input id="f-sup" type="number" min="0" value="'+esc(r.suppress_s==null?'':r.suppress_s)+'"></label><label style="flex-direction:row;align-items:center;gap:8px;margin-top:18px"><input id="f-en" type="checkbox"'+(r.enabled!==false?' checked':'')+'> Enabled</label></div>'
+      +'<label class="muted" style="font-size:12px">Description<textarea id="f-desc" rows="2" style="font-family:inherit">'+esc(r.description||'')+'</textarea></label>';
+      if(sch||!f.ok)h+='<p class="note">'+(sch?'Sequence and scheduled rules are edited in the JSON tab.':'This rule has nested condition groups - edit them in the JSON tab.')+'</p>';
+      else h+='<h4 style="margin:12px 0 6px;color:var(--title)">Conditions <span class="muted" style="font-weight:400;font-size:12px">all = every one must match · any = at least one · none = excludes</span></h4><div id="conds">'+f.rows.map(condRow).join('')+'</div><button type="button" id="addc">＋ Condition</button>';}
+    h+='<div class="msg '+(ED.msgCls||'')+'" id="edm">'+ED.msg+'</div><div class="bar"><select id="btw"><option value="86400000">Backtest last 24 h</option><option value="604800000">last 7 days</option><option value="2592000000">last 30 days</option></select><button type="button" id="edtest">🧪 Backtest</button>'
+      +'<button type="button" class="pri" id="edsave">💾 Save'+(ED.isNew?'':' (new version)')+'</button>'+(!ED.isNew?'<button type="button" id="edtune">✨ Ask AI how to tune it</button>':'')+'</div><div id="edres"></div>'
+      +(I&&I.recent&&I.recent.length?'<h4 style="margin:14px 0 6px;color:var(--title)">Recent alerts</h4>'+tbl(['When','Status','Entity','Summary'],I.recent.map(function(a){return '<tr><td class="mono">'+esc(new Date(a.created).toLocaleString('en-GB'))+'</td><td>'+esc(a.status)+'</td><td class="mono">'+esc(Object.keys(a.group||{}).map(function(k){return k+'='+a.group[k];}).join(' '))+'</td><td>'+esc(a.summary)+'</td></tr>';}),''):'')
+      +'<p class="note">Saving stores a new version of the rule in the engine (admin, audited); a built-in rule can be reset to the shipped version from the engine. Values are matched case-insensitively.</p>';
+    var e=$('ed');e.innerHTML=h;e.classList.add('open');}
+  function condRow(c){return '<div class="cond"><select data-c="s">'+['all','any','none'].map(function(s){return '<option'+(c.s===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select><input data-c="field" placeholder="field e.g. action" value="'+esc(c.field||'')+'"><select data-c="op">'+OPS.concat(OPS.indexOf(c.op)<0&&c.op?[c.op]:[]).map(function(o){return '<option'+(c.op===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select><input data-c="value" placeholder="value (comma = any of)" value="'+esc(c.value||'')+'"><button type="button" data-rmc="1" title="Remove">✕</button></div>';}
+  // read the form back into the draft (the draft object is the source of truth; the JSON tab shows it as it is)
+  function readEd(){var r=ED.rule;if(ED.json){try{var p=JSON.parse($('edj').value);if(!p||typeof p!=='object'||Array.isArray(p))throw new Error('not an object');ED.rule=p;return true;}catch(x){setMsg('That is not valid JSON: '+x.message,'bad');return false;}}
+    var v=function(id){var el=$(id);return el?el.value.trim():undefined;},num=function(id){var s=v(id);return s===undefined||s===''?undefined:Number(s);},list=function(id){var s=v(id);return s===undefined?undefined:s.split(',').map(function(x){return x.trim();}).filter(Boolean);};
+    r.name=v('f-name');r.type=v('f-type');r.severity=Number(v('f-sev'));r.tactic=v('f-tac')||undefined;r.mitre=list('f-mitre');r.description=v('f-desc');r.enabled=$('f-en').checked;
+    var g=list('f-group');if(r.type==='sequence')r.by=g;else r.group_by=g;
+    [['window_s','f-win'],['count','f-count'],['distinct_count','f-dcount'],['suppress_s','f-sup']].forEach(function(p){var n=num(p[1]);if(n!==undefined)r[p[0]]=n;else if($(p[1]))delete r[p[0]];});
+    if($('f-dfield'))r.distinct_field=v('f-dfield');if($('f-nfield'))r.new_field=v('f-nfield');
+    var rows=$('conds')?[].map.call(document.querySelectorAll('#conds .cond'),function(d){var q=function(k){return d.querySelector('[data-c="'+k+'"]').value.trim();};return {s:q('s'),field:q('field'),op:q('op'),value:q('value')};}):null;
+    if(rows){var m={};rows.forEach(function(c){if(!c.field)return;var val=c.op==='in'||c.value.indexOf(',')>=0&&c.op!=='re'?c.value.split(',').map(function(x){return x.trim();}).filter(Boolean):/^(gt|gte|lt|lte)$/.test(c.op)?Number(c.value):c.op==='exists'?true:c.value;(m[c.s]=m[c.s]||[]).push({field:c.field,op:c.op,value:val});});r.match=m;}
+    return true;}
+  function setMsg(t,cls){ED.msg=esc(t);ED.msgCls=cls||'';var m=$('edm');if(m){m.className='msg '+(cls||'');m.textContent=t;}}
+  function save(){if(!readEd())return;var b=$('edsave');b.disabled=true;setMsg('Saving…');
+    req('POST','/rules',{rule:ED.rule}).then(function(r){ED.isNew=false;if(r.rule)ED.rule=r.rule;['stats','alerts_24h','noisy','origin','builtin','overridden','pack_file'].forEach(function(k){delete ED.rule[k];});drawEd();setMsg(r.load_error?'Saved, but the engine could not load it: '+r.load_error:'Saved as version '+((r.rule&&r.rule.version)||'')+(ED.rule.enabled===false?' (disabled - enable it when the backtest is right).':'.'),r.load_error?'bad':'ok');load();})
+      .catch(function(e){b.disabled=false;setMsg(e.status===403?'Saving a rule needs the admin role.':why(e,'Saving the rule'),'bad');});}
+  function backtest(){if(!readEd())return;var b=$('edtest'),win=Number($('btw').value),to=Date.now();b.disabled=true;setMsg('Replaying '+$('btw').selectedOptions[0].textContent.replace('Backtest ','')+' of events through this draft… nothing is raised and nobody is told.');
+    req('POST','/rules/test',{rule:ED.rule,from:to-win,to:to}).then(function(r){b.disabled=false;
+      var few=!r.events_scanned?'No event matched the rule’s first condition in this window - either the condition is quiet or the log source is not arriving.':'';
+      setMsg((r.total_alerts||0)+' alarm(s) would have been raised from '+(r.events_scanned||0)+' event(s)'+(r.truncated?' (stopped at the event limit)':'')+(r.timed_out?' (stopped at the time limit)':'')+'. '+few,r.total_alerts?'':'ok');
+      $('edres').innerHTML=(r.alerts||[]).length?tbl(['First','Count','Group','Summary'],r.alerts.slice(0,50).map(function(a){return '<tr><td class="mono">'+esc(a.ts_first?new Date(a.ts_first).toLocaleString('en-GB'):'')+'</td><td>'+esc(String(a.count||1))+'</td><td class="mono">'+esc(Object.keys(a.group||{}).map(function(k){return k+'='+a.group[k];}).join(' '))+'</td><td>'+esc(a.summary||'')+'</td></tr>';}),''):'';})
+      .catch(function(e){b.disabled=false;setMsg(e.status===403?'Backtesting needs the operator role.':why(e,'Backtesting'),'bad');});}
+  // ---- AI rule assistant: a person asks; the engine compiles the draft; it arrives disabled and is saved only by an admin
+  var AIQ='';
+  function drawAi(){var st=(V&&V.ai)||{};
+    $('panel').innerHTML='<div class="ai"><div class="lbl">AI RULE ASSISTANT · DRAFTS ONLY · A PERSON REVIEWS, BACKTESTS AND AN ADMIN SAVES</div><p class="muted" style="margin:6px 0">Describe what you want to detect in plain words. The assistant reads the catalogue (so it does not duplicate a rule), writes a rule, and the engine compiles it before you see it. It cannot save, enable or change anything.</p>'
+      +(st.enabled===false?'<p class="muted">'+esc(st.reason||'AI is not available on the engine.')+'</p>':'<textarea id="aiq" rows="3" placeholder="e.g. a user signs in from two different countries within one hour" style="font-family:inherit">'+esc(AIQ)+'</textarea><div class="bar" style="margin-top:8px"><button type="button" class="pri" id="aigo">✨ Draft the rule</button></div>')+'<div id="aiout"></div></div>';
+    if(AIOUT)drawAiOut();}
+  function drawAiOut(where){var el=where||$('aiout');if(!el)return;var b=AIOUT;
+    if(b.error){el.innerHTML='<p class="err">'+esc(b.error)+'</p>';return;}if(!b.rule){el.innerHTML='<p class="muted">'+esc(b.note||'The assistant did not return a rule.')+'</p>';return;}
+    el.innerHTML='<div style="margin-top:10px"><span class="pill" style="color:var(--info)">'+esc(b.label||'AI draft')+'</span>'+(b.ok?'<span class="pill h-healthy">compiles</span>':'<span class="pill h-broken">does not compile: '+esc(b.compile_error||'')+'</span>')+((b.duplicates||[]).length?'<span class="pill h-noisy">same name as '+esc(b.duplicates.join(', '))+'</span>':'')
+      +'<p style="white-space:pre-wrap">'+esc(b.why||'')+'</p>'+(b.noise_risk?'<p class="muted"><b>Could be noisy when:</b> '+esc(b.noise_risk)+'</p>':'')+(b.test_hint?'<p class="muted"><b>How to test:</b> '+esc(b.test_hint)+'</p>':'')
+      +'<pre class="mono" style="white-space:pre-wrap;background:#0b0c10;border:1px solid var(--edge);border-radius:8px;padding:10px;max-height:320px;overflow:auto">'+esc(JSON.stringify(b.rule,null,2))+'</pre><button type="button" id="aiedit">Open the draft in the editor</button></div>';}
+  function askAi(body,btn){btn.disabled=true;var t=btn.textContent;btn.textContent='Thinking…';
+    return req('POST','/rules/assist',body).then(function(r){AIOUT=r;}).catch(function(e){AIOUT={error:e.status===403?'The AI rule assistant needs the operator role.':why(e,'The AI rule assistant')};}).then(function(){btn.disabled=false;btn.textContent=t;});}
+  // ---- the portal's older rules lived in each browser (localStorage); they ran only while a tab was open. List them, never run them.
+  function drawOld(){var old=[];try{old=JSON.parse(localStorage.getItem('alarm_rules_ash')||'[]')||[];}catch(e){ /* unreadable storage: treated as no browser rules */ }
+    if(!Array.isArray(old))old=[];var custom=old.filter(function(r){return r&&r.builtin===false;});
+    $('panel').innerHTML='<h2>Rules in this browser <span class="c">the portal’s older in-browser rules - they only ran while a tab was open</span></h2>'
+      +'<p class="muted">The rules above run on the server around the clock. The old portal kept its own rules in each browser; built-in ones are covered by the engine’s catalogue. A rule someone wrote by hand is listed here so it is not lost: ask the AI assistant to turn it into an engine rule, then backtest and save it.</p>'
+      +tbl(['Rule','Type','Written by',''],custom.map(function(r,i){return '<tr><td><b>'+esc(r.name||r.id)+'</b><div class="muted mono">'+esc(r.id||'')+'</div></td><td>'+esc(r.type||'')+'</td><td>'+esc(r.by||'')+'</td><td><button type="button" data-old="'+i+'">✨ Convert with AI</button></td></tr>';}),old.length?'Only the starter rules are in this browser - nothing to carry over.':'No browser rules on this computer.');
+    $('panel').setAttribute('data-old',JSON.stringify(custom.map(function(r){return {name:r.name,type:r.type,match:r.match,exclude:r.exclude,groupBy:r.groupBy,windowMin:r.windowMin,threshold:r.threshold,sev:r.sev,mitre:r.mitre};})));}
+  document.addEventListener('click',function(e){var t;
+    if((t=e.target.closest('#tabs button'))){TAB=t.getAttribute('data-t');panel();return;}
+    if((t=e.target.closest('.t[data-f]'))){var f=t.getAttribute('data-f');if(f==='cov'){TAB='cov';}else{TAB='rules';FILTER.health=f;}panel();return;}
+    if((t=e.target.closest('[data-open]'))){openRule(t.getAttribute('data-open'));return;}
+    if((t=e.target.closest('[data-gap]'))){TAB='ai';AIQ='A rule for the ATT&CK tactic '+t.getAttribute('data-gap')+' that fits the log sources this engine already has.';AIOUT=null;panel();return;}
+    if((t=e.target.closest('[data-old]'))){var L=JSON.parse($('panel').getAttribute('data-old')||'[]'),o=L[Number(t.getAttribute('data-old'))];TAB='ai';AIQ='Convert this older portal rule into an engine rule (its JSON, data only): '+JSON.stringify(o).slice(0,1500);AIOUT=null;panel();return;}
+    if(e.target.closest('#aigo')){AIQ=$('aiq').value.trim();if(!AIQ){toast('Describe what the rule should detect.');return;}askAi({mode:'draft',text:AIQ},e.target.closest('#aigo')).then(function(){drawAiOut();});return;}
+    if(e.target.closest('#aiedit')){newRule(JSON.parse(JSON.stringify(AIOUT.rule)),'AI draft - read it, backtest it, then save. It stays disabled until you enable it.');ED.isNew=!(V&&(V.items||[]).some(function(x){return x.id===AIOUT.rule.id;}));drawEd();return;}
+    if(e.target.closest('#newrule')){newRule();return;}
+    if(e.target.closest('#edx')){$('ed').classList.remove('open');ED=null;return;}
+    if(e.target.closest('#edform')){if(ED.json&&!readEd())return;ED.json=false;drawEd();return;}
+    if(e.target.closest('#edjson')){if(!ED.json&&!readEd())return;ED.json=true;drawEd();return;}
+    if(e.target.closest('#addc')){readEd();(ED.rule.match=ED.rule.match||{}).all=(ED.rule.match.all||[]).concat([{field:'',op:'eq',value:''}]);drawEd();return;}
+    if((t=e.target.closest('[data-rmc]'))){t.closest('.cond').remove();return;}
+    if(e.target.closest('#edexcl')){readEd();var x=ED.intel.exclusion;(ED.rule.match=ED.rule.match||{}).none=(ED.rule.match.none||[]).concat([{field:x.field,op:'eq',value:x.value}]);drawEd();setMsg('Exclusion added to the draft: '+x.field+' = '+x.value+'. Backtest, then save.','ok');return;}
+    if(e.target.closest('#edsave')){save();return;}
+    if(e.target.closest('#edtest')){backtest();return;}
+    if(e.target.closest('#edtune')){var b=e.target.closest('#edtune');askAi({mode:'tune',rule_id:ED.rule.id},b).then(function(){drawAiOut($('edres'));});return;}
+  });
+  document.addEventListener('change',function(e){if(e.target.id==='f-type'&&ED){readEd();drawEd();}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&ED){$('ed').classList.remove('open');ED=null;}});
+  $('refresh').addEventListener('click',load);$('print').addEventListener('click',function(){window.print();});
+  load();setInterval(function(){if(!document.hidden&&!ED)load();},120000);
+})();
+</script></body></html>

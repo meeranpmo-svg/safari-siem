@@ -1,0 +1,178 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lifecycle Studio</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--l-bg:#0b0d12;--l-panel:#12151c;--l-raise:#181c25;--l-line:#232837;--l-ink:#e7eaf0;--l-mute:#8b93a4;--l-ok:#2fb344;--l-warn:#f59f00;--l-bad:#e5484d;--l-acc:#5b8def;--l-ai:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--l-bg);color:var(--l-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--l-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--l-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--l-raise);color:var(--l-ink);border:1px solid var(--l-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--l-acc);border-color:var(--l-acc);color:#fff}.btn.ok{background:rgba(47,179,68,.18);border-color:rgba(47,179,68,.5);color:#7ee28f}.btn.ai{background:linear-gradient(135deg,#7c4dff,#5b8def);border:0;color:#fff}.btn.ghost{background:transparent}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--l-panel);border:1px solid var(--l-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--l-mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:center;background:radial-gradient(circle at 12% 40%,rgba(47,179,68,.14),transparent 55%),var(--l-panel)}
+.ring{position:relative;width:190px;height:190px;margin:auto}.ring svg{transform:rotate(-90deg)}.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.ring .v b{font-size:42px;line-height:1}.ring .v span{font-size:12px;color:var(--l-mute);max-width:140px}.ring circle.fg{transition:stroke-dashoffset 1.2s cubic-bezier(.2,.7,.2,1)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px}
+.kpi{background:var(--l-raise);border:1px solid var(--l-line);border-radius:12px;padding:11px 13px;cursor:pointer;text-align:left;color:inherit;font:inherit}.kpi:hover,.kpi.on{border-color:var(--l-acc)}.kpi .n{font-size:25px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--l-mute)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.chip{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--l-raise);border:1px solid var(--l-line)}.chip.lrn{border-color:rgba(163,113,247,.5);color:#c6a6ff}
+#fc{width:100%;height:auto}#fc .bar{cursor:pointer}#fc .bar:hover rect{opacity:.85}#fc text{font:11px Inter,"Segoe UI",system-ui,sans-serif;fill:#aab2c2}#fc .sel rect.bg{fill:rgba(91,141,239,.12)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--l-mute);margin-top:6px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px}
+.inp{background:#0b0d12;color:var(--l-ink);border:1px solid var(--l-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--l-mute);padding:6px 8px;border-bottom:1px solid var(--l-line);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid #1b2030;vertical-align:middle}tr.r{cursor:pointer}tr.r:hover td{background:#151925}tr.r.sel td{background:#18203a}
+.rk{display:inline-flex;align-items:center;gap:6px}.rk .b{width:60px;height:6px;border-radius:4px;background:#232837;overflow:hidden}.rk .b i{display:block;height:100%}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.a-isolate{background:rgba(229,72,77,.2);color:#ff7b80}.a-replace,.a-upgrade{background:rgba(245,159,0,.18);color:#f5b544}.a-renew,.a-extend{background:rgba(91,141,239,.18);color:#9dbbff}.a-plan{background:rgba(163,113,247,.18);color:#c6a6ff}.a-ok{background:rgba(47,179,68,.15);color:#56d364}.p-mute{background:rgba(139,147,164,.16);color:#aab2c2}.p-ai{background:rgba(163,113,247,.18);color:#c6a6ff}
+.months{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.mo{background:var(--l-raise);border:1px solid var(--l-line);border-radius:10px;padding:8px;font-size:12px;min-height:62px}.mo b{display:block;font-size:12.5px}.mo.hot{border-color:rgba(245,159,0,.6)}
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:10px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--l-raise);border:1px solid var(--l-line);border-radius:12px;padding:10px;min-height:120px}.col h3{margin:0 0 8px;font-size:13px;display:flex;justify-content:space-between}
+.it{background:#10141c;border:1px solid var(--l-line);border-radius:10px;padding:8px;margin-bottom:6px;font-size:12.5px}.it.prop{border-color:rgba(163,113,247,.5)}.it.done{opacity:.6}
+.lnk{background:none;border:0;color:#9dbbff;cursor:pointer;font:inherit;padding:0;text-align:left}.lnk:hover{text-decoration:underline}
+#drawer{position:fixed;top:0;right:0;height:100vh;width:min(560px,100vw);background:var(--l-panel);border-left:1px solid var(--l-line);z-index:50;overflow:auto;padding:18px;transform:translateX(105%);transition:transform .25s ease;box-shadow:-20px 0 40px rgba(0,0,0,.4)}
+#drawer.open{transform:none}#drawer h3{margin:0;font-size:18px;word-break:break-word}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin:10px 0}.kv span:nth-child(odd){color:var(--l-mute)}
+.wf .st{display:flex;align-items:center;gap:8px;font-size:12.5px;margin:3px 0}.wf .st .b{height:10px;border-radius:3px;background:var(--l-bad)}
+.tl text{font:10.5px Inter,"Segoe UI",system-ui,sans-serif;fill:#aab2c2}
+.ask{display:flex;gap:8px;flex-wrap:wrap}.ask textarea{flex:1;min-width:240px;min-height:64px}
+.ans{white-space:pre-wrap;background:var(--l-raise);border:1px solid var(--l-line);border-radius:12px;padding:12px;margin-top:10px;font-size:13px}.steps{font-size:12px;color:var(--l-mute);margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.empty{color:var(--l-mute);padding:8px 0;font-size:13px}
+@media (max-width:1100px){.cols,.hero{grid-template-columns:1fr}.months{grid-template-columns:repeat(3,1fr)}}
+@media (prefers-reduced-motion:reduce){#drawer,.ring circle.fg{transition:none}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT Asset Management · lifecycle</div><h1>Lifecycle Studio</h1><div class="mute">What to replace, upgrade, renew or isolate - and when. Risk you can read point by point, lifespans learned from your own retirements, the next two years of refresh with the cost where it is known, support renewals and the refresh plan. People decide every plan item.</div></div>
+ <span class="sp"></span><span class="mute sm" id="up"></span><a class="btn ghost" href="lifecycle.html"><i class="ti ti-shield-lock"></i>End of Life &amp; Isolation</a><button type="button" class="btn" id="refresh"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+<section class="card hero"><div class="ring" id="ring"></div><div><div class="kpis" id="kpis"></div><div class="chips" id="life"></div><p class="mute sm" id="learned" style="margin:8px 0 0"></p></div></section>
+<section class="card"><h2><i class="ti ti-chart-bar"></i>Refresh forecast <span class="c">replacements, upgrades and isolations due per quarter · click a quarter to list them</span></h2><svg id="fc" viewBox="0 0 1000 260" role="img" aria-label="Refresh forecast by quarter"></svg><div class="legend" id="fcl"></div></section>
+<div class="cols">
+ <section class="card" id="reg"><h2><i class="ti ti-list-details"></i>Assets by risk <span class="c" id="rc"></span></h2>
+  <div class="row" style="margin-bottom:10px"><input class="inp" id="find" placeholder="Search name, model, site" aria-label="Search" style="flex:1;min-width:180px"><select class="inp" id="fact" aria-label="Action"><option value="">All actions</option></select><span class="sm" id="filt"></span><button type="button" class="btn ghost" id="clear" hidden>Clear filters</button></div>
+  <div style="overflow:auto"><table><thead><tr><th>Asset</th><th>Risk</th><th>Action</th><th>Due</th><th>Support</th><th id="thcost">Est. cost</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <div class="row" style="margin-top:8px"><button type="button" class="btn ghost" id="more" hidden>Show more</button></div></section>
+ <div>
+  <section class="card"><h2><i class="ti ti-calendar-due"></i>Support renewals <span class="c">next 12 months</span></h2><div class="months" id="months"></div></section>
+  <section class="card" id="c-plan"><h2><i class="ti ti-layout-kanban"></i>Refresh plan <span class="c" id="pc"></span></h2><div class="board" id="board"></div></section>
+ </div>
+</div>
+<section class="card"><h2><i class="ti ti-sparkles"></i>AI lifecycle planner <span class="c" id="ais"></span></h2>
+ <div class="ask"><textarea class="inp" id="q" maxlength="4000" placeholder="e.g. What must we replace in 2027 and what will it cost? Which end-of-life servers have no plan yet?" aria-label="Question"></textarea><button type="button" class="btn ai" id="go" disabled><i class="ti ti-send"></i>Ask</button></div>
+ <div class="sm mute" style="margin-top:6px">The planner reads with read-only tools and may record plan PROPOSALS - a person accepts or drops each one. It never isolates, retires or buys; isolation needs the CISO on End of Life &amp; Isolation.</div>
+ <div id="out"></div></section>
+</div>
+<aside id="drawer" aria-hidden="true" aria-label="Asset lifecycle"></aside>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, F={k:'',q:'',act:'',quarter:''}, LIMIT=150, OPEN='';
+  var TCOL={server:'#5b8def',vm:'#3bc9db',network:'#f59f00',storage:'#a371f7',workstation:'#94d82d',laptop:'#63e6be',printer:'#f783ac',ups:'#ffd43b',phone:'#ff922b',mobile:'#ff922b',peripheral:'#8b93a4',other:'#8b93a4'};
+  var ACLS={isolate:'a-isolate',replace:'a-replace',upgrade:'a-upgrade','renew support':'a-renew','extend warranty':'a-extend',plan:'a-plan',ok:'a-ok'};
+  var KF={isolate:function(a){return a.action==='isolate';},eol:function(a){return a.eol_status==='eol';},soon:function(a){return a.eol_status==='soon';},warranty:function(a){return a.why.some(function(w){return /out of warranty/.test(w.text);});},
+    uncovered:function(a){return a.support==='uncovered';},overdue:function(a){return a.quarter==='overdue';},high:function(a){return a.risk>=50;},due12:function(a){return a.quarter&&a.quarter!=='overdue'&&V.forecast.slice(1,5).some(function(f){return f.quarter===a.quarter;});}};
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=240000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function col(p){return p==null?'#8b93a4':p>=80?'#2fb344':p>=55?'#f59f00':'#e5484d';}
+  function rcol(r){return r>=50?'#e5484d':r>=25?'#f59f00':'#2fb344';}
+  function money(v){return v==null?'':'SAR '+Number(v).toLocaleString('en-US');}
+  function ringSvg(pct,size,stroke,c){var r=(size-stroke)/2,ci=2*Math.PI*r,off=ci*(1-(pct||0)/100);
+    return '<svg width="'+size+'" height="'+size+'"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="#232837" stroke-width="'+stroke+'"/><circle class="fg" cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+ci.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';}
+  function risk(r){return '<span class="rk"><span class="b"><i style="width:'+r+'%;background:'+rcol(r)+'"></i></span><b style="color:'+rcol(r)+'">'+esc(r)+'</b></span>';}
+  function act(a){return '<span class="pill '+(ACLS[a]||'p-mute')+'">'+esc(a)+'</span>';}
+  function planAction(a){return a.action==='plan'||a.action==='ok'?(a.type==='vm'?'upgrade':'replace'):a.action;}
+
+  function drawTop(){var s=V.summary;
+    $('ring').innerHTML=ringSvg(s.supported_pct||0,190,15,col(s.supported_pct))+'<div class="v"><b>'+(s.supported_pct==null?'—':esc(s.supported_pct)+'%')+'</b><span>of active assets on a vendor-supported version (known)</span></div>';
+    function k(n,l,c,key){return '<button type="button" class="kpi'+(F.k===key?' on':'')+'" data-k="'+esc(key)+'"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></button>';}
+    $('kpis').innerHTML=k(s.isolate,'isolate now',s.isolate?'#ff7b80':'','isolate')+k(s.eol,'past end of life',s.eol?'#ff7b80':'','eol')+k(s.eol_soon,'end of life in 180 d',s.eol_soon?'#f5b544':'','soon')
+      +k(s.out_of_warranty,'out of warranty',s.out_of_warranty?'#f5b544':'','warranty')+k(s.uncovered,'no support contract',s.uncovered?'#f5b544':'','uncovered')+k(s.overdue,'replacement overdue',s.overdue?'#ff7b80':'','overdue')
+      +k(s.due_12m,'due in 12 months','#9dbbff','due12')+k(s.high_risk,'risk 50 +',s.high_risk?'#ff7b80':'','high')+k(s.planned,'in the plan','#c6a6ff','');
+    $('life').innerHTML='<span class="sm mute" style="align-self:center">Lifespans:</span>'+Object.keys(V.lifespans).sort().map(function(t){var l=V.lifespans[t];return '<span class="chip'+(l.source==='learned'?' lrn':'')+'" title="'+esc(l.source==='learned'?'learned from '+l.n+' retirements in this register':'default - fewer than 3 retirements with dates')+'">'+esc(t)+' '+esc(l.years)+' y'+(l.source==='learned'?' · learned':'')+'</span>';}).join('');
+    $('learned').textContent=V.learned.note+(V.sources.support?'':' Support Contracts is not installed: support coverage is not shown.')+(V.sources.lifecycle?'':' End of Life is not available: vendor end-of-life dates come from the asset record only.');
+    var acts=['isolate','replace','upgrade','renew support','extend warranty','plan','ok'];$('fact').innerHTML='<option value="">All actions</option>'+acts.map(function(a){return '<option'+(F.act===a?' selected':'')+'>'+esc(a)+'</option>';}).join('');
+    $('thcost').hidden=!V.costs;
+  }
+  function drawForecast(){var fc=V.forecast,W=1000,H=260,pad=40,bw=(W-pad*2)/fc.length,max=Math.max.apply(null,fc.map(function(f){return f.count;}).concat([1])),types={};
+    fc.forEach(function(f){Object.keys(f.by_type).forEach(function(t){types[t]=1;});});
+    var out='';fc.forEach(function(f,i){var x=pad+i*bw,y0=H-56,h=0;
+      out+='<g class="bar'+(F.quarter===f.quarter?' sel':'')+'" data-quarter="'+esc(f.quarter)+'" tabindex="0" role="button" aria-label="'+esc(f.quarter+': '+f.count+' due')+'"><rect class="bg" x="'+(x+2)+'" y="10" width="'+(bw-4)+'" height="'+(H-62)+'" fill="transparent" rx="6"/>';
+      Object.keys(f.by_type).forEach(function(t){var hh=(H-90)*f.by_type[t]/max;out+='<rect x="'+(x+bw*0.18)+'" y="'+(y0-h-hh)+'" width="'+(bw*0.64)+'" height="'+hh+'" fill="'+(TCOL[t]||'#8b93a4')+'" rx="3"><title>'+esc(f.by_type[t]+' '+t)+'</title></rect>';h+=hh;});
+      out+='<text x="'+(x+bw/2)+'" y="'+(y0-h-6)+'" text-anchor="middle" style="fill:#e7eaf0;font-weight:700">'+(f.count||'')+'</text><text x="'+(x+bw/2)+'" y="'+(H-38)+'" text-anchor="middle"'+(f.quarter==='overdue'?' style="fill:#ff7b80"':'')+'>'+esc(f.quarter)+'</text>'
+        +(V.costs&&f.count?'<text x="'+(x+bw/2)+'" y="'+(H-22)+'" text-anchor="middle">'+esc(f.cost?money(f.cost):'')+'</text>'+(f.cost_unknown?'<text x="'+(x+bw/2)+'" y="'+(H-8)+'" text-anchor="middle">'+esc('+'+f.cost_unknown+' cost not known')+'</text>':''):'')+'</g>';});
+    $('fc').innerHTML=out;
+    $('fcl').innerHTML=Object.keys(types).map(function(t){return '<span><i style="background:'+(TCOL[t]||'#8b93a4')+'"></i>'+esc(t)+'</span>';}).join('')+(V.costs?'<span>cost = median of recorded purchases of the same model / type (3 or more) - never guessed</span>':'');}
+  function filtered(){var q=F.q.toLowerCase();return V.assets.filter(function(a){return (!F.k||KF[F.k](a))&&(!F.act||a.action===F.act)&&(!F.quarter||a.quarter===F.quarter&&['replace','plan','isolate','upgrade'].indexOf(a.action)>=0)&&(!q||[a.name,a.model,a.site,a.type].join(' ').toLowerCase().indexOf(q)>=0);});}
+  function drawRows(){var L=filtered();
+    $('rows').innerHTML=L.slice(0,LIMIT).map(function(a){return '<tr class="r'+(OPEN===a.id?' sel':'')+'" data-asset="'+esc(a.id)+'" tabindex="0"><td><b>'+esc(a.name)+'</b><div class="sm mute">'+esc([a.type,a.model,a.site,a.age!=null?a.age+' y old':''].filter(Boolean).join(' · '))+'</div></td><td>'+risk(a.risk)+'</td><td>'+act(a.action)+(a.planned.length?' <span class="pill p-ai" title="in the plan">'+esc(a.planned[0].status)+'</span>':'')+'</td>'
+      +'<td>'+esc(a.quarter||'—')+'<div class="sm mute">'+esc(a.due||'')+'</div></td><td><span class="sm '+(a.support==='uncovered'?'" style="color:#f5b544':'mute')+'">'+esc(a.support==='uncovered'?'none':a.support)+'</span></td>'+(V.costs?'<td class="sm">'+esc(a.cost?money(a.cost.value):'')+'</td>':'')+'</tr>';}).join('')||'<tr><td colspan="6" class="empty">No asset matches.</td></tr>';
+    $('rc').textContent=L.length+' of '+V.assets.length;$('more').hidden=L.length<=LIMIT;
+    var f=[F.k&&$('kpis').querySelector('[data-k="'+F.k+'"] .l')&&$('kpis').querySelector('[data-k="'+F.k+'"] .l').textContent,F.act,F.quarter&&('due '+F.quarter)].filter(Boolean);$('filt').textContent=f.length?'Filtered: '+f.join(' · '):'';$('clear').hidden=!f.length&&!F.q;}
+  function drawRenewals(){var m=V.renewals,now=new Date(),cells=[];for(var i=0;i<12;i++){var d=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+i,1)),key=d.toISOString().slice(0,7),x=m.find(function(r){return r.month===key;});
+      cells.push('<div class="mo'+(x&&x.count?' hot':'')+'"><b>'+esc(d.toLocaleString('en-GB',{month:'short',year:'2-digit',timeZone:'UTC'}))+'</b>'+(x?esc(x.count+' contract(s)')+(V.costs&&x.cost?'<div>'+esc(money(x.cost))+'</div>':'')+'<div class="mute" title="'+esc(x.contracts.map(function(c){return c.vendor+' '+c.product+' · '+c.end;}).join('\n'))+'">'+esc(x.contracts.slice(0,2).map(function(c){return c.vendor;}).join(', '))+'</div>':'<span class="mute">—</span>')+'</div>');}
+    $('months').innerHTML=V.sources.support?cells.join(''):'<div class="empty" style="grid-column:1/-1">Support Contracts is not installed - renewals appear when contracts are recorded there.</div>';}
+  function drawPlan(){var P=V.plan,qs={};P.forEach(function(p){(qs[p.quarter]=qs[p.quarter]||[]).push(p);});
+    var keys=Object.keys(qs).sort();$('pc').textContent=P.filter(function(p){return p.status==='planned';}).length+' planned · '+P.filter(function(p){return p.status==='proposed';}).length+' proposed';
+    $('board').innerHTML=keys.length?keys.map(function(k){return '<div class="col"><h3><span>'+esc(k)+'</span><span class="mute sm">'+esc(qs[k].length)+'</span></h3>'+qs[k].map(function(p){var pr=p.status==='proposed',open=pr||p.status==='planned';
+      return '<div class="it'+(pr?' prop':'')+(open?'':' done')+'" data-item="'+esc(p.id)+'"><div class="row"><button type="button" class="lnk" data-asset="'+esc(p.asset_id)+'">'+esc(p.asset_name)+'</button><span class="sp"></span>'+(pr?'<span class="pill p-ai">proposed</span>':'<span class="pill p-mute">'+esc(p.status)+'</span>')+'</div><div>'+act(p.action)+(V.costs&&p.est_cost?' <span class="sm mute">'+esc(money(p.est_cost))+'</span>':'')+'</div>'
+        +(p.note?'<div class="sm mute">'+esc(p.note)+'</div>':'')+'<div class="sm mute">by '+esc(p.by)+'</div>'
+        +(open&&can('operator')?'<div class="row" style="margin-top:6px">'+(pr?'<button type="button" class="btn ok" data-st="planned" data-id="'+esc(p.id)+'">Accept</button>':'<button type="button" class="btn ok" data-st="done" data-id="'+esc(p.id)+'">Done</button>')+'<input class="inp" data-note placeholder="why (to drop)" aria-label="Note" style="flex:1;min-width:80px"><button type="button" class="btn ghost" data-st="dropped" data-id="'+esc(p.id)+'">Drop</button></div>':'')+'</div>';}).join('')+'</div>';}).join('')
+      :'<div class="empty">Nothing planned yet. Open an asset and press "Add to plan", or ask the planner.</div>';}
+  function timeline(a){var pts=[['purchased / first seen',a.purchase_date,'#8b93a4'],['warranty ends',a.warranty_end,'#f59f00'],['end of life',a.eol,'#e5484d'],['due',a.due,'#a371f7']].filter(function(p){return p[1];}),now=Date.now();
+    if(!pts.length)return '<div class="sm mute">No dates recorded - add a purchase date, warranty or end of life to the asset.</div>';
+    var ts=pts.map(function(p){return Date.parse(p[1]);}).concat([now]),lo=Math.min.apply(null,ts),hi=Math.max.apply(null,ts),X=function(t){return 20+480*(t-lo)/((hi-lo)||1);};
+    return '<svg class="tl" viewBox="0 0 520 86" width="100%"><line x1="20" y1="40" x2="500" y2="40" stroke="#232837" stroke-width="4" stroke-linecap="round"/><line x1="'+X(now)+'" y1="18" x2="'+X(now)+'" y2="62" stroke="#5b8def" stroke-dasharray="3 3"/><text x="'+X(now)+'" y="12" text-anchor="middle" style="fill:#9dbbff">today</text>'
+      +pts.map(function(p,i){var x=X(Date.parse(p[1]));return '<circle cx="'+x+'" cy="40" r="7" fill="'+p[2]+'"/><text x="'+x+'" y="'+(i%2?78:66)+'" text-anchor="middle">'+esc(p[0]+' '+String(p[1]).slice(0,10))+'</text>';}).join('')+'</svg>';}
+  function openAsset(id){var a=V.assets.find(function(x){return x.id===id;});if(!a)return;OPEN=id;drawRows();var d=$('drawer');d.classList.add('open');d.setAttribute('aria-hidden','false');
+    var pa=planAction(a),qopts=V.forecast.slice(1).map(function(f){return f.quarter;});
+    d.innerHTML='<div class="row"><h3>'+esc(a.name)+'</h3><span class="sp"></span><button type="button" class="btn ghost" id="dclose" aria-label="Close"><i class="ti ti-x"></i></button></div>'
+      +'<div class="row" style="margin-top:6px">'+act(a.action)+risk(a.risk)+'<span class="sm mute">'+esc(a.type)+'</span></div><p style="margin:8px 0">'+esc(a.reason)+'</p>'+timeline(a)
+      +'<div class="kv"><span>Model</span><span>'+esc(a.model||'—')+'</span><span>Age</span><span>'+esc(a.age!=null?a.age+' years':'—')+'</span><span>End of life</span><span>'+esc(a.eol?a.eol+(a.product?' · '+a.product:''):(a.eol_status==='unknown'?'not known':a.eol_status))+'</span><span>Warranty</span><span>'+esc(a.warranty_end||'not recorded')+'</span>'
+      +'<span>Support</span><span>'+esc(a.support==='uncovered'?'no active contract':a.support)+' · <a href="support-contracts.html" style="color:#9dbbff">Support Contracts</a></span><span>Dependents</span><span>'+esc(a.dependents)+' · <a href="cmdb-studio.html" style="color:#9dbbff">CMDB Studio</a></span><span>Due</span><span>'+esc(a.due?a.due+' - '+a.due_why:'no date')+'</span>'
+      +(V.costs?'<span>Est. cost</span><span>'+esc(a.cost?money(a.cost.value)+' ('+a.cost.basis+')':'not known - fewer than 3 recorded purchases of this model or type')+'</span>':'')+'</div>'
+      +'<div style="font-weight:700">Risk '+esc(a.risk)+' / 100</div><div class="wf">'+(a.why.length?a.why.map(function(w){return '<div class="st"><span class="b" style="width:'+w.points*2+'px"></span><b>+'+esc(w.points)+'</b><span>'+esc(w.text)+'</span></div>';}).join(''):'<div class="sm mute">No risk factor.</div>')+'</div>'
+      +(a.action==='isolate'?'<div class="row" style="margin:8px 0"><a class="btn" href="lifecycle.html"><i class="ti ti-shield-lock"></i>Request isolation on End of Life &amp; Isolation (CISO approves)</a></div>':'')
+      +(a.planned.length?'<div class="sm" style="margin-top:8px">In the plan: '+a.planned.map(function(p){return esc(p.action+' '+p.quarter+' ('+p.status+')');}).join(', ')+'</div>':'')
+      +(can('operator')?'<div style="font-weight:700;margin-top:12px">Add to plan</div><div class="row" style="margin-top:6px"><select class="inp" id="pact" aria-label="Action">'+V.actions.map(function(x){return '<option'+(x===pa?' selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select><select class="inp" id="pq" aria-label="Quarter">'+qopts.map(function(q){return '<option'+(q===a.quarter?' selected':'')+'>'+esc(q)+'</option>';}).join('')+'</select><input class="inp" id="pnote" placeholder="note (optional)" aria-label="Note" style="flex:1;min-width:100px"><button type="button" class="btn pri" id="padd" data-id="'+esc(a.id)+'">Add</button></div>':'');}
+  function closeAsset(){OPEN='';var d=$('drawer');d.classList.remove('open');d.innerHTML='';d.setAttribute('aria-hidden','true');if(V)drawRows();}
+  function draw(){drawTop();drawForecast();drawRows();drawRenewals();drawPlan();if(OPEN)openAsset(OPEN);}
+  function load(){
+    req('GET','/lifecycle-studio').then(function(v){V=v;$('main').hidden=false;$('err').innerHTML='';draw();
+      $('ais').textContent=v.ai.enabled?'Claude '+v.ai.model:v.ai.reason;$('go').disabled=!(v.ai.enabled&&can('operator'));
+      $('up').textContent='updated '+new Date(v.generated_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});},
+      function(e){$('main').hidden=true;$('err').innerHTML='<div class="card"><p>'+esc(e.status===404?'Lifecycle Studio is not installed yet - run the platform update (update-platform.ps1).':e.status===409?'Lifecycle Studio runs in Python and Python did not answer - run the update.':e.message)+'</p></div>';});
+  }
+  document.addEventListener('click',function(ev){
+    var t=ev.target.closest('#dclose,#padd,[data-st],[data-asset],[data-k],[data-quarter]');if(!t)return;
+    if(t.id==='dclose'){closeAsset();return;}
+    if(t.id==='padd'){t.disabled=true;var b={asset_id:t.getAttribute('data-id'),action:$('pact').value,quarter:$('pq').value};if($('pnote').value.trim())b.note=$('pnote').value.trim();
+      req('POST','/lifecycle-studio/plan',b).then(function(){toast('Added to the refresh plan (audited)');load();},function(e){t.disabled=false;toast(e.message);});return;}
+    if(t.hasAttribute('data-st')){var st=t.getAttribute('data-st'),note=t.closest('.it').querySelector('[data-note]').value.trim();if(st==='dropped'&&!note){toast('Say why it is dropped');t.closest('.it').querySelector('[data-note]').focus();return;}t.disabled=true;
+      req('POST','/lifecycle-studio/plan/'+encodeURIComponent(t.getAttribute('data-id'))+'/status',note?{status:st,note:note}:{status:st}).then(function(){toast(st==='planned'?'Accepted into the plan':st==='done'?'Marked done':'Dropped');load();},function(e){t.disabled=false;toast(e.message);});return;}
+    if(t.hasAttribute('data-asset')){openAsset(t.getAttribute('data-asset'));return;}
+    if(t.hasAttribute('data-k')){var k=t.getAttribute('data-k');if(!k){$('c-plan').scrollIntoView({behavior:'smooth'});return;}F.k=F.k===k?'':k;LIMIT=150;drawTop();drawRows();$('reg').scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(t.hasAttribute('data-quarter')){var q=t.getAttribute('data-quarter');F.quarter=F.quarter===q?'':q;LIMIT=150;drawForecast();drawRows();}
+  });
+  document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&OPEN)closeAsset();var r=ev.target.closest&&ev.target.closest('[data-asset],[data-quarter]');if(r&&ev.key==='Enter'){if(r.hasAttribute('data-asset'))openAsset(r.getAttribute('data-asset'));else r.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});
+  $('find').addEventListener('input',function(){F.q=this.value.trim();LIMIT=150;drawRows();});
+  $('fact').addEventListener('change',function(){F.act=this.value;LIMIT=150;drawRows();});
+  $('clear').addEventListener('click',function(){F={k:'',q:'',act:'',quarter:''};$('find').value='';drawTop();drawForecast();drawRows();});
+  $('more').addEventListener('click',function(){LIMIT+=150;drawRows();});
+  $('refresh').addEventListener('click',load);
+  $('go').addEventListener('click',function(){var q=$('q').value.trim(),b=this;if(q.length<3){$('out').innerHTML='<div class="ans">Type a question first.</div>';return;}
+    b.disabled=true;$('out').innerHTML='<div class="ans mute">The planner is reading the lifecycle data…</div>';
+    req('POST','/lifecycle-studio/ai/ask',{question:q}).then(function(r){
+      $('out').innerHTML='<div class="ans">'+esc(r.answer)+'</div><div class="steps">'+esc(r.model)+' · '+r.steps.length+' step(s): '+esc(r.steps.map(function(s){return s.tool+(s.ok?'':' (refused)');}).join(', '))
+        +(r.proposed.length?' · '+r.proposed.length+' plan proposal(s) for your decision':'')+(r.injection_signals.length?' · ⚠ text in the data looked like instructions - treated as data':'')+'</div>';
+      if(r.proposed.length)load();
+    },function(e){$('out').innerHTML='<div class="ans">'+esc(e.message)+'</div>';}).then(function(){b.disabled=!(V&&V.ai&&V.ai.enabled&&can('operator'));});});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden&&!OPEN&&!document.activeElement.matches('textarea,input,select'))load();},120000);
+})();
+</script></body></html>

@@ -1,0 +1,101 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI SOC Analyst</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1680px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.ai{background:linear-gradient(135deg,#7c4dff,#5b8def);border:0;color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}.btn.bad{border-color:#5a2a2d;color:#ff8a8e}
+.cols{display:grid;grid-template-columns:240px minmax(0,1fr) 340px;gap:14px}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:14px;min-width:0}
+.card h2{margin:0 0 10px;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.conv{display:block;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:9px;padding:7px 9px;color:var(--d-ink);cursor:pointer;font:13px Inter,sans-serif;margin-bottom:3px}.conv:hover{background:#151924}.conv[aria-current="true"]{border-color:var(--d-acc);background:rgba(91,141,239,.12)}
+.chat{min-height:380px;max-height:62vh;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px}
+.msg{max-width:88%;border-radius:12px;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13.5px}.msg.a{align-self:flex-end;background:#1d2a45;border:1px solid #2b3e66}.msg.c{align-self:flex-start;background:var(--d-raise);border:1px solid var(--d-line)}.msg.c .who{font:600 11px ui-monospace,monospace;color:#b39bff;margin-bottom:4px}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.quick button{background:transparent;border:1px solid var(--d-line);color:var(--d-ink);border-radius:999px;padding:5px 12px;font:600 12px Inter,sans-serif;cursor:pointer}.quick button:hover{border-color:#7c4dff}
+.inp,select.inp,textarea.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:7px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.ok{background:rgba(47,179,68,.15);color:#56d364}.warn{background:rgba(245,159,0,.18);color:#f5b544}.vio{background:rgba(124,77,255,.2);color:#b39bff}.bad{background:rgba(229,72,77,.18);color:#ff8a8e}
+.prop{border:1px solid var(--d-line);border-radius:10px;padding:9px;margin-bottom:8px;font-size:12.5px}.prop pre{margin:6px 0;background:#0b0d12;border-radius:6px;padding:6px;font:11.5px ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.draft{white-space:pre-wrap;background:#0b0d12;border:1px solid var(--d-line);border-radius:10px;padding:12px;font:13px/1.5 Inter,sans-serif;max-height:50vh;overflow:auto;overflow-wrap:anywhere}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.steps{font:11px ui-monospace,monospace;color:var(--d-mute);margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1200px){.cols{grid-template-columns:1fr}.chat{max-height:none}}
+@media(max-width:640px){main{padding:12px 12px 40px}.top h1{font-size:20px}.msg{max-width:100%}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security Operations · AI</div><h1>AI SOC Analyst</h1><div class="sm mute">A conversational analyst grounded in the live SOC: it reads alerts, cases, hunts, behaviour and threat intelligence, cites the records, proposes next steps a person accepts, and drafts runbooks, change requests, incident reports and manager briefs for review. It cannot contain, block or close anything by itself.</div></div><div class="sp"></div>
+ <span id="st"></span><a class="btn" href="soc-alerts.html"><i class="ti ti-bell"></i>Alert queue</a></div>
+<div id="err" class="card" hidden style="margin-bottom:14px"></div>
+<div class="cols" id="main" hidden>
+ <section class="card"><h2><i class="ti ti-messages"></i>Conversations</h2><button class="btn sm" type="button" id="new" style="margin-bottom:8px"><i class="ti ti-plus"></i>New conversation</button><div id="convs"></div><div class="sm mute" style="margin-top:8px">Your conversations are private to you.</div></section>
+ <section class="card">
+  <div class="row" style="margin-bottom:8px"><span class="sm mute">About</span><select class="inp" id="ck" style="max-width:150px" aria-label="Context kind"><option value="none">the SOC now</option><option value="alert">an alert</option><option value="case">a case</option><option value="entity">a user / host / IP</option><option value="indicator">an indicator</option></select><input class="inp" id="cid" style="max-width:240px" placeholder="ALR-…, CASE-…, user:dave, 10.0.0.9" aria-label="Context id" hidden></div>
+  <div class="chat" id="chat" aria-live="polite"></div>
+  <div class="quick" id="quick"></div>
+  <div class="row"><textarea class="inp" id="q" rows="2" maxlength="4000" style="flex:1" placeholder="Ask about what is happening - e.g. Which open alert should I work first, and why?" aria-label="Question"></textarea><button class="btn ai" type="button" id="ask"><i class="ti ti-send"></i>Ask</button></div>
+  <div class="sm mute" style="margin-top:6px">Answers are drawn from the records the platform holds; the analyst cites record ids so you can open them. User behaviour is an indicator, never proof (PDPL).</div>
+ </section>
+ <div>
+  <section class="card" style="margin-bottom:14px"><h2><i class="ti ti-checklist"></i>Proposed next steps <span class="c">a person accepts; it then runs as that person</span></h2><div id="props"></div></section>
+  <section class="card"><h2><i class="ti ti-file-text"></i>Draft a document <span class="c">for you to review and file</span></h2>
+   <div class="row" style="margin-bottom:6px"><select class="inp" id="dk" aria-label="Document"><option value="incident_report">Incident report</option><option value="runbook">Runbook</option><option value="change_request">Change request</option><option value="catalog_entry">Service catalogue entry</option><option value="manager_brief">Brief my manager</option></select></div>
+   <input class="inp" id="dn" maxlength="1000" placeholder="Optional note - audience, focus" aria-label="Note" style="margin-bottom:6px">
+   <div class="row"><button class="btn ai sm" type="button" id="draft"><i class="ti ti-wand"></i>Draft from the selected context</button></div>
+   <div id="dout" style="margin-top:8px"></div></section>
+ </div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var ROLE='viewer',CONV=null,TURNS=[],BUSY=false,LAST=null;
+  var QUICK=[['What needs my attention right now, in order, and why?','Focus now'],['Give me a threat briefing for the last 24 hours: what was seen, what was stopped, what is still open.','Threat briefing'],['Is there an attack in progress? Look for chains across alerts, behaviour and threat intelligence.','Active attack?'],['For the most serious open alert, what are the containment options and who must approve each?','Containment options'],['Is there any sign of lateral movement between hosts in the last 24 hours?','Lateral movement'],['How does today compare with yesterday - alerts raised, closed and still open?','Today vs yesterday'],['Brief my manager in five lines on the current SOC position.','Brief my manager']];
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc'+u);x.withCredentials=true;x.timeout=300000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('The SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function ctx(){var k=$('ck').value,id=$('cid').value.trim();return k==='none'||!id?null:{page:'other',kind:k,id:id};}
+  function drawChat(){var c=$('chat');c.innerHTML=TURNS.length?TURNS.map(function(t){return '<div class="msg '+(t.role==='analyst'?'a':'c')+'">'+(t.role==='analyst'?'':'<div class="who">AI SOC ANALYST</div>')+esc(t.text)+(t.steps&&t.steps.length?'<div class="steps">read: '+esc(t.steps.map(function(s){return s.tool+(s.ok===false?' (refused)':'');}).join(', '))+'</div>':'')+'</div>';}).join(''):note('Ask a question, or start from one of the questions below. The analyst reads the live records to answer.');c.scrollTop=c.scrollHeight;}
+  function loadConvs(){return req('GET','/soc/copilot/conversations').then(function(r){var L=r.items||[];$('convs').innerHTML=L.length?L.map(function(c){return '<button class="conv" type="button" data-conv="'+esc(c.id)+'" aria-current="'+(c.id===CONV)+'">'+esc(c.title||c.id)+'<div class="sm mute">'+esc(c.updated?new Date(c.updated).toLocaleString():'')+'</div></button>';}).join(''):'<div class="sm mute">None yet.</div>';}).catch(function(e){$('convs').innerHTML=note(e.message);});}
+  function loadProps(){return req('GET','/soc/copilot/proposals?status=pending').then(function(r){var L=r.items||[],can=ROLE==='operator'||ROLE==='admin';
+      $('props').innerHTML=L.length?L.map(function(p){return '<div class="prop"><div class="row"><span class="pill vio">'+esc(p.kind.replace(/_/g,' '))+'</span><span class="sm mute">'+esc(p.id)+'</span></div>'+(p.reason?'<div style="margin-top:4px">'+esc(p.reason)+'</div>':'')+'<pre>'+esc(JSON.stringify(p.params,null,1))+'</pre>'
+        +(can?'<div class="row"><button class="btn sm pri" type="button" data-dec="accept" data-p="'+esc(p.id)+'">Accept</button><button class="btn sm bad" type="button" data-dec="reject" data-p="'+esc(p.id)+'">Reject</button></div>':'<div class="sm mute">An operator or administrator accepts or rejects this.</div>')+'</div>';}).join(''):note('Nothing proposed. When the analyst suggests opening a case, adding a note, closing or assigning an alert, or saving a hunt, it waits here for you.');})
+      .catch(function(e){$('props').innerHTML=note(e.message);});}
+  function ask(q){if(BUSY||!q)return;BUSY=true;$('ask').disabled=true;TURNS.push({role:'analyst',text:q});TURNS.push({role:'copilot',text:'Reading the records…'});drawChat();
+    var b={question:q};if(CONV)b.conversation=CONV;var c=ctx();if(c)b.context=c;
+    req('POST','/soc/copilot/ask',b).then(function(r){CONV=r.conversation;TURNS[TURNS.length-1]={role:'copilot',text:r.answer||'(no answer)',steps:r.steps};if(r.proposals&&r.proposals.length)toast(r.proposals.length+' next step(s) proposed - accept or reject them on the right');
+        if(r.injection_signals&&r.injection_signals.length)TURNS.push({role:'copilot',text:'Some records contained text that looks like instructions; it was treated as data, not obeyed.'});
+        drawChat();loadConvs();loadProps();})
+      .catch(function(e){TURNS[TURNS.length-1]={role:'copilot',text:e.status===403?'Your role cannot use the AI analyst (analysts and above).':'Could not answer: '+e.message};drawChat();})
+      .then(function(){BUSY=false;$('ask').disabled=false;});}
+  function openConv(id){req('GET','/soc/copilot/conversations/'+encodeURIComponent(id)).then(function(r){CONV=r.id;TURNS=r.turns||[];drawChat();loadConvs();}).catch(function(e){toast(e.message);});}
+  function draft(){var b={kind:$('dk').value},c=ctx(),n=$('dn').value.trim();if(c)b.context={kind:c.kind,id:c.id};if(n)b.note=n;$('draft').disabled=true;$('dout').innerHTML=note('Drafting from the records…');
+    req('POST','/soc/copilot/draft',b).then(function(r){LAST=r;$('dout').innerHTML='<div class="row" style="margin-bottom:6px"><span class="pill warn">AI draft - review before use</span><button class="btn sm" type="button" id="dcopy"><i class="ti ti-copy"></i>Copy</button><button class="btn sm" type="button" id="ddl"><i class="ti ti-download"></i>Download</button></div><div class="draft">'+esc(r.answer||'')+'</div>';loadConvs();loadProps();})
+      .catch(function(e){$('dout').innerHTML=note(e.status===403?'Your role cannot use the AI analyst (analysts and above).':'Could not draft: '+e.message);}).then(function(){$('draft').disabled=false;});}
+  $('quick').innerHTML=QUICK.map(function(x,i){return '<button type="button" data-qk="'+i+'">'+esc(x[1])+'</button>';}).join('');
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-qk],[data-conv],[data-dec],button[id]');if(!el)return;
+    if(el.dataset.qk!==undefined){ask(QUICK[+el.dataset.qk][0]);return;}
+    if(el.dataset.conv){openConv(el.dataset.conv);return;}
+    if(el.dataset.dec){var nt=el.dataset.dec==='reject'?prompt('Why reject it? (optional)')||'':'';el.disabled=true;req('POST','/soc/copilot/proposals/'+encodeURIComponent(el.dataset.p)+'/decide',nt?{decision:el.dataset.dec,note:nt}:{decision:el.dataset.dec}).then(function(r){toast(el.dataset.dec==='accept'?'Accepted - done as you: '+r.kind.replace(/_/g,' '):'Rejected');loadProps();}).catch(function(e){el.disabled=false;toast(e.message);});return;}
+    if(el.id==='ask'){var q=$('q').value.trim();$('q').value='';ask(q);return;}
+    if(el.id==='new'){CONV=null;TURNS=[];drawChat();loadConvs();return;}
+    if(el.id==='draft'){draft();return;}
+    if(el.id==='dcopy'&&LAST){try{navigator.clipboard.writeText(LAST.answer||'');toast('Copied');}catch(e){toast('Copy is not allowed here - select the text');}return;}
+    if(el.id==='ddl'&&LAST){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([LAST.answer||''],{type:'text/plain'}));a.download=LAST.kind+'-'+new Date().toISOString().slice(0,10)+'.txt';document.body.appendChild(a);a.click();a.remove();return;}});
+  document.addEventListener('change',function(ev){if(ev.target.id==='ck'){$('cid').hidden=ev.target.value==='none';if(!$('cid').hidden)$('cid').focus();}});
+  document.addEventListener('keydown',function(ev){if(ev.target.id==='q'&&ev.key==='Enter'&&!ev.shiftKey){ev.preventDefault();$('ask').click();}});
+  (function(){var u=new URLSearchParams(location.search),k=u.get('kind'),id=u.get('id');if(k&&id&&['alert','case','entity','indicator'].indexOf(k)>=0){$('ck').value=k;$('cid').hidden=false;$('cid').value=id;}})();
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{ROLE=JSON.parse(w.responseText).role||'viewer';}catch(e){ROLE='viewer';/* unknown identity: least privilege */}start();};w.onerror=function(){start();};w.send();
+  function start(){req('GET','/soc/copilot/status').then(function(s){var on=s&&s.enabled!==false&&s.available!==false;$('st').innerHTML=on?'<span class="pill ok">AI on'+(s.model?' · '+esc(s.model):'')+'</span>':'<span class="pill bad">AI off</span>';
+      $('main').hidden=false;drawChat();
+      if(ROLE==='viewer'){$('err').hidden=false;$('err').innerHTML=note('The AI analyst reads alerts and events, which hold personal data (PDPL), so it is for analysts and above. Ask an administrator for the analyst role.');$('main').hidden=true;return;}
+      if(!on){$('err').hidden=false;$('err').innerHTML=note('The AI analyst is off: '+((s&&s.reason)||'not configured')+'. The alert queue, cases and hunting work without it.');}
+      loadConvs();loadProps();})
+    .catch(function(e){$('err').hidden=false;$('err').innerHTML=note(e.status===404?'The SOC Copilot is not installed on the SIEM yet - run the update (update-platform.ps1).':e.message);});}
+})();
+</script></body></html>

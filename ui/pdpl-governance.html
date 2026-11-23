@@ -1,0 +1,69 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PDPL Governance</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+pre.letter{white-space:pre-wrap;font:13px/1.55 "Segoe UI",system-ui,sans-serif;background:rgba(255,255,255,.03);padding:12px;border-radius:8px}pre.letter[dir=rtl]{text-align:right}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">PDPL Governance</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>A PDPL programme needs clear decision-making authority, not only policy documents: a <b>DPO</b> with direct access to executive management and the authority to stop risky processing; a <b>named person</b> (not a job title) for each function; a <b>data protection committee</b> of legal, IT, HR and operations meeting at least quarterly; a <b>privacy review before any new system or product goes live</b>; and a <b>yearly programme review</b> whose findings become actions with an owner and a due date, closed with evidence.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div class="row row-cards mb-3">
+ <div class="col-lg-5"><section class="card h-100"><div class="card-header"><h3 class="card-title">Data Protection Officer</h3></div><div class="card-body" id="dpo"></div></section></div>
+ <div class="col-lg-7"><section class="card h-100"><div class="card-header"><h3 class="card-title">Who is accountable</h3><div class="card-actions"><span class="mut">administrators name them</span></div></div><div class="table-responsive" id="funcs"></div></section></div>
+</div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Data protection committee</h3><div class="card-actions"><button type="button" class="btn btn-sm btn-primary" id="addmeet"><i class="ti ti-users me-1"></i>Record a meeting</button></div></div><div class="card-body pb-0" id="comm"></div><div class="table-responsive" id="meets"></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Privacy by design - reviews before go-live</h3><div class="card-actions"><button type="button" class="btn btn-sm btn-primary" id="addpbd"><i class="ti ti-shield-check me-1"></i>Request a review</button></div></div><div class="table-responsive" id="pbd"></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Programme reviews and remediation actions</h3><div class="card-actions"><button type="button" class="btn btn-sm btn-primary" id="addrev"><i class="ti ti-clipboard-list me-1"></i>Record a review</button></div></div><div class="card-body pb-0" id="revs"></div><div class="table-responsive" id="acts"></div><div class="card-footer small text-secondary" id="note"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+
+  var V=null, DEPTS=['legal','it','hr','operations','compliance','risk','finance','marketing','customer_service','claims','underwriting','management'];
+  var PST={submitted:'yellow',approved:'green',rejected:'red'};
+  function acts(prefix){return '<div class="form-label mt-2">Actions (one per line: action | owner user name | due YYYY-MM-DD)</div><textarea class="form-control" rows="3" name="'+prefix+'acts" maxlength="3000"></textarea>';}
+  function parseActs(t){return String(t||'').split('\n').map(function(l){return l.trim();}).filter(Boolean).map(function(l){var p=l.split('|').map(function(x){return x.trim();});return {action:p[0],owner:p[1]||'',due:p[2]||''};});}
+  function load(){return P.req('GET','/pdpl/governance').then(function(r){V=r;
+    $('kpis').innerHTML=P.tile(r.dpo.ok?'set':'incomplete','DPO line and authority',r.dpo.ok?'':'text-red')+P.tile((6-r.functions_gap.length)+' / 6','Functions with a named owner',r.functions_gap.length?'text-orange':'')
+      +P.tile(r.committee.last||'never','Last committee meeting',r.committee.overdue?'text-red':'')+P.tile(r.open_actions+(r.overdue_actions?' ('+r.overdue_actions+' late)':''),'Open review actions',r.overdue_actions?'text-red':'');
+    var d=r.dpo;$('dpo').innerHTML=Z.kv([['DPO',esc(d.user||'not named')],['Appointed',esc(d.appointed||'—')],['Reports to',d.reports_to?esc(d.reports_to):P.badge('not recorded','red')],['Can stop risky processing',d.can_stop?P.badge('yes','green'):P.badge('not recorded','red')]])+'<div class="mut">Set in the PDPL profile (AI PDPL Consultant → Registers → Profile, administrators). The DPO should report to executive management or a board committee, not sit inside IT or legal.</div>';
+    $('funcs').innerHTML=P.table([['Function',function(f){return esc(f.label);}],['Named person',function(f){return f.user?esc(f.user):P.badge('nobody','red');}],['Deputy',function(f){return esc(f.deputy||'—');}],['',function(f){return '<button type="button" class="btn btn-sm" data-fn="'+esc(f.function)+'">'+(f.user?'Change':'Name')+'</button>';}]],r.functions);
+    var c=r.committee;$('comm').innerHTML='<p class="small">'+(c.overdue?P.badge('meeting overdue','red')+' The committee should meet at least every quarter. ':'')+(c.missing_departments.length?'Not represented in the last 12 months: <b>'+esc(c.missing_departments.join(', '))+'</b>.':'Legal, IT, HR and operations all represented in the last 12 months.')+'</p>';
+    $('meets').innerHTML=P.table([['Date',function(m){return esc(m.date);}],['Departments',function(m){return esc(m.departments.join(', '));}],['Attendees',function(m){return esc(m.attendees.join(', ')||'—');}],['Decisions',function(m){return '<span class="small">'+esc(m.decisions||'—')+'</span>';}],['Actions',function(m){return esc(m.actions.length);}]],c.meetings,null,'No meetings recorded.');
+    $('pbd').innerHTML=P.table([['System / product',function(x){return '<b>'+esc(x.name)+'</b><div class="mut">'+esc(x.id)+' · '+esc(x.type)+' · requested by '+esc(x.requested_by)+'</div>';}],['Go-live',function(x){return esc(x.go_live||'—')+(x.late?' '+P.badge('live without a decision','red'):'');}],
+      ['DPIA',function(x){return x.dpia_required?P.badge('required','orange'):'no';}],['Before go-live',function(x){return x.required.length?'<ul class="small mb-0">'+x.required.map(function(q){return '<li>'+esc(q)+'</li>';}).join('')+'</ul>':'—';}],
+      ['Decision',function(x){return P.badge(x.state,PST[x.state])+(x.decided_by?'<div class="mut">'+esc(x.decided_by)+(x.note?' · '+esc(x.note):'')+'</div>':'')+(x.state==='submitted'?'<div class="mt-1"><button type="button" class="btn btn-sm btn-success" data-pbd="approve" data-id="'+esc(x.id)+'">Approve</button> <button type="button" class="btn btn-sm" data-pbd="reject" data-id="'+esc(x.id)+'">Reject</button></div>':'');}]],r.pbd,null,'No privacy reviews yet. Request one for every new system, product, vendor or significant change that touches personal data.');
+    $('revs').innerHTML='<p class="small">'+(r.review_overdue?P.badge('review due','red')+' No programme review in the last 12 months. ':'')+(r.reviews.length?'Last review '+esc(r.reviews[0].date)+' by '+esc(r.reviews[0].reviewer)+(r.reviews[0].summary?': '+esc(r.reviews[0].summary):''):'')+'</p>'
+      +(r.reviews.length?'<div class="d-flex flex-wrap gap-2 mb-2">'+r.review_checks.map(function(k){var x=(r.reviews[0].checks||{})[k.id]||{};return P.badge(k.label+': '+(x.result||'—'),x.result==='issues'?'orange':x.result==='ok'?'green':'secondary');}).join('')+'</div>':'');
+    $('acts').innerHTML=P.table([['Action',function(a){return esc(a.action)+'<div class="mut">'+esc(a.review)+'</div>';}],['Owner',function(a){return esc(a.owner);}],['Due',function(a){return esc(a.due)+(a.overdue?' '+P.badge('late','red'):'');}],
+      ['Status',function(a){return P.badge(a.status,a.status==='done'?'green':'yellow')+(a.note?'<div class="mut">'+esc(a.note)+'</div>':'');}],['',function(a){return a.status==='done'?'':'<button type="button" class="btn btn-sm" data-close="'+esc(a.review)+'" data-n="'+esc(a.n)+'">Close</button>';}]],r.actions,null,'No remediation actions.');
+    $('note').textContent=r.note;}).catch(function(e){P.fail($('funcs'),e);});}
+  var LBL={inventory:'Data inventory and mapping',approval:'Processing approval and contracts',requests:'Data subject requests',incidents:'Security incident and breach response',training:'Staff training and awareness',sdaia:'SDAIA liaison and documentation'};
+  document.addEventListener('click',function(ev){var t=ev.target;
+    var fn=t.closest('[data-fn]');if(fn){var f=fn.getAttribute('data-fn'),cur=V.functions.find(function(x){return x.function===f;})||{};Z.open('Who is accountable',LBL[f],P.form('fform',[['user','text','Named person (platform user name)',1],['deputy','text','Deputy']],cur,'Save')+'<input type="hidden" id="ffn" value="'+esc(f)+'">');return;}
+    var pb=t.closest('[data-pbd]');if(pb){var dec=pb.getAttribute('data-pbd'),note='';if(dec==='reject'){note=window.prompt('What must change before go-live?')||'';if(!note)return;}
+      P.req('POST','/pdpl/pbd/'+encodeURIComponent(pb.getAttribute('data-id'))+'/decide',{decision:dec,note:note}).then(function(r){P.toast(r.id+': '+r.state);load();}).catch(function(e){P.toast(P.why(e));});return;}
+    var cl=t.closest('[data-close]');if(cl){var ev2=window.prompt('What was done (evidence)?')||'';if(!ev2)return;
+      P.req('POST','/pdpl/reviews/'+encodeURIComponent(cl.getAttribute('data-close'))+'/action/'+encodeURIComponent(cl.getAttribute('data-n')),{status:'done',note:ev2}).then(function(){P.toast('Action closed');load();}).catch(function(e){P.toast(P.why(e));});}});
+  $('addmeet').addEventListener('click',function(){Z.open('Data protection committee','Record a meeting',P.form('mform',[['date','date','Date',1],['departments','multi','Departments present',1,DEPTS],['attendees','list','Attendees (user names, comma separated)'],['decisions','area','Decisions']],{},'Save',acts('m')));});
+  $('addpbd').addEventListener('click',function(){Z.open('Privacy by design','Request a review',P.form('pform',[['name','text','System, product or change',1],['type','sel','Type',1,[['new_system','New system'],['new_product','New product / service'],['change','Significant change'],['vendor','New vendor'],['other','Other']]],['go_live','date','Planned go-live'],['ropa_id','text','Processing activity (PD-ROPA-nnn), if known']],{},'Submit',
+    '<div class="form-label mt-2">Questions</div>'+V.pbd_questions.map(function(q){return '<div class="mb-2"><label class="form-label small" for="pq-'+esc(q.id)+'">'+esc(q.question)+'</label><select class="form-select form-select-sm" id="pq-'+esc(q.id)+'" data-q="'+esc(q.id)+'"><option value="">- choose -</option>'+q.options.map(function(o){return '<option>'+esc(o)+'</option>';}).join('')+'</select></div>';}).join('')));});
+  $('addrev').addEventListener('click',function(){Z.open('Programme review','Record a review',P.form('rform',[['date','date','Date',1],['summary','area','Summary']],{},'Save',
+    V.review_checks.map(function(k){return '<div class="mb-2"><div class="small fw-semibold">'+esc(k.label)+'</div><div class="d-flex gap-2"><select class="form-select form-select-sm w-auto" data-ck="'+esc(k.id)+'" aria-label="'+esc(k.label)+'"><option value="">- result -</option><option value="ok">ok</option><option value="issues">issues</option></select><input class="form-control form-control-sm" data-ckn="'+esc(k.id)+'" maxlength="1000" placeholder="what was found" aria-label="note"></div></div>';}).join('')+acts('r')));});
+  document.addEventListener('submit',function(ev){var fm=ev.target;if(['fform','mform','pform','rform'].indexOf(fm.id)<0)return;ev.preventDefault();var b=P.body(fm),path;
+    if(fm.id==='fform'){b.function=$('ffn').value;path='/pdpl/accountability';}
+    if(fm.id==='mform'){b.actions=parseActs(fm.elements.macts.value);path='/pdpl/committee';}
+    if(fm.id==='pform'){b.answers={};[].slice.call(fm.querySelectorAll('[data-q]')).forEach(function(s){if(s.value)b.answers[s.getAttribute('data-q')]=s.value;});path='/pdpl/pbd';}
+    if(fm.id==='rform'){b.checks={};[].slice.call(fm.querySelectorAll('[data-ck]')).forEach(function(s){var k=s.getAttribute('data-ck');if(s.value)b.checks[k]={result:s.value,note:fm.querySelector('[data-ckn="'+k+'"]').value};});b.actions=parseActs(fm.elements.racts.value);path='/pdpl/reviews';}
+    P.req('POST',path,b).then(function(){P.toast('Saved');if(Z.close)Z.close();load();}).catch(function(e){P.msg(fm,P.why(e));});});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

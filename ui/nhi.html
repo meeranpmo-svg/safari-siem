@@ -1,0 +1,82 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Non-Human Identities</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.chips .btn{margin:0 6px 6px 0}.risk-list li{margin-bottom:6px}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Identity &amp; Microsoft 365 · Cyber Security</div><h2 class="page-title">Non-Human Identities</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn" id="csv"><i class="ti ti-download me-1"></i>Export CSV</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Every identity that is not a person: Active Directory service accounts and managed service accounts, Entra ID app registrations, this platform's connector and scan credentials, agent keys and API keys, and the AI engineers. Each one needs a <b>named owner</b>, a purpose, a secret that is rotated, no more privilege than its job, and to be removed when it is no longer used. Risks come from what each source reports; a source that is not connected is named below, never read as "none". <b>The platform never disables an account or rotates a secret</b>: decommissioning is requested, approved by an administrator who did not request it, done at the source by a person and recorded - and the register flags a "done" the source contradicts.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-plug-connected me-1"></i>Sources</h3></div><div class="card-body" id="srcs"><span class="text-secondary">Loading…</span></div></section>
+<div class="d-flex gap-2 mb-2"><button type="button" class="btn btn-primary" data-tab="list">Identities</button><button type="button" class="btn" data-tab="policy">Policy</button></div>
+<section class="card mb-3" data-pane="list"><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">Identities <span class="mut" id="filt"></span></h3>
+ <input class="form-control form-control-sm w-auto" id="q" placeholder="Search name, owner, purpose" aria-label="Search">
+ <select class="form-select form-select-sm w-auto" id="frisk" aria-label="Risk"><option value="">All risks</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="none">No risk</option></select></div>
+ <div class="card-body pb-0 chips" id="kinds"></div>
+ <div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="note"></div></section>
+<section class="card mb-3" data-pane="policy" hidden><div class="card-header"><h3 class="card-title">NHI policy (administrator)</h3></div><div class="card-body" id="pol"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+  var V=null, KIND='', RISK='', Q='', CUR=null;
+  var RC={critical:['critical','red'],high:['high','red'],medium:['medium','orange'],low:['low','yellow'],info:['info','secondary'],none:['no risk','green']};
+  function rb(r){var x=RC[r]||[r,'secondary'];return P.badge(x[0],x[1]);}
+  function load(){return P.req('GET','/nhi').then(function(v){V=v;draw();}).catch(function(e){P.fail($('list'),e);$('srcs').innerHTML='';$('kpis').innerHTML='';});}
+  function draw(){var c=V.counts,br=c.by_risk||{};
+    $('kpis').innerHTML=P.tile(c.total,'Identities')+P.tile((br.critical||0)+(br.high||0),'Critical / high risk',(br.critical||br.high)?'text-red':'')+P.tile(c.no_owner,'Without an owner',c.no_owner?'text-orange':'')
+      +P.tile(c.privileged,'Privileged')+P.tile(c.old_secret,'Secret past rotation')+P.tile(c.expiring,'Expired / expiring')+P.tile(c.unused,'Unused');
+    $('srcs').innerHTML='<ul class="list-unstyled mb-0">'+V.sources.map(function(s){return '<li class="d-flex justify-content-between align-items-start py-1 border-bottom gap-2"><span class="small">'+esc(s.name)+(s.reason?'<div class="mut">'+esc(s.reason)+'</div>':'')+'</span>'+(s.connected?P.badge('connected','green'):P.badge('not connected','secondary'))+'</li>';}).join('')+'</ul>';
+    var kinds=Object.keys(c.by_kind||{});
+    $('kinds').innerHTML='<button type="button" class="btn btn-sm'+(!KIND?' btn-primary':'')+'" data-kind="">All <span class="badge ms-1">'+esc(c.total)+'</span></button>'+kinds.map(function(k){return '<button type="button" class="btn btn-sm'+(KIND===k?' btn-primary':'')+'" data-kind="'+esc(k)+'">'+esc(V.kinds[k]||k)+' <span class="badge ms-1">'+esc(c.by_kind[k])+'</span></button>';}).join('');
+    rows();drawPolicy();$('note').textContent=V.note;}
+  function rows(){var q=Q.toLowerCase();
+    var r=V.items.filter(function(x){return (!KIND||x.kind===KIND)&&(!RISK||x.risk===RISK)&&(!q||[x.name,x.owner,x.purpose,x.detail].some(function(s){return String(s||'').toLowerCase().indexOf(q)>=0;}));});
+    $('filt').textContent='('+r.length+' of '+V.items.length+')';
+    $('list').innerHTML=P.table([['Identity',function(x){return '<b>'+esc(x.name)+'</b>'+(x.privileged?' '+P.badge('privileged','red'):'')+(x.enabled?'':' '+P.badge('disabled','secondary'))+'<div class="mut">'+esc(x.kind_name)+(x.detail?' · '+esc(x.detail):'')+'</div>';}],
+      ['Owner',function(x){return x.kind==='ai_engineer'?'<span class="mut">approvers: '+esc((x.facts.approvers||[]).join(', ')||'administrators only')+'</span>':x.owner?esc(x.owner)+(x.purpose?'<div class="mut">'+esc(x.purpose)+'</div>':''):'<span class="text-orange">none</span>';}],
+      ['Secret',function(x){return (x.secret_age_days!==null&&x.secret_age_days!==undefined?esc(x.secret_age_days)+' days old':'—')+(x.expires?'<div class="mut">expires '+esc(x.expires)+'</div>':'');}],
+      ['Last used',function(x){return x.last_used?esc(String(x.last_used).slice(0,10)):'<span class="mut">not reported</span>';}],
+      ['Risk',function(x){return rb(x.risk)+(x.risks[0]?'<div class="mut">'+esc(x.risks[0].text)+(x.risks.length>1?' (+'+esc(x.risks.length-1)+' more)':'')+'</div>':'')+(x.decommission?'<div class="mut">decommission: '+esc(x.decommission.status)+'</div>':'');}]],
+      r,function(x){return 'class="rowc" data-id="'+esc(x.id)+'"';},V.items.length?'No identity matches the filter.':'No identity reported yet - connect the sources above.');}
+  function open(x){CUR=x;var d=x.decommission||{},rv=x.review;
+    var h=Z.kv([['Kind',esc(x.kind_name)],['Source',esc(x.source)],['Detail',esc(x.detail||'—')],['Owner',esc(x.owner||'none')],['Purpose',esc(x.purpose||'—')],['Criticality',esc(x.criticality||'—')],
+      ['Secret age',x.secret_age_days!==null&&x.secret_age_days!==undefined?esc(x.secret_age_days)+' days':'—'],['Expires',esc(x.expires||'—')],['Last used',esc(x.last_used||'not reported')],
+      ['Last review',rv?esc(rv.decision)+' by '+esc(rv.by)+' on '+esc(P.dt(rv.at))+' - '+esc(rv.note):'never']]);
+    var f=x.facts||{},fl=[];if(f.groups&&f.groups.length)fl.push('Privileged groups: '+f.groups.join(', '));if(f.spn&&f.spn.length)fl.push('SPNs: '+f.spn.join(', '));if(f.why&&f.why.length)fl.push('Listed because: '+f.why.join(', '));
+    if(f.scopes&&f.scopes.length)fl.push('Used by scopes: '+f.scopes.join(', '));if(f.owners)fl.push('Entra owners: '+(f.owners.join(', ')||'none'));
+    if(fl.length)h+=Z.sec('What the source reports','<ul class="small mb-0 ps-3">'+fl.map(function(t){return '<li>'+esc(t)+'</li>';}).join('')+'</ul>');
+    h+=Z.sec('Risks',x.risks.length?'<ul class="risk-list small mb-0 ps-3">'+x.risks.map(function(r){return '<li>'+rb(r.severity)+' '+esc(r.text)+'<div class="mut">Fix: '+esc(r.fix)+'</div></li>';}).join('')+'</ul>':'<p class="small text-green mb-0">No risk found from what the sources report.</p>');
+    if(x.kind!=='ai_engineer'){
+      h+=Z.sec('Owner',P.form('owform',[['owner','text','Owner (platform user name)',1],['purpose','text','What it is for'],['criticality','sel','Criticality',0,[['low','Low'],['medium','Medium'],['high','High'],['critical','Critical']]]],{owner:x.owner,purpose:x.purpose,criticality:x.criticality},'Save owner'));
+      if(x.owner)h+=Z.sec('Owner review',P.form('rvform',[['decision','sel','Decision',1,[['keep','Still needed - keep'],['decommission','No longer needed - decommission']]],['note','text','What you checked',1]],{},'Record the review')+'<div class="mut">The owner ('+esc(x.owner)+') or an administrator.</div>');
+      if(!d.status||d.status==='rejected'||d.status==='done')h+=Z.sec('Decommission',P.form('dcform',[['reason','text','Why it should go',1]],{},'Request decommissioning')+'<div class="mut">An administrator who is not you approves; then a person disables it at the source and records it.</div>');
+      else if(d.status==='requested')h+=Z.sec('Decommission request','<p class="small">Requested by '+esc(d.by)+': '+esc(d.reason)+'</p>'+P.form('ddform',[['decision','sel','Decision',1,[['approve','Approve'],['reject','Reject']]],['note','text','Note (required to reject)']],{},'Record the decision')+'<div class="mut">Administrators only, and not '+esc(d.by)+'.</div>');
+      else if(d.status==='approved')h+=Z.sec('Decommission approved','<p class="small">Approved by '+esc(d.decided_by)+'. Disable or delete it at the source, then record it.</p>'+P.form('dnform',[['evidence','text','Change / ticket reference',1]],{},'Record as done'));
+      if(d.status==='done')h+=Z.sec('Decommissioned','<p class="small mb-0">Done by '+esc(d.done_by)+' ('+esc(d.evidence)+'), approved by '+esc(d.decided_by)+'.</p>');
+    } else h+=Z.sec('Approvers','<p class="small mb-0">AI engineers only propose. Who approves is set in <a href="roles.html">Roles &amp; Functions</a>.</p>');
+    Z.open('Non-Human Identity',x.name,h);}
+  function drawPolicy(){var p=V.policy||{};
+    $('pol').innerHTML=P.form('polform',[['rotation_days','num','Rotate secrets every (days)',1],['privileged_rotation_days','num','Privileged accounts: rotate every (days)',1],['dormant_days','num','Unused after (days without a sign-in)'],['secret_max_days','num','Longest allowed app secret (days)'],
+      ['expiry_warn_days','num','Warn before expiry (days)'],['review_days','num','Owner review every (days)'],['key_unused_days','num','API key unused after (days)'],['agent_stale_days','num','Agent key stale after (days)']],p,'Save policy');}
+  function reopen(id){load().then(function(){var x=V.items.find(function(q){return q.id===id;});if(x)open(x);});}
+  var POST={owform:'/nhi/owner',rvform:'/nhi/review',dcform:'/nhi/decommission',ddform:'/nhi/decommission/decide',dnform:'/nhi/decommission/done'};
+  document.addEventListener('submit',function(ev){var fm=ev.target;
+    if(POST[fm.id]&&CUR){ev.preventDefault();var id=CUR.id,b=P.body(fm);b.id=id;P.req('POST',POST[fm.id],b).then(function(){P.toast('Recorded');reopen(id);}).catch(function(e){P.msg(fm,P.why(e));});return;}
+    if(fm.id==='polform'){ev.preventDefault();P.req('PUT','/nhi/policy',P.body(fm)).then(function(){P.toast('Policy saved');load();}).catch(function(e){P.msg(fm,P.why(e));});}});
+  document.addEventListener('click',function(ev){
+    var t=ev.target.closest('[data-tab]');if(t){[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.className='btn'+(b===t?' btn-primary':'');});[].forEach.call(document.querySelectorAll('[data-pane]'),function(p){p.hidden=p.getAttribute('data-pane')!==t.getAttribute('data-tab');});return;}
+    var k=ev.target.closest('[data-kind]');if(k&&V){KIND=k.getAttribute('data-kind');draw();return;}
+    var tr=ev.target.closest('#list tr[data-id]');if(tr&&V){open(V.items.find(function(x){return x.id===tr.getAttribute('data-id');}));}});
+  $('q').addEventListener('input',function(){Q=this.value;if(V)rows();});
+  $('frisk').addEventListener('change',function(){RISK=this.value;if(V)rows();});
+  $('csv').addEventListener('click',function(){P.req('GET','/nhi/export').then(function(r){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r.csv],{type:'text/csv'}));a.download=r.filename;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);}).catch(function(e){P.toast(P.why(e));});});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "note": "Device-TYPE templates for the Add-Devices bulk hub. Each template maps a device type to a REAL connector kind in catalog.json (field `kind`); parser / source_kind / sama are cross-checked against that catalog entry at load (engine/onboard/bulk.js resolveTemplates) so they never drift. `default_port` / `proto` are the SIEM syslog listener the device points at (udp/tcp 5514, tls 6514); `snmp` is the UDP port used for range auto-discovery classification. `planned_parser` is the dedicated parser listed as planned in the catalogue (generic syslog/CEF parser used today).",
+  "templates": [
+    { "type": "cisco-ios", "kind": "cisco", "vendor": "Cisco", "category": "network",
+      "label": { "en": "Cisco IOS / NX-OS switch or router", "ar": "مبدّل أو موجّه Cisco IOS / NX-OS" },
+      "parser": "cisco", "default_port": 5514, "proto": "udp", "source_kind": "syslog",
+      "snmp": 161, "sama": ["3.3.14", "3.3.8", "3.3.7"] },
+
+    { "type": "cisco-asa-ftd", "kind": "cisco-asa-ftd", "vendor": "Cisco", "category": "firewall",
+      "label": { "en": "Cisco ASA / Firepower (FTD)", "ar": "جدار Cisco ASA / Firepower" },
+      "parser": "cisco", "default_port": 5514, "proto": "udp", "source_kind": "syslog",
+      "snmp": 161, "sama": ["3.3.14", "3.3.8", "3.3.16"] },
+
+    { "type": "fortigate", "kind": "fortigate", "vendor": "Fortinet", "category": "firewall",
+      "label": { "en": "Fortinet FortiGate firewall", "ar": "جدار Fortinet FortiGate" },
+      "parser": "fortigate", "default_port": 5514, "proto": "udp", "source_kind": "syslog",
+      "snmp": 161, "sama": ["3.3.14", "3.3.8", "3.3.16"] },
+
+    { "type": "palo-alto", "kind": "palo-alto", "vendor": "Palo Alto Networks", "category": "firewall",
+      "label": { "en": "Palo Alto PAN-OS firewall / Panorama", "ar": "جدار Palo Alto PAN-OS / Panorama" },
+      "parser": "syslog", "planned_parser": "paloalto", "default_port": 5514, "proto": "udp", "source_kind": "syslog",
+      "snmp": 161, "sama": ["3.3.14", "3.3.8", "3.3.16"] },
+
+    { "type": "f5-bigip", "kind": "f5-bigip", "vendor": "F5", "category": "adc",
+      "label": { "en": "F5 BIG-IP (LTM/ASM load balancer)", "ar": "موازن أحمال F5 BIG-IP" },
+      "parser": "syslog", "planned_parser": "f5", "default_port": 5514, "proto": "tcp", "source_kind": "syslog",
+      "snmp": 161, "sama": ["3.3.14", "3.3.6", "3.3.8"] },
+
+    { "type": "citrix-netscaler", "kind": "citrix-netscaler", "vendor": "Citrix", "category": "adc",
+      "label": { "en": "Citrix NetScaler (ADC) load balancer", "ar": "موازن أحمال Citrix NetScaler" },
+      "parser": "syslog", "planned_parser": "netscaler", "default_port": 5514, "proto": "udp", "source_kind": "syslog",
+      "snmp": 161, "sama": ["3.3.14", "3.3.6", "3.3.5"] },
+
+    { "type": "aruba-hpe", "kind": "syslog", "vendor": "Aruba / HPE", "category": "network",
+      "label": { "en": "Aruba / HPE switch or wireless controller (WLC)", "ar": "مبدّل Aruba / HPE أو متحكّم لاسلكي" },
+      "parser": "syslog", "default_port": 5514, "proto": "udp", "source_kind": "syslog",
+      "snmp": 161, "sama": ["3.3.14"] },
+
+    { "type": "zscaler", "kind": "zscaler-zia", "vendor": "Zscaler", "category": "proxy",
+      "label": { "en": "Zscaler Internet Access (ZIA) proxy / NSS", "ar": "وكيل Zscaler Internet Access (ZIA)" },
+      "parser": "cef", "default_port": 6514, "proto": "tls", "source_kind": "syslog",
+      "snmp": 0, "sama": ["3.3.14", "3.3.16", "3.3.6"] },
+
+    { "type": "genian-nac", "kind": "syslog", "vendor": "Genians", "category": "nac",
+      "label": { "en": "Genian NAC (network access control)", "ar": "التحكم بالوصول للشبكة Genian NAC" },
+      "parser": "syslog", "default_port": 5514, "proto": "udp", "source_kind": "syslog",
+      "snmp": 161, "sama": ["3.3.14"] },
+
+    { "type": "kaspersky", "kind": "kaspersky", "vendor": "Kaspersky", "category": "endpoint",
+      "label": { "en": "Kaspersky Security Center (EDR/EPP)", "ar": "مركز أمان Kaspersky (EDR/EPP)" },
+      "parser": "cef", "default_port": 5514, "proto": "tcp", "source_kind": "syslog",
+      "snmp": 0, "sama": ["3.3.14", "3.3.16", "3.3.17"] },
+
+    { "type": "somansa", "kind": "somansa-privacy-i", "vendor": "Somansa", "category": "dlp",
+      "label": { "en": "Somansa Privacy-i (endpoint DLP)", "ar": "Somansa Privacy-i (منع تسرّب البيانات)" },
+      "parser": "somansa", "default_port": 5514, "proto": "tcp", "source_kind": "syslog",
+      "snmp": 0, "sama": ["3.3.14", "3.3.9", "3.3.11"] },
+
+    { "type": "libraesva", "kind": "email-security-gateway", "vendor": "Libraesva", "category": "email",
+      "label": { "en": "Libraesva Email Security Gateway", "ar": "بوابة أمان البريد Libraesva" },
+      "parser": "libraesva", "default_port": 5514, "proto": "udp", "source_kind": "syslog",
+      "snmp": 0, "sama": ["3.3.14", "3.3.16", "3.3.6"] },
+
+    { "type": "esxi", "kind": "vmware-esxi-hosts", "vendor": "VMware", "category": "server",
+      "label": { "en": "VMware ESXi host", "ar": "مضيف VMware ESXi" },
+      "parser": "syslog", "default_port": 5514, "proto": "udp", "source_kind": "syslog",
+      "snmp": 161, "sama": ["3.3.14", "3.3.8"] },
+
+    { "type": "generic-syslog", "kind": "syslog", "vendor": "Generic", "category": "generic",
+      "label": { "en": "Generic syslog device", "ar": "جهاز Syslog عام" },
+      "parser": "syslog", "default_port": 5514, "proto": "udp", "source_kind": "syslog",
+      "snmp": 161, "sama": ["3.3.14"] },
+
+    { "type": "generic-cef", "kind": "generic-cef", "vendor": "Generic", "category": "generic",
+      "label": { "en": "Generic CEF appliance", "ar": "جهاز CEF عام" },
+      "parser": "cef", "default_port": 5514, "proto": "tcp", "source_kind": "syslog",
+      "snmp": 0, "sama": ["3.3.14"] }
+  ]
+}

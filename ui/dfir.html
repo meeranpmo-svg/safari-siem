@@ -1,0 +1,294 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DFIR</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12.3px;word-break:break-all}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.btn:hover{border-color:#3a4258}.btn.pri{background:#2b4b8f;border-color:#3d63b5}.btn.sm2{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:default}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:14px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.card h2 .c{font-weight:400;font-size:12px;color:var(--d-mute)}
+.card h3{margin:14px 0 8px;font-size:13px;color:var(--d-mute);text-transform:uppercase;letter-spacing:.05em}
+.hero{display:grid;grid-template-columns:240px 1fr;gap:14px}@media(max-width:1000px){.hero{grid-template-columns:1fr}}
+.ring{text-align:center}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:800px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:26px;font-weight:800}.kpi .l{font-size:12px;color:var(--d-mute)}.kpi.bad .n{color:var(--bad)}.kpi.warn .n{color:var(--warn)}.kpi.ok .n{color:var(--ok)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}@media(max-width:1100px){.g2,.g3{grid-template-columns:1fr}}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:700;margin:1px 2px}.v-bad{background:rgba(229,72,77,.15);color:var(--bad)}.v-warn{background:rgba(245,159,0,.15);color:var(--warn)}.v-ok{background:rgba(47,179,68,.15);color:var(--ok)}.v-mute{background:#232837;color:var(--d-mute)}.v-info{background:rgba(91,141,239,.15);color:var(--info)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:12px;white-space:nowrap}
+.tw{overflow-x:auto}tr[data-case]{cursor:pointer}tr[data-case]:hover td,tr[data-case].on td{background:rgba(255,255,255,.035)}
+.tabs{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap}.tabs button{background:var(--d-raise);border:1px solid var(--d-line);color:var(--d-mute);border-radius:9px;padding:7px 14px;font-weight:600;cursor:pointer}.tabs button.on{color:var(--d-ink);border-color:#3d63b5;background:rgba(61,99,181,.2)}
+.att{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--d-line);cursor:pointer}.att:last-child{border:0}.att .dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.bad{background:var(--bad)}.dot.warn{background:var(--warn)}.dot.info{background:var(--info)}
+.steps{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 10px}.steps span{flex:1;min-width:96px;text-align:center;padding:6px 4px;border-radius:8px;background:var(--d-raise);border:1px solid var(--d-line);font-size:12px;color:var(--d-mute)}.steps span.done{color:var(--ok);border-color:#285c36}.steps span.cur{color:var(--d-ink);border-color:#3d63b5;background:rgba(61,99,181,.22);font-weight:700}
+.mini{display:flex;gap:2px}.mini i{width:14px;height:6px;border-radius:2px;background:#2a3040}.mini i.done{background:#3a8f4d}.mini i.cur{background:#5b8def}
+.clk{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.clk .n{font-size:20px;font-weight:800}.clk.bad{border-color:#7a2b2e}.clk.warn{border-color:#7a5a1a}.clk.ok{border-color:#285c36}
+.frm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.frm label{font-size:12px;color:var(--d-mute);display:flex;flex-direction:column;gap:3px}
+input,select,textarea{background:#0d1017;color:inherit;border:1px solid var(--d-line);border-radius:8px;padding:7px 10px;font:inherit}textarea{width:100%;resize:vertical}
+label.ck{display:inline-flex;gap:6px;align-items:center;margin:3px 10px 3px 0;font-size:12.5px;color:var(--d-ink);flex-direction:row}
+.banner{border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}.banner.bad{background:rgba(229,72,77,.12);border:1px solid #7a2b2e}.banner.inf{background:rgba(91,141,239,.08);border:1px solid #2b4a6b}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.chips button[aria-pressed="true"]{border-color:#3d63b5;background:rgba(61,99,181,.25)}
+.tl{margin-left:6px;padding-left:16px;border-left:2px solid var(--d-line)}.tl .ev{position:relative;padding:6px 0 6px 6px;border-bottom:1px solid rgba(255,255,255,.04)}.tl .ev::before{content:'';position:absolute;left:-23px;top:12px;width:9px;height:9px;border-radius:50%;background:#4a5162}
+.tl .ev.detection::before,.tl .ev.evasion::before{background:var(--bad)}.tl .ev.persistence::before,.tl .ev.account::before{background:var(--warn)}.tl .ev.auth::before,.tl .ev.execution::before{background:var(--info)}.tl .ev.burst{background:rgba(229,72,77,.06)}
+.tl .tm{color:var(--d-mute);font-size:11.5px;font-family:ui-monospace,Consolas,monospace}
+.why{margin:6px 0 0;padding-left:18px;font-size:12.5px}.why li{margin:2px 0}
+.ans{white-space:pre-wrap;border:1px solid var(--d-line);border-radius:10px;padding:12px;margin-top:10px;background:var(--d-raise)}
+.chain{font-size:12px;margin:6px 0 0;padding-left:16px}.chain li{margin:2px 0}
+.toast{position:fixed;right:18px;bottom:18px;background:#1d2330;border:1px solid #3a4258;border-radius:10px;padding:10px 14px;z-index:60;max-width:520px}
+.empty{color:var(--d-mute);padding:8px 0}
+@media print{.btn,.tabs,.frm{display:none!important}body{background:#fff;color:#000}.card,.kpi{background:#fff;border-color:#ccc}}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Security · incident response</div><h1>Digital Forensics &amp; Incident Response</h1><div class="mute sm">The forensic side of each SOC case: when the company became aware, the regulatory clocks that started (PDPL 72 hours by law; SAMA, NCA and the Insurance Authority from the hours an administrator enters), the evidence register with a hash-chained chain of custody, indicators with their sightings, and a reconstruction of any host, user or IP from the SIEM's events. Machine learning finds bursts, attack stages in order, first-seen values and pivots - indicators, not proof. Nothing here touches an endpoint or contacts a regulator: people do, and the platform records it.</div></div>
+<div class="sp"></div><span class="mute sm" id="asof"></span><button type="button" class="btn" id="xls">Excel</button><button type="button" class="btn" id="print">Print</button><button type="button" class="btn" id="refresh">Refresh</button></div>
+<div class="banner bad" id="err" hidden></div>
+<div id="main" hidden>
+<div class="hero"><div class="card ring" id="ring"></div><div class="card"><div class="kpis" id="kpis"></div></div></div>
+<div class="card"><h2>What needs attention <span class="c">most urgent first · click to open the case</span></h2><div id="attn"></div></div>
+<div class="tabs" id="tabs"><button type="button" data-tab="cases" class="on">Cases</button><button type="button" data-tab="inv">Investigate</button><button type="button" data-tab="col">Collections</button><button type="button" data-tab="ready">Readiness &amp; settings</button></div>
+
+<section id="tab-cases">
+  <div class="card"><h2>Forensic cases <span class="c" id="cc"></span></h2><div class="chips" id="cchips"></div><div class="tw" id="cases"></div>
+    <div class="mute sm">Cases are opened and run on Investigations &amp; Cases; this page adds their forensic record. Closing the forensic record does not close the SOC case.</div></div>
+  <div id="cw"></div>
+</section>
+
+<section id="tab-inv" hidden>
+  <div class="card"><h2>Reconstruct a host, user or IP <span class="c">read-only, from the SIEM event store · every search is audited (PDPL)</span></h2>
+    <div class="frm"><input id="ent" placeholder="host, user or IP (e.g. PC-RUH-01, ahmed, 10.0.0.5)" style="flex:1;min-width:240px">
+      <select id="etype"><option value="">auto</option><option value="host">host</option><option value="user">user</option><option value="ip">IP</option></select>
+      <select id="ehours"><option value="24">24 h</option><option value="72" selected>72 h</option><option value="168">7 days</option><option value="720">30 days</option></select>
+      <button type="button" class="btn pri" id="go">Investigate</button></div></div>
+  <div id="invout"></div>
+</section>
+
+<section id="tab-col" hidden>
+  <div class="card"><h2>Triage-collection requests <span class="c" id="cqc"></span></h2><div class="tw" id="cqueue"></div>
+    <div class="banner inf" style="margin-top:10px">Collection runs on the endpoint through Endpoint Central or the response agent and the output is registered as evidence on the case. The person who asked never approves their own request.</div></div>
+  <div class="card"><h2>Triage-collection catalogue</h2><div class="tw" id="catalog"></div></div>
+</section>
+
+<section id="tab-ready" hidden>
+  <div class="g2"><div class="card"><h2>Forensic readiness <span class="c">what the platform needs to support an investigation</span></h2><div id="ready"></div></div>
+  <div class="card"><h2>Settings <span class="c" id="setc"></span></h2><div id="settings"></div></div></div>
+</section>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',USER='',TAB='cases',B=null,CUR=null,CV=null,INV=null,LANEF='',CF='open',CAT=[];
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc/dfir'+p);x.withCredentials=true;x.timeout=90000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){/* not JSON: reported below with the status */}if(x.status>=200&&x.status<300&&j!==null)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=function(){bad(new Error('the SIEM did not answer'));};x.ontimeout=function(){bad(new Error('the SIEM took too long to answer'));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5200);}
+  function fmt(t){if(!t)return '—';var d=new Date(typeof t==='number'?t:String(t).replace(' ','T')+(/Z|[+-]\d\d:?\d\d$/.test(String(t))||typeof t==='number'?'':'Z'));return isNaN(d)?String(t):d.toISOString().slice(0,16).replace('T',' ');}
+  function dur(ms){var a=Math.abs(ms),h=Math.floor(a/3600e3),m=Math.round((a%3600e3)/60e3);return (h?h+' h ':'')+m+' min';}
+  function sevPill(s){s=Number(s)||0;return '<span class="pill '+(s>=3?'v-bad':s===2?'v-warn':'v-mute')+'">'+['info','low','medium','high','critical'][s]+'</span>';}
+  var CL={'breached':['v-bad','overdue'],'due-soon':['v-warn','due soon'],'running':['v-info','running'],'notified':['v-ok','notified'],'notified-late':['v-warn','notified late'],'hours-not-set':['v-mute','hours not set'],'no-awareness-time':['v-mute','no awareness time']};
+  function clkPill(c){var x=CL[c.state]||['v-mute',c.state];return '<span class="pill '+x[0]+'" title="'+esc(c.note||'')+'">'+esc(c.name)+': '+esc(x[1])+'</span>';}
+  function ringSvg(v,max,label,sub,col){var r=70,C=2*Math.PI*r,f=max?Math.min(1,v/max):0;return '<svg viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="'+esc(label)+'"><circle cx="90" cy="90" r="'+r+'" fill="none" stroke="#232837" stroke-width="14"/><circle cx="90" cy="90" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+(C*f)+' '+C+'" transform="rotate(-90 90 90)"/><text x="90" y="92" text-anchor="middle" fill="#e7eaf0" font-size="38" font-weight="800">'+esc(String(v))+'</text><text x="90" y="116" text-anchor="middle" fill="#8b93a4" font-size="12">'+esc(sub)+'</text></svg><div style="font-weight:700">'+esc(label)+'</div>';}
+  function kpi(l,v,cls,t){return '<div class="kpi '+(cls||'')+'" title="'+esc(t||'')+'"><div class="n">'+esc(String(v))+'</div><div class="l">'+esc(l)+'</div></div>';}
+  function show(t){TAB=t;[].forEach.call(document.querySelectorAll('#tabs button'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===t);});['cases','inv','col','ready'].forEach(function(x){$('tab-'+x).hidden=x!==t;});if(t==='col')loadCol();if(t==='ready')drawReady();}
+
+  // ---------------------------------------------------------------- board
+  function load(){return req('GET','/board').then(function(b){B=b;$('err').hidden=true;$('main').hidden=false;drawBoard();if(CUR)openCase(CUR,true);$('asof').textContent='as of '+fmt(b.at)+' UTC';})
+    .catch(function(e){$('err').hidden=false;$('err').textContent=e.status===404?'This SIEM does not have the DFIR forensics module yet - run the engine update.':e.status===503?e.message:'Could not load DFIR: '+e.message;});}
+  function drawBoard(){var k=B.kpis,urgent=k.breached+k.due_soon;
+    $('ring').innerHTML=ringSvg(urgent,Math.max(1,urgent+k.unset+1),urgent?'Clocks needing action':'No clock overdue or due soon',k.breached+' overdue · '+k.due_soon+' due',k.breached?'#e5484d':urgent?'#f5b544':'#3a8f4d');
+    $('kpis').innerHTML=kpi('Open cases',k.open,'')+kpi('With a forensic record',k.tracked,'')+kpi('Clocks overdue',k.breached,k.breached?'bad':'ok')+kpi('Clocks due in 12 h',k.due_soon,k.due_soon?'warn':'ok')
+      +kpi('Clocks not started / hours not set',k.unset,k.unset?'warn':'','a case reportable to a regulator with no awareness time, or a regulator whose hours an administrator has not entered')
+      +kpi('Evidence items',k.evidence,'')+kpi('Integrity / custody failures',k.integrity_issues,k.integrity_issues?'bad':'ok')+kpi('Legal holds · active IOCs',k.holds+' · '+k.iocs,'');
+    $('attn').innerHTML=B.attention.length?B.attention.map(function(a){return '<div class="att" data-open="'+esc(a.case_id)+'"><span class="dot '+esc(a.level)+'"></span><div>'+esc(a.text)+'</div></div>';}).join(''):'<div class="empty">Nothing urgent: no regulatory clock is overdue or due soon and every evidence chain verifies.</div>';
+    var cases=B.cases.filter(function(c){return CF==='all'||(CF==='open'?!/^closed/.test(c.status||''):CF==='clock'?c.clocks.some(function(x){return /breached|due-soon/.test(x.state);}):CF==='hold'?c.hold:CF==='pd'?c.personal_data:true);});
+    var cnt={open:0,clock:0,hold:0,pd:0};B.cases.forEach(function(c){if(!/^closed/.test(c.status||''))cnt.open++;if(c.clocks.some(function(x){return /breached|due-soon/.test(x.state);}))cnt.clock++;if(c.hold)cnt.hold++;if(c.personal_data)cnt.pd++;});
+    $('cchips').innerHTML=[['open','Open ('+cnt.open+')'],['clock','Clock overdue / due ('+cnt.clock+')'],['pd','Personal data ('+cnt.pd+')'],['hold','Legal hold ('+cnt.hold+')'],['all','All ('+B.cases.length+')']].map(function(c){return '<button type="button" class="btn sm2" data-cf="'+c[0]+'" aria-pressed="'+(CF===c[0])+'">'+esc(c[1])+'</button>';}).join('');
+    $('cc').textContent=cases.length+' shown';
+    $('cases').innerHTML=cases.length?'<table><thead><tr><th>Case</th><th>Severity</th><th>Type</th><th>Phase</th><th>Clocks</th><th>Evidence</th><th>IOCs</th><th>Owner</th></tr></thead><tbody>'+cases.map(function(c){var pi=B.phases.indexOf(c.phase||'identification');
+      return '<tr data-case="'+esc(c.id)+'"'+(CUR===c.id?' class="on"':'')+'><td><b class="mono">'+esc(c.id)+'</b> '+(c.hold?'<span class="pill v-warn">legal hold</span>':'')+'<div class="sm">'+esc(c.title||'')+'</div></td><td>'+sevPill(c.severity)+'</td><td>'+esc(c.type||'—')+(c.personal_data?' <span class="pill v-info">personal data</span>':'')+'</td>'
+      +'<td><div class="mini">'+B.phases.map(function(p,i){return '<i class="'+(i<pi?'done':i===pi?'cur':'')+'" title="'+esc(p)+'"></i>';}).join('')+'</div><div class="sm mute">'+esc(c.phase||'identification')+'</div></td>'
+      +'<td>'+(c.clocks.length?c.clocks.map(clkPill).join(''):'<span class="mute sm">none</span>')+'</td><td>'+c.evidence+(c.integrity_issues?' <span class="pill v-bad">'+c.integrity_issues+' failed</span>':'')+'</td><td>'+c.iocs+'</td><td>'+esc(c.owner||'—')+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">'+(B.cases.length?'No case matches this filter.':'No SOC cases yet. Cases are opened on Investigations &amp; Cases (from an alert or by hand); each then gets its forensic record here.')+'</div>';
+  }
+
+  // ---------------------------------------------------------------- case workspace
+  function openCase(id,quiet){CUR=id;[].forEach.call(document.querySelectorAll('tr[data-case]'),function(r){r.classList.toggle('on',r.getAttribute('data-case')===id);});
+    if(!can('analyst')){$('cw').innerHTML='<div class="card"><div class="empty">The forensic record names people and devices (PDPL): it is shown to analysts and above.</div></div>';return;}
+    if(!quiet)$('cw').innerHTML='<div class="card"><div class="empty">Loading '+esc(id)+'…</div></div>';
+    req('GET','/cases/'+encodeURIComponent(id)).then(function(v){CV=v;drawCase();if(!quiet)$('cw').scrollIntoView({behavior:'smooth',block:'start'});}).catch(function(e){$('cw').innerHTML='<div class="card"><p class="banner bad">'+esc(e.message)+'</p></div>';});}
+  function drawCase(){var v=CV,o=v.overlay,c=v.case,op=can('operator'),pi=B.phases.indexOf(o.phase);
+    var h='<div class="card"><h2><span class="mono">'+esc(c.id)+'</span> '+esc(c.title||'')+' <span class="c">'+sevPill(c.severity)+' SOC status '+esc(c.status)+' · '+c.alerts+' alert(s) · owner '+esc(c.owner||'—')+'</span></h2>';
+    h+='<div class="steps">'+B.phases.map(function(p,i){return '<span class="'+(i<pi?'done':i===pi?'cur':'')+'">'+esc(p)+'</span>';}).join('')+'</div>';
+    if(op&&v.next_phase)h+='<div class="frm"><input id="phnote" placeholder="'+(/acquisition|closed/.test(v.next_phase)?'required: what was preserved / why the case is complete':'note (optional)')+'" style="flex:1;min-width:260px"><button type="button" class="btn pri" id="phgo">Move to '+esc(v.next_phase)+'</button>'+(pi>0&&o.phase!=='closed'?'<button type="button" class="btn" id="phback">Back to '+esc(B.phases[pi-1])+'</button>':'')+'</div>';
+    // regulatory clocks
+    h+='<h3>Regulatory clocks</h3><div class="g3">'+(v.clocks.length?v.clocks.map(function(k){var cls=k.state==='breached'?'bad':k.state==='due-soon'||k.state==='notified-late'?'warn':k.state==='notified'?'ok':'';
+      var big=k.state==='running'||k.state==='due-soon'?dur(k.left_ms)+' left':k.state==='breached'?'overdue by '+dur(-k.left_ms):k.state==='notified'||k.state==='notified-late'?'notified '+fmt(k.notified_at):CL[k.state]?CL[k.state][1]:k.state;
+      return '<div class="clk '+cls+'"><div class="sm mute">'+esc(k.name)+(k.hours?' · '+k.hours+' h':'')+'</div><div class="n">'+esc(big)+'</div><div class="sm mute">'+esc(k.due?'due '+fmt(k.due)+' UTC':k.note||'')+(k.ref?' · ref '+esc(k.ref):'')+'</div>'+(k.basis?'<div class="sm mute">'+esc(k.basis)+'</div>':'')
+      +(op&&/running|due-soon|breached/.test(k.state)?'<div class="frm"><input data-nref="'+esc(k.key)+'" placeholder="regulator reference" style="flex:1;min-width:120px"><button type="button" class="btn sm2" data-notify="'+esc(k.key)+'">Record notification</button></div>':'')+'</div>';}).join('')
+      :'<div class="empty">No clock: mark personal data (PDPL 72 h) or a regulator the incident is reportable to.</div>')+'</div>';
+    // overlay form
+    h+='<h3>Incident facts</h3>';
+    if(op)h+='<div class="frm"><label>Type<select id="ovtype"><option value="">—</option>'+B.types.map(function(t){return '<option'+(o.type===t?' selected':'')+'>'+esc(t)+'</option>';}).join('')+'</select></label>'
+      +'<label>Aware at (UTC)<input type="datetime-local" id="ovaware" value="'+(o.aware_at?new Date(o.aware_at).toISOString().slice(0,16):'')+'"></label>'
+      +'<label class="ck"><input type="checkbox" id="ovpd"'+(o.personal_data?' checked':'')+'> personal data involved</label>'
+      +'<label>People affected (estimate)<input type="number" min="0" id="ovppl" value="'+(o.people_estimate!=null?esc(o.people_estimate):'')+'" style="width:130px"></label>'
+      +'<span>'+B.regulators.map(function(r){return '<label class="ck"><input type="checkbox" data-reg="'+esc(r.id)+'"'+((o.regulators||[]).indexOf(r.id)>=0?' checked':'')+'> reportable to '+esc(r.name)+'</label>';}).join('')+'</span>'
+      +'<button type="button" class="btn pri" id="ovsave">Save</button></div>';
+    else h+='<div class="sm">Type <b>'+esc(o.type||'—')+'</b> · aware at <b>'+esc(o.aware_at?fmt(o.aware_at)+' UTC':'not recorded')+'</b> · personal data <b>'+(o.personal_data?'yes':'no')+'</b> · regulators <b>'+esc((o.regulators||[]).join(', ')||'none')+'</b></div>';
+    // legal hold
+    var hd=o.hold||{};h+='<h3>Legal hold</h3><div class="sm">'+(hd.on?'<span class="pill v-warn">ON</span> placed by '+esc(hd.by)+' on '+fmt(hd.at)+' - '+esc(hd.reason):'Off'+(hd.released_by?' (released by '+esc(hd.released_by)+' on '+fmt(hd.released_at)+')':''))+'</div>';
+    if(op&&!hd.on)h+='<div class="frm"><input id="hreason" placeholder="reason (litigation, regulator request, …)" style="flex:1;min-width:260px"><button type="button" class="btn" id="hplace">Place legal hold</button></div>';
+    if(hd.on&&can('admin'))h+='<div class="frm"><input id="hreason" placeholder="reason for release" style="flex:1;min-width:260px"><button type="button" class="btn" id="hrel">Release (administrator, not the person who placed it)</button></div>';
+    h+='</div>';
+    // evidence
+    h+='<div class="card"><h2>Evidence register <span class="c">'+v.evidence.length+' item(s) · the platform holds the hash and the custody record, not the file</span></h2>';
+    h+=v.evidence.length?'<div class="tw"><table><thead><tr><th>Ref</th><th>Kind</th><th>Description</th><th>SHA-256</th><th>Location</th><th>Integrity</th><th>Custody</th></tr></thead><tbody>'+v.evidence.map(function(e){
+      var integ=!e.chain_ok?'<span class="pill v-bad">chain broken at entry '+e.chain_broken_at+'</span>':e.integrity==='mismatch'?'<span class="pill v-bad">hash MISMATCH</span>':e.integrity==='verified'?'<span class="pill v-ok">re-hashed, matches</span>':'<span class="pill v-mute">as registered</span>';
+      var last=e.custody[e.custody.length-1]||{};
+      return '<tr><td class="mono"><b>'+esc(e.ref)+'</b></td><td>'+esc(e.kind)+'</td><td>'+esc(e.description)+'<div class="sm mute">'+esc(e.source||'')+' · collected '+fmt(e.collected_at)+' by '+esc(e.collected_by)+'</div></td><td class="mono">'+esc(e.sha256)+'</td><td>'+esc(e.location)+'</td><td>'+integ+'</td>'
+      +'<td><details><summary class="sm">'+e.custody.length+' entr'+(e.custody.length===1?'y':'ies')+' · last '+esc(last.action||'')+'</summary><ol class="chain">'+e.custody.map(function(x){return '<li>'+fmt(x.at)+' <b>'+esc(x.action)+'</b> by '+esc(x.by)+(x.to?' → '+esc(x.to):'')+(x.sha256_observed?' · re-hash '+(x.sha256_observed===e.sha256?'matches':'<b style="color:var(--bad)">differs</b>'):'')+(x.note?' - '+esc(x.note):'')+' <span class="mono mute">'+esc(x.hash.slice(0,12))+'</span></li>';}).join('')+'</ol>'
+      +'<button type="button" class="btn sm2" data-verify="'+esc(e.ref)+'">Verify chain</button>'
+      +(op&&e.chain_ok?'<div class="frm"><select data-cact="'+esc(e.ref)+'">'+B.custody_actions.filter(function(a){return a!=='collected';}).map(function(a){return '<option>'+esc(a)+'</option>';}).join('')+'</select><input data-cto="'+esc(e.ref)+'" placeholder="to (who / where)" style="width:150px"><input data-csha="'+esc(e.ref)+'" placeholder="re-hash SHA-256 (optional)" style="width:190px"><input data-cnote="'+esc(e.ref)+'" placeholder="note" style="width:140px"><button type="button" class="btn sm2" data-cgo="'+esc(e.ref)+'">Add entry</button></div>':'')+'</details></td></tr>';}).join('')+'</tbody></table></div>'
+      :'<div class="empty">No evidence registered. Register each item with the SHA-256 its collector computed and where it is kept.</div>';
+    if(op)h+='<h3>Register evidence</h3><div class="frm"><select id="evkind">'+B.ev_kinds.map(function(k){return '<option>'+esc(k)+'</option>';}).join('')+'</select><input id="evdesc" placeholder="description" style="flex:1;min-width:200px"><input id="evsha" placeholder="SHA-256 (64 hex)" class="mono" style="width:330px"><input id="evsrc" placeholder="source host / mailbox" style="width:160px">'
+      +'<input id="evloc" placeholder="kept at (vault / share)" list="evlocs" style="width:200px"><datalist id="evlocs">'+(B.settings.storage||[]).map(function(s){return '<option value="'+esc(s)+'">';}).join('')+'</datalist><button type="button" class="btn pri" id="evadd">Register</button></div>';
+    h+='</div>';
+    // IOCs + AI
+    h+='<div class="g2"><div class="card"><h2>Indicators <span class="c">'+v.iocs.filter(function(i){return i.status==='active';}).length+' active</span></h2>';
+    h+=v.iocs.length?'<div class="tw"><table><thead><tr><th>Type</th><th>Value</th><th>Note</th><th>Sightings (30 days)</th><th></th></tr></thead><tbody>'+v.iocs.map(function(i){return '<tr'+(i.status!=='active'?' class="mute"':'')+'><td>'+esc(i.type)+'</td><td class="mono">'+esc(i.value)+'</td><td>'+esc(i.note||'')+(i.status!=='active'?' <span class="pill v-mute">retired: '+esc(i.retire_reason||'')+'</span>':'')+'</td><td id="sg-'+esc(i.id)+'" class="sm">'+(i.status==='active'?'—':'')+'</td><td>'+(op&&i.status==='active'?'<button type="button" class="btn sm2" data-retire="'+esc(i.id)+'">Retire</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No indicators on this case yet.</div>';
+    h+='<div class="frm">'+(v.iocs.length?'<button type="button" class="btn" id="sight">Look for sightings</button><button type="button" class="btn" id="stix">STIX 2.1</button>':'')+'</div>';
+    if(op)h+='<div class="frm"><select id="iotype">'+B.ioc_types.map(function(t){return '<option>'+esc(t)+'</option>';}).join('')+'</select><input id="ioval" placeholder="value" class="mono" style="flex:1;min-width:180px"><input id="ionote" placeholder="note" style="width:160px"><button type="button" class="btn pri" id="ioadd">Add</button></div>';
+    h+='</div><div class="card"><h2>AI forensic analyst <span class="c">reads this case, its timelines and indicators; changes nothing</span></h2><div id="ai"></div></div></div>';
+    if(v.collections.length)h+='<div class="card"><h2>Triage collections for this case</h2>'+colTable(v.collections)+'</div>';
+    if(can('analyst'))h+='<div class="card"><h2>Cases like this one <span class="c">shared hosts / users / IPs, detection rules, indicators, ATT&amp;CK techniques and type - and how each ended</span></h2><div id="sim"><div class="sm mute">Comparing…</div></div></div>';
+    $('cw').innerHTML=h;drawAi();if(can('analyst'))drawSim(CUR);
+    if(v.scope.length)$('cw').querySelector('.card').insertAdjacentHTML('beforeend','<h3>In scope (from the case alerts)</h3><div>'+v.scope.map(function(s){return '<button type="button" class="btn sm2" data-pivot="'+esc(s)+'">'+esc(s)+'</button>';}).join(' ')+'</div>');
+  }
+  function drawSim(id){req('GET','/cases/'+encodeURIComponent(id)+'/similar').then(function(r){if(CUR!==id||!$('sim'))return;var L=r.items||[],o=r.outcome;
+      $('sim').innerHTML=(L.length?'<table><thead><tr><th>Case</th><th>Similarity</th><th>Shared</th><th>Ended</th></tr></thead><tbody>'+L.map(function(x){return '<tr><td><button type="button" class="btn sm2" data-simcase="'+esc(x.id)+'">'+esc(x.id)+'</button> '+esc(x.title)+'</td><td><b>'+esc(x.similarity)+'%</b></td><td class="sm">'+x.why.map(function(w){return esc(w.on)+': '+w.shared.map(esc).join(', ');}).join(' · ')+'</td><td class="sm">'+(x.status==='closed'?esc(x.resolution||'closed')+(x.hours_to_close!=null?' in '+esc(x.hours_to_close)+' h':''):'<span class="pill v-warn">'+esc(x.status)+'</span>')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="sm mute">No earlier case shares enough with this one (compared with '+esc(r.compared)+').</div>')
+        +(o?'<div class="sm" style="margin-top:6px">Closed matches: '+Object.keys(o.by_resolution).map(function(k){return esc(k)+' '+esc(o.by_resolution[k]);}).join(', ')+(o.median_hours!=null?' · median '+esc(o.median_hours)+' h to close':'')+'</div>':'')+'<div class="sm mute">'+esc(r.note)+'</div>';})
+    .catch(function(e){if($('sim'))$('sim').innerHTML='<div class="sm mute">'+esc(e.status===404?'Case comparison arrives with the SIEM update.':e.message)+'</div>';});}
+  function drawAi(){var v=CV,a=v.ai,st=v.ai_status,h='';
+    if(!st.enabled)h='<div class="empty">The AI analyst is off: '+esc(st.reason)+'. Everything else on this page works without it.</div>';
+    else h='<textarea id="aiq" rows="2" placeholder="e.g. What happened on the hosts in scope, in what order, and what evidence is still missing?"></textarea><div class="frm"><button type="button" class="btn pri" id="aigo">Ask</button><span class="sm mute">Uses the shared AI budget; the answer is a draft.</span></div>';
+    if(a){h+='<div class="ans">'+esc(a.answer)+'</div>';
+      if(a.findings.length)h+='<ul class="why">'+a.findings.map(function(f){return '<li>'+esc(f.text)+' <span class="mono">['+esc(f.ref)+']</span> '+(f.verified?'<span class="pill v-ok">verified</span>':'<span class="pill v-bad">unverified - no tool returned this</span>')+'</li>';}).join('')+'</ul>';
+      if(a.next_steps.length)h+='<div class="sm"><b>Next steps</b><ul class="why">'+a.next_steps.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ul></div>';
+      if(a.gaps.length)h+='<div class="sm"><b>Gaps</b><ul class="why">'+a.gaps.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ul></div>';
+      h+='<div class="sm mute">Asked by '+esc(a.asked_by)+' · '+fmt(a.at)+(a.injection_signals&&a.injection_signals.length?' · <span class="pill v-warn">the data held text that looked like instructions - treated as data</span>':'')+' · '+esc(a.state)+(a.decided_by?' by '+esc(a.decided_by):'')+'</div>';
+      if(a.state==='draft'&&can('operator'))h+='<div class="frm"><button type="button" class="btn pri" data-aidec="add">Add to the case as my note</button><button type="button" class="btn" data-aidec="discard">Discard</button></div>';}
+    $('ai').innerHTML=h;}
+  function caseAction(p,b,msg){return req('POST','/cases/'+encodeURIComponent(CUR)+p,b).then(function(){toast(msg);return load();}).catch(function(e){toast(e.message);});}
+
+  // ---------------------------------------------------------------- investigate
+  function investigate(ent,type){ent=ent||$('ent').value.trim();if(!ent){toast('Enter a host, user or IP');return;}$('ent').value=ent;if(type!==undefined)$('etype').value=type;
+    if(!can('analyst')){$('invout').innerHTML='<div class="card"><div class="empty">Reconstructing a person or device from raw events is for analysts and above (PDPL).</div></div>';return;}
+    var qs='?entity='+encodeURIComponent(ent)+($('etype').value?'&type='+$('etype').value:'')+'&hours='+$('ehours').value;
+    $('invout').innerHTML='<div class="card"><div class="empty">Reconstructing and analysing '+esc(ent)+'…</div></div>';
+    Promise.all([req('GET','/analyse'+qs),req('GET','/triage'+qs)]).then(function(R){INV={a:R[0].analysis,tl:R[0].timeline,tr:R[1]};LANEF='';drawInv();}).catch(function(e){$('invout').innerHTML='<div class="card"><p class="banner bad">'+esc(e.message)+'</p></div>';});}
+  function burstSvg(a){var s=a.series;if(!s.length)return '';var W=900,Hh=120,max=Math.max.apply(null,s.map(function(x){return x.n;}))||1,bw=W/s.length;
+    var inB=function(t){return a.bursts.some(function(b){return t>=b.from&&t<b.to;});};
+    return '<svg viewBox="0 0 '+W+' '+(Hh+18)+'" width="100%" height="150" preserveAspectRatio="none" role="img" aria-label="events per time bucket">'+s.map(function(x,i){var hh=Math.max(1,x.n/max*Hh);return '<rect x="'+(i*bw+.5)+'" y="'+(Hh-hh)+'" width="'+Math.max(1,bw-1)+'" height="'+hh+'" fill="'+(inB(x.t)?'#e5484d':'#3d63b5')+'"><title>'+fmt(x.t)+' · '+x.n+' events · z '+x.z+'</title></rect>';}).join('')
+      +'<text x="0" y="'+(Hh+14)+'" fill="#8b93a4" font-size="11">'+esc(fmt(s[0].t))+'</text><text x="'+W+'" y="'+(Hh+14)+'" fill="#8b93a4" font-size="11" text-anchor="end">'+esc(fmt(s[s.length-1].t))+'</text></svg>';}
+  function drawInv(){var a=INV.a,tl=INV.tl,tr=INV.tr,col=a.score>=60?'#e5484d':a.score>=30?'#f5b544':'#3a8f4d';
+    var h='<div class="hero"><div class="card ring">'+ringSvg(a.score,100,'Attention score',tl.type+' · '+a.events+' events',col)+'<div class="sm mute">indicators, not proof</div></div><div class="card"><h2>Why this score <span class="c">every point itemised</span></h2>'
+      +(a.reasons.length?'<ul class="why">'+a.reasons.map(function(r){return '<li><b>+'+r.points+'</b> '+esc(r.why)+'</li>';}).join('')+'</ul>':'<div class="empty">Nothing in this window raised the score.</div>')
+      +(a.note?'<div class="sm mute">'+esc(a.note)+'</div>':'')+(tl.truncated?'<div class="banner inf" style="margin-top:8px">The window holds '+tl.total+' events; the first '+tl.shown+' were analysed. Narrow the window for a complete picture.</div>':'')+'</div></div>';
+    h+='<div class="card"><h2>Activity over time <span class="c">bucket '+dur(a.bucket_ms)+' · red = burst (robust z ≥ 3.5 against this entity\'s own median)</span></h2>'+burstSvg(a)
+      +(a.bursts.length?'<ul class="why">'+a.bursts.map(function(b){return '<li><b>'+fmt(b.from)+' → '+fmt(b.to)+'</b> · '+b.events+' events (normal '+b.baseline+' per bucket, peak z '+b.peak_z+') · '+b.lanes.map(function(l){return esc(l.lane)+' '+l.n;}).join(', ')+'</li>';}).join('')+'</ul>':'<div class="sm mute">No burst found.</div>')+'</div>';
+    h+='<div class="g2"><div class="card"><h2>Attack stages in order <span class="c">inside one activity session</span></h2>'+(a.progression?'<div class="steps">'+a.progression.stages.map(function(s){return '<span class="cur">'+esc(s.stage)+'<div class="sm mute">'+esc(fmt(s.at).slice(11))+'</div></span>';}).join('')+'</div><div class="sm">'+a.progression.stages.length+' stages within '+a.progression.minutes+' min - consistent with a hands-on intrusion; confirm on the endpoint.</div>':'<div class="empty">Fewer than three attack stages appear in order in any one session.</div>')
+      +'<h3>Activity sessions</h3>'+(a.sessions.length?'<table><tbody>'+a.sessions.slice(-8).map(function(s){return '<tr><td>'+fmt(s.from)+' → '+fmt(s.to)+'</td><td>'+s.events+' events</td><td class="sm mute">'+Object.keys(s.lanes).map(function(k){return esc(k)+' '+s.lanes[k];}).join(', ')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">none</div>')+'</div>';
+    h+='<div class="card"><h2>Pivots <span class="c">other entities in this timeline · weighted by bursts · click to reconstruct</span></h2>'+(a.pivots.length?'<table><thead><tr><th>Entity</th><th>Events</th><th>In bursts</th></tr></thead><tbody>'+a.pivots.map(function(p){return '<tr><td><button type="button" class="btn sm2" data-pivot="'+esc(p.entity)+'">'+esc(p.entity)+'</button>'+(p.external?' <span class="pill v-warn">external</span>':'')+'</td><td>'+p.events+'</td><td>'+(p.in_bursts?'<b>'+p.in_bursts+'</b>':'0')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No other entity appears.</div>')
+      +'<h3>Never seen in the previous 30 days</h3>'+(a.first_seen.length?a.first_seen.map(function(f){return '<span class="pill v-warn">'+esc(f.field)+': '+esc(f.value)+'</span>';}).join(''):'<div class="sm mute">'+esc(a.first_seen_note||'nothing new against the baseline')+'</div>')
+      +'<h3>Seen once in this window</h3>'+(a.rare.length?a.rare.map(function(r){return '<span class="pill v-mute">'+esc(r.field)+': '+esc(r.value)+'</span>';}).join(''):'<div class="sm mute">none</div>')+'</div></div>';
+    // machine-learning findings (sentra-siem engine/dfir/ml.js) - each says which feature made it
+    var bc=a.beacons||[],cm=a.commands||[],lt=a.lateral||[],rp=a.rare_pairs||[],tq=a.techniques||[];
+    h+='<div class="card"><h2>Machine-learning findings <span class="c">beaconing · command lines · lateral movement · rare process pairs - each names what made it; indicators, not proof</span></h2>'
+      +(tq.length?'<div style="margin-bottom:8px">'+tq.map(function(t){return '<span class="pill v-warn" title="'+esc(t.findings+' finding(s)')+'">'+esc(t.id)+' '+esc(t.name)+'</span>';}).join(' ')+'</div>':'')
+      +'<div class="g2"><div><h3>Regular beacons <span class="sm mute">same destination at a steady interval</span></h3>'+(bc.length?'<table><thead><tr><th>Destination</th><th>Contacts</th><th>Every</th><th>Jitter</th></tr></thead><tbody>'+bc.map(function(b){return '<tr><td class="mono">'+esc(b.destination)+(b.external?' <span class="pill v-bad">external</span>':' <span class="pill v-mute">internal</span>')+'</td><td>'+esc(b.contacts)+'</td><td>'+esc(dur(b.period_s*1000))+'</td><td>'+esc(b.jitter_pct)+'%</td></tr>';}).join('')+'</tbody></table><div class="sm mute">Updaters and monitoring agents beacon too - check whether other hosts reach the same destination on the same interval before calling it C2.</div>':'<div class="sm mute">No destination is contacted at a steady interval.</div>')
+      +'<h3>Lateral movement fan-out</h3>'+(lt.length?'<ul class="why">'+lt.map(function(l){return '<li><b>'+esc(l.why)+'</b>: '+l.hosts.map(function(x){return '<button type="button" class="btn sm2" data-pivot="host:'+esc(x.host)+'">'+esc(x.host)+'</button>';}).join(' ')+(l.accounts.length?' <span class="sm mute">as '+esc(l.accounts.join(', '))+'</span>':'')+'</li>';}).join('')+'</ul>':'<div class="sm mute">No source logged on to three or more hosts within an hour.</div>')
+      +'<h3>Rare parent → child processes</h3>'+(rp.length?rp.map(function(r){return '<span class="pill '+(r.shell?'v-warn':'v-mute')+'">'+esc(r.pair)+'</span>';}).join(' '):'<div class="sm mute">none (or too few process pairs to tell)</div>')+'</div>'
+      +'<div><h3>Suspicious command lines</h3>'+(cm.length?cm.slice(0,8).map(function(c){return '<div class="card" style="padding:8px;margin:0 0 8px"><div><b>'+esc(c.score)+'</b> · <span class="mono">'+esc(c.process)+'</span>'+(c.parent?' <span class="sm mute">← '+esc(c.parent)+'</span>':'')+(c.count>1?' <span class="sm mute">×'+esc(c.count)+'</span>':'')+'</div><div class="mono sm" style="word-break:break-all">'+esc(String(c.cmdline).slice(0,300))+'</div><div class="sm">'+c.features.map(function(f){return '+'+esc(f.points)+' '+esc(f.feature)+' <span class="mute">'+esc(f.technique)+'</span>';}).join(' · ')+'</div></div>';}).join(''):'<div class="sm mute">No command line shows an encoded, download, living-off-the-land, obfuscation or document-spawned-shell feature.</div>')+'</div></div></div>';
+    var tc=function(t,arr,row,hd){return '<div class="card"><h2>'+esc(t)+' <span class="c">'+arr.length+'</span></h2><div class="tw">'+(arr.length?'<table><thead><tr>'+hd.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr></thead><tbody>'+arr.map(row).join('')+'</tbody></table>':'<div class="empty">none</div>')+'</div></div>';};
+    h+='<div class="g2">'+tc('Top processes',tr.processes||[],function(p){return '<tr><td class="mono">'+esc(p.process||'(n/a)')+'</td><td>'+p.count+'</td><td class="mono">'+esc((p.cmdline||'').slice(0,100))+'</td></tr>';},['Process','#','Command line'])
+      +tc('Logons',tr.logons||[],function(l){return '<tr><td>'+esc(l.user||'(n/a)')+'</td><td class="mono">'+esc(l.src_ip||'')+'</td><td>'+esc(l.type||'')+'</td><td>'+(l.success||0)+'</td><td>'+(l.fail?'<span class="pill v-bad">'+l.fail+'</span>':'0')+'</td></tr>';},['User','Source','Type','OK','Fail'])+'</div>';
+    h+='<div class="card"><h2>Forensic timeline <span class="c">'+tl.shown+' of '+tl.total+' events</span></h2><div class="chips" id="lanes"></div><div id="tl"></div></div>';
+    if(can('operator'))h+='<div class="card"><h2>Request a triage collection <span class="c">'+esc(tl.entity)+' · an approver decides</span></h2><div id="colform"></div></div>';
+    $('invout').innerHTML=h;drawTl();if(can('operator'))colForm(tl.entity,tl.type);}
+  function drawTl(){var tl=INV.tl,a=INV.a,inB=function(r){var t=Date.parse(String(r.ts).replace(' ','T')+'Z');return a.bursts.some(function(b){return t>=b.from&&t<b.to;});};
+    $('lanes').innerHTML='<button type="button" class="btn sm2" data-lane="" aria-pressed="'+(LANEF==='')+'">all ('+tl.rows.length+')</button>'+tl.lanes.map(function(l){return '<button type="button" class="btn sm2" data-lane="'+esc(l.lane)+'" aria-pressed="'+(LANEF===l.lane)+'">'+esc(l.label)+' ('+l.count+')</button>';}).join('');
+    var rows=tl.rows.filter(function(r){return !LANEF||r.lane===LANEF;}).slice(-600);
+    $('tl').innerHTML=rows.length?'<div class="tl">'+rows.map(function(r){return '<div class="ev '+esc(r.lane)+(inB(r)?' burst':'')+'"><div class="tm">'+esc(String(r.ts).slice(0,23))+' · '+esc(r.lane_label)+(r.sev>=3?' · '+sevPill(r.sev):'')+(r.src_type?' · '+esc(r.src_type):'')+'</div><div class="mono">'+esc(r.title)+'</div></div>';}).join('')+'</div>':'<div class="empty">No events for this entity in the window - check the name, or whether its logs reach the SIEM (Live Status).</div>';}
+  function colForm(ent,type){var go=function(){var f=$('colform');if(!f)return;
+    f.innerHTML=CAT.map(function(c){return '<label class="ck"><input type="checkbox" value="'+esc(c.id)+'"> '+esc(c.name)+' <span class="mute">['+esc(c.kind)+' · '+esc(c.os)+']</span></label>';}).join('')
+      +'<textarea id="colrat" rows="2" placeholder="Rationale (required - PDPL): why this host / person is being collected" style="margin-top:8px"></textarea><div class="frm"><input id="colcase" placeholder="case id (optional)" value="'+esc(CUR||'')+'" style="width:200px"><button type="button" class="btn pri" id="colgo">Request collection</button></div>';};
+    if(CAT.length)go();else req('GET','/collect/catalog').then(function(c){CAT=c.items||[];go();}).catch(function(e){toast(e.message);});
+    window.__colEnt={ent:ent,type:type};}
+
+  // ---------------------------------------------------------------- collections
+  function colTable(items){var dec=can('admin')||(window.zybApproves&&window.zybApproves('eng:dfir'));
+    return items.length?'<table><thead><tr><th>ID</th><th>Entity</th><th>Items</th><th>Case</th><th>Rationale</th><th>Status</th><th>Requested</th>'+(dec?'<th>Decide</th>':'')+'</tr></thead><tbody>'+items.map(function(r){
+      return '<tr><td class="mono">'+esc(r.id)+'</td><td>'+esc(r.entity)+' <span class="mute">('+esc(r.type)+')</span></td><td class="sm">'+esc((r.items||[]).join(', '))+'</td><td class="mono">'+esc(r.case_id||'—')+'</td><td class="sm">'+esc(r.rationale)+'</td><td><span class="pill '+(r.status==='approved'||r.status==='collected'?'v-ok':r.status==='rejected'?'v-bad':'v-warn')+'">'+esc(r.status)+'</span>'+(r.decided_by?'<div class="sm mute">'+esc(r.decided_by)+(r.note?': '+esc(r.note):'')+'</div>':'')+'</td><td class="sm">'+esc(r.requested_by)+'<br>'+fmt(r.requested_at)+'</td>'
+      +(dec?'<td>'+(r.status==='requested'?'<input data-dnote="'+esc(r.id)+'" placeholder="reason (required to reject)" style="width:170px"><div class="frm"><button type="button" class="btn sm2" data-dec="approved" data-id="'+esc(r.id)+'"'+(r.requested_by===USER?' disabled title="you asked for it - another person decides"':'')+'>Approve</button><button type="button" class="btn sm2" data-dec="rejected" data-id="'+esc(r.id)+'">Reject</button></div>':r.status==='approved'?'<button type="button" class="btn sm2" data-dec="collected" data-id="'+esc(r.id)+'">Mark collected</button>':'')+'</td>':'')+'</tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No collection requests.</div>';}
+  function loadCol(){req('GET','/collect/catalog').then(function(c){CAT=c.items||[];$('catalog').innerHTML='<table><thead><tr><th>Artefact</th><th>OS</th><th>Depth</th></tr></thead><tbody>'+CAT.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td class="mono">'+esc(x.os)+'</td><td>'+esc(x.kind)+'</td></tr>';}).join('')+'</tbody></table>';}).catch(function(e){$('catalog').innerHTML='<p class="banner bad">'+esc(e.message)+'</p>';});
+    if(!can('analyst')){$('cqueue').innerHTML='<div class="empty">Collection requests name people and devices: shown to analysts and above.</div>';return;}
+    req('GET','/collections').then(function(r){var it=r.items||[];$('cqc').textContent=it.length+' request(s)';$('cqueue').innerHTML=colTable(it);}).catch(function(e){$('cqueue').innerHTML='<p class="banner bad">'+esc(e.message)+'</p>';});}
+
+  // ---------------------------------------------------------------- readiness + settings
+  function drawReady(){if(!B)return;var s=B.settings;
+    $('ready').innerHTML='<table><tbody>'+B.readiness.map(function(r){return '<tr><td>'+(r.ok?'<span class="pill v-ok">ready</span>':'<span class="pill v-warn">to do</span>')+'</td><td><b>'+esc(r.item)+'</b><div class="sm mute">'+esc(r.how)+'</div></td></tr>';}).join('')+'</tbody></table>'
+      +'<div class="sm mute" style="margin-top:8px">PDPL: SDAIA is notified within '+s.pdpl_hours+(' hours of awareness when a breach may harm personal data (Implementing Regulation Art. 24). That clock is fixed by law; the other regulators\' hours come from the circulars that apply to ' + ZYB_ORG.short + '.</div>');
+    $('setc').textContent=s.updated?'last changed '+fmt(s.updated)+' by '+(s.updated_by||'—'):'not set yet';
+    var regs=Object.keys(s.regulators);
+    $('settings').innerHTML='<table><thead><tr><th>Regulator</th><th>Reporting hours</th><th>Basis (circular / reference)</th></tr></thead><tbody>'+regs.map(function(k){var r=s.regulators[k];return '<tr><td>'+esc(r.name)+'</td><td>'+(can('admin')?'<input type="number" min="0" max="720" data-rh="'+esc(k)+'" value="'+(r.hours||'')+'" placeholder="not set" style="width:110px">':esc(r.hours||'not set'))+'</td><td>'+(can('admin')?'<input data-rb="'+esc(k)+'" value="'+esc(r.basis)+'" style="width:100%">':esc(r.basis||'—'))+'</td></tr>';}).join('')+'</tbody></table>'
+      +'<h3>Evidence storage locations</h3>'+(can('admin')?'<textarea id="stor" rows="3" placeholder="one per line, e.g. Evidence safe, IT room 2">'+esc((s.storage||[]).join('\n'))+'</textarea><div class="frm"><button type="button" class="btn pri" id="setsave">Save settings</button></div>':'<div class="sm">'+esc((s.storage||[]).join(', ')||'none listed')+'</div><div class="sm mute">An administrator changes these.</div>');}
+
+  // ---------------------------------------------------------------- Excel
+  function xls(){if(!B)return;var sheets=[{name:'Cases',rows:[['Case','Title','Severity','SOC status','Type','Phase','Personal data','Legal hold','Clocks','Evidence','Integrity failures','IOCs','Owner']].concat(B.cases.map(function(c){return [c.id,c.title,c.severity,c.status,c.type,c.phase,c.personal_data?'yes':'no',c.hold?'on':'off',c.clocks.map(function(k){return k.name+': '+k.state+(k.due?' (due '+fmt(k.due)+' UTC)':'');}).join('; '),c.evidence,c.integrity_issues,c.iocs,c.owner];}))},
+      {name:'Attention',rows:[['Level','Case','What']].concat(B.attention.map(function(a){return [a.level,a.case_id,a.text];}))}];
+    if(CV)sheets.push({name:'Evidence '+CV.case.id,rows:[['Ref','Kind','Description','SHA-256','Location','Integrity','Chain verifies','Custody']].concat(CV.evidence.map(function(e){return [e.ref,e.kind,e.description,e.sha256,e.location,e.integrity,e.chain_ok?'yes':'NO',e.custody.map(function(x){return fmt(x.at)+' '+x.action+' '+x.by+(x.to?' -> '+x.to:'');}).join(' | ')];}))});
+    window.zybXlsx.download('dfir-'+new Date().toISOString().slice(0,10)+'.xlsx',toSheets(sheets));}
+  function toSheets(L){return L.map(function(s){return {name:s.name,columns:s.rows[0].map(function(h){return {h:String(h)};}),rows:s.rows.slice(1)};});}
+
+  // ---------------------------------------------------------------- events (delegated)
+  document.addEventListener('click',function(ev){var t=ev.target.closest('button,tr[data-case],.att');if(!t)return;var g=function(a){return t.getAttribute(a);};
+    if(g('data-tab'))return show(g('data-tab'));
+    if(g('data-cf')){CF=g('data-cf');return drawBoard();}
+    if(t.matches('tr[data-case]'))return openCase(g('data-case'));
+    if(g('data-open')){show('cases');return openCase(g('data-open'));}
+    if(g('data-simcase')){show('cases');return openCase(g('data-simcase'));}
+    if(g('data-pivot')){var p=g('data-pivot'),m=/^(user|host|ip):(.*)$/.exec(p);show('inv');return investigate(m?m[2]:p,m?m[1]:'');}
+    if(g('data-lane')!==null&&t.id!=='go'&&t.closest('#lanes')){LANEF=g('data-lane');return drawTl();}
+    if(t.id==='phgo'||t.id==='phback'){var to=t.id==='phgo'?CV.next_phase:B.phases[B.phases.indexOf(CV.overlay.phase)-1];return caseAction('',{phase:to,phase_note:($('phnote')||{}).value||undefined},'Phase moved to '+to);}
+    if(t.id==='ovsave'){var b={personal_data:$('ovpd').checked,regulators:[].map.call(document.querySelectorAll('[data-reg]:checked'),function(x){return x.getAttribute('data-reg');})};if($('ovtype').value)b.type=$('ovtype').value;if($('ovaware').value)b.aware_at=$('ovaware').value+':00Z';if($('ovppl').value!=='')b.people_estimate=Number($('ovppl').value);return caseAction('',b,'Saved');}
+    if(g('data-notify')){var k=g('data-notify'),ref=document.querySelector('[data-nref="'+k+'"]').value.trim();if(!ref)return toast('Enter the reference the regulator gave');return caseAction('/notify',{regulator:k,ref:ref},'Notification recorded');}
+    if(t.id==='hplace'||t.id==='hrel'){var rs=$('hreason').value.trim();if(!rs)return toast('A reason is required');return caseAction(t.id==='hplace'?'/hold':'/hold/release',{reason:rs},t.id==='hplace'?'Legal hold placed':'Legal hold released');}
+    if(t.id==='evadd'){var e={kind:$('evkind').value,description:$('evdesc').value.trim(),sha256:$('evsha').value.trim(),source:$('evsrc').value.trim()||undefined,location:$('evloc').value.trim()};return caseAction('/evidence',e,'Evidence registered');}
+    if(g('data-verify')){var r0=g('data-verify');return req('GET','/evidence/'+encodeURIComponent(r0)+'/verify').then(function(v){toast(r0+': '+(v.ok?'custody chain verifies ('+v.entries+' entries)':'chain BROKEN at entry '+v.broken_at)+' · integrity '+v.integrity);}).catch(function(e2){toast(e2.message);});}
+    if(g('data-cgo')){var rf=g('data-cgo'),q=function(a){return document.querySelector('['+a+'="'+rf+'"]').value.trim();},cb={action:q('data-cact'),to:q('data-cto')||undefined,note:q('data-cnote')||undefined,sha256_observed:q('data-csha')||undefined};
+      return req('POST','/evidence/'+encodeURIComponent(rf)+'/custody',cb).then(function(r2){toast(r2.integrity==='mismatch'?rf+': the re-hash DIFFERS from the registered SHA-256':'Custody entry added');load();}).catch(function(e3){toast(e3.message);});}
+    if(t.id==='ioadd')return caseAction('/iocs',{type:$('iotype').value,value:$('ioval').value.trim(),note:$('ionote').value.trim()||undefined},'Indicator added');
+    if(g('data-retire')){var id0=g('data-retire'),tr0=t.closest('tr');if(!tr0.querySelector('[data-rr]')){t.insertAdjacentHTML('beforebegin','<input data-rr="'+esc(id0)+'" placeholder="reason" style="width:120px">');return;}var why=tr0.querySelector('[data-rr]').value.trim();if(!why)return toast('A reason is required');
+      return req('POST','/iocs/'+encodeURIComponent(id0)+'/retire',{reason:why}).then(function(){toast('Indicator retired');load();}).catch(function(e4){toast(e4.message);});}
+    if(t.id==='sight'){t.disabled=true;return req('GET','/cases/'+encodeURIComponent(CUR)+'/sightings').then(function(s){t.disabled=false;s.items.forEach(function(i){var c=$('sg-'+i.id);if(c)c.innerHTML=i.error?'<span class="pill v-bad">'+esc(i.error)+'</span>':i.events?'<b>'+i.events+'</b> events · '+fmt(i.first)+' → '+fmt(i.last)+'<div class="mute">'+esc(i.hosts.join(', '))+'</div>':'<span class="mute">not seen</span>';});toast(s.seen+' of '+s.items.length+' indicator(s) seen in '+s.days+' days');}).catch(function(e5){t.disabled=false;toast(e5.message);});}
+    if(t.id==='stix')return req('GET','/cases/'+encodeURIComponent(CUR)+'/stix').then(function(b2){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(b2,null,2)],{type:'application/json'}));a.download=CUR+'-stix.json';document.body.appendChild(a);a.click();a.remove();}).catch(function(e6){toast(e6.message);});
+    if(t.id==='aigo'){var qq=$('aiq').value.trim();if(!qq)return toast('Ask a question');t.disabled=true;$('ai').insertAdjacentHTML('beforeend','<div class="empty" id="aiw">The analyst is reading the case…</div>');
+      return req('POST','/cases/'+encodeURIComponent(CUR)+'/ask',{question:qq}).then(function(a){CV.ai=a;drawAi();}).catch(function(e7){t.disabled=false;var w=$('aiw');if(w)w.remove();toast(e7.message);});}
+    if(g('data-aidec'))return req('POST','/cases/'+encodeURIComponent(CUR)+'/ask/decide',{decision:g('data-aidec')}).then(function(a){CV.ai=a;drawAi();toast(a.state==='added'?'Added to the case as your note':'Discarded');}).catch(function(e8){toast(e8.message);});
+    if(t.id==='colgo'){var f=$('colform'),items=[].map.call(f.querySelectorAll('input[type=checkbox]:checked'),function(x){return x.value;}),rat=$('colrat').value.trim();if(!items.length)return toast('Pick at least one artefact');if(!rat)return toast('A rationale is required');
+      var ce=window.__colEnt||{};return req('POST','/collect',{entity:ce.ent,type:ce.type||undefined,items:items,rationale:rat,case_id:$('colcase').value.trim()||undefined}).then(function(r3){toast('Collection '+r3.id+' requested - an approver decides');}).catch(function(e9){toast(e9.message);});}
+    if(g('data-dec')){var did=g('data-id'),dec=g('data-dec'),nt=(document.querySelector('[data-dnote="'+did+'"]')||{}).value||'';if(dec==='rejected'&&!nt.trim())return toast('A reason is required to reject');
+      return req('POST','/collections/'+encodeURIComponent(did)+'/decide',{decision:dec,note:nt.trim()||undefined}).then(function(){toast(did+': '+dec);loadCol();if(CUR)openCase(CUR,true);}).catch(function(e10){toast(e10.message);});}
+    if(t.id==='setsave'){var sb={storage:$('stor').value.split('\n').map(function(x){return x.trim();}).filter(Boolean)};[].forEach.call(document.querySelectorAll('[data-rh]'),function(x){sb[x.getAttribute('data-rh')+'_hours']=x.value===''?0:Number(x.value);});[].forEach.call(document.querySelectorAll('[data-rb]'),function(x){sb[x.getAttribute('data-rb')+'_basis']=x.value.trim();});
+      return req('POST','/settings',sb).then(function(){toast('Settings saved');load().then(drawReady);}).catch(function(e11){toast(e11.message);});}
+    if(t.id==='go')return investigate();
+    if(t.id==='refresh')return load();if(t.id==='print')return window.print();if(t.id==='xls')return xls();
+  });
+  $('ent').addEventListener('keydown',function(e){if(e.key==='Enter')investigate();});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;USER=String(j.user||'');}catch(e){/* no identity: stays viewer */}load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden&&TAB==='cases'&&!document.activeElement.matches('input,textarea,select'))load();},60000);
+})();
+</script></body></html>

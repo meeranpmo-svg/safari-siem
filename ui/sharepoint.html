@@ -1,0 +1,54 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SharePoint &amp; OneDrive</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}.mono{font-family:ui-monospace,Consolas,monospace}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}[data-f]{cursor:pointer}[data-f][aria-pressed=true]{outline:1px solid #4299e1}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.bar{height:10px;border-radius:5px;overflow:hidden;display:flex;background:rgba(255,255,255,.06)}.bar i{display:block;height:100%}
+#sptabs{flex-wrap:wrap}#actw .card,#actw [class*=col-]{min-width:0}#actw .table-responsive{max-width:100%;overflow-x:auto}@media(max-width:640px){#sptabs .mut{display:none}}
+body.sp-act #main,body.sp-act #err,body.sp-act .alert-info{display:none!important}body:not(.sp-act) #actw{display:none!important}
+.act{border-left:4px solid #6b7280;padding:7px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,.02)}.act.p-hi{border-left-color:#d63939}.act.p-md{border-left-color:#f59f00}.act.p-lo{border-left-color:#4299e1}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-3"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Microsoft 365 · Files</div><h2 class="page-title">SharePoint &amp; OneDrive</h2></div>
+ <div class="col-auto ms-auto d-flex gap-2"><span class="mut align-self-center" id="up"></span><button type="button" class="btn" id="run" hidden><i class="ti ti-scan me-1"></i>Read now</button><button type="button" class="btn" id="csv"><i class="ti ti-download me-1"></i>Export CSV</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Every SharePoint site (and OneDrive, when switched on) is read <b>read only</b> for personal data. Only <b>counts per kind</b> are kept, never a value. Each file holding personal data is scored for exposure: <b>what it holds</b> × <b>how far it is shared</b>. A file whose sharing could not be read is treated as <b>unknown, not safe</b>. Nothing here changes a file or a link.</div></div></div>
+<ul class="nav nav-tabs mb-3" role="tablist" id="sptabs"><li class="nav-item"><a href="#content" class="nav-link active" data-sptab="content" role="tab" aria-selected="true"><i class="ti ti-file-search me-1"></i>Content &amp; exposure</a></li><li class="nav-item"><a href="#activity" class="nav-link" data-sptab="activity" role="tab" aria-selected="false"><i class="ti ti-activity me-1"></i>Activity <span class="mut ms-1">sharing · mass downloads · after hours · external</span></a></li></ul>
+<div id="err" class="alert alert-warning" hidden></div>
+<div id="main" hidden>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div class="row g-3 mb-3">
+ <div class="col-lg-7"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-list-check me-1"></i>What to do first</h3></div><div class="card-body" id="acts"></div></section></div>
+ <div class="col-lg-5 d-flex flex-column gap-3">
+  <section class="card"><div class="card-header"><h3 class="card-title"><i class="ti ti-share me-1"></i>How far files with personal data are shared</h3></div><div class="card-body" id="share"></div></section>
+  <section class="card"><div class="card-header"><h3 class="card-title"><i class="ti ti-chart-line me-1"></i>Across discovery runs</h3></div><div class="card-body" id="trend"></div></section>
+ </div>
+</div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-building-community me-1"></i>Sites and OneDrives <span class="mut">ranked by the exposure they hold</span></h3></div><div class="table-responsive" id="srcs"></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-files me-1"></i>Files with personal data <span class="mut">ranked by exposure</span></h3><div class="card-actions d-flex gap-2"><input class="form-control form-control-sm" id="q" type="search" placeholder="Search file, folder, site, kind" aria-label="Search files"></div></div><div class="table-responsive" id="files"></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-folders me-1"></i>Where personal data concentrates</h3></div><div class="card-body" id="folders"></div></section>
+<p class="mut" id="note"></p>
+</div>
+<div id="actw">
+ <div class="d-flex gap-2 align-items-center mb-3"><span class="mut">Window</span><select class="form-select form-select-sm" id="adays" style="width:auto" aria-label="Activity window"><option value="1">24 hours</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select><span class="mut" id="aup"></span></div>
+ <div id="aerr" class="alert alert-warning" hidden></div>
+ <div id="amain" hidden>
+  <div class="row row-cards mb-3" id="akpis"></div>
+  <div class="row g-3 mb-3">
+   <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-download me-1"></i>Mass downloads <span class="mut">against each user's own 14 days</span></h3></div><div class="card-body" id="adl"></div></section></div>
+   <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-moon me-1"></i>After-hours activity <span class="mut">outside Sun-Thu 07-18 Riyadh, a change in the user's own pattern</span></h3></div><div class="card-body" id="aah"></div></section></div>
+  </div>
+  <div class="row g-3 mb-3">
+   <div class="col-lg-8"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-world-share me-1"></i>External &amp; anonymous sharing</h3></div><div class="table-responsive" id="aext"></div></section></div>
+   <div class="col-lg-4 d-flex flex-column gap-3"><section class="card"><div class="card-header"><h3 class="card-title"><i class="ti ti-link me-1"></i>Anonymous links used</h3></div><div class="card-body" id="aused"></div></section>
+    <section class="card"><div class="card-header"><h3 class="card-title"><i class="ti ti-chart-bar me-1"></i>Per day</h3></div><div class="card-body" id="aday"></div></section></div>
+  </div>
+  <section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-share me-1"></i>All sharing</h3><div class="card-actions d-flex gap-2"><select class="form-select form-select-sm" id="ascope" aria-label="Scope"><option value="">Every scope</option><option value="anonymous">Anyone with the link</option><option value="external">Outside the organisation</option><option value="organisation">Whole organisation</option><option value="internal">Specific people inside</option></select><input class="form-control form-control-sm" id="aq" type="search" placeholder="Search user, file, site" aria-label="Search sharing"></div></div><div class="table-responsive" id="ashare"></div></section>
+  <p class="mut" id="anote"></p>
+ </div>
+</div>
+</div></main>
+<script src="vendor/zyb-spo.js"></script></body></html>

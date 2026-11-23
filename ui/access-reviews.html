@@ -1,0 +1,102 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Access Reviews</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.dec label{margin-right:10px;font-size:12.5px}.dec input[type=text]{min-width:220px}
+.pbar{height:6px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;min-width:90px}.pbar i{display:block;height:100%;background:#0ca30c}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Identity & Microsoft 365 · quarterly</div><h2 class="page-title">Access Reviews</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><select class="form-select w-auto" id="camp" aria-label="Campaign"></select><button type="button" class="btn btn-primary" id="start"><i class="ti ti-player-play me-1"></i>Start this quarter</button><button type="button" class="btn" id="scope"><i class="ti ti-settings me-1"></i>Scope</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Every quarter the platform reads the members of the Active Directory groups in scope (read-only) and asks each member's <b>line manager</b> (the AD "manager" field) whether the person still needs that access. Nobody reviews their own access: without a manager the group's fallback reviewer does. Mark each line keep or remove and <b>sign the attestation</b>. Removals are approved by an administrator who did not ask for them, then removed in the directory and read back; privileged groups are removed by hand by a domain administrator. The export is the audit evidence (SAMA CSF 3.3.5, NCA ECC 2-2-1-5).</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div id="body"><div class="card"><div class="card-body text-secondary">Loading…</div></div></div>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+  var L=null, CID=null, S=null, MINE=null, ALL=null, TAB='mine';
+  var STATE={open:['open','secondary'],decided:['decided, not signed','blue'],kept:['kept','green'],removal_pending:['removal waiting for approval','orange'],removal_approved:['remove by hand','orange'],removed:['removed','green'],removal_failed:['removal failed','red']};
+  function st(s){var x=STATE[s]||[s,'secondary'];return P.badge(x[0],x[1]);}
+  function flags(x){return (x.privileged_group?P.badge('privileged group','red')+' ':'')+(!x.enabled?P.badge('disabled','secondary')+' ':'')+(x.dormant?P.badge('no sign-in 90 days','orange')+' ':'')+(x.new_since_last?P.badge('new since last quarter','blue'):'');}
+  function load(){return P.req('GET','/access-reviews').then(function(v){L=v;
+    var sel=$('camp');sel.innerHTML=v.campaigns.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.quarter)+' · '+esc(c.status)+'</option>';}).join('')||'<option value="">no campaign yet</option>';
+    if(!CID||!v.campaigns.some(function(c){return c.id===CID;}))CID=v.campaigns.length?v.campaigns[0].id:null;sel.value=CID||'';
+    $('start').hidden=v.campaigns.some(function(c){return c.quarter===v.current_quarter;});
+    return CID?Promise.all([P.req('GET','/access-reviews/'+CID),P.req('GET','/access-reviews/'+CID+'/items?mine=1')]).then(function(r){S=r[0];MINE=r[1];draw();}):empty();
+  }).catch(function(e){P.fail($('body'),e);$('kpis').innerHTML='';});}
+  function empty(){S=null;$('kpis').innerHTML='';
+    $('body').innerHTML='<div class="card"><div class="card-body">'+(!L.directory.connected?'<p>The directory is not connected. An administrator sets it in <a href="hr-onboarding.html">HR Onboarding → Directory settings</a> (read access is enough to review).</p>':'')
+      +(L.scope.groups.length?'<p>'+esc(L.scope.groups.length)+' group(s) in scope. An administrator starts the '+esc(L.current_quarter)+' campaign with "Start this quarter"'+(L.scope.auto_start?' - or it starts by itself on the first day of the quarter':'')+'.</p>':'<p>No group is in scope yet. An administrator lists the groups to review under "Scope".</p>')+'</div></div>';}
+  function draw(){var c=S.counts;
+    $('kpis').innerHTML=P.tile(c.lines,'Memberships')+P.tile(c.decided+' / '+c.lines,'Decided')+P.tile(c.signed+' / '+c.reviewers,'Reviewers signed')+P.tile(c.remove,'Marked remove',c.remove?'text-orange':'')
+      +P.tile(c.removal_pending,'Removals waiting for approval',c.removal_pending?'text-orange':'')+P.tile(c.removed,'Removed')+P.tile(c.unassigned,'No reviewer',c.unassigned?'text-red':'')+P.tile(S.overdue?'overdue':S.due_at.slice(0,10),S.status==='open'?'Due':'Status: '+S.status,S.overdue?'text-red':'');
+    var tabs=[['mine','My reviews ('+MINE.items.filter(function(x){return !x.decision;}).length+' open)'],['progress','Progress'],['removals','Removals'],['report','Report']];
+    $('body').innerHTML='<ul class="nav nav-tabs mb-3" id="tabs">'+tabs.map(function(t){return '<li class="nav-item"><a href="#" class="nav-link'+(TAB===t[0]?' active':'')+'" data-tab="'+t[0]+'">'+esc(t[1])+'</a></li>';}).join('')+'</ul><div id="pane"></div>';
+    pane();}
+  function pane(){var p=$('pane');
+    if(TAB==='mine')return mine(p);
+    if(TAB==='progress')return progress(p);
+    if(TAB==='removals')return P.req('GET','/access-reviews/'+CID+'/items').then(function(v){ALL=v;removals(p);}).catch(function(e){P.fail(p,e);});
+    report(p);}
+  function mine(p){var it=MINE.items,open=S.status==='open'&&!MINE.signed;
+    if(!it.length){p.innerHTML='<div class="card"><div class="card-body text-secondary">Nothing to review for you in this campaign.</div></div>';return;}
+    p.innerHTML='<section class="card"><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">Your people\'s access ('+esc(it.length)+')</h3>'
+      +(open?'<button type="button" class="btn btn-sm" data-act="keepall">Mark all undecided "keep"</button>':P.badge(MINE.signed?'signed - locked':S.status,'green'))+'</div>'
+      +'<div class="table-responsive"><table class="table table-vcenter card-table table-sm"><thead><tr><th>Person</th><th>Group</th><th>Signals</th><th>Decision</th></tr></thead><tbody>'
+      +it.map(function(x){return '<tr data-item="'+esc(x.id)+'"><td><b>'+esc(x.display_name||x.user)+'</b><div class="mut">'+esc(x.user)+(x.employee_id?' · '+esc(x.employee_id):'')+'</div></td><td>'+esc(x.group)+'</td><td>'+flags(x)+'<div class="mut">last sign-in '+esc(x.last_logon?P.dt(x.last_logon):'never')+'</div></td>'
+        +'<td class="dec">'+(open?'<label><input type="radio" name="d-'+esc(x.id)+'" value="keep"'+(x.decision==='keep'?' checked':'')+'> keep</label><label><input type="radio" name="d-'+esc(x.id)+'" value="remove"'+(x.decision==='remove'?' checked':'')+'> remove</label><input type="text" class="form-control form-control-sm mt-1" maxlength="300" placeholder="reason (required to remove, or to keep a disabled / dormant account)" value="'+esc(x.reason||'')+'" aria-label="Reason">'
+          :(x.decision?P.badge(x.decision,x.decision==='keep'?'green':'orange')+' <span class="mut">'+esc(x.reason||'')+'</span>':'—'))+'</td></tr>';}).join('')+'</tbody></table></div>'
+      +(open?'<div class="card-body"><div class="d-flex gap-2 align-items-center"><button type="button" class="btn btn-primary" data-act="save">Save decisions</button><span class="small text-secondary" id="savemsg"></span></div>'
+        +'<div class="mt-3 p-3 border rounded"><div class="small mb-2">'+esc(S.statement)+'</div><label class="form-check"><input type="checkbox" class="form-check-input" id="stmt"><span class="form-check-label">I confirm this statement</span></label><button type="button" class="btn btn-success mt-2" data-act="sign"><i class="ti ti-signature me-1"></i>Sign the attestation</button><div class="mut mt-1">Once signed, your lines are locked. Every line must be decided first.</div></div></div>':'')+'</section>';}
+  function bar(a,b){return '<div class="pbar" title="'+esc(a+' of '+b)+'"><i style="width:'+(b?Math.round(a*100/b):0)+'%"></i></div>';}
+  function progress(p){
+    p.innerHTML='<div class="row g-3"><div class="col-lg-6"><section class="card"><div class="card-header"><h3 class="card-title">By group</h3></div>'
+      +P.table([['Group',function(g){var x=(S.groups||[]).find(function(y){return y.name===g.name;})||{};return esc(g.name)+(x.privileged?' '+P.badge('privileged','red'):'');}],['Members',function(g){return esc(g.lines);}],['Decided',function(g){return bar(g.decided,g.lines);}],['Remove',function(g){return esc(g.remove);}]],S.by_group,null,'')
+      +((S.groups||[]).filter(function(g){return g.error;}).map(function(g){return '<div class="alert alert-danger small m-2">'+esc(g.name)+': '+esc(g.error)+'</div>';}).join(''))+'</section></div>'
+      +'<div class="col-lg-6"><section class="card"><div class="card-header"><h3 class="card-title">By reviewer</h3></div>'
+      +P.table([['Reviewer',function(r){return esc(r.name);}],['Lines',function(r){return esc(r.lines);}],['Decided',function(r){return bar(r.decided,r.lines);}],['Signed',function(r){return r.signed?P.badge('signed','green'):P.badge('not yet','secondary');}]],S.by_reviewer,null,'')+'</section></div></div>'
+      +(S.status==='open'?'<section class="card mt-3"><div class="card-body d-flex flex-wrap gap-2"><button type="button" class="btn" data-act="remind"><i class="ti ti-mail me-1"></i>Remind reviewers</button><button type="button" class="btn" data-act="reassign"><i class="ti ti-user-share me-1"></i>Reassign lines</button><div class="mut align-self-center">Administrators. A reviewer is never given their own access.</div></div></section>':'');}
+  function removals(p){var it=ALL.items,pend=it.filter(function(x){return x.state==='removal_pending';}),man=it.filter(function(x){return x.state==='removal_approved'||x.state==='removal_failed';}),done=it.filter(function(x){return x.state==='removed';});
+    var row=function(x,cb){return '<tr><td>'+(cb?'<input type="checkbox" class="form-check-input" data-pick="'+esc(cb)+'" value="'+esc(x.id)+'" aria-label="Select">':'')+'</td><td><b>'+esc(x.display_name||x.user)+'</b><div class="mut">'+esc(x.user)+'</div></td><td>'+esc(x.group)+' '+flags(x)+'</td><td>'+esc(x.reason||'')+'<div class="mut">asked by '+esc(x.decided_by||'')+'</div></td><td>'+st(x.state)+(x.manual_reason?'<div class="mut">'+esc(x.manual_reason)+'</div>':'')+(x.error?'<div class="mut text-danger">'+esc(x.error)+'</div>':'')+(x.directory_ref?'<div class="mut">'+esc(x.directory_ref)+'</div>':'')+'</td></tr>';};
+    var tbl=function(list,cb){return list.length?'<div class="table-responsive"><table class="table table-vcenter card-table table-sm"><thead><tr><th></th><th>Person</th><th>Group</th><th>Why</th><th>State</th></tr></thead><tbody>'+list.map(function(x){return row(x,cb);}).join('')+'</tbody></table></div>':'<div class="card-body text-secondary">None.</div>';};
+    p.innerHTML='<section class="card mb-3"><div class="card-header"><h3 class="card-title">Waiting for approval ('+esc(pend.length)+')</h3></div>'+tbl(pend,'pend')
+      +(pend.length?'<div class="card-body">'+P.form('arrem',[['decision','sel','Decision for the selected lines',1,[['approve','Approve - remove the access'],['reject','Reject - the access stays']]],['note','text','Note (required to reject)']],{},'Record the decision')+'<div class="mut">Administrators, and not the reviewer who asked. Approved lines are removed in the directory at once (privileged groups by hand).</div></div>':'')+'</section>'
+      +'<section class="card mb-3"><div class="card-header"><h3 class="card-title">To remove by hand ('+esc(man.length)+')</h3></div>'+tbl(man,'man')
+      +(man.length?'<div class="card-body">'+P.form('ardone',[['directory_ref','text','How it was removed (change / ticket)',1]],{},'Record as removed')+'<div class="mut">Not the member.</div></div>':'')+'</section>'
+      +'<section class="card"><div class="card-header"><h3 class="card-title">Removed ('+esc(done.length)+')</h3></div>'+tbl(done,null)+'</section>';}
+  function report(p){var e=S.exceptions;
+    p.innerHTML='<section class="card"><div class="card-body">'+Z.kv([['Campaign',esc(S.id)],['Started',esc(P.dt(S.started_at))+' by '+esc(S.started_by)],['Due',esc(S.due_at.slice(0,10))+(S.overdue?' '+P.badge('overdue','red'):'')],['Status',esc(S.status)+(S.closed_at?' · closed '+esc(P.dt(S.closed_at))+' by '+esc(S.closed_by):'')],
+      ['Attestations',esc((S.attestations||[]).map(function(a){return a.by+' ('+a.lines+' lines, '+P.dt(a.at)+')';}).join('; ')||'none yet')]].concat(e?[['Exceptions at close',esc('not decided '+e.not_decided+' · not signed '+e.not_signed+' · removal not approved '+e.removal_not_approved+' · removal not done '+e.removal_not_done)]]:[]))
+      +'<div class="d-flex gap-2 mt-3"><button type="button" class="btn" data-act="export"><i class="ti ti-download me-1"></i>Export the evidence (CSV)</button></div>'
+      +(S.status==='open'?'<div class="mt-3">'+P.form('arclose',[['note','text','Closing note']],{},'Close the campaign')+'<div class="mut">Administrators. Anything not attested or not removed is listed as an exception in the report.</div></div>':'')+'</div></section>';}
+  function scopeForm(){var s=L.scope;
+    Z.open('Access Reviews','Scope',P.form('arscope',[['groups','area','Groups to review - one per line: group name | fallback reviewer',1],['due_days','num','Days managers have',1],['auto_start','bool','Start a campaign by itself on the first day of each quarter'],['auto_remove','bool','Remove approved memberships in the directory automatically (not privileged groups)']],
+      {groups:s.groups.map(function(g){return g.name+(g.fallback_reviewer?' | '+g.fallback_reviewer:'');}).join('\n'),due_days:s.due_days,auto_start:s.auto_start,auto_remove:s.auto_remove},'Save the scope')
+      +'<div class="mut mt-2">Administrators. Include the privileged groups (Domain Admins, server and firewall admins): they matter most. The fallback reviewer reviews members with no manager in AD. Reviewers sign in with the same user name as in AD.</div>');}
+  function collect(){var out=[];document.querySelectorAll('#pane tr[data-item]').forEach(function(tr){var r=tr.querySelector('input[type=radio]:checked');if(!r)return;var t=tr.querySelector('input[type=text]');out.push({item:tr.getAttribute('data-item'),decision:r.value,reason:(t&&t.value.trim())||undefined});});return out;}
+  function picked(k){return [].slice.call(document.querySelectorAll('[data-pick="'+k+'"]:checked')).map(function(i){return i.value;});}
+  document.addEventListener('click',function(ev){var t=ev.target.closest('[data-tab]');if(t){ev.preventDefault();TAB=t.getAttribute('data-tab');draw();return;}
+    var b=ev.target.closest('[data-act]');if(!b)return;var a=b.getAttribute('data-act');
+    if(a==='keepall'){document.querySelectorAll('#pane tr[data-item]').forEach(function(tr){if(!tr.querySelector('input[type=radio]:checked'))tr.querySelector('input[value=keep]').checked=true;});return;}
+    if(a==='save'){var d=collect();if(!d.length){$('savemsg').textContent='Choose keep or remove first.';return;}P.req('POST','/access-reviews/'+CID+'/decide',{decisions:d}).then(function(){P.toast('Saved');load();}).catch(function(e){$('savemsg').textContent=P.why(e);});return;}
+    if(a==='sign'){if(!$('stmt').checked){P.toast('Tick the statement first');return;}var d2=collect();(d2.length?P.req('POST','/access-reviews/'+CID+'/decide',{decisions:d2}):Promise.resolve()).then(function(){return P.req('POST','/access-reviews/'+CID+'/sign',{statement:true});}).then(function(){P.toast('Attestation signed');load();}).catch(function(e){P.toast(P.why(e));});return;}
+    if(a==='remind'){P.req('POST','/access-reviews/'+CID+'/remind',{}).then(function(r){P.toast(r.note||('Reminded '+r.sent+' reviewer(s)'));}).catch(function(e){P.toast(P.why(e));});return;}
+    if(a==='reassign'){Z.open('Access Reviews','Reassign lines',P.form('arre',[['items','area','Line ids (one per line, from the export or the Removals tab)',1],['reviewer','text','New reviewer (platform user name)',1],['reason','text','Reason',1]],{},'Reassign'));return;}
+    if(a==='export'){P.req('GET','/access-reviews/'+CID+'/export').then(function(r){var bl=new Blob([r.csv],{type:'text/csv'}),u=URL.createObjectURL(bl),x=document.createElement('a');x.href=u;x.download=r.filename;document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(u);},1000);}).catch(function(e){P.toast(P.why(e));});return;}});
+  document.addEventListener('submit',function(ev){var fm=ev.target,b=P.body(fm),go=function(m,u,body,ok){ev.preventDefault();P.req(m,u,body).then(function(r){P.toast(ok(r));if(fm.closest('#zd')&&Z.close)Z.close();load();}).catch(function(e){P.msg(fm,P.why(e));});};
+    if(fm.id==='arscope'){var groups=(b.groups||'').split(/\r?\n/).map(function(l){return l.trim();}).filter(Boolean).map(function(l){var p=l.split('|');return p[1]&&p[1].trim()?{name:p[0].trim(),fallback_reviewer:p[1].trim()}:{name:p[0].trim()};});
+      return go('POST','/access-reviews/config',{groups:groups,due_days:b.due_days,auto_start:b.auto_start,auto_remove:b.auto_remove},function(){return 'Scope saved';});}
+    if(fm.id==='arrem')return go('POST','/access-reviews/'+CID+'/removals/decide',{items:picked('pend'),decision:b.decision,note:b.note},function(r){return r.result?('Removed '+r.result.removed+', by hand '+r.result.manual+(r.result.failed?', failed '+r.result.failed:'')):'Recorded';});
+    if(fm.id==='ardone')return go('POST','/access-reviews/'+CID+'/removals/done',{items:picked('man'),directory_ref:b.directory_ref},function(){return 'Recorded';});
+    if(fm.id==='arclose')return go('POST','/access-reviews/'+CID+'/close',b,function(){return 'Campaign closed';});
+    if(fm.id==='arre')return go('POST','/access-reviews/'+CID+'/reassign',{items:(b.items||'').split(/\s+/).filter(Boolean),reviewer:b.reviewer,reason:b.reason},function(){return 'Reassigned';});});
+  $('camp').addEventListener('change',function(){CID=this.value||null;load();});
+  $('start').addEventListener('click',function(){var b=this;b.disabled=true;P.req('POST','/access-reviews',{}).then(function(r){CID=r.id;P.toast(r.id+' started: '+r.counts.lines+' memberships');load();}).catch(function(e){P.toast(P.why(e));}).then(function(){b.disabled=false;});});
+  $('scope').addEventListener('click',function(){if(L)scopeForm();});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

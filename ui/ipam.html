@@ -1,0 +1,34 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IP Address Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}.mono{font-family:ui-monospace,Consolas,monospace}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}[data-f]{cursor:pointer}[data-f][aria-pressed=true]{outline:1px solid #4299e1}
+.bar{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;min-width:90px}.bar i{display:block;height:100%}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.fd{border-left:4px solid #6b7280;padding:7px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,.02)}.fd.s-high{border-left-color:#d63939}.fd.s-medium{border-left-color:#f59f00}.fd.s-low{border-left-color:#4299e1}
+.grid{display:grid;grid-template-columns:repeat(32,1fr);gap:2px}.grid span{aspect-ratio:1;border-radius:2px;background:rgba(255,255,255,.06)}.grid .u{background:#4299e1}.grid .r{background:#ae3ec9}.grid .g{background:#f59f00}.grid .d{background:rgba(12,166,120,.35)}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-3"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Network · Address plan</div><h2 class="page-title">IP Address Management</h2></div>
+ <div class="col-auto ms-auto d-flex gap-2"><span class="mut align-self-center" id="up"></span><button type="button" class="btn" id="csv"><i class="ti ti-download me-1"></i>Export CSV</button><button type="button" class="btn btn-primary" id="addsub" hidden><i class="ti ti-plus me-1"></i>Add subnet</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>The address plan your team keeps (subnets, DHCP ranges, reservations), checked against every address the <b>asset register</b> and <b>Asset Discovery</b> actually see. Growth and days-until-full are learned from the platform's own daily history. Nothing here changes a device, a DHCP server or DNS.</div></div></div>
+<div id="err" class="alert alert-warning" hidden></div>
+<div id="main" hidden>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-network me-1"></i>Subnets</h3><div class="card-actions mut" id="subn"></div></div><div class="table-responsive" id="subs"></div></section>
+<div class="row g-3 mb-3">
+ <div class="col-lg-7"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-alert-triangle me-1"></i>What needs attention</h3><div class="card-actions mut">ranked by severity, each with what to do</div></div><div class="card-body" id="finds"></div></section></div>
+ <div class="col-lg-5 d-flex flex-column gap-3">
+  <section class="card"><div class="card-header"><h3 class="card-title"><i class="ti ti-map-search me-1"></i>Networks in use, not in the plan</h3></div><div class="card-body" id="props"></div></section>
+  <section class="card"><div class="card-header"><h3 class="card-title"><i class="ti ti-bookmark me-1"></i>Reservations</h3></div><div class="card-body" id="resv"></div></section>
+ </div>
+</div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-list-details me-1"></i>Addresses in use</h3><div class="card-actions d-flex gap-2"><input class="form-control form-control-sm" id="q" type="search" placeholder="Search IP, host, MAC, asset" aria-label="Search addresses"><select class="form-select form-select-sm" id="af" aria-label="Filter addresses"><option value="">All</option><option value="conflict">Conflicts (2+ MACs)</option><option value="unplanned">Not in a subnet</option><option value="unknown">Not in the asset register</option><option value="asset">In the asset register</option></select></div></div><div class="table-responsive" id="addr"></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-sparkles me-1"></i>Address-plan advisor (AI)</h3><div class="card-actions mut" id="ais"></div></div><div class="card-body"><div class="mut mb-2">Answers only from this page's records, read-only. People change the plan, the DHCP server and the devices.</div><form id="af2" class="d-flex gap-2"><input class="form-control" id="aq" maxlength="1500" placeholder="Which subnet fills first, and what should we clean up?" aria-label="Question for the advisor"><button type="submit" class="btn btn-primary" id="ago">Ask</button></form><div class="mt-2" id="aa"></div></div></section>
+<p class="mut" id="note"></p>
+</div>
+</div></main>
+<script src="vendor/zyb-ipam.js"></script></body></html>

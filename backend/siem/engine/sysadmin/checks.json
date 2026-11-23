@@ -1,0 +1,473 @@
+{
+ "_comment": "Read-only checks the AI Server Administrators may run on a Windows / Exchange server over WinRM (ps-helper.py). Only these scripts run - the helper refuses anything else. {{name}} is replaced by the validated parameter as a PowerShell single-quoted string (numbers as numbers). scope: windows | exchange. personal: true = output names people (operator role, audited). admin: true = needs local administrator on the server; a less privileged account gets 'access denied' and the result says so. org: true = an organisation-wide Exchange check (runs once, on one Exchange server, not on each).",
+ "checks": [
+  {
+   "id": "system_info",
+   "scope": "windows",
+   "title": "OS, version, uptime, memory, CPU",
+   "baseline": true,
+   "script": "$o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_ComputerSystem; $p=@(Get-CimInstance Win32_Processor); [pscustomobject]@{computer=$env:COMPUTERNAME; domain=$c.Domain; os=$o.Caption; version=$o.Version; build=$o.BuildNumber; last_boot=$o.LastBootUpTime.ToUniversalTime().ToString('o'); uptime_days=[math]::Round(((Get-Date)-$o.LastBootUpTime).TotalDays,1); memory_gb=[math]::Round($c.TotalPhysicalMemory/1GB,1); memory_free_pct=[math]::Round($o.FreePhysicalMemory/$o.TotalVisibleMemorySize*100,1); cpu_load_pct=[math]::Round(($p|Measure-Object LoadPercentage -Average).Average,0); cpus=$p.Count; cores=($p|Measure-Object NumberOfCores -Sum).Sum; model=$c.Model; manufacturer=$c.Manufacturer} | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "disks",
+   "scope": "windows",
+   "title": "Disk space per volume",
+   "baseline": true,
+   "script": "@(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object { [pscustomobject]@{drive=$_.DeviceID; label=$_.VolumeName; size_gb=[math]::Round($_.Size/1GB,1); free_gb=[math]::Round($_.FreeSpace/1GB,1); free_pct=if($_.Size){[math]::Round($_.FreeSpace/$_.Size*100,1)}else{$null}} }) | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "stopped_auto_services",
+   "scope": "windows",
+   "title": "Automatic services that are not running",
+   "baseline": true,
+   "script": "$skip='^(sppsvc|RemoteRegistry|gupdate|gupdatem|edgeupdate|MapsBroker|tiledatamodelsvc|CDPSvc|OneSyncSvc.*|WbioSrvc|clr_optimization.*|DoSvc|BITS|wuauserv|UsoSvc|TrustedInstaller|ShellHWDetection|GoogleUpdater.*)$'; @(Get-CimInstance Win32_Service -Filter \"StartMode='Auto' AND State<>'Running'\" | Where-Object { $_.Name -notmatch $skip } | ForEach-Object { [pscustomobject]@{name=$_.Name; display=$_.DisplayName; state=$_.State; exit_code=$_.ExitCode; account=$_.StartName} }) | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "service",
+   "scope": "windows",
+   "title": "One service: status, start type, account",
+   "params": {
+    "name": {
+     "type": "string",
+     "pattern": "^[A-Za-z0-9_.$ -]{1,80}$"
+    }
+   },
+   "script": "@(Get-CimInstance Win32_Service | Where-Object { $_.Name -eq {{name}} -or $_.DisplayName -eq {{name}} } | ForEach-Object { [pscustomobject]@{name=$_.Name; display=$_.DisplayName; state=$_.State; start_mode=$_.StartMode; account=$_.StartName; exit_code=$_.ExitCode; pid=$_.ProcessId; path=$_.PathName} }) | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "events",
+   "scope": "windows",
+   "title": "Errors and warnings from a Windows log",
+   "baseline": true,
+   "params": {
+    "log": {
+     "type": "enum",
+     "values": [
+      "System",
+      "Application"
+     ],
+     "default": "System"
+    },
+    "hours": {
+     "type": "int",
+     "min": 1,
+     "max": 168,
+     "default": 24
+    },
+    "level": {
+     "type": "enum",
+     "values": [
+      "critical",
+      "error",
+      "warning"
+     ],
+     "default": "error"
+    }
+   },
+   "script": "$lv=@{critical=@(1);error=@(1,2);warning=@(1,2,3)}[{{level}}]; try { @(Get-WinEvent -FilterHashtable @{LogName={{log}}; Level=$lv; StartTime=(Get-Date).AddHours(-{{hours}})} -MaxEvents 400 -ErrorAction Stop | Group-Object ProviderName,Id | Sort-Object Count -Descending | Select-Object -First 30 | ForEach-Object { $e=$_.Group[0]; [pscustomobject]@{source=$e.ProviderName; id=$e.Id; level=$e.LevelDisplayName; count=$_.Count; last=$e.TimeCreated.ToUniversalTime().ToString('o'); message=([string]$e.Message).Split(\"`n\")[0].Substring(0,[math]::Min(220,([string]$e.Message).Split(\"`n\")[0].Length))} }) | ConvertTo-Json -Compress } catch { if ($_.Exception.Message -match 'No events were found') { '[]' } else { throw } }"
+  },
+  {
+   "id": "unexpected_shutdowns",
+   "scope": "windows",
+   "title": "Unexpected shutdowns, crashes and restarts (30 days)",
+   "script": "try { @(Get-WinEvent -FilterHashtable @{LogName='System'; Id=41,6008,1074,1076,6005,6006; StartTime=(Get-Date).AddDays(-30)} -MaxEvents 100 -ErrorAction Stop | ForEach-Object { [pscustomobject]@{time=$_.TimeCreated.ToUniversalTime().ToString('o'); id=$_.Id; kind=@{41='kernel power loss (unexpected)';6008='unexpected shutdown';1074='planned restart / shutdown';1076='shutdown reason recorded';6005='event log started (boot)';6006='clean shutdown'}[$_.Id]; message=([string]$_.Message).Substring(0,[math]::Min(240,([string]$_.Message).Length))} }) | ConvertTo-Json -Compress } catch { if ($_.Exception.Message -match 'No events were found') { '[]' } else { throw } }"
+  },
+  {
+   "id": "updates",
+   "scope": "windows",
+   "title": "Installed updates and pending reboot",
+   "baseline": true,
+   "script": "$h=@(Get-HotFix | Where-Object InstalledOn | Sort-Object InstalledOn -Descending); $pr=@(); if(Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending'){$pr+='component servicing'}; if(Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired'){$pr+='windows update'}; if((Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager' -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations){$pr+='file rename'}; [pscustomobject]@{last_installed=if($h){$h[0].InstalledOn.ToUniversalTime().ToString('o')}else{$null}; days_since_last_update=if($h){[math]::Round(((Get-Date)-$h[0].InstalledOn).TotalDays,0)}else{$null}; recent=@($h|Select-Object -First 10|ForEach-Object{[pscustomobject]@{kb=$_.HotFixID; description=$_.Description; installed=$_.InstalledOn.ToString('yyyy-MM-dd')}}); pending_reboot=($pr.Count -gt 0); pending_reasons=$pr} | ConvertTo-Json -Compress -Depth 4"
+  },
+  {
+   "id": "top_processes",
+   "scope": "windows",
+   "title": "Top processes by CPU time and memory",
+   "script": "@(Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 15 | ForEach-Object { [pscustomobject]@{name=$_.ProcessName; pid=$_.Id; memory_mb=[math]::Round($_.WorkingSet64/1MB,0); cpu_s=[math]::Round($_.CPU,0); handles=$_.HandleCount} }) | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "performance",
+   "scope": "windows",
+   "title": "CPU, memory, disk queue, network (one 5-second sample)",
+   "script": "$c=Get-Counter -Counter '\\Processor(_Total)\\% Processor Time','\\Memory\\Available MBytes','\\Memory\\Pages/sec','\\PhysicalDisk(_Total)\\Avg. Disk Queue Length','\\PhysicalDisk(_Total)\\Avg. Disk sec/Transfer','\\Network Interface(*)\\Bytes Total/sec' -SampleInterval 5 -MaxSamples 1 -ErrorAction SilentlyContinue; @($c.CounterSamples | ForEach-Object { [pscustomobject]@{counter=$_.Path -replace '^\\\\\\\\[^\\\\]+',''; value=[math]::Round($_.CookedValue,3)} }) | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "network",
+   "scope": "windows",
+   "title": "IP configuration, DNS servers, listening ports",
+   "baseline": true,
+   "script": "[pscustomobject]@{addresses=@(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -ne '127.0.0.1' } | ForEach-Object { [pscustomobject]@{interface=$_.InterfaceAlias; ip=$_.IPAddress; prefix=$_.PrefixLength; origin=[string]$_.PrefixOrigin} }); dns=@(Get-DnsClientServerAddress -AddressFamily IPv4 | Where-Object ServerAddresses | ForEach-Object { [pscustomobject]@{interface=$_.InterfaceAlias; servers=$_.ServerAddresses} }); gateway=@(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | ForEach-Object NextHop); listening=@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort -Unique | Sort-Object)} | ConvertTo-Json -Compress -Depth 4"
+  },
+  {
+   "id": "certificates",
+   "scope": "windows",
+   "title": "Machine certificates and expiry",
+   "baseline": true,
+   "script": "@(Get-ChildItem Cert:\\LocalMachine\\My | ForEach-Object { [pscustomobject]@{subject=$_.Subject; issuer=$_.Issuer; thumbprint=$_.Thumbprint; not_after=$_.NotAfter.ToUniversalTime().ToString('o'); days_left=[math]::Floor(($_.NotAfter-(Get-Date)).TotalDays); has_private_key=$_.HasPrivateKey; dns_names=@($_.DnsNameList|ForEach-Object Unicode)} }) | ConvertTo-Json -Compress -Depth 3"
+  },
+  {
+   "id": "time_sync",
+   "scope": "windows",
+   "title": "Time synchronisation (w32tm)",
+   "script": "$s=(w32tm /query /status 2>&1) -join \"`n\"; $src=(w32tm /query /source 2>&1) -join ''; [pscustomobject]@{source=$src.Trim(); status=$s; utc_now=(Get-Date).ToUniversalTime().ToString('o')} | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "failed_tasks",
+   "scope": "windows",
+   "title": "Scheduled tasks whose last run failed",
+   "admin": true,
+   "script": "@(Get-ScheduledTask | Where-Object { $_.State -ne 'Disabled' -and $_.TaskPath -notlike '\\Microsoft\\*' } | ForEach-Object { $i=$_ | Get-ScheduledTaskInfo -ErrorAction SilentlyContinue; if($i -and $i.LastTaskResult -notin 0,267009,267011,267014) { [pscustomobject]@{task=$_.TaskPath+$_.TaskName; last_run=if($i.LastRunTime){$i.LastRunTime.ToUniversalTime().ToString('o')}; result=('0x{0:X}' -f $i.LastTaskResult); runs_as=$_.Principal.UserId} } }) | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "roles",
+   "scope": "windows",
+   "title": "Installed server roles and features",
+   "admin": true,
+   "script": "if (Get-Command Get-WindowsFeature -ErrorAction SilentlyContinue) { @(Get-WindowsFeature | Where-Object { $_.Installed -and $_.FeatureType -eq 'Role' } | ForEach-Object { [pscustomobject]@{name=$_.Name; display=$_.DisplayName} }) | ConvertTo-Json -Compress } else { '[]' }"
+  },
+  {
+   "id": "shares",
+   "scope": "windows",
+   "title": "File shares",
+   "admin": true,
+   "script": "@(Get-SmbShare | Where-Object { $_.Special -eq $false } | ForEach-Object { [pscustomobject]@{name=$_.Name; path=$_.Path; description=$_.Description; encrypt=$_.EncryptData} }) | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "local_admins",
+   "scope": "windows",
+   "title": "Members of the local Administrators group",
+   "personal": true,
+   "script": "@(Get-LocalGroupMember -SID 'S-1-5-32-544' -ErrorAction Stop | ForEach-Object { [pscustomobject]@{name=$_.Name; type=[string]$_.ObjectClass; source=[string]$_.PrincipalSource} }) | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "dc_replication",
+   "scope": "windows",
+   "title": "Active Directory replication summary (domain controllers)",
+   "script": "if (Get-Command repadmin -ErrorAction SilentlyContinue) { [pscustomobject]@{summary=((repadmin /replsummary 2>&1) -join \"`n\")} | ConvertTo-Json -Compress } else { [pscustomobject]@{summary='not a domain controller (repadmin not present)'} | ConvertTo-Json -Compress }"
+  },
+  {
+   "id": "ex_servers",
+   "scope": "exchange",
+   "title": "Exchange servers, roles and versions",
+   "baseline": true,
+   "script": "@(Get-ExchangeServer | ForEach-Object { [pscustomobject]@{name=$_.Name; roles=[string]$_.ServerRole; version=[string]$_.AdminDisplayVersion; edition=[string]$_.Edition; site=[string]$_.Site} }) | ConvertTo-Json -Compress",
+   "org": true
+  },
+  {
+   "id": "ex_service_health",
+   "scope": "exchange",
+   "title": "Required Exchange services running (Test-ServiceHealth)",
+   "baseline": true,
+   "script": "@(Test-ServiceHealth | ForEach-Object { [pscustomobject]@{role=$_.Role; all_running=$_.RequiredServicesRunning; not_running=@($_.ServicesNotRunning)} }) | ConvertTo-Json -Compress -Depth 3"
+  },
+  {
+   "id": "ex_queues",
+   "scope": "exchange",
+   "title": "Mail queues with messages",
+   "baseline": true,
+   "script": "@(Get-ExchangeServer | Where-Object { $_.IsHubTransportServer -or $_.IsMailboxServer } | ForEach-Object { Get-Queue -Server $_.Name -ErrorAction SilentlyContinue } | Where-Object { $_.MessageCount -gt 0 -or $_.Status -ne 'Active' -and $_.Status -ne 'Ready' } | ForEach-Object { [pscustomobject]@{queue=[string]$_.Identity; type=[string]$_.DeliveryType; status=[string]$_.Status; messages=$_.MessageCount; next_hop=[string]$_.NextHopDomain; last_error=[string]$_.LastError} }) | ConvertTo-Json -Compress",
+   "org": true
+  },
+  {
+   "id": "ex_databases",
+   "scope": "exchange",
+   "title": "Mailbox databases: mounted, size, free space, last backup",
+   "baseline": true,
+   "script": "@(Get-MailboxDatabase -Status | ForEach-Object { [pscustomobject]@{name=$_.Name; server=[string]$_.Server; mounted=$_.Mounted; size=[string]$_.DatabaseSize; whitespace=[string]$_.AvailableNewMailboxSpace; last_full_backup=if($_.LastFullBackup){$_.LastFullBackup.ToUniversalTime().ToString('o')}; last_incremental=if($_.LastIncrementalBackup){$_.LastIncrementalBackup.ToUniversalTime().ToString('o')}; circular_logging=$_.CircularLoggingEnabled} }) | ConvertTo-Json -Compress",
+   "org": true
+  },
+  {
+   "id": "ex_db_copies",
+   "scope": "exchange",
+   "title": "DAG database copies: status, copy / replay queues, content index",
+   "baseline": true,
+   "script": "@(Get-MailboxDatabase | ForEach-Object { Get-MailboxDatabaseCopyStatus -Identity $_.Name -ErrorAction SilentlyContinue } | ForEach-Object { [pscustomobject]@{copy=$_.Name; status=[string]$_.Status; copy_queue=$_.CopyQueueLength; replay_queue=$_.ReplayQueueLength; content_index=[string]$_.ContentIndexState; last_inspected=if($_.LastInspectedLogTime){$_.LastInspectedLogTime.ToUniversalTime().ToString('o')}} }) | ConvertTo-Json -Compress",
+   "org": true
+  },
+  {
+   "id": "ex_dag",
+   "scope": "exchange",
+   "title": "Database availability groups",
+   "script": "@(Get-DatabaseAvailabilityGroup -Status -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{name=$_.Name; servers=@($_.Servers|ForEach-Object{[string]$_}); operational=@($_.OperationalServers|ForEach-Object{[string]$_}); witness=[string]$_.WitnessServer; witness_in_use=[string]$_.WitnessShareInUse; primary_active_manager=[string]$_.PrimaryActiveManager} }) | ConvertTo-Json -Compress -Depth 3",
+   "org": true
+  },
+  {
+   "id": "ex_certificates",
+   "scope": "exchange",
+   "title": "Exchange certificates, services bound, expiry",
+   "baseline": true,
+   "script": "@(Get-ExchangeCertificate | ForEach-Object { [pscustomobject]@{thumbprint=$_.Thumbprint; subject=$_.Subject; services=[string]$_.Services; not_after=$_.NotAfter.ToUniversalTime().ToString('o'); days_left=[math]::Floor(($_.NotAfter-(Get-Date)).TotalDays); self_signed=$_.IsSelfSigned; status=[string]$_.Status; names=@($_.CertificateDomains|ForEach-Object{[string]$_})} }) | ConvertTo-Json -Compress -Depth 3"
+  },
+  {
+   "id": "ex_server_health",
+   "scope": "exchange",
+   "title": "Managed availability: health sets that are not healthy",
+   "script": "@(Get-ExchangeServer | Where-Object { $_.IsMailboxServer } | ForEach-Object { $n=$_.Name; Get-ServerHealth -Identity $n -ErrorAction SilentlyContinue | Where-Object { $_.AlertValue -ne 'Healthy' } | ForEach-Object { [pscustomobject]@{server=$n; health_set=$_.HealthSetName; monitor=$_.Name; state=[string]$_.AlertValue; since=if($_.LastTransitionTime){$_.LastTransitionTime.ToUniversalTime().ToString('o')}} } }) | Select-Object -First 80 | ConvertTo-Json -Compress",
+   "org": true
+  },
+  {
+   "id": "ex_back_pressure",
+   "scope": "exchange",
+   "title": "Transport back pressure events (48 hours)",
+   "script": "try { @(Get-WinEvent -FilterHashtable @{LogName='Application'; ProviderName='MSExchangeTransport'; Id=15004,15005,15006,15007; StartTime=(Get-Date).AddHours(-48)} -MaxEvents 50 -ErrorAction Stop | ForEach-Object { [pscustomobject]@{time=$_.TimeCreated.ToUniversalTime().ToString('o'); id=$_.Id; message=([string]$_.Message).Substring(0,[math]::Min(400,([string]$_.Message).Length))} }) | ConvertTo-Json -Compress } catch { if ($_.Exception.Message -match 'No events were found') { '[]' } else { throw } }"
+  },
+  {
+   "id": "ex_receive_connectors",
+   "scope": "exchange",
+   "title": "Receive connectors: bindings, allowed IPs, anonymous / relay permissions",
+   "script": "@(Get-ReceiveConnector | ForEach-Object { [pscustomobject]@{identity=[string]$_.Identity; enabled=$_.Enabled; bindings=@($_.Bindings|ForEach-Object{[string]$_}); remote_ip_ranges=@($_.RemoteIPRanges|ForEach-Object{[string]$_}); permission_groups=[string]$_.PermissionGroups; auth=[string]$_.AuthMechanism; transport_role=[string]$_.TransportRole} }) | ConvertTo-Json -Compress -Depth 3",
+   "org": true
+  },
+  {
+   "id": "ex_send_connectors",
+   "scope": "exchange",
+   "title": "Send connectors: address spaces, smart hosts, TLS",
+   "script": "@(Get-SendConnector | ForEach-Object { [pscustomobject]@{name=$_.Name; enabled=$_.Enabled; address_spaces=@($_.AddressSpaces|ForEach-Object{[string]$_}); smart_hosts=@($_.SmartHosts|ForEach-Object{[string]$_}); require_tls=$_.RequireTLS; tls_domain=[string]$_.TlsDomain; source_servers=@($_.SourceTransportServers|ForEach-Object{[string]$_})} }) | ConvertTo-Json -Compress -Depth 3",
+   "org": true
+  },
+  {
+   "id": "ex_message_trace",
+   "scope": "exchange",
+   "title": "Message tracking for a sender or recipient (names people)",
+   "personal": true,
+   "params": {
+    "address": {
+     "type": "string",
+     "pattern": "^[A-Za-z0-9._%+'-]{1,64}@[A-Za-z0-9.-]{1,190}\\.[A-Za-z]{2,24}$"
+    },
+    "direction": {
+     "type": "enum",
+     "values": [
+      "sender",
+      "recipient"
+     ],
+     "default": "recipient"
+    },
+    "hours": {
+     "type": "int",
+     "min": 1,
+     "max": 168,
+     "default": 24
+    }
+   },
+   "script": "$p=@{Start=(Get-Date).AddHours(-{{hours}}); ResultSize=200; ErrorAction='SilentlyContinue'}; if({{direction}} -eq 'sender'){$p.Sender={{address}}}else{$p.Recipients={{address}}}; @(Get-TransportService | ForEach-Object { Get-MessageTrackingLog -Server $_.Name @p } | Sort-Object Timestamp | Select-Object -Last 100 | ForEach-Object { [pscustomobject]@{time=$_.Timestamp.ToUniversalTime().ToString('o'); event=[string]$_.EventId; source=[string]$_.Source; sender=$_.Sender; recipients=@($_.Recipients); subject=$_.MessageSubject; server=$_.ServerHostname; status=@($_.RecipientStatus)} }) | ConvertTo-Json -Compress -Depth 3",
+   "org": true
+  },
+  {
+   "id": "ex_mailbox",
+   "scope": "exchange",
+   "title": "One mailbox: size, quota, database, last logon (names people)",
+   "personal": true,
+   "params": {
+    "address": {
+     "type": "string",
+     "pattern": "^[A-Za-z0-9._%+'-]{1,64}@[A-Za-z0-9.-]{1,190}\\.[A-Za-z]{2,24}$"
+    }
+   },
+   "script": "$m=Get-Mailbox -Identity {{address}} -ErrorAction Stop; $s=Get-MailboxStatistics -Identity {{address}} -ErrorAction SilentlyContinue; [pscustomobject]@{name=$m.DisplayName; database=[string]$m.Database; type=[string]$m.RecipientTypeDetails; size=[string]$s.TotalItemSize; items=$s.ItemCount; last_logon=if($s.LastLogonTime){$s.LastLogonTime.ToUniversalTime().ToString('o')}; prohibit_send=[string]$m.ProhibitSendQuota; issue_warning=[string]$m.IssueWarningQuota; use_database_defaults=$m.UseDatabaseQuotaDefaults; archive=[string]$m.ArchiveStatus; forwarding=[string]$m.ForwardingSmtpAddress; litigation_hold=$m.LitigationHoldEnabled} | ConvertTo-Json -Compress",
+   "org": true
+  },
+  {
+   "id": "ex_hybrid",
+   "scope": "exchange",
+   "title": "Hybrid configuration: HCW settings, organization relationships, OAuth",
+   "baseline": true,
+   "org": true,
+   "script": "$h=Get-HybridConfiguration -ErrorAction SilentlyContinue; $or=@(Get-OrganizationRelationship -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{name=$_.Name; enabled=$_.Enabled; domains=@($_.DomainNames|ForEach-Object{[string]$_}); free_busy=$_.FreeBusyAccessEnabled; target_url=[string]$_.TargetAutodiscoverEpr} }); $ioc=@(Get-IntraOrganizationConnector -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{name=$_.Name; enabled=$_.Enabled; domains=@($_.TargetAddressDomains|ForEach-Object{[string]$_}); url=[string]$_.DiscoveryEndpoint} }); $auth=@(Get-AuthServer -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{name=$_.Name; enabled=$_.Enabled; type=[string]$_.Type; realm=[string]$_.Realm} }); [pscustomobject]@{hybrid=[bool]$h; domains=@(if($h){$h.Domains|ForEach-Object{[string]$_}}); features=@(if($h){$h.Features|ForEach-Object{[string]$_}}); servers=@(if($h){$h.ReceivingTransportServers|ForEach-Object{[string]$_}}); edge=@(if($h){$h.EdgeTransportServers|ForEach-Object{[string]$_}}); tls_certificate=if($h){[string]$h.TlsCertificateName}; on_premises_smart_host=if($h){[string]$h.OnPremisesSmartHost}; org_relationships=$or; intra_org_connectors=$ioc; auth_servers=$auth} | ConvertTo-Json -Compress -Depth 4"
+  },
+  {
+   "id": "ex_hybrid_ews",
+   "scope": "exchange",
+   "title": "Exchange Web Services and Autodiscover URLs, MRS Proxy (needed to move mailboxes)",
+   "baseline": true,
+   "org": true,
+   "script": "$ad=@{}; Get-ClientAccessService -ErrorAction SilentlyContinue | ForEach-Object { $ad[$_.Name]=[string]$_.AutoDiscoverServiceInternalUri }; @(Get-WebServicesVirtualDirectory -ADPropertiesOnly -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{server=[string]$_.Server; external_url=[string]$_.ExternalUrl; internal_url=[string]$_.InternalUrl; mrs_proxy=$_.MRSProxyEnabled; auth=@($_.ExternalAuthenticationMethods|ForEach-Object{[string]$_}); autodiscover_internal=$ad[[string]$_.Server]} }) | ConvertTo-Json -Compress -Depth 3"
+  },
+  {
+   "id": "ex_hybrid_domains",
+   "scope": "exchange",
+   "title": "Accepted and remote domains (tenant routing domain, target delivery domain)",
+   "baseline": true,
+   "org": true,
+   "script": "[pscustomobject]@{accepted=@(Get-AcceptedDomain -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{name=[string]$_.DomainName; type=[string]$_.DomainType; default=$_.Default} }); remote=@(Get-RemoteDomain -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{name=$_.Name; domain=[string]$_.DomainName; target_delivery=$_.TargetDeliveryDomain} }); send_connectors=@(Get-SendConnector -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{name=$_.Name; enabled=$_.Enabled; spaces=@($_.AddressSpaces|ForEach-Object{[string]$_}); smart_hosts=@($_.SmartHosts|ForEach-Object{[string]$_}); tls_domain=[string]$_.TlsDomain; cloud=$_.CloudServicesMailEnabled} })} | ConvertTo-Json -Compress -Depth 4"
+  },
+  {
+   "id": "ex_mailbox_counts",
+   "scope": "exchange",
+   "title": "Mailbox counts: on-premises by type and database, already in Exchange Online (no names)",
+   "baseline": true,
+   "org": true,
+   "script": "$m=@(Get-Mailbox -ResultSize Unlimited -ErrorAction SilentlyContinue | Select-Object RecipientTypeDetails,Database,ArchiveStatus); $r=@(Get-RemoteMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue | Select-Object RecipientTypeDetails); [pscustomobject]@{on_premises=$m.Count; by_type=@($m | Group-Object RecipientTypeDetails | ForEach-Object { [pscustomobject]@{type=[string]$_.Name; count=$_.Count} }); by_database=@($m | Group-Object Database | ForEach-Object { [pscustomobject]@{database=[string]$_.Name; count=$_.Count} }); with_archive=@($m | Where-Object { [string]$_.ArchiveStatus -eq 'Active' }).Count; in_cloud=$r.Count; in_cloud_by_type=@($r | Group-Object RecipientTypeDetails | ForEach-Object { [pscustomobject]@{type=[string]$_.Name; count=$_.Count} })} | ConvertTo-Json -Compress -Depth 3"
+  },
+  {
+   "id": "ex_large_mailboxes",
+   "scope": "exchange",
+   "title": "Largest on-premises mailboxes (move planning; names people)",
+   "personal": true,
+   "org": true,
+   "params": {
+    "min_gb": {
+     "type": "int",
+     "min": 1,
+     "max": 200,
+     "default": 40
+    }
+   },
+   "script": "@(Get-MailboxDatabase -ErrorAction SilentlyContinue | ForEach-Object { Get-MailboxStatistics -Database $_.Name -ErrorAction SilentlyContinue } | Where-Object { $_.DisconnectDate -eq $null -and $_.TotalItemSize } | ForEach-Object { $b=$_.TotalItemSize.Value.ToBytes(); [pscustomobject]@{name=$_.DisplayName; database=[string]$_.Database; size_gb=[math]::Round($b/1GB,1); items=$_.ItemCount; last_logon=if($_.LastLogonTime){$_.LastLogonTime.ToUniversalTime().ToString('o')}} } | Where-Object { $_.size_gb -ge {{min_gb}} } | Sort-Object size_gb -Descending | Select-Object -First 200) | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "ex_inv_databases",
+   "scope": "exchange",
+   "org": true,
+   "title": "Mailbox inventory: databases with file size, white space and default quotas (no names)",
+   "script": "@(Get-MailboxDatabase -Status -ErrorAction SilentlyContinue | Where-Object { -not $_.Recovery } | ForEach-Object { $q={param($x) if($x -eq $null -or $x.IsUnlimited){$null}else{$x.Value.ToBytes()}}; [pscustomobject]@{name=$_.Name; server=[string]$_.Server; mounted=$_.Mounted; size_bytes=if($_.DatabaseSize){$_.DatabaseSize.ToBytes()}; whitespace_bytes=if($_.AvailableNewMailboxSpace){$_.AvailableNewMailboxSpace.ToBytes()}; prohibit_send_bytes=(& $q $_.ProhibitSendQuota); warning_bytes=(& $q $_.IssueWarningQuota)} }) | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "ex_inv_mailboxes",
+   "scope": "exchange",
+   "org": true,
+   "personal": true,
+   "title": "Mailbox inventory: every mailbox of a database with type, size, items, quota, last logon, archive, hidden, litigation hold, forwarding (names people; paged)",
+   "params": {
+    "database": {
+     "type": "string",
+     "pattern": "^[A-Za-z0-9 _.()-]{0,64}$",
+     "default": ""
+    },
+    "skip": {
+     "type": "int",
+     "min": 0,
+     "max": 200000,
+     "default": 0
+    },
+    "take": {
+     "type": "int",
+     "min": 1,
+     "max": 1000,
+     "default": 500
+    }
+   },
+   "script": "$dbs=@(if({{database}}){Get-MailboxDatabase -Identity {{database}} -ErrorAction Stop}else{Get-MailboxDatabase -ErrorAction SilentlyContinue}) | Where-Object { -not $_.Recovery }; $all=@($dbs | ForEach-Object { Get-Mailbox -Database $_.Identity -ResultSize Unlimited -ErrorAction SilentlyContinue } | Sort-Object Guid); $q={param($x) if($x -eq $null -or $x.IsUnlimited){$null}else{$x.Value.ToBytes()}}; $dq=@{}; foreach($d in $dbs){ $dq[[string]$d.Name]=$d }; $page=@($all | Select-Object -Skip {{skip}} -First {{take}}); $st=@{}; foreach($dn in @($page | ForEach-Object { [string]$_.Database } | Sort-Object -Unique)){ Get-MailboxStatistics -Database $dn -ErrorAction SilentlyContinue | Where-Object { $_.DisconnectDate -eq $null } | ForEach-Object { $st[[string]$_.MailboxGuid]=$_ } }; $items=@($page | ForEach-Object { $s=$st[[string]$_.ExchangeGuid]; $d=$dq[[string]$_.Database]; $ps=if($_.UseDatabaseQuotaDefaults -and $d){$d.ProhibitSendQuota}else{$_.ProhibitSendQuota}; $iw=if($_.UseDatabaseQuotaDefaults -and $d){$d.IssueWarningQuota}else{$_.IssueWarningQuota}; $fw=$null; if($_.ForwardingAddress){ $r=Get-Recipient -Identity $_.ForwardingAddress -ErrorAction SilentlyContinue; if($r){ $fw=if($r.ExternalEmailAddress){[string]$r.ExternalEmailAddress}else{[string]$r.PrimarySmtpAddress} } }; [pscustomobject]@{address=[string]$_.PrimarySmtpAddress; name=$_.DisplayName; type=[string]$_.RecipientTypeDetails; database=[string]$_.Database; size_bytes=if($s -and $s.TotalItemSize){$s.TotalItemSize.Value.ToBytes()}; deleted_bytes=if($s -and $s.TotalDeletedItemSize){$s.TotalDeletedItemSize.Value.ToBytes()}; items=if($s){$s.ItemCount}; last_logon=if($s -and $s.LastLogonTime){$s.LastLogonTime.ToUniversalTime().ToString('o')}; prohibit_send_bytes=(& $q $ps); warning_bytes=(& $q $iw); quota_from_database=[bool]$_.UseDatabaseQuotaDefaults; archive=[string]$_.ArchiveStatus; hidden=[bool]$_.HiddenFromAddressListsEnabled; litigation_hold=[bool]$_.LitigationHoldEnabled; forwarding_smtp=[string]$_.ForwardingSmtpAddress; forwarding_recipient=$fw; deliver_and_forward=[bool]$_.DeliverToMailboxAndForward; created=if($_.WhenMailboxCreated){$_.WhenMailboxCreated.ToUniversalTime().ToString('o')}} }); [pscustomobject]@{total=$all.Count; items=$items} | ConvertTo-Json -Compress -Depth 3"
+  },
+  {
+   "id": "ex_inv_cas",
+   "scope": "exchange",
+   "org": true,
+   "personal": true,
+   "title": "Mailbox inventory: client access per mailbox - OWA, ActiveSync, POP, IMAP, MAPI, EWS (names people; paged)",
+   "params": {
+    "skip": {
+     "type": "int",
+     "min": 0,
+     "max": 200000,
+     "default": 0
+    },
+    "take": {
+     "type": "int",
+     "min": 1,
+     "max": 2000,
+     "default": 1000
+    }
+   },
+   "script": "$all=@(Get-CASMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue | Sort-Object Guid); [pscustomobject]@{total=$all.Count; items=@($all | Select-Object -Skip {{skip}} -First {{take}} | ForEach-Object { [pscustomobject]@{address=[string]$_.PrimarySmtpAddress; owa=$_.OWAEnabled; eas=$_.ActiveSyncEnabled; pop=$_.PopEnabled; imap=$_.ImapEnabled; mapi=$_.MAPIEnabled; ews=$_.EwsEnabled; eas_policy=[string]$_.ActiveSyncMailboxPolicy} })} | ConvertTo-Json -Compress -Depth 3"
+  },
+  {
+   "id": "ex_inv_permissions",
+   "scope": "exchange",
+   "org": true,
+   "personal": true,
+   "title": "Mailbox permissions now: Full Access, Send As and Send on Behalf granted to others, per mailbox of a database (names people; paged)",
+   "params": {
+    "database": {
+     "type": "string",
+     "pattern": "^[A-Za-z0-9 _.()-]{0,64}$",
+     "default": ""
+    },
+    "skip": {
+     "type": "int",
+     "min": 0,
+     "max": 200000,
+     "default": 0
+    },
+    "take": {
+     "type": "int",
+     "min": 1,
+     "max": 300,
+     "default": 100
+    }
+   },
+   "script": "$dbs=@(if({{database}}){Get-MailboxDatabase -Identity {{database}} -ErrorAction Stop}else{Get-MailboxDatabase -ErrorAction SilentlyContinue}) | Where-Object { -not $_.Recovery }; $all=@($dbs | ForEach-Object { Get-Mailbox -Database $_.Identity -ResultSize Unlimited -ErrorAction SilentlyContinue } | Sort-Object Guid); $sys='^(NT AUTHORITY\\\\|S-1-5-)'; $items=@($all | Select-Object -Skip {{skip}} -First {{take}} | ForEach-Object { $m=$_; $fa=@(Get-MailboxPermission -Identity $m.Identity -ErrorAction SilentlyContinue | Where-Object { -not $_.IsInherited -and -not $_.Deny -and (($_.AccessRights -join ',') -match 'FullAccess') -and ([string]$_.User -notmatch $sys) } | ForEach-Object { [string]$_.User }); $sa=@(Get-ADPermission -Identity $m.DistinguishedName -ErrorAction SilentlyContinue | Where-Object { -not $_.IsInherited -and -not $_.Deny -and (($_.ExtendedRights -join ',') -match 'Send-As') -and ([string]$_.User -notmatch $sys) } | ForEach-Object { [string]$_.User }); $sob=@($m.GrantSendOnBehalfTo | ForEach-Object { $r=Get-Recipient -Identity $_ -ErrorAction SilentlyContinue; if($r){[string]$r.PrimarySmtpAddress}else{[string]$_} }); [pscustomobject]@{mailbox=[string]$m.PrimarySmtpAddress; name=$m.DisplayName; type=[string]$m.RecipientTypeDetails; full_access=$fa; send_as=$sa; send_on_behalf=$sob} }); [pscustomobject]@{total=$all.Count; items=$items} | ConvertTo-Json -Compress -Depth 4"
+  },
+  {
+   "id": "ex_inv_groups",
+   "scope": "exchange",
+   "org": true,
+   "personal": true,
+   "title": "Distribution lists with their direct members (nested lists are expanded by the platform, bounded); dynamic lists by name (names people; paged)",
+   "params": {
+    "skip": {
+     "type": "int",
+     "min": 0,
+     "max": 200000,
+     "default": 0
+    },
+    "take": {
+     "type": "int",
+     "min": 1,
+     "max": 300,
+     "default": 100
+    }
+   },
+   "script": "$all=@(Get-DistributionGroup -ResultSize Unlimited -ErrorAction SilentlyContinue | Sort-Object Guid); $items=@($all | Select-Object -Skip {{skip}} -First {{take}} | ForEach-Object { $g=$_; $mem=@(Get-DistributionGroupMember -Identity $g.Identity -ResultSize 5000 -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{address=[string]$_.PrimarySmtpAddress; name=$_.DisplayName; type=[string]$_.RecipientTypeDetails; external=[string]$_.ExternalEmailAddress} }); [pscustomobject]@{address=[string]$g.PrimarySmtpAddress; name=$g.DisplayName; type=[string]$g.RecipientTypeDetails; hidden=[bool]$g.HiddenFromAddressListsEnabled; accepts_external=(-not $g.RequireSenderAuthenticationEnabled); managed_by=@($g.ManagedBy | ForEach-Object { [string]$_ }); members=$mem} }); $dyn=@(if({{skip}} -eq 0){ Get-DynamicDistributionGroup -ResultSize Unlimited -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{address=[string]$_.PrimarySmtpAddress; name=$_.DisplayName; hidden=[bool]$_.HiddenFromAddressListsEnabled; accepts_external=(-not $_.RequireSenderAuthenticationEnabled)} } }); [pscustomobject]@{total=$all.Count; dynamic=$dyn; items=$items} | ConvertTo-Json -Compress -Depth 4"
+  },
+  {
+   "id": "ex_inv_public_folders",
+   "scope": "exchange",
+   "org": true,
+   "title": "Public folders, if present: path, mail-enabled, items, size, last change (folder names, no content)",
+   "script": "$pf=@(Get-PublicFolder -Identity '\\' -Recurse -ResultSize 5000 -ErrorAction SilentlyContinue | Where-Object { [string]$_.Identity -ne '\\' }); $st=@{}; if($pf.Count){ Get-PublicFolderStatistics -ResultSize 5000 -ErrorAction SilentlyContinue | ForEach-Object { $st[[string]$_.EntryId]=$_ } }; [pscustomobject]@{present=($pf.Count -gt 0); total=$pf.Count; items=@($pf | ForEach-Object { $s=$st[[string]$_.EntryId]; [pscustomobject]@{path=[string]$_.Identity; mail_enabled=[bool]$_.MailEnabled; content_mailbox=[string]$_.ContentMailboxName; items=if($s){$s.ItemCount}; size=if($s){[string]$s.TotalItemSize}; last_modified=if($s -and $s.LastModificationTime){$s.LastModificationTime.ToUniversalTime().ToString('o')}} })} | ConvertTo-Json -Compress -Depth 3"
+  },
+  {
+   "id": "ex_inv_mobile",
+   "scope": "exchange",
+   "org": true,
+   "personal": true,
+   "title": "ActiveSync / mobile devices: owner, model, OS, access state, policy, first and last sync (names people; no phone number or IMEI; paged)",
+   "params": {
+    "skip": {
+     "type": "int",
+     "min": 0,
+     "max": 200000,
+     "default": 0
+    },
+    "take": {
+     "type": "int",
+     "min": 1,
+     "max": 500,
+     "default": 200
+    }
+   },
+   "script": "$all=@(Get-MobileDevice -ResultSize Unlimited -ErrorAction SilentlyContinue | Sort-Object Guid); $items=@($all | Select-Object -Skip {{skip}} -First {{take}} | ForEach-Object { $d=$_; $s=Get-MobileDeviceStatistics -Identity $d.Identity -ErrorAction SilentlyContinue; [pscustomobject]@{owner=[string]$d.UserDisplayName; device_id=[string]$d.DeviceId; model=[string]$d.DeviceModel; type=[string]$d.DeviceType; os=[string]$d.DeviceOS; client=[string]$d.ClientType; access=[string]$d.DeviceAccessState; access_reason=[string]$d.DeviceAccessStateReason; policy=[string]$d.DeviceMobilePolicy; policy_status=if($s){[string]$s.DevicePolicyApplicationStatus}; first_sync=if($d.FirstSyncTime){$d.FirstSyncTime.ToUniversalTime().ToString('o')}; last_sync=if($s -and $s.LastSuccessSync){$s.LastSuccessSync.ToUniversalTime().ToString('o')}} }); [pscustomobject]@{total=$all.Count; items=$items} | ConvertTo-Json -Compress -Depth 3"
+  },
+  {
+   "id": "gpo_report",
+   "scope": "windows",
+   "title": "Group Policy report (XML) of one GPO, or of the GPOs changed in the last hours (domain controller, read-only)",
+   "personal": true,
+   "params": {
+    "guid": {
+     "type": "string",
+     "pattern": "^(\\{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\\}?)?$",
+     "default": ""
+    },
+    "hours": {
+     "type": "int",
+     "min": 1,
+     "max": 168,
+     "default": 24
+    }
+   },
+   "script": "if (-not (Get-Command Get-GPOReport -ErrorAction SilentlyContinue)) { Import-Module GroupPolicy -ErrorAction SilentlyContinue }; if (-not (Get-Command Get-GPOReport -ErrorAction SilentlyContinue)) { [pscustomobject]@{available=$false; reason='the Group Policy module (GPMC) is not on this server - choose a domain controller'; reports=@()} | ConvertTo-Json -Compress -Depth 4 } else { $g={{guid}}; $l=if ($g) { @(Get-GPO -Guid $g -ErrorAction Stop) } else { @(Get-GPO -All | Where-Object { $_.ModificationTime -gt (Get-Date).AddHours(-{{hours}}) } | Sort-Object ModificationTime -Descending | Select-Object -First 25) }; [pscustomobject]@{available=$true; reports=@($l | ForEach-Object { [pscustomobject]@{guid=$_.Id.ToString().ToUpper(); name=[string]$_.DisplayName; modified=$_.ModificationTime.ToUniversalTime().ToString('o'); computer_version=$_.Computer.DSVersion; user_version=$_.User.DSVersion; xml=[string](Get-GPOReport -Guid $_.Id -ReportType Xml)} })} | ConvertTo-Json -Compress -Depth 4 }"
+  }
+ ]
+}

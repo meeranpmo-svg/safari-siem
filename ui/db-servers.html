@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Database Servers</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.card h3{margin:14px 0 8px;font-size:13px;color:var(--title)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}
+.stmt{font-size:14.5px;line-height:1.6}.stmt p{margin:0 0 8px}.stmt .b{color:var(--title);font-weight:600}
+.chk{list-style:none;margin:0;padding:0}.chk li{padding:3px 0}.chk .y{color:var(--ok);font-weight:700}.chk .n{color:var(--bad);font-weight:700}
+.kv{display:grid;grid-template-columns:170px 1fr;gap:4px 10px;font-size:13px}.kv dt{color:var(--mute)}.kv dd{margin:0;overflow-wrap:anywhere}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+ul.plain{margin:0;padding-left:18px}ul.plain li{margin:3px 0}
+@media print{.top button,.noprint{display:none!important}body{background:#fff;color:#000}.card,.t{border-color:#bbb;background:#fff;break-inside:avoid}.banner{color:#000;background:#f3f6fa}.card h2,.t .v,.stmt .b{color:#000}.muted,.note,th{color:#444}}
+.bar{height:7px;border-radius:4px;background:var(--raise);overflow:hidden;min-width:80px}.bar>i{display:block;height:100%;background:var(--ok)}.bar>i.w{background:var(--warn)}.bar>i.b{background:var(--bad)}
+tr.rw{cursor:pointer}tr.rw:hover td{background:rgba(255,255,255,.025)}select,input.in{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:13px}
+[hidden]{display:none!important}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Databases · the servers the DBA looks after</div><h1>Database Servers</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <button type="button" class="btn" id="run" hidden>⟳ Read servers now</button><button type="button" class="btn" id="xlsx">⬇ Excel</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="banner">Every server a monitored Oracle database runs on, <b>aligned with its IT asset record</b>, and its operating system read over SSH every 15 minutes: file systems, inodes, memory and swap, CPU load, Oracle instances against <span class="mono">/etc/oratab</span>, listeners, clock sync, HugePages / THP, uptime and last patch. The platform only logs in where the SSH host key is one an administrator trusted, with a read-only login - a server it cannot read says why and is never shown as healthy.</div>
+<div class="k" id="kk"></div>
+<div class="card"><h2>Servers <span class="c" id="sc"></span></h2><div class="tw" id="srv"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Findings <span class="c" id="fc"></span></h2><div class="tw" id="find"><div class="empty">Loading…</div></div></div>
+</main>
+<script src="vendor/zyb-xlsx.js"></script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, ERR='';
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(m,url,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,url);x.withCredentials=true;x.timeout=300000;if(b!==undefined)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(b!==undefined?JSON.stringify(b):null);});}
+  function who(){return new Promise(function(ok){var x=new XMLHttpRequest();x.open('GET','/dashboards/whoami.json');x.onload=function(){try{ok(JSON.parse(x.responseText));}catch(e){ok(null);}};x.onerror=function(){ok(null);};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function pill(t,c){return '<span class="pill p-'+c+'">'+esc(t)+'</span>';}
+  function sev(s){return s?pill(s,{critical:'bad',high:'bad',medium:'warn',low:'mut'}[s]||'mut'):pill('OK','ok');}
+  function when(s){var t=s?Date.parse(s):NaN;return isFinite(t)?new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function bar(p){if(p==null)return '<span class="muted">—</span>';return '<div style="display:flex;align-items:center;gap:8px"><div class="bar"><i class="'+(p>=90?'b':p>=85?'w':'')+'" style="width:'+Math.min(100,p)+'%"></i></div><span>'+esc(p)+'%</span></div>';}
+  function memPct(v){return v&&v.mem_total_mb&&v.mem_avail_mb!=null?Math.round(v.mem_avail_mb/v.mem_total_mb*100):null;}
+  function days(s){return s==null?'—':Math.round(s/86400)+' d';}
+  function assetCell(x){
+    if(x.asset)return '<b>'+esc(x.asset.asset_tag||x.asset.name||x.asset.id)+'</b><div class="muted" style="font-size:11.5px">'+esc([x.asset.name,x.asset.owner].filter(Boolean).join(' · '))+'</div>';
+    return pill('not in asset register','warn')+(x.asset_suggestion?'<div class="muted" style="font-size:11.5px">same name: '+esc(x.asset_suggestion.name)+'</div>':'');
+  }
+  function draw(){
+    if(ERR){$('srv').innerHTML='<p class="err">'+esc(ERR)+'</p>';$('find').innerHTML='<div class="empty">—</div>';$('kk').innerHTML='';return;}
+    var S=V.summary;
+    $('kk').innerHTML=tile('Database servers',S.servers,S.read+' read over SSH',S.servers&&S.read<S.servers?'warn':'')+tile('In the asset register',S.in_asset_register+' / '+S.servers,S.in_asset_register<S.servers?(S.servers-S.in_asset_register)+' not registered':'all aligned',S.in_asset_register<S.servers?'warn':'ok')
+      +tile('Critical',S.critical,'findings',S.critical?'bad':'ok')+tile('High',S.high,'findings',S.high?'warn':'ok');
+    $('sc').textContent=V.servers.length;
+    $('srv').innerHTML=!V.servers.length?'<div class="empty">No database server yet. Servers appear here once a database is connected in Databases → All Databases (or proven by Asset Discovery).</div>'
+      :'<table><thead><tr><th>Server</th><th>Asset</th><th>OS</th><th>CPU load (5 min)</th><th>Memory free</th><th>Fullest file system</th><th>Oracle</th><th>Clock</th><th>Read</th><th>Status</th></tr></thead><tbody>'+V.servers.map(function(x,i){var v=x.server,m=memPct(v);
+        return '<tr class="rw" data-i="'+i+'"><td><b>'+esc(x.host)+'</b><div class="muted mono" style="font-size:11.5px">'+esc(x.ip)+' · '+esc(x.databases.map(function(d){return d.instance||d.service;}).join(', '))+'</div></td>'
+          +'<td>'+assetCell(x)+'</td><td>'+esc(x.os||'—')+'</td>'
+          +'<td>'+(v&&v.load5!=null&&v.ncpu?esc(v.load5+' / '+v.ncpu+' CPU'):'<span class="muted">—</span>')+'</td>'
+          +'<td>'+(m==null?'<span class="muted">—</span>':(m<10?pill(m+'%','bad'):esc(m+'%')))+'</td>'
+          +'<td>'+(x.fs_fullest?esc(x.fs_fullest.mount)+bar(x.fs_fullest.used_pct):'<span class="muted">—</span>')+'</td>'
+          +'<td>'+(v?esc((v.oracle.pmon||[]).join(', ')||'no instance')+'<div class="muted" style="font-size:11.5px">listener '+esc((v.oracle.listeners||[]).join(', ')||'none')+'</div>':'<span class="muted">—</span>')+'</td>'
+          +'<td>'+(!v||v.ntp_synced==null?'<span class="muted">—</span>':v.ntp_synced?pill('synced','ok'):pill('not synced','warn'))+'</td>'
+          +'<td class="muted">'+(x.read_at&&v?esc(when(x.read_at)):x.read_error?'<span class="err">'+esc(x.read_error)+'</span>':'not read')+'</td><td>'+sev(x.worst)+'</td></tr>';}).join('')+'</tbody></table>';
+    $('fc').textContent=V.findings.length;
+    $('find').innerHTML=!V.findings.length?'<div class="empty">No findings.</div>':'<table><thead><tr><th>Severity</th><th>Finding</th><th>What to do</th></tr></thead><tbody>'+V.findings.map(function(f){return '<tr><td>'+sev(f.severity)+'</td><td>'+esc(f.title)+(f.evidence&&f.evidence.length?'<div class="muted" style="font-size:11.5px">'+esc(f.evidence.join(' · '))+'</div>':'')+'</td><td class="muted">'+esc(f.recommendation)+'</td></tr>';}).join('')+'</tbody></table>';
+  }
+  function detail(x){
+    var v=x.server,h='';
+    h+=Z.sec('Asset',x.asset?Z.kv([['Asset',esc(x.asset.asset_tag||'')+' '+esc(x.asset.name||'')],['Owner',esc(x.asset.owner||'—')],['Department',esc(x.asset.department||'—')],['Vendor / model',esc([x.asset.vendor,x.asset.model].filter(Boolean).join(' ')||'—')],['Serial',esc(x.asset.serial||'—')],['Warranty ends',esc(x.asset.warranty_end||'—')],['Matched by',esc(x.asset.how)]])
+      :'<p>'+pill('not in asset register','warn')+' Ownership, warranty and end of life are not tracked for this server.</p>'+(x.asset_suggestion?'<p>Asset <b>'+esc(x.asset_suggestion.name)+'</b> has the same host name.</p>':''));
+    if(can('admin'))h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px">'+(x.asset_suggestion&&!x.asset?'<button type="button" class="btn pri" data-link="'+esc(x.asset_suggestion.id)+'">Link to '+esc(x.asset_suggestion.name)+'</button>':'')
+      +'<input class="in" id="aq" placeholder="Search asset: tag, name, serial" style="min-width:240px"><button type="button" class="btn" id="afind">Find</button>'+(x.asset?'<button type="button" class="btn" data-link="">Remove link</button>':'')+'</div><div id="ares"></div>';
+    h+=Z.sec('SSH login',Z.kv([['Login',esc(x.ssh.credential||'none')+(x.ssh.via?' ('+esc(x.ssh.via)+')':'')],['Host key',esc(x.ssh.host_key)],['Port',esc(x.ssh.port)]])
+      +(can('admin')?'<div style="display:flex;gap:8px;margin-top:8px"><select id="sshsel"><option value="">— the login Asset Discovery proved —</option>'+V.ssh_logins.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.label)+'</option>';}).join('')+'</select><button type="button" class="btn" id="sshset">Use this login</button></div><p class="note">Read-only accounts only. The host key is trusted in Asset Discovery → Trust; the platform never logs in to a host whose key it has not been told to trust.</p>':''));
+    if(v){
+      h+=Z.sec('System',Z.kv([['OS',esc(v.os||'—')],['Kernel',esc(v.kernel||'—')],['Up',esc(days(v.uptime_s))],['CPU',esc(v.ncpu==null?'—':v.ncpu)+' · load '+esc([v.load1,v.load5,v.load15].join(' / '))],['Memory',v.mem_total_mb?esc(v.mem_avail_mb+' MB free of '+v.mem_total_mb+' MB'):'—'],['Swap',v.swap_total_mb?esc(v.swap_used_mb+' MB used of '+v.swap_total_mb+' MB'):'—'],
+        ['HugePages',esc(v.hugepages_total==null?'—':v.hugepages_total+' ('+v.hugepages_free+' free)')],['Transparent HugePages',esc(v.thp||'—')],['Clock',v.ntp_synced==null?'—':v.ntp_synced?'synchronised'+(v.ntp_offset_ms!=null?' ('+esc(v.ntp_offset_ms)+' ms)':''):'NOT synchronised'],['Last OS patch',esc(v.last_patch||'—')]]));
+      h+=Z.sec('File systems','<table><thead><tr><th>Mount</th><th>Used</th><th>Free</th><th>Size</th></tr></thead><tbody>'+(v.filesystems||[]).map(function(f){return '<tr><td class="mono">'+esc(f.mount)+'</td><td>'+bar(f.used_pct)+'</td><td>'+esc(Math.round(f.avail_kb/1048576*10)/10)+' GB</td><td>'+esc(Math.round(f.size_kb/1048576*10)/10)+' GB</td></tr>';}).join('')+'</tbody></table>');
+      var run={};(v.oracle.pmon||[]).forEach(function(s){run[s.toUpperCase()]=1;});
+      h+=Z.sec('Oracle on this server','<table><thead><tr><th>oratab entry</th><th>Start at boot</th><th>Running</th></tr></thead><tbody>'+((v.oratab||[]).map(function(o){var r=!!run[o.sid.toUpperCase()]||/^\+ASM/i.test(o.sid)&&(v.oracle.asm||[]).length;return '<tr><td class="mono">'+esc(o.sid)+'</td><td>'+(o.autostart?'Y':'N')+'</td><td>'+(r?pill('running','ok'):o.autostart?pill('NOT running','bad'):pill('not running','mut'))+'</td></tr>';}).join('')||'<tr><td colspan="3" class="muted">no /etc/oratab readable</td></tr>')+'</tbody></table>'
+        +'<p class="note">Instances running: '+esc((v.oracle.pmon||[]).join(', ')||'none')+' · ASM: '+esc((v.oracle.asm||[]).join(', ')||'none')+' · listeners: '+esc((v.oracle.listeners||[]).join(', ')||'none')+(v.oracle.clusterware?' · Grid Infrastructure running':'')+'</p>');
+      if((v.top||[]).length)h+=Z.sec('Top processes (CPU)','<table><thead><tr><th>Command</th><th>User</th><th>CPU</th><th>Memory</th></tr></thead><tbody>'+v.top.map(function(t){return '<tr><td class="mono">'+esc(t.command)+'</td><td>'+esc(t.user)+'</td><td>'+esc(t.cpu_pct)+'%</td><td>'+esc(t.mem_pct)+'%</td></tr>';}).join('')+'</tbody></table>');
+    } else h+=Z.sec('Operating system','<p class="muted">Not read'+(x.read_error?': '+esc(x.read_error):'')+'. See the finding for why.</p>');
+    var F=V.findings.filter(function(f){return f.ip===x.ip;});
+    if(F.length)h+=Z.sec('Findings','<ul class="plain">'+F.map(function(f){return '<li>'+sev(f.severity)+' '+esc(f.title)+' - <span class="muted">'+esc(f.recommendation)+'</span></li>';}).join('')+'</ul>');
+    Z.open('Database server',x.host+' ('+x.ip+')',h);
+    var root=document.getElementById('zd')||document;
+    var linkTo=function(id){req('POST','/api/itam/db-servers/link',{ip:x.ip,asset_id:id||null}).then(function(){toast(id?'Linked to the asset':'Link removed');load(x.ip);},function(er){toast('Not linked: '+er.message);});};
+    [].forEach.call(root.querySelectorAll('[data-link]'),function(b){b.addEventListener('click',function(){linkTo(b.getAttribute('data-link'));});});
+    var af=root.querySelector('#afind');if(af)af.addEventListener('click',function(){var q=root.querySelector('#aq').value.trim();if(!q)return;req('GET','/api/itam/assets?limit=20&q='+encodeURIComponent(q)).then(function(r){var L=(r&&r.assets)||[];root.querySelector('#ares').innerHTML=L.length?'<table><tbody>'+L.map(function(a){return '<tr><td><b>'+esc(a.asset_tag||'')+'</b> '+esc(a.name||'')+'</td><td class="muted">'+esc(a.type||'')+' · '+esc(a.serial||'')+'</td><td><button type="button" class="btn" data-pick="'+esc(a.id)+'">Link</button></td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No asset matches.</div>';
+      [].forEach.call(root.querySelectorAll('[data-pick]'),function(b){b.addEventListener('click',function(){linkTo(b.getAttribute('data-pick'));});});},function(er){toast(er.message);});});
+    var ss=root.querySelector('#sshset');if(ss)ss.addEventListener('click',function(){req('POST','/api/itam/db-servers/ssh',{ip:x.ip,cred_id:root.querySelector('#sshsel').value||null}).then(function(){toast('Login saved - read the servers now to use it');load(x.ip);},function(er){toast(er.message);});});
+  }
+  function load(reopen){
+    Promise.all([who(),req('GET','/api/itam/db-servers').then(function(r){V=r;ERR='';},function(er){V=null;ERR=er.status===404?'Database Servers is not installed on the server yet - run the update (update-platform.ps1).':er.status===403?'Operators and administrators only.':er.message;})]).then(function(r){
+      if(r[0]){var rl=String(r[0].role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}
+      $('run').hidden=!can('operator')||!V;$('up').textContent=V?'read '+when(V.generated_at):'';draw();
+      if(reopen&&V){var x=V.servers.filter(function(s){return s.ip===reopen;})[0];if(x)detail(x);}
+    });
+  }
+  $('srv').addEventListener('click',function(e){var tr=e.target.closest('tr.rw');if(tr&&V)detail(V.servers[Number(tr.getAttribute('data-i'))]);});
+  $('run').addEventListener('click',function(){var b=this;b.disabled=true;toast('Reading the servers over SSH…');req('POST','/api/itam/db-servers/run',{}).then(function(r){toast(r.read+' read, '+r.skipped+' skipped (no login / host key), '+r.failed+' failed');load();},function(er){toast(er.message);}).then(function(){b.disabled=false;});});
+  $('refresh').onclick=function(){load();};
+  $('xlsx').onclick=function(){if(!V||!window.zybXlsx){toast('Nothing to export yet');return;}zybXlsx.who().then(function(by){zybXlsx.download('database-servers-'+new Date().toISOString().slice(0,10)+'.xlsx',[
+    {name:'Servers',columns:[{h:'Server',w:22},{h:'IP',w:16},{h:'Databases',w:20},{h:'Asset tag',w:16},{h:'Asset name',w:20},{h:'Owner',w:18},{h:'OS',w:26},{h:'Load 5 min',w:10},{h:'CPUs',w:6},{h:'Memory free %',w:12},{h:'Fullest file system',w:20},{h:'Used %',w:8},{h:'Instances running',w:20},{h:'Listeners',w:16},{h:'Clock synced',w:10},{h:'Last patch',w:12},{h:'Read at',w:18},{h:'Worst finding',w:12}],
+      rows:V.servers.map(function(x){var v=x.server||{};return [x.host,x.ip,x.databases.map(function(d){return d.instance||d.service;}).join(', '),x.asset?x.asset.asset_tag||'':'NOT IN ASSET REGISTER',x.asset?x.asset.name||'':'',x.asset?x.asset.owner||'':'',x.os||'',v.load5==null?'':v.load5,v.ncpu==null?'':v.ncpu,memPct(x.server)==null?'':memPct(x.server),x.fs_fullest?x.fs_fullest.mount:'',x.fs_fullest?x.fs_fullest.used_pct:'',((v.oracle||{}).pmon||[]).join(', '),((v.oracle||{}).listeners||[]).join(', '),v.ntp_synced==null?'':v.ntp_synced?'yes':'no',v.last_patch||'',x.read_at||'',x.worst||'OK'];})},
+    {name:'File systems',columns:[{h:'Server',w:22},{h:'Mount',w:24},{h:'Used %',w:8},{h:'Free GB',w:10},{h:'Size GB',w:10}],rows:[].concat.apply([],V.servers.map(function(x){return ((x.server||{}).filesystems||[]).map(function(f){return [x.host,f.mount,f.used_pct,Math.round(f.avail_kb/1048576*10)/10,Math.round(f.size_kb/1048576*10)/10];});}))},
+    {name:'Findings',columns:[{h:'Severity',w:10},{h:'Server',w:22},{h:'Finding',w:60},{h:'What to do',w:80}],rows:V.findings.map(function(f){return [f.severity,f.host,f.title,f.recommendation];})}],{title:'Database Servers',filter:'none',by:by});});};
+  load();
+})();
+</script>
+</body></html>

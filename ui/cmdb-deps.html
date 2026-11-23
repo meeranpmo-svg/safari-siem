@@ -1,0 +1,120 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CMDB &amp; Dependencies</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1600px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:14px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;text-align:left;color:inherit;font:inherit;cursor:pointer}.kpi .n{font-size:22px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.wrap{display:grid;grid-template-columns:330px minmax(0,1fr);gap:14px}
+.apps{display:flex;flex-direction:column;gap:8px;max-height:78vh;overflow:auto}
+.ap{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;text-align:left;color:inherit;font:inherit;cursor:pointer}.ap:hover{border-color:#3a4258}.ap[aria-pressed="true"]{border-color:var(--d-acc);background:#172036}
+.bar{height:7px;border-radius:4px;background:#232837;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tabs button{background:transparent;border:1px solid var(--d-line);color:var(--d-mute);border-radius:999px;padding:6px 14px;font:600 13px Inter,sans-serif;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.tabs button[aria-selected="true"]{color:#fff;border-color:var(--d-acc);background:rgba(91,141,239,.2)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.v-ok{background:rgba(47,179,68,.15);color:#56d364}.v-bad{background:rgba(229,72,77,.2);color:#ff8a8e}.v-warn{background:rgba(245,159,0,.18);color:#f5b544}.v-mute{background:rgba(139,147,164,.16);color:#aab2c2}.v-info{background:rgba(91,141,239,.18);color:#8db0ff}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12.8px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--d-line)}td{padding:7px 8px;border-bottom:1px solid #1b2030;vertical-align:top}
+svg .nd{cursor:pointer}svg .nd:hover rect{stroke:#fff}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--d-mute);margin-top:8px}.legend span{display:inline-flex;gap:6px;align-items:center}.sw{width:14px;height:10px;border-radius:3px;display:inline-block}
+.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,sans-serif;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ans{white-space:pre-wrap;background:#10131a;border:1px solid var(--d-line);border-radius:10px;padding:12px;margin-top:10px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(4,1fr)}.wrap{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT Asset Management</div><h1>CMDB &amp; Dependencies</h1><div class="sm mute">Every business application and what it stands on, from the CMDB relationships. Click a component to see what fails with it. A component fails when anything it needs fails; a recorded cluster stands while one member stands. Redundancy that is not recorded is not assumed.</div></div><div class="sp"></div>
+ <span class="sm mute" id="me"></span><a class="btn" href="cmdb-studio.html"><i class="ti ti-topology-star-3"></i>CMDB Studio</a><button class="btn" id="snap" type="button" hidden><i class="ti ti-camera"></i>Record snapshot</button><button class="btn" id="xls" type="button"><i class="ti ti-file-spreadsheet"></i>Excel</button><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <div class="kpis" id="kpis"></div>
+ <div class="tabs" id="tabs" role="tablist"></div>
+ <div id="view"></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var V=null, TAB='map', SEL=null, IMP=null, ANS=null, FK='', ROLE='viewer', USER='';
+  var SEVC={critical:'v-bad',high:'v-bad',medium:'v-warn',low:'v-info'};
+  var KIND={spof:'Single point of failure',underrated:'Under-rated dependency',eol:'End of life / retired',proposed:'Unconfirmed link','no-deps':'No dependency mapped',unmapped:'Unmapped machine',cycle:'Cycle'};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,/^\/(dashboards|api)\//.test(u)?u:'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function rcol(r){return r>=50?'#e5484d':r>=25?'#f59f00':'#2fb344';}
+  function cur(){return V.apps.find(function(a){return a.app_id===SEL;})||V.apps[0];}
+  function load(){$('err').hidden=true;return req('GET','/cmdb/deps').then(function(v){V=v;$('main').hidden=false;$('me').textContent=v.can_act?'Operator':'Read-only';$('snap').hidden=!v.can_act;if(!SEL&&v.apps.length)SEL=v.apps[0].app_id;draw();})
+    .catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>CMDB &amp; Dependencies is not available</h2>'+note(e.status===404?'Not installed on the server - run the update (update-platform.ps1).':e.message);});}
+  function draw(){var s=V.summary;
+    function kp(n,l,c,go){return '<button type="button" class="kpi" data-go="'+go+'"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n==null?'—':n)+'</div><div class="l">'+esc(l)+'</div></button>';}
+    $('kpis').innerHTML=kp(s.apps,'applications','','map:')+kp(s.mapped+' / '+s.apps,'mapped to servers',s.mapped<s.apps?'#f5b544':'','findings:no-deps')+kp(s.cis,'components they stand on','','map:')+kp(s.spof,'single points of failure',s.spof?'#ff7b80':'','findings:spof')
+      +kp(s.high,'high findings',s.high?'#ff7b80':'','findings:')+kp(s.proposed,'unconfirmed relationships',s.proposed?'#f5b544':'','findings:proposed')+kp(s.risk_avg,'average risk',s.risk_avg==null?'':rcol(s.risk_avg),'map:');
+    var T=[['map','sitemap','Dependency map'],['findings','alert-triangle','Findings ('+V.findings.length+')'],['drift','git-compare','Changes'],['ai','robot','AI analyst']];
+    $('tabs').innerHTML=T.map(function(t){return '<button type="button" role="tab" data-tab="'+t[0]+'" aria-selected="'+(TAB===t[0])+'"><i class="ti ti-'+t[1]+'"></i>'+esc(t[2])+'</button>';}).join('');
+    $('view').innerHTML=TAB==='map'?mapView():TAB==='findings'?findingsView():TAB==='drift'?driftView():aiView();}
+  // ---------- map
+  function mapView(){if(!V.apps.length)return '<section class="card"><h2>Dependency map</h2>'+note('No business application is registered yet. Add the applications (name, servers, database) on the Application Route Map; their servers are joined to the asset register by exact name, and the relationships come from discovery, vCenter / Prism and CMDB Studio.')+' <a class="btn sm" href="app-route-map.html" style="margin-top:8px">Application Route Map</a></section>';
+    var a=cur();
+    var list='<div class="apps">'+V.apps.map(function(x){return '<button type="button" class="ap" data-app="'+esc(x.app_id)+'" aria-pressed="'+(x.app_id===a.app_id)+'"><div class="row"><b>'+esc(x.name)+'</b><span class="sp"></span>'+pill(x.criticality||'—',x.criticality==='critical'?'v-bad':'v-mute')+'</div><div class="sm mute">'+x.depends_on+' components · '+x.spof.length+' single point(s) of failure'+(x.unmapped.length?' · '+x.unmapped.length+' unmapped':'')+'</div><div class="bar"><i style="width:'+Math.max(3,x.risk)+'%;background:'+rcol(x.risk)+'"></i></div><div class="sm" style="color:'+rcol(x.risk)+'">risk '+x.risk+'</div></button>';}).join('')+'</div>';
+    var why=a.risk_why.length?'<table><tbody>'+a.risk_why.map(function(p){return '<tr><td style="width:60px"><b>+'+p.points+'</b></td><td>'+esc(p.why)+'</td></tr>';}).join('')+'</tbody></table>':note('Nothing adds to the risk of this application.');
+    return '<div class="wrap"><section class="card"><h2>Applications <span class="c">highest risk first</span></h2>'+list+'</section><div>'
+      +'<section class="card"><h2><i class="ti ti-sitemap"></i>'+esc(a.name)+' <span class="c">'+esc(a.url||'')+(a.database?' · database '+esc(a.database):'')+' · click a component to see what fails with it</span></h2>'+diagram(a)
+      +'<div class="legend"><span><i class="sw" style="background:#172036;border:2px solid #e5484d"></i>single point of failure</span><span><i class="sw" style="border:2px dashed #8db0ff"></i>recorded cluster</span><span><i class="sw" style="background:#3a1d1f"></i>fails in the simulation</span>'+(IMP?'<span><button class="btn sm" type="button" id="clrimp">Clear simulation</button></span>':'')+'</div>'
+      +(a.unmapped.length?'<div class="note" style="margin-top:8px">Machine names on the Application Route Map that match no asset: '+esc(a.unmapped.join(', '))+'. They are left out of the map rather than guessed.</div>':'')+'</section>'
+      +(IMP?impactCard():'')
+      +'<section class="card"><h2>Why the risk is '+a.risk+'</h2>'+why+'</section></div></div>';}
+  function diagram(a){var L=[[{id:'app',name:a.name,type:'application',criticality:a.criticality,app:true}]].concat(a.layers||[]);
+    if(L.length===1)return note('No component is mapped for this application.');
+    var spof={};a.spof.forEach(function(x){if(x)spof[x.id]=1;});var failed={};if(IMP){IMP.fails_with.forEach(function(x){if(x)failed[x.id]=1;});failed[IMP.ci.id]=1;if(IMP.apps.some(function(x){return x.app_id===a.app_id;}))failed.app=1;}
+    var CW=210,NW=176,NH=46,GAP=12,maxN=Math.max.apply(null,L.map(function(l){return l.length;})),W=L.length*CW,H=Math.max(140,maxN*(NH+GAP)+20),pos={};
+    L.forEach(function(l,i){var top=(H-l.length*(NH+GAP))/2;l.forEach(function(n,j){pos[n.id]={x:i*CW+10,y:top+j*(NH+GAP)};});});
+    var edges='';L.forEach(function(l,i){if(!i)return;l.forEach(function(n){(n.parents||[]).concat(i===1?['app:'+a.app_id]:[]).forEach(function(p){var pid=p==='app:'+a.app_id?'app':p,P=pos[pid],Q=pos[n.id];if(!P||!Q)return;var x1=P.x+NW,y1=P.y+NH/2,x2=Q.x,y2=Q.y+NH/2,mx=(x1+x2)/2;
+      edges+='<path d="M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2+'" fill="none" stroke="'+(failed[n.id]&&failed[pid]?'#e5484d':'#3a4258')+'" stroke-width="1.6"/>';});});});
+    var nodes=L.map(function(l){return l.map(function(n){var p=pos[n.id],f=failed[n.id],sp=spof[n.id],ic=n.app?'⬢':n.cluster?'◎':'■';
+      return '<g class="nd" data-ci="'+esc(n.app?'':n.id)+'" transform="translate('+p.x+','+p.y+')"><rect width="'+NW+'" height="'+NH+'" rx="9" fill="'+(f?'#3a1d1f':n.app?'#1b2742':'#181c25')+'" stroke="'+(sp?'#e5484d':n.cluster?'#8db0ff':'#2b3346')+'" stroke-width="'+(sp?2.2:1.4)+'"'+(n.cluster?' stroke-dasharray="5 3"':'')+'/>'
+        +'<text x="10" y="19" fill="#e7eaf0" font-size="12.5" font-weight="700" font-family="Inter,sans-serif">'+esc(ic+' '+String(n.name||'').slice(0,22))+'</text><text x="10" y="35" fill="#8b93a4" font-size="10.5" font-family="Inter,sans-serif">'+esc(String(n.type||'')+(n.criticality?' · '+n.criticality:'')+(n.status&&n.status!=='in_use'?' · '+n.status:''))+'</text></g>';}).join('');}).join('');
+    return '<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" aria-label="Dependencies of '+esc(a.name)+'">'+edges+nodes+'</svg></div>';}
+  function impactCard(){var r=IMP;return '<section class="card" style="border-color:#5a2a2d"><h2><i class="ti ti-bolt"></i>If '+esc(r.ci.name)+' fails <span class="c">'+esc(r.rule)+'</span></h2>'
+      +(r.apps.length?'<div style="margin-bottom:8px">'+r.apps.map(function(x){return pill(x.name+' down',x.criticality==='critical'?'v-bad':'v-warn');}).join(' ')+'</div>':'<div style="margin-bottom:8px">'+pill('no application goes down','v-ok')+'</div>')
+      +(r.fails_with.length?'<div class="sm">Fails with it: '+esc(r.fails_with.map(function(x){return x.name;}).join(', '))+'</div>':'<div class="sm mute">Nothing else fails with it.</div>')
+      +(r.held_by_cluster.length?'<div class="sm" style="margin-top:6px;color:#56d364">Kept standing by the cluster: '+esc(r.held_by_cluster.map(function(x){return x.name;}).join(', '))+'</div>':'')+'</section>';}
+  // ---------- findings
+  function findingsView(){var L=V.findings.filter(function(f){return !FK||f.kind===FK;});
+    var bar='<div class="row" style="margin-bottom:10px"><select class="inp" id="fk" style="max-width:240px"><option value="">every kind</option>'+Object.keys(KIND).map(function(k){return '<option value="'+k+'"'+(FK===k?' selected':'')+'>'+esc(KIND[k])+'</option>';}).join('')+'</select><span class="sm mute">'+L.length+' of '+V.findings.length+'</span></div>';
+    return '<section class="card"><h2>Findings <span class="c">most severe first, each with what to do</span></h2>'+bar+(L.length?'<table><thead><tr><th>Severity</th><th>Kind</th><th>Application</th><th>Finding</th><th>What to do</th></tr></thead><tbody>'
+      +L.map(function(f){return '<tr data-finding><td>'+pill(f.severity,SEVC[f.severity])+'</td><td class="sm">'+esc(KIND[f.kind]||f.kind)+'</td><td>'+esc(f.app||'—')+'</td><td><b>'+esc(f.title)+'</b></td><td class="sm">'+esc(f.fix)+'</td></tr>';}).join('')+'</tbody></table>':note('No finding of this kind.'))+'</section>';}
+  function driftView(){var d=V.drift;if(!d.since)return '<section class="card"><h2>Changes</h2>'+note('A snapshot of each application\'s dependencies is recorded weekly (and when an operator presses "Record snapshot"). Changes show from the second snapshot on.')+'</section>';
+    return '<section class="card"><h2>Changes since '+esc(d.since.slice(0,10))+' <span class="c">components added to or removed from each application\'s chain</span></h2>'+(d.changes.length?'<table><thead><tr><th>Application</th><th>Added</th><th>Removed</th></tr></thead><tbody>'+d.changes.map(function(c){return '<tr data-drift><td><b>'+esc(c.app)+'</b></td><td style="color:#56d364">'+esc(c.added.join(', ')||'—')+'</td><td style="color:#ff8a8e">'+esc(c.removed.join(', ')||'—')+'</td></tr>';}).join('')+'</tbody></table>':note('No application\'s dependencies changed.'))+'</section>';}
+  function aiView(){var a=V.ai||{};if(!a.enabled)return note('The AI dependency analyst is off: '+(a.reason||'not configured')+'. Everything else on this page works without it.');if(!V.can_act)return note('The AI dependency analyst is for operators and administrators.');
+    return '<section class="card"><h2>AI dependency analyst <span class="c">reads the applications, findings and impact; changes nothing</span></h2><div class="row"><input class="inp" id="aq" style="max-width:720px" placeholder="e.g. Which single point of failure would hurt us most, and what should we fix first?"><button class="btn pri" type="button" id="ask">Ask</button></div>'
+      +(ANS?'<div class="ans">'+esc(ANS.answer)+'</div>'+(ANS.injection_signals&&ANS.injection_signals.length?'<div class="note" style="margin-top:8px">Some CMDB text looked like instructions to the AI and was treated as data: '+esc(ANS.injection_signals.join(', '))+'.</div>':''):'')+'</section>';}
+  function xls(){var s=V.summary;
+    var sheets=[{name:'Summary',columns:[{h:'Measure',w:36},{h:'Value',w:14}],rows:[['Applications',s.apps],['Mapped to servers',s.mapped],['Components',s.cis],['Relationships',s.relationships],['Unconfirmed relationships',s.proposed],['Single points of failure',s.spof],['High findings',s.high],['Average risk',s.risk_avg]]},
+      {name:'Applications',columns:[{h:'Application',w:28},{h:'Criticality',w:12},{h:'Risk',t:'n'},{h:'Components',t:'n'},{h:'Direct dependencies',w:40},{h:'Single points of failure',w:50},{h:'Unmapped machines',w:30},{h:'Risk reasons',w:70}],
+        rows:V.apps.map(function(a){return [a.name,a.criticality,a.risk,a.depends_on,a.direct.map(function(x){return x&&x.name;}).join(', '),a.spof.map(function(x){return x&&x.name;}).join(', '),a.unmapped.join(', '),a.risk_why.map(function(p){return '+'+p.points+' '+p.why;}).join('; ')];})},
+      {name:'Findings',columns:[{h:'Severity',w:10},{h:'Kind',w:22},{h:'Application',w:24},{h:'Finding',w:70},{h:'What to do',w:70}],rows:V.findings.map(function(f){return [f.severity,KIND[f.kind]||f.kind,f.app||'',f.title,f.fix];})},
+      {name:'Changes',columns:[{h:'Application',w:24},{h:'Added',w:50},{h:'Removed',w:50}],rows:(V.drift.changes||[]).map(function(c){return [c.app,c.added.join(', '),c.removed.join(', ')];})}];
+    window.zybXlsx.download('cmdb-dependencies-'+String(V.at).slice(0,10)+'.xlsx',sheets,{title:('CMDB & Dependencies - ' + ZYB_ORG.short),filter:'all registered applications; generated '+V.at,by:USER||ROLE});}
+  document.addEventListener('change',function(ev){if(ev.target.id==='fk'){FK=ev.target.value;$('view').innerHTML=findingsView();}});
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-tab],[data-go],[data-app],g[data-ci],button[id]');if(!el)return;
+    if(el.dataset.tab){TAB=el.dataset.tab;return draw();}
+    if(el.dataset.go!=null){var g=el.dataset.go.split(':');TAB=g[0];FK=g[1]||'';return draw();}
+    if(el.dataset.app){SEL=el.dataset.app;IMP=null;return draw();}
+    if(el.dataset.ci!=null){if(!el.dataset.ci)return;return req('GET','/cmdb/deps/impact/'+encodeURIComponent(el.dataset.ci)).then(function(r){IMP=r;draw();}).catch(function(e){toast(e.message);});}
+    var id=el.id;
+    if(id==='clrimp'){IMP=null;return draw();}
+    if(id==='refresh'){el.disabled=true;return load().then(function(){el.disabled=false;toast('Refreshed');});}
+    if(id==='snap'){el.disabled=true;return req('POST','/cmdb/deps/snapshot').then(function(){return load();}).then(function(){el.disabled=false;toast('Snapshot recorded');}).catch(function(e){el.disabled=false;toast(e.message);});}
+    if(id==='xls'&&V)return xls();
+    if(id==='ask'){var q=$('aq').value.trim();if(q.length<3)return toast('Type a question');el.disabled=true;el.textContent='Thinking…';return req('POST','/cmdb/deps/ai/ask',{question:q}).then(function(r){ANS=r;draw();}).catch(function(e){el.disabled=false;el.textContent='Ask';toast(e.message);});}
+  });
+  req('GET','/dashboards/whoami.json').then(function(w){ROLE=(w&&w.role)||'viewer';USER=(w&&w.user)||'';}).catch(function(){ROLE='viewer';/* no identity: read-only */}).then(load);
+})();
+</script></body></html>

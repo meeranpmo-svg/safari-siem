@@ -1,0 +1,161 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Audit Reports</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.pre{white-space:pre-wrap;word-break:break-word}.wn{border-left:4px solid #fab219;padding:6px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,.02);font-size:12.5px}
+.aibox{border:1px dashed var(--tblr-border-color);border-radius:8px;padding:10px 12px}
+#doc h1{font-size:20px;margin:0 0 4px}#doc h2{font-size:15px;margin:18px 0 6px}#doc h3{font-size:13.5px;margin:12px 0 4px}#doc table{font-size:12.5px}#doc .fnd{border:1px solid var(--tblr-border-color);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+#doc dl{display:grid;grid-template-columns:200px 1fr;gap:2px 12px;margin:0}#doc dt{font-weight:600;font-size:12.5px}#doc dd{margin:0;font-size:12.5px}
+@media print{body *{visibility:hidden}#doc,#doc *{visibility:visible}#doc{position:absolute;left:0;top:0;width:100%;color:#000!important;background:#fff!important}#doc *{color:#000!important;background:transparent!important}}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Audit · Reports</div><h2 class="page-title">Audit Reports <span class="mut">drafted from the engagement's own records</span></h2></div>
+ <div class="col-auto ms-auto"><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>The platform assembles each report from the engagement's records - scope, period, objectives, procedures performed, samples and results, every finding with management's response, and the overall rating by a stated rule. The AI can only <b>propose</b> an executive summary and narrative; it is in the report when an auditor saves it as their own edit. <b>People decide</b>: the engagement lead signs as author, an administrator who is not on the audit team approves it for issue, and the issued report is frozen with its SHA-256 fingerprint. Reports name people and weaknesses, so they are for operators and administrators only.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Engagements</h3><span class="mut ms-2">from fieldwork on, in the IT Audit, Cyber Security Audit and Internal Audit teams</span></div><div class="table-responsive" id="engs"><div class="card-body text-secondary">Loading…</div></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Reports</h3></div><div class="table-responsive" id="reps"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="rule"></div></section>
+<section class="card mb-3" id="rep" hidden>
+ <div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto" id="rtitle">Report</h3>
+  <button type="button" class="btn btn-sm" id="aiask"><i class="ti ti-sparkles me-1"></i>Ask the AI for a draft</button>
+  <button type="button" class="btn btn-sm btn-primary" id="sign" hidden>Sign as author</button>
+  <button type="button" class="btn btn-sm btn-success" id="approve" hidden>Approve for issue</button>
+  <button type="button" class="btn btn-sm" id="giveback" hidden>Return to draft</button>
+  <button type="button" class="btn btn-sm" id="print"><i class="ti ti-printer me-1"></i>Print</button>
+  <button type="button" class="btn btn-sm" id="xlsx"><i class="ti ti-file-spreadsheet me-1"></i>Export to Excel</button>
+  <button type="button" class="btn btn-sm" id="verify" hidden>Verify fingerprint</button></div>
+ <div class="card-body">
+  <div id="rstate" class="mb-2"></div>
+  <div id="rwarn"></div>
+  <div class="aibox mb-3" id="aibox"></div>
+  <form id="editf" class="mb-3" hidden>
+   <div class="mb-2"><label class="form-label" for="f-title">Title</label><input class="form-control" id="f-title" name="title" maxlength="200"></div>
+   <div class="mb-2"><label class="form-label" for="f-executive_summary">Executive summary (written or adopted by a person)</label><textarea class="form-control" rows="6" id="f-executive_summary" name="executive_summary" maxlength="8000"></textarea></div>
+   <div class="mb-2"><label class="form-label" for="f-background">Background</label><textarea class="form-control" rows="3" id="f-background" name="background" maxlength="6000"></textarea></div>
+   <div class="mb-2"><label class="form-label" for="f-conclusion">Conclusion</label><textarea class="form-control" rows="3" id="f-conclusion" name="conclusion" maxlength="6000"></textarea></div>
+   <div id="fnotes"></div>
+   <div class="mb-2"><label class="form-label" for="f-note">What you changed (kept with the version)</label><input class="form-control" id="f-note" name="note" maxlength="500"></div>
+   <button type="submit" class="btn btn-primary">Save as a new version</button> <span class="mut" id="editmsg"></span>
+  </form>
+  <div class="card mb-3"><div class="card-body" id="doc"></div></div>
+  <h4 class="mb-1">Versions</h4><div class="table-responsive" id="vers"></div>
+ </div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, esc=P.esc, $=P.$, CUR=null, DATA=null;
+  var ST={draft:['draft','secondary'],signed:['signed - waiting for approval','orange'],issued:['issued','green'],fieldwork:['fieldwork','blue'],draft_report:['draft report','orange'],final:['final','green']};
+  var RC={Satisfactory:'green','Needs improvement':'orange',Unsatisfactory:'red'}, FR={high:'red',medium:'orange',low:'blue'};
+  function sb(s){var x=ST[s]||[s,'secondary'];return P.badge(x[0],x[1]);}
+  function why(e){if(e&&e.status===403&&(!e.message||/requires|role|HTTP 403/i.test(e.message)))return 'Audit reports need the operator role (a named person) - they name people and weaknesses.';
+    if(e&&e.status===404&&/HTTP 404/.test(e.message||''))return 'The audit report service is not installed yet: run the update (git pull origin main, then scripts\\update-platform.ps1).';return (e&&e.message)||'request failed';}
+  function fail(el,e){el.innerHTML='<div class="card-body"><div class="alert alert-warning mb-0">'+esc(why(e))+'</div></div>';}
+  function toastErr(e){P.toast(why(e));}
+  function dt(s){return s?esc(String(s).slice(0,16).replace('T',' ')):'';}
+
+  function load(){return P.req('GET','/audit-reports').then(function(d){DATA=d;
+    var rs=d.reports;
+    $('kpis').innerHTML=P.tile(rs.filter(function(r){return r.state==='draft';}).length,'Reports in draft')+P.tile(rs.filter(function(r){return r.state==='signed';}).length,'Signed - waiting for approval')
+      +P.tile(rs.filter(function(r){return r.state==='issued';}).length,'Issued')+P.tile(d.engagements.filter(function(x){return !x.report;}).length,'Engagements without a report');
+    var missing=d.teams.filter(function(t){return !t.installed;}).map(function(t){return t.name;});
+    $('engs').innerHTML=P.table([['Team',function(x){return esc(x.team_name);}],['Engagement',function(x){return '<b>'+esc(x.id)+'</b> '+esc(x.title);}],['State',function(x){return sb(x.state);}],['Lead',function(x){return esc(x.lead);}],
+      ['Report',function(x){return x.report?'<button type="button" class="btn btn-sm" data-open="'+esc(x.report)+'">Open '+esc(x.report)+'</button>':'<button type="button" class="btn btn-sm btn-primary" data-draft="'+esc(x.id)+'" data-team="'+esc(x.team)+'">Draft the report</button>';}]],d.engagements,null,
+      'No engagement in fieldwork or later yet. Open and run an engagement in the IT Audit, Cyber Security Audit or Internal Audit Team page; its report is drafted here from its records.'+(missing.length?' Not installed: '+missing.join(', ')+'.':''));
+    $('reps').innerHTML=P.table([['Report',function(x){return '<b>'+esc(x.id)+'</b> '+esc(x.title)+'<div class="mut">'+esc(x.team_name)+'</div>';}],['State',function(x){return sb(x.state);}],['Rating',function(x){return P.badge(x.rating,RC[x.rating]);}],
+      ['Version',function(x){return esc(x.version);}],['Signed / approved',function(x){return esc(x.signed_by||'-')+' / '+esc(x.approved_by||'-');}],['Fingerprint',function(x){return x.fingerprint?'<code>'+esc(x.fingerprint.slice(0,16))+'</code>':'-';}]],rs,function(x){return 'class="rowc" data-open="'+esc(x.id)+'"';},'No report drafted yet.');
+    $('rule').textContent='Rating rule: '+d.rule;
+  }).catch(function(e){fail($('engs'),e);$('reps').innerHTML='';$('kpis').innerHTML='';});}
+
+  function open(id){return P.req('GET','/audit-reports/'+encodeURIComponent(id)).then(draw).catch(toastErr);}
+  function draw(r){CUR=r;$('rep').hidden=false;var c=r.content,s=r.skeleton,can=r.can;
+    $('rtitle').textContent=r.id+' · '+c.title;
+    $('rstate').innerHTML=sb(r.state)+' '+P.badge(s.rating.value,RC[s.rating.value])+' <span class="mut">version '+esc(r.version)+' · drafted by '+esc(r.created_by)+' '+dt(r.created_at)
+      +(r.signed_by?' · signed by '+esc(r.signed_by)+' '+dt(r.signed_at):'')+(r.approved_by?' · approved for issue by '+esc(r.approved_by)+' '+dt(r.approved_at):'')+'</span>'
+      +(r.fingerprint?'<div class="mut mt-1">SHA-256 fingerprint <code id="fp">'+esc(r.fingerprint)+'</code></div>':'')
+      +(r.returned?'<div class="mut mt-1">Returned by '+esc(r.returned.by)+': '+esc(r.returned.note)+'</div>':'');
+    var w=(s.warnings||[]).map(function(x){return '<div class="wn">'+esc(x)+'</div>';}).join('');
+    if(r.stale)w='<div class="wn d-flex gap-2 align-items-center"><span class="me-auto">The engagement\'s records changed since this draft was built - refresh it from the records and check it before signing.</span>'+(can.edit?'<button type="button" class="btn btn-sm" id="rebuild">Refresh from the records</button>':'')+'</div>'+w;
+    $('rwarn').innerHTML=w;
+    drawAi(r);
+    $('editf').hidden=!can.edit;$('aiask').hidden=!can.edit;$('sign').hidden=!can.sign;$('approve').hidden=!can.approve;$('giveback').hidden=!(r.state==='signed'&&can.approve);$('verify').hidden=r.state!=='issued';
+    if(can.edit){$('f-title').value=c.title||'';$('f-executive_summary').value=c.executive_summary||'';$('f-background').value=c.background||'';$('f-conclusion').value=c.conclusion||'';$('f-note').value='';
+      $('fnotes').innerHTML=s.findings.map(function(f){return '<div class="mb-2"><label class="form-label" for="fn-'+esc(f.id)+'">Note on '+esc(f.id)+' '+esc(f.title)+'</label><textarea class="form-control" rows="2" id="fn-'+esc(f.id)+'" data-fn="'+esc(f.id)+'" maxlength="3000">'+esc((c.finding_notes||{})[f.id]||'')+'</textarea></div>';}).join('');}
+    $('doc').innerHTML=docHtml(r);
+    $('vers').innerHTML=P.table([['Version',function(v){return esc(v.v);}],['When',function(v){return dt(v.at);}],['By',function(v){return esc(v.by);}],['Changed',function(v){return esc((v.changed||[]).join(', ')||'-');}],
+      ['AI words adopted',function(v){return esc((v.adopted_ai||[]).join(', ')||'-');}],['Note',function(v){return esc(v.note);}]],r.versions.slice().reverse());
+  }
+  function drawAi(r){var a=r.ai,ready=DATA&&DATA.ai&&DATA.ai.ready;
+    if(!a){$('aibox').innerHTML='<div class="mut">'+esc(r.ai_note)+(ready?'':' '+esc((DATA&&DATA.ai&&DATA.ai.message)||''))+'</div>';return;}
+    var fn=Object.keys(a.finding_narratives||{});
+    $('aibox').innerHTML='<div class="d-flex gap-2 align-items-center mb-1">'+P.badge('AI draft','purple')+'<span class="mut">'+esc(a.label)+' · asked by '+esc(a.requested_by)+' '+dt(a.at)+(a.model?' · '+esc(a.model):'')+'</span>'
+      +(r.can.edit?'<button type="button" class="btn btn-sm ms-auto" id="aiuse">Put the AI text in the editor</button>':'')+'</div>'
+      +'<div class="mb-1"><b>Executive summary</b><div class="pre" id="ai-sum">'+esc(a.executive_summary||'-')+'</div></div>'
+      +(a.conclusion?'<div class="mb-1"><b>Conclusion</b><div class="pre">'+esc(a.conclusion)+'</div></div>':'')
+      +fn.map(function(k){return '<div class="mb-1"><b>'+esc(k)+'</b><div class="pre">'+esc(a.finding_narratives[k])+'</div></div>';}).join('')
+      +(a.notes||[]).concat(a.dropped||[]).map(function(x){return '<div class="wn">'+esc(x)+'</div>';}).join('')
+      +((a.injection_signals||[]).length?'<div class="wn">The records sent contain text that looks like an instruction to the AI - read the draft critically.</div>':'');
+  }
+  function field(k,v){return '<dt>'+esc(k)+'</dt><dd class="pre">'+esc(v===null||v===undefined||v===''?'-':v)+'</dd>';}
+  function docHtml(r){var s=r.skeleton,c=r.content,e=s.engagement;
+    var h='<h1>'+esc(c.title)+'</h1><div class="mut">'+esc(s.team_name)+' · '+esc(e.id)+' · '+esc(r.state==='issued'?'Issued '+String(r.issued_at).slice(0,10):'Draft version '+r.version+' - not issued')+'</div>'
+      +'<h2>Overall rating: '+esc(s.rating.value)+'</h2><div class="mut">'+esc(s.rating.why)+'. '+esc(s.rating.rule)+'</div>'
+      +'<h2>Executive summary</h2><div class="pre">'+(c.executive_summary?esc(c.executive_summary):'<span class="text-secondary">Not written yet - the executive summary is written by an auditor (the AI may propose one).</span>')+'</div>'
+      +(c.background?'<h2>Background</h2><div class="pre">'+esc(c.background)+'</div>':'')
+      +'<h2>Scope and period</h2><dl>'+field('Engagement',e.title)+field('Audit area',e.area_name)+field('Auditee',e.auditee_dept+' ('+e.auditee_owner+')')+field('Lead auditor',e.lead)+field('Audit team',(e.team||[]).join(', '))
+      +field('Period',s.period.start+' to '+s.period.fieldwork_end)+field('Report due',s.period.report_due)+field('Scope',s.scope)+field('Criteria',s.criteria)+'</dl>'
+      +'<h2>Objectives</h2>'+(s.objectives.length?'<ol>'+s.objectives.map(function(o){return '<li>'+esc(o)+'</li>';}).join('')+'</ol>':'<div class="text-secondary">None recorded.</div>')
+      +'<h2>Procedures performed</h2>'+P.table([['Workpaper',function(w){return '<b>'+esc(w.id)+'</b> '+esc(w.title);}],['Procedure',function(w){return '<span class="pre">'+esc(w.procedure)+'</span>';}],['Conclusion',function(w){return esc(w.conclusion||'not concluded')+'<div class="mut pre">'+esc(w.summary)+'</div>';}],['Reviewed by',function(w){return esc(w.reviewed_by||'-');}]],s.procedures,null,'No workpaper recorded.')
+      +'<h2>Samples and results</h2>'+P.table([['Sample',function(x){return '<b>'+esc(x.id)+'</b> '+esc(x.population);}],['Method',function(x){return esc(x.method)+(x.seed?' (seed '+esc(x.seed)+')':'');}],['Size',function(x){return esc(x.size)+' of '+esc(x.population_size);}],
+        ['Results',function(x){return esc(x.results.pass)+' pass · '+esc(x.results.exception)+' exception · '+esc(x.results.na)+' n/a'+(x.results.open?' · '+esc(x.results.open)+' open':'');}]],s.samples,null,'No sample drawn.')
+      +'<h2>Findings</h2>'+(s.findings.length?s.findings.map(function(f){var note=(c.finding_notes||{})[f.id];return '<div class="fnd"><h3>'+esc(f.id)+' '+esc(f.title)+' '+P.badge(f.rating,FR[f.rating])+'</h3>'+(note?'<div class="pre mb-2">'+esc(note)+'</div>':'')
+        +'<dl>'+field('Condition',f.condition)+field('Criteria',f.criteria)+field('Cause',f.cause)+field('Effect',f.effect)+field('Recommendation',f.recommendation)+field('Management response',f.management_response||'not responded yet')
+        +field('Action plan',f.action_plan)+field('Owner',f.owner)+field('Due',f.due)+field('State',f.state)+'</dl></div>';}).join(''):'<div class="text-secondary">No findings.</div>')
+      +(c.conclusion?'<h2>Conclusion</h2><div class="pre">'+esc(c.conclusion)+'</div>':'')
+      +'<h2>Sign-off</h2><dl>'+field('Author (engagement lead)',r.signed_by?r.signed_by+' - '+String(r.signed_at).slice(0,16).replace('T',' '):'not signed')+field('Approved for issue',r.approved_by?r.approved_by+' - '+String(r.approved_at).slice(0,16).replace('T',' '):'not approved')
+      +(r.fingerprint?field('SHA-256 fingerprint',r.fingerprint):'')+(r.adopted_ai&&r.adopted_ai.length?field('AI words adopted by the author',r.adopted_ai.join(', ')):'')+'</dl>';
+    return h;}
+
+  function post(p,b){return P.req('POST','/audit-reports/'+encodeURIComponent(CUR.id)+p,b||{}).then(function(r){draw(r);load();return r;});}
+  function exportXlsx(){var r=CUR,s=r.skeleton,c=r.content,e=s.engagement;
+    var info=[['Report',r.id],['Title',c.title],['Team',s.team_name],['Engagement',e.id+' '+e.title],['State',r.state],['Version',r.version],['Overall rating',s.rating.value],['Rating basis',s.rating.why],['Rating rule',s.rating.rule],
+      ['Period',s.period.start+' to '+s.period.fieldwork_end],['Scope',s.scope],['Criteria',s.criteria],['Objectives',s.objectives.join('\n')],['Executive summary',c.executive_summary],['Background',c.background],['Conclusion',c.conclusion],
+      ['Signed by',r.signed_by||''],['Signed at',r.signed_at||''],['Approved for issue by',r.approved_by||''],['Approved at',r.approved_at||''],['SHA-256 fingerprint',r.fingerprint||'not issued']];
+    window.zybXlsx.who().then(function(by){window.zybXlsx.download(r.id+'.xlsx',[
+      {name:'Report',columns:[{h:'Field',w:24},{h:'Value',w:100}],rows:info},
+      {name:'Findings',columns:[{h:'Id',w:12},{h:'Title',w:40},{h:'Rating',w:10},{h:'Condition',w:50},{h:'Criteria',w:30},{h:'Cause',w:30},{h:'Effect',w:30},{h:'Recommendation',w:40},{h:'Management response',w:40},{h:'Action plan',w:40},{h:'Owner',w:16},{h:'Due',t:'d',w:12},{h:'State',w:12},{h:'Auditor note',w:40}],
+        rows:s.findings.map(function(f){return [f.id,f.title,f.rating,f.condition,f.criteria,f.cause,f.effect,f.recommendation,f.management_response,f.action_plan,f.owner,f.due,f.state,(c.finding_notes||{})[f.id]||''];})},
+      {name:'Procedures',columns:[{h:'Workpaper',w:12},{h:'Title',w:40},{h:'Objective',w:40},{h:'Procedure',w:50},{h:'Conclusion',w:20},{h:'Summary',w:50},{h:'Reviewed by',w:16}],rows:s.procedures.map(function(w){return [w.id,w.title,w.objective,w.procedure,w.conclusion||'',w.summary,w.reviewed_by||''];})},
+      {name:'Samples',columns:[{h:'Sample',w:12},{h:'Population',w:40},{h:'Method',w:14},{h:'Seed',t:'n'},{h:'Population size',t:'n'},{h:'Size',t:'n'},{h:'Pass',t:'n'},{h:'Exception',t:'n'},{h:'N/A',t:'n'}],rows:s.samples.map(function(x){return [x.id,x.population,x.method,x.seed,x.population_size,x.size,x.results.pass,x.results.exception,x.results.na];})},
+      {name:'Versions',columns:[{h:'Version',t:'n'},{h:'When',t:'d',w:18},{h:'By',w:16},{h:'Changed',w:40},{h:'AI words adopted',w:30},{h:'Note',w:40}],rows:r.versions.map(function(v){return [v.v,String(v.at).slice(0,16),v.by,(v.changed||[]).join(', '),(v.adopted_ai||[]).join(', '),v.note];})}],
+      {title:'Audit report '+r.id,by:by,notes:r.state==='issued'?'Issued report, SHA-256 fingerprint '+r.fingerprint:'Draft - not issued'});});}
+
+  document.addEventListener('click',function(ev){var t=ev.target.closest('button,[data-open]');if(!t)return;
+    if(t.id==='refresh'){load();if(CUR)open(CUR.id);return;}
+    if(t.hasAttribute('data-draft')){P.req('POST','/audit-reports',{team:t.getAttribute('data-team'),engagement:t.getAttribute('data-draft')}).then(function(r){draw(r);load();P.toast('Report '+r.id+' drafted from the records');}).catch(toastErr);return;}
+    if(t.hasAttribute('data-open')){open(t.getAttribute('data-open'));return;}
+    if(!CUR)return;
+    if(t.id==='aiask'){t.disabled=true;post('/ai-draft').then(function(){P.toast('AI draft ready - it is a proposal until you save it');}).catch(toastErr).then(function(){t.disabled=false;});return;}
+    if(t.id==='aiuse'){var a=CUR.ai;if(a.executive_summary)$('f-executive_summary').value=a.executive_summary;if(a.conclusion)$('f-conclusion').value=a.conclusion;
+      Object.keys(a.finding_narratives||{}).forEach(function(k){var el=document.querySelector('[data-fn="'+k.replace(/[^A-Za-z0-9_.:-]/g,'')+'"]');if(el)el.value=a.finding_narratives[k];});
+      $('f-note').value='adopted the AI draft after checking it';P.toast('The AI text is in the editor - check it, then save');return;}
+    if(t.id==='rebuild'){post('/refresh',{version:CUR.version}).then(function(){P.toast('Refreshed from the records');}).catch(toastErr);return;}
+    if(t.id==='sign'){if(!window.confirm('Sign '+CUR.id+' as its author?'))return;post('/sign',{version:CUR.version}).then(function(){P.toast('Signed - waiting for an administrator to approve it for issue');}).catch(toastErr);return;}
+    if(t.id==='approve'){if(!window.confirm('Approve '+CUR.id+' for issue? It will be frozen.'))return;post('/approve',{version:CUR.version}).then(function(){P.toast('Issued - frozen with its fingerprint');}).catch(toastErr);return;}
+    if(t.id==='giveback'){var n=window.prompt('Why is the report returned to the author?');if(!n)return;post('/return',{version:CUR.version,note:n}).catch(toastErr);return;}
+    if(t.id==='verify'){P.req('GET','/audit-reports/'+encodeURIComponent(CUR.id)+'/verify').then(function(v){P.toast(v.ok?'Fingerprint verified: the issued report is unchanged':'WARNING: the stored report does not match its fingerprint');}).catch(toastErr);return;}
+    if(t.id==='print'){window.print();return;}
+    if(t.id==='xlsx'){exportXlsx();return;}
+  });
+  $('editf').addEventListener('submit',function(ev){ev.preventDefault();if(!CUR)return;
+    var b={version:CUR.version,title:$('f-title').value,executive_summary:$('f-executive_summary').value,background:$('f-background').value,conclusion:$('f-conclusion').value,note:$('f-note').value,
+      finding_notes:[].map.call(document.querySelectorAll('[data-fn]'),function(el){return {id:el.getAttribute('data-fn'),text:el.value};})};
+    $('editmsg').textContent='Saving…';
+    post('/edit',b).then(function(r){$('editmsg').textContent=r.unchanged?'Nothing changed.':'Saved as version '+r.version+'.';}).catch(function(e){$('editmsg').textContent='';toastErr(e);});});
+  load().then(function(){var m=/[#&]report=([A-Za-z0-9_.:-]+)/.exec(location.hash);if(m)open(m[1]);});
+})();
+</script></body></html>

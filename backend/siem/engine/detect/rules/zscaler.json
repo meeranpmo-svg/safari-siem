@@ -1,0 +1,45 @@
+[
+  {
+    "id": "SENTRA-ZSC-001", "name": "Zscaler blocked malware or threat download", "enabled": true, "severity": 3,
+    "mitre": ["T1189", "T1204.001"], "sama": ["3.3.16", "3.3.17", "3.3.14"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "Zscaler Internet Access (ZIA via on-prem NSS, CEF) blocked a web request carrying a threat (malware / threat-category hit): the SWG stopped a drive-by or malicious download. fields.vendor_hook=zscaler, action=blocked and a threat name present.",
+    "type": "single",
+    "match": { "all": [ { "field": "fields.vendor_hook", "op": "eq", "value": "zscaler" },
+                        { "field": "action", "op": "eq", "value": "blocked" },
+                        { "field": "fields.threat_name", "op": "exists", "value": true } ] },
+    "group_by": ["user", "fields.threat_name"], "suppress_s": 1800,
+    "fields_in_alert": ["user", "host", "url", "fields.threat_name", "fields.url_category", "fields.policy", "src_ip"]
+  },
+  {
+    "id": "SENTRA-ZSC-002", "name": "Zscaler repeated policy bypass attempts by one user", "enabled": true, "severity": 2,
+    "mitre": ["T1090", "T1071"], "sama": ["3.3.6", "3.3.13", "3.3.14"], "tactic": "command-and-control", "author":"Sentra SOC", "version": 1,
+    "description": "20 or more Zscaler web requests blocked by policy for one user within 10 minutes - a user repeatedly trying to reach blocked categories / an anonymiser or proxy-avoidance tool to bypass the SWG.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "fields.vendor_hook", "op": "eq", "value": "zscaler" },
+                        { "field": "action", "op": "eq", "value": "blocked" } ] },
+    "group_by": ["user"], "window_s": 600, "count": 20, "suppress_s": 1800,
+    "fields_in_alert": ["user", "host", "url", "fields.url_category", "fields.policy", "src_ip"]
+  },
+  {
+    "id": "SENTRA-ZSC-003", "name": "Zscaler DLP-triggered web upload blocked", "enabled": true, "severity": 3,
+    "mitre": ["T1567", "T1048"], "sama": ["3.3.14", "3.3.16", "3.3.17"], "tactic": "exfiltration", "author":"Sentra SOC", "version": 1,
+    "description": "Zscaler blocked a web upload that matched a DLP engine / dictionary (fields.zscaler_dlp present, action=blocked) - an attempted exfiltration to a web / cloud destination stopped by the SWG DLP.",
+    "type": "single",
+    "match": { "all": [ { "field": "fields.vendor_hook", "op": "eq", "value": "zscaler" },
+                        { "field": "action", "op": "eq", "value": "blocked" },
+                        { "field": "fields.zscaler_dlp", "op": "exists", "value": true } ] },
+    "group_by": ["user", "fields.zscaler_dlp"], "suppress_s": 600,
+    "fields_in_alert": ["user", "host", "url", "fields.zscaler_dlp", "fields.url_category", "fields.policy", "fields.bytes_out"]
+  },
+  {
+    "id": "SENTRA-ZSC-004", "name": "Zscaler allowed traffic to a risky category", "enabled": true, "severity": 2,
+    "mitre": ["T1071", "T1090"], "sama": ["3.3.16", "3.3.14"], "tactic": "command-and-control", "author":"Sentra SOC", "version": 1,
+    "description": "Zscaler ALLOWED a web / firewall session whose URL or application category is high-risk (anonymiser, proxy avoidance, botnet / C2, malware or phishing site, cryptomining, newly-registered domain, remote-access or peer-to-peer). Anomalous allowed traffic to a risky category that the policy did not block.",
+    "type": "single",
+    "match": { "all": [ { "field": "fields.vendor_hook", "op": "eq", "value": "zscaler" },
+                        { "field": "action", "op": "eq", "value": "allowed" },
+                        { "field": "fields.url_category", "op": "re", "value": "anonymiz|proxy avoid|open proxies|malicious|malware|phish|botnet|spyware|command.?and.?control|\\bc2\\b|crypto ?min|coin ?min|newly ?(?:registered|seen)|peer.?to.?peer|\\bp2p\\b|remote access|dns.?(?:over|tunnel)|adware|suspicious|questionable|spam ?url|typosquat|parked|dynamic dns" } ] },
+    "group_by": ["user", "fields.url_category"], "suppress_s": 1800,
+    "fields_in_alert": ["user", "host", "url", "fields.url_category", "fields.app", "src_ip", "dst_ip"]
+  }
+]

@@ -1,0 +1,138 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Password &amp; MFA Posture</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1380px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{font-weight:400;font-size:12px;color:var(--mute)}
+.n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#1f6feb;color:#fff;font-size:12px;font-weight:700}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:18px;font-weight:700;margin:2px 0;color:var(--title)}.t .s{font-size:12px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4b5563}button:disabled{opacity:.5;cursor:default}
+button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button.on{border-color:#1f6feb;color:var(--info)}
+input,select{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid var(--edge);vertical-align:top}
+.tw{overflow-x:auto;max-height:420px;overflow-y:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12.5px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;border:1px solid var(--edge);color:var(--mute);margin:2px 4px 2px 0;white-space:nowrap}
+.p-ok{color:var(--ok);border-color:rgba(63,185,80,.45)}.p-bad{color:var(--bad);border-color:rgba(255,123,114,.45)}.p-warn{color:var(--warn);border-color:rgba(227,179,65,.45)}.p-info{color:var(--info);border-color:rgba(121,184,255,.45)}
+.warn{border:1px solid rgba(227,179,65,.45);background:rgba(227,179,65,.07);border-radius:10px;padding:9px 12px;margin:0 0 8px}.okb{border:1px solid rgba(63,185,80,.45);background:rgba(63,185,80,.07);border-radius:10px;padding:9px 12px;margin:0 0 12px}
+.act{border-left:4px solid var(--mute);background:var(--raise);border-radius:8px;padding:8px 12px;margin:0 0 7px}.act.s-critical{border-left-color:var(--bad)}.act.s-high{border-left-color:#f0883e}.act.s-medium{border-left-color:var(--warn)}.act.s-low{border-left-color:var(--info)}
+.act .h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.act .r{font-weight:700;color:var(--mute);min-width:22px}
+.bars{display:flex;align-items:flex-end;gap:2px;height:60px;margin:6px 0}.bars i{flex:1;background:var(--info);border-radius:2px 2px 0 0;min-height:1px;opacity:.85}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:0 0 10px}.fg label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}.fg label.wide{grid-column:1/-1}
+a.lk{color:var(--info)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Identity &amp; sign-in · report only</div><h1>Password &amp; MFA Posture</h1></div><span class="sp"></span><span class="muted" id="gen"></span><button type="button" id="refreshv">↻ Refresh</button></div>
+<div class="okb" style="font-size:13px">The domain password policy, accounts with weak password settings, MFA in Microsoft Entra and account lockouts, scored against the platform baseline (NCA ECC 2-2-3, SAMA CSF 3.3.5). <b>Report only</b> - nothing is changed from this page. Accounts are unlocked, reset or disabled in <a class="lk" href="ad-manage.html">AD Management</a>, where a second administrator approves every change.</div>
+<div id="err"></div>
+<div class="k" id="kpis"></div>
+<div id="sources"></div>
+<div class="card"><h2><span class="n">1</span> What to fix first <span class="c">ranked by impact · every item names its source and the control</span></h2><div id="remed"><div class="empty">Loading…</div></div></div>
+<div class="g2">
+ <div class="card"><h2><span class="n">2</span> Domain password policy <span class="c">Default Domain Policy, from the SIEM's AD sync</span></h2><div id="policy"></div></div>
+ <div class="card"><h2><span class="n">3</span> Fine-grained password policies <span class="c">read over the directory connection</span></h2><div id="fgpp"></div></div>
+</div>
+<div class="card"><h2><span class="n">4</span> Accounts <span class="c">enabled accounts, from the SIEM's AD sync</span></h2><div class="bar" id="atabs"></div><div id="accts"></div></div>
+<div class="g2">
+ <div class="card"><h2><span class="n">5</span> MFA in Microsoft Entra <span class="c">from the SIEM's Microsoft Graph sync</span></h2><div id="mfa"></div></div>
+ <div class="card"><h2><span class="n">6</span> Account lockouts <span class="c">domain controller event 4740, from the SIEM</span></h2><div id="locks"></div></div>
+</div>
+<div class="card"><h2>Baseline <span class="c">what the report scores against · administrators adjust it, audited</span></h2><div id="base"></div></div>
+<p class="note" id="foot"></p>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var $=function(id){return document.getElementById(id);};
+  var V=null, ME={}, TAB='never_expires';
+  var PAGES={'ad-audit.html':'AD Audit','m365-security.html':'Microsoft 365 Security','ad-manage.html':'AD Management','identity-signin.html':'Identity & Sign-in','ad-exchange.html':'AD & Exchange settings'};
+  var TABS={never_expires:'Password never expires',not_required:'Password not required',old:'Old passwords'};
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(m==='POST')x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: reported below as the HTTP status */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('The server is not reachable'));};x.send(m==='POST'?JSON.stringify(b||{}):null);});}
+  var itam=function(m,p,b){return req(m,'/api/itam'+p,b);};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function tile(l,v,s,c){return '<div class="t '+(c||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function tbl(h,rows,empty){return rows.length?'<div class="tw"><table><thead><tr>'+h.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':'<div class="empty">'+esc(empty)+'</div>';}
+  function when(s){return s?new Date(s).toLocaleString('en-GB'):'—';}
+  function na(x){return x===null||x===undefined;}
+  function notAv(o){return '<div class="warn">'+esc((o&&o.reason)||'Not available.')+'</div>';}
+  function why(e){return e.status===403?'Password & MFA Posture needs the operator role (it names people).':e.status===404&&/^(HTTP 404|not found)$/.test(e.message)?'The server does not have Password & MFA Posture yet - run the update.':e.message;}
+  function pageLink(p){return PAGES[p]?' <a class="lk" href="'+esc(p)+'">'+esc(PAGES[p])+' →</a>':'';}
+
+  function load(refresh){$('err').innerHTML='';
+    return Promise.all([req('GET','/auth/whoami').catch(function(){return {};/* no gateway: treated as signed out */}),itam('GET','/identity-posture'+(refresh?'?refresh=1':''))])
+      .then(function(r){ME=r[0]||{};V=r[1];draw();})
+      .catch(function(e){$('err').innerHTML='<div class="warn err">'+esc(why(e))+'</div>';$('remed').innerHTML='';});}
+  function draw(){var S=V.summary||{};
+    $('gen').textContent='as of '+when(V.generated_at);
+    var pc=S.policy_score,mp=S.mfa_pct,tg=(V.baseline&&V.baseline.values&&V.baseline.values.mfa_users_pct)||100;
+    $('kpis').innerHTML=tile('Domain policy',na(pc)?'not read':pc+'%','checks meeting the baseline',na(pc)?'':pc>=100?'ok':pc>=75?'warn':'bad')
+      +tile('MFA registered',na(mp)?'not read':mp+'%','target '+tg+'%',na(mp)?'':mp>=tg?'ok':'warn')
+      +tile('Admins without MFA',na(S.admins_without_mfa)?'not read':S.admins_without_mfa,'Microsoft Entra',na(S.admins_without_mfa)?'':S.admins_without_mfa?'bad':'ok')
+      +tile('Password never expires',na(S.never_expires)?'not read':S.never_expires,'enabled accounts',na(S.never_expires)?'':S.never_expires?'warn':'ok')
+      +tile('Password not required',na(S.not_required)?'not read':S.not_required,'enabled accounts',na(S.not_required)?'':S.not_required?'bad':'ok')
+      +tile('Lockouts (30 days)',na(S.lockouts)?'not read':S.lockouts,'event 4740','')
+      +tile('Actions',S.actions||0,'ranked below',S.actions?'warn':'ok');
+    var src=V.sources||{},lbl={ad:'AD sync (SIEM)',m365:'Microsoft Graph (SIEM)',lockouts:'Lockout events (SIEM)',fgpp:'Directory connection'};
+    $('sources').innerHTML='<div class="bar">'+Object.keys(lbl).map(function(k){var x=src[k]||{};return '<span class="pill '+(x.state==='live'?'p-ok':x.state==='error'?'p-bad':'p-warn')+'" title="'+esc(x.reason||'')+'">'+esc(lbl[k])+': '+esc(x.state==='live'?'read':x.state==='error'?'error':'not connected')+'</span>';}).join('')+'</div>';
+    drawRemed();drawPolicy();drawFg();drawTabs();drawAccts();drawMfa();drawLocks();drawBase();
+    $('foot').textContent=V.note||'';}
+  function drawRemed(){var R=V.remediation||[];
+    $('remed').innerHTML=R.length?R.map(function(x){return '<div class="act s-'+esc(x.severity)+'"><div class="h"><span class="r">'+esc(String(x.rank))+'</span><span class="pill '+(x.severity==='critical'||x.severity==='high'?'p-bad':x.severity==='medium'?'p-warn':'p-info')+'">'+esc(x.severity)+'</span><b>'+esc(x.title)+'</b>'+(x.count>1?'<span class="pill">'+esc(String(x.count))+'</span>':'')+'</div>'
+      +'<div style="margin:3px 0 0 30px">'+esc(x.detail)+pageLink(x.page)+'</div><div class="note" style="margin-left:30px">'+esc((x.refs||[]).join(' · '))+'</div></div>';}).join('')
+      :'<div class="empty">'+esc(Object.keys(V.sources||{}).some(function(k){return V.sources[k].state==='live';})?'Nothing below the baseline in what could be read.':'Nothing to rank - no source is connected yet (see the reasons in each section).')+'</div>';}
+  function checksTable(C){return tbl(['Setting','Value','Baseline','Result'],C.map(function(c){return '<tr><td>'+esc(c.label)+'<div class="note">'+esc((c.refs||[]).join(' · '))+'</div></td><td class="mono">'+esc(na(c.value)?'not read':String(c.value))+'</td><td class="mono">'+esc(c.expected)+'</td><td>'+(c.ok?'<span class="pill p-ok">meets</span>':'<span class="pill p-bad">below</span><div class="note">'+esc(c.why)+'</div>')+'</td></tr>';}),'No setting read.');}
+  function drawPolicy(){var P=V.policy||{};$('policy').innerHTML=P.available?'<div class="bar"><b>'+esc(String(P.score))+'%</b><span class="muted">of the settings meet the baseline</span></div>'+checksTable(P.checks||[]):notAv(P);}
+  function drawFg(){var F=V.fine_grained||{};
+    if(!F.available&&!(F.items||[]).length){$('fgpp').innerHTML=notAv(F)+(F.note?'<p class="note">'+esc(F.note)+'</p>':'');return;}
+    $('fgpp').innerHTML=(F.items.length?F.items.map(function(p){return '<div style="margin:0 0 12px"><div class="bar"><b>'+esc(p.name)+'</b><span class="pill">precedence '+esc(na(p.precedence)?'?':String(p.precedence))+'</span><span class="pill">applies to '+esc(String(p.applies_to||0))+'</span><span class="pill '+(p.score>=100?'p-ok':'p-warn')+'">'+esc(String(p.score))+'%</span></div>'+checksTable(p.checks||[])+'</div>';}).join(''):'')+'<p class="note">'+esc(F.note||'')+'</p>';}
+  function drawTabs(){$('atabs').innerHTML=Object.keys(TABS).map(function(k){var A=V.accounts&&V.accounts[k];return '<button type="button" data-tab="'+k+'"'+(k===TAB?' class="on"':'')+'>'+esc(TABS[k])+(A?' ('+esc(String(A.count))+')':'')+'</button>';}).join('');}
+  function drawAccts(){var A=V.accounts||{};if(A.available===false||!A[TAB]){$('accts').innerHTML=notAv(A);return;}
+    var L=A[TAB];
+    $('accts').innerHTML=tbl(['Account','Name','Kind','Password last set','Age (days)'],L.items.map(function(u){return '<tr><td class="mono">'+esc(u.sam)+'</td><td>'+esc(u.name)+'</td><td>'+(u.privileged?'<span class="pill p-bad">privileged</span>':'')+(u.service?'<span class="pill p-info">service</span>':'')+(!u.privileged&&!u.service?'<span class="muted">person</span>':'')+'</td><td>'+esc(when(u.pwd_last_set))+'</td><td>'+esc(na(u.pwd_age_days)?'—':String(u.pwd_age_days))+'</td></tr>';}),TAB==='old'?'No enabled account has a password older than '+A.old_days+' days.':'No enabled account.')
+      +(L.truncated?'<p class="note">The first '+esc(String(L.items.length))+' of '+esc(String(L.count))+' are listed.</p>':'')+'<p class="note">'+esc(A.note||'')+'</p>';}
+  function drawMfa(){var M=V.mfa||{},CA=V.conditional_access||{},h='';
+    if(M.available){h+='<div class="bar"><b style="font-size:18px">'+esc(na(M.pct)?'—':M.pct+'%')+'</b><span class="muted">'+esc(M.registered+' of '+M.users+' people registered MFA (target '+M.target_pct+'%)')+'</span></div>';
+      h+='<h3 style="font-size:13px;margin:8px 0 4px">Administrators without MFA</h3>'+(M.admins_without.length?tbl(['Name','Sign-in name'],M.admins_without.map(function(u){return '<tr><td>'+esc(u.name)+'</td><td class="mono">'+esc(u.upn)+'</td></tr>';}),''):'<div class="empty">None - every administrator has MFA registered.</div>');
+      h+='<details style="margin:8px 0"><summary class="muted">People without MFA ('+esc(String(M.not_registered.count))+')</summary>'+tbl(['Name','Sign-in name',''],M.not_registered.items.map(function(u){return '<tr><td>'+esc(u.name)+'</td><td class="mono">'+esc(u.upn)+'</td><td>'+(u.admin?'<span class="pill p-bad">admin</span>':'')+'</td></tr>';}),'Everyone is registered.')+'</details>';
+      h+='<p class="note">Registered methods: '+esc(M.methods&&M.methods.reason||'')+'</p>';}
+    else h+=notAv(M);
+    h+='<h3 style="font-size:13px;margin:10px 0 4px">Conditional Access</h3>';
+    if(CA.available){h+='<div class="bar"><span class="pill">'+esc(CA.total+' policies')+'</span><span class="pill p-ok">'+esc(CA.enabled+' enforced')+'</span><span class="pill p-warn">'+esc(CA.report_only+' report-only')+'</span></div>'
+      +'<div>Enforcing MFA (by name): '+(CA.mfa_enforced.length?CA.mfa_enforced.map(function(n){return '<span class="pill p-ok">'+esc(n)+'</span>';}).join(''):'<span class="pill p-bad">none</span>')+'</div>'
+      +(CA.mfa_report_only.length?'<div>Report-only, not enforced: '+CA.mfa_report_only.map(function(n){return '<span class="pill p-warn">'+esc(n)+'</span>';}).join('')+'</div>':'')+'<p class="note">'+esc(CA.note)+pageLink('m365-security.html')+'</p>';}
+    else h+=notAv(CA);
+    $('mfa').innerHTML=h;}
+  function drawLocks(){var L=V.lockouts||{};if(!L.available){$('locks').innerHTML=notAv(L);return;}
+    var mx=Math.max.apply(null,L.per_day.map(function(b){return b.n;}).concat([1]));
+    $('locks').innerHTML='<div class="bar"><b style="font-size:18px">'+esc(String(L.total))+'</b><span class="muted">lockouts in '+esc(String(L.days))+' days</span></div>'
+      +'<div class="bars" aria-label="lockouts per day">'+L.per_day.map(function(b){return '<i title="'+esc(b.t+': '+b.n)+'" style="height:'+Math.round(b.n/mx*100)+'%"></i>';}).join('')+'</div>'
+      +'<div class="g2" style="gap:10px"><div>'+tbl(['Account','Lockouts'],L.top_accounts.map(function(x){return '<tr><td class="mono">'+esc(x.sam)+'</td><td>'+esc(String(x.n))+'</td></tr>';}),'No account locked out.')+'</div>'
+      +'<div>'+tbl(['Caller computer','Lockouts'],L.top_computers.map(function(x){return '<tr><td class="mono">'+esc(x.computer)+'</td><td>'+esc(String(x.n))+'</td></tr>';}),'No caller computer recorded.')+'</div></div>'
+      +'<p class="note">'+esc(L.note||'')+pageLink('ad-manage.html')+'</p>';}
+  function drawBase(){var B=V.baseline||{},adm=ME.role==='admin',K=B.knobs||[];
+    var h=tbl(['Requirement','Baseline','Platform default'],K.map(function(k){var v=B.values[k.key];return '<tr><td>'+esc(k.label)+'</td><td>'+(adm?'<input type="number" data-knob="'+esc(k.key)+'" min="'+esc(String(k.min))+'" max="'+esc(String(k.max))+'" value="'+esc(String(v))+'" style="width:110px">':'<span class="mono">'+esc(String(v))+'</span>')+(v!==k.def?' <span class="pill p-warn">changed</span>':'')+'</td><td class="mono">'+esc(String(k.def))+' <span class="muted">('+esc(k.min+' - '+k.max)+')</span></td></tr>';}),'');
+    h+='<p class="note">Always required, not adjustable: '+esc((B.fixed||[]).join(' · '))+'.</p><p class="note">References: '+esc((B.refs||[]).join(' · '))+'.</p>';
+    h+=B.changed_by?'<p class="note">Last changed by '+esc(B.changed_by)+' '+esc(when(B.changed_at))+' - '+esc(B.reason||'')+'</p>':'<p class="note">The platform defaults are in use.</p>';
+    if(adm)h+='<div class="fg"><label class="wide">Reason for the change (recorded)<input id="b-reason" maxlength="500" placeholder="e.g. risk acceptance RA-12 approved by the CISO"></label></div><div class="bar"><button type="button" class="pri" id="b-save">Save baseline</button><button type="button" id="b-reset">Back to the platform defaults</button></div>';
+    else h+='<p class="note">The baseline is changed by an administrator.</p>';
+    $('base').innerHTML=h;}
+  function saveBase(reset,btn){var reason=($('b-reason').value||'').trim();if(reason.length<5){toast('Give a reason of at least 5 characters - it is recorded.');return;}
+    var b={reason:reason};if(reset)b.reset=true;else{var vals={},n=0;Array.prototype.forEach.call(document.querySelectorAll('[data-knob]'),function(i){var k=i.getAttribute('data-knob'),v=parseInt(i.value,10);if(String(v)!==String(V.baseline.values[k])){vals[k]=isNaN(v)?i.value:v;n++;}});if(!n){toast('Nothing changed.');return;}b.values=vals;}
+    btn.disabled=true;itam('POST','/identity-posture/baseline',b).then(function(){toast(reset?'Back to the platform defaults.':'Baseline saved.');return load(true);}).catch(function(e){btn.disabled=false;toast(e.status===403?(/person/.test(e.message)?e.message:'Changing the baseline needs the administrator role.'):e.message);});}
+  document.addEventListener('click',function(e){var t;
+    if((t=e.target.closest('[data-tab]'))){TAB=t.getAttribute('data-tab');drawTabs();drawAccts();return;}
+    if(e.target.id==='b-save'){saveBase(false,e.target);return;}
+    if(e.target.id==='b-reset'){saveBase(true,e.target);return;}
+  });
+  $('refreshv').addEventListener('click',function(){load(true);});
+  load(false);
+})();
+</script></body></html>

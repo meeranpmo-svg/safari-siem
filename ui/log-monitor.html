@@ -1,0 +1,113 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Log Monitor &amp; Analysis</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1680px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.kpi .s{font-size:11.5px;color:var(--d-mute)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tabs button{background:transparent;border:1px solid var(--d-line);color:var(--d-mute);border-radius:999px;padding:6px 14px;font:600 13px Inter,"Segoe UI",system-ui,sans-serif;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.tabs button[aria-selected="true"]{color:#fff;border-color:var(--d-acc);background:rgba(91,141,239,.2)}
+.grid2{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.inp,select.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.s-new{background:rgba(124,77,255,.22);color:#b39bff}.s-spike{background:rgba(245,99,0,.2);color:#ff9b5c}.s-steady{background:rgba(139,147,164,.16);color:#aab2c2}.s-dropped{background:rgba(229,72,77,.18);color:#ff8a8e}
+.v-critical{background:rgba(229,72,77,.22);color:#ff8a8e}.v-high{background:rgba(245,99,0,.2);color:#ff9b5c}.v-medium{background:rgba(245,159,0,.18);color:#f5b544}.v-low,.v-info{background:rgba(139,147,164,.16);color:#aab2c2}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px;border-bottom:1px solid var(--d-line)}td{padding:6px;border-bottom:1px solid #1b2030;vertical-align:top}
+td.num{text-align:right;font-variant-numeric:tabular-nums}tr.pt{cursor:pointer}tr.pt:hover td{background:#151924}
+.tpl{font:12px ui-monospace,Consolas,monospace;overflow-wrap:anywhere}
+.samp{background:#0b0d12;border:1px solid var(--d-line);border-radius:8px;padding:8px;font:12px ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
+.bar{display:flex;align-items:center;gap:8px;font-size:12.5px;margin:5px 0;cursor:pointer}.bar .lb{width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bar .tr{flex:1;height:8px;background:#1b2030;border-radius:4px;overflow:hidden}.bar .tr i{display:block;height:100%;background:var(--d-acc)}.bar .v{width:64px;text-align:right;color:var(--d-mute);font-variant-numeric:tabular-nums}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--d-mute);margin-top:6px}.legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+svg#vol{width:100%;height:220px;display:block}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){main{padding:12px 12px 40px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}table{display:block;overflow-x:auto}.top h1{font-size:20px}.row .inp{width:100%}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security Operations · Logs</div><h1>Log Monitor &amp; Analysis</h1><div class="sm mute">What {{org.short}}'s logs say, not only that they arrive: volume and rate by source, severity mix, and every message reduced to its pattern - with the patterns that are new, spiking or have stopped since the window before.</div></div><div class="sp"></div>
+ <a class="btn" href="soc-live.html"><i class="ti ti-activity"></i>Live stream</a><a class="btn" href="soc-sources.html"><i class="ti ti-database"></i>Log sources</a><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<section class="card"><div class="row">
+ <select class="inp" id="win" aria-label="Time window"><option value="1">Last hour</option><option value="6">Last 6 hours</option><option value="24" selected>Last 24 hours</option><option value="168">Last 7 days</option></select>
+ <input class="inp" id="q" style="flex:1;min-width:220px" placeholder='Filter in the query language, e.g. src_type:fortigate severity:>=2 -host:"test*"' aria-label="Filter">
+ <button class="btn pri" id="go" type="button"><i class="ti ti-filter"></i>Apply</button><button class="btn" id="clear" type="button" hidden>Clear filter</button>
+</div><div class="sm mute" id="info" style="margin-top:6px"></div></section>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <section class="card"><div class="kpis" id="kpis"></div></section>
+ <div class="tabs" id="tabs" role="tablist"></div>
+ <div id="view"></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var O=null, PT=null, TAB='overview', FIL='all', PQ='', OPEN='', Q='', HRS=24;
+  var COL=['#5b8def','#2fb344','#f59f00','#b39bff','#22b8cf','#5c6476'];
+  var SEVC={info:'#5c6476',low:'#22b8cf',medium:'#f59f00',high:'#ff7a2f',critical:'#e5484d'};
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc'+u);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('The SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function fmt(n){return Number(n||0).toLocaleString();}
+  function when(t){return t?new Date(t).toLocaleString():'—';}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function load(){var to=Date.now(),b={from:to-HRS*3600000,to:to};if(Q)b.q=Q;$('err').hidden=true;$('info').textContent='Reading the SIEM…';
+    Promise.all([req('POST','/logmon/overview',b),req('POST','/logmon/patterns',b)]).then(function(r){O=r[0];PT=r[1];$('main').hidden=false;$('clear').hidden=!Q;
+      $('info').textContent=when(O.from)+' → '+when(O.to)+(Q?' · filter: '+Q:'')+(PT.note?' · '+PT.note:'');draw();})
+    .catch(function(e){$('main').hidden=true;$('err').hidden=false;$('info').textContent='';
+      $('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>Log analysis is not available</h2>'+note(e.status===403?'Raw log lines hold personal data (sign-ins and logons of named people - PDPL), so log analysis is for analysts and above. Ask an administrator for the analyst role.':e.status===404?'Not installed on the SIEM yet - run the update (update-platform.ps1).':e.status===400?'The filter was not understood: '+e.message:e.message);});}
+  function draw(){var s=PT.summary;function k(n,l,sub,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div>'+(sub?'<div class="s">'+esc(sub)+'</div>':'')+'</div>';}
+    var hot=O.rate.median_per_min>0&&O.rate.last_per_min>=3*O.rate.median_per_min;
+    $('kpis').innerHTML=k(fmt(O.total),'events',HRS<=24?'in '+HRS+' h':'in 7 days')+k(O.rate.last_per_min+'/min','rate now','usual '+O.rate.median_per_min+'/min'+(O.rate.partial?' · last slot still filling':''),hot?'#ff9b5c':'')
+      +k(O.warn_share_pct+'%','medium or worse',fmt(O.severity.medium+O.severity.high+O.severity.critical)+' events',O.severity.critical?'#ff8a8e':'')+k(O.top.sources.length,'source types sending')
+      +k(s.new,'new patterns','not seen in the '+HRS+' h before',s.new?'#b39bff':'')+k(s.spike,'spiking patterns','3× or more',s.spike?'#ff9b5c':'')+k(s.dropped,'patterns stopped','10+ before, none now',s.dropped?'#ff8a8e':'');
+    var T=[['overview','chart-bar','Overview'],['patterns','list-search','Patterns ('+s.patterns+')'],['dropped','player-stop','Stopped ('+s.dropped+')']];
+    $('tabs').innerHTML=T.map(function(t){return '<button type="button" role="tab" data-tab="'+t[0]+'" aria-selected="'+(TAB===t[0])+'"><i class="ti ti-'+t[1]+'"></i>'+esc(t[2])+'</button>';}).join('');
+    if(!O.total){$('view').innerHTML='<section class="card">'+note(Q?'No event matches this filter in the window.':'No event reached the SIEM in this window. Point the devices\' syslog at the SIEM collector, or check Log sources for what is silent.')+'</section>';return;}
+    $('view').innerHTML=TAB==='overview'?overview():TAB==='patterns'?patterns():dropped();if(TAB==='overview')chart();}
+  function bars(list,field,label){var max=Math.max.apply(null,list.map(function(x){return x.n;}).concat([1]));
+    return '<section class="card"><h2>'+esc(label)+'</h2>'+(list.length?list.map(function(x){var v=field==='severity'?['info','low','medium','high','critical'][x.v]||x.v:x.v;return '<div class="bar" data-add="'+esc(field+':"'+String(x.v).replace(/"/g,'')+'"')+'" title="Filter on this"><span class="lb">'+esc(v)+'</span><span class="tr"><i style="width:'+Math.round(100*x.n/max)+'%"></i></span><span class="v">'+fmt(x.n)+'</span></div>';}).join(''):note('None in this window.'))+'</section>';}
+  function overview(){var sv=Object.keys(O.severity).map(function(k,i){return {v:i,n:O.severity[k]};}).filter(function(x){return x.n;});
+    return '<section class="card"><h2><i class="ti ti-chart-bar"></i>Volume over time <span class="c">stacked by the five busiest source types · one bar = '+Math.round(O.step_ms/60000)+' min</span></h2><svg id="vol" role="img" aria-label="Events over time by source type"></svg><div class="legend" id="leg"></div></section>'
+      +'<div class="grid2">'+bars(O.top.sources,'src_type','Source types')+bars(O.top.hosts,'host','Hosts')+bars(O.top.categories,'category','Categories')+bars(sv,'severity','Severity')+'</div>'
+      +'<div class="sm mute">Click a bar to filter on it. Silent sources (a device that stopped sending) are on the Log sources page.</div>';}
+  function chart(){var svg=$('vol');if(!svg)return;var n=O.buckets.length,W=1000,Hh=200,gap=2,bw=W/n-gap;
+    var other=O.buckets.map(function(b,i){return Math.max(0,b.n-O.series.reduce(function(s,x){return s+(x.buckets[i]||0);},0));});
+    var ser=O.series.concat(other.some(Boolean)?[{source:'other',buckets:other}]:[]),max=Math.max.apply(null,O.buckets.map(function(b){return b.n;}).concat([1]));
+    svg.setAttribute('viewBox','0 0 '+W+' '+(Hh+18));svg.setAttribute('preserveAspectRatio','none');var h='';
+    for(var i=0;i<n;i++){var y=Hh;ser.forEach(function(s,j){var v=s.buckets[i]||0;if(!v)return;var hh=Hh*v/max;y-=hh;h+='<rect x="'+(i*(bw+gap)).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hh.toFixed(1)+'" fill="'+COL[j%COL.length]+'"><title>'+esc(new Date(O.buckets[i].t).toLocaleString()+' · '+s.source+': '+fmt(v))+'</title></rect>';});}
+    h+='<text x="0" y="'+(Hh+14)+'" fill="#8b93a4" font-size="11">'+esc(new Date(O.from).toLocaleString())+'</text><text x="'+W+'" y="'+(Hh+14)+'" fill="#8b93a4" font-size="11" text-anchor="end">'+esc(new Date(O.to).toLocaleString())+'</text>';
+    svg.innerHTML=h;$('leg').innerHTML=ser.map(function(s,j){return '<span><b style="background:'+COL[j%COL.length]+'"></b>'+esc(s.source)+'</span>';}).join('')+'<span>peak '+fmt(max)+' per bar</span>';}
+  function hunt(p){return 'soc-hunt.html?q='+encodeURIComponent('src_type:"'+p.src_type+'"'+(Q?' AND ('+Q+')':''));}
+  function patterns(){var L=PT.patterns.filter(function(p){return (FIL==='all'||(FIL==='rare'?p.n===1:p.status===FIL))&&(!PQ||(p.template+' '+p.src_type).toLowerCase().indexOf(PQ)>=0);});
+    var h='<section class="card"><h2><i class="ti ti-list-search"></i>Log patterns <span class="c">each message reduced to its template (addresses, numbers and times masked), compared with the '+(HRS<=24?HRS+' h':'7 days')+' before</span></h2>'
+      +(PT.note?'<div class="note" style="margin-bottom:8px">'+esc(PT.note[0].toUpperCase()+PT.note.slice(1))+' - narrow the filter or the window to mine them all.</div>':'')
+      +'<div class="row" style="margin-bottom:8px">'+[['all','All'],['new','New'],['spike','Spiking'],['steady','Steady'],['rare','Seen once']].map(function(f){return '<button type="button" class="btn sm'+(FIL===f[0]?' pri':'')+'" data-fil="'+f[0]+'">'+esc(f[1])+'</button>';}).join('')
+      +'<input class="inp" id="pq" style="max-width:260px" placeholder="Find in patterns" aria-label="Find in patterns" value="'+esc(PQ)+'"></div>';
+    if(!L.length)return h+note('No pattern matches.')+'</section>';
+    h+='<table><thead><tr><th>Status</th><th>Source</th><th>Pattern</th><th style="text-align:right">Now</th><th style="text-align:right">Before</th><th style="text-align:right">Hosts</th><th>Worst</th><th>Last seen</th></tr></thead><tbody>';
+    L.slice(0,300).forEach(function(p){h+='<tr class="pt" data-p="'+esc(p.id)+'"><td>'+pill(p.status,'s-'+p.status)+'</td><td>'+esc(p.src_type)+'</td><td class="tpl">'+esc(p.template)+'</td><td class="num">'+fmt(p.n)+'</td><td class="num">'+fmt(p.before)+'</td><td class="num">'+fmt(p.hosts)+'</td><td>'+pill(p.severity,'v-'+p.severity)+'</td><td class="sm">'+esc(when(p.last))+'</td></tr>';
+      if(OPEN===p.id)h+='<tr><td colspan="8"><div class="sm mute">Latest line</div><div class="samp">'+esc(p.sample)+'</div><div class="sm">First '+esc(when(p.first))+' · hosts: '+esc(p.host_list.join(', ')+(p.hosts>p.host_list.length?' …':''))+'</div><div class="row" style="margin-top:6px"><a class="btn sm" href="'+esc(hunt(p))+'"><i class="ti ti-search"></i>Hunt this source</a></div></td></tr>';});
+    return h+'</tbody></table>'+(L.length>300?'<div class="sm mute">First 300 of '+L.length+' shown - narrow the filter.</div>':'')+'</section>';}
+  function dropped(){var D=PT.dropped;return '<section class="card"><h2><i class="ti ti-player-stop"></i>Patterns that stopped <span class="c">10 or more in the window before, none now - a device, service or job that went quiet, or a fixed problem</span></h2>'
+    +(D.length?'<table><thead><tr><th>Source</th><th>Pattern</th><th style="text-align:right">Before</th><th style="text-align:right">Hosts</th><th>Last seen</th></tr></thead><tbody>'+D.map(function(d){return '<tr><td>'+esc(d.src_type)+'</td><td class="tpl">'+esc(d.template)+'</td><td class="num">'+fmt(d.before)+'</td><td class="num">'+fmt(d.hosts)+'</td><td class="sm">'+esc(when(d.last))+'</td></tr>';}).join('')+'</tbody></table>':note('No pattern stopped.'))+'</section>';}
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-tab],[data-fil],[data-p],[data-add],button[id]');if(!el)return;
+    if(el.dataset.tab){TAB=el.dataset.tab;draw();return;}
+    if(el.dataset.fil){FIL=el.dataset.fil;draw();return;}
+    if(el.dataset.p){OPEN=OPEN===el.dataset.p?'':el.dataset.p;draw();return;}
+    if(el.dataset.add){Q=(Q?Q+' ':'')+el.dataset.add;$('q').value=Q;load();return;}
+    if(el.id==='go'){Q=$('q').value.trim();load();return;}
+    if(el.id==='clear'){Q='';$('q').value='';load();return;}
+    if(el.id==='refresh'){load();return;}});
+  document.addEventListener('change',function(ev){if(ev.target.id==='win'){HRS=Number(ev.target.value);load();}});
+  document.addEventListener('keydown',function(ev){if(ev.target.id==='q'&&ev.key==='Enter'){Q=ev.target.value.trim();load();}});
+  document.addEventListener('input',function(ev){if(ev.target.id==='pq'){PQ=ev.target.value.trim().toLowerCase();var c=ev.target.selectionStart;draw();var n=$('pq');if(n){n.focus();n.setSelectionRange(c,c);}}});
+  load();
+})();
+</script></body></html>

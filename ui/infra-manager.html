@@ -1,0 +1,203 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IT Infrastructure Manager</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-leader.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--info);border-radius:12px;padding:18px;margin:0 0 12px}
+.hero .txt{flex:1 1 380px;min-width:0}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--info);text-transform:uppercase}.hero h1{margin:6px 0;font-size:24px;color:var(--title)}.hero p{margin:0;color:var(--mute)}
+.live{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;border:1px solid rgba(63,185,80,.5);color:var(--ok);letter-spacing:.06em}.live[hidden]{display:none}
+.rings{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}.ring{width:120px;text-align:center}.ring svg{display:block;margin:0 auto}.ring .rl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-top:6px}.ring .rs{font-size:11px;color:var(--mute)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:24px;font-weight:700;color:var(--title)}.t .s{font-size:12px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.na .v{color:var(--mute);font-size:15px;font-weight:600}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{margin-left:auto;display:flex;gap:6px;align-items:center}
+button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 11px;cursor:pointer}button:hover{border-color:#4a5162}button.sm{padding:3px 9px;font-size:12px}
+button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}.tw{overflow-x:auto}
+.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.empty{color:var(--mute);padding:6px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}.err{color:var(--bad)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}
+.bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 56px;gap:8px;align-items:center;margin:5px 0;font-size:13px}.bar .tr{height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}.bar .fl{height:100%;border-radius:5px}.bar .n{text-align:right;font-variant-numeric:tabular-nums}
+.na{color:var(--mute);background:var(--raise);border:1px dashed var(--border);border-radius:9px;padding:10px;font-size:13px}
+.top{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin:0 0 8px}
+@media print{.top{display:none}body{background:#fff;color:#000}.card,.t,.hero{background:#fff;border-color:#ccc}}
+</style></head><body><main>
+<div class="top"><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<section class="hero"><div class="txt"><div class="eb">IT infrastructure manager<span class="live" id="live" hidden>LIVE DATA</span></div><h1>Infrastructure health, capacity and change</h1>
+<p>Servers, network, databases, storage and applications from the asset register and the platform's collectors — availability, backups, patches, end of life and what is waiting to change. A source that is not connected says so; nothing on this page is sample data.</p></div>
+<div class="rings" id="rings"></div></section>
+<div class="k" id="kk"><div class="empty">Loading…</div></div>
+<div id="zl-ai"></div>
+<section class="card" id="questions" style="margin:0 0 12px;border-left:3px solid var(--bad)"><h2>🚩 Critical problems &amp; questions to the teams <span class="c"><span class="muted" id="q-up"></span></span></h2>
+  <div class="k" id="q-teams" style="margin-bottom:8px"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"><button type="button" class="sm" data-qtab="iss" aria-pressed="true">Flagged problems</button><button type="button" class="sm" data-qtab="q" aria-pressed="false">Questions <span id="q-cnt"></span></button><label class="muted" style="font-size:12px"><input type="checkbox" id="q-high"> include high</label></div>
+  <div id="q-iss"><div class="empty">Loading…</div></div><div id="q-list" hidden></div>
+  <p class="note">Problems come from the DBA alert center, the AI Server Administrators (servers and Exchange) and the AI Network Engineer. Ask the team from the problem: they are mailed, acknowledge and answer here; you follow up or close. A critical problem's answer is due in 4 hours.</p></section>
+<div class="g">
+  <div class="card"><h2>🧩 Business applications <span class="c"><button type="button" class="sm" data-go="apm.html">Open →</button></span></h2><div id="apps"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🌐 Hosts &amp; devices offline <span class="c"><button type="button" class="sm" data-go="server-availability.html">Open →</button></span></h2><div id="off"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🛢️ Databases <span class="c"><button type="button" class="sm" data-go="databases.html">Open →</button></span></h2><div id="db"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>💾 Storage capacity <span class="c"><button type="button" class="sm" data-go="storage.html">Open →</button></span></h2><div id="sto"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🩹 Patches (Endpoint Central) <span class="c"><button type="button" class="sm" data-go="manageengine.html">Open →</button></span></h2><div id="pat"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>⏳ End of life <span class="c"><button type="button" class="sm" data-go="lifecycle.html">Open →</button></span></h2><div id="eol"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🗓️ Approved changes waiting to be applied <span class="c"><button type="button" class="sm" data-go="network-engineer.html">Open →</button></span></h2><div id="chg"><div class="empty">Loading…</div></div></div>
+  <div class="card" style="grid-column:1/-1"><h2>🔁 Business requests to the IT teams <span class="c"><button type="button" class="sm" data-go="workflow-automation.html#tab=queue">Team queue →</button> <button type="button" class="sm" data-go="workflow-automation.html">Open →</button></span></h2><div id="wf"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>📑 Support contracts &amp; warranty <span class="c"><button type="button" class="sm" data-go="support-contracts.html">Open →</button></span></h2><div id="ren"><div class="empty">Loading…</div></div></div>
+</div>
+<p class="note">Figures come from IT Asset Management (servers, devices, backups, Endpoint Central, end of life, storage, contracts) and the SIEM (Server Availability, Oracle collector, Applications Manager, change plans) — the same sources as the pages each card opens.</p>
+<dialog id="q-dlg" style="background:var(--panel);color:var(--text);border:1px solid var(--edge);border-radius:12px;padding:16px;width:min(560px,94vw)"><h3 id="q-dt" style="margin-top:0"></h3><div id="q-db"></div><p class="err" id="q-de"></p><div style="display:flex;gap:6px;justify-content:flex-end"><button type="button" id="q-dx">Cancel</button><button type="button" id="q-dok">Send</button></div></dialog>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  // every request is handled on the page (each card says why it has nothing): marked quiet for zyb-errors.js
+  function get(url){return new Promise(function(ok){var x=new XMLHttpRequest();x.zybQuiet=true;x.open('GET',url);x.withCredentials=true;x.timeout=60000;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }ok({status:x.status,json:j&&typeof j==='object'?j:null});};x.onerror=x.ontimeout=function(){ok({status:0,json:null});};x.send();});}
+  function why(r,what){return r.status===403?'needs a higher role to read '+what:r.status===404?what+' is not installed on the server':r.status===0?what+' did not answer':r.json&&r.json.error?String(r.json.error):!r.json?what+' did not answer with data (HTTP '+r.status+')':'';}
+  function na(t){return '<div class="na">'+esc(t)+'</div>';}
+  function n(v){return v==null||!isFinite(v)?null:Number(v);}
+  function pctTxt(v){return v==null?'–':(Math.round(v*10)/10)+'%';}
+  function cls(v,good,warn){return v==null?'na':v>=good?'ok':v>=warn?'warn':'bad';}
+  function col(c){return c==='ok'?'var(--ok)':c==='warn'?'var(--warn)':c==='bad'?'var(--bad)':'var(--mute)';}
+  function ring(v,label,sub){var c=cls(v,99,95),r=46,L=2*Math.PI*r,d=v==null?0:Math.max(0,Math.min(100,v))/100*L;
+    return '<div class="ring"><svg width="112" height="112" viewBox="0 0 112 112" role="img" aria-label="'+esc(label+': '+pctTxt(v))+'"><circle cx="56" cy="56" r="'+r+'" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>'
+      +(v==null?'':'<circle cx="56" cy="56" r="'+r+'" fill="none" stroke="'+col(c)+'" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+d.toFixed(1)+' '+L.toFixed(1)+'" transform="rotate(-90 56 56)"/>')
+      +'<text x="56" y="62" text-anchor="middle" font-size="'+(v==null?15:22)+'" font-weight="700" fill="'+(v==null?'#8C93A1':'#fff')+'">'+esc(v==null?'not measured':pctTxt(v))+'</text></svg><div class="rl">'+esc(label)+'</div><div class="rs">'+esc(sub||'')+'</div></div>';}
+  function tile(l,v,s,c,go){return '<button type="button" class="t '+(c||'')+'"'+(go?' data-go="'+esc(go)+'"':'')+'><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function bar(label,v,txt,c){return '<div class="bar"><span>'+esc(label)+'</span><span class="tr"><span class="fl" style="width:'+Math.max(0,Math.min(100,v||0))+'%;background:'+col(c)+'"></span></span><span class="n">'+esc(txt)+'</span></div>';}
+  function dt(t){try{var d=new Date(t);return isNaN(d)?'–':d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return '–';}}
+  function gb(b){return b==null?'–':b>=1e12?(b/1e12).toFixed(1)+' TB':Math.round(b/1e9)+' GB';}
+
+  function draw(R){
+    var itamOk=R.itam.status===200&&R.itam.json, O=itamOk?R.itam.json:{}, reg=O.register&&O.register.available?O.register:null, AV=R.avail.json&&R.avail.json.summary?R.avail.json:null, ORA=R.ora.json&&Array.isArray(R.ora.json.instances)?R.ora.json:null;
+    var APM=R.apmStatus.json&&R.apmStatus.json.configured&&R.apmMon.json&&Array.isArray(R.apmMon.json.items)?R.apmMon.json.items.filter(function(m){return m.managed!==false;}):null;
+    var itamWhy=itamOk?'':why(R.itam,'the IT Asset Management overview (install/add-infra-overview.sh)');
+    // rings: only what a source measured
+    var appUp=APM&&APM.length?APM.filter(function(m){return m.availability==='up';}).length:null, appPct=appUp==null?null:appUp/APM.length*100;
+    var avMon=AV?(AV.summary.online+AV.summary.offline):0, avPct=avMon?AV.summary.online/avMon*100:null;
+    var bk=O.backup&&O.backup.available?O.backup:null;
+    $('rings').innerHTML=ring(appPct,'Application availability',APM?(APM.length?appUp+' of '+APM.length+' monitors up':'no monitors'):'Applications Manager not connected')
+      +ring(avPct,'Host & device availability',AV?(avMon?AV.summary.online+' of '+avMon+' reachable':'nothing monitored yet'):'Server Availability not answering')
+      +ring(bk?n(bk.protected_pct):null,'Servers backed up',bk?bk.protected+' of '+(bk.assets-bk.exempt)+' protected':(O.backup?O.backup.why:itamWhy||'Backup Status not answering'));
+    $('live').hidden=!(reg||AV||ORA||APM);
+    // tiles
+    var off=AV?AV.summary.offline:null, dbRep=ORA?ORA.instances.length:null, dbIss=ORA?ORA.instances.filter(function(i){return (i.issues||[]).length||i.state==='down';}).length:null, pt=O.patch&&O.patch.available?O.patch:null, lc=O.lifecycle&&O.lifecycle.available?O.lifecycle:null;
+    $('kk').innerHTML=(reg?tile('Servers',reg.servers.total,reg.servers.physical+' physical · '+reg.servers.virtual+' virtual','','reconcile.html')+tile('Network devices',reg.network.total,'in the asset register'+(off!=null?' · '+off+' monitored offline':''),off?'warn':'','network-engineer.html')
+        :tile('Servers','–',itamWhy||'asset register not answering','na')+tile('Network devices','–',itamWhy||'asset register not answering','na'))
+      +tile('Database instances',dbRep==null?'–':dbRep,dbRep==null?why(R.ora,'the Oracle collector'):(dbIss+' with issues'+(O.databases&&O.databases.available?' · '+O.databases.registered+' registered':'')),dbRep==null?'na':dbIss?'warn':'ok','databases.html')
+      +tile('Backups OK',bk?pctTxt(n(bk.protected_pct)):'–',bk?bk.failed+' failed · '+bk.none+' with no backup':(O.backup?O.backup.why:itamWhy||'not answering'),bk?cls(n(bk.protected_pct),95,80):'na','backup.html')
+      +tile('Patch compliance',pt?pctTxt(n(pt.compliant_pct)):'–',pt?pt.compliant+' of '+pt.reported+' computers fully patched · '+pt.critical_missing+' missing critical':(O.patch?O.patch.why:itamWhy||'not answering'),pt?cls(n(pt.compliant_pct),90,75):'na','manageengine.html')
+      +tile('Legacy / EoL devices',lc?lc.eol:'–',lc?lc.soon+' reach end of support within a year':(O.lifecycle?O.lifecycle.why:itamWhy||'not answering'),lc?(lc.eol?'bad':'ok'):'na','lifecycle.html');
+    // applications
+    if(!APM)$('apps').innerHTML=na(R.apmStatus.json&&!R.apmStatus.json.configured?'Applications Manager is not connected - set it up under Connections & Setup (ManageEngine Applications Manager).':why(R.apmStatus,'Applications Manager')||'Applications Manager has not reported monitors yet.');
+    else if(!APM.length)$('apps').innerHTML=na('Applications Manager is connected but reports no managed monitors.');
+    else{var dn=APM.filter(function(m){return m.availability!=='up';});$('apps').innerHTML=(dn.length?'<div class="tw"><table><thead><tr><th>Monitor</th><th>Type</th><th>State</th></tr></thead><tbody>'+dn.slice(0,10).map(function(m){return '<tr><td><b>'+esc(m.name)+'</b><div class="muted">'+esc(m.host||'')+'</div></td><td class="muted">'+esc(m.type||'')+'</td><td><span class="pill '+(m.availability==='down'?'bad':'warn')+'">'+esc(m.availability)+'</span></td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">All '+APM.length+' monitors are up.</div>')+'<p class="note">'+appUp+' of '+APM.length+' Applications Manager monitors up at the last read.</p>';}
+    // offline hosts
+    if(!AV)$('off').innerHTML=na(why(R.avail,'Server Availability (SIEM)')||'Server Availability has not answered.');
+    else{var L=(R.avail.json.items||[]).filter(function(i){return i.status==='offline';});$('off').innerHTML=!avMon?na('No host or device is monitored yet - add them on Server Availability.'):L.length?'<div class="tw"><table><thead><tr><th>Name</th><th>Address</th><th>Offline for</th></tr></thead><tbody>'+L.slice(0,12).map(function(i){var h=i.duration_s==null?null:i.duration_s/3600;return '<tr><td><b>'+esc(i.name||i.ip)+'</b><div class="muted">'+esc(i.site||'')+'</div></td><td class="mono">'+esc(i.ip||'')+'</td><td>'+esc(h==null?'–':h<48?Math.round(h)+' h':Math.round(h/24)+' d')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">All '+avMon+' monitored hosts and devices are reachable.</div>';}
+    // databases
+    if(!ORA)$('db').innerHTML=na(why(R.ora,'the Oracle collector')||'No database reports yet.');
+    else if(!ORA.instances.length)$('db').innerHTML=na('No Oracle instance reports to the SIEM yet - connect databases on All Databases.');
+    else $('db').innerHTML='<div class="tw"><table><thead><tr><th>Instance</th><th>State</th><th>Issues</th></tr></thead><tbody>'+ORA.instances.slice(0,10).map(function(i){var st=i.state||(i.up?'up':'down'),is=(i.issues||[]);return '<tr><td><b>'+esc(i.instance)+'</b><div class="muted">'+esc(i.host||'')+'</div></td><td><span class="pill '+(st==='up'?'ok':st==='down'?'bad':'warn')+'">'+esc(i.stale?'no recent sample':st)+'</span></td><td class="muted">'+(is.length?esc(is.slice(0,2).map(function(x){return x.text;}).join('; '))+(is.length>2?' (+'+(is.length-2)+')':''):'none')+'</td></tr>';}).join('')+'</tbody></table></div>';
+    // storage
+    var so=O.storage;if(!so||!so.available)$('sto').innerHTML=na(so?so.why:itamWhy||'not answering');
+    else $('sto').innerHTML=so.list.map(function(a){var c=a.used_pct==null?'na':a.used_pct>=90?'bad':a.used_pct>=80?'warn':'ok';return bar(a.name,a.used_pct,a.used_pct==null?'–':a.used_pct+'%',c);}).join('')+'<p class="note">'+esc(gb(so.used_bytes)+' of '+gb(so.size_bytes)+' used across '+so.read+' array(s)')+(so.failed_disks?' · <span class="err">'+so.failed_disks+' failed disk(s)</span>':'')+'. A forecast needs capacity history; the current reading is shown.</p>';
+    // patches
+    if(!pt)$('pat').innerHTML=na(O.patch?O.patch.why:itamWhy||'not answering');
+    else $('pat').innerHTML=bar('Fully patched',pt.compliant_pct,pctTxt(n(pt.compliant_pct)),cls(n(pt.compliant_pct),90,75))+(pt.worst.length?'<div class="tw" style="margin-top:8px"><table><thead><tr><th>Computer</th><th>Missing</th><th>Critical</th></tr></thead><tbody>'+pt.worst.map(function(w){return '<tr><td><b>'+esc(w.name)+'</b></td><td>'+esc(w.missing)+'</td><td>'+(w.critical?'<span class="pill bad">'+esc(w.critical)+'</span>':'0')+'</td></tr>';}).join('')+'</tbody></table></div>':'')+'<p class="note">'+esc(pt.reported+' of '+pt.computers+' computers reported a patch status to Endpoint Central.')+'</p>';
+    // end of life
+    if(!lc)$('eol').innerHTML=na(O.lifecycle?O.lifecycle.why:itamWhy||'not answering');
+    else $('eol').innerHTML=lc.items.length?'<div class="tw"><table><thead><tr><th>Device</th><th>Product</th><th>End of support</th></tr></thead><tbody>'+lc.items.map(function(i){return '<tr><td><b>'+esc(i.name)+'</b><div class="muted">'+esc(i.type)+'</div></td><td class="muted">'+esc(i.product||'')+'</td><td><span class="pill '+(i.status==='eol'?'bad':'warn')+'">'+esc(i.status==='eol'?'past':i.days!=null?'in '+i.days+' d':'soon')+'</span> '+esc(i.eol?dt(i.eol):'')+'</td></tr>';}).join('')+'</tbody></table></div>'+(lc.isolation_required?'<p class="note err">'+esc(lc.isolation_required+' device(s) past end of life need isolation or an approved exception.')+'</p>':''):'<div class="empty">Nothing past or near end of support.</div>';
+    // changes approved, not applied
+    var ch=[];[['network',R.chN],['server',R.chS]].forEach(function(p){var it=p[1].json&&Array.isArray(p[1].json.items)?p[1].json.items:[];it.filter(function(c){return c.status==='approved';}).forEach(function(c){ch.push({area:p[0],c:c});});});
+    ch.sort(function(a,b){return (b.c.decided_at||0)-(a.c.decided_at||0);});
+    var chFail=[R.chN,R.chS].filter(function(r){return !(r.json&&Array.isArray(r.json.items));}).length===2;
+    $('chg').innerHTML=chFail?na(why(R.chN,'change plans (SIEM)')||'Change plans did not answer.'):ch.length?'<div class="tw"><table><thead><tr><th>Approved</th><th>Area</th><th>Change</th></tr></thead><tbody>'+ch.slice(0,10).map(function(x){return '<tr><td class="muted">'+esc(dt(x.c.decided_at))+'<div>'+esc(x.c.decided_by||'')+'</div></td><td><span class="pill">'+esc(x.area)+'</span></td><td><b>'+esc(x.c.title||x.c.id)+'</b><div class="muted mono">'+esc(x.c.id)+' · '+esc(x.c.device||'')+'</div></td></tr>';}).join('')+'</tbody></table></div><p class="note">Approved by a person and not yet applied. A change plan carries no scheduled time; the approver and the engineer agree the window.</p>':'<div class="empty">No approved change is waiting to be applied.</div>';
+    // contracts + warranty
+    var co=O.contracts, h='';
+    if(!co||!co.available)h+=na(co?co.why:itamWhy||'not answering');
+    else h+=(co.renewing.length?'<div class="tw"><table><thead><tr><th>Contract</th><th>Ends</th></tr></thead><tbody>'+co.renewing.map(function(c){return '<tr><td><b>'+esc(c.vendor)+'</b> '+esc(c.product||'')+'</td><td><span class="pill '+(c.state==='expired'?'bad':'warn')+'">'+esc(c.state==='expired'?'expired':'in '+c.days_left+' d')+'</span> '+esc(dt(c.end))+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No contract expired or expiring.</div>')+(co.uncovered_assets?'<p class="note">'+esc(co.uncovered_assets+' asset(s) in scope are not covered by any contract.')+'</p>':'');
+    if(reg&&(reg.warranty.expired||reg.warranty.within_90d))h+='<p class="note">Hardware warranty: '+esc(reg.warranty.expired+' expired, '+reg.warranty.within_90d+' ending within 90 days')+' ('+reg.warranty.items.slice(0,4).map(function(i){return esc(i.name);}).join(', ')+(reg.warranty.items.length>4?'…':'')+').</p>';
+    $('ren').innerHTML=h;
+    try{drawWf(R.wf);}catch(e){$('wf').innerHTML=na('Workflow Automation could not be drawn: '+(e&&e.message||e));}
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  // Workflow Automation (GET /api/itam/workflow/attention): what the CISO office, risk, audit, HR, GRC, governance and the DPO asked
+  // the IT teams for - each team's open / overdue / on time, and the requests that need the Head of IT, ranked with their points
+  function drawWf(r){if(!r.json||!r.json.summary){$('wf').innerHTML=na(why(r,'Workflow Automation')||'Workflow Automation did not answer');return;}
+    var w=r.json.summary,P=(r.json.priorities||[]).map(function(p){return {p:p,pts:p.why.reduce(function(n,q){return n+q[1];},0)};}).sort(function(a,b){return b.pts-a.pts;});
+    var t=function(v,l,c){return '<div style="min-width:120px"><div style="font-size:22px;font-weight:700'+(c?';color:var(--'+c+')':'')+'">'+esc(String(v))+'</div><div class="muted" style="font-size:11.5px">'+esc(l)+'</div></div>';};
+    var h='<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">'+t(w.all_overdue,'overdue across the IT teams',w.all_overdue?'bad':'')+t(w.approvals,'waiting for your approval',w.approvals?'warn':'')+t(w.queue_open,'open in your team queue')+t(w.overdue,'overdue in your queue',w.overdue?'bad':'')+t(w.at_risk,'likely to miss the SLA',w.at_risk?'warn':'')+t(w.to_accept,'results for you to accept')+'</div>';
+    h+=w.teams.length?'<div class="tw"><table><thead><tr><th>Team</th><th>Open</th><th>Overdue</th><th>On time</th></tr></thead><tbody>'+w.teams.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+esc(x.open)+'</td><td>'+(x.overdue?'<span class="pill bad">'+esc(x.overdue)+'</span>':'0')+'</td><td>'+(x.n?esc(x.on_time+' of '+x.n)+' <span class="muted">('+Math.round(x.rate*100)+' %)</span>':'<span class="muted">no history</span>')+'</td></tr>';}).join('')+'</tbody></table></div>':na('No request has reached an IT team yet.');
+    h+=P.length?'<div style="margin-top:10px">'+P.slice(0,8).map(function(x){return '<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span class="pill">'+esc(x.pts)+'</span><div><a href="'+esc(x.p.page)+'" style="color:var(--info)">'+esc(x.p.ref)+'</a> '+esc(x.p.text)+'<div class="muted" style="font-size:12px">'+esc(x.p.kind)+'</div></div></div>';}).join('')+'</div>':'';
+    if(w.recurring)h+='<div class="muted" style="font-size:12px;margin-top:8px">'+esc(w.recurring)+' request type(s) keep coming back - schedule them under Workflow Automation → Automation &amp; insights.</div>';
+    $('wf').innerHTML=h;}
+  var busy=false;
+  function load(){if(busy)return;busy=true;
+    var Q={itam:'/api/itam/infra-overview',avail:'/api/soc/netops/avail',ora:'/api/soc/db/oracle',apmStatus:'/api/soc/integrations/apm/status',apmMon:'/api/soc/integrations/apm/monitors',chN:'/api/soc/netops/changes',chS:'/api/soc/sysadmin/changes',wf:'/api/itam/workflow/attention'},K=Object.keys(Q);
+    Promise.all(K.map(function(k){return get(Q[k]);})).then(function(rs){busy=false;var R={};K.forEach(function(k,i){R[k]=rs[i];});
+      try{draw(R);}catch(e){$('kk').innerHTML=na('The page could not be drawn: '+(e&&e.message||e));}});}
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)location.href=b.getAttribute('data-go');});
+  $('refresh').addEventListener('click',load);
+  load();setInterval(function(){if(!document.hidden)load();},120000);
+})();
+</script>
+<script>
+/* Questions to the teams (SIEM engine/ops/questions.js): flagged problems by team, ask from a problem, the team's answers, follow-up, close */
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(i){return document.getElementById(i);},ME={user:'',role:'viewer'},I=null,V=null,DLG=null,TAB='iss';
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},can=function(r){return (RANK[ME.role]||0)>=RANK[r];};
+  function call(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.zybQuiet=true;x.open(m,'/api/soc'+u);x.withCredentials=true;x.timeout=60000;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){/* not JSON: reported below */}if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||'HTTP '+x.status),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the SIEM did not answer'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function dialog(t,html,fn){$('q-dt').textContent=t;$('q-db').innerHTML=html;$('q-de').textContent='';DLG=fn;$('q-dlg').showModal();var f=$('q-db').querySelector('textarea');if(f)f.focus();}
+  $('q-dx').addEventListener('click',function(){$('q-dlg').close();});
+  $('q-dok').addEventListener('click',function(){if(DLG)DLG(function(m){$('q-de').textContent=m;},function(){$('q-dlg').close();});});
+  var SEV=function(s){return '<span class="pill '+(s==='critical'?'bad':'warn')+'">'+esc(s==='critical'?'Critical':'High')+'</span>';};
+  var ST={open:['Waiting','warn'],acknowledged:['Acknowledged','info'],answered:['Answered','ok'],reopened:['Follow-up','warn'],closed:['Closed','']};
+  var stp=function(s){var x=ST[s]||[s,''];return '<span class="pill '+x[1]+'">'+esc(x[0])+'</span>';};
+  var when=function(t){return t?new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'–';};
+  var hrs=function(ms){var h=ms/36e5;return h<1?Math.round(h*60)+' min':Math.round(h*10)/10+' h';};
+  function drawTeams(){var T=V?V.teams:[];$('q-teams').innerHTML=I.by_team.map(function(t){var q=T.find(function(x){return x.id===t.team;})||{};
+    return '<button type="button" class="t '+(t.critical?'bad':t.high?'warn':'ok')+'" data-qteam="'+esc(t.team)+'"><div class="l">'+esc(t.label)+'</div><div class="v">'+t.critical+'</div><div class="s">critical · '+t.high+' high · '+(q.open||0)+' question(s) open'+(q.overdue?' · '+q.overdue+' overdue':'')+(q.median_h!=null?' · answers in ~'+q.median_h+' h':'')+'</div></button>';}).join('');}
+  function drawIssues(){var hi=$('q-high').checked,L=I.items.filter(function(x){return hi||x.severity==='critical';});
+    $('q-iss').innerHTML=(I.missing.length?'<div class="na" style="margin-bottom:6px">Not read: '+I.missing.map(function(m){return esc(m.team+' ('+m.why+')');}).join(' · ')+'</div>':'')
+      +(L.length?'<table><thead><tr><th>Severity</th><th>Team</th><th>Asset</th><th>Problem</th><th>Since</th><th>Question</th></tr></thead><tbody>'+L.map(function(x){
+        return '<tr><td>'+SEV(x.severity)+'</td><td>'+esc(I.by_team.find(function(t){return t.team===x.team;}).label)+'</td><td class="mono">'+esc(x.asset||'')+'</td><td>'+esc(x.title||'')+(x.detail?'<div class="muted" style="font-size:12px">'+esc(x.detail)+'</div>':'')+'</td><td class="muted">'+(x.since?when(x.since):'–')+'</td><td>'
+          +(x.question?'<button type="button" class="sm" data-qopen="'+esc(x.question.id)+'">'+esc(x.question.id)+'</button> '+stp(x.question.status):can('operator')?'<button type="button" class="sm" data-qask="'+esc(x.ref)+'">Ask '+esc(x.team==='dba'?'the DBA':'the team')+'</button>':'<span class="muted">–</span>')+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No '+(hi?'critical or high':'critical')+' problem is flagged right now.</div>');}
+  function qCard(q){var mine=q.asked_by.toLowerCase()===ME.user.toLowerCase(),acts=[];
+    if(q.status!=='closed'){if(!mine&&can('operator')){if(q.status==='open'||q.status==='reopened')acts.push('<button type="button" class="sm" data-qack="'+esc(q.id)+'">Acknowledge</button>');acts.push('<button type="button" class="sm" data-qans="'+esc(q.id)+'">Answer</button>');}
+      if(mine||ME.role==='admin'){acts.push('<button type="button" class="sm" data-qfu="'+esc(q.id)+'">Follow up</button>','<button type="button" class="sm" data-qclose="'+esc(q.id)+'">Close</button>');}}
+    return '<div class="card" style="margin:6px 0;padding:10px" id="q-'+esc(q.id)+'"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b class="mono">'+esc(q.id)+'</b>'+stp(q.status)+SEV(q.severity==='critical'?'critical':'high')+'<span>'+esc(q.team_label)+'</span>'+(q.issue?'<span class="muted">· '+esc(q.issue.title)+' on <span class="mono">'+esc(q.issue.asset)+'</span></span>':'')
+      +'<span style="flex:1"></span>'+(q.overdue?'<span class="pill bad">overdue '+hrs(Date.now()-q.due_at)+'</span>':q.status!=='closed'&&!q.answered_at?'<span class="muted">due '+when(q.due_at)+'</span>':'')+(q.risk&&q.risk.p!=null&&!q.overdue?' <span class="pill '+(q.risk.p>=0.5?'bad':'')+'" title="'+esc(q.risk.why)+'">breach risk '+Math.round(q.risk.p*100)+'%</span>':'')+'</div>'
+      +q.thread.map(function(m){return '<div style="margin:6px 0 0 8px;font-size:13px"><span class="muted">'+esc(when(m.at))+' · <b>'+esc(m.by)+'</b> '+esc({question:'asked',answer:'answered',follow_up:'followed up',acknowledged:'acknowledged',closed:'closed'}[m.kind]||m.kind)+'</span>'+(m.text?'<div style="white-space:pre-wrap">'+esc(m.text)+'</div>':'')+'</div>';}).join('')
+      +(q.asked_before&&q.status!=='closed'&&!q.answered_at?'<div class="na" style="margin-top:6px"><b>Asked before</b> ('+esc(q.asked_before.id)+(q.asked_before.same_asset?', same asset':'')+'): '+esc(q.asked_before.question)+'<br><b>'+esc(q.asked_before.by||'')+'</b> answered: '+esc(q.asked_before.answer)+'</div>':'')
+      +(q.notify&&q.notify.sent===false?'<div class="note">Mail not sent: '+esc(q.notify.why)+'</div>':'')
+      +(acts.length?'<div style="display:flex;gap:6px;margin-top:8px">'+acts.join('')+'</div>':'')+'</div>';}
+  function drawList(){$('q-cnt').textContent=V.kpis.open?'('+V.kpis.open+')':'';$('q-list').innerHTML=V.items.length?V.items.map(qCard).join(''):'<div class="empty">No question yet. Ask from a flagged problem.</div>';}
+  function show(t){TAB=t;document.querySelectorAll('[data-qtab]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-qtab')===t));});$('q-iss').hidden=t!=='iss';$('q-list').hidden=t!=='q';}
+  function load(){return Promise.all([call('GET','/ops/issues'),call('GET','/ops/questions?status=all')]).then(function(r){I=r[0];V=r[1];drawTeams();drawIssues();drawList();$('q-up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});},
+    function(e){$('q-iss').innerHTML='<div class="na">'+esc(e.status===404?'Questions to the teams are not installed on the SIEM yet - run the update.':e.status===0?'The SIEM did not answer.':e.message)+'</div>';$('q-teams').innerHTML='';});}
+  function text(t,label,fn,min){dialog(t,'<label class="muted" style="font-size:12px">'+esc(label)+'<textarea id="q-tx" rows="5" maxlength="4000" style="width:100%;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px"></textarea></label>',function(err,done){var v=$('q-tx').value.trim();if(v.length<(min||3))return err('Write at least '+(min||3)+' characters.');fn(v).then(function(){done();load();},function(e){err(e.message);});});}
+  document.addEventListener('click',function(ev){var b=ev.target.closest&&ev.target.closest('button');if(!b||!I)return;var a;
+    if((a=b.getAttribute('data-qtab'))){show(a);return;}
+    if((a=b.getAttribute('data-qteam'))){$('q-high').checked=true;drawIssues();show('iss');return;}
+    if((a=b.getAttribute('data-qopen'))){show('q');var el=$('q-'+a);if(el)el.scrollIntoView({block:'center'});return;}
+    if((a=b.getAttribute('data-qask'))){var x=I.items.find(function(y){return y.ref===a;});var team=I.by_team.find(function(t){return t.team===x.team;}).label;
+      dialog('Ask '+team,'<div class="na" style="margin-bottom:8px">'+SEV(x.severity)+' <b>'+esc(x.title)+'</b> on <span class="mono">'+esc(x.asset)+'</span>'+(x.detail?'<br>'+esc(x.detail):'')+'</div><label class="muted" style="font-size:12px">Your question<textarea id="q-tx" rows="4" maxlength="3000" style="width:100%;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px">What is the cause, what is the impact on the business, and when will it be fixed?</textarea></label><label class="muted" style="font-size:12px">Mail the answer to me at (optional)<input id="q-rt" type="email" maxlength="200" style="width:100%;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px"></label>',
+        function(err,done){var q=$('q-tx').value.trim();if(q.length<10)return err('Write the question (at least 10 characters).');call('POST','/ops/questions',{team:x.team,ref:x.ref,question:q,reply_to:$('q-rt').value.trim()||undefined}).then(function(r){done();load().then(function(){show('q');});void r;},function(e){err(e.message);});});return;}
+    if((a=b.getAttribute('data-qack'))){b.disabled=true;call('POST','/ops/questions/'+a+'/ack',{}).then(load,function(e){b.disabled=false;$('q-up').textContent=e.message;});return;}
+    if((a=b.getAttribute('data-qans'))){var id=a;text('Answer '+id,'Your answer (cause, impact, fix and when)',function(v){return call('POST','/ops/questions/'+id+'/answer',{text:v});});return;}
+    if((a=b.getAttribute('data-qfu'))){var id2=a;text('Follow up on '+id2,'Your follow-up question',function(v){return call('POST','/ops/questions/'+id2+'/follow-up',{text:v});});return;}
+    if((a=b.getAttribute('data-qclose'))){var id3=a;text('Close '+id3,'Closing note',function(v){return call('POST','/ops/questions/'+id3+'/close',{note:v});},0);return;}});
+  $('q-high').addEventListener('change',function(){if(I)drawIssues();});
+  var w=new XMLHttpRequest();w.zybQuiet=true;w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);ME.user=String(j.user||'');ME.role=String(j.role||'viewer').toLowerCase();}catch(e){/* no identity: read-only */}load();};w.onerror=function(){load();};w.send();
+  if((location.hash||'')==='#questions')setTimeout(function(){show('q');$('questions').scrollIntoView();},300);
+  setInterval(function(){if(!document.hidden&&!$('q-dlg').open)load();},120000);
+})();
+</script>
+<script>(function(){ /* the ✦ AI / ML section (vendor/zyb-leader.js) */ var m=window.zybLeader&&window.zybLeader.mount(document.getElementById('zl-ai'),'infra'); var b=document.getElementById('refresh'); if(b&&m)b.addEventListener('click',function(){m.reload();}); })();</script>
+</body></html>

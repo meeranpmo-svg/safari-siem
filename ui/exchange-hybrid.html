@@ -1,0 +1,140 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exchange Hybrid Migration</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:24px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}button.sm{padding:3px 9px;font-size:12px}button:disabled{opacity:.55;cursor:default}
+select,input,textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.note{color:var(--mute);font-size:12px;margin-top:8px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;align-items:end;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:12px;margin:10px 0}.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.banner{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.3);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--info);margin:0 0 12px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}.step{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px;font-size:12.5px}.step b{display:block;color:var(--title);margin-bottom:3px}
+pre{white-space:pre-wrap;font-size:12px;background:#0b0c10;border:1px solid var(--edge);border-radius:8px;padding:10px;max-height:340px;overflow:auto}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+@media print{.top button,button{display:none!important}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Identity & Microsoft 365 · Exchange</div><h1>Exchange Hybrid Migration</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <button type="button" id="set" hidden>⚙️ Settings</button><button type="button" class="pri" id="refresh" hidden>⟳ Read the Exchange organisation now</button></div>
+<div class="banner">On-premises Exchange to Exchange Online in <b>hybrid</b> mode. The checks below are read from your Exchange servers with the AI Exchange Server Administrator's read-only login. Nothing here changes Exchange or Microsoft 365: for each migration wave the page writes the CSV and the Exchange Online PowerShell, your Exchange admin runs it, and records the outcome here.</div>
+<div class="k" id="kk"></div>
+<div class="card"><h2>The migration, step by step</h2><div class="steps">
+  <div class="step"><b>1. Prepare</b>Supported Exchange update, public certificate, EWS published with MRS Proxy, Entra Connect synchronising.</div>
+  <div class="step"><b>2. Hybrid Configuration Wizard</b>Creates the routing domain, connectors, organization relationship and OAuth. Then move one test mailbox both ways.</div>
+  <div class="step"><b>3. Pilot wave</b>IT staff first. Check Outlook, mobile, calendar sharing and mail flow both ways.</div>
+  <div class="step"><b>4. Waves</b>Department by department: copy in the background, switch users over in the window.</div>
+  <div class="step"><b>5. Cut-over</b>When every mailbox is in the cloud: MX and Autodiscover to Exchange Online, update SPF.</div>
+  <div class="step"><b>6. After</b>Keep one Exchange server (or the Exchange Management Tools) to manage the users from Active Directory; retire the rest.</div>
+</div></div>
+<div class="card"><h2>Readiness <span class="c" id="rc"></span></h2><div class="tw" id="ready"><div class="empty">Loading…</div></div>
+  <p class="note">Read from the servers. A check that could not be read says so and is never counted as ready.</p></div>
+<div class="g2">
+  <div class="card"><h2>Steps people confirm <span class="c">the platform cannot see these</span></h2><div id="manual"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>Public DNS for the cut-over <span class="c">from Domains, DNS &amp; Hosting</span></h2><div id="dns"><div class="empty">Loading…</div></div></div>
+</div>
+<div class="g2">
+  <div class="card"><h2>Mailboxes <span class="c" id="invat"></span></h2><div id="inv"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>Largest mailboxes <span class="c">names people · operators</span></h2><div id="large"><p class="muted">Mailboxes over the size you choose take longer to move and need an Exchange Online plan that fits them (100 GB primary on most plans). <button type="button" class="sm" id="lg" hidden>Read mailboxes ≥ 40 GB</button></p></div></div>
+</div>
+<div class="card"><h2>Migration waves <span class="c" id="wc"></span> <button type="button" class="sm" id="neww" hidden>➕ New wave</button></h2>
+  <div id="wform" hidden class="form"><label>Name (becomes the batch name)<input id="w-n" placeholder="Wave 1 - IT pilot"></label><label>Planned date<input id="w-d" type="date"></label>
+    <label style="grid-column:1/-1">Mailboxes (one e-mail address per line, or separated by commas)<textarea id="w-m" rows="5"></textarea></label><label style="grid-column:1/-1">Notes<input id="w-o"></label><button type="button" class="pri" id="w-go">Save wave</button></div>
+  <div class="tw" id="waves"><div class="empty">Loading…</div></div>
+  <p class="note">Statuses: planned → syncing (copying in the background) → synced (ready to switch over) → completing → completed. A failed wave needs a note saying what failed. Every change is audited.</p></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, EXT=null, editId=null;
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  function req(base,m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,base+p);x.withCredentials=true;x.timeout=300000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  var soc=function(m,p,b){return req('/api/soc',m,p,b);};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function dt(t){return t?new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'never';}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  var ST={ok:['ready','ok'],warn:['attention','warn'],bad:['not ready','bad'],unknown:['not read','']};
+  var VERD={ready:['Ready','ok'],ready_with_warnings:['Ready, with warnings','warn'],not_ready:['Not ready','bad'],incomplete:['Not fully read','info']};
+  var WS={planned:'',syncing:'info',synced:'info',completing:'warn',completed:'ok',failed:'bad'};
+
+  function draw(){
+    var R=V.readiness, I=V.inventory, ws=V.waves_summary, vd=VERD[R.verdict]||['—',''];
+    var total=I?(I.on_premises+I.in_cloud):0, pct=total?Math.round(I.in_cloud/total*100):null;
+    $('kk').innerHTML=tile('Readiness',vd[0],(R.counts.ok||0)+' of '+R.items.length+' checks ready',vd[1])
+      +tile('Exchange servers',V.servers,V.servers_with_login+' with a login',V.servers_with_login?'info':'warn')
+      +tile('On-premises mailboxes',I?I.on_premises:'—',I?'to move':'not read yet','info')
+      +tile('Already in Exchange Online',I?I.in_cloud:'—',pct==null?'':pct+' % of all mailboxes',pct==null?'':pct>=100?'ok':'info')
+      +tile('Waves',ws.waves,ws.planned_mailboxes+' mailboxes planned','info')+tile('Moved in waves',ws.completed_mailboxes,'mailboxes completed',ws.completed_mailboxes?'ok':'');
+    $('up').textContent='Read from Exchange: '+dt(V.data_at);
+    $('refresh').hidden=!can('operator');$('set').hidden=!can('admin');$('neww').hidden=!can('operator');$('lg').hidden=!can('operator');
+    $('rc').textContent=(R.counts.bad||0)+' not ready · '+(R.counts.warn||0)+' attention · '+(R.counts.unknown||0)+' not read';
+    $('ready').innerHTML='<table><thead><tr><th>Status</th><th>Check</th><th>What the servers say</th><th>What to do</th></tr></thead><tbody>'+R.items.map(function(i){var s=ST[i.status]||[i.status,''];
+      return '<tr><td><span class="pill '+s[1]+'">'+esc(s[0])+'</span></td><td><b>'+esc(i.title)+'</b></td><td class="muted" style="font-size:12.5px">'+esc(i.detail)+'</td><td style="font-size:12.5px">'+esc(i.fix||'—')+'</td></tr>';}).join('')+'</tbody></table>'
+      +(V.servers_with_login?'':'<p class="err" style="font-size:12.5px">No Exchange server has a login yet: add one on the <a href="exchange-admin.html">AI Exchange Server Administrator</a> (read-only account in the View-Only Organization Management role group).</p>');
+    $('manual').innerHTML=V.manual.map(function(m){return '<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)"><input type="checkbox" data-man="'+esc(m.id)+'" aria-label="'+esc(m.title)+'"'+(m.done?' checked':'')+(can('operator')?'':' disabled')+'><div style="flex:1"><div>'+esc(m.title)+'</div>'
+      +(m.by?'<div class="muted" style="font-size:11.5px">'+(m.done?'confirmed':'cleared')+' by '+esc(m.by)+' · '+esc(dt(m.at))+(m.note?' — '+esc(m.note):'')+'</div>':'')+'</div></div>';}).join('');
+    if(!I)$('inv').innerHTML='<div class="empty">Not read yet. The mailbox count is read with the other checks (no names).</div>';
+    else{$('invat').textContent='read '+dt(I.at);
+      $('inv').innerHTML='<table><thead><tr><th>On-premises, by database</th><th>Mailboxes</th></tr></thead><tbody>'+I.by_database.map(function(d){return '<tr><td>'+esc(d.database)+'</td><td>'+d.count+'</td></tr>';}).join('')+'</tbody></table>'
+        +'<table style="margin-top:8px"><thead><tr><th>Type</th><th>On-premises</th></tr></thead><tbody>'+I.by_type.map(function(d){return '<tr><td>'+esc(d.type)+'</td><td>'+d.count+'</td></tr>';}).join('')+'</tbody></table>'
+        +'<p class="note">'+I.with_archive+' on-premises mailbox(es) have an archive (it moves with the mailbox). In Exchange Online: '+I.in_cloud+(I.in_cloud_by_type.length?' ('+I.in_cloud_by_type.map(function(x){return x.count+' '+esc(x.type);}).join(', ')+')':'')+'.</p>';}
+    drawWaves();drawDns();
+  }
+  function drawWaves(){var W=V.waves;$('wc').textContent=W.length?'('+W.length+')':'';
+    $('waves').innerHTML=W.length?'<table><thead><tr><th>Wave</th><th>Planned</th><th>Mailboxes</th><th>Status</th><th>Last change</th><th></th></tr></thead><tbody>'+W.map(function(w){var h=(w.history||[]).slice(-1)[0]||{};
+      return '<tr><td><b>'+esc(w.name)+'</b>'+(w.notes?'<div class="muted" style="font-size:11.5px">'+esc(w.notes)+'</div>':'')+'</td><td class="mono">'+esc(w.planned||'—')+'</td><td>'+w.count+'</td><td><span class="pill '+(WS[w.status]||'')+'">'+esc(w.status)+'</span></td><td class="muted" style="font-size:11.5px">'+esc(dt(h.at))+' · '+esc(h.by||'')+' — '+esc(h.what||'')+'</td>'
+        +'<td style="white-space:nowrap">'+(can('operator')?'<button type="button" class="sm" data-cmd="'+esc(w.id)+'">Commands</button> <select data-st="'+esc(w.id)+'" aria-label="Set status"><option value="">Set status…</option>'+V.flow.filter(function(s){return s!==w.status;}).map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('')+'</select> <button type="button" class="sm" data-edit="'+esc(w.id)+'">Edit</button>':'')+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No wave yet.'+(can('operator')?' Start with a pilot wave of IT staff: <b>➕ New wave</b>.':'')+'</div>';}
+  function drawDns(){
+    if(!EXT){$('dns').innerHTML='<div class="empty">Reading the Domains register…</div>';return;}
+    if(EXT.error){$('dns').innerHTML='<p class="muted">'+esc(EXT.error)+'</p>';return;}
+    var D=EXT.domains||[];if(!D.length){$('dns').innerHTML='<p class="muted">No domain in <a href="domains.html">Domains, DNS &amp; Hosting</a> yet - add the mail domains to see MX and SPF here.</p>';return;}
+    $('dns').innerHTML='<table><thead><tr><th>Domain</th><th>MX today</th><th>SPF includes Exchange Online</th></tr></thead><tbody>'+D.map(function(d){var r=(d.check&&d.check.records)||{},mx=(r.MX||[]).map(function(m){return m.exchange||m;}),spf=(r.SPF||[]).join(' ');
+      var cloud=mx.some(function(m){return /mail\.protection\.outlook\.com$/i.test(m);});
+      return '<tr><td><b>'+esc(d.name)+'</b></td><td class="mono" style="font-size:11.5px">'+esc(mx.join(', ')||'—')+' '+(mx.length?(cloud?'<span class="pill ok">Exchange Online</span>':'<span class="pill">on-premises / gateway</span>'):'')+'</td><td>'+(!r.SPF?'<span class="muted">not checked</span>':/spf\.protection\.outlook\.com/i.test(spf)?'<span class="pill ok">yes</span>':'<span class="pill warn">no</span>')+'</td></tr>';}).join('')+'</tbody></table>'
+      +'<p class="note">Leave MX and Autodiscover pointing at the on-premises servers (or the mail gateway) during the waves; move them to Exchange Online at the cut-over, and add <span class="mono">include:spf.protection.outlook.com</span> to SPF before the first wave so mail from moved mailboxes is not rejected.</p>';}
+
+  function waveForm(w){editId=w?w.id:null;$('wform').hidden=false;$('w-n').value=w?w.name:'';$('w-d').value=w&&w.planned||'';$('w-m').value=w&&w.mailboxes?w.mailboxes.join('\n'):'';$('w-o').value=w&&w.notes||'';$('w-n').focus();}
+  function openCmd(id){soc('GET','/sysadmin/hybrid/waves/'+encodeURIComponent(id)+'/commands').then(function(r){
+    Z.open('Wave commands',r.wave+' · '+r.mailboxes+' mailbox(es)',Z.sec('1. The CSV ('+esc(r.csv_name)+')','<button type="button" class="sm" id="dl-csv">⬇ Download CSV</button>')
+      +Z.sec('2. Exchange Online PowerShell (review, then run)','<button type="button" class="sm" id="cp-ps">Copy</button><pre id="ps-txt">'+esc(r.powershell)+'</pre>')
+      +'<p class="note">The platform does not run these. Record the outcome with Set status.</p>');
+    $('dl-csv').addEventListener('click',function(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r.csv],{type:'text/csv'}));a.download=r.csv_name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);});
+    $('cp-ps').addEventListener('click',function(){try{navigator.clipboard.writeText(r.powershell).then(function(){toast('Copied');});}catch(e){toast('Select the text and copy it');}});
+  }).catch(function(e){toast(e.message);});}
+  function setForm(){var S=V.settings;Z.open('Settings','Microsoft 365 tenant and migration endpoint','<div class="form" style="grid-template-columns:1fr"><label>Tenant name (before .onmicrosoft.com)<input id="s-t" value="'+esc(S.tenant)+'" placeholder="sentra"></label><label>Migration endpoint name in Exchange Online<input id="s-e" value="'+esc(S.endpoint)+'"></label><label>Notification e-mail for batch reports (optional)<input id="s-n" value="'+esc(S.notify)+'"></label><button type="button" class="pri" id="s-go">Save</button></div><p class="note">The Hybrid Configuration Wizard creates the endpoint; its name is in Exchange admin center → Migration → Endpoints.</p>');
+    $('s-go').addEventListener('click',function(){soc('PUT','/sysadmin/hybrid/settings',{tenant:$('s-t').value.trim(),endpoint:$('s-e').value.trim(),notify:$('s-n').value.trim()}).then(function(){toast('Saved');Z.close();load();}).catch(function(e){toast(e.message);});});}
+  function large(){var b=$('lg');b.disabled=true;b.textContent='Reading…';
+    soc('GET','/sysadmin/targets?role=exchange').then(function(t){var s=(t.items||[])[0];if(!s)throw new Error('no Exchange server yet - add one on the AI Exchange Server Administrator');
+      return soc('POST','/sysadmin/targets/'+encodeURIComponent(s.id)+'/check',{check:'ex_large_mailboxes',params:{min_gb:40}});}).then(function(r){var L=[].concat(r.data||[]);
+      $('large').innerHTML=L.length?'<table><thead><tr><th>Mailbox</th><th>Size</th><th>Items</th><th>Database</th></tr></thead><tbody>'+L.map(function(m){return '<tr><td>'+esc(m.name)+'</td><td'+(m.size_gb>=100?' style="color:var(--bad);font-weight:700"':m.size_gb>=50?' style="color:var(--warn)"':'')+'>'+esc(m.size_gb)+' GB</td><td>'+esc(m.items)+'</td><td>'+esc(m.database)+'</td></tr>';}).join('')+'</tbody></table><p class="note">Over 100 GB: archive or clean up before the move (Exchange Online primary mailbox limit on most plans). Put large mailboxes in their own wave with more time.</p>':'<p class="muted">No mailbox of 40 GB or more.</p>';
+    }).catch(function(e){b.disabled=false;b.textContent='Read mailboxes ≥ 40 GB';toast(e.message);});}
+
+  function load(){soc('GET','/sysadmin/hybrid').then(function(v){V=v;draw();}).catch(function(e){$('ready').innerHTML='<p class="err">'+esc(e.status===404?'The SIEM on the server does not have the hybrid migration workspace yet - run the update.':e.message)+'</p>';});
+    req('/api/itam','GET','/domains').then(function(d){EXT=d;if(V)drawDns();}).catch(function(e){EXT={error:e.status===404?'Domains, DNS & Hosting is not installed - MX / SPF cannot be shown.':'Domains register not reachable ('+e.message+').'};if(V)drawDns();});}
+
+  document.addEventListener('change',function(e){var t=e.target,id;
+    if((id=t.getAttribute('data-man'))){var note=t.checked?(prompt('Note (optional): who confirmed it, version, ticket…')||''):'';soc('POST','/sysadmin/hybrid/manual/'+encodeURIComponent(id),{done:t.checked,note:note}).then(function(r){V.manual=r.manual;draw();}).catch(function(er){toast(er.message);t.checked=!t.checked;});return;}
+    if((id=t.getAttribute('data-st'))&&t.value){var st=t.value,n=st==='failed'?prompt('What failed?'):'';if(st==='failed'&&!n){t.value='';return;}soc('POST','/sysadmin/hybrid/waves/'+encodeURIComponent(id)+'/status',{status:st,note:n||''}).then(function(){toast('Wave: '+st);load();}).catch(function(er){toast(er.message);t.value='';});}
+  });
+  document.addEventListener('click',function(e){var t=e.target,x;
+    if((x=t.closest('[data-cmd]'))){openCmd(x.getAttribute('data-cmd'));return;}
+    if((x=t.closest('[data-edit]'))){waveForm(V.waves.filter(function(w){return w.id===x.getAttribute('data-edit');})[0]);return;}
+    if(t.id==='neww'){waveForm(null);return;}
+    if(t.id==='w-go'){var b={name:$('w-n').value.trim(),planned:$('w-d').value,mailboxes:$('w-m').value,notes:$('w-o').value.trim()};if(editId)b.id=editId;
+      soc('POST','/sysadmin/hybrid/waves',b).then(function(w){toast('Saved '+w.name+' ('+w.mailboxes.length+' mailboxes)');$('wform').hidden=true;load();}).catch(function(er){toast(er.message);});return;}
+    if(t.id==='set'){setForm();return;}
+    if(t.id==='lg'){large();return;}
+    if(t.id==='refresh'){t.disabled=true;t.textContent='Reading…';soc('POST','/sysadmin/hybrid/refresh',{}).then(function(v){V=v;draw();toast('Read from Exchange.');}).catch(function(er){toast(er.message);}).then(function(){t.disabled=false;t.textContent='⟳ Read the Exchange organisation now';});}
+  });
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+})();
+</script></body></html>

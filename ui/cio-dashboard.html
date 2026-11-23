@@ -1,0 +1,142 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CIO Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-leader.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--info);border-radius:12px;padding:18px;margin:0 0 12px}
+.hero .txt{flex:1 1 380px;min-width:0}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--info);text-transform:uppercase}.hero h1{margin:6px 0;font-size:24px;color:var(--title)}.hero p{margin:0;color:var(--mute)}
+.live{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;border:1px solid rgba(63,185,80,.5);color:var(--ok);letter-spacing:.06em}.live[hidden]{display:none}
+.rings{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}.ring{width:120px;text-align:center}.ring svg{display:block;margin:0 auto}.ring .rl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-top:6px}.ring .rs{font-size:11px;color:var(--mute)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:24px;font-weight:700;color:var(--title)}.t .s{font-size:12px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.na .v{color:var(--mute);font-size:15px;font-weight:600}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{margin-left:auto;display:flex;gap:6px;align-items:center}
+button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 11px;cursor:pointer}button:hover{border-color:#4a5162}button.sm{padding:3px 9px;font-size:12px}
+button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}.tw{overflow-x:auto}
+.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.empty{color:var(--mute);padding:6px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}.err{color:var(--bad)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}
+.bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 56px;gap:8px;align-items:center;margin:5px 0;font-size:13px}.bar .tr{height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}.bar .fl{height:100%;border-radius:5px}.bar .n{text-align:right;font-variant-numeric:tabular-nums}
+.na{color:var(--mute);background:var(--raise);border:1px dashed var(--border);border-radius:9px;padding:10px;font-size:13px}
+.top{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin:0 0 8px}
+@media print{.top{display:none}body{background:#fff;color:#000}.card,.t,.hero{background:#fff;border-color:#ccc}}
+</style></head><body><main>
+<div class="top"><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<section class="hero"><div class="txt"><div class="eb">CIO dashboard<span class="live" id="live" hidden>LIVE DATA</span></div><h1>IT performance, spend and delivery for the business</h1>
+<p>Business service availability, the IT budget built from the asset register, renewals, licences, security posture and compliance, decisions waiting for a person and the AI engineering team. A source that is not connected says so; nothing on this page is sample data.</p></div>
+<div class="rings" id="rings"></div></section>
+<div id="zl-ai"></div>
+<div class="k" id="kk"><div class="empty">Loading…</div></div>
+<div class="g">
+  <div class="card"><h2>💰 IT budget <span class="c"><button type="button" class="sm" data-go="budget.html">Open →</button></span></h2><div id="bud"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🧭 Security posture &amp; compliance <span class="c"><button type="button" class="sm" data-go="ai-ciso.html">Open →</button></span></h2><div id="pos"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🧩 Business services <span class="c"><button type="button" class="sm" data-go="apm.html">Open →</button></span></h2><div id="apps"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>✋ Waiting for a decision <span class="c"><button type="button" class="sm" data-go="ai-ciso.html">Open →</button></span></h2><div id="dec"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🔁 Business requests to IT <span class="c"><button type="button" class="sm" data-go="workflow-automation.html">Open →</button></span></h2><div id="wf"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>📑 Renewals &amp; licences <span class="c"><button type="button" class="sm" data-go="support-contracts.html">Open →</button></span></h2><div id="ren"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🤖 AI engineering team <span class="c"><button type="button" class="sm" data-go="ai-team.html">Open →</button></span></h2><div id="team"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🎯 Detection &amp; response <span class="c"><button type="button" class="sm" data-go="soc-response.html">Open →</button></span></h2><div id="soc"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🗒️ Latest board brief <span class="c"><button type="button" class="sm" data-go="ai-ciso.html">Open →</button></span></h2><div id="brief"><div class="empty">Loading…</div></div></div>
+</div>
+<p class="note">Figures come from IT Asset Management (budget, support contracts, licences, the AI CISO overview of posture, risks, decisions and the AI engineers) and the SIEM (Applications Manager, SOC metrics through the AI CISO overview). Strategic programmes are not tracked in the platform, so none are shown.</p>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  // every request is handled on the page (each card says why it has nothing): marked quiet for zyb-errors.js
+  function get(url){return new Promise(function(ok){var x=new XMLHttpRequest();x.zybQuiet=true;x.open('GET',url);x.withCredentials=true;x.timeout=60000;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }ok({status:x.status,json:j&&typeof j==='object'?j:null});};x.onerror=x.ontimeout=function(){ok({status:0,json:null});};x.send();});}
+  function okj(r){return r.status===200&&r.json?r.json:null;}
+  function why(r,what){return r.status===403?'needs a higher role to read '+what:r.status===404?what+' is not installed on the server':r.status===0?what+' did not answer':r.json&&r.json.error?String(r.json.error):!r.json?what+' did not answer with data (HTTP '+r.status+')':'';}
+  function na(t){return '<div class="na">'+esc(t)+'</div>';}
+  // Workflow Automation (GET /api/itam/workflow/attention): how the IT teams answer what the CISO office, risk, audit, HR, GRC,
+  // governance and the DPO ask of them - overdue across the teams, each team's on-time record, and what needs the CIO, ranked
+  function drawWf(r){if(!r.json||!r.json.summary){$('wf').innerHTML=na(why(r,'Workflow Automation')||'Workflow Automation did not answer');return;}
+    var w=r.json.summary,P=(r.json.priorities||[]).map(function(p){return {p:p,pts:p.why.reduce(function(n,q){return n+q[1];},0)};}).sort(function(a,b){return b.pts-a.pts;});
+    var done=w.teams.reduce(function(n,x){return n+x.n;},0),ont=w.teams.reduce(function(n,x){return n+x.on_time;},0);
+    var t=function(v,l,c){return '<div style="min-width:110px"><div style="font-size:22px;font-weight:700'+(c?';color:var(--'+c+')':'')+'">'+esc(String(v))+'</div><div class="muted" style="font-size:11.5px">'+esc(l)+'</div></div>';};
+    var h='<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px">'+t(w.all_overdue,'overdue across the IT teams',w.all_overdue?'bad':'ok')+t(done?Math.round(ont/done*100)+' %':'—','fulfilled on time'+(done?' ('+ont+' of '+done+')':' - no history yet'))+t(w.approvals,'waiting for your approval',w.approvals?'warn':'')+t(w.raised_late,'your requests late',w.raised_late?'bad':'')+'</div>';
+    var T=w.teams.filter(function(x){return x.open||x.overdue;}).sort(function(a,b){return b.overdue-a.overdue||b.open-a.open;});
+    h+=T.length?'<div class="tw"><table><thead><tr><th>Team</th><th>Open</th><th>Overdue</th><th>On time</th></tr></thead><tbody>'+T.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+esc(x.open)+'</td><td>'+(x.overdue?'<span class="pill bad">'+esc(x.overdue)+'</span>':'0')+'</td><td>'+(x.n?esc(x.on_time+' of '+x.n):'<span class="muted">no history</span>')+'</td></tr>';}).join('')+'</tbody></table></div>':na('No request is open with an IT team.');
+    h+=P.length?'<div style="margin-top:8px">'+P.slice(0,5).map(function(x){return '<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span class="pill">'+esc(x.pts)+'</span><div><a href="'+esc(x.p.page)+'" style="color:var(--info)">'+esc(x.p.ref)+'</a> '+esc(x.p.text)+'</div></div>';}).join('')+'</div>':'';
+    $('wf').innerHTML=h;}
+  function pctTxt(v){return v==null?'–':(Math.round(v*10)/10)+'%';}
+  function cls(v,good,warn){return v==null?'na':v>=good?'ok':v>=warn?'warn':'bad';}
+  function col(c){return c==='ok'?'var(--ok)':c==='warn'?'var(--warn)':c==='bad'?'var(--bad)':'var(--mute)';}
+  function ring(v,label,sub,good,warn,unit){var c=cls(v,good,warn),r=46,L=2*Math.PI*r,d=v==null?0:Math.max(0,Math.min(100,v))/100*L,t=v==null?'not measured':unit==='/100'?String(v):pctTxt(v);
+    return '<div class="ring"><svg width="112" height="112" viewBox="0 0 112 112" role="img" aria-label="'+esc(label+': '+t)+'"><circle cx="56" cy="56" r="'+r+'" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>'
+      +(v==null?'':'<circle cx="56" cy="56" r="'+r+'" fill="none" stroke="'+col(c)+'" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+d.toFixed(1)+' '+L.toFixed(1)+'" transform="rotate(-90 56 56)"/>')
+      +'<text x="56" y="62" text-anchor="middle" font-size="'+(v==null?15:22)+'" font-weight="700" fill="'+(v==null?'#8C93A1':'#fff')+'">'+esc(t)+'</text></svg><div class="rl">'+esc(label)+'</div><div class="rs">'+esc(sub||'')+'</div></div>';}
+  function tile(l,v,s,c,go){return '<button type="button" class="t '+(c||'')+'"'+(go?' data-go="'+esc(go)+'"':'')+'><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function bar(label,v,txt,c){return '<div class="bar"><span>'+esc(label)+'</span><span class="tr"><span class="fl" style="width:'+Math.max(0,Math.min(100,v||0))+'%;background:'+col(c)+'"></span></span><span class="n">'+esc(txt)+'</span></div>';}
+  function money(v,cur){if(v==null||!isFinite(v))return '–';var a=Math.abs(v);return (cur||'SAR')+' '+(a>=1e6?(v/1e6).toFixed(1)+'M':a>=1e3?Math.round(v/1e3)+'k':Math.round(v));}
+  function dt(t){try{var d=new Date(t);return isNaN(d)?'–':d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return '–';}}
+  function dur(s){return s==null?'–':s<3600?Math.round(s/60)+' min':s<172800?(s/3600).toFixed(1)+' h':Math.round(s/86400)+' d';}
+
+  function draw(R){
+    var B=okj(R.budget), C=okj(R.ciso), SC=okj(R.contracts), LI=okj(R.licences);
+    var APM=R.apmStatus.json&&R.apmStatus.json.configured&&R.apmMon.json&&Array.isArray(R.apmMon.json.items)?R.apmMon.json.items.filter(function(m){return m.managed!==false;}):null;
+    var appUp=APM&&APM.length?APM.filter(function(m){return m.availability==='up';}).length:null, appPct=appUp==null?null:appUp/APM.length*100;
+    var P=C&&C.posture?C.posture:null, sama=C&&C.compliance&&C.compliance.sama?C.compliance.sama:null;
+    $('rings').innerHTML=ring(appPct,'Business services available',APM?(APM.length?appUp+' of '+APM.length+' monitors up':'no monitors'):'Applications Manager not connected',99,95)
+      +ring(sama?sama.coverage_pct:null,'SAMA CSF coverage',sama?'controls with evidence':(C?'SAMA compliance not reported by the SIEM':why(R.ciso,'the AI CISO overview')),85,70)
+      +ring(P?P.overall:null,'Security posture',P?(P.overall==null?P.withheld_why:P.grade+' · '+P.measured+' of '+P.of+' domains'):why(R.ciso,'the AI CISO overview'),85,70,'/100');
+    $('live').hidden=!(B||C||SC||APM);
+    // tiles
+    var cur=B&&B.currency||'SAR', S=B&&B.summary, pv=B&&B.previous, risks=C?(C.risks||[]):null, crit=risks?risks.filter(function(r){return r.severity==='critical';}).length:null, high=risks?risks.filter(function(r){return r.severity==='high';}).length:null;
+    var ren=SC&&SC.summary?SC.summary:null, lic=LI&&Array.isArray(LI.licences)?LI.licences:null, under=lic?lic.filter(function(l){return l.compliance==='under';}):null, unusedSeats=under?under.reduce(function(n,l){return n+Math.max(0,Number(l.seats||0)-Number(l.used||0));},0):null;
+    var unusedVal=under?under.reduce(function(n,l){var s=Number(l.seats||0),c=Number(l.cost||0);return n+(s>0&&c>0?Math.max(0,s-Number(l.used||0))*c/s:0);},0):0;
+    $('kk').innerHTML=tile('IT budget '+(B?B.fy:''),B?money(S.envelope_total,cur):'–',B?money(S.total,cur)+' proposed from the register · '+S.unpriced+' lines need a price':why(R.budget,'the IT budget'),B?(S.total>S.envelope_total?'warn':''):'na','budget.html')
+      +tile('Last year spent',pv&&pv.approved?pctTxt(pv.spent/pv.approved*100):'–',pv?money(pv.spent,cur)+' of '+money(pv.approved,cur)+' approved (FY '+pv.fy+')':'import last year\'s budget on IT Budget',pv&&pv.approved?'':'na','budget.html')
+      +tile('Renewals ≤ 90 days',ren?(ren.renewal_cost_90d!=null?money(ren.renewal_cost_90d,cur):ren.expiring):'–',ren?ren.expiring+' contract(s) expiring · '+ren.expired+' expired':why(R.contracts,'support contracts'),ren?(ren.expired?'bad':ren.expiring?'warn':'ok'):'na','support-contracts.html')
+      +tile('Unused licence seats',lic?unusedSeats:'–',lic?(under.length+' licence(s) under-used'+(unusedVal?' · about '+money(unusedVal,cur)+' a year':'')):why(R.licences,'licences'),lic?'':'na','licence-audit.html')
+      +tile('Critical risks',crit==null?'–':crit,crit==null?why(R.ciso,'the AI CISO overview'):high+' high · from real records only',crit==null?'na':crit?'bad':'ok','ai-ciso.html')
+      +tile('Waiting for a decision',C?(C.decisions||[]).length:'–',C?'approvals, sign-offs, policy reviews':why(R.ciso,'the AI CISO overview'),C?((C.decisions||[]).length?'warn':'ok'):'na','ai-ciso.html');
+    // budget
+    if(!B)$('bud').innerHTML=na(why(R.budget,'the IT budget'));
+    else $('bud').innerHTML=(B.envelopes||[]).map(function(e){var p=e.envelope?e.proposed/e.envelope*100:null;return bar(e.name,p,money(e.proposed,cur)+' / '+money(e.envelope,cur),p==null?'na':p>100?'bad':p>90?'warn':'ok')+'<div class="muted" style="font-size:12px;margin:-2px 0 8px">CAPEX '+esc(money(e.capex,cur))+' · OPEX '+esc(money(e.opex,cur))+(e.unpriced?' · '+esc(e.unpriced)+' line(s) need a price':'')+(e.over?' · <span class="err">'+esc(e.over)+' line(s) do not fit</span>':'')+'</div>';}).join('')
+      +'<p class="note">FY '+esc(B.fy)+' proposal generated from the register (renewals, warranty, end of life, storage, carry-over, manual lines). Decisions stay with an administrator on IT Budget.</p>';
+    // posture
+    if(!P)$('pos').innerHTML=na(why(R.ciso,'the AI CISO overview'));
+    else $('pos').innerHTML=P.domains.map(function(d){return bar(d.name,d.score,d.measured?d.score+'/100':'not measured',d.measured?cls(d.score,85,70):'na');}).join('')+(sama?'<p class="note">SAMA CSF: '+esc(sama.coverage_pct)+'% of controls covered by evidence.</p>':'')+(P.overall==null?'<p class="note">'+esc('Overall score withheld: '+P.withheld_why+'.')+'</p>':'');
+    // apps
+    if(!APM)$('apps').innerHTML=na(R.apmStatus.json&&R.apmStatus.json.configured===false?'Applications Manager is not connected - set it up under Connections & Setup.':why(R.apmStatus,'Applications Manager')||'Applications Manager has not reported monitors yet.');
+    else if(!APM.length)$('apps').innerHTML=na('Applications Manager is connected but reports no managed monitors.');
+    else $('apps').innerHTML=APM.slice().sort(function(a,b){return (a.availability==='up')-(b.availability==='up');}).slice(0,10).map(function(m){return '<div class="bar" style="grid-template-columns:1fr auto"><span><b>'+esc(m.name)+'</b> <span class="muted">'+esc(m.type||'')+'</span></span><span class="pill '+(m.availability==='up'?'ok':'bad')+'">'+esc(m.availability)+'</span></div>';}).join('');
+    // decisions
+    if(!C)$('dec').innerHTML=na(why(R.ciso,'the AI CISO overview'));
+    else{var D=C.decisions||[];$('dec').innerHTML=D.length?'<div class="tw"><table><thead><tr><th>What</th><th>Who decides</th></tr></thead><tbody>'+D.slice(0,8).map(function(d){return '<tr><td><b>'+esc(d.title)+'</b><div class="muted">'+esc(d.from||d.kind||'')+'</div></td><td class="muted">'+esc(d.who||'')+'</td></tr>';}).join('')+'</tbody></table></div>'+(D.length>8?'<p class="note">'+esc((D.length-8)+' more on AI CISO.')+'</p>':''):'<div class="empty">Nothing is waiting for a decision.</div>';}
+    // renewals + licences
+    var h='';
+    if(!SC)h+=na(why(R.contracts,'support contracts'));
+    else{var rc=(SC.contracts||[]).filter(function(c){return c.state==='expired'||c.state==='expiring';});h+=rc.length?'<div class="tw"><table><thead><tr><th>Contract</th><th>Ends</th></tr></thead><tbody>'+rc.slice(0,6).map(function(c){return '<tr><td><b>'+esc(c.vendor)+'</b> '+esc(c.product||'')+'</td><td><span class="pill '+(c.state==='expired'?'bad':'warn')+'">'+esc(c.state==='expired'?'expired':'in '+c.days_left+' d')+'</span> '+esc(dt(c.end))+(c.cost!=null?' · '+esc(money(c.cost,cur)):'')+'</td></tr>';}).join('')+'</tbody></table></div>':(SC.contracts||[]).length?'<div class="empty">No contract expired or expiring.</div>':na('No support contract recorded - add them on Support Contracts.');}
+    if(lic&&under.length)h+='<p class="note">Under-used licences: '+under.slice(0,5).map(function(l){return esc((l.product||l.name||'licence')+' ('+(Number(l.seats||0)-Number(l.used||0))+' unused)');}).join(', ')+(under.length>5?'…':'')+'.</p>';
+    $('ren').innerHTML=h;
+    // team
+    if(!C)$('team').innerHTML=na(why(R.ciso,'the AI CISO overview'));
+    else{var T=(C.team||[]).filter(function(t){return t.state==='live';}),down=(C.team||[]).filter(function(t){return t.state!=='live';});
+      $('team').innerHTML=(T.length?'<div class="tw"><table><thead><tr><th>Engineer</th><th>Open</th><th>Critical</th><th>Resolved 24 h</th></tr></thead><tbody>'+T.map(function(t){return '<tr><td><b>'+esc(t.name)+'</b>'+(t.late?' <span class="pill warn">patrol late</span>':'')+'</td><td>'+esc(t.open)+'</td><td>'+(t.critical?'<span class="pill bad">'+esc(t.critical)+'</span>':'0')+'</td><td>'+esc(t.resolved_24h==null?'–':t.resolved_24h)+'</td></tr>';}).join('')+'</tbody></table></div>':na('No AI engineer reported.'))+(down.length?'<p class="note">'+esc(down.map(function(d){return d.engine+' engine: '+(d.state==='not_connected'?'not connected':d.state);}).join(' · '))+'</p>':'');}
+    // soc
+    var M=C&&C.soc;
+    if(!C)$('soc').innerHTML=na(why(R.ciso,'the AI CISO overview'));
+    else if(!M)$('soc').innerHTML=na('SOC metrics are not reported - the SIEM link is not answering.');
+    else $('soc').innerHTML='<div class="k" style="margin:0">'+tile('Mean time to detect',dur(M.mttd_s),'from first event to case',M.mttd_s==null?'na':'')+tile('Mean time to resolve',dur(M.mttr_s),'case opened to closed',M.mttr_s==null?'na':'')+tile('SLA met (resolve)',M.sla?pctTxt(M.sla.resolve_compliance_pct):'–',M.sla?M.sla.breaching_now+' breaching now':'no SLA reported',M.sla?cls(M.sla.resolve_compliance_pct,95,85):'na')+'</div>';
+    // brief
+    var lb=C&&C.last_brief;$('brief').innerHTML=!C?na(why(R.ciso,'the AI CISO overview')):lb?'<p><b>'+esc(lb.headline)+'</b></p><p class="note">'+esc(dt(lb.at)+' · '+(lb.kind==='rules'?'rule-based brief (no AI configured or AI unavailable)':'written by the AI from the platform records, every claim cited'))+'</p>':na('No board brief yet - write one on AI CISO (also written every working morning).');
+    try{drawWf(R.wf);}catch(e){$('wf').innerHTML=na('Workflow Automation could not be drawn: '+(e&&e.message||e));}
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  var busy=false;
+  function load(){if(busy)return;busy=true;
+    var Q={budget:'/api/itam/budget',ciso:'/api/itam/ciso/overview',contracts:'/api/itam/support-contracts',licences:'/api/itam/licences',apmStatus:'/api/soc/integrations/apm/status',apmMon:'/api/soc/integrations/apm/monitors',wf:'/api/itam/workflow/attention'},K=Object.keys(Q);
+    Promise.all(K.map(function(k){return get(Q[k]);})).then(function(rs){busy=false;var R={};K.forEach(function(k,i){R[k]=rs[i];});
+      try{draw(R);}catch(e){$('kk').innerHTML=na('The page could not be drawn: '+(e&&e.message||e));}});}
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)location.href=b.getAttribute('data-go');});
+  $('refresh').addEventListener('click',load);
+  load();setInterval(function(){if(!document.hidden)load();},120000);
+})();
+</script>
+<script>(function(){ /* the ✦ AI / ML section (vendor/zyb-leader.js) */ var m=window.zybLeader&&window.zybLeader.mount(document.getElementById('zl-ai'),'cio'); var b=document.getElementById('refresh'); if(b&&m)b.addEventListener('click',function(){m.reload();}); })();</script>
+</body></html>

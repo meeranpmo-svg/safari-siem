@@ -1,0 +1,104 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Applications Manager</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+.lv{font-weight:700;border-radius:6px;padding:1px 7px;font-size:11.5px}.lv.crit{background:rgba(255,123,114,.18);color:var(--bad)}.lv.warn{background:rgba(210,153,34,.18);color:#d29922}
+.fil{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.fil input[type=search]{width:100%;max-width:300px}
+.k .t.on{outline:2px solid var(--accent,#5794f2)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Applications · ManageEngine integration</div><h1>Applications Manager</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="sync">⟳ Read now</button></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="in" class="on">🧠 Insights</button><button type="button" role="tab" data-tab="mo">📡 Monitors</button><button type="button" role="tab" data-tab="al">🚨 Alarms</button><button type="button" role="tab" data-tab="rq">✅ Approvals</button><button type="button" role="tab" data-tab="cv">🔍 Coverage</button><button type="button" role="tab" data-tab="st">⚙ Connection</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div id="tab-in"></div>
+<div id="tab-mo" hidden>
+ <div class="card"><h2>Monitors <span class="c" id="mc"></span></h2>
+  <div class="fil"><input type="search" id="q" placeholder="Search monitor, host, type, id…"><select id="ty"><option value="">All types</option></select><select id="hl"><option value="">Any health</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="clear">Clear</option></select><select id="av"><option value="">Up and down</option><option value="down">Down only</option><option value="up">Up only</option></select><label><input type="checkbox" id="um"> unmanaged only</label><label><input type="checkbox" id="db"> databases only</label></div>
+  <div class="tw" id="mon"></div></div>
+</div>
+<div id="tab-al" hidden><div class="card"><h2>Open alarms <span class="c" id="alc"></span></h2><div class="fil"><select id="as"><option value="">All severities</option><option value="critical">Critical</option><option value="warning">Warning</option></select><label><input type="checkbox" id="adb"> databases only</label></div><div class="tw" id="alm"></div></div></div>
+<div id="tab-rq" hidden><div class="card"><h2>Waiting for approval &amp; history <span class="c" id="rqc"></span></h2><div class="tw" id="act"></div>
+ <p class="note"><b>Poll now</b> runs at once. <b>Maintenance</b> (Unmanage) and <b>Resume</b> (Manage) are requests: a different person - an administrator, or the approver for that area (database monitors: the DBA approver; others: infrastructure) - decides, then the SIEM sends it to Applications Manager with the stored key. The requester never approves their own request, and an AI or service identity never approves.</p></div></div>
+<div id="tab-cv" hidden><div class="card"><h2>Coverage: Applications Manager vs the Database Dashboard</h2><div id="cov"></div><p class="note">Matched by database name / host text - a lead to verify, not proof.</p></div></div>
+<div id="tab-st" hidden><div class="card"><h2>Connection</h2><div id="set"><p class="muted">Administrators set the connection.</p></div></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,Z=window.zybDetail,esc=S.esc,$=function(i){return document.getElementById(i);};
+  var ST=null,MONS=[],ALS=[],ACTS=[],VIEW=[],TILE='';
+  S.tabs(['in','mo','al','rq','cv','st']);
+  var can=function(){return S.can('operator');};
+  function lv(l){return '<span class="lv '+(l==='critical'?'crit':l==='warning'?'warn':'')+'">'+(l==='critical'?'CRITICAL':esc(l||'—'))+'</span>';}
+  function ask(title,fields,cb){Z.open(title,'',fields.map(function(f){return '<label class="small" style="display:block;margin:6px 0">'+esc(f[1])+'<br><input id="'+f[0]+'" '+(f[2]||'')+' style="width:100%"></label>';}).join('')+'<p><button type="button" id="ask-ok">OK</button></p>');setTimeout(function(){var b=$('ask-ok');if(b)b.onclick=function(){var v={};fields.forEach(function(f){v[f[0]]=$(f[0]).value;});cb(v);};},50);}
+  function post(path,b,msg,after){return S.req('POST',path,b).then(function(r){S.toast(msg);(after||load)();return r;}).catch(function(e){S.toast(e.message);});}
+
+  function tiles(){var st=ST;
+    if(!st.configured){$('kp').innerHTML='<div class="card" style="grid-column:1/-1"><p><b>Applications Manager is not connected.</b> An administrator sets its address and a REST API key on the Connection tab (Applications Manager → Settings → REST API). The key is stored sealed on the SIEM and never shown again.</p></div>';return;}
+    var t=function(id,label,v,sub,cls){return S.tile(label,v,sub,(cls||'')+(TILE===id?' on':''),'tile:'+id);};
+    $('kp').innerHTML=t('all','Monitors',S.n(st.monitors),S.n(st.db_monitors)+' databases','')+t('down','Down',S.n(st.down),'',st.down?'bad':'ok')+t('crit','Critical',S.n(MONS.filter(function(m){return m.health==='critical';}).length),S.n(st.alarms.critical)+' critical alarms',st.alarms.critical?'bad':'ok')+
+      t('warn','Warning',S.n(MONS.filter(function(m){return m.health==='warning';}).length),S.n(st.alarms.warning)+' warning alarms',st.alarms.warning?'warn':'ok')+t('um','Unmanaged',S.n(st.unmanaged),'in maintenance','')+t('rq','Waiting for approval',S.n(st.pending_actions),'',st.pending_actions?'warn':'')+
+      S.tile('Last read',st.last_sync?S.ago(st.last_sync):'never',st.ok===false?st.error:'',st.ok===false?'bad':'');
+    $('up').textContent=st.last_sync?'read '+S.ago(st.last_sync):'';
+  }
+  function drawMons(){
+    var q=$('q').value.trim().toLowerCase(),ty=$('ty').value,hl=$('hl').value,av=$('av').value,um=$('um').checked,db=$('db').checked;
+    VIEW=MONS.filter(function(m){return (!q||[m.name,m.host,m.type,m.id].join(' ').toLowerCase().indexOf(q)>=0)&&(!ty||m.type===ty)&&(!hl||m.health===hl)&&(!av||m.availability===av)&&(!um||!m.managed)&&(!db||m.db);});
+    VIEW.sort(function(a,b){var r=function(m){return m.availability==='down'?0:m.health==='critical'?1:m.health==='warning'?2:3;};return r(a)-r(b)||String(a.name).localeCompare(String(b.name));});
+    $('mc').textContent=VIEW.length+(VIEW.length!==MONS.length?' of '+MONS.length:'');
+    $('mon').innerHTML=!ST||!ST.configured?'':VIEW.length?'<table><thead><tr><th>Monitor</th><th>Type</th><th>Host</th><th>Health</th><th>Availability</th><th>Managed</th><th></th></tr></thead><tbody>'+VIEW.map(function(m,i){return '<tr class="mr" data-i="'+i+'" tabindex="0" style="cursor:pointer"><td><b>'+esc(m.name)+'</b>'+(m.db?' '+S.pill('database'):'')+'<div class="muted small">id '+esc(m.id)+'</div></td><td>'+esc(m.type)+'</td><td class="mono">'+esc(m.host)+'</td><td>'+(m.health==='critical'||m.health==='warning'?lv(m.health):S.pill(m.health||'—',m.health==='clear'?'ok':''))+'</td><td>'+(m.availability==='down'?S.pill('down','bad'):S.pill(m.availability||'—',m.availability==='up'?'ok':''))+'</td><td>'+(m.managed?'yes':S.pill('unmanaged'))+'</td><td>'+
+      (can()?'<button type="button" class="sm" data-app="'+i+'">Poll now</button> '+(m.managed?'<button type="button" class="sm" data-apu="'+i+'">Maintenance</button>':'<button type="button" class="sm" data-apm="'+i+'">Resume</button>'):'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(MONS.length?'No monitor matches the filter.':'No monitor in the last read.')+'</div>';
+  }
+  function drawAlarms(){var sv=$('as').value,db=$('adb').checked,L=ALS.filter(function(a){return (!sv||a.severity===sv)&&(!db||a.db);});
+    $('alc').textContent=L.length+'';
+    $('alm').innerHTML=!ST||!ST.configured?'':L.length?'<table><thead><tr><th>Severity</th><th>Monitor</th><th>Attribute</th><th>Message</th><th>Time</th></tr></thead><tbody>'+L.map(function(a){var mi=MONS.findIndex(function(m){return String(m.id)===String(a.resource_id);});return '<tr'+(mi>=0?' class="ar" data-mid="'+mi+'" tabindex="0" style="cursor:pointer"':'')+'><td>'+lv(a.severity)+'</td><td>'+esc(a.name)+(a.db?' '+S.pill('database'):'')+'</td><td>'+esc(a.attribute)+'</td><td>'+esc(a.message)+'</td><td>'+esc(a.time)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No open alarm.</div>';}
+  function drawActs(){var w=ACTS.filter(function(a){return a.status==='pending';}).length;$('rqc').textContent=w+' waiting';
+    $('act').innerHTML=!can()?'<p class="muted">Operators and administrators see requests.</p>':ACTS.length?'<table><thead><tr><th>Request</th><th>Monitor</th><th>What</th><th>Why</th><th>Asked by</th><th>State</th><th></th></tr></thead><tbody>'+ACTS.map(function(a,i){return '<tr><td class="mono">'+esc(a.id)+'</td><td>'+esc(a.monitor)+'</td><td>'+esc(a.action==='unmanage'?'maintenance '+a.hours+' h ('+(a.suppress==='monitoring'?'stop monitoring':'alerts off')+')':a.action==='manage'?'resume':'poll now')+'</td><td class="small">'+esc(a.reason)+'</td><td>'+esc(a.requested_by)+' · '+esc(S.ago(a.requested_at))+'</td><td>'+(a.status==='pending'?S.pill('waiting','warn'):a.status==='executed'?S.pill('done','ok'):a.status==='failed'?S.pill('failed','bad'):S.pill(a.status))+(a.decided_by?'<div class="small muted">'+esc(a.decided_by)+(a.comment?': '+esc(a.comment):'')+'</div>':'')+(a.result&&a.status==='failed'?'<div class="small err">'+esc(a.result)+'</div>':'')+'</td><td>'+(a.status==='pending'?'<button type="button" class="sm" data-apok="'+i+'">Approve</button> <button type="button" class="sm" data-apno="'+i+'">Reject</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No request yet.</div>';}
+  function openMon(m){
+    var head=Z.kv([['Type',esc(m.type)],['Host',esc(m.host||'—')],['Health',lv(m.health)],['Availability',esc(m.availability||'—')],['Managed',m.managed?'yes':'unmanaged (maintenance)'],['Resource id',esc(m.id)]]);
+    var acts=can()?'<p><button type="button" data-app="m">Poll now</button> '+(m.managed?'<button type="button" data-apu="m">Maintenance…</button>':'<button type="button" data-apm="m">Resume…</button>')+'</p>':'';
+    var al=ALS.filter(function(a){return String(a.resource_id)===String(m.id);});
+    Z.open('Applications Manager · '+(m.type||''),m.name,head+acts+Z.sec('Open alarms',al.length?Z.tbl(['Severity','Attribute','Message','Time'],al.map(function(a){return [lv(a.severity),esc(a.attribute),esc(a.message),esc(a.time)];})):'<p class="zd-dim">No open alarm.</p>')+Z.sec('Attributes','<div id="mattr">'+(can()?'Loading…':'<p class="zd-dim">Operators see attributes.</p>')+'</div>'));
+    OPEN=m;
+    if(can())S.req('GET','/integrations/apm/monitors/'+encodeURIComponent(m.id)).then(function(d){var el=$('mattr');if(el)el.innerHTML=d.attributes.length?Z.tbl(['Attribute','Value','Status'],d.attributes.map(function(a){return [esc(a.name),esc(a.value+(a.unit?' '+a.unit:'')),lv(a.status)];})):'<p class="zd-dim">No attribute in the reply.</p>';}).catch(function(e){var el=$('mattr');if(el)el.innerHTML='<p class="zd-dim">'+esc(e.message)+'</p>';});
+  }
+  var OPEN=null;
+  function loadSet(){if(!S.can('admin'))return;S.req('GET','/integrations/apm/settings').then(function(j){var s=j.settings,k=j.key;
+    $('set').innerHTML='<div class="form"><label>Applications Manager address<input id="as-url" value="'+esc(s.base_url)+('" placeholder="https://apm.' + ZYB_ORG.domain + ':8443"></label><label>Read every (min)<input id="as-pm" type="number" min="1" max="60" value="')+s.poll_min+'"></label><label>Certificate SHA-256 (optional pin)<input id="as-fp" value="'+esc(s.fingerprint256)+'"></label><label><input type="checkbox" id="as-en"'+(s.enabled?' checked':'')+'> Read on a schedule</label><button type="button" id="as-save">Save</button></div>'+
+      '<div class="form"><label>REST API key '+(k.api_key_set?S.pill('stored · '+esc(k.key_fingerprint),'ok'):S.pill('not set','warn'))+'<input id="as-key" type="password" autocomplete="off" placeholder="paste to replace"></label><button type="button" id="as-ks">Store key</button>'+(k.api_key_set?' <button type="button" id="as-kd">Remove key</button>':'')+' <button type="button" id="as-test">Test connection</button></div>'+
+      '<p class="note">Use the key of an Applications Manager <b>Operator</b> user that sees the monitors you want here (a key sees only its own user\'s monitors). The SIEM server must reach the address. Only these calls are ever made: ListMonitor, ListAlarms, GetMonitorData, PollNow, UnmanageMonitor, ManageMonitor.</p>';
+  }).catch(function(e){$('set').innerHTML=S.errHtml(e,'settings');});}
+  function load(){return S.req('GET','/integrations/apm/status').then(function(st){ST=st;$('sync').hidden=!can()||!st.configured;
+    loadSet();
+    if(!st.configured){MONS=[];ALS=[];ACTS=[];tiles();drawMons();drawAlarms();$('act').innerHTML='';$('cov').innerHTML='';return;}
+    return Promise.all([S.req('GET','/integrations/apm/monitors'),S.req('GET','/integrations/apm/alarms'),S.req('GET','/integrations/apm/coverage'),can()?S.req('GET','/integrations/apm/actions'):Promise.resolve({items:[]})]).then(function(r){
+      MONS=r[0].items||[];ALS=r[1].items||[];ACTS=r[3].items||[];
+      var types={};MONS.forEach(function(m){if(m.type)types[m.type]=(types[m.type]||0)+1;});var cur=$('ty').value;
+      $('ty').innerHTML='<option value="">All types</option>'+Object.keys(types).sort().map(function(t){return '<option value="'+esc(t)+'"'+(t===cur?' selected':'')+'>'+esc(t)+' ('+types[t]+')</option>';}).join('');
+      var C=r[2];$('cov').innerHTML='<p class="small"><b>Both:</b> '+(C.both.map(function(x){return esc(x.name);}).join(', ')||'none')+'</p><p class="small"><b>Only in Applications Manager:</b> '+(C.apm_only.map(function(x){return esc(x.name)+' ('+esc(x.type)+')';}).join(', ')||'none')+'</p><p class="small"><b>Only on the Database Dashboard:</b> '+(C.siem_only.map(function(x){return esc(x.instance);}).join(', ')||'none')+'</p>';
+      tiles();drawMons();drawAlarms();drawActs();
+    });
+  }).catch(function(e){$('kp').innerHTML='<div class="card" style="grid-column:1/-1">'+S.errHtml(e,'Applications Manager')+'</div>';});}
+  function setTile(id){TILE=TILE===id?'':id;$('hl').value='';$('av').value='';$('um').checked=false;
+    if(TILE==='down')$('av').value='down';else if(TILE==='crit')$('hl').value='critical';else if(TILE==='warn')$('hl').value='warning';else if(TILE==='um')$('um').checked=true;
+    if(TILE==='rq'){document.querySelector('[data-tab="rq"]').click();}else document.querySelector('[data-tab="mo"]').click();
+    tiles();drawMons();}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-act^="tile:"]'))){setTile(x.getAttribute('data-act').slice(5));return;}
+    var pick=function(a){var v=x.getAttribute(a);return v==='m'?OPEN:VIEW[+v];};
+    if((x=t.closest('[data-app]'))){var m2=pick('data-app');post('/integrations/apm/actions',{action:'poll',resource_id:m2.id},'Poll requested from Applications Manager');return;}
+    if((x=t.closest('[data-apu]'))){var m3=pick('data-apu');ask('Maintenance for '+m3.name,[['ap-h','Hours (1-72)','type="number" min="1" max="72" value="4"'],['ap-r','Why (goes to the approver)','']],function(v){post('/integrations/apm/actions',{action:'unmanage',resource_id:m3.id,hours:+v['ap-h'],suppress:'alerts',reason:v['ap-r']},'Request sent for approval',function(){Z.close();load();});});return;}
+    if((x=t.closest('[data-apm]'))){var m4=pick('data-apm');ask('Resume '+m4.name,[['ap-r2','Why','']],function(v){post('/integrations/apm/actions',{action:'manage',resource_id:m4.id,reason:v['ap-r2']},'Request sent for approval',function(){Z.close();load();});});return;}
+    if((x=t.closest('[data-apok]'))){var a=ACTS[+x.getAttribute('data-apok')];post('/integrations/apm/actions/'+encodeURIComponent(a.id)+'/decide',{decision:'approve'},'Approved and sent to Applications Manager');return;}
+    if((x=t.closest('[data-apno]'))){var a2=ACTS[+x.getAttribute('data-apno')];ask('Reject '+a2.id,[['ap-c','Why it is rejected','']],function(v){post('/integrations/apm/actions/'+encodeURIComponent(a2.id)+'/decide',{decision:'reject',comment:v['ap-c']},'Rejected',function(){Z.close();load();});});return;}
+    if((x=t.closest('tr.mr'))&&!t.closest('button')){openMon(VIEW[+x.getAttribute('data-i')]);return;}
+    if((x=t.closest('tr.ar'))){openMon(MONS[+x.getAttribute('data-mid')]);return;}
+    if(t.id==='sync'){post('/integrations/apm/sync',{},'Read from Applications Manager');return;}
+    if(t.id==='as-save'){post('/integrations/apm/settings',{base_url:$('as-url').value.trim(),poll_min:+$('as-pm').value,fingerprint256:$('as-fp').value.trim(),enabled:$('as-en').checked},'Saved');return;}
+    if(t.id==='as-ks'){var kv=$('as-key').value;$('as-key').value='';post('/integrations/apm/key',{api_key:kv},'Key stored (it will not be shown again)');return;}
+    if(t.id==='as-kd'){if(!confirm('Remove the Applications Manager key?'))return;S.req('DELETE','/integrations/apm/key').then(function(){S.toast('Key removed');load();}).catch(function(e){S.toast(e.message);});return;}
+    if(t.id==='as-test'){S.req('POST','/integrations/apm/test',{}).then(function(r){S.toast('Connected: '+r.monitors+' monitor(s) visible to this key');}).catch(function(e){S.toast(e.message);});return;}
+  });
+  document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;var x=e.target.closest&&e.target.closest('tr.mr,tr.ar');if(x)x.click();});
+  ['ty','hl','av','um','db'].forEach(function(i){$(i).addEventListener('change',function(){TILE='';tiles();drawMons();});});
+  $('q').addEventListener('input',drawMons);$('as').onchange=drawAlarms;$('adb').onchange=drawAlarms;
+  S.ready(load);setInterval(function(){if(!document.hidden&&!(document.getElementById('zd')&&!document.getElementById('zd').hidden))load();},120000);
+})();
+</script><script src="vendor/zyb-apmx.js"></script></body></html>

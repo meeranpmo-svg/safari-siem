@@ -1,0 +1,112 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Risk Register by Year</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- The business risk register year by year (engine/business-risk.js, /api/itam/brisk/years): each year is a frozen copy - closed from the live
+     register by the Risk Head, or a past year's workbook imported by an administrator - compared risk by risk with any other year or the live register. -->
+<style>
+:root{--bg:#0b0e14;--pn:#121722;--rs:#18202d;--ln:#232c3c;--tx:#e8ecf3;--mu:#8c95a8;--hi:#e5484d;--md:#f59f00;--lo:#2fb344;--ac:#f97316;--un:#5b6478}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 60px}
+.top{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}.top h1{margin:0;font-size:26px}.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:7px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}.btn:hover{border-color:#3a4560}.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}.btn.xs{padding:3px 8px;font-size:12px}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:14px 16px;min-width:0;margin-bottom:14px}.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mu);font-weight:600;font-size:12px;padding:7px;border-bottom:1px solid var(--ln);white-space:nowrap}td{padding:7px;border-bottom:1px solid #1a2130;vertical-align:top}tr.row{cursor:pointer}tr.row:hover td{background:#151b28}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.c-1{background:rgba(47,179,68,.15);color:#56d364}.c-2{background:rgba(99,102,241,.18);color:#a5b4fc}.c-3{background:rgba(245,159,0,.16);color:#ffc14d}.c-4{background:rgba(229,72,77,.18);color:#ff7b80}.c-0{background:#1b2230;color:var(--mu)}
+.b-Low{color:#56d364}.b-Low-Medium{color:#a5b4fc}.b-Medium{color:#ffc14d}.b-High{color:#ff7b80}
+.flag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:6px;background:rgba(249,115,22,.12);color:#fdba74;margin:1px 2px 1px 0}
+.inp{background:#0b0e14;color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:7px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif;min-width:0;width:100%}
+.flt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.flt .inp{width:auto}.flt input.inp{flex:1;min-width:200px}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.form .w{grid-column:1/-1}label.f{font-size:12px;color:var(--mu);display:flex;flex-direction:column;gap:3px}
+.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:12px;margin-bottom:12px}
+.empty{color:var(--mu);padding:18px;text-align:center;border:1px dashed var(--ln);border-radius:12px}
+.note{font-size:12.5px;color:var(--mu);border-left:3px solid var(--ac);padding:7px 11px;background:rgba(249,115,22,.07);border-radius:0 8px 8px 0;margin:8px 0}.note b{color:var(--tx)}
+.drawer{position:fixed;top:0;right:0;width:min(640px,100vw);height:100vh;background:#101520;border-left:1px solid var(--ln);z-index:9000;padding:16px;overflow:auto;box-shadow:-10px 0 30px rgba(0,0,0,.4)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 10px;font-size:13px}.kv b{color:var(--mu);font-weight:600}
+.pre{white-space:pre-wrap}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}@media (max-width:900px){.g2{grid-template-columns:1fr}}
+.hm{display:grid;grid-template-columns:18px repeat(5,minmax(0,1fr));gap:3px;direction:ltr;font-size:10px;max-width:320px}.hm span{display:grid;place-items:center;min-height:24px;border-radius:5px;font-weight:800;font-size:11px;color:#0b0e14}.hm .ax{color:var(--mu);font-weight:600;background:none}
+.ch-worse{background:rgba(229,72,77,.18);color:#ff7b80}.ch-better{background:rgba(47,179,68,.15);color:#56d364}.ch-new{background:rgba(99,102,241,.18);color:#a5b4fc}.ch-gone{background:#1b2230;color:var(--mu)}.ch-same{background:#1b2230;color:#c7cedb}.ch-not{background:rgba(245,159,0,.16);color:#ffc14d}
+.trend{width:100%;height:150px;display:block}.flt label{font-size:12px;color:var(--mu);display:flex;flex-direction:column;gap:3px}
+</style></head><body><main>
+<div class="top"><div><h1><i class="ti ti-calendar-stats" style="color:#fb923c"></i> Risk Register by Year</h1><div class="mu sm">Each year's register kept as it stood, and any two years compared risk by risk.</div></div><span class="sp"></span>
+ <a class="btn" href="business-risk-register.html"><i class="ti ti-list-details"></i>Risk register</a><a class="btn" href="business-risk.html"><i class="ti ti-chart-dots"></i>Dashboard</a><button type="button" class="btn" id="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button></div>
+<div id="err"></div>
+<div class="card"><h2><i class="ti ti-timeline"></i>Years recorded <span class="mu sm" id="ycnt"></span></h2><div id="years"></div><div id="trend"></div><p class="note" id="ynote"></p></div>
+<div class="g2">
+ <div class="card" id="closec" hidden><h2><i class="ti ti-lock"></i>Close a year</h2><p class="sm mu">Freezes the live register as it stands today as that year's register. The Risk Head (or an administrator) closes it, once per year; the live register carries on unchanged.</p>
+  <div class="flt"><label>Year<input class="inp" id="c-year" type="number" min="2000" max="2100"></label><label style="flex:1">Note (optional)<input class="inp" id="c-note" type="text" maxlength="1000"></label><button type="button" class="btn pri" id="c-go" style="align-self:flex-end">Close the year</button></div></div>
+ <div class="card" id="impc" hidden><h2><i class="ti ti-file-spreadsheet"></i>Import a past year</h2><p class="sm mu">A past year's risk register workbook (the "Risk Register" sheet, same columns as the register import). It is kept as that year only - the live register is not touched. Preview first.</p>
+  <div class="flt"><label>Year<input class="inp" id="i-year" type="number" min="2000" max="2100"></label><label style="flex:1">Workbook (.xlsx)<input class="inp" id="i-file" type="file" accept=".xlsx"></label></div>
+  <div class="flt"><label style="flex:1">Label (optional)<input class="inp" id="i-label" type="text" maxlength="120"></label><button type="button" class="btn" id="i-prev" style="align-self:flex-end">Preview</button><button type="button" class="btn pri" id="i-apply" style="align-self:flex-end" disabled>Import</button></div><div id="i-res"></div></div>
+</div>
+<div class="card" id="cmpc" hidden><h2><i class="ti ti-columns"></i>Compare two years</h2>
+ <div class="flt"><label>From<select class="inp" id="ca" aria-label="From year"></select></label><label>To<select class="inp" id="cb" aria-label="To year"></select></label><button type="button" class="btn pri" id="cgo" style="align-self:flex-end">Compare</button><button type="button" class="btn" id="cx" style="align-self:flex-end" hidden><i class="ti ti-file-spreadsheet"></i>Export to Excel</button></div>
+ <div id="cmp"></div></div>
+</main>
+<script src="vendor/zyb-xlsx.js"></script>
+<script>
+(function(){
+  'use strict';
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',ME='',Y=null,C=null,FILE=null,FILT='';
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var nf=function(v){return v==null?'—':String(v);};
+  var yl=function(y){return y==='current'||y==null?'Current register':String(y);};
+  function trendSvg(T){if(T.length<2)return '';var W=600,H=150,P=28,mx=1;T.forEach(function(x){mx=Math.max(mx,x.risks);});var X=function(i){return P+(W-2*P)*i/(T.length-1);},Yp=function(v){return H-P-(H-2*P)*v/mx;};
+    var line=function(k,c){return '<polyline fill="none" stroke="'+c+'" stroke-width="2.5" points="'+T.map(function(x,i){return X(i).toFixed(1)+','+Yp(x[k]).toFixed(1);}).join(' ')+'"/>'+T.map(function(x,i){return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Yp(x[k]).toFixed(1)+'" r="3.5" fill="'+c+'"><title>'+esc(yl(x.year)+': '+x[k])+'</title></circle>';}).join('');};
+    return '<svg class="trend" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Risks, high inherent and Class III-IV by year">'+line('risks','#8c95a8')+line('high','#e5484d')+line('class34','#f59f00')
+      +T.map(function(x,i){return '<text x="'+X(i).toFixed(1)+'" y="'+(H-8)+'" fill="#8c95a8" font-size="11" text-anchor="middle">'+esc(x.year==='current'?'now':x.year)+'</text>';}).join('')+'</svg>'
+      +'<div class="sm mu"><span style="color:#c7cedb">■</span> risks · <span style="color:#ff7b80">■</span> high inherent (15+) · <span style="color:#ffc14d">■</span> Class III / IV residual</div>';}
+  function drawYears(){var L=Y.years,cur=Y.current;$('ycnt').textContent=L.length?L.length+' year(s)':'';$('ynote').textContent=Y.note;
+    var row=function(y,live){return '<tr><td><b>'+esc(live?'Current register':y.year)+'</b></td><td>'+esc(live?'live':y.source)+'</td><td>'+esc(y.risks)+'</td><td>'+esc(y.open)+'</td><td class="b-High">'+esc(y.high)+'</td><td>'+esc(y.class34)+'</td><td>'+esc(nf(y.avg_inherent))+'</td><td class="sm">'+(live?'':esc(y.by+' '+String(y.at).slice(0,10))+(y.filename?'<div class="mu">'+esc(y.filename)+'</div>':'')+(y.note?'<div class="mu">'+esc(y.note)+'</div>':''))+'</td><td>'+(!live&&can('admin')?'<button type="button" class="btn xs" data-rm="'+esc(y.year)+'">Remove</button>':'')+'</td></tr>';};
+    $('years').innerHTML=(L.length?'':'<div class="empty" style="margin-bottom:10px">No year recorded yet. Close the current year from the live register, or import a past year\'s register workbook.</div>')
+      +'<div class="tw"><table><thead><tr><th>Year</th><th>Source</th><th>Risks</th><th>Open</th><th>High inherent</th><th>Class III / IV</th><th>Avg inherent</th><th>Recorded</th><th></th></tr></thead><tbody>'+L.map(function(y){return row(y,false);}).join('')+row(cur,true)+'</tbody></table></div>';
+    $('trend').innerHTML=trendSvg(Y.trend);
+    var opts=L.map(function(y){return y.year;}).concat(['current']),pa=$('ca').value,pb=$('cb').value;$('cmpc').hidden=opts.length<2;
+    var o=function(sel){return opts.map(function(v){return '<option value="'+esc(v)+'"'+(String(v)===String(sel)?' selected':'')+'>'+esc(yl(v))+'</option>';}).join('');};
+    if(opts.indexOf(isNaN(+pb)?pb:+pb)<0)pb='current';if(!pa||pa===pb||opts.indexOf(isNaN(+pa)?pa:+pa)<0)pa=L.length?L[L.length-1].year:'';
+    $('ca').innerHTML=o(pa);$('cb').innerHTML=o(pb);}
+  function heat(g,title){var h='<div><div class="sm mu" style="margin-bottom:4px">'+esc(title)+'</div><div class="hm">',l,i;for(l=5;l>=1;l--){h+='<span class="ax">'+l+'</span>';for(i=1;i<=5;i++){var n=g[l+'x'+i]||0,s=l*i,c=s>=15?'#e5484d':s>=10?'#f59f00':s>=5?'#e6c229':'#2fb344';h+='<span style="background:'+(n?c:'#1b2332')+';color:'+(n?'#0b0e14':'transparent')+'" title="likelihood '+l+' × impact '+i+': '+n+'">'+n+'</span>';}}
+    h+='<span class="ax"></span>';for(i=1;i<=5;i++)h+='<span class="ax">'+i+'</span>';return h+'</div><div class="sm mu">likelihood ↑ · impact →</div></div>';}
+  var chCls=function(c){return 'ch-'+(c==='not comparable'?'not':c);};
+  var rate=function(x){return x?(x.inherent!=null?'<b class="b-'+esc(x.band)+'">'+esc(x.band+' '+x.inherent)+'</b>':'not rated')+(x.class?' · '+esc(x.class):''):'—';};
+  function drawCmp(){if(!C){$('cmp').innerHTML='';$('cx').hidden=true;return;}$('cx').hidden=false;var k=C.counts;
+    var pills=['worse','better','same','new','gone','not comparable'].map(function(c){return '<button type="button" class="btn xs '+(FILT===c?'pri':'')+'" data-ch="'+esc(c)+'"><span class="pill '+chCls(c)+'">'+esc(c)+'</span> '+esc(k[c]||0)+'</button>';}).join(' ');
+    var H='<div class="g2"><div><b>From</b> '+esc(yl(C.from.year))+' <span class="sm mu">'+esc(C.from.risks)+' risks · '+esc(C.from.high)+' high · '+esc(C.from.class34)+' Class III/IV · avg '+esc(nf(C.from.avg_inherent))+'</span></div><div><b>To</b> '+esc(yl(C.to.year))+' <span class="sm mu">'+esc(C.to.risks)+' risks · '+esc(C.to.high)+' high · '+esc(C.to.class34)+' Class III/IV · avg '+esc(nf(C.to.avg_inherent))+'</span></div></div>';
+    H+='<div class="flt" style="margin-top:10px">'+pills+(FILT?' <button type="button" class="btn xs" data-ch="">all</button>':'')+'</div>'+(C.persistent_high?'<p class="note"><b>'+esc(C.persistent_high)+' risk(s) rated High in both years</b> - the treatment has not brought them down.</p>':'');
+    H+='<div class="g2">'+heat(C.heat.from,yl(C.from.year))+heat(C.heat.to,yl(C.to.year))+'</div>';
+    H+='<h3 class="sm mu" style="margin:14px 0 4px">By risk area (average inherent score)</h3><div class="tw"><table><thead><tr><th>Area</th><th>'+esc(yl(C.from.year))+'</th><th>'+esc(yl(C.to.year))+'</th><th>Worse</th><th>Better</th></tr></thead><tbody>'+C.by_area.map(function(a){return '<tr><td>'+esc(a.area)+'</td><td>'+esc(nf(a.from_avg))+' <span class="mu sm">('+esc(a.from_n)+')</span></td><td>'+esc(nf(a.to_avg))+' <span class="mu sm">('+esc(a.to_n)+')</span></td><td>'+esc(a.worse)+'</td><td>'+esc(a.better)+'</td></tr>';}).join('')+'</tbody></table></div>';
+    var rows=C.rows.filter(function(r){return !FILT||r.change===FILT;});
+    H+='<h3 class="sm mu" style="margin:14px 0 4px">Risk by risk ('+esc(rows.length)+')</h3><div class="tw"><table><thead><tr><th>Change</th><th>Code</th><th>Risk</th><th>Department</th><th>'+esc(yl(C.from.year))+'</th><th>'+esc(yl(C.to.year))+'</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td><span class="pill '+chCls(r.change)+'">'+esc(r.change)+'</span>'+(r.inherent_change?' <span class="sm">'+(r.inherent_change>0?'+':'')+esc(r.inherent_change)+'</span>':'')+(r.matched_on==='title'?'<div class="sm mu">matched on title</div>':'')+'</td><td class="sm">'+esc(r.code)+'</td><td>'+esc(r.title)+'</td><td class="sm">'+esc(r.department)+'</td><td class="sm">'+rate(r.from)+'</td><td class="sm">'+rate(r.to)+'</td></tr>';}).join('')+'</tbody></table></div><p class="note">'+esc(C.note)+'</p>';
+    $('cmp').innerHTML=H;}
+  function cmpGo(){var a=$('ca').value,b=$('cb').value;if(!a||!b||a===b){toast('Choose two different years.');return;}req('GET','/brisk/years/compare?a='+encodeURIComponent(a)+'&b='+encodeURIComponent(b)).then(function(j){C=j;FILT='';drawCmp();}).catch(function(e){toast(e.message);});}
+  function cmpX(){if(!C||!window.zybXlsx){toast('Nothing to export');return;}var f=yl(C.from.year),t=yl(C.to.year),rt=function(x){return x?[x.likelihood,x.impact,x.inherent,x.band||'',x.class||'']:['','','','',''];};
+    window.zybXlsx.download('risk-register-'+C.from.year+'-vs-'+C.to.year+'.xlsx',[{name:'Risk by risk',columns:[{h:'Change',w:14},{h:'Code',w:14},{h:'Risk',w:50},{h:'Department',w:18},{h:'Area',w:18},{h:f+' likelihood',t:'n'},{h:f+' impact',t:'n'},{h:f+' inherent',t:'n'},{h:f+' band',w:12},{h:f+' residual',w:10},{h:t+' likelihood',t:'n'},{h:t+' impact',t:'n'},{h:t+' inherent',t:'n'},{h:t+' band',w:12},{h:t+' residual',w:10}],
+      rows:C.rows.map(function(r){return [r.change,r.code,r.title,r.department,r.area].concat(rt(r.from),rt(r.to));})},{name:'By area',columns:[{h:'Area',w:30},{h:f+' avg inherent',t:'n'},{h:t+' avg inherent',t:'n'},{h:'Worse',t:'n'},{h:'Better',t:'n'}],rows:C.by_area.map(function(a){return [a.area,a.from_avg,a.to_avg,a.worse,a.better];})}],
+      {title:'Business risk register: '+f+' vs '+t,filter:C.note,by:ME||'unknown'});}
+  function b64(file){return new Promise(function(ok,bad){var fr=new FileReader();fr.onload=function(){ok(String(fr.result).split(',')[1]||'');};fr.onerror=function(){bad(new Error('the file could not be read'));};fr.readAsDataURL(file);});}
+  function imp(apply){var y=Number($('i-year').value);if(!FILE){toast('Choose the workbook first');return;}if(!(y>=2000&&y<=2100)){toast('The year of the register is needed');return;}if(!/\.xlsx$/i.test(FILE.name)){toast('An .xlsx workbook');return;}
+    $('i-res').innerHTML='<div class="sm mu">Reading…</div>';b64(FILE).then(function(d){var b={year:y,filename:FILE.name,xlsx_b64:d,apply:!!apply};if($('i-label').value.trim())b.label=$('i-label').value.trim();return req('POST','/brisk/years/import',b);}).then(function(r){
+      if(!r.applied){var p=r.preview;$('i-res').innerHTML='<div class="note"><b>'+esc(p.risks)+' risks</b> for '+esc(y)+': '+esc(p.high)+' high inherent, '+esc(p.class34)+' Class III / IV'+(p.skipped&&p.skipped.length?', '+esc(p.skipped.length)+' row(s) skipped (no title)':'')+(p.duplicates?', '+esc(p.duplicates)+' duplicate code(s)':'')+'. Check it, then Import.</div>';$('i-apply').disabled=false;return;}
+      $('i-res').innerHTML='';$('i-apply').disabled=true;toast(y+' imported');Y=r;drawYears();},function(e){$('i-res').innerHTML='<div class="err">'+esc(e.message)+'</div>';$('i-apply').disabled=true;});}
+  function load(){return req('GET','/brisk/years').then(function(j){Y=j;$('err').innerHTML='';drawYears();}).catch(function(e){$('err').innerHTML='<div class="err">'+esc(e.status===404?'The year-by-year register is not installed on the server yet - run the platform update.':e.status===403?'Not allowed: '+e.message:e.message)+'</div>';$('years').innerHTML='';$('cmpc').hidden=true;});}
+  document.addEventListener('click',function(ev){var t=ev.target.closest('button');if(!t)return;
+    if(t.id==='refresh'){load();return;}if(t.id==='cgo'){cmpGo();return;}if(t.id==='cx'){cmpX();return;}if(t.id==='i-prev'){imp(false);return;}if(t.id==='i-apply'){imp(true);return;}
+    if(t.id==='c-go'){var y=Number($('c-year').value);if(!(y>=2000&&y<=2100)){toast('The year to close is needed');return;}var b={year:y};if($('c-note').value.trim())b.note=$('c-note').value.trim();req('POST','/brisk/years/close',b).then(function(j){Y=j;drawYears();toast(y+' closed - the register as it stands is kept as '+y);}).catch(function(e){toast((e.status===403?'Not allowed: ':'')+e.message);});return;}
+    if(t.hasAttribute('data-ch')){FILT=t.getAttribute('data-ch');drawCmp();return;}
+    if(t.hasAttribute('data-rm')){var ry=t.getAttribute('data-rm');
+      {var d=document.createElement('div');d.className='note';d.innerHTML='Why remove '+esc(ry)+'? <input class="inp" id="rm-why" style="width:260px" maxlength="500"> <button type="button" class="btn xs" data-rm2="'+esc(ry)+'">Remove '+esc(ry)+'</button>';t.closest('td').appendChild(d);t.remove();var f=$('rm-why');if(f)f.focus();}return;}
+    if(t.hasAttribute('data-rm2')){var y2=t.getAttribute('data-rm2'),rs=($('rm-why')&&$('rm-why').value.trim())||'';if(!rs){toast('A reason is needed');return;}req('POST','/brisk/years/'+encodeURIComponent(y2)+'/remove',{reason:rs}).then(function(j){Y=j;drawYears();toast(y2+' removed');}).catch(function(e){toast(e.message);});return;}
+  });
+  $('i-file').addEventListener('change',function(){FILE=$('i-file').files[0]||null;$('i-apply').disabled=true;$('i-res').innerHTML='';});
+  $('c-year').value=String(new Date().getFullYear());
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText);ROLE=j.role||'viewer';ME=j.user||'';}catch(e){ROLE='viewer';/* unknown identity: least privilege */}
+    $('closec').hidden=!can('operator');$('impc').hidden=!can('admin');load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

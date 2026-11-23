@@ -1,0 +1,47 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Data Protection Impact Assessment</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+pre.letter{white-space:pre-wrap;font:13px/1.55 "Segoe UI",system-ui,sans-serif;background:rgba(255,255,255,.03);padding:12px;border-radius:8px}pre.letter[dir=rtl]{text-align:right}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">Data Protection Impact Assessment</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>An impact assessment is required before processing sensitive data, combining data from two or more sources, continuous monitoring, solely automated decisions, or anything else likely to harm a person's privacy (PDPL Art. 22; Implementing Regulation Art. 25). The questionnaire is scored in Python (likelihood + severity, each measure reduces it, every point named). The result is a draft until the <b>DPO</b> signs it, and the DPO cannot sign an assessment they prepared. Re-assess when the activity changes, at least every 2 years.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Which activities need an assessment</h3></div><div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="note"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+
+  var V=null, Q=null, REC={};
+  var STC={missing:'red',draft:'yellow',signed:'green','not needed':'secondary'};
+  function load(){return Promise.all([P.req('GET','/pdpl/dpia/view'),P.req('GET','/pdpl/records?kind=dpia')]).then(function(rr){V=rr[0];REC={};rr[1].records.forEach(function(d){REC[d.id]=d;});
+    var a=V.activities;$('kpis').innerHTML=P.tile(a.filter(function(x){return x.needed_for.length;}).length,'Need an assessment')+P.tile(V.missing,'Missing',V.missing?'text-red':'')+P.tile(a.filter(function(x){return x.state==='draft';}).length,'Draft - DPO to sign')+P.tile(V.outdated,'Out of date',V.outdated?'text-orange':'');
+    $('list').innerHTML=P.table([['Activity',function(x){return '<b>'+esc(x.name)+'</b><div class="mut">'+esc(x.id)+'</div>';}],['Why it is needed',function(x){return x.needed_for.length?'<span class="small">'+esc(x.needed_for.join('; '))+'</span>':'<span class="mut">no trigger</span>';}],
+      ['State',function(x){return P.badge(x.state,STC[x.state])+(x.outdated?' '+P.badge('out of date','orange'):'');}],['Residual risk',function(x){return esc(x.residual||'—');}],['Outcome',function(x){return esc(x.outcome||'—');}],
+      ['',function(x){return '<button type="button" class="btn btn-sm" data-assess="'+esc(x.id)+'">'+(x.state==='draft'?'Review':'Assess')+'</button>'+(x.state==='draft'&&x.latest?' <button type="button" class="btn btn-sm btn-success" data-sign="'+esc(x.latest)+'">DPO sign</button>':'');}]],a,null,'No processing activities recorded - start with the records of processing.');
+    $('note').textContent=V.note;}).catch(function(e){P.fail($('list'),e);});}
+  function assess(id){var x=V.activities.find(function(a){return a.id===id;}), d=x.latest&&x.state==='draft'?REC[x.latest]:null;
+    (Q?Promise.resolve(Q):P.req('GET','/pdpl/dpia/questions')).then(function(q){Q=q;
+      var h='<form id="dform">'+q.questions.map(function(qq){var v=d&&d.answers?d.answers[qq.id]:'';return '<div class="mb-2"><label class="form-label small fw-semibold" for="q-'+esc(qq.id)+'">'+esc(qq.question)+'</label><select class="form-select form-select-sm" id="q-'+esc(qq.id)+'" name="q_'+esc(qq.id)+'"><option value="">- choose -</option>'+qq.options.map(function(o){return '<option'+(o===v?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select></div>';}).join('')
+        +'<div class="form-label mt-2">Measures in place</div>'+q.measures.map(function(m){return '<label class="form-check"><input type="checkbox" class="form-check-input" name="m" value="'+esc(m.id)+'"'+(d&&(d.measures||[]).indexOf(m.id)>=0?' checked':'')+'><span class="form-check-label">'+esc(m.measure)+' <span class="mut">(-'+Number(m.reduces)+')</span></span></label>';}).join('')
+        +'<input type="hidden" name="ropa" value="'+esc(id)+'">'+(d?'<input type="hidden" name="did" value="'+esc(d.id)+'">':'')+'<div class="d-flex gap-2 align-items-center mt-2"><button type="submit" class="btn btn-primary">Score the assessment</button><span class="small text-secondary" data-msg></span></div></form><div id="dres" class="mt-2"></div>';
+      Z.open('Impact assessment',x.id+' · '+x.name,h);}).catch(function(e){P.toast(P.why(e));});}
+  $('list').addEventListener('click',function(ev){var a=ev.target.closest('[data-assess]'),s=ev.target.closest('[data-sign]');
+    if(a)assess(a.getAttribute('data-assess'));
+    if(s)P.req('POST','/pdpl/dpia/'+encodeURIComponent(s.getAttribute('data-sign'))+'/sign',{}).then(function(r){P.toast(r.id+' signed by '+r.approved_by);load();}).catch(function(e){P.toast(P.why(e));});});
+  document.addEventListener('submit',function(ev){var fm=ev.target;if(fm.id!=='dform')return;ev.preventDefault();var answers={},measures=[];
+    [].slice.call(fm.elements).forEach(function(el){if(el.name&&el.name.indexOf('q_')===0&&el.value)answers[el.name.slice(2)]=el.value;if(el.name==='m'&&el.checked)measures.push(el.value);});
+    var b={ropa_id:fm.elements.ropa.value,answers:answers,measures:measures};if(fm.elements.did)b.id=fm.elements.did.value;
+    P.req('POST','/pdpl/dpia/assess',b).then(function(r){var s=r.score||{};$('dres').innerHTML='<div class="alert alert-'+(s.level==='high'?'danger':s.level==='medium'?'warning':'success')+'">'+esc(r.id)+': residual risk <b>'+esc(s.level)+'</b> ('+esc(s.residual)+' of inherent '+esc(s.inherent)+') → '+esc(r.outcome)+'. The DPO signs it next.</div>'+(s.why?'<ul class="small">'+s.why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>':'');load();}).catch(function(e){P.msg(fm,P.why(e));});});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

@@ -1,0 +1,85 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Update Health</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1400px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:170px 1fr minmax(260px,420px);gap:18px;align-items:center}
+.state b{display:block;font-size:28px;font-weight:900;letter-spacing:.04em}.state span{color:var(--d-mute);font-size:12.5px}
+.ring{position:relative;width:150px;height:150px;margin:auto}.ring svg{transform:rotate(-90deg)}.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.ring .v b{font-size:32px}.ring .v span{font-size:11px;color:var(--d-mute);max-width:110px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:9px 12px}.kpi .n{font-size:22px;font-weight:800}.kpi .l{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--d-mute)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.s-ok{background:rgba(47,179,68,.15);color:#56d364}.s-partial,.s-warn{background:rgba(245,159,0,.16);color:#f5b544}.s-bad,.s-rolled-back{background:rgba(229,72,77,.16);color:#ff7b80}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--d-line)}td{padding:7px 8px;border-bottom:1px solid #1b2030;vertical-align:top}
+td code,.fx code{font:12px ui-monospace,Consolas,monospace;color:#c9d1dc}
+.flt{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.flt .btn.on{border-color:var(--d-acc);box-shadow:0 0 0 1px var(--d-acc) inset}
+.fx{border-left:3px solid var(--d-bad);background:rgba(229,72,77,.06);border-radius:8px;padding:10px 12px;margin:8px 0}.fx .cause{font-weight:700}.fx .fix{margin-top:4px}.fx .ln{margin-top:6px;font:11.5px ui-monospace,Consolas,monospace;color:var(--d-mute);white-space:pre-wrap;word-break:break-all}
+.steps{margin:0;padding-left:20px}.steps li{margin:4px 0}
+.empty{color:var(--d-mute);padding:14px;border:1px dashed var(--d-line);border-radius:12px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:900px){.hero{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Platform Administration</div><h1>Update Health</h1><div class="sm mute">After an update: does every page actually work, and if not, why. Read from the running engine's own route table, the modules it could not load, and the report each installer wrote.</div></div><div class="sp"></div>
+ <button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Check again</button></div>
+<div id="err" hidden class="card"></div>
+<div id="body" hidden>
+ <section class="card hero"><div class="ring" id="ring"></div><div class="state" id="state"></div><div class="kpis" id="kpis"></div></section>
+ <section class="card"><h2><i class="ti ti-stethoscope"></i>What went wrong, and the fix <span class="c">named by the update doctor from the service log - the same log always gives the same answer</span></h2><div id="findings"></div></section>
+ <section class="card"><h2><i class="ti ti-layout-dashboard"></i>Pages <span class="c" id="pc"></span></h2>
+  <div class="flt" id="flt"><button class="btn on" type="button" data-f="all">All</button><button class="btn" type="button" data-f="bad">Not working</button><button class="btn" type="button" data-f="ok">Working</button></div>
+  <table><thead><tr><th>Page</th><th>API</th><th>Module</th><th>Status</th><th>Why</th></tr></thead><tbody id="pages"></tbody></table></section>
+ <section class="card"><h2><i class="ti ti-package"></i>Installers in the last update <span class="c" id="ic"></span></h2>
+  <table><thead><tr><th>Installer</th><th>Result</th><th>When</th><th>Not answering</th><th>Reason</th></tr></thead><tbody id="inst"></tbody></table></section>
+ <section class="card"><h2><i class="ti ti-list-check"></i>How an update behaves now</h2><ol class="steps sm">
+  <li>Before sentra-itam restarts, every engine module is loaded in a test process; a file a module needs but nobody installed is copied from the package (<b>preflight</b>).</li>
+  <li>A page whose API does not answer is <b>named</b>, its cause read from the log, and the update <b>keeps everything else</b> - one page no longer takes the others back with it.</li>
+  <li>An installer that still rolls back its own module records why, so it shows here.</li>
+  <li>After the last restart every page API is checked again (<b>final check</b>).</li>
+  <li>Fix the cause shown above, then run the update again: <code>git pull origin main</code> and <code>update-platform.ps1</code>.</li></ol>
+  <div class="sm mute" id="rf"></div></section>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);}, V=null, F='all';
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(u){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/itam'+u);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send();});}
+  function when(t){if(!t)return '—';var d=new Date(t);return isNaN(d)?esc(t):esc(d.toLocaleString());}
+  function ring(p,c){var s=150,st=13,r=(s-st)/2,ci=2*Math.PI*r,off=ci*(1-(p||0)/100);return '<svg width="'+s+'" height="'+s+'"><circle cx="75" cy="75" r="'+r+'" fill="none" stroke="#232837" stroke-width="'+st+'"/><circle cx="75" cy="75" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="'+st+'" stroke-linecap="round" stroke-dasharray="'+ci.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';}
+  function draw(){var s=V.summary,pct=s.pages?Math.round(s.working/s.pages*100):0,col={HEALTHY:'#2fb344',ATTENTION:'#e5484d'}[s.state]||'#8b93a4';
+    $('ring').innerHTML=ring(pct,col)+'<div class="v"><b>'+esc(s.working)+'/'+esc(s.pages)+'</b><span>checked pages working</span></div>';
+    $('state').innerHTML='<b style="color:'+col+'">'+esc(s.state)+'</b><span>'+esc(s.state==='HEALTHY'?'Every checked page answers and every module loaded.':s.state==='NO REPORT YET'?'No update has written a report on this server yet - the next update will.':s.not_working+' page(s) not working, '+s.missing_modules+' module(s) not on the server. The causes and fixes are below.')+'</span>';
+    function k(n,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    var fails=V.installers.filter(function(i){return i.status!=='ok';}).length;
+    $('kpis').innerHTML=k(s.not_working,'pages not working',s.not_working?'#ff7b80':'')+k(s.missing_modules,'modules missing',s.missing_modules?'#ff7b80':'')+k(fails,'installers not ok',fails?'#f5b544':'')+k(s.last_update?new Date(s.last_update).toLocaleDateString():'—','last update');
+    var fx=V.findings||[];
+    $('findings').innerHTML=(V.report_error?'<div class="fx"><div class="cause">'+esc(V.report_error)+'</div></div>':'')
+      +(V.missing_modules.length?V.missing_modules.map(function(m){return '<div class="fx"><div class="cause">The module '+esc(m)+'.js is not on the server, so its page reports "not installed".</div><div class="fix">Fix: run the update again - add-duty.sh copies every module duty.js loads.</div></div>';}).join(''):'')
+      +(fx.length?fx.map(function(f){return '<div class="fx" data-rule="'+esc(f.rule)+'"><div class="cause">'+esc(f.cause)+'</div><div class="fix">Fix: '+esc(f.fix)+'</div>'+(f.line?'<div class="ln">'+esc(f.line)+'</div>':'')+'</div>';}).join(''):'')
+      +(!fx.length&&!V.missing_modules.length&&!V.report_error?'<div class="empty">'+(s.not_working?'No cause was found in the service log. The page list below names each API that does not answer; check <code>journalctl -u sentra-itam -n 200</code>.':'Nothing to fix.')+'</div>':'');
+    var P=V.pages.filter(function(p){return F==='all'||(F==='ok')===p.ok;});
+    $('pc').textContent=s.working+' working · '+s.not_working+' not working';
+    $('pages').innerHTML=P.length?P.map(function(p){return '<tr><td><a href="'+esc(p.page)+'" style="color:#7aa7ff">'+esc(p.name)+'</a></td><td><code>'+esc(p.route)+'</code></td><td><code>'+esc(p.module)+'.js</code></td><td><span class="pill '+(p.ok?'s-ok">working':'s-bad">not working')+'</span></td><td class="sm">'+esc(p.why||'')+'</td></tr>';}).join(''):'<tr><td colspan="5" class="mute">None.</td></tr>';
+    $('ic').textContent=V.installers.length?V.installers.length+' recorded':'';
+    $('inst').innerHTML=V.installers.length?V.installers.map(function(i){return '<tr><td><code>'+esc(i.installer)+'</code></td><td><span class="pill s-'+esc(i.status)+'">'+esc(i.status)+'</span></td><td class="sm">'+when(i.at)+'</td><td class="sm"><code>'+esc(i.missing||'')+'</code></td><td class="sm">'+esc(i.reason||'')+'</td></tr>';}).join(''):'<tr><td colspan="5" class="mute">No installer has reported yet. The next update (update-platform.ps1) records each one here.</td></tr>';
+    $('rf').textContent='Report file: '+(V.report_file||'')+' · checked '+new Date(V.generated_at).toLocaleTimeString();
+  }
+  function load(){req('/platform/update-health').then(function(v){V=v;$('err').hidden=true;$('body').hidden=false;draw();},function(e){$('body').hidden=true;var m=$('err');m.hidden=false;
+    m.innerHTML=e.status===403?'<h2><i class="ti ti-lock"></i>Administrators only</h2><div class="sm mute">Update Health names engine files and server paths, so only an administrator can read it.</div>'
+      :e.status===404?'<h2><i class="ti ti-plug-off"></i>Update Health is not installed on the server yet</h2><div class="sm">Run the update: <code>git pull origin main</code>, then <code>update-platform.ps1</code>. If it still says this, the update could not start the new engine - its console output names the cause (lines starting with <code>!!</code>).</div>'
+      :'<h2><i class="ti ti-alert-triangle"></i>Could not read Update Health</h2><div class="sm">'+esc(e.message)+'</div>';});}
+  $('flt').addEventListener('click',function(ev){var b=ev.target.closest('[data-f]');if(!b)return;F=b.getAttribute('data-f');Array.prototype.forEach.call(this.querySelectorAll('[data-f]'),function(x){x.classList.toggle('on',x===b);});if(V)draw();});
+  $('refresh').addEventListener('click',function(){load();toast('Checked again');});
+  load();
+  setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script></body></html>

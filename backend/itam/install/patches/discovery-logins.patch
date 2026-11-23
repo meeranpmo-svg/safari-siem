@@ -1,0 +1,248 @@
+diff -ru a/engine/discovery/classify.js b/engine/discovery/classify.js
+--- a/engine/discovery/classify.js	2026-10-13 13:59:21.442383008 +0000
++++ b/engine/discovery/classify.js	2026-10-13 13:59:21.447122769 +0000
+@@ -130,6 +130,10 @@
+   if (x.db && x.db.length) add('server', 70, 'database listener (' + x.db.map((d) => d.label + ' ' + d.port).join(', ') + ')');
+   if (x.unix && x.unix.os) { add('server', x.unix.confidence || 60, (x.unix.label || 'Unix server') + (x.unix.ssh_banner ? ' (' + x.unix.ssh_banner + ')' : '')); if (x.unix.os === 'solaris') vendor = vendor || 'Oracle'; }
+   if (x.storage && x.storage.protocols && x.storage.protocols.length) { const p = x.storage.protocols; add('storage', p.includes('ndmp') ? 75 : p.includes('iscsi') ? 65 : 30, 'storage protocols open (' + p.join(', ') + ')'); }
++  // read-only logins (methods/login.js): what the system itself said after a successful login
++  if (x.storage_login && x.storage_login.platform) { add('storage', 95, (x.storage_login.platform === 'ontap' ? 'NetApp ONTAP' : 'HPE MSA') + ' API login'); vendor = vendor || (x.storage_login.platform === 'ontap' ? 'NetApp' : 'HPE'); }
++  if (x.unix_login && x.unix_login.os) { add('server', 88, 'SSH login: ' + x.unix_login.os); if (/solaris/i.test(x.unix_login.os)) vendor = vendor || 'Oracle'; }
++  if (x.db_login && Object.keys(x.db_login).length) add('server', 85, 'database login (' + Object.keys(x.db_login).join(', ') + ')');
+   if (x.hyperv && x.hyperv.kind === 'vm') add('vm', 90, 'Hyper-V virtual machine');
+   if (x.hyperv && x.hyperv.kind === 'host') add('server', 85, 'Hyper-V host');
+   if (x.cucm) { add('phone', 95, 'registered in CUCM'); vendor = vendor || 'Cisco'; }
+diff -ru a/engine/discovery/index.js b/engine/discovery/index.js
+--- a/engine/discovery/index.js	2026-10-13 13:59:21.448432610 +0000
++++ b/engine/discovery/index.js	2026-10-13 13:59:21.457171259 +0000
+@@ -25,6 +25,7 @@
+ const azM = require('./methods/azure');
+ const awsM = require('./methods/aws');
+ const hypervM = require('./methods/hyperv');
++const loginM = require('./methods/login');
+ 
+ const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
+ const SYSTEMS_OF_RECORD = ['ad', 'vcenter', 'nutanix', 'hyperv', 'cucm', 'azure', 'aws'];
+@@ -39,6 +40,9 @@
+   const vault = createVault({ store, keyFile: dc.vault_key_file, createKey: dc.vault_create_key !== false, scrubber });
+   const devices = createDevices({ store, assets, ingest, audit: (e) => audit(Object.assign({}, e, { detail: scrubber.deep(e.detail) })), config });
+   const siem = createSiem({ config, log: slog, assets, store, audit: (e) => audit(Object.assign({}, e, { detail: scrubber.deep(e.detail) })), findings, request: deps.siemRequest, readFile: deps.siemReadFile });
++  // read-only inventory logins (DB / SSH / storage API): trusted host keys + certificates, and the Python helper
++  const trust = loginM.createTrust(store, (e) => audit(Object.assign({}, e, { detail: scrubber.deep(e.detail) })));
++  const invRun = deps.invRun || loginM.realRunner(dc.python_bin || '/opt/sentra-siem/pyenv/bin/python3');
+   const scopesCol = store.collection('disc_scopes');
+   const runsCol = store.collection('disc_runs');
+   const setCol = store.collection('disc_settings');
+@@ -168,7 +172,7 @@
+     A(who, 'discovery.scan.start', run.id, { scope_id: scope.id, scope: scope.name, trigger, methods: allowed, blocked });
+     let lastPersist = 0;
+     const ctx = {
+-      vault, devices, deps, settings, config, log: slog,
++      vault, devices, deps, settings, config, log: slog, trust, invRun,
+       isCancelled: () => entry.cancelled || entry.window,
+       stopWindow: () => { entry.window = true; },
+       onProgress: () => { run.devices_seen = run.seen.size; if (Date.now() - lastPersist > 1500) { lastPersist = Date.now(); persist(run); } },
+@@ -221,12 +225,57 @@
+   // Classified, actionable connection test for the vault + Connect Wizard. Returns a structured result the UI shows
+   // verbatim: { ok, latency_ms, error_class, stage, http, tls:{trusted, pinned, presented}, message, hint, discovered }.
+   // The connectors (vcenter/ad/cucm/azure/aws) build this via diag.js so a TLS problem is never mislabelled as auth.
++  // helper / storage answers → the standard test result; the helper's own text is kept where it says what to do
++  function lerr(kind, r, t0) {
++    const ec = (r && r.error_class) || 'error';
++    const code = { auth: 'auth', denied: 'authz', authz: 'authz', timeout: 'timeout', refused: 'unreachable', unreachable: 'unreachable', missing_module: 'config', config: 'config', tls: 'tls' }[ec] || 'protocol';
++    const out = diag.fromError(kind, diag.err(code, (r && r.error) || 'login failed'), { latency_ms: Date.now() - t0 });
++    if (ec === 'missing_module' || ec === 'config' || ec === 'denied') out.message = scrubber.text(String((r && r.error) || out.message).slice(0, 300));
++    return out;
++  }
+   async function testCredential(id, body, who) {
+     const meta = vault.get(id);
+     if (!meta) throw bad('credential not found', 404);
+     let res;
+     if (meta.future) res = diag.fromError(meta.kind, diag.err('not_supported', 'stored for future use'), { latency_ms: null });
+-    else if (meta.kind === 'snmp_v2c' || meta.kind === 'snmp_v3') {
++    else if (meta.kind === 'ssh' || meta.kind === 'db_login' || meta.kind === 'storage_api') {
++      // these log in to ONE host: it must be inside an active scope whose pre-scan checklist is complete (same rule as SNMP)
++      const host = String((body && body.host) || '').trim();
++      const n = ip4.parseIp(host);
++      if (n === null) throw bad('host (IPv4) is required to test this credential');
++      const scope = scopesCol.all((s) => s.status === 'active' && scopesM.gateOpen(s) && ip4.contains(s.targets, n) && !ip4.contains(s.exclusions, n))[0];
++      if (!scope) throw bad('safety gate: the test host must be inside an active scope whose pre-scan checklist is complete', 409);
++      const ip = ip4.ipStr(n), t0 = Date.now();
++      const c = Object.assign(vault.open(id), { label: meta.label });
++      try {
++        let r;
++        if (meta.kind === 'db_login') {
++          r = await invRun({ op: 'db', engine: c.target.engine, host: ip, port: c.target.port || loginM.DB_DEFAULT_PORT[c.target.engine], username: c.secret.username, password: c.secret.password, service: c.target.service, database: c.target.database });
++          res = r && r.ok ? diag.result(meta.kind, { latency_ms: Date.now() - t0, message: 'Logged in: ' + String(r.version || '').slice(0, 160) })
++            : lerr(meta.kind, r, t0);
++        } else if (meta.kind === 'ssh') {
++          const port = c.target.port || 22, hk = await invRun({ op: 'hostkey', host: ip, port });
++          if (!hk || !hk.ok) res = lerr(meta.kind, hk, t0);
++          else {
++            const tr = trust.see('ssh', ip, port, hk.fp, { type: hk.type });
++            if (tr.state !== 'trusted') res = { ok: false, error_class: tr.state === 'changed' ? 'hostkey_changed' : 'hostkey_untrusted', latency_ms: Date.now() - t0, message: tr.state === 'changed' ? 'The SSH host key of this server CHANGED - not logged in. Check it, then trust the new key under Trust.' : `Host key recorded (${hk.type} SHA256 ${hk.fp.slice(0, 16)}…) - trust it under Trust, then test again. No password was sent.` };
++            else {
++              r = await invRun({ op: 'ssh_facts', host: ip, port, username: c.secret.username, password: c.secret.password, private_key: c.secret.private_key, fp: tr.fp });
++              const u = r && r.ok ? loginM.parseUnix(r.facts) : null;
++              res = u ? diag.result(meta.kind, { latency_ms: Date.now() - t0, message: 'Logged in: ' + [u.hostname, u.os, u.model, u.serial].filter(Boolean).join(' · ') })
++                : lerr(meta.kind, r, t0);
++            }
++          }
++        } else {
++          const port = c.target.port || 443, tr = trust.get('tls', ip, port);
++          const cred = { secret: c.secret, target: { base_url: `https://${ip}${port === 443 ? '' : ':' + port}`, tls_fingerprint: tr && tr.state === 'trusted' ? tr.fp : undefined } };
++          r = await require('../storage-sources')[c.target.platform](cred, { request: deps.request, captureUntrusted: true, timeoutMs: 30000 });
++          if (r.ok) res = diag.result(meta.kind, { latency_ms: Date.now() - t0, message: 'Logged in: ' + [r.system && r.system.name, r.system && r.system.model, r.system && r.system.version].filter(Boolean).join(' · ') });
++          else if (r.presented && r.presented.fingerprint256) { const s2 = trust.see('tls', ip, port, r.presented.fingerprint256, { subject: r.presented.subject || null, issuer: r.presented.issuer || null, valid_to: r.presented.valid_to || null }); res = { ok: false, error_class: s2.state === 'changed' ? 'cert_changed' : 'cert_untrusted', latency_ms: Date.now() - t0, message: 'Certificate recorded - trust it under Trust, then test again. No password was sent.' }; }
++          else res = lerr(meta.kind, r, t0);
++        }
++      } finally { c.release(); }
++    } else if (meta.kind === 'snmp_v2c' || meta.kind === 'snmp_v3') {
+       const host = String((body && body.host) || '').trim();
+       const n = ip4.parseIp(host);
+       if (n === null) throw bad('host (IPv4) is required to test an SNMP credential');
+@@ -541,6 +590,8 @@
+     kinds: () => ({ table: KIND_TABLE.map((r) => ({ when: r.when, kind: r.kind })), connectable: CONNECTABLE }),
+     credentialKinds: () => Object.entries(vault.KINDS).map(([k, v]) => ({ kind: k, secret_fields: Object.keys(v.secret), target_fields: Object.keys(v.target), future: !!v.future })),
+     sites: () => sites.slice(), scrubber, vault, devices, siem,
++    trustList: (q) => trust.list(q), trustDecide: (ids, action, who) => trust.decide(ids, action, who),
++    loginStatus: () => invRun({ op: 'version' }),
+   };
+ }
+ 
+diff -ru a/engine/discovery/routes.js b/engine/discovery/routes.js
+--- a/engine/discovery/routes.js	2026-10-13 13:59:21.457171259 +0000
++++ b/engine/discovery/routes.js	2026-10-13 13:59:21.469475920 +0000
+@@ -40,6 +40,10 @@
+   srv.route('POST', `${P}/credentials/:id/test`, async (ctx) => { admin(ctx); return { result: await D.testCredential(ctx.params.id, ctx.body, ctx.who) }; });
+ 
+   // results + review
++  // trusted SSH host keys / storage certificates for the read-only logins (methods/login.js)
++  srv.route('GET', `${P}/trust`, (ctx) => { admin(ctx); return { items: D.trustList({ state: ctx.query.state || '' }) }; });
++  srv.route('POST', `${P}/trust`, (ctx) => { admin(ctx); const b = ctx.body || {}; if (!['trust', 'forget'].includes(b.action)) throw bad('action must be trust or forget'); return D.trustDecide(b.ids, b.action, ctx.who); });
++  srv.route('GET', `${P}/login-helper`, async (ctx) => { admin(ctx); return { helper: await D.loginStatus() }; });
+   srv.route('GET', `${P}/results`, (ctx) => D.results(ctx.query));
+   srv.route('POST', `${P}/results/bulk`, (ctx) => { admin(ctx); return D.bulkResults(ctx.body, ctx.who); });
+   srv.route('GET', `${P}/results/:id`, (ctx) => ({ device: D.result(ctx.params.id) }));
+diff -ru a/engine/discovery/runner.js b/engine/discovery/runner.js
+--- a/engine/discovery/runner.js	2026-10-13 13:59:21.472432609 +0000
++++ b/engine/discovery/runner.js	2026-10-13 13:59:21.480423085 +0000
+@@ -11,6 +11,7 @@
+ const sweep = require('./methods/sweep');
+ const snmpM = require('./methods/snmp');
+ const svcM = require('./methods/services');
++const loginM = require('./methods/login');
+ const adM = require('./methods/ad');
+ const vcM = require('./methods/vcenter');
+ const ntxM = require('./methods/nutanix');
+@@ -179,6 +180,8 @@
+     for (const id of snmpCreds) opened.set(id, vault.open(id));
+     const t0 = Date.now();
+     let tcpUp = 0; let snmpUp = 0; let dbHosts = 0; let dbListeners = 0; let unixHosts = 0; let storHosts = 0;
++    const loginTargets = new Map();   // ip → {db:[{engine,port}], ssh: port|null, storage} for the read-only login phase
++    const lt = (ip) => { if (!loginTargets.has(ip)) loginTargets.set(ip, { ip, db: [], ssh: null, storage: false }); return loginTargets.get(ip); };
+     const useDb = allowed.includes('db'), useUnix = allowed.includes('unix'), useStor = allowed.includes('storage'), probeOpt = { connect: deps.connect, banner: deps.banner, timeout_ms: ctx.config.discovery.tcp_timeout_ms };
+     run.progress.phase = 'probe';
+     // per host the TCP ports and the SNMP probe run at the same time (not one after another): a silent address costs one
+@@ -214,6 +217,9 @@
+         obs({ method: allowed.includes('sweep') ? 'sweep' : allowed.includes('snmp') ? 'snmp' : useDb ? 'db' : useUnix ? 'unix' : 'storage', ip, open_ports: rec.open });
+         if (sr && sr.protocols.length) { if (sr.protocols.some((p) => p !== 'nfs')) storHosts++; obs({ method: 'storage', ip, open_ports: sr.open, extra: { storage: { protocols: sr.protocols } } }); }
+         if (dr && dr.found.length) { dbHosts++; dbListeners += dr.found.length; obs({ method: 'db', ip, open_ports: dr.open, extra: { db: dr.found } }); }
++        if (dr && dr.found.length) lt(ip).db = dr.found.map((f) => ({ engine: f.engine, port: f.port }));
++        if (ur && ur.open.includes(22)) lt(ip).ssh = 22;
++        if (sr && sr.protocols.some((p) => p !== 'nfs')) lt(ip).storage = true;
+         if (ur && (ur.open.length || ur.ssh_banner)) { if (ur.hint) unixHosts++; obs({ method: 'unix', ip, open_ports: ur.open, os: ur.hint ? ur.hint.label : '', extra: { unix: { ssh_banner: ur.ssh_banner, ports: ur.open, os: ur.hint ? ur.hint.os : null, label: ur.hint ? ur.hint.label : null, confidence: ur.hint ? ur.hint.confidence : null } } }); }
+       }
+       run.progress.hosts_done++;
+@@ -223,6 +229,13 @@
+     if (useDb) stat('db', { ok: true, seen: dbHosts, listeners: dbListeners, ms: Date.now() - t0 });
+     if (useUnix) stat('unix', { ok: true, seen: unixHosts, ms: Date.now() - t0 });
+     if (useStor) stat('storage', { ok: true, seen: storHosts, ms: Date.now() - t0 });
++    // 2b) read-only logins with the scope's credentials (only where the probes found something; trusted keys only)
++    const wantLogin = (useDb && (m.db.credential_ids || []).length) || (useUnix && m.unix.credential_id) || (useStor && m.storage.credential_id);
++    if (wantLogin && loginTargets.size && !stop() && ctx.trust && ctx.invRun) {
++      run.progress.phase = 'login'; ctx.onProgress();
++      const mm = { db: useDb ? m.db : null, unix: useUnix ? m.unix : null, storage: useStor ? m.storage : null };
++      await loginM.loginPhase({ targets: [...loginTargets.values()], m: mm, vault, trust: ctx.trust, run: ctx.invRun, request: deps.request, obs, stat, take, stop, pool, concurrency: scope.rate.concurrency, log });
++    }
+     // 3) SNMP collection on responders (system, interfaces, entity serial, LLDP / CDP neighbours)
+     if (snmpCreds.length && !stop()) {
+       const responders = [...alive.entries()].filter(([, r]) => r.snmp);
+diff -ru a/engine/discovery/scopes.js b/engine/discovery/scopes.js
+--- a/engine/discovery/scopes.js	2026-10-13 13:59:21.484432609 +0000
++++ b/engine/discovery/scopes.js	2026-10-13 13:59:21.493096455 +0000
+@@ -17,7 +17,9 @@
+ const METHODS = ACTIVE.concat(PASSIVE);
+ const DEFAULT_TCP_PORTS = [22, 80, 135, 443, 445, 3389, 5985];
+ // which credential kinds a method may use
+-const METHOD_CRED = { snmp: ['snmp_v2c', 'snmp_v3'], ad: ['ldap'], vcenter: ['vcenter'], nutanix: ['nutanix'], cucm: ['cucm_axl'], azure: ['azure'], aws: ['aws'] };
++// db / unix / storage probe without logging in; a credential only ADDS a read-only login (methods/login.js)
++const OPTIONAL_CRED = ['db', 'unix', 'storage'];
++const METHOD_CRED = { snmp: ['snmp_v2c', 'snmp_v3'], db: ['db_login'], unix: ['ssh'], storage: ['storage_api'], ad: ['ldap'], vcenter: ['vcenter'], nutanix: ['nutanix'], cucm: ['cucm_axl'], azure: ['azure'], aws: ['aws'] };
+ 
+ const bad = (msg) => Object.assign(new Error(msg), { status: 400 });
+ const str = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max);
+@@ -79,21 +81,21 @@
+       for (const x of e) if (!DBE.includes(String(x))) throw bad(`methods.db.engines: unknown engine "${x}" (allowed: ${DBE.join(', ')})`);
+       o.engines = [...new Set(e.map(String))];
+     }
+-    if (k === 'snmp') {
++    if (k === 'snmp' || k === 'db') {   // several: SNMP tries each, a database credential is per engine
+       const ids = b.credential_ids !== undefined ? b.credential_ids : (p.credential_ids || []);
+-      if (!Array.isArray(ids) || ids.length > 8) throw bad('methods.snmp.credential_ids must be a list (max 8)');
++      if (!Array.isArray(ids) || ids.length > 8) throw bad(`methods.${k}.credential_ids must be a list (max 8)`);
+       o.credential_ids = ids.map((x) => str(x, 64)).filter(Boolean);
+     } else if (METHOD_CRED[k]) {
+       o.credential_id = b.credential_id !== undefined ? (str(b.credential_id, 64) || null) : (p.credential_id || null);
+     }
+     // credential references must exist and be of the right kind
+-    const refs = k === 'snmp' ? o.credential_ids : (o.credential_id ? [o.credential_id] : []);
++    const refs = k === 'snmp' || k === 'db' ? o.credential_ids : (o.credential_id ? [o.credential_id] : []);
+     if (credentials) for (const id of refs) {
+       const c = credentials(id);
+       if (!c) throw bad(`methods.${k}: credential ${id} not found`);
+       if (!METHOD_CRED[k].includes(c.kind)) throw bad(`methods.${k}: credential ${id} is ${c.kind}, expected ${METHOD_CRED[k].join(' or ')}`);
+     }
+-    if (o.enabled && METHOD_CRED[k] && !refs.length) throw bad(`methods.${k}: choose a credential before enabling it`);
++    if (o.enabled && METHOD_CRED[k] && !OPTIONAL_CRED.includes(k) && !refs.length) throw bad(`methods.${k}: choose a credential before enabling it`);
+     out[k] = o;
+   }
+   return out;
+@@ -171,4 +173,4 @@
+   return { run, blocked };
+ }
+ 
+-module.exports = { normScope, normChecklist, gateOpen, allowedMethods, targetsFingerprint, isPublicTarget, ACTIVE, PASSIVE, METHODS, METHOD_CRED, DEFAULT_TCP_PORTS };
++module.exports = { OPTIONAL_CRED, normScope, normChecklist, gateOpen, allowedMethods, targetsFingerprint, isPublicTarget, ACTIVE, PASSIVE, METHODS, METHOD_CRED, DEFAULT_TCP_PORTS };
+diff -ru a/engine/discovery/vault.js b/engine/discovery/vault.js
+--- a/engine/discovery/vault.js	2026-10-13 13:59:21.496432609 +0000
++++ b/engine/discovery/vault.js	2026-10-13 13:59:21.502541908 +0000
+@@ -36,7 +36,10 @@
+     secret: { user: { max: 64 }, auth_password: { max: 128, min: 8 }, priv_password: { max: 128, min: 8, optional: true } },
+     target: { auth_protocol: ['sha', 'sha256'], priv_protocol: ['aes', 'none'], port: 'port' },
+   },
+-  ssh: { secret: { username: { max: 64 }, password: { max: 256, optional: true }, private_key: { max: 16384, optional: true } }, target: { port: 'port' }, future: true },
++  ssh: { secret: { username: { max: 64 }, password: { max: 256, optional: true }, private_key: { max: 16384, optional: true } }, target: { port: 'port' } },
++  // read-only inventory logins used by the active scan (methods/login.js): one credential per database engine
++  db_login: { secret: { username: { max: 128 }, password: { max: 256 } }, target: { engine: ['oracle', 'mssql', 'mysql', 'postgres'], port: 'port', service: 'dbname', database: 'dbname' } },
++  storage_api: { secret: { username: { max: 128 }, password: { max: 256 } }, target: { platform: ['ontap', 'msa'], port: 'port' } },
+   winrm: { secret: { username: { max: 128 }, password: { max: 256 } }, target: { transport: ['https', 'http'], port: 'port' }, future: true },
+   ldap: { secret: { bind_dn: { max: 512 }, password: { max: 256 } }, target: { servers: 'ldapurls', ip: 'ip', base_dn: 'dn', ca_file: 'path' } },
+   vcenter: { secret: { username: { max: 128 }, password: { max: 256 } }, target: { base_url: 'url', ca_file: 'path', tls_fingerprint: 'fp' } },
+@@ -48,7 +51,7 @@
+ // connection-target fields: changing any of them re-points where the stored secret is sent, so the secret must be
+ // re-entered in the same request (otherwise an admin session/CSRF could redirect a saved password to a new host).
+ const CONNECTION_TARGET_FIELDS = ['base_url', 'servers', 'host', 'ip', 'port', 'ca_file', 'tls_fingerprint', 'transport'];
+-const REQUIRED_TARGET = { ldap: ['servers', 'base_dn'], vcenter: ['base_url'], nutanix: ['base_url'], cucm_axl: ['host'], azure: ['tenant_id', 'client_id'], aws: ['regions'] };
++const REQUIRED_TARGET = { db_login: ['engine'], storage_api: ['platform'], ldap: ['servers', 'base_dn'], vcenter: ['base_url'], nutanix: ['base_url'], cucm_axl: ['host'], azure: ['tenant_id', 'client_id'], aws: ['regions'] };
+ 
+ function normTarget(kind, raw) {
+   const spec = KINDS[kind].target;
+@@ -70,6 +73,7 @@
+       case 'guids': { if (!Array.isArray(x) || x.length > 50) throw bad(`target.${k} must be a list of GUIDs`); out[k] = x.map((g) => { const s = str(g, 40); if (!GUID_RE.test(s)) throw bad(`target.${k} must be GUIDs`); return s.toLowerCase(); }); break; }
+       case 'regions': { const arr = Array.isArray(x) ? x : [x]; if (arr.length > 20) throw bad('target.regions: at most 20'); out[k] = arr.map((r) => { const s = str(r, 30).toLowerCase(); if (!AWS_REGION_RE.test(s)) throw bad(`target.regions: "${s}" is not an AWS region`); return s; }); break; }
+       case 'ldapurls': { const arr = Array.isArray(x) ? x : [x]; if (arr.length > 6) throw bad('target.servers: at most 6'); out[k] = arr.map((u) => { const s = str(u, 300); if (!LDAP_URL_RE.test(s)) throw bad(`target.servers: "${s}" must be ldaps://host:636 or ldap://host:389 (StartTLS)`); return s; }); break; }
++      case 'dbname': { const s = str(x, 64); if (!/^[A-Za-z0-9_.$#-]{1,64}$/.test(s)) throw bad(`target.${k} must be a name (letters, digits, _ . $ # -)`); out[k] = s; break; }
+       case 'axlver': { const s = str(x, 10); if (!/^\d{1,2}\.\d$/.test(s)) throw bad('target.axl_version must look like 12.5'); out[k] = s; break; }
+       default: break;
+     }

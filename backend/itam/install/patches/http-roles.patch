@@ -1,0 +1,32 @@
+diff --git a/repos/sentra-itam/engine/http.js b/repos/sentra-itam/engine/http.js
+index 1a5065f..d3ac5a9 100644
+--- a/engine/http.js
++++ b/engine/http.js
+@@ -13,7 +13,8 @@ const http = require('node:http');
+ const crypto = require('node:crypto');
+ const fs = require('node:fs');
+ 
+-const ROLE_RANK = { viewer: 1, operator: 2, admin: 3 };
++const ROLE_RANK = Object.freeze(Object.assign(Object.create(null), { viewer: 1, operator: 2, admin: 3 }));   // no prototype: a role header "constructor" / "__proto__" is not a role
++const rankOf = (r) => (Object.prototype.hasOwnProperty.call(ROLE_RANK, r) ? ROLE_RANK[r] : 0);
+ 
+ function compile(pattern) {
+   const keys = [];
+@@ -73,7 +74,7 @@ function createServer({ host = '127.0.0.1', port = 9150, prefix = '/api/itam', a
+     const user = String(req.headers['x-auth-user'] || '').trim().slice(0, 200);
+     const role = String(req.headers['x-auth-role'] || '').trim().toLowerCase();
+     const isHealth = p === `${prefix}/health`;
+-    if (inPortal && !isHealth && (!user || !ROLE_RANK[role])) { req.resume(); return send(res, 401, { error: 'missing or invalid identity' }); }
++    if (inPortal && !isHealth && (!user || !rankOf(role))) { req.resume(); return send(res, 401, { error: 'missing or invalid identity' }); }
+     const fetchSite = String(req.headers['sec-fetch-site'] || '').trim().toLowerCase();
+     if (fetchSite === 'cross-site' || fetchSite === 'same-site') {
+       req.resume();
+@@ -100,7 +101,7 @@ function createServer({ host = '127.0.0.1', port = 9150, prefix = '/api/itam', a
+       agent: !!hit.r.opts.agent,
+       who: { user, role, ip: xr ? String(xr).slice(0, 64) : '' },
+       bearer() { const h = String(req.headers['authorization'] || ''); const m = /^Bearer\s+(.+)$/i.exec(h); return m ? m[1].trim() : ''; },
+-      need(min) { if ((ROLE_RANK[role] || 0) < ROLE_RANK[min]) throw Object.assign(new Error(`requires role ${min}`), { status: 403 }); },
++      need(min) { if (rankOf(role) < (rankOf(min) || 99)) throw Object.assign(new Error(`requires role ${min}`), { status: 403 }); },
+       raw(code, headers, body) { ctx.sent = true; res.writeHead(code, Object.assign({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }, headers)); res.end(body); },
+       file(filePath, headers) {
+         ctx.sent = true;

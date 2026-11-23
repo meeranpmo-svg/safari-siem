@@ -1,0 +1,57 @@
+--- a/engine/discovery/routes.js
++++ b/engine/discovery/routes.js
+@@ -11,14 +11,14 @@ function registerDiscoveryRoutes(srv, app) {
+   const P = '/discovery';
+ 
+   // dashboard + configuration (read: everyone)
+-  srv.route('GET', `${P}/dashboard`, () => D.dashboard());
+-  srv.route('GET', `${P}/methods`, () => ({ settings: D.settings(), active: ['sweep', 'snmp', 'db', 'unix', 'storage'], passive: ['arp', 'ad', 'vcenter', 'nutanix', 'hyperv', 'cucm', 'azure', 'aws'], credential_kinds: D.credentialKinds(), sites: D.sites() }));
++  srv.route('GET', `${P}/dashboard`, (ctx) => void ctx.need('viewer') || D.dashboard());
++  srv.route('GET', `${P}/methods`, (ctx) => void ctx.need('viewer') || ({ settings: D.settings(), active: ['sweep', 'snmp', 'db', 'unix', 'storage'], passive: ['arp', 'ad', 'vcenter', 'nutanix', 'hyperv', 'cucm', 'azure', 'aws'], credential_kinds: D.credentialKinds(), sites: D.sites() }));
+   srv.route('POST', `${P}/methods`, (ctx) => { admin(ctx); return { settings: D.updateSettings(ctx.body, ctx.who) }; });
+ 
+   // scopes
+-  srv.route('GET', `${P}/scopes`, (ctx) => ({ scopes: D.listScopes(ctx.query.archived === '1'), sites: D.sites() }));
++  srv.route('GET', `${P}/scopes`, (ctx) => void ctx.need('viewer') || ({ scopes: D.listScopes(ctx.query.archived === '1'), sites: D.sites() }));
+   srv.route('POST', `${P}/scopes`, (ctx) => { admin(ctx); return { scope: D.createScope(ctx.body, ctx.who) }; });
+-  srv.route('GET', `${P}/scopes/:id`, (ctx) => ({ scope: D.getScope(ctx.params.id) }));
++  srv.route('GET', `${P}/scopes/:id`, (ctx) => void ctx.need('viewer') || ({ scope: D.getScope(ctx.params.id) }));
+   srv.route('POST', `${P}/scopes/:id`, (ctx) => { admin(ctx); return { scope: D.updateScope(ctx.params.id, ctx.body, ctx.who) }; });
+   for (const [act, st] of [['enable', 'active'], ['disable', 'disabled'], ['archive', 'archived']]) {
+     srv.route('POST', `${P}/scopes/:id/${act}`, (ctx) => { admin(ctx); return { scope: D.setScopeStatus(ctx.params.id, st, ctx.who) }; });
+@@ -28,8 +28,8 @@ function registerDiscoveryRoutes(srv, app) {
+   srv.route('POST', `${P}/scopes/:id/run`, (ctx) => { admin(ctx); return { run: D.startRun(ctx.params.id, { trigger: 'manual', who: ctx.who }) }; });
+ 
+   // runs
+-  srv.route('GET', `${P}/runs`, (ctx) => ({ runs: D.listRuns(ctx.query) }));
+-  srv.route('GET', `${P}/runs/:id`, (ctx) => { const r = D.getRun(ctx.params.id); if (!r) throw bad('run not found', 404); return { run: r }; });
++  srv.route('GET', `${P}/runs`, (ctx) => void ctx.need('viewer') || ({ runs: D.listRuns(ctx.query) }));
++  srv.route('GET', `${P}/runs/:id`, (ctx) => { ctx.need('viewer'); const r = D.getRun(ctx.params.id); if (!r) throw bad('run not found', 404); return { run: r }; });
+   srv.route('POST', `${P}/runs/:id/cancel`, (ctx) => { admin(ctx); return { run: D.cancelRun(ctx.params.id, ctx.who) }; });
+ 
+   // credentials (admin only — metadata included)
+@@ -45,9 +45,9 @@ function registerDiscoveryRoutes(srv, app) {
+   srv.route('GET', `${P}/trust`, (ctx) => { admin(ctx); return { items: D.trustList({ state: ctx.query.state || '' }) }; });
+   srv.route('POST', `${P}/trust`, (ctx) => { admin(ctx); const b = ctx.body || {}; if (!['trust', 'forget'].includes(b.action)) throw bad('action must be trust or forget'); return D.trustDecide(b.ids, b.action, ctx.who); });
+   srv.route('GET', `${P}/login-helper`, async (ctx) => { admin(ctx); return { helper: await D.loginStatus() }; });
+-  srv.route('GET', `${P}/results`, (ctx) => D.results(ctx.query));
++  srv.route('GET', `${P}/results`, (ctx) => void ctx.need('viewer') || D.results(ctx.query));
+   srv.route('POST', `${P}/results/bulk`, (ctx) => { admin(ctx); return D.bulkResults(ctx.body, ctx.who); });
+-  srv.route('GET', `${P}/results/:id`, (ctx) => ({ device: D.result(ctx.params.id) }));
++  srv.route('GET', `${P}/results/:id`, (ctx) => void ctx.need('viewer') || ({ device: D.result(ctx.params.id) }));
+   srv.route('POST', `${P}/results/:id/approve`, (ctx) => { admin(ctx); return D.approve(ctx.params.id, ctx.who); });
+   srv.route('POST', `${P}/results/:id/ignore`, (ctx) => { admin(ctx); return D.ignore(ctx.params.id, ctx.body.reason, ctx.who); });
+   srv.route('POST', `${P}/results/:id/restore`, (ctx) => { admin(ctx); return D.restore(ctx.params.id, ctx.who); });
+@@ -57,10 +57,10 @@ function registerDiscoveryRoutes(srv, app) {
+   srv.route('POST', `${P}/hyperv/import`, (ctx) => { admin(ctx); return D.ingestHyperv(ctx.body.report || ctx.body, ctx.who, { scope_id: ctx.body.scope_id }); }, { maxBody: 4 * 1024 * 1024 });
+ 
+   // SIEM log-coverage confirmation (read: everyone) — are discovered/approved assets actually sending logs?
+-  srv.route('GET', `${P}/log-coverage`, async () => await D.logCoverage());
++  srv.route('GET', `${P}/log-coverage`, async (ctx) => void ctx.need('viewer') || await D.logCoverage());
+ 
+   // SIEM connect
+-  srv.route('GET', `${P}/connect`, () => ({ connections: D.connections(), candidates: D.connectCandidates(), kinds: D.kinds() }));
++  srv.route('GET', `${P}/connect`, (ctx) => void ctx.need('viewer') || ({ connections: D.connections(), candidates: D.connectCandidates(), kinds: D.kinds() }));
+   srv.route('POST', `${P}/connect`, async (ctx) => { admin(ctx); return D.connect(ctx.body.asset_id, { kind: ctx.body.kind }, ctx.who); });
+   srv.route('POST', `${P}/connect/health`, async (ctx) => { admin(ctx); return { health: await D.health() }; });
+ 

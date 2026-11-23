@@ -1,0 +1,352 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Databases</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left;color:inherit;font:inherit}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer;text-decoration:none;display:inline-block}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn.sm{padding:4px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:default}
+input,select,textarea{font:13px "Segoe UI",system-ui,sans-serif;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}
+.flt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.links{display:flex;gap:8px;flex-wrap:wrap}
+.form{display:grid;gap:10px}.form label{display:grid;gap:3px;font-size:12px;color:var(--mute)}.row2{display:flex;gap:8px;flex-wrap:wrap}.row2>label{flex:1;min-width:140px}
+.step{font-weight:700;color:var(--title);margin:6px 0 0}
+pre.sql{background:#0b0c10;border:1px solid var(--border);border-radius:8px;padding:10px;font:12px Consolas,monospace;max-height:220px;overflow:auto;white-space:pre;margin:0}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Databases · inventory · monitoring · setup</div><h1>Databases</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <button type="button" class="btn pri" id="add" hidden>＋ Add database</button><button type="button" class="btn" id="run" hidden>▶ Read now</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="banner">Every database the platform knows, in one place: the ones <b>monitored</b> (health and performance every 4 minutes, sent to the SIEM for the AI Oracle DBA) and the ones Asset Discovery <b>found</b> on the network. Add a database in three steps — the page gives your DBA the exact script for a read-only account. The platform only reads: it never changes a database.</div>
+<div class="k" id="kk"><div class="empty">Loading…</div></div>
+<div class="card"><h2>All databases <span class="c" id="dc"></span></h2>
+  <div class="flt"><input id="q" placeholder="Search name, host, service…" style="flex:1;min-width:200px"><select id="fst"><option value="">All</option><option value="monitored">Monitored</option><option value="problem">Needs attention</option><option value="found">Found, not monitored</option></select></div>
+  <div class="tw" id="tbl"><div class="empty">Loading…</div></div>
+  <div id="rmw" hidden><h3 style="font-size:14px;margin:14px 0 6px">Removed from the inventory <span class="c" id="rmc"></span></h3><div class="tw" id="rml"></div><p class="note">Removed databases are not read and not listed. The server stays in Asset Discovery; <b>Restore</b> brings the database back.</p></div>
+  <p class="note">Monitoring (health, tablespaces, backups, performance) is available for <b>Oracle</b>. Oracle, SQL Server, MySQL and PostgreSQL: the login Asset Discovery proved on each server is read automatically - version, edition, every database with its size and state, backups (SQL Server), sessions and replication - see the section below.</p></div>
+<div class="card" id="inv"><h2>Oracle · SQL Server · PostgreSQL · MySQL <span class="c">details pulled automatically from the servers already in the platform</span><span class="sp"></span><button type="button" class="btn sm" id="inv-run" hidden>▶ Read now</button></h2>
+  <div class="k" id="inv-k"><div class="empty">Loading…</div></div>
+  <div class="tw" id="inv-t"></div>
+  <div id="inv-fw" hidden><h3 style="font-size:14px;margin:14px 0 6px">Found on servers, no read-only login yet <span class="c" id="inv-fc"></span></h3><div class="tw" id="inv-f"></div></div>
+  <p class="note" id="inv-n"></p></div>
+<div class="card"><h2>More on databases</h2><div class="links"><a class="btn" href="db-performance.html">📈 Database Performance</a><a class="btn" href="ai-dba.html">🤖 AI Oracle DBA</a><a class="btn" href="network-discovery.html">🔎 Asset Discovery (find databases)</a><a class="btn" href="credential-security.html">🔐 Credential Security</a></div></div>
+</main>
+<script type="text/plain" id="sql-oracle">-- Run as a DBA in the monitored database (multitenant: connect to the PDB = the service name you enter).
+-- Change the password. The account can log in and read monitoring views (performance, statistics, GoldenGate status) - nothing else.
+CREATE PROFILE zyb_monitor_prof LIMIT SESSIONS_PER_USER 2 IDLE_TIME 10 CONNECT_TIME 30 FAILED_LOGIN_ATTEMPTS 5 PASSWORD_LOCK_TIME 1/24;
+CREATE USER zyb_monitor IDENTIFIED BY "Change-Me-Long-Random-1" PROFILE zyb_monitor_prof DEFAULT TABLESPACE users QUOTA 0 ON users;
+GRANT CREATE SESSION TO zyb_monitor;
+GRANT SELECT ON sys.v_$version TO zyb_monitor;
+GRANT SELECT ON sys.v_$instance TO zyb_monitor;
+GRANT SELECT ON sys.v_$database TO zyb_monitor;
+GRANT SELECT ON sys.v_$session TO zyb_monitor;
+GRANT SELECT ON sys.v_$parameter TO zyb_monitor;
+GRANT SELECT ON sys.v_$log TO zyb_monitor;
+GRANT SELECT ON sys.v_$archived_log TO zyb_monitor;
+GRANT SELECT ON sys.v_$log_history TO zyb_monitor;
+GRANT SELECT ON sys.v_$archive_dest TO zyb_monitor;
+GRANT SELECT ON sys.v_$rman_backup_job_details TO zyb_monitor;
+GRANT SELECT ON sys.v_$dataguard_stats TO zyb_monitor;
+GRANT SELECT ON sys.v_$recovery_file_dest TO zyb_monitor;
+GRANT SELECT ON sys.v_$diag_alert_ext TO zyb_monitor;
+GRANT SELECT ON sys.dba_tablespace_usage_metrics TO zyb_monitor;
+GRANT SELECT ON sys.dba_tablespaces TO zyb_monitor;
+GRANT SELECT ON sys.dba_objects TO zyb_monitor;
+GRANT SELECT ON sys.v_$sysmetric TO zyb_monitor;
+GRANT SELECT ON sys.v_$waitclassmetric TO zyb_monitor;
+GRANT SELECT ON sys.v_$system_wait_class TO zyb_monitor;
+GRANT SELECT ON sys.v_$osstat TO zyb_monitor;
+-- Morning Health Check (Databases -> Morning Health Check): ASM space and the standby's managed recovery process
+GRANT SELECT ON sys.v_$asm_diskgroup_stat TO zyb_monitor;
+GRANT SELECT ON sys.v_$managed_standby TO zyb_monitor;
+-- Long-Running Queries (Databases -> Long-Running Queries): the sessions holding up a database, on every RAC instance
+GRANT SELECT ON sys.gv_$session TO zyb_monitor;
+GRANT SELECT ON sys.gv_$sql TO zyb_monitor;
+-- V$TEMPSEG_USAGE and GV$TEMPSEG_USAGE are public synonyms (for V_$SORT_USAGE / GV_$SORT_USAGE on most versions), so
+-- "GRANT SELECT ON sys.gv_$tempseg_usage" fails with ORA-00942: grant on whatever the synonyms point to
+BEGIN
+  FOR s IN (SELECT DISTINCT table_name FROM dba_synonyms WHERE owner = 'PUBLIC' AND table_owner = 'SYS' AND synonym_name IN ('V$TEMPSEG_USAGE', 'GV$TEMPSEG_USAGE')) LOOP
+    EXECUTE IMMEDIATE 'GRANT SELECT ON sys.' || s.table_name || ' TO zyb_monitor';
+  END LOOP;
+END;
+/
+GRANT SELECT ON sys.gv_$process TO zyb_monitor;
+GRANT SELECT ON sys.gv_$session_longops TO zyb_monitor;
+GRANT SELECT ON sys.gv_$sesstat TO zyb_monitor;
+GRANT SELECT ON sys.v_$statname TO zyb_monitor;
+-- tuning (Databases -> Oracle Tuning; Oracle 12.2+): Top SQL, execution plans, waits, memory, temp/undo, limits, statistics
+GRANT SELECT ON sys.v_$sqlstats TO zyb_monitor;
+GRANT SELECT ON sys.v_$sql TO zyb_monitor;
+GRANT SELECT ON sys.v_$sql_plan TO zyb_monitor;
+GRANT SELECT ON sys.v_$sql_plan_statistics_all TO zyb_monitor;
+GRANT SELECT ON sys.v_$eventmetric TO zyb_monitor;
+GRANT SELECT ON sys.v_$event_name TO zyb_monitor;
+-- (v$tempseg_usage / gv$tempseg_usage: granted by the synonym block above)
+GRANT SELECT ON sys.dba_temp_files TO zyb_monitor;
+GRANT SELECT ON sys.v_$undostat TO zyb_monitor;
+GRANT SELECT ON sys.v_$sgainfo TO zyb_monitor;
+GRANT SELECT ON sys.v_$pgastat TO zyb_monitor;
+GRANT SELECT ON sys.v_$resource_limit TO zyb_monitor;
+GRANT SELECT ON sys.v_$asm_diskgroup TO zyb_monitor;
+GRANT SELECT ON sys.dba_tab_statistics TO zyb_monitor;
+GRANT SELECT ON sys.dba_users TO zyb_monitor;
+-- GoldenGate integrated Extract / Replicat (only where GoldenGate runs; harmless otherwise)
+GRANT SELECT ON sys.dba_capture TO zyb_monitor;
+GRANT SELECT ON sys.dba_apply TO zyb_monitor;
+GRANT SELECT ON sys.v_$goldengate_capture TO zyb_monitor;
+GRANT SELECT ON sys.v_$gg_apply_coordinator TO zyb_monitor;
+GRANT SELECT ON sys.v_$archive_dest_status TO zyb_monitor;
+GRANT SELECT ON sys.v_$dataguard_process TO zyb_monitor;
+GRANT SELECT ON sys.v_$archive_gap TO zyb_monitor;
+GRANT SELECT ON sys.v_$dataguard_status TO zyb_monitor;
+GRANT SELECT ON sys.v_$dg_broker_config TO zyb_monitor;
+GRANT SELECT ON sys.v_$standby_log TO zyb_monitor;
+GRANT SELECT ON sys.v_$datafile TO zyb_monitor;
+GRANT AUDIT_VIEWER TO zyb_monitor;
+GRANT SELECT ON sys.v_$option TO zyb_monitor;
+GRANT SELECT ON sys.dba_audit_mgmt_cleanup_jobs TO zyb_monitor;
+GRANT SELECT ON sys.dba_audit_mgmt_last_arch_ts TO zyb_monitor;
+-- DIAGNOSTICS PACK ONLY - grant this ONLY if the database is licensed for the Oracle Diagnostics Pack, and switch it on
+-- in Databases -> Oracle Tuning -> Settings (the platform records who confirmed the licence):
+-- GRANT SELECT ON sys.v_$active_session_history TO zyb_monitor;
+-- check (should list CREATE SESSION only): SELECT privilege FROM dba_sys_privs WHERE grantee = 'ZYB_MONITOR';
+-- undo: DROP USER zyb_monitor; DROP PROFILE zyb_monitor_prof;</script>
+<script type="text/plain" id="sql-mssql">-- Run on the SQL Server instance as a sysadmin. Change the password.
+-- The login can see server state and database names - it cannot read or change any data.
+CREATE LOGIN zyb_monitor WITH PASSWORD = 'Change-Me-Long-Random-1', CHECK_POLICY = ON, CHECK_EXPIRATION = OFF;
+GRANT VIEW SERVER STATE TO zyb_monitor;
+GRANT VIEW ANY DEFINITION TO zyb_monitor;
+-- backup history for the database inventory (read-only):
+USE msdb; CREATE USER zyb_monitor FOR LOGIN zyb_monitor; GRANT SELECT ON dbo.backupset TO zyb_monitor;
+-- undo: USE msdb; DROP USER zyb_monitor; DROP LOGIN zyb_monitor;</script>
+<script type="text/plain" id="sql-mysql">-- Run as an administrator. Put the platform server's IP address in place of PLATFORM_IP. Change the password.
+-- The account can list databases and server status - it cannot read or change any data.
+CREATE USER 'zyb_monitor'@'PLATFORM_IP' IDENTIFIED BY 'Change-Me-Long-Random-1' REQUIRE SSL;
+GRANT PROCESS, SHOW DATABASES ON *.* TO 'zyb_monitor'@'PLATFORM_IP';
+GRANT SELECT ON performance_schema.* TO 'zyb_monitor'@'PLATFORM_IP';   -- uptime, sessions, replication status
+-- (remove "REQUIRE SSL" only if the server has no TLS yet - then set Encryption in transit = off)
+-- undo: DROP USER 'zyb_monitor'@'PLATFORM_IP';</script>
+<script type="text/plain" id="sql-postgres">-- Run as a superuser. Change the password.
+-- pg_monitor = read-only statistics; the role cannot read or change table data.
+CREATE ROLE zyb_monitor LOGIN PASSWORD 'Change-Me-Long-Random-1';
+GRANT pg_monitor TO zyb_monitor;
+-- pg_hba.conf: allow the platform server's IP for user zyb_monitor with "hostssl ... scram-sha-256"
+-- undo: DROP ROLE zyb_monitor;</script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', ST=null, REG=null, DISC=[], CREDS=null, SI=null, ROWS=[];
+  var ENG={oracle:['Oracle',1521],mssql:['SQL Server',1433],mysql:['MySQL',3306],postgres:['PostgreSQL',5432]};
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(m,url,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,url);x.withCredentials=true;x.timeout=120000;if(b!==undefined||m==='POST')x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(b!==undefined?JSON.stringify(b):(m==='POST'?'{}':null));});}
+  function who(){return new Promise(function(ok){var x=new XMLHttpRequest();x.open('GET','/dashboards/whoami.json');x.onload=function(){try{ok(JSON.parse(x.responseText));}catch(e){ok(null);}};x.onerror=function(){ok(null);};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function pill(t,c){return '<span class="pill p-'+c+'">'+esc(t)+'</span>';}
+  function when(s){return s?new Date(s).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';}
+  function tile(l,v,s,cls,f){return '<button type="button" class="t '+(cls||'')+'" data-f="'+esc(f||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  var soft=function(p){return p.catch(function(e){return {__err:e};});};
+
+  function load(){
+    Promise.all([who(),soft(req('GET','/api/itam/db-health')),soft(req('GET','/api/itam/db-health/databases')),soft(req('GET','/api/itam/discovery/results?method=db&limit=1000')),soft(req('GET','/api/itam/discovery/credentials')),soft(req('GET','/api/soc/db/oracle'))]).then(function(r){
+      if(r[0]){var rl=String(r[0].role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}
+      ST=r[1].__err?null:r[1];REG=r[2].__err?null:r[2];DISC=r[3].__err?[]:(r[3].devices||[]);CREDS=r[4].__err?null:(r[4].credentials||[]).filter(function(c){return c.kind==='db_login';});SI=r[5].__err?null:r[5];
+      if(r[1].__err&&r[1].__err.status===404){$('kk').innerHTML='<p class="err">The database module is not installed yet - run the platform update (update-platform.ps1).</p>';$('tbl').innerHTML='';return;}
+      $('add').hidden=!can('admin');$('run').hidden=!can('admin');
+      build();draw();drawRemoved();editFromHash();loadInv();$('up').textContent='read '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    });
+  }
+  // how to fix one database: what failed, why, who acts - and the exact grants for its own account, in one script
+  var KIND={grant:['Missing grant','Your DBA runs the script below as SYS (or a DBA account) in this database; for a PDB, connected to the PDB.','warn'],
+    platform:['Query refused by this Oracle release','Not a grant - a query the platform sends. It is fixed in the platform: install the latest update. Nothing for the DBA to do.','info'],
+    timeout:['Timed out','The reading took longer than its 10-second limit. Retried at every read.','mut'],other:['Other error','See the error; it is retried at every read.','mut']};
+  function fixPanel(id){var r=ROWS.filter(function(x){return x.id===id;})[0];if(!r||!r.fix)return;var F=r.fix,h='';
+    ['grant','platform','timeout','other'].forEach(function(k){var L=F.md.filter(function(m){return (m.kind||'grant')===k;});if(!L.length)return;
+      h+='<div class="sec"><h3>'+esc(KIND[k][0])+' · '+L.length+'</h3><p class="note">'+esc(KIND[k][1])+'</p><table><thead><tr><th>Reading</th><th>Error</th><th>What it feeds / fix</th></tr></thead><tbody>'
+        +L.map(function(m){return '<tr><td><b>'+esc(m.label||m.query)+'</b></td><td class="mono">'+esc(m.ora||'')+'<div class="note">'+esc(String(m.error||'').slice(0,160))+'</div></td><td class="note">'+esc(m.fix||'')+'</td></tr>';}).join('')+'</tbody></table></div>';});
+    if(F.script.length)h='<div class="sec"><h3>The fix script for '+esc(F.account||'the monitoring account')+'</h3><p class="note">Read-only grants only (SELECT on dictionary views, AUDIT_VIEWER) - the same as in the Add database script. Run it once; nothing else changes.</p>'
+      +'<button class="btn sm" data-copyfix="1">Copy</button><pre class="mono" id="fixsql" style="white-space:pre-wrap;margin:6px 0 0">'+esc(F.script.join('\n'))+'</pre></div>'+h;
+    h+='<div class="sec"><h3>After the fix</h3><p class="note">The platform reads this database every '+esc((ST&&ST.interval_min)||4)+' minutes; when a reading succeeds it leaves this list and the status turns <b>healthy</b> by itself - this page refreshes every minute. Last read: '+esc(when(F.at))+'.</p>'
+      +(can('admin')?'<button class="btn" data-recheck="'+esc(r.id)+'">Check again now</button>':'<p class="note">An administrator can also press Check again now.</p>')+'</div>';
+    Z.open('How to fix',r.name+(r.instance?' · '+r.instance:''),h);}
+  function credOf(label){return (CREDS||[]).filter(function(c){return c.label===label;})[0]||null;}
+  function tlsPill(c){if(!c)return '<span class="muted">—</span>';var m=(c.target||{}).tls||'off';return m==='verify'?pill('TLS verified','ok'):m==='require'?pill('TLS','warn'):pill('not encrypted','bad');}
+  function build(){
+    var RLAB={instance:'instance status',tablespace:'tablespaces',sessions:'sessions',blocked:'blocked sessions',redo:'redo / archive',backup:'RMAN backups',dataguard:'Data Guard lag',invalid_objects:'invalid objects',fra:'recovery area'};
+    ROWS=[];var last=(ST&&ST.last)||{},res=last.results||[],inst=(SI&&SI.instances)||[],seen={};
+    ((REG&&REG.databases)||[]).forEach(function(d){
+      var rr=res.filter(function(x){return x.ip===d.host||x.host===d.label||x.host===d.host;})[0]||null;
+      // the newest successful read decides: a Test pressed after the DBA ran the grants shows at once, without waiting for the pass
+      var lt0=d.last_test;if(lt0&&lt0.ok&&lt0.missing_detail&&(!rr||!rr.at||Date.parse(lt0.at)>Date.parse(rr.at)))rr=Object.assign({},rr||{},lt0,{ok:true});
+      var si=inst.filter(function(i){return (i.host||'').toLowerCase()===String(d.host).toLowerCase()||(rr&&rr.instance&&i.instance===rr.instance);})[0]||null;
+      var lt=d.last_test||{},state,why='',fix=null;
+      if(d.paused){state='bad';why='paused: '+d.paused.reason;}
+      else if(rr&&!rr.ok){state='bad';why=rr.error||'last read failed';}
+      else if(rr&&rr.ok&&last.push_error){state='warn';why='read OK but not reaching the SIEM: '+last.push_error;}
+      else if(si&&si.stale){state='warn';why='no fresh data in the SIEM';}
+      else if(rr&&rr.ok&&rr.missing&&rr.missing.length){var md=rr.missing_detail||[],ins=rr.missing.indexOf('instance')>=0;
+        var cnt=function(k){return md.filter(function(m){return (m.kind||'grant')===k;}).length;},g=cnt('grant'),pf=cnt('platform'),oth=cnt('timeout')+cnt('other');
+        // only a platform query error: nothing for the DBA - the update fixes it
+        state=g||oth||ins?'warn':'upd';
+        why='read '+(rr.records||0)+' records · '+[g?g+' reading'+(g>1?'s':'')+' need'+(g>1?'':'s')+' a grant (your DBA runs the fix script)':'',pf?pf+' refused by this Oracle release (fixed by the platform update, nothing for the DBA)':'',oth?oth+' timed out / other error (retried every read)':''].filter(Boolean).join(' · ')
+          +(ins?' — its open / down status is unknown until the grant is in place':'')+'. The status changes by itself once the next read succeeds.';
+        fix={md:md,script:rr.fix_script||[],account:rr.account||'',at:rr.at||last.at};}
+      else if(rr&&rr.ok){state='ok';why='read '+(rr.records||0)+' records '+when(last.at);}
+      else if(lt.ok===false){state='bad';why=lt.error||'test failed';}
+      else {state='info';why='waiting for the first read';}
+      seen[String(d.host).toLowerCase()]=1;
+      ROWS.push({kind:'monitored',fix:fix,id:d.id,name:d.label,engine:'oracle',where:d.host+':'+d.port+'/'+(d.service||''),login:d.credential,cred:credOf(d.credential),state:state,why:why,instance:(rr&&rr.instance)||(si&&si.instance)||'',up:si?si.up:null});
+    });
+    var gone={};((REG&&REG.dismissed)||[]).forEach(function(x){gone[x.id]=1;});
+    DISC.forEach(function(v){
+      var ip=String(v.ip||'').toLowerCase();if(gone[v.id]||seen[ip]||seen[String(v.hostname||'').toLowerCase()])return;
+      var dl=(v.extra&&v.extra.db_login)||{},eng=Object.keys(dl);
+      ROWS.push({kind:'found',id:v.id,name:v.hostname||v.ip,engine:eng[0]||'',engines:eng,where:v.ip,login:eng.map(function(k){return dl[k]&&dl[k].credential;}).filter(Boolean).join(', '),state:'mut',why:eng.length?eng.map(function(k){var x=dl[k]||{};return (ENG[k]?ENG[k][0]:k)+(x.version?' '+String(x.version).slice(0,40):'')+(x.databases&&x.databases.length?' · '+x.databases.length+' databases':'');}).join('; '):'database login answered (Asset Discovery)',ip:v.ip,host:v.hostname});
+    });
+  }
+  function draw(){
+    var mon=ROWS.filter(function(r){return r.kind==='monitored';}),found=ROWS.filter(function(r){return r.kind==='found';});
+    var bad=mon.filter(function(r){return r.state==='bad'||r.state==='warn';}).length,okc=mon.filter(function(r){return r.state==='ok';}).length;
+    var clear=CREDS?CREDS.filter(function(c){return ((c.target||{}).tls||'off')==='off';}).length:null;
+    $('kk').innerHTML=tile('Databases',ROWS.length,mon.length+' monitored · '+found.length+' found','info','')+tile('Monitored, healthy',okc,'read OK and reaching the SIEM',okc?'ok':'','monitored')
+      +tile('Needs attention',bad,'paused, failing or not reaching the SIEM',bad?'bad':'ok','problem')+tile('Found, not monitored',found.length,'by Asset Discovery','','found')
+      +(clear!=null?tile('Logins without TLS',clear,'of '+CREDS.length+' database logins',clear?'warn':'ok',''):'')
+      +tile('Last read',ST&&ST.last?when(ST.last.at):'—',ST?(ST.enabled?'every '+ST.interval_min+' min':'switched off'):'','','');
+    var q=$('q').value.trim().toLowerCase(),f=$('fst').value;
+    var rows=ROWS.filter(function(r){if(f==='monitored'&&r.kind!=='monitored')return false;if(f==='found'&&r.kind!=='found')return false;if(f==='problem'&&!(r.state==='bad'||r.state==='warn'))return false;
+      return !q||[r.name,r.where,r.login,r.instance,r.why].join(' ').toLowerCase().indexOf(q)>=0;});
+    $('dc').textContent=rows.length+' of '+ROWS.length;
+    $('tbl').innerHTML=rows.length?'<table><thead><tr><th>Database</th><th>Engine</th><th>Where</th><th>Login</th><th>Encryption</th><th>Status</th><th></th></tr></thead><tbody>'+rows.map(function(r){
+      var st=r.kind==='found'?pill('found','mut'):pill({ok:'healthy',warn:'check',bad:'problem',info:'waiting',upd:'update pending'}[r.state],{ok:'ok',warn:'warn',bad:'bad',info:'info',upd:'info'}[r.state]);
+      var act=r.kind==='monitored'?(can('admin')?'<button class="btn sm" data-edit="'+esc(r.id)+'">Edit</button> <button class="btn sm" data-test="'+esc(r.id)+'">Test</button> <button class="btn sm" data-del="'+esc(r.id)+'">Remove</button> ':'')+'<a class="btn sm" href="db-performance.html">Performance</a>'
+        :(can('admin')?'<button class="btn sm" data-mon="'+esc(r.id)+'">Monitor this</button> <button class="btn sm" data-rmf="'+esc(r.id)+'" title="Unknown or not used: leave it out of the inventory">Remove</button>':'');
+      return '<tr><td><b>'+esc(r.name)+'</b>'+(r.instance?' <span class="muted">'+esc(r.instance)+'</span>':'')+'</td><td>'+esc(ENG[r.engine]?ENG[r.engine][0]:(r.engine||'—'))+'</td><td class="mono">'+esc(r.where)+'</td><td>'+(esc(r.login)||'<span class="muted">—</span>')+'</td><td>'+(r.kind==='monitored'?tlsPill(r.cred):'<span class="muted">—</span>')+'</td><td>'+st+'<div class="note" style="margin:2px 0 0">'+esc(r.why)+'</div>'+(r.fix?'<button class="btn sm" data-fix="'+esc(r.id)+'" style="margin-top:4px">How to fix</button>':'')+'</td><td style="white-space:nowrap">'+act+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">'+(ROWS.length?'No database matches.':(can('admin')?'No database yet. Click “＋ Add database”, or run an Asset Discovery scope with the database method to find them.':'No database yet - an administrator adds them here.'))+'</div>';
+  }
+
+  function drawRemoved(){var L=(REG&&REG.dismissed)||[];$('rmw').hidden=!L.length;$('rmc').textContent=L.length?String(L.length):'';
+    $('rml').innerHTML=L.length?'<table><thead><tr><th>Database</th><th>Engine</th><th>Why</th><th>Removed by</th><th></th></tr></thead><tbody>'+L.map(function(x){return '<tr><td><b>'+esc(x.host||x.ip)+'</b> <span class="muted mono">'+esc(x.ip)+'</span></td><td>'+esc((x.engines||[]).map(function(k){return ENG[k]?ENG[k][0]:k;}).join(', ')||'—')+'</td><td>'+esc(x.reason)+'</td><td>'+esc(x.by)+' · '+esc(when(x.at))+'</td><td>'+(can('admin')?'<button class="btn sm" data-rst="'+esc(x.id)+'">Restore</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'';}
+  /* ---------- edit a monitored database: name / address / service, and its login (new password, or another saved login) ---------- */
+  function editForm(id){var d=((REG&&REG.databases)||[]).filter(function(x){return x.id===id;})[0];if(!d){toast('Database not found - refresh the page');return;}
+    var saved=((REG&&REG.credentials)||[]).filter(function(c){return c.id!==d.cred_id;});
+    var shared=(d.login_shared_with||[]).length?'<p class="note">The login <b>'+esc(d.credential)+'</b> is also used by: '+esc(d.login_shared_with.join(', '))+'. A new password applies to all of them (it is one saved login).</p>':'';
+    Z.open('Edit database',d.label,'<div class="form">'
+      +'<div class="row2"><label>Display name<input id="e-label" value="'+esc(d.label)+'"></label><label>Host name or IP<input id="e-host" value="'+esc(d.host)+'"></label></div>'
+      +'<div class="row2"><label>Port<input id="e-port" type="number" min="1" max="65535" value="'+esc(d.port||1521)+'"></label><label>Service name (multitenant = the PDB)<input id="e-svc" value="'+esc(d.service)+'"></label></div>'
+      +'<div class="step">Login - now <b>'+esc(d.credential||'—')+'</b></div>'
+      +'<div class="row2"><label>Change to<select id="e-mode"><option value="keep">keep this login</option><option value="pass">new password (same user)</option><option value="userpass">new user and password</option>'+(saved.length?'<option value="saved">another saved login</option>':'')+'</select></label><label id="e-savedl" style="display:none">Saved login<select id="e-saved">'+saved.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.label)+'</option>';}).join('')+'</select></label></div>'
+      +'<div class="row2" id="e-cred" style="display:none"><label id="e-userl">User<input id="e-user" autocomplete="off"></label><label>Password<input id="e-pass" type="password" autocomplete="new-password"></label></div>'
+      +shared+'<p class="note">The password is sealed in the credential vault and never shown. Saving tests the login once: if it works, a paused database starts reading again.</p>'
+      +'<div><button class="btn pri" id="e-save">Save and test</button></div></div>');
+    function sync(){var m=$('e-mode').value;$('e-cred').style.display=m==='pass'||m==='userpass'?'':'none';$('e-userl').style.display=m==='userpass'?'':'none';$('e-savedl').style.display=m==='saved'?'':'none';}
+    $('e-mode').addEventListener('change',sync);sync();
+    $('e-save').addEventListener('click',function(){var b=this,m=$('e-mode').value,body={label:$('e-label').value.trim(),host:$('e-host').value.trim(),port:$('e-port').value,service:$('e-svc').value.trim()};
+      if(m==='pass'||m==='userpass'){body.password=$('e-pass').value;if(!body.password){toast('Enter the password');return;}if(m==='userpass'){body.username=$('e-user').value.trim();if(!body.username){toast('Enter the user');return;}}}
+      if(m==='saved')body.cred_id=$('e-saved').value;
+      b.disabled=true;req('POST','/api/itam/db-health/databases/'+encodeURIComponent(id),body).then(function(r){var t=(r.database||{}).last_test||{};Z.close();toast(t.ok?'Saved - connected, instance '+(t.instance||'')+'. Reading again.':'Saved, but the test failed: '+(t.error||'unknown'));load();},function(er){b.disabled=false;toast(er.message);});});}
+  /* ---------- add a database: 1 where · 2 read-only account (script for the DBA) · 3 login + test ---------- */
+  var EDIT_HASH=(function(){var m=/[#&]edit=([^&]+)/.exec(location.hash);return m?decodeURIComponent(m[1]):'';})();
+  function editFromHash(){if(!EDIT_HASH||!REG||!can('admin'))return;var id=EDIT_HASH;EDIT_HASH='';try{history.replaceState(null,'',location.pathname+location.search);}catch(e){ /* address bar not updated (sandboxed frame): the page works without it */ }editForm(id);}
+  function wizard(pre){pre=pre||{};var e=pre.engine&&ENG[pre.engine]?pre.engine:'oracle';
+    Z.open('Add database','Three steps — the platform only reads','<div class="form">'
+      +'<div class="step">1 · Where is the database?</div>'
+      +'<div class="row2"><label>Engine<select id="w-eng">'+Object.keys(ENG).map(function(k){return '<option value="'+k+'"'+(k===e?' selected':'')+'>'+ENG[k][0]+(k==='oracle'?' — full monitoring':' — inventory')+'</option>';}).join('')+'</select></label>'
+      +'<label>Host name or IP<input id="w-host" value="'+esc(pre.host||'')+'" placeholder="192.168.1.30"></label><label>Port<input id="w-port" type="number" min="1" max="65535" value="'+ENG[e][1]+'"></label></div>'
+      +'<div class="row2"><label id="w-svcl">Service name (Oracle; multitenant = the PDB)<input id="w-svc" placeholder="ORCLPDB1"></label><label>Display name<input id="w-label" value="'+esc(pre.label||'')+'" placeholder="ERP production"></label></div>'
+      +'<div class="step">2 · Read-only account — send this to your DBA</div><pre class="sql" id="w-sql"></pre><div><button class="btn sm" id="w-copy">⧉ Copy script</button> <span class="muted" style="font-size:12px">The account can only read monitoring views; the platform refuses an account with more rights.</span></div>'
+      +'<div class="step">3 · Login and encryption</div>'
+      +'<div class="row2"><label>User<input id="w-user" value="zyb_monitor" autocomplete="off"></label><label>Password<input id="w-pass" type="password" autocomplete="new-password"></label></div>'
+      +'<div class="row2"><label>Encryption in transit<select id="w-tls"><option value="off">off — plain connection (shown as a finding)</option><option value="require">require — encrypted</option><option value="verify">verify — encrypted + server certificate checked</option></select></label><label>CA certificate file on the platform server (verify; SQL Server always)<input id="w-ca" placeholder="/etc/ssl/db-ca.pem"></label></div>'
+      +'<p class="note" id="w-note"></p><div><button class="btn pri" id="w-save">Test and save</button></div></div>');
+    function sync(){var k=$('w-eng').value;$('w-sql').textContent=($('sql-'+k)||{}).textContent||'';$('w-svcl').style.display=k==='oracle'||k==='postgres'||k==='mssql'?'':'none';
+      $('w-svcl').firstChild.nodeValue=k==='oracle'?'Service name (Oracle; multitenant = the PDB)':'Database (optional)';
+      $('w-note').textContent=k==='oracle'?'Oracle: health, tablespaces, backups and performance are read every 4 minutes and sent to the SIEM. Encryption uses TCPS (usually port 2484).':'This login is saved for Asset Discovery inventory (version, edition, database names). Performance monitoring is available for Oracle.';}
+    $('w-eng').addEventListener('change',function(){$('w-port').value=ENG[this.value][1];sync();});sync();
+    $('w-copy').addEventListener('click',function(){var t=$('w-sql').textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Script copied');},function(){toast('Select the script and copy it');});});
+    $('w-save').addEventListener('click',function(){var b=this,k=$('w-eng').value,host=$('w-host').value.trim(),port=$('w-port').value,svc=$('w-svc').value.trim(),label=$('w-label').value.trim()||host,u=$('w-user').value.trim(),p=$('w-pass').value,tls=$('w-tls').value,ca=$('w-ca').value.trim();
+      if(!host||!u||!p){toast('Host, user and password are needed');return;}
+      b.disabled=true;var call;
+      if(k==='oracle'){if(!svc){b.disabled=false;toast('The Oracle service name is needed');return;}
+        call=req('POST','/api/itam/db-health/databases',{label:label,host:host,port:port,service:svc,username:u,password:p,tls:tls,ca_file:ca||undefined}).then(function(r){var t=(r.database||{}).last_test||{};return t.ok?'Connected — instance '+(t.instance||'')+'. Monitoring starts within 4 minutes.':'Saved, but the test failed: '+(t.error||t.error_class||'unknown')+' — fix it, then press Test.';});}
+      else{var tgt={engine:k,port:Number(port),tls:tls};if(svc)tgt.database=svc;if(ca)tgt.ca_file=ca;
+        call=req('POST','/api/itam/discovery/credentials',{kind:'db_login',label:k+'-'+label.replace(/[^A-Za-z0-9_.-]+/g,'-').slice(0,60),target:tgt,secret:{username:u,password:p}}).then(function(){return 'Login saved for Asset Discovery. Add the database method to a scope that covers '+host+' to read it.';});}
+      call.then(function(m){toast(m);Z.close();load();},function(er){b.disabled=false;toast(er.message);});});
+  }
+
+  document.addEventListener('click',function(e){var t=e.target,el;if(!t.closest)return;
+    if((el=t.closest('[data-f]'))){$('fst').value=el.getAttribute('data-f');draw();return;}
+    if((el=t.closest('[data-edit]'))){editForm(el.getAttribute('data-edit'));return;}
+    if((el=t.closest('[data-fix]'))){fixPanel(el.getAttribute('data-fix'));return;}
+    if((el=t.closest('[data-recheck]'))){el.disabled=true;el.textContent='Reading the database…';req('POST','/api/itam/db-health/databases/'+encodeURIComponent(el.getAttribute('data-recheck'))+'/test').then(function(){Z.close();load();toast('Read again - the status below is from this read');},function(er){el.disabled=false;el.textContent='Check again now';toast(er.message);});return;}
+    if((el=t.closest('[data-copyfix]'))){var tx=$('fixsql')?$('fixsql').textContent:'';try{navigator.clipboard.writeText(tx).then(function(){el.textContent='Copied';},function(){el.textContent='Select the text below';});}catch(e){el.textContent='Select the text below';/* no clipboard API here - the script is shown for selecting */}return;}
+    if((el=t.closest('[data-test]'))){el.disabled=true;req('POST','/api/itam/db-health/databases/'+encodeURIComponent(el.getAttribute('data-test'))+'/test').then(function(r){var x=(r.database||{}).last_test||{};toast(x.ok?'OK — instance '+(x.instance||''):'Failed: '+(x.error||x.error_class||''));load();},function(er){el.disabled=false;toast(er.message);});return;}
+    if((el=t.closest('[data-del]'))){if(!window.confirm('Stop monitoring this database? The saved login stays in Asset Discovery → Credentials.'))return;req('POST','/api/itam/db-health/databases/'+encodeURIComponent(el.getAttribute('data-del'))+'/delete').then(function(){toast('Removed');load();},function(er){toast(er.message);});return;}
+    if((el=t.closest('[data-rmf]'))){var rr=ROWS.filter(function(x){return x.id===el.getAttribute('data-rmf');})[0]||{};var why=window.prompt('Remove '+(rr.name||'this database')+' from the inventory? It will not be read or listed (the server stays in Asset Discovery).\n\nWhy? (recorded: unknown, not used, test copy …)','');if(why==null)return;if(!why.trim()){toast('A reason is required');return;}
+      req('POST','/api/itam/db-health/inventory/remove',{device_id:el.getAttribute('data-rmf'),reason:why.trim()}).then(function(){toast('Removed from the inventory');load();},function(er){toast(er.message);});return;}
+    if((el=t.closest('[data-rst]'))){req('POST','/api/itam/db-health/inventory/restore',{device_id:el.getAttribute('data-rst')}).then(function(){toast('Restored');load();},function(er){toast(er.message);});return;}
+    if((el=t.closest('[data-mon]'))){var r=ROWS.filter(function(x){return x.id===el.getAttribute('data-mon');})[0]||{};wizard({engine:r.engine,host:r.ip,label:r.host||r.ip});return;}
+  });
+
+  // ---- SQL Server / PostgreSQL / MySQL inventory (engine/db-inventory.js): read from the servers' proven logins
+  var INV=null, IENG={mssql:'SQL Server',postgres:'PostgreSQL',mysql:'MySQL / MariaDB'};
+  function mb(v){return v==null?'—':v>=1048576?(v/1048576).toFixed(1)+' TB':v>=1024?(v/1024).toFixed(1)+' GB':v+' MB';}
+  function loadInv(){
+    req('GET','/api/itam/db-inventory').then(function(v){INV=v;drawInv();},function(er){INV=null;
+      $('inv-k').innerHTML='';$('inv-t').innerHTML='<p class="'+(er.status===403?'muted':'err')+'">'+esc(er.status===403?'The database inventory is for operators and administrators.':er.status===404?'The database inventory is not installed yet - run the platform update (update-platform.ps1).':er.message)+'</p>';});
+  }
+  function drawInv(){
+    var v=INV;$('inv-run').hidden=!can('operator');
+    $('inv-k').innerHTML=v.engines.map(function(e){return tile(e.label,e.read+' read',e.databases+' databases · '+mb(e.size_mb)+(e.found?' · '+e.found+' without a login':''),e.found?'warn':e.read?'ok':'','');}).join('');
+    var rows=v.servers;
+    $('inv-t').innerHTML=rows.length?'<table><thead><tr><th>Engine</th><th>Server</th><th>Version / edition</th><th>Databases</th><th>Size</th><th>Sessions</th><th>Needs attention</th><th>Read</th></tr></thead><tbody>'+rows.map(function(r){
+      var sv=r.server||{},bad=(r.notes||[]).filter(function(n){return n.severity==='high';}).length,att=(r.notes||[]).length;
+      var st=r.error?pill(r.error_class==='auth'?'login refused':r.error_class==='unsafe'?'account not read-only':r.error_class||'failed','bad'):r.stale?pill('login removed','warn'):pill('read','ok');
+      return '<tr class="rowc" data-inv="'+esc(r.id)+'" style="cursor:pointer"><td>'+esc(r.label)+'</td><td>'+esc(r.asset_name||r.host)+'<div class="muted mono">'+esc(r.ip+':'+r.port)+'</div></td><td>'+esc([sv.version,sv.edition,sv.level].filter(Boolean).join(' · ')||'—')+'</td>'
+        +'<td>'+esc(r.totals?r.totals.databases:'—')+'</td><td>'+esc(r.totals?mb(r.totals.size_mb):'—')+'</td><td>'+esc(sv.sessions==null?'—':sv.sessions+(sv.max_connections?' / '+sv.max_connections:''))+'</td>'
+        +'<td>'+(att?pill(att+' item'+(att>1?'s':''),bad?'bad':'warn'):'<span class="muted">—</span>')+(r.missing&&r.missing.length?' '+pill(r.missing.length+' not readable','info'):'')+'</td><td>'+st+'<div class="muted">'+esc(when(r.error?r.error_at:r.at))+'</div></td></tr>';}).join('')+'</tbody></table>'
+      :'<p class="empty">No Oracle, SQL Server, PostgreSQL or MySQL server has a proven read-only login yet. Add one with <b>＋ Add database</b> (or in Asset Discovery → Credentials) and run a scope that covers the server.</p>';
+    $('inv-fw').hidden=!v.found.length;$('inv-fc').textContent=v.found.length?'('+v.found.length+')':'';
+    $('inv-f').innerHTML='<table><thead><tr><th>Engine</th><th>Server</th><th>How it was found</th><th></th></tr></thead><tbody>'+v.found.map(function(f){
+      return '<tr><td>'+esc(f.label)+'</td><td>'+esc(f.asset_name||f.host)+'<div class="muted mono">'+esc(f.ip)+'</div></td><td class="muted">'+esc(f.evidence||'Business Services')+'</td><td>'+(can('admin')?'<button class="btn sm" data-invlogin="'+esc(f.engine+'|'+f.ip+'|'+(f.asset_name||f.host))+'">Set up a read-only login</button>':'<span class="muted">an administrator adds the login</span>')+'</td></tr>';}).join('')+'</tbody></table>';
+    $('inv-n').textContent=v.note;
+  }
+  function invDetail(id){var r=(INV&&INV.servers||[]).filter(function(x){return x.id===id;})[0];if(!r)return;var sv=r.server||{},h='';
+    h+='<p>'+esc(r.label)+' on <b>'+esc(r.asset_name||r.host)+'</b> <span class="mono muted">'+esc(r.ip+':'+r.port)+'</span> · login <span class="mono">'+esc(r.login||'—')+'</span></p>';
+    if(r.error)h+='<p class="err">Last read failed '+esc(when(r.error_at))+': '+esc(r.error)+'</p>'+(r.error_class==='auth'||r.error_class==='unsafe'?'<p class="note">Not retried automatically, so the account cannot be locked out. Fix the login (Asset Discovery → Credentials, or Edit on an Oracle database above), then press <b>Read now</b>.</p>':'');
+    var kv=[['Version',sv.version],['Edition',sv.edition||sv.banner],['Instance',sv.instance],['Host name',sv.host_name],['Started',sv.started?when(sv.started):null],['Sessions',sv.sessions==null?null:sv.sessions+(sv.max_connections?' of '+sv.max_connections:'')],
+      ['CPUs / memory',sv.cpus?sv.cpus+' CPU · '+mb(sv.memory_mb):null],['Always On / cluster',sv.always_on||sv.clustered?(sv.always_on?'Always On':'')+(sv.clustered?' clustered':''):null],['Standby',sv.standby?'yes - a replica in recovery':null],['Database',sv.db_name?sv.db_name+(sv.unique_name&&sv.unique_name!==sv.db_name?' ('+sv.unique_name+')':'')+(sv.multitenant?' · multitenant':''):null],['Role / open mode',sv.role?sv.role+' · '+(sv.open_mode||''):null],['Log mode',sv.log_mode],['SGA',sv.sga_mb?mb(sv.sga_mb):null],
+      ['Last RMAN backup',r.engine==='oracle'?(sv.last_full?when(sv.last_full):'none recorded'):null],['Last archive-log backup',r.engine==='oracle'?(sv.last_arch?when(sv.last_arch):'none recorded'):null],['Read-only',sv.read_only?'yes':null],['Collation',sv.collation]].filter(function(x){return x[1];});
+    h+='<table><tbody>'+kv.map(function(x){return '<tr><th>'+esc(x[0])+'</th><td>'+esc(x[1])+'</td></tr>';}).join('')+'</tbody></table>';
+    if((r.notes||[]).length)h+='<h3 style="font-size:14px;margin:14px 0 6px">Needs attention</h3><ul>'+r.notes.map(function(n){return '<li>'+pill(n.severity,n.severity==='high'?'bad':n.severity==='medium'?'warn':'info')+' '+esc(n.text)+'</li>';}).join('')+'</ul>';
+    var dbs=(r.databases||[]).slice().sort(function(a,b){return (a.system?1:0)-(b.system?1:0)||(b.size_mb||0)-(a.size_mb||0);});
+    var ms=r.engine==='mssql', ora=r.engine==='oracle';
+    h+='<h3 style="font-size:14px;margin:14px 0 6px">Databases ('+dbs.filter(function(d){return !d.system;}).length+' + '+dbs.filter(function(d){return d.system;}).length+' system)</h3><div class="tw"><table><thead><tr><th>Name</th><th>State</th><th>Size</th>'+(ora?'<th>Restricted</th>':ms?'<th>Recovery</th><th>Last full backup</th><th>Last log backup</th>':'<th>Encoding</th><th>'+(r.engine==='postgres'?'Sessions':'Tables')+'</th>')+'</tr></thead><tbody>'
+      +dbs.map(function(d){return '<tr'+(d.system?' class="muted"':'')+'><td>'+esc(d.name)+(d.system?' <span class="muted">(system)</span>':'')+'</td><td>'+pill(d.state||'—',d.state==='ONLINE'||d.state==='READ WRITE'||(ora&&sv.role&&sv.role!=='PRIMARY')?'ok':'bad')+'</td><td>'+esc(mb(d.size_mb))+'</td>'
+        +(ora?'<td>'+(d.restricted?pill('restricted','warn'):'—')+'</td>':ms?'<td>'+esc(d.recovery||'—')+'</td><td>'+esc(d.last_full?when(d.last_full):'none recorded')+'</td><td>'+esc(d.last_log?when(d.last_log):'—')+'</td>':'<td>'+esc(d.encoding||'—')+'</td><td>'+esc(r.engine==='postgres'?(d.sessions==null?'—':d.sessions):(d.tables==null?'—':d.tables))+'</td>')+'</tr>';}).join('')+'</tbody></table></div>';
+    if((r.replication||[]).length)h+='<h3 style="font-size:14px;margin:14px 0 6px">Replication</h3><table><tbody>'+r.replication.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+esc([x.role,x.state].filter(Boolean).join(' · '))+'</td><td>'+esc(x.lag_s==null?'':'lag '+x.lag_s+' s')+'</td></tr>';}).join('')+'</tbody></table>';
+    if((r.missing||[]).length)h+='<p class="note">Not readable with this login (nothing is guessed): '+esc(r.missing.map(function(m){return m.query+' ('+m.reason+')';}).join(', '))+'. The grants are in the login script of <b>＋ Add database</b>.</p>';
+    Z.open('Database server',(r.asset_name||r.host)+' · '+r.label,h);
+  }
+  $('inv-run').addEventListener('click',function(){var b=this;b.disabled=true;req('POST','/api/itam/db-inventory/run').then(function(v){b.disabled=false;INV=v;drawInv();toast('Read '+v.run.read+' of '+v.run.targets+' server(s)'+(v.run.failed?' - '+v.run.failed+' failed':'')+(v.run.held?' - '+v.run.held+' waiting for a fixed login':''));},function(er){b.disabled=false;toast(er.message);});});
+  $('inv').addEventListener('click',function(e){var el=e.target.closest('[data-inv]');if(el){invDetail(el.getAttribute('data-inv'));return;}
+    el=e.target.closest('[data-invlogin]');if(el){var p=el.getAttribute('data-invlogin').split('|');wizard({engine:p[0],host:p[1],label:p.slice(2).join('|')});}});
+  $('add').addEventListener('click',function(){wizard();});
+  $('run').addEventListener('click',function(){var b=this;b.disabled=true;req('POST','/api/itam/db-health/run').then(function(r){b.disabled=false;toast('Read '+(r.read||0)+', sent '+(r.sent||0)+(r.push_error?' — '+r.push_error:'')+(r.note?' — '+r.note:''));load();},function(er){b.disabled=false;toast(er.message);});});
+  $('refresh').addEventListener('click',load);
+  ['q','fst'].forEach(function(id){$(id).addEventListener('input',draw);});
+  load();
+  // the status follows the database by itself: re-read the page's data every minute, but never while a drawer or form is open
+  var tick=setInterval(function(){var zd=document.getElementById('zd');if(document.hidden||(zd&&!zd.hidden))return;load();},60000);
+  window.addEventListener('pagehide',function(){clearInterval(tick);});
+})();
+</script>
+</body></html>

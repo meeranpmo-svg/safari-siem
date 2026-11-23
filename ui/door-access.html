@@ -1,0 +1,109 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Door Access</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Door access: ZKTeco ZKBioSecurity controllers, doors and the last 24 h of door alarms, from /api/soc/facilities/doors (read only -
+     no door is opened, no person, card or level is read). Connection tab: an administrator saves the server and its API token
+     (write-only, sealed on the SIEM); an operator reads now. Nothing is invented: with no server the page says what to connect. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}
+.tabs{display:flex;gap:6px;margin-bottom:12px}.tabs button{font:600 13px Inter,system-ui,sans-serif;background:transparent;color:var(--d-mute);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}.tabs button[aria-selected=true]{color:var(--d-ink);background:var(--d-raise)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px 14px}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:28px;font-weight:800;line-height:1.1}.t .s{font-size:11.5px;color:var(--d-mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:14px;margin-bottom:12px}.card h2{margin:0 0 10px;font-size:15px}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);font-size:13px}th{color:var(--d-mute);font-weight:600;font-size:11.5px;text-transform:uppercase}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}.dot.ok{background:#2fb344}.dot.warn{background:#f59f00}.dot.bad{background:#e5484d}.dot.mute{background:#5b6273}
+.row{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}.empty{color:var(--d-mute);padding:12px;text-align:center}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.f label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--d-mute)}
+.inp{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:7px 9px;font:13px Inter,system-ui,sans-serif}
+.msg{margin-top:8px;font-size:13px}.msg.bad{color:var(--bad)}.msg.ok{color:var(--ok)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Facilities · ZKTeco ZKBioSecurity · read only</div><h1>Door Access</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn" id="rf">⟳ Refresh</button></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="ov" aria-selected="true">Overview</button><button type="button" role="tab" data-tab="cn" aria-selected="false">Connection</button></div>
+<section id="ov"><div class="k" id="kp"><div class="empty">Loading…</div></div><div id="body"></div></section>
+<section id="cn" hidden>
+  <div class="card"><h2>ZKBioSecurity servers</h2><div id="srv"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>Add or update a server <span class="mut sm">(administrators)</span></h2>
+    <div class="f">
+      <label>ID<input class="inp" id="c-id" placeholder="e.g. zk-hq"></label><label>Name<input class="inp" id="c-label" placeholder="e.g. ZKBio HQ"></label>
+      <label>Site<input class="inp" id="c-site" placeholder="e.g. Riyadh HQ"></label><label>Server address<input class="inp" id="c-host" placeholder="10.x.x.x or zkbio.corp"></label>
+      <label>Port<input class="inp" id="c-port" type="number" value="8098"></label>
+      <label>Devices path<input class="inp" id="c-pdev" placeholder="/api/device/list"></label><label>Doors path<input class="inp" id="c-pdoor" placeholder="/api/door/list"></label><label>Events path<input class="inp" id="c-pev" placeholder="/api/transaction/list"></label>
+    </div>
+    <div class="mut sm" style="margin-top:6px">The paths differ between ZKBio releases; leave them empty for the defaults and check the API page on your server if a read says 404.</div>
+    <div style="margin-top:10px"><button type="button" class="btn" id="c-save">Save server</button></div>
+    <div class="f" style="margin-top:14px">
+      <label>API token<input class="inp" id="c-token" type="password" autocomplete="off" placeholder="System → API Authorization"></label>
+      <label>Certificate SHA-256 fingerprint (pin)<input class="inp" id="c-fp" placeholder="optional"></label>
+    </div>
+    <div style="margin-top:10px"><button type="button" class="btn" id="c-tok">Save token</button></div>
+    <div class="mut sm" style="margin-top:6px">The token is stored sealed on the SIEM and never shown again. Use an API client that can only read.</div>
+    <div class="msg" id="c-msg"></div></div>
+</section>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var B = '/api/soc/facilities/doors';
+  function req(m, url, body) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, url); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; if (body) x.setRequestHeader('Content-Type', 'application/json'); x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || 'HTTP ' + x.status), { status: x.status })); }; x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(body ? JSON.stringify(body) : null); }); }
+  var KIND = { duress: 'Duress', forced: 'Forced open', tamper: 'Tamper', 'held-open': 'Held open', alarm: 'Alarm', denied: 'Denied' };
+  var ago = function (t) { if (!t) return 'never'; var m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; };
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s) + '</div></div>'; }
+  function drawView(v) {
+    $('up').textContent = 'read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    if (!v.configured) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(v.reason) + '</div></div>'; return; }
+    var K = v.kpis, al = K.duress + K.forced + K.tamper;
+    $('kp').innerHTML = tile('Controllers online', K.online + ' / ' + K.controllers, K.offline + ' offline · ' + K.not_reported + ' not reported', K.offline ? 'bad' : K.not_reported ? 'warn' : 'ok')
+      + tile('Doors', K.doors, 'in ZKBio', '') + tile('Duress / forced / tamper', al, '24 h · ' + K.duress + ' duress · ' + K.forced + ' forced · ' + K.tamper + ' tamper', al ? 'bad' : 'ok')
+      + tile('Held open', K.held_open, '24 h', K.held_open ? 'warn' : 'ok') + tile('Denied', K.denied, '24 h attempts', '') + tile('Servers not read', K.unread, K.servers + ' server(s)', K.unread ? 'warn' : 'ok');
+    var act = v.actions.length ? v.actions.map(function (a) { return '<div class="row"><span class="dot ' + (a.priority >= 80 ? 'bad' : 'warn') + '"></span><b>' + esc(a.title) + '</b><div class="mut sm">' + esc(a.detail) + '</div></div>'; }).join('') : '<div class="empty">Nothing needs attention.</div>';
+    var ST = { 'true': ['ok', 'online'], 'false': ['bad', 'offline'], 'null': ['mute', 'not reported'] };
+    var ctr = v.controllers.length ? '<table><thead><tr><th>Controller</th><th>Site / area</th><th>IP</th><th>Serial</th><th>State</th></tr></thead><tbody>' + v.controllers.map(function (c) { var s = ST[String(c.online)]; return '<tr><td><span class="dot ' + s[0] + '"></span><b>' + esc(c.name || '–') + '</b><div class="mut sm">' + esc([c.model, c.firmware].filter(Boolean).join(' · ')) + '</div></td><td>' + esc(c.site || '–') + '</td><td>' + esc(c.ip || '–') + '</td><td>' + esc(c.sn || '–') + '</td><td>' + s[1] + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No controller was read.</div>';
+    var pd = v.per_door.length ? '<table><thead><tr><th>Door</th><th>Site</th><th>Events (24 h)</th><th>Last</th></tr></thead><tbody>' + v.per_door.map(function (r) { return '<tr><td><b>' + esc(r.door) + '</b></td><td>' + esc(r.site || '–') + '</td><td>' + Object.keys(r.counts).map(function (k) { return esc(KIND[k] || k) + ' <b>' + esc(r.counts[k]) + '</b>'; }).join(' · ') + '</td><td>' + esc(ago(r.last)) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No door alarm or denied attempt in the last 24 h.</div>';
+    var srv = v.servers.map(function (s) { return '<div class="row"><span class="dot ' + (s.error || s.stale ? 'warn' : 'ok') + '"></span><b>' + esc(s.label) + '</b> <span class="mut sm">read ' + esc(ago(s.last)) + '</span>' + (s.error ? '<div class="sm" style="color:var(--bad)">' + esc(s.error) + '</div>' : '') + (s.errors && s.errors.length ? '<div class="mut sm">' + esc(s.errors.join(' · ')) + '</div>' : '') + '</div>'; }).join('');
+    $('body').innerHTML = '<div class="g2"><div class="card"><h2>📌 Needs attention</h2>' + act + '</div><div class="card"><h2>🗄️ ZKBio servers</h2>' + srv + '</div></div>'
+      + '<div class="card"><h2>🎛️ Controllers</h2>' + ctr + '</div><div class="card"><h2>🚪 Door alarms by door</h2>' + pd + '</div><p class="mut sm">' + esc(v.note) + '</p>';
+  }
+  function drawSrv(L) {
+    $('srv').innerHTML = L.length ? '<table><thead><tr><th>Server</th><th>Address</th><th>Site</th><th>Token</th><th></th></tr></thead><tbody>' + L.map(function (s) { return '<tr><td><b>' + esc(s.label) + '</b> <span class="mut sm">' + esc(s.id) + '</span></td><td>' + esc(s.host + ':' + s.port) + '</td><td>' + esc(s.site) + '</td><td>' + esc(s.token || 'not set') + '</td><td><button type="button" class="btn" data-sync="' + esc(s.id) + '">Read now</button> <button type="button" class="btn" data-edit="' + esc(s.id) + '">Edit</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No server yet - add the ZKBioSecurity server below.</div>';
+    $('srv').dataset.list = JSON.stringify(L);
+  }
+  function msg(t, ok) { $('c-msg').className = 'msg ' + (ok ? 'ok' : 'bad'); $('c-msg').textContent = t; }
+  var why = function (e) { return e.status === 403 ? 'Only an administrator can change the connection.' : e.status === 404 ? 'Door access is not on this platform yet - run the update.' : e.message; };
+  function load() {
+    req('GET', B).then(drawView, function (e) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(e.status === 404 ? 'Door access is not on this platform yet - run the update.' : 'The door access reader is not reachable: ' + e.message) + '</div></div>'; });
+    req('GET', B + '/servers').then(function (j) { drawSrv(j.items || []); }, function (e) { $('srv').innerHTML = '<div class="empty">' + esc(why(e)) + '</div>'; });
+  }
+  document.querySelector('.tabs').addEventListener('click', function (ev) { var b = ev.target.closest('[data-tab]'); if (!b) return; ['ov', 'cn'].forEach(function (t) { $(t).hidden = t !== b.dataset.tab; document.querySelector('[data-tab="' + t + '"]').setAttribute('aria-selected', String(t === b.dataset.tab)); }); });
+  $('srv').addEventListener('click', function (ev) {
+    var s = ev.target.closest('[data-sync]'), e = ev.target.closest('[data-edit]');
+    if (s) { s.disabled = true; req('POST', B + '/servers/' + encodeURIComponent(s.dataset.sync) + '/sync', {}).then(function (r) { msg(r.ok ? 'Read: ' + (r.devices == null ? '–' : r.devices) + ' controllers, ' + (r.doors == null ? '–' : r.doors) + ' doors, ' + (r.alarms == null ? '–' : r.alarms) + ' alarm events' + (r.errors.length ? ' · ' + r.errors.join(' · ') : '') : 'Not read: ' + r.error, r.ok); load(); }, function (er) { msg(er.status === 403 ? 'Operators and administrators read now.' : er.message, false); s.disabled = false; }); }
+    if (e) { var L = JSON.parse($('srv').dataset.list || '[]'), x = L.filter(function (y) { return y.id === e.dataset.edit; })[0]; if (!x) return; $('c-id').value = x.id; $('c-label').value = x.label || ''; $('c-site').value = x.site || ''; $('c-host').value = x.host || ''; $('c-port').value = x.port || 8098; $('c-pdev').value = (x.paths || {}).devices || ''; $('c-pdoor').value = (x.paths || {}).doors || ''; $('c-pev').value = (x.paths || {}).events || ''; }
+  });
+  $('c-save').addEventListener('click', function () {
+    var id = $('c-id').value.trim().toLowerCase(), host = $('c-host').value.trim();
+    if (!/^[a-z0-9][a-z0-9-]{1,39}$/.test(id)) return msg('ID: 2-40 lowercase letters, digits and dashes', false);
+    if (!host) return msg('Server address is required', false);
+    var b = { id: id, label: $('c-label').value.trim(), site: $('c-site').value.trim(), host: host, port: Number($('c-port').value) || 8098 };
+    [['c-pdev', 'path_devices'], ['c-pdoor', 'path_doors'], ['c-pev', 'path_events']].forEach(function (p) { var v = $(p[0]).value.trim(); if (v) b[p[1]] = v; });
+    req('POST', B + '/servers', b).then(function () { msg('Saved ' + id + '.', true); load(); }, function (e) { msg(why(e), false); });
+  });
+  $('c-tok').addEventListener('click', function () {
+    var id = $('c-id').value.trim().toLowerCase(), tok = $('c-token').value;
+    if (!id) return msg('Pick the server (Edit) or type its ID first', false);
+    if (!tok) return msg('API token is required', false);
+    var b = { token: tok }, fp = $('c-fp').value.trim(); if (fp) b.fingerprint256 = fp;
+    req('PUT', B + '/servers/' + encodeURIComponent(id) + '/token', b).then(function () { $('c-token').value = ''; msg('Token saved for ' + id + ' (sealed, not shown again).', true); load(); }, function (e) { msg(why(e), false); });
+  });
+  $('rf').addEventListener('click', load);
+  load(); setInterval(function () { if (!document.hidden) load(); }, 120000);
+})();
+</script></body></html>

@@ -1,0 +1,291 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Security</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
+.banner.bad{background:rgba(255,123,114,.08);border-color:#6b2b2b;color:#f5c6c2}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px}.g2>.card{margin:0}
+.bars{display:flex;align-items:flex-end;gap:2px;height:120px;padding:4px 0;border-bottom:1px solid var(--edge)}.bars i{flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-width:2px;height:100%}.bars b{display:block;background:#2f81f7;border-radius:2px 2px 0 0}.bars b.th{background:var(--bad);border-radius:0}
+.lg{display:flex;gap:14px;font-size:12px;color:var(--mute);margin-top:6px}.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:#2f81f7}.lg span.th:before{background:var(--bad)}
+.rbar{height:6px;border-radius:3px;background:rgba(255,255,255,.07);min-width:60px}.rbar i{display:block;height:100%;border-radius:3px;background:#2f81f7}
+pre.snip{background:#0b0c10;border:1px solid var(--edge);border-radius:8px;padding:10px;font:12px Consolas,monospace;color:#d6dbe4;max-height:300px;overflow:auto}
+ol.steps{margin:6px 0 0 18px;padding:0;font-size:13px}ol.steps li{margin:3px 0}
+.rt svg{width:100%;max-width:1100px;margin:0 auto;height:auto;display:block}.rt g[data-hop]{cursor:pointer}.rt g[data-hop]:focus{outline:none}.rt g[data-hop]:focus rect,.rt g[data-hop]:hover rect{stroke-width:2.5}
+.rtb{border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:13px}.rtb.down{background:rgba(255,123,114,.12);border:1px solid #8b2b2b;color:#ffd5d0}.rtb.okb{background:rgba(63,185,80,.08);border:1px solid #2b6b3a;color:#c6f0cf}
+.rtd{border-top:1px solid var(--edge);margin-top:8px;padding-top:8px}.rtd h3{font-size:14px;margin:0 0 6px}.rtl{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin:4px 0}.rtl i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.av3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:6px 0 10px}.av3>div{border:1px solid var(--edge);border-radius:10px;padding:10px}
+.av3 .big{font-size:26px;font-weight:800;line-height:1.1}.avbar{height:10px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden;margin:6px 0 2px}.avbar i{display:block;height:100%}
+.avnow{font-weight:800;font-size:15px}.avnow.up{color:#3fb950}.avnow.down{color:#ff2d55}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">SOC · email</div><h1>Email Security</h1><div class="muted small">What the email security gateway delivered, blocked and quarantined; phishing and malware aimed at {{org.short}}; threats that got through; and mailbox take-over signals from Exchange</div></div><span class="sp"></span>
+<select id="per" aria-label="Period"><option value="24h">Last 24 hours</option><option value="7d" selected>Last 7 days</option><option value="30d">Last 30 days</option></select>
+<span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button><a href="soc-live.html" style="color:var(--info);text-decoration:none;font-weight:600">Live Logs →</a></div>
+<div class="banner" id="nc" hidden></div>
+<div class="k" id="kk"></div>
+<div class="card" id="leak" hidden><h2>⚠ Threats the gateway delivered <span class="c">phishing or malware verdict, action delivered - check these mailboxes first</span></h2><div class="tw" id="leakt"></div></div>
+<div class="card" id="avail"><h2>Email availability <span class="c">inbound mail service measured every minute (MX hosts answering SMTP) against the target</span></h2>
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="avnow" id="avnow">…</span><span class="muted small" id="avlast"></span>
+<form id="avtgt" class="muted small" style="margin-left:auto;display:flex;gap:6px;align-items:center"><label for="avsel">Target</label><select id="avsel" name="target"><option>99.9</option><option>99.95</option><option selected>99.99</option><option>99.999</option></select><button type="submit">Set (administrators)</button></form></div>
+<div class="av3" id="avwin"><div class="empty">Loading…</div></div><div id="avmsg"></div>
+<div class="g2"><div><h2 style="font-size:14px">Outages</h2><div class="tw" id="avout"></div></div><div><h2 style="font-size:14px">What stands between the design and the target</h2><div class="tw" id="avgap"></div></div></div>
+<p class="note" id="avnote"></p></div>
+<div class="card rt" id="route"><h2>Mail route flow <span class="c">receiving and sending path hop by hop - where mail stops and how to fix it (DNS checked by the platform, counts from the SIEM)</span></h2>
+<div id="rtbanner"></div><div id="rtsvg"><div class="empty">Loading…</div></div>
+<div class="rtl"><span><i style="background:#3fb950"></i>working</span><span><i style="background:#d29922"></i>warning</span><span><i style="background:#f85149"></i>failing</span><span><i style="background:#ff2d55"></i>down - no mail in the last hour</span><span><i style="background:#6e7681"></i>not connected / not checked</span><span>click a hop for its issues and fixes</span></div>
+<div class="rtd" id="rtdetail" hidden></div>
+<form id="rtprof" class="muted small" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px"><label for="rtplat">Mail platform</label><select id="rtplat" name="platform"><option value="onprem">Exchange on-premises</option><option value="hybrid">Hybrid (on-premises + Office 365)</option><option value="online">Exchange Online</option></select><label for="rtisp">Internet links</label><input id="rtisp" name="isp" type="number" min="1" max="4" value="1" style="width:56px"><span>MX should point to:</span><input name="mx" placeholder="gateway host or domain suffix, comma separated" maxlength="400" aria-label="Expected MX hosts" style="min-width:260px"><button type="submit">Save</button></form>
+<div class="tw" id="rtissues"></div></div>
+<div class="card" id="rep"><h2>Mail server reputation <span class="c">{{org.short}}'s public mail IPs and mail domains checked against Spamhaus (ZEN: SBL, CSS, XBL, PBL, DROP · DBL for domains) every 6 hours</span></h2>
+<div class="sp" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 8px"><span class="muted small" id="repup"></span><button type="button" id="repchk">⟳ Check now</button>
+<form id="repip" style="display:flex;gap:6px;flex-wrap:wrap"><input name="ip" placeholder="public IPv4 (egress / gateway)" maxlength="15" aria-label="Mail server public IP" required><input name="label" placeholder="label" maxlength="120" aria-label="Label" required><select name="role" aria-label="Role"><option value="outbound">outbound</option><option value="inbound">inbound</option><option value="both">both</option></select><button type="submit">Add IP</button></form>
+<form id="repkey" style="display:flex;gap:6px"><input name="key" type="password" autocomplete="off" placeholder="Spamhaus DQS key (administrators)" maxlength="40" aria-label="Spamhaus DQS key"><button type="submit">Save key</button></form></div>
+<div class="banner" id="repwarn" hidden></div><div class="tw" id="repl"><div class="empty">Loading…</div></div><div class="muted small" id="repnotes"></div></div>
+<div class="card"><h2>Mail flow <span class="c" id="hc"></span></h2><div class="bars" id="hist"></div><div class="lg"><span>all mail</span><span class="th">phishing / malware</span></div></div>
+<div class="g2">
+ <div class="card"><h2>Verdicts</h2><div class="tw" id="verd"><div class="empty">Loading…</div></div></div>
+ <div class="card"><h2>Gateway action</h2><div class="tw" id="act"><div class="empty">Loading…</div></div></div>
+ <div class="card"><h2>Top attacking senders <span class="c">phishing / malware</span></h2><div class="tw" id="snd"><div class="empty">Loading…</div></div></div>
+ <div class="card"><h2>Most targeted people <span class="c">phishing / malware</span></h2><div class="tw" id="rcp"><div class="empty">Loading…</div></div></div>
+ <div class="card"><h2>Threats named by the gateway</h2><div class="tw" id="thr"><div class="empty">Loading…</div></div></div>
+ <div class="card"><h2>Sending IPs stopped <span class="c">blocked / rejected / quarantined</span></h2><div class="tw" id="ips"><div class="empty">Loading…</div></div></div>
+ <div class="card"><h2>Outbound with a threat verdict <span class="c">an internal account sending spam or malware may be compromised</span></h2><div class="tw" id="outb"><div class="empty">Loading…</div></div></div>
+ <div class="card"><h2>Gateways reporting</h2><div class="tw" id="ven"><div class="empty">Loading…</div></div></div>
+</div>
+<div class="card" style="margin-top:12px"><h2>Mailbox take-over signals <span class="c">Exchange: forwarding to outside, mailbox export / search, Send-As and mailbox permissions, journal and connector changes</span></h2><div class="tw" id="mbx"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Recent threat events <span class="c" id="rc"></span></h2><div class="tw" id="rec"><div class="empty">Loading…</div></div></div>
+<p class="note">Everything here comes from the SIEM: the gateway's own syslog (Libraesva ESG, or Proofpoint / Mimecast / Cisco ESA / Forcepoint / Trend Micro / Symantec over CEF) and Exchange audit logs. Subjects are stored hashed (PDPL). Sender and recipient addresses are personal data: this page is for SOC analysts and above, and every query is recorded in the SIEM audit log. Microsoft Defender for Office 365 alerts are on the Microsoft 365 page.</p>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var G='fields.vendor_class:email_gateway', TH=G+' AND fields.email_verdict:(phishing OR malware)';
+  var MBX='action:(mail-forwarding-set OR mailbox-export OR mailbox-search OR sendas-permission-added OR mailbox-permission-added OR mailbox-folder-permission-added OR journal-rule-changed OR mail-connector-changed)';
+  var VC={phishing:'bad',malware:'bad',spam:'warn','auth-failure':'warn',dlp:'warn'}, AC={delivered:'ok',quarantined:'warn',blocked:'inf',rejected:'inf'};
+  var per=function(){return $('per').value;};
+  var quote=function(v){return '"'+String(v).replace(/[\\"]/g,'\\$&')+'"';};
+  var top=function(q,field,limit){return Z.req('POST','/top',{q:q,from:'now-'+per(),to:'now',field:field,limit:limit||10});};
+  var find=function(q,limit){return Z.req('POST','/search',{q:q,from:'now-'+per(),to:'now',limit:limit||50,order:'desc'});};
+  var F=function(r,k){return (r&&r.fields&&r.fields[k])||'';};
+  function ranked(id,res,label,field,base,cls){
+    var V=(res&&res.values)||[];
+    if(!V.length){$(id).innerHTML='<div class="empty">None in this period.</div>';return;}
+    var mx=V[0].n||1;
+    $(id).innerHTML='<table><thead><tr><th>'+esc(label)+'</th><th class="num">Events</th><th></th></tr></thead><tbody>'+V.map(function(o,i){
+      return '<tr data-i="'+i+'"><td class="mono">'+(cls&&cls[o.v]?Z.pill(o.v,cls[o.v]):esc(o.v))+'</td><td class="num">'+Z.n(o.n)+'</td><td style="width:30%"><div class="rbar"><i style="width:'+Math.max(2,Math.round(o.n/mx*100))+'%"></i></div></td></tr>';}).join('')+'</tbody></table>';
+    [].forEach.call($(id).querySelectorAll('tr[data-i]'),function(tr){tr.addEventListener('click',function(){var o=V[+tr.getAttribute('data-i')];drill(label+': '+o.v,base+' AND '+field+':'+quote(o.v));});});
+  }
+  function evRows(rows,id,empty){
+    if(!rows.length){$(id).innerHTML='<div class="empty">'+esc(empty)+'</div>';return;}
+    $(id).innerHTML='<table><thead><tr><th>Time</th><th>Verdict</th><th>Action</th><th>From</th><th>To</th><th>Threat</th><th>Sender IP</th></tr></thead><tbody>'+rows.map(function(r,i){
+      var v=F(r,'email_verdict'),a=F(r,'email_action')||r.action;
+      return '<tr data-i="'+i+'"><td class="small">'+esc(Z.dt(r.ts))+'</td><td>'+(v?Z.pill(v,VC[v]||''):'<span class="muted">–</span>')+'</td><td>'+(a?Z.pill(a,AC[a]||'mut'):'')+'</td><td class="mono small">'+esc(F(r,'email_from')||'–')+'</td><td class="mono small">'+esc(F(r,'email_to')||'–')+'</td><td class="small">'+esc(F(r,'threat_name')||'–')+'</td><td class="mono small">'+esc(r.src_ip||'–')+'</td></tr>';}).join('')+'</tbody></table>';
+    [].forEach.call($(id).querySelectorAll('tr[data-i]'),function(tr){tr.addEventListener('click',function(){detail(rows[+tr.getAttribute('data-i')]);});});
+  }
+  function detail(r){
+    var D=window.zybDetail, f=r.fields||{};
+    var kv=[['Time',esc(Z.dt(r.ts))],['Source',esc((r.src_type||'')+(r.host?' · '+r.host:''))],['Category / action',esc(r.category+' / '+r.action)],['Severity',Z.sev(r.severity)]];
+    Object.keys(f).sort().forEach(function(k){if(f[k]!==''&&f[k]!=null)kv.push([k,'<span class="mono">'+esc(f[k])+'</span>']);});
+    if(r.user)kv.push(['User',esc(r.user)]);if(r.target_user)kv.push(['Target user',esc(r.target_user)]);if(r.src_ip)kv.push(['Source IP',esc(r.src_ip)]);
+    D.open('Email event',r.message||'',D.kv(kv)+(r.raw?D.sec('Raw log','<pre class="snip" style="white-space:pre-wrap">'+esc(r.raw)+'</pre>'):''));
+  }
+  function drill(title,q){
+    var D=window.zybDetail; D.open(title,'Latest 50 events · '+$('per').selectedOptions[0].textContent,'<div class="empty">Loading…</div>');
+    find(q,50).then(function(r){
+      var rows=r.rows||[];
+      var h=rows.length?'<div class="tw"><table><thead><tr><th>Time</th><th>Verdict</th><th>Action</th><th>From</th><th>To</th></tr></thead><tbody>'+rows.map(function(x){var v=F(x,'email_verdict'),a=F(x,'email_action')||x.action;return '<tr><td class="small">'+esc(Z.dt(x.ts))+'</td><td>'+(v?Z.pill(v,VC[v]||''):'–')+'</td><td>'+(a?Z.pill(a,AC[a]||'mut'):'')+'</td><td class="mono small">'+esc(F(x,'email_from')||x.user||'–')+'</td><td class="mono small">'+esc(F(x,'email_to')||x.target_user||'–')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No events.</div>';
+      D.open(title,(r.total_estimate||rows.length)+' event(s) · latest 50 shown',h+'<p class="note">Query: <span class="mono">'+esc(q)+'</span> - paste it into Live Logs or the SIEM search for the full list.</p>');
+    },function(e){D.open(title,'',Z.errHtml(e,'search'));});
+  }
+  function hist(all,th){
+    var A=(all&&all.buckets)||[],T=(th&&th.buckets)||[],mx=Math.max.apply(null,A.map(function(b){return b.n;}).concat([1]));
+    var tot=A.reduce(function(s,b){return s+b.n;},0);
+    $('hc').textContent=Z.n(tot)+' gateway events'+(A.length?' · '+Math.round(all.step_ms/3600000*10)/10+' h per bar':'');
+    $('hist').innerHTML=A.map(function(b,i){var t=(T[i]||{}).n||0;return '<i title="'+esc(Z.dt(b.t)+': '+b.n+' mail, '+t+' threats')+'"><b class="th" style="height:'+(t/mx*100)+'%"></b><b style="height:'+(Math.max(0,b.n-t)/mx*100)+'%"></b></i>';}).join('');
+    return tot;
+  }
+  function notConnected(on,seen30){
+    var b=$('nc'); b.hidden=!on; if(!on)return;
+    b.className='banner bad';
+    b.innerHTML='<b>No email gateway logs '+(seen30?'in this period':'in the last 30 days')+'.</b> '+(seen30?'The gateway reported before - check it is still forwarding (SIEM → Log Sources & Agents).':'The SIEM has not received a single event from an email security gateway, so this page has nothing to show (it never invents figures). To connect the Libraesva gateway (LibraESG-1):')
+      +(seen30?'':'<ol class="steps"><li>Libraesva ESG: <b>Admin → System → Log settings</b> (remote syslog / log forwarding) → add the SIEM server, TCP port 5514 (or the TLS port) - forward the mail / Amavis logs.</li><li>Register the gateway in the SIEM as a source with its sending IP: <a href="soc-sources.html" style="color:var(--info)">Log Sources &amp; Agents</a> → onboard <b>Email Security Gateway (Libraesva ESG)</b>.</li><li>Other gateways (Proofpoint, Mimecast, Cisco ESA, Forcepoint, Trend Micro, Symantec): enable their CEF / syslog SIEM export to the same port.</li></ol>')
+      +'<div class="muted small" style="margin-top:6px">Mailbox take-over signals below come from Exchange and work without the gateway.</div>';
+  }
+  function kpis(tot,act,verd,leak,mbx){
+    var A={},V={};((act&&act.values)||[]).forEach(function(o){A[o.v]=o.n;});((verd&&verd.values)||[]).forEach(function(o){V[o.v]=o.n;});
+    var stop=(A.blocked||0)+(A.rejected||0)+(A.quarantined||0);
+    $('kk').innerHTML=Z.tile('Gateway events',Z.n(tot),per(),tot?'':'na')
+      +Z.tile('Delivered',Z.n(A.delivered||0),tot?Math.round((A.delivered||0)/tot*100)+'% of all':'','')
+      +Z.tile('Stopped',Z.n(stop),Z.n(A.blocked||0)+' blocked · '+Z.n(A.rejected||0)+' rejected · '+Z.n(A.quarantined||0)+' quarantined','')
+      +Z.tile('Phishing',Z.n(V.phishing||0),'incl. impersonation / BEC',V.phishing?'warn':'ok','phishing')
+      +Z.tile('Malware',Z.n(V.malware||0),'attachments / URLs',V.malware?'warn':'ok','malware')
+      +Z.tile('Threats delivered',Z.n(leak),'phishing / malware that reached a mailbox',leak?'bad':'ok','leak')
+      +Z.tile('Mailbox take-over signals',Z.n(mbx),'Exchange forwarding / export / permissions',mbx?'warn':'ok','mbx');
+    [].forEach.call($('kk').querySelectorAll('[data-act]'),function(b){b.addEventListener('click',function(){var a=b.getAttribute('data-act');
+      if(a==='phishing'||a==='malware')drill('Verdict: '+a,G+' AND fields.email_verdict:'+a);
+      else if(a==='leak')$('leak').scrollIntoView({behavior:'smooth'});else if(a==='mbx')$('mbx').scrollIntoView({behavior:'smooth'});});});
+  }
+  function load(){
+    var fail=function(id){return function(e){$(id).innerHTML=Z.errHtml(e,'this search');return null;};};
+    var opt=function(p){return p.catch(function(){return null;});};
+    Promise.all([
+      Z.req('POST','/histogram',{q:G,from:'now-'+per(),to:'now',buckets:56}),
+      opt(Z.req('POST','/histogram',{q:TH,from:'now-'+per(),to:'now',buckets:56})),
+      opt(top(G,'fields.email_action')), opt(top(G,'fields.email_verdict')),
+      opt(find(TH+' AND fields.email_action:delivered',50)), opt(find(MBX,50)),
+    ]).then(function(r){
+      var tot=hist(r[0],r[1]), leakRows=(r[4]&&r[4].rows)||[], mbxRows=(r[5]&&r[5].rows)||[];
+      kpis(tot,r[2],r[3],(r[4]&&r[4].total_estimate)||leakRows.length,(r[5]&&r[5].total_estimate)||mbxRows.length);
+      ranked('verd',r[3],'Verdict','fields.email_verdict',G,VC); ranked('act',r[2],'Action','fields.email_action',G,AC);
+      $('leak').hidden=!leakRows.length; if(leakRows.length)evRows(leakRows,'leakt','');
+      if(!mbxRows.length)$('mbx').innerHTML='<div class="empty">None in this period (or the Exchange / Microsoft 365 audit logs are not reaching the SIEM - see Log Sources).</div>';
+      else{$('mbx').innerHTML='<table><thead><tr><th>Time</th><th>Change</th><th>By</th><th>Mailbox / target</th><th>Source</th></tr></thead><tbody>'+mbxRows.map(function(x,i){return '<tr data-i="'+i+'"><td class="small">'+esc(Z.dt(x.ts))+'</td><td>'+Z.pill(x.action,/export|forward|sendas|journal/.test(x.action)?'bad':'warn')+'</td><td class="mono small">'+esc(x.user||'–')+'</td><td class="mono small">'+esc(x.target_user||'–')+'</td><td class="small">'+esc(x.src_type||'')+'</td></tr>';}).join('')+'</tbody></table>';
+        [].forEach.call($('mbx').querySelectorAll('tr[data-i]'),function(tr){tr.addEventListener('click',function(){detail(mbxRows[+tr.getAttribute('data-i')]);});});}
+      if(!tot){
+        ['verd','act','snd','rcp','thr','ips','outb','ven','rec'].forEach(function(id){$(id).innerHTML='<div class="empty">No gateway logs.</div>';});
+        opt(Z.req('POST','/top',{q:G,from:'now-30d',to:'now',field:'fields.email_vendor',limit:1})).then(function(v){notConnected(true,!!(v&&v.values&&v.values.length));});
+      }else{
+        notConnected(false);
+        top(TH,'fields.email_from').then(function(x){ranked('snd',x,'Sender','fields.email_from',TH);},fail('snd'));
+        top(TH,'fields.email_to').then(function(x){ranked('rcp',x,'Recipient','fields.email_to',TH);},fail('rcp'));
+        top(G,'fields.threat_name').then(function(x){ranked('thr',x,'Threat','fields.threat_name',G);},fail('thr'));
+        top(G+' AND fields.email_action:(blocked OR rejected OR quarantined)','src_ip').then(function(x){ranked('ips',x,'Sender IP','src_ip',G);},fail('ips'));
+        top(G+' AND fields.email_direction:outbound AND fields.email_verdict:*','fields.email_from').then(function(x){ranked('outb',x,'Internal sender','fields.email_from',G+' AND fields.email_direction:outbound');},fail('outb'));
+        top(G,'fields.email_vendor').then(function(x){ranked('ven',x,'Gateway','fields.email_vendor',G);},fail('ven'));
+        find(G+' AND fields.email_verdict:*',50).then(function(x){$('rc').textContent=(x.total_estimate||0)+' in this period · latest 50';evRows(x.rows||[],'rec','No threat verdicts in this period.');},fail('rec'));
+      }
+      $('up').textContent='updated '+Z.dt(Date.now());
+    },function(e){
+      $('kk').innerHTML='';$('hist').innerHTML='';
+      var msg=e.status===403?'<p class="err">Email security shows sender and recipient addresses (personal data under PDPL), so it is open to SOC analysts and above. Ask an administrator for the analyst role.</p>':Z.errHtml(e,'the search API');
+      ['verd','act','snd','rcp','thr','ips','outb','ven','mbx','rec'].forEach(function(id){$(id).innerHTML=msg;});
+    });
+  }
+  $('refresh').addEventListener('click',load);$('per').addEventListener('change',load);
+  Z.ready(load);
+  setInterval(function(){if(!document.hidden)load();},300000);
+})();
+</script>
+<script>
+// Mail server reputation (IT Asset Management /mail-reputation, rules in Python): Spamhaus listings for our own mail IPs and domains
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status below */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var ST={listed:'bad',clean:'ok',not_checked:'warn'}, SV={critical:'bad',high:'bad',medium:'warn',low:'inf'};
+  function why(e){return e.status===403?(/requires role admin/.test(e.message)?'The Spamhaus key is set by an administrator.':'This needs the operator role.'):e.status===404?'Mail reputation is not installed on the server yet - run the update.':e.message;}
+  function draw(v){
+    var L=v.last;$('repup').textContent=(L?'checked '+Z.dt(L.at)+(L.dqs?' · Spamhaus DQS':' · public Spamhaus zones'):'not checked yet')+(v.dqs_configured?' · DQS key set':' · no DQS key');
+    $('repwarn').hidden=!(L&&L.warning);$('repwarn').className='banner bad';$('repwarn').textContent=L&&L.warning||'';
+    if(!L){$('repl').innerHTML='<div class="empty">Not checked yet. The mail IPs come from the domains in Domains &amp; Hosting (MX and SPF) and the IPs registered here - use “Check now”.</div>';$('repnotes').textContent='';return;}
+    $('repl').innerHTML=L.rows.length?'<table><thead><tr><th>Target</th><th>Role</th><th>Result</th><th>Listed on</th><th>What to do</th></tr></thead><tbody>'+L.rows.map(function(r){
+      return '<tr><td class="mono">'+esc(r.target)+'<div class="muted small">'+esc(r.kind==='domain'?'mail domain':(r.provider?r.provider:r.sources.join('; ')))+'</div></td><td class="small">'+esc(r.roles.join(', '))+'</td>'
+        +'<td>'+Z.pill(r.state.replace('_',' '),ST[r.state]||'')+(r.changed?' <span class="muted small">was '+esc(r.changed)+'</span>':'')+(r.state==='not_checked'?'<div class="muted small">'+esc(r.why||'')+'</div>':'')+'</td>'
+        +'<td class="small">'+(r.lists.length?r.lists.map(function(l){return Z.pill(l.list,SV[l.severity]||'warn')+' '+esc(l.meaning);}).join('<br>'):'–')+'</td>'
+        +'<td class="small">'+(r.advice.length?'<ol class="steps">'+r.advice.map(function(a){return '<li>'+esc(a)+'</li>';}).join('')+'</ol>':'–')+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No public mail IP or mail domain to check. Add the domains in Domains &amp; Hosting, or register the public IPs your mail leaves from.</div>';
+    $('repnotes').innerHTML=(L.notes||[]).map(function(n){return '· '+esc(n);}).join('<br>')+(v.registered.length?'<br>Registered: '+v.registered.map(function(x){return esc(x.ip+' '+x.label+' ('+x.role+')');}).join(', '):'');
+  }
+  function load(){return req('GET','/mail-reputation').then(draw).catch(function(e){$('repl').innerHTML='<div class="empty">'+esc(why(e))+'</div>';});}
+  $('repchk').addEventListener('click',function(){var b=$('repchk');b.disabled=true;b.textContent='Checking…';req('POST','/mail-reputation/check',{}).then(draw).catch(function(e){$('repwarn').hidden=false;$('repwarn').textContent=why(e);}).then(function(){b.disabled=false;b.textContent='⟳ Check now';});});
+  $('repip').addEventListener('submit',function(ev){ev.preventDefault();var f=ev.target;req('POST','/mail-reputation/ips',{ip:f.ip.value.trim(),label:f.label.value.trim(),role:f.role.value}).then(function(){f.reset();return load();}).catch(function(e){$('repwarn').hidden=false;$('repwarn').textContent=why(e);});});
+  $('repkey').addEventListener('submit',function(ev){ev.preventDefault();var f=ev.target,k=f.key.value.trim();if(!k)return;req('POST','/mail-reputation/key',{key:k}).then(function(){f.reset();return load();}).catch(function(e){$('repwarn').hidden=false;$('repwarn').textContent=why(e);});});
+  load();
+})();
+</script><script>
+// Mail route flow (IT Asset Management /mail-route; rules in Python): the SIEM counts are read here as the signed-in analyst
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var G='fields.vendor_class:email_gateway', EXQ='src_type:exchange AND category:email', R=null;
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status below */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var per=function(){var e=$('per');return e?e.value:'7d';};
+  var opt=function(p){return p.then(function(x){return x;},function(){return null;/* SIEM part not available: that hop shows "not connected" */});};
+  var top=function(q,field,from,limit){return opt(Z.req('POST','/top',{q:q,from:from,to:'now',field:field,limit:limit||20}));};
+  var map=function(r){if(!r||!r.values)return null;var o={};r.values.forEach(function(x){o[String(x.v)]=x.n;});return o;};
+  var sum=function(o){if(!o)return null;var t=0;for(var k in o)t+=o[k];return t;};
+  function siem(){var P='now-'+per();
+    return Promise.all([top(G+' AND fields.email_direction:inbound','fields.email_action',P),top(G+' AND fields.email_direction:outbound','fields.email_action',P),top(EXQ,'action',P),
+      top(EXQ+' AND action:(fail OR defer)','fields.recipient_status',P,10),top(G,'fields.email_direction','now-1h'),top(EXQ,'action','now-1h')]).then(function(a){
+      var gi=map(a[0]),go=map(a[1]),ex=map(a[2]),rs=a[3]&&a[3].values,gr=map(a[4]),er=map(a[5]);
+      if(!gi&&!go&&!ex)return null;
+      var pick=function(o,keys){if(!o)return undefined;var r={};keys.forEach(function(k){if(o[k]!=null)r[k]=Math.max(0,Math.round(o[k]));});return r;};
+      var GK=['delivered','quarantined','blocked','rejected','email-event'],EK=['receive','send','deliver','fail','defer','dsn','submit','drop','expand','redirect','resolve','transfer','transport'];
+      var out={gateway_in:gi&&sum(gi)?pick(gi,GK):undefined,gateway_out:go&&sum(go)?pick(go,GK):undefined,exchange:ex&&sum(ex)?pick(ex,EK):undefined,
+        exchange_reasons:(rs||[]).slice(0,15).map(function(x){return {value:String(x.v).slice(0,300),n:Math.max(0,Math.round(x.n))};}),recent:{}};
+      if(gr){out.recent.gateway_in=Math.round(gr.inbound||0);out.recent.gateway_out=Math.round(gr.outbound||0);}
+      if(er){out.recent.exchange_receive=Math.round(er.receive||0);out.recent.exchange_send=Math.round(er.send||0);out.recent.exchange_deliver=Math.round(er.deliver||0);}
+      return out;});}
+  var COL={ok:'#3fb950',warn:'#d29922',bad:'#f85149',down:'#ff2d55',not_connected:'#6e7681',not_checked:'#6e7681',info:'#2f81f7'};
+  var LBL={ok:'working',warn:'warning',bad:'failing',down:'DOWN',not_connected:'not connected',not_checked:'not checked',info:''};
+  function wrap(t,n){var w=String(t).split(' '),l=[''];w.forEach(function(x){if((l[l.length-1]+' '+x).trim().length>n)l.push(x);else l[l.length-1]=(l[l.length-1]+' '+x).trim();});return l.slice(0,2);}
+  function lane(y,title,hops,blocked){
+    var W=150,H=78,GAP=34,x0=10,h='<text x="'+x0+'" y="'+(y-10)+'" fill="#c9d1d9" font-size="14" font-weight="700">'+esc(title)+'</text>';
+    var bi=blocked?hops.findIndex(function(z){return z.id===blocked.hop;}):-1;
+    hops.forEach(function(z,i){var x=x0+i*(W+GAP),c=COL[z.state]||'#6e7681',cnt=z.counts?Object.keys(z.counts).map(function(k){return k+' '+Z.n(z.counts[k]);}).join(' · '):'';
+      h+='<g data-hop="'+esc(z.id)+'" tabindex="0" role="button" aria-label="'+esc(z.label+': '+(LBL[z.state]||z.state))+'"><rect x="'+x+'" y="'+y+'" width="'+W+'" height="'+H+'" rx="10" fill="'+c+'22" stroke="'+c+'" stroke-width="1.5"'+(z.state==='down'?' stroke-dasharray="6 3"':'')+'/>'
+        +wrap(z.label,19).map(function(l,j){return '<text x="'+(x+W/2)+'" y="'+(y+20+j*15)+'" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="600">'+esc(l)+'</text>';}).join('')
+        +'<text x="'+(x+W/2)+'" y="'+(y+52)+'" text-anchor="middle" fill="'+c+'" font-size="11.5" font-weight="700">'+esc(LBL[z.state]||'')+(z.issues?' · '+z.issues+' issue'+(z.issues>1?'s':''):'')+'</text>'
+        +(cnt?'<text x="'+(x+W/2)+'" y="'+(y+68)+'" text-anchor="middle" fill="#8b949e" font-size="10">'+esc(cnt.slice(0,30))+'</text>':'')+'</g>';
+      if(i<hops.length-1){var ax=x+W,ay=y+H/2,br=(i===bi);
+        h+=br?'<line x1="'+ax+'" y1="'+ay+'" x2="'+(ax+GAP)+'" y2="'+ay+'" stroke="#ff2d55" stroke-width="2.5" stroke-dasharray="4 4"/><text x="'+(ax+GAP/2)+'" y="'+(ay+6)+'" text-anchor="middle" fill="#ff2d55" font-size="18" font-weight="800">✕</text>'
+          :'<line x1="'+ax+'" y1="'+ay+'" x2="'+(ax+GAP-6)+'" y2="'+ay+'" stroke="'+(bi>=0&&i>bi?'#6e7681':'#8b949e')+'" stroke-width="2"/><path d="M'+(ax+GAP-8)+' '+(ay-5)+' L'+(ax+GAP)+' '+ay+' L'+(ax+GAP-8)+' '+(ay+5)+' Z" fill="'+(bi>=0&&i>bi?'#6e7681':'#8b949e')+'"/>';}
+      if(i===bi)h+='<text x="'+(x+W/2)+'" y="'+(y+H+18)+'" text-anchor="middle" fill="#ff2d55" font-size="12" font-weight="800">▲ BLOCKED HERE</text>';});
+    return h;}
+  function draw(r){R=r;
+    if(!r.lanes){$('rtsvg').innerHTML='<div class="empty">'+esc(r.note||'Not checked yet')+'</div>';$('rtbanner').innerHTML='';$('rtissues').innerHTML='';return;}
+    var b=r.blocked||{},bl=[];['inbound','outbound'].forEach(function(k){var x=b[k];if(x)bl.push('<div><b>'+(k==='inbound'?'Receiving':'Sending')+' mail is '+(x.state==='down'?'stopped':'failing')+' at: '+esc(x.label)+'</b> - '+esc(x.reason)+(x.fix&&x.fix.length?'<ol class="steps">'+x.fix.map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol>':'')+'</div>');});
+    $('rtbanner').innerHTML=bl.length?'<div class="rtb down">'+bl.join('')+'</div>':(r.issues.length?'':'<div class="rtb okb">No hop is failing.'+(r.siem?'':' Mail-flow counts from the SIEM are not available - gateway and Exchange hops show not connected.')+'</div>');
+    $('rtsvg').innerHTML='<svg viewBox="0 0 1100 300" role="img" aria-label="Mail route flow">'+lane(36,'Receiving (inbound)',r.lanes.inbound,b.inbound)+lane(190,'Sending (outbound)',r.lanes.outbound,b.outbound)+'</svg>';
+    var SV={critical:'bad',high:'bad',medium:'warn',low:'inf',info:'mut'};
+    $('rtissues').innerHTML=r.issues.length?'<table><thead><tr><th>Severity</th><th>Hop</th><th>Issue</th><th>How to fix</th></tr></thead><tbody>'+r.issues.map(function(i){return '<tr><td>'+Z.pill(i.severity,SV[i.severity]||'')+'</td><td class="small">'+esc(i.hop.replace('_',' '))+'</td><td>'+esc(i.title)+'<div class="muted small">'+esc((i.evidence||[]).join(' · '))+'</div></td><td class="small"><ol class="steps">'+(i.fix||[]).map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol></td></tr>';}).join('')+'</tbody></table>':'';
+    var f=$('rtprof');if(f&&r.profile){if(document.activeElement!==f.mx)f.mx.value=(r.profile.expected_mx||[]).join(', ');if(document.activeElement!==f.platform)f.platform.value=r.profile.platform||'onprem';if(document.activeElement!==f.isp)f.isp.value=r.profile.isp_links||1;}}
+  function detail(id){if(!R||!R.lanes)return;var h=[].concat(R.lanes.inbound,R.lanes.outbound).find(function(z){return z.id===id;});if(!h)return;
+    var its=R.issues.filter(function(i){return i.hop===id||(i.hop==='exchange'&&(id==='exchange_in'||id==='exchange_out'));});
+    var d=$('rtdetail');d.hidden=false;d.innerHTML='<h3>'+esc(h.label)+' - '+esc(LBL[h.state]||h.state)+'</h3>'+(h.detail?'<div class="muted small">'+esc(h.detail)+'</div>':'')
+      +(h.counts&&Object.keys(h.counts).length?'<div class="small">'+Object.keys(h.counts).map(function(k){return esc(k)+': <b>'+Z.n(h.counts[k])+'</b>';}).join(' · ')+'</div>':'')
+      +(its.length?its.map(function(i){return '<div style="margin-top:6px"><b>'+esc(i.title)+'</b><ol class="steps">'+(i.fix||[]).map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol></div>';}).join('')
+        :'<div class="small" style="margin-top:6px">'+(h.state==='not_connected'?'No data for this hop: connect its logs to the SIEM (gateway syslog / Exchange message tracking shipper).':h.state==='not_checked'?'Not checked yet.':'No issue found at this hop.')+'</div>');}
+  function load(){return siem().then(function(s){return req('POST','/mail-route',{siem:s});}).then(draw).catch(function(e){$('rtsvg').innerHTML='<div class="empty">'+esc(e.status===404?'Mail route flow is not installed on the server yet - run the update.':e.message)+'</div>';});}
+  $('rtsvg').addEventListener('click',function(ev){var g=ev.target.closest('[data-hop]');if(g)detail(g.getAttribute('data-hop'));});
+  $('rtsvg').addEventListener('keydown',function(ev){if(ev.key!=='Enter'&&ev.key!==' ')return;var g=ev.target.closest('[data-hop]');if(g){ev.preventDefault();detail(g.getAttribute('data-hop'));}});
+  $('rtprof').addEventListener('submit',function(ev){ev.preventDefault();var f=ev.target,v=f.mx.value.split(',').map(function(x){return x.trim();}).filter(Boolean);
+    req('POST','/mail-route/profile',{expected_mx:v,platform:f.platform.value,isp_links:Math.max(1,Math.min(4,parseInt(f.isp.value,10)||1))}).then(load).catch(function(e){$('rtbanner').innerHTML='<div class="rtb down">'+esc(e.status===403?'Saving the route profile needs the operator role.':e.message)+'</div>';});});
+  var pe=$('per');if(pe)pe.addEventListener('change',load);
+  var rc=$('repchk');if(rc)rc.addEventListener('click',function(){setTimeout(load,2500);});
+  load();
+})();
+</script><script>
+// Email availability (IT Asset Management /mail-availability; rules in Python)
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status below */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var SC={met:'#3fb950',at_risk:'#d29922',breached:'#f85149',not_measurable:'#6e7681',no_data:'#6e7681'}, SL={met:'meeting the target',at_risk:'at risk - over 75% of the budget used',breached:'target missed',not_measurable:'not measurable from the platform',no_data:'no data yet'};
+  var mins=function(m){if(m==null)return '–';if(m<60)return (Math.round(m*10)/10)+' min';var h=Math.floor(m/60);return h+' h '+Math.round(m-h*60)+' min';};
+  function draw(a){
+    var c=a.current||{};$('avnow').className='avnow '+(c.up===false?'down':c.up?'up':'');
+    $('avnow').textContent=c.up===false?'● DOWN since '+Z.dt(c.down_since)+' - no MX host answers':c.up?'● Mail service up':'● Not measured yet';
+    $('avlast').textContent=c.last_at?'last probe '+Z.dt(c.last_at)+' · '+(c.hosts||[]).map(function(h){return h.host+(h.up?' ✓':' ✕');}).join(', '):'';
+    if(document.activeElement!==$('avsel'))$('avsel').value=String(a.target);
+    $('avwin').innerHTML=a.windows.map(function(w){var col=SC[w.state]||'#6e7681',used=w.budget_used_pct==null?0:Math.min(100,w.budget_used_pct);
+      return '<div><div class="muted small">'+esc(w.label)+'</div><div class="big" style="color:'+col+'">'+(w.availability==null?'–':esc(w.availability.toFixed(w.availability>=99.9?3:2))+'%')+'</div>'
+        +'<div class="small" style="color:'+col+'">'+esc(SL[w.state]||w.state)+'</div>'
+        +'<div class="avbar" title="downtime budget used"><i style="width:'+used+'%;background:'+col+'"></i></div>'
+        +'<div class="muted small">down '+esc(mins(w.down_minutes))+' of '+esc(mins(w.allowed_minutes))+' allowed'+(w.budget_left_minutes!=null?' · '+esc(mins(Math.max(0,w.budget_left_minutes)))+' left':'')+'</div>'
+        +(w.partial?'<div class="muted small">measured '+esc(w.coverage_pct)+'% of the period</div>':'')+'</div>';}).join('');
+    $('avmsg').innerHTML=!a.ever_up&&a.windows[0].measured_minutes?'<div class="banner">No MX host has answered from the platform yet. Outbound TCP 25 is probably blocked from this server: availability cannot be measured here (it is not counted as an outage). Allow TCP 25 from the platform to the MX addresses, or use an external monitor.</div>':'';
+    $('avout').innerHTML=a.outages.length?'<table><thead><tr><th>Start</th><th class="num">Minutes</th><th>MX hosts</th></tr></thead><tbody>'+a.outages.map(function(o){return '<tr><td class="small">'+esc(Z.dt(o.start))+'</td><td class="num">'+esc(o.minutes)+'</td><td class="small">'+esc((o.hosts||[]).join('; '))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No outage recorded.</div>';
+    var SV={high:'bad',medium:'warn',info:'inf'};
+    $('avgap').innerHTML='<table><tbody>'+a.gaps.map(function(g){return '<tr><td>'+Z.pill(g.severity,SV[g.severity]||'')+'</td><td>'+esc(g.title)+'<ol class="steps">'+(g.fix||[]).map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol></td></tr>';}).join('')+'</tbody></table>';
+    $('avnote').textContent=a.note;}
+  function load(){return req('GET','/mail-availability').then(draw).catch(function(e){$('avwin').innerHTML='<div class="empty">'+esc(e.status===404?'Availability measurement is not installed on the server yet - run the update.':e.message)+'</div>';});}
+  $('avtgt').addEventListener('submit',function(ev){ev.preventDefault();req('POST','/mail-availability/target',{target:Number($('avsel').value)}).then(load).catch(function(e){$('avmsg').innerHTML='<div class="banner bad">'+esc(e.status===403?'The availability target is set by an administrator.':e.message)+'</div>';});});
+  load();var t=setInterval(load,60000);window.addEventListener('pagehide',function(){clearInterval(t);});
+})();
+</script></body></html>

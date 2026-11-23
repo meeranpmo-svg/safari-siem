@@ -1,0 +1,119 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Data Subject Requests</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+pre.letter{white-space:pre-wrap;font:13px/1.55 "Segoe UI",system-ui,sans-serif;background:rgba(255,255,255,.03);padding:12px;border-radius:8px}pre.letter[dir=rtl]{text-align:right}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">Data Subject Requests</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn btn-primary" id="add"><i class="ti ti-plus me-1"></i>Record a request</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Requests from customers and employees to access, copy, correct or destroy their personal data, withdraw consent or object. Staff record each request here when it arrives (branch, call centre, e-mail, web, letter). <b>Only the request reference is kept here</b>: the person's name and details stay in the customer systems. The answer is due in 30 days; once, with notice and reasons before the 30 days end, it may be extended by 30 days. Identity is verified first, every system that holds the person's data is worked, and the answer letter (Arabic and English) is drafted from the request.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Requests</h3><div class="card-actions"><select class="form-select form-select-sm" id="filter" aria-label="Filter"><option value="open">Open</option><option value="overdue">Overdue</option><option value="">All</option><option value="closed">Closed</option></select></div></div>
+<div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="note"></div></section>
+<section class="card mb-3" id="intake"><div class="card-header"><h3 class="card-title"><i class="ti ti-inbox me-1"></i>Requests sent in automatically</h3><div class="card-actions text-secondary small">customer portal · app · call centre</div></div>
+<div class="card-body" id="inbody"><div class="text-secondary">Loading…</div></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+
+  var V=null, SYS=[], CLOSED=['responded','refused','withdrawn'];
+  var TYPES=[['access','Access'],['copy','Copy'],['correction','Correction'],['destruction','Destruction'],['withdraw_consent','Withdraw consent'],['objection','Objection'],['other','Other']];
+  var CH=[['branch','Branch'],['call_centre','Call centre'],['email','E-mail'],['web','Web'],['letter','Letter'],['app','Mobile app'],['other','Other']];
+  var METHODS=[['national_id_in_branch','National ID / Iqama checked in branch'],['absher_otp','Absher / Nafath verification'],['policy_number_and_otp','Policy number + one-time code'],['registered_email','Reply from the registered e-mail'],['guardian_documents','Guardian\'s documents (person lacks capacity)'],['other','Other']];
+  var STC={received:'azure',verifying:'azure',in_progress:'yellow',responded:'green',refused:'secondary',withdrawn:'secondary'};
+  function left(x){if(x.days_left===null)return '—';return x.overdue?P.badge('overdue','red'):P.badge(x.days_left+' days',x.days_left<=7?'orange':'secondary');}
+  function draw(){var f=$('filter').value,rows=(V.requests||[]).filter(function(x){var c=CLOSED.indexOf(x.stage)>=0;return !f||(f==='open'&&!c)||(f==='closed'&&c)||(f==='overdue'&&!c&&x.overdue);});
+    $('list').innerHTML=P.table([['Reference',function(x){return '<b>'+esc(x.ref)+'</b><div class="mut">'+esc(x.id)+'</div>';}],['Type',function(x){return esc(x.type)+'<div class="mut">'+esc(x.channel||'')+'</div>';}],['Received',function(x){return esc(P.dt(x.received));}],
+      ['Due',function(x){return esc(x.due||'—')+(x.extended?' <span class="mut">extended</span>':'');}],['Left',left],['Stage',function(x){return P.badge(x.stage,STC[x.stage]);}],
+      ['Identity',function(x){return x.identity_verified?P.badge('verified','green'):P.badge('not verified','orange');}],['Blocking the answer',function(x){return x.blockers.length?'<span class="small">'+esc(x.blockers.join('; '))+'</span>':(CLOSED.indexOf(x.stage)>=0?esc(x.outcome||x.stage):P.badge('ready to answer','green'));}],
+      ['With',function(x){return esc(x.assigned_to||'—')+(x.intake?'<div class="mut"><i class="ti ti-inbox"></i> '+esc(x.intake.source_name||'sent in')+'</div>':'')+((x.flags||[]).some(function(f){return f.flag==='possibly_repetitive';})?'<div>'+P.badge('possibly repetitive','orange')+'</div>':'');}]],rows,function(x){return 'class="rowc" data-id="'+esc(x.id)+'"';},f==='open'?'No open requests.':'No requests recorded yet.');}
+  function load(){return Promise.all([P.req('GET','/pdpl/dsar'),P.req('GET','/pdpl/ropa').catch(function(){return {activities:[]};})]).then(function(rr){var r=rr[0];V=r;
+    SYS=[];rr[1].activities.forEach(function(a){a.systems.forEach(function(s){if(SYS.indexOf(s)<0)SYS.push(s);});});
+    $('kpis').innerHTML=P.tile(r.open,'Open')+P.tile(r.overdue,'Overdue',r.overdue?'text-red':'')+P.tile(r.due_7d,'Due within 7 days',r.due_7d?'text-orange':'')+P.tile(r.requests.length-r.open,'Closed');
+    $('note').textContent=r.note;draw();}).catch(function(e){P.fail($('list'),e);});}
+  function action(id,kind,title,F,btn){return '<details class="mb-2"><summary class="fw-semibold">'+esc(title)+'</summary><div class="pt-2">'+P.form('a-'+kind,F,{},btn)+'</div></details>';}
+  function open(x){
+    var c=CLOSED.indexOf(x.stage)>=0;
+    var h=Z.kv([['Reference',esc(x.ref)],['Type',esc(x.type)],['Channel',esc(x.channel||'—')],['Received',esc(P.dt(x.received))],['Due',esc(x.due||'—')+' '+left(x)],['Stage',P.badge(x.stage,STC[x.stage])],
+      ['Identity',x.identity_verified?'verified ('+esc(x.identity_method)+')':'not verified'],['Outcome',esc(x.outcome||'—')+(x.refusal_ground?' · '+esc(V.refusal_grounds[x.refusal_ground]||x.refusal_ground):'')]]);
+    if(x.intake){var it=x.intake;h+=Z.sec('Sent in automatically','<div>From <b>'+esc(it.source_name||'?')+'</b>'+(it.auto_verified?' · '+P.badge('identity checked by the channel','green'):'')+(it.searched?' · '+P.badge('searched automatically: found in '+it.found_in+' system(s)','azure'):'')+(it.search_error?' · '+P.badge('automatic search did not run: '+it.search_error,'red'):'')+'</div>'
+      +((x.flags||[]).length?'<ul class="mb-0 mt-2 small">'+x.flags.map(function(f){return '<li>'+P.badge(f.flag.replace(/_/g,' '),f.flag==='possibly_repetitive'?'orange':'azure')+' '+esc(f.detail)+'</li>';}).join('')+'</ul>':''));}
+    h+=Z.sec('Systems that hold the person\'s data',P.table([['System',function(t){return esc(t.system);}],['Status',function(t){return P.badge(t.status,t.status==='open'?'orange':'green');}],['Note',function(t){return esc(t.note||'');}],['By',function(t){return esc(t.by||'');}]],x.tasks,null,'No system listed yet.'));
+    var cor=x.correlation||[];
+    var corH=cor.length?P.table([['When',function(r){return esc(P.dt(r.at))+'<div class="mut">'+esc(r.by)+'</div>';}],['Searched by',function(r){return esc(r.id_type.replace('_',' '));}],
+      ['Found in',function(r){return r.systems.map(function(y){return '<div>'+esc(y.system)+': '+(y.error?P.badge('not read: '+y.error,'red'):y.rows?P.badge(y.rows+' row(s) in '+y.tables.length+' table(s)','orange'):P.badge('none','green'))+'</div>';}).join('');}]],cor.slice().reverse()):'';
+    h+=Z.sec('Find this person across systems',(c?'':!x.identity_verified?'<p class="mut">Verify the requester\'s identity first - the search runs only for a verified data subject.</p>'
+      :'<form id="cform" autocomplete="off"><div class="row g-2 align-items-end"><div class="col-sm-4"><label class="form-label" for="c-type">Identifier</label><select class="form-select" id="c-type" name="id_type"><option value="national_id">National ID</option><option value="iqama">Iqama</option><option value="passport">Passport</option><option value="mobile">Mobile number</option><option value="email">E-mail</option><option value="iban">IBAN</option><option value="customer_no">Customer number</option><option value="policy_no">Policy number</option><option value="claim_no">Claim number</option></select></div>'
+      +'<div class="col-sm-5"><label class="form-label" for="c-value">Value</label><input class="form-control" id="c-value" name="value" maxlength="120" autocomplete="off" spellcheck="false" required></div><div class="col-sm-3"><button type="submit" class="btn btn-primary w-100"><i class="ti ti-user-search me-1"></i>Search</button></div></div>'
+      +'<div class="small text-secondary mt-1" data-msg></div><div class="mut mt-1">Read-only search of the identifier columns confirmed on the Data Catalog page. Only the number of rows per system comes back; the value is not stored or logged. Systems where the person is found become tasks below.</div></form>')+corH);
+    if(!c){
+      h+=Z.sec('Work the request',
+        (x.identity_verified?'':action(x.id,'verify','1. Verify identity',[['method','sel','How identity was verified',1,METHODS],['note','text','Note (no ID numbers)']],'Mark verified'))
+        +action(x.id,'task','2. Record a system (searched / done / not found)',[['system','text','System',1],['status','sel','Status',1,[['open','Open - still to do'],['done','Done'],['not_found','No data found'],['retained_by_law','Kept: a law requires it']]],['note','text','Note']],'Save')
+        +(x.extended?'':action(x.id,'extend','Extend by 30 days (once, before the deadline)',[['reason','area','Reason told to the requester',1]],'Extend and notify'))
+        +action(x.id,'respond','3. Answer the request',[['outcome','sel','Outcome',1,[['fulfilled','Fulfilled'],['partially','Partially (say why)']]],['note','text','Note']],'Record the answer')
+        +action(x.id,'refuse','Refuse (DPO or administrator)',[['ground','sel','Ground',1,Object.keys(V.refusal_grounds).map(function(k){return [k,V.refusal_grounds[k]];})],['note','area','Reason given to the requester',1]],'Refuse')
+        +action(x.id,'withdraw','The requester withdrew it',[['note','text','Note',1]],'Close as withdrawn')
+        +(SYS.length?'<div class="mut">Systems named in the records of processing: '+esc(SYS.join(', '))+'</div>':''));}
+    h+=Z.sec('Letter to the requester','<button type="button" class="btn btn-sm" id="letter" data-id="'+esc(x.id)+'"><i class="ti ti-mail me-1"></i>Draft the letter</button><div id="letterout" class="mt-2"></div>');
+    Z.open('Data subject request',x.id+' · '+x.ref,h+'<input type="hidden" id="did" value="'+esc(x.id)+'">');}
+  $('filter').addEventListener('change',draw);
+  $('add').addEventListener('click',function(){Z.open('Data subject requests','Record a request','<p class="small text-secondary">The reference from the system where the request was logged - not the person\'s name, ID or phone.</p>'+P.form('nform',[['ref','text','Request reference',1],['type','sel','Type',1,TYPES],['channel','sel','Received through',1,CH],['received','dtl','Received at',1],['systems','list','Systems to search (comma separated)'+(SYS.length?' - e.g. '+SYS.slice(0,4).join(', '):'')],['assigned_to','text','Handled by (user name; default you)']],{},'Record'));});
+  $('list').addEventListener('click',function(ev){var tr=ev.target.closest('tr[data-id]');if(!tr||!V)return;open(V.requests.find(function(x){return x.id===tr.getAttribute('data-id');}));});
+  document.addEventListener('click',function(ev){var b=ev.target.closest('#letter');if(!b)return;P.req('GET','/pdpl/dsar/'+encodeURIComponent(b.getAttribute('data-id'))+'/letter').then(function(L){
+    $('letterout').innerHTML='<pre class="letter">'+esc(L.en)+'</pre><pre class="letter" dir="rtl" lang="ar">'+esc(L.ar)+'</pre><div class="mut">'+esc(L.note)+'</div>';}).catch(function(e){$('letterout').textContent=P.why(e);});});
+  document.addEventListener('submit',function(ev){var fm=ev.target;if(fm.id!=='cform')return;ev.preventDefault();var id=$('did').value,btn=fm.querySelector('button');btn.disabled=true;fm.querySelector('[data-msg]').textContent='Searching…';
+    P.req('POST','/pdpl/dsar/'+encodeURIComponent(id)+'/correlate',{id_type:fm.elements.id_type.value,value:fm.elements.value.value.trim()}).then(function(r){fm.elements.value.value='';
+      P.toast(r.found_in.length?'Found in '+r.found_in.join(', ')+(r.tasks_added.length?' - added as tasks':''):'Not found in the '+r.searched+' system(s) searched');load().then(function(){var x=V.requests.find(function(q){return q.id===id;});if(x)open(x);});})
+      .catch(function(e){btn.disabled=false;fm.querySelector('[data-msg]').textContent=P.why(e);});});
+  document.addEventListener('submit',function(ev){var fm=ev.target;if(fm.id==='nform'){ev.preventDefault();P.req('POST','/pdpl/dsar',P.body(fm)).then(function(r){P.toast('Recorded '+r.id+' - due '+r.due);if(Z.close)Z.close();load();}).catch(function(e){P.msg(fm,P.why(e));});return;}
+    var m=/^a-(verify|task|extend|respond|refuse|withdraw)$/.exec(fm.id);if(!m)return;ev.preventDefault();var id=$('did').value;
+    P.req('POST','/pdpl/dsar/'+encodeURIComponent(id)+'/'+m[1],P.body(fm)).then(function(r){P.toast(r.id+': '+r.stage);load().then(function(){var x=V.requests.find(function(q){return q.id===id;});if(x)open(x);});}).catch(function(e){P.msg(fm,P.why(e));});});
+  /* intake: requests the customer portal / app / call centre send in (engine/pdpl-intake.js) */
+  var IN=null, ROLE='viewer', MLAB={nafath:'Nafath',absher_otp:'Absher one-time code',policy_number_and_otp:'Policy number + one-time code',registered_email:'Reply from the registered e-mail',national_id_in_branch:'ID seen in a branch'};
+  var isAdmin=function(){return ROLE==='admin';};
+  function drawIntake(){var v=IN,S=v.settings,m=v.summary,h='';
+    h+='<div class="row row-cards mb-3">'+P.tile(m.last_30_days,'Sent in - 30 days')+P.tile(m.auto_verified,'Identity checked by the channel')+P.tile(m.auto_searched,'Searched automatically')+P.tile(m.repetitive_flagged,'Flagged possibly repetitive',m.repetitive_flagged?'text-orange':'')+'</div>';
+    (v.findings||[]).forEach(function(f){h+='<div class="alert alert-'+(f.severity==='high'?'danger':'warning')+' py-2 mb-2"><b>'+esc(f.title)+'</b> - '+esc(f.recommendation)+'</div>';});
+    h+='<div class="mb-2 small">Handler: <b>'+esc(S.default_assignee||'not set')+'</b>'+Object.keys(S.assignees||{}).map(function(t){return ' · '+esc(t)+': <b>'+esc(S.assignees[t])+'</b>';}).join('')
+      +' · accepted as verified: '+S.strong_methods.map(function(x){return P.badge(MLAB[x]||x,'green');}).join(' ')+' · automatic search: '+(S.auto_search?P.badge('on','azure'):P.badge('off','secondary'))
+      +(S.updated_by?' <span class="mut">(set by '+esc(S.updated_by)+' '+esc(P.dt(S.updated_at))+')</span>':'')+'</div>';
+    h+=P.table([['Reference',function(x){return '<b>'+esc(x.ref)+'</b><div class="mut">'+esc(x.id)+'</div>';}],['From',function(x){return esc(x.source||'')+'<div class="mut">'+esc(x.channel||'')+'</div>';}],['Arrived',function(x){return esc(P.dt(x.at));}],['Type',function(x){return esc(x.type);}],
+      ['Automation',function(x){return (x.auto_verified?P.badge('verified by channel','green'):P.badge('to verify','orange'))+(x.auto_searched?' '+P.badge('found in '+x.found_in,'azure'):'');}],['Flags',function(x){return x.flags.map(function(f){return P.badge(f.replace(/_/g,' '),f==='possibly_repetitive'?'orange':'secondary');}).join(' ');}],
+      ['With',function(x){return esc(x.assigned_to||'—');}]],v.log.slice(0,50),function(x){return 'class="rowc" data-id="'+esc(x.id)+'"';},'Nothing sent in yet. Give the customer portal, the app or the call-centre system an intake key (administrator), and they send each request here.');
+    if(isAdmin()){
+      h+='<div class="row g-3 mt-1"><div class="col-lg-6"><h4 class="mb-2">Settings</h4><form id="insform"><div class="mb-2"><label class="form-label" for="in-def">Default handler (user name)</label><input class="form-control" id="in-def" name="default_assignee" maxlength="80" value="'+esc(S.default_assignee||'')+'"></div>'
+        +'<div class="mb-2"><div class="form-label">Handler per type (optional)</div><div class="row g-1">'+TYPES.map(function(t){return '<div class="col-6"><input class="form-control form-control-sm" name="as_'+esc(t[0])+'" placeholder="'+esc(t[1])+'" aria-label="'+esc(t[1])+' handler" maxlength="80" value="'+esc((S.assignees||{})[t[0]]||'')+'"></div>';}).join('')+'</div></div>'
+        +'<div class="mb-2"><div class="form-label">Channel identity checks accepted as verified</div>'+Object.keys(MLAB).map(function(k){return '<label class="form-check form-check-inline"><input type="checkbox" class="form-check-input" name="strong" value="'+esc(k)+'"'+(S.strong_methods.indexOf(k)>=0?' checked':'')+'><span class="form-check-label">'+esc(MLAB[k])+'</span></label>';}).join('')+'</div>'
+        +'<label class="form-check mb-1"><input type="checkbox" class="form-check-input" name="auto_search"'+(S.auto_search?' checked':'')+'><span class="form-check-label">Search a verified requester automatically</span></label>'
+        +'<div class="mut mb-2">Runs the same read-only search as "Find this person" (identifier columns confirmed on the Data Catalog page) the moment a verified request arrives; systems where the person is found become tasks. Counts only - the identifier is not stored or logged. A person still answers every request.</div>'
+        +'<button type="submit" class="btn btn-primary">Save settings</button> <span class="small text-danger" data-msg></span></form></div>'
+        +'<div class="col-lg-6"><h4 class="mb-2">Intake keys</h4>'+P.table([['Key',function(k){return '<b>'+esc(k.id)+'</b> '+esc(k.name);}],['Created',function(k){return esc(k.created_by)+'<div class="mut">'+esc(P.dt(k.created_at))+'</div>';}],['Last used',function(k){return esc(P.dt(k.last_used));}],
+          ['',function(k){return k.revoked_at?P.badge('revoked','secondary'):'<button type="button" class="btn btn-sm btn-ghost-danger" data-revoke="'+esc(k.id)+'">Revoke</button>';}]],v.keys,null,'No intake key yet.')
+        +'<form id="inkform" class="d-flex gap-2 mt-2"><input class="form-control" name="name" maxlength="80" placeholder="System name, e.g. Customer portal" aria-label="System name" required><button type="submit" class="btn">Issue a key</button></form><div class="small text-danger" id="inkmsg"></div>'
+        +'<details class="mt-2"><summary class="small">How the sending system calls it</summary><pre class="letter small mt-2" id="insample"></pre></details></div></div>';
+    }
+    $('inbody').innerHTML=h;
+    var smp=$('insample');if(smp)smp.textContent='POST /agent/dsar/intake\nAuthorization: Bearer dk_…  (the intake key)\nContent-Type: application/json\n\n'+JSON.stringify({ref:'WEB-2026-000123',type:'access',channel:'web',identity_method:'nafath',id_type:'national_id',id_value:'(the requester\'s ID - used for the search, never stored)',systems:['Core insurance'],language:'both'},null,2)
+      +'\n\nAnswer: {request, reference, received, due, stage, identity_verified, flags, acknowledgement: {en, ar}} - show the acknowledgement to the person.';}
+  function loadIntake(){return P.req('GET','/pdpl/intake').then(function(v){IN=v;drawIntake();}).catch(function(e){$('inbody').innerHTML='<div class="text-secondary">'+esc(P.why(e))+'</div>';});}
+  $('inbody').addEventListener('click',function(ev){var rv=ev.target.closest('[data-revoke]');if(rv){if(!confirm('Revoke '+rv.getAttribute('data-revoke')+'? The system using it can no longer send requests.'))return;P.req('POST','/pdpl/intake/keys/'+encodeURIComponent(rv.getAttribute('data-revoke'))+'/revoke',{}).then(function(){P.toast('Revoked');loadIntake();}).catch(function(e){P.toast(P.why(e));});return;}
+    var tr=ev.target.closest('tr[data-id]');if(tr&&V){var x=V.requests.find(function(q){return q.id===tr.getAttribute('data-id');});if(x)open(x);}});
+  document.addEventListener('submit',function(ev){var fm=ev.target;
+    if(fm.id==='insform'){ev.preventDefault();var as={};TYPES.forEach(function(t){as[t[0]]=fm.elements['as_'+t[0]].value.trim();});
+      var b={default_assignee:fm.elements.default_assignee.value.trim()||undefined,assignees:as,strong_methods:[].slice.call(fm.querySelectorAll('input[name=strong]:checked')).map(function(i){return i.value;}),auto_search:fm.elements.auto_search.checked};
+      P.req('POST','/pdpl/intake/settings',b).then(function(v){IN=v;P.toast('Intake settings saved');drawIntake();}).catch(function(e){P.msg(fm,P.why(e));});return;}
+    if(fm.id==='inkform'){ev.preventDefault();P.req('POST','/pdpl/intake/keys',{name:fm.elements.name.value.trim()}).then(function(k){
+      Z.open('Intake key',k.id+' · '+k.name,'<p>Copy it now - it is shown once and stored as a hash only.</p><pre class="letter" id="newkey"></pre><p class="mut">'+esc(k.note)+'</p>');$('newkey').textContent=k.key;loadIntake();}).catch(function(e){$('inkmsg').textContent=P.why(e);});}});
+  $('refresh').addEventListener('click',function(){load();loadIntake();});
+  load();
+  var wr=new XMLHttpRequest();wr.open('GET','/dashboards/whoami.json');wr.zybQuiet=true;wr.onload=function(){try{ROLE=String(JSON.parse(wr.responseText).role||'viewer').toLowerCase();}catch(e){/* no role: viewer */}loadIntake();};wr.onerror=function(){loadIntake();};wr.send();
+})();
+</script></body></html>

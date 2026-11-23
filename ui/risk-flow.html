@@ -1,0 +1,110 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Enterprise Risk Automation Flow</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Enterprise Risk Automation Flow: how enterprise risk management runs on the platform, live. Seven stages - sources, methodology,
+     machine learning, the AI Risk Officer, its supervisor, people's decisions, actions and outcomes - each lit and counted from its own
+     API (/api/itam/brisk, /risk-command, /brisk/officer, /brisk/ras/limits); the learning loop back from decisions to the officer.
+     A stage whose source is not connected is grey, never green. Nothing is entered here. -->
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--ai:#a78bfa}
+[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 48px}
+.hero{border:1px solid #3b2a5c;border-radius:18px;padding:20px 22px;margin:0 0 14px;background:radial-gradient(700px 300px at 90% -30%,rgba(167,139,250,.22),transparent 60%),radial-gradient(600px 300px at 0% 130%,rgba(249,115,22,.14),transparent 60%),linear-gradient(135deg,#150f22,#0a0f14)}
+.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.14em;color:#c4b5fd;text-transform:uppercase}.hero h1{margin:8px 0 6px;font-size:28px;color:#fff;line-height:1.1}.hero h1 span{background:linear-gradient(90deg,#fb923c,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:#c7cedb;margin:0;max-width:1000px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.flow{overflow-x:auto}.flow svg{display:block;min-width:900px;width:100%;height:auto;direction:ltr}
+.flow a{cursor:pointer}.flow .nd rect{transition:stroke .15s}.flow a:hover .nd rect,.flow a:focus .nd rect{stroke:#fff}
+@keyframes dash{to{stroke-dashoffset:-24}}.flow .ln{stroke-dasharray:6 6;animation:dash 1.2s linear infinite}.flow .ln.off{animation:none;opacity:.35}
+@media(prefers-reduced-motion:reduce){.flow .ln{animation:none}}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.t{position:relative;overflow:hidden;background:linear-gradient(160deg,#1a1d27,var(--panel));border:1px solid var(--edge);border-radius:12px;padding:10px 12px 12px}.t::after{content:"";position:absolute;inset:auto 0 0 0;height:3px;background:var(--a,#3a4258)}
+.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:24px;font-weight:800;margin-top:2px}.t .s{font-size:11.5px;color:var(--mute)}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+.row{display:grid;grid-template-columns:minmax(0,40%) minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}.row:last-child{border-bottom:0}
+.tr{height:10px;border-radius:999px;background:#1f2533;overflow:hidden}.tr i{display:block;height:100%;border-radius:999px}
+.empty{color:var(--mute);padding:8px 0}.muted{color:var(--mute)}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.err{background:rgba(255,123,114,.1);border:1px solid rgba(255,123,114,.4);border-radius:12px;padding:10px;margin-bottom:12px;font-size:13px}
+.steps{margin:0;padding-left:20px;font-size:13px}.steps li{margin:4px 0}.steps b{color:#fff}
+</style>
+</head><body><main>
+<section class="hero"><div class="eb">Enterprise risk · how the automation works</div><h1>Enterprise Risk Automation <span>Flow</span></h1>
+<p>From the department's workbooks and the platform's own signals to decisions the risk committee can stand behind: the methodology rates every risk on the server, machine learning reads the register and the appetite metrics, the AI Risk Officer turns what needs doing into proposals, a supervisor checks each one against the records, a named person decides, and the decision becomes an action - and teaches the officer. Each stage below is lit and counted from its own source.</p></section>
+<div id="err"></div>
+<div class="card"><h2>The flow, live <span class="c">click a stage to open it · green = working · amber = partly · grey = not connected</span></h2><div class="flow" id="flow"></div></div>
+<div class="k" id="kk"></div>
+<div class="g2"><div class="card"><h2>Graded on outcomes <span class="c">the AI Risk Officer's scorecard, against its targets</span></h2><div id="score"></div></div>
+ <div class="card"><h2>The learning loop <span class="c">what people's decisions taught the officer</span></h2><div id="learn"></div></div></div>
+<div class="card"><h2>What each stage does <span class="c">and who decides</span></h2><ol class="steps" id="how"></ol></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);},E=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  function get(u){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(null);});}
+  var settle=function(p){return p.then(function(v){return v;},function(e){return {__err:e};});},bad=function(x){return !x||x.__err;};
+  // ---------- the seven stages, each from its own source; numbers only from what the APIs return
+  function stages(B,R,O,L){var k=bad(B)?null:B.kpis,im=bad(B)?null:B.imports,ins=bad(B)?null:B.insights,o=bad(O)?null:O,sv={passed:0,flagged:0,held:0};
+    if(o)o.queue.concat(o.held).forEach(function(p){var v=p.supervisor&&p.supervisor.verdict;if(sv[v]!=null)sv[v]++;});
+    var dec=o?o.decided:[],ap=dec.filter(function(p){return p.status==='approved';}).length,acts=o?dec.filter(function(p){return p.result&&p.result.action;}).length:0,lim=bad(L)?null:L;
+    var st=function(on,part){return on?'ok':part?'part':'off';};
+    return [
+      {id:'src',title:'Sources',href:'business-risk-register.html',status:st(im&&im.register&&im.ras,im&&(im.register||im.ras)||(!bad(R)&&R.kpis)),
+        lines:[im&&im.register?im.register.rows+' register risks':'register not imported',im&&im.ras?im.ras.metrics+' appetite metrics':'RAS not imported',!bad(R)?R.kpis.scenarios_assessed+'/10 scenarios rated':'scenarios: not connected',!bad(R)?R.kpis.candidates+' platform signal(s)':'']},
+      {id:'rate',title:'Methodology',href:'business-risk-register.html',status:st(k&&k.risks&&!k.not_rated,k&&k.risks),
+        lines:k?[(k.risks-k.not_rated)+'/'+k.risks+' rated','Class III / IV: '+(k['class'][2]+k['class'][3]),k.flagged+' quality flag(s)']:['not connected']},
+      {id:'ml',title:'Machine learning',href:'ras-cockpit.html#cov',status:st(k&&(k.metrics||k.risks),k),
+        lines:k&&ins?[ins.duplicates_total+' likely duplicate(s)',ins.consistency_total+' rated unlike peers',k.early_warnings+' early warning(s)']:['not connected']},
+      {id:'officer',title:'AI Risk Officer',href:'ai-team.html',status:st(o&&o.loaded,o),ai:true,
+        lines:o?[o.queue.length+' proposal(s) waiting',o.held.length+' held',dec.length+' decided']:['not installed']},
+      {id:'sup',title:'Supervisor',href:'enterprise-risk.html',status:st(o&&(sv.passed+sv.flagged+sv.held),o),ai:true,
+        lines:o?[sv.passed+' passed',sv.flagged+' flagged',sv.held+' held, escalated']:['not installed']},
+      {id:'people',title:'People decide',href:'enterprise-risk.html',status:st(o&&dec.length,o||lim),
+        lines:[o?ap+' approved · '+(dec.length-ap)+' rejected':'no decision feed',lim?lim.pending.length+' limit change(s) 4-eyes':'limits not connected',k?k.acceptance_pending+' acceptance(s) 4-eyes':'']},
+      {id:'act',title:'Actions & outcomes',href:'grc-workspace.html',status:st(o&&o.scorecard,k),
+        lines:[acts+' GRC action(s) raised',k?k.outside_appetite+' outside appetite':'',o&&o.scorecard?o.scorecard.filter(function(x){return x.met;}).length+'/'+o.scorecard.filter(function(x){return x.met!=null;}).length+' targets met':'no scorecard']}];}
+  function flow(S){var col={ok:'#3fb950',part:'#e3b341',off:'#5b6270'},W=1460,H=330,w=176,h=168,y=40,gap=(W-40-7*w)/6,svg='';
+    S.forEach(function(s,i){s.x=20+i*(w+gap);});
+    svg+='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b7fe0"/></marker></defs>';
+    for(var i=0;i<S.length-1;i++){var a=S[i],b=S[i+1],on=a.status!=='off'&&b.status!=='off';svg+='<path class="ln'+(on?'':' off')+'" d="M'+(a.x+w)+' '+(y+h/2)+' L'+(b.x-4)+' '+(y+h/2)+'" stroke="#8b7fe0" stroke-width="2" fill="none" marker-end="url(#ah)"/>';}
+    // the learning loop: decisions back to the officer
+    var pp=S[5],of=S[3],lx1=pp.x+w/2,lx2=of.x+w/2,ly=y+h+44;svg+='<path class="ln'+(pp.status==='off'?' off':'')+'" d="M'+lx1+' '+(y+h)+' C'+lx1+' '+ly+' '+lx2+' '+ly+' '+lx2+' '+(y+h+4)+'" stroke="#a78bfa" stroke-width="2" fill="none" marker-end="url(#ah)"/><text x="'+((lx1+lx2)/2)+'" y="'+(ly+22)+'" text-anchor="middle" font-size="14" font-weight="600" fill="#c4b5fd">learns from every decision</text>';
+    // the supervisor sits on the officer's output
+    S.forEach(function(s,i){var c=col[s.status];svg+='<a href="'+E(s.href)+'" data-stage="'+E(s.id)+'" aria-label="'+E(s.title+': '+s.lines.filter(Boolean).join(', '))+'"><g class="nd"><rect x="'+s.x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="14" fill="'+(s.ai?'#191527':'#141a26')+'" stroke="'+c+'" stroke-width="1.8"/>'
+      +'<circle cx="'+(s.x+18)+'" cy="'+(y+20)+'" r="6" fill="'+c+'"/><text x="'+(s.x+31)+'" y="'+(y+25)+'" font-size="13" fill="#8C93A1">'+(i+1)+'</text>'
+      +'<text x="'+(s.x+w/2)+'" y="'+(y+52)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">'+E(s.title)+'</text>'
+      +s.lines.filter(Boolean).map(function(l,j){return '<text x="'+(s.x+12)+'" y="'+(y+86+j*26)+'" font-size="14" fill="#c7cedb">'+E(l.length>23?l.slice(0,22)+'…':l)+'<title>'+E(l)+'</title></text>';}).join('')
+      +'</g></a>';});
+    return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Enterprise risk automation flow: '+E(S.map(function(s){return s.title+' '+s.status;}).join(', '))+'">'+svg+'</svg>';}
+  function tile(l,v,s,c){return '<div class="t" style="--a:'+c+'"><div class="l">'+E(l)+'</div><div class="v" style="color:'+c+'">'+E(v)+'</div><div class="s">'+E(s)+'</div></div>';}
+  function draw(B,R,O,L){var S=stages(B,R,O,L);$('flow').innerHTML=flow(S);
+    var errs=[];if(bad(B))errs.push('Business Risk: '+(B&&B.__err&&B.__err.status===404?'not installed':B&&B.__err?B.__err.message:'no answer'));if(bad(O))errs.push('AI Risk Officer: '+(O&&O.__err&&O.__err.status===404?'not installed - run the update':O&&O.__err?O.__err.message:'no answer'));
+    $('err').innerHTML=errs.length?'<div class="err">'+errs.map(E).join('<br>')+'</div>':'';
+    var on=S.filter(function(s){return s.status==='ok';}).length,o=bad(O)?null:O,k=bad(B)?null:B.kpis;
+    $('kk').innerHTML=tile('Stages working',on+' / 7','green stages above',on===7?'#3fb950':on>=4?'#e3b341':'#ff7b72')
+      +tile('Waiting for a person',o?o.queue.length:'—','officer proposals to decide',o&&o.queue.length?'#e3b341':'#3fb950')
+      +tile('Held by the supervisor',o?o.held.length:'—','escalated to their owners',o&&o.held.length?'#ff7b72':'#3fb950')
+      +tile('Class III / IV risks',k?k['class'][2]+k['class'][3]:'—','enhanced oversight or action',k&&(k['class'][2]+k['class'][3])?'#ff7b72':'#3fb950')
+      +tile('Outside appetite',k?k.outside_appetite:'—','RAS metrics, latest period',k&&k.outside_appetite?'#ff7b72':'#3fb950')
+      +tile('Early warnings',k?k.early_warnings:'—','forecast to leave the appetite',k&&k.early_warnings?'#e3b341':'#3fb950');
+    var SC=o&&o.scorecard;
+    $('score').innerHTML=SC?SC.map(function(x){var c=x.value==null?'#5b6270':x.lower_is_better?'#a78bfa':x.met?'#3fb950':x.value>=x.target*0.75?'#e3b341':'#ff7b72',w=x.value==null?0:x.lower_is_better?Math.min(100,x.value*10):Math.min(100,x.value);
+      return '<div class="row" title="'+E(x.why)+'"><span>'+E(x.label)+'</span><div class="tr" role="img" aria-label="'+E(x.label+': '+(x.value==null?'not measured':x.value))+'"><i style="width:'+w+'%;background:'+c+'"></i></div><b style="color:'+c+'">'+(x.value==null?'—':E(x.value)+(x.key==='decision_days'?' d':' %'))+(x.lower_is_better||x.value==null?'':' <span class="muted" style="font-weight:400">/ '+E(x.target)+'</span>')+'</b></div>';}).join(''):'<div class="empty">The scorecard appears once the AI Risk Officer is installed.</div>';
+    var Lr=o&&o.learning,ks=Lr?Object.keys(Lr.kinds).filter(function(k2){return Lr.kinds[k2].decisions;}):[];
+    $('learn').innerHTML=Lr?(ks.length?ks.map(function(k2){var x=Lr.kinds[k2];return '<div class="row"><span>'+E(k2.replace(/-/g,' '))+'</span><div class="tr" title="'+E(x.why)+'"><i style="width:'+Math.round(x.rate*100)+'%;background:'+(x.lowered?'#ff7b72':'#a78bfa')+'"></i></div><b>'+Math.round(x.rate*100)+' %</b></div>';}).join(''):'<div class="empty">No decision yet - each approval or rejection teaches the officer what to raise first.</div>')
+      +'<div class="note">Coverage-link threshold <b style="color:#fff">'+E(Lr.link_threshold.value)+'</b> - '+E(Lr.link_threshold.why)+'</div>':'<div class="empty">The learning loop appears once the AI Risk Officer is installed.</div>';
+    $('how').innerHTML=[['Sources','the department\'s risk register and Risk Appetite Statement workbooks (imported by an administrator, preview first), the platform\'s own signals (Risk Studio) and the ten insurer scenarios.'],
+      ['Methodology','likelihood x impact and exposure after controls give the inherent band and the residual Class I-IV on the server - never typed; quality flags list what is wrong.'],
+      ['Machine learning','duplicates and rating consistency (TF-IDF), category (naive Bayes), which metric watches which risk, Holt forecasts and early warnings - suggestions with their evidence.'],
+      ['AI Risk Officer','on duty with the AI team: turns what needs doing into work items, each with evidence and one proposed step; it changes nothing itself.'],
+      ['Supervisor','checks every proposal against the records, when it is made and when it is decided; a failed check holds it and sends it to the named owner.'],
+      ['People decide','an operator or administrator - never a service or AI identity - approves or rejects with a reason; limit changes and Class III / IV acceptances need a second administrator.'],
+      ['Actions & outcomes','an approval becomes a GRC action, a link or a request through the module that owns it; the officer is graded on outcomes, and every decision teaches it.']]
+      .map(function(x){return '<li><b>'+E(x[0])+'</b> - '+E(x[1])+'</li>';}).join('');}
+  function load(){Promise.all([settle(get('/brisk')),settle(get('/risk-command')),settle(get('/brisk/officer')),settle(get('/brisk/ras/limits'))]).then(function(a){
+    if(a[0]&&a[0].__err&&a[0].__err.status===403){$('err').innerHTML='<div class="err">Your role cannot open this page.</div>';return;}draw(a[0],a[1],a[2],a[3]);});}
+  load();
+})();
+</script></body></html>

@@ -1,0 +1,60 @@
+[
+  {
+    "id": "SENTRA-MAIL-001", "name": "Inbound malware / phishing block spike", "enabled": true, "severity": 3,
+    "mitre": ["T1566", "T1566.001"], "sama": ["3.3.14", "3.3.16"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "10 or more inbound e-mails classified malware or phishing and blocked / quarantined / rejected by the Secure Email Gateway (Libraesva ESG; or Proofpoint / Mimecast / Cisco ESA / Forcepoint / Trend Micro / Symantec via CEF) within 10 minutes - a campaign hitting the organisation.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "email" },
+                        { "field": "action", "op": "in", "value": ["blocked", "quarantined", "rejected"] },
+                        { "field": "fields.email_verdict", "op": "in", "value": ["malware", "phishing"] },
+                        { "any": [ { "field": "fields.email_direction", "op": "eq", "value": "inbound" },
+                                   { "field": "fields.email_direction", "op": "exists", "value": false } ] } ] },
+    "group_by": ["host"], "window_s": 600, "count": 10, "suppress_s": 1800,
+    "fields_in_alert": ["host", "fields.email_verdict", "fields.email_from", "fields.threat_name", "fields.email_direction"]
+  },
+  {
+    "id": "SENTRA-MAIL-002", "name": "Credential phishing / impersonation (BEC)", "enabled": true, "severity": 3,
+    "mitre": ["T1566", "T1684.001"], "sama": ["3.3.14", "3.3.16", "3.3.5"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "The email gateway flagged a message as phishing / impersonation / business-email-compromise (any disposition, including DELIVERED - impersonation often bypasses filters). Credential-phishing and CEO/vendor impersonation targeting the organisation.",
+    "type": "single",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "email" },
+                        { "any": [ { "field": "fields.email_verdict", "op": "eq", "value": "phishing" },
+                                   { "field": "tags", "op": "eq", "value": "phishing" },
+                                   { "field": "fields.email_action_raw", "op": "re", "value": "impersonat|\\bbec\\b|display ?name|lookalike|spoof|ceo fraud" } ] } ] },
+    "group_by": ["host", "fields.email_from"], "suppress_s": 600,
+    "fields_in_alert": ["fields.email_from", "fields.email_to", "fields.email_subject", "fields.email_verdict", "fields.email_action", "host", "src_ip"]
+  },
+  {
+    "id": "SENTRA-MAIL-003", "name": "Outbound spam / compromised internal account", "enabled": true, "severity": 3,
+    "mitre": ["T1566", "T1078"], "sama": ["3.3.14", "3.3.16", "3.3.15"], "tactic": "exfiltration", "author":"Sentra SOC", "version": 1,
+    "description": "5 or more OUTBOUND e-mails from the same internal sender blocked / quarantined / rejected, or classified spam / malware / phishing, within 1 hour - a compromised or abused internal mailbox sending out spam or malicious mail.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "email" },
+                        { "field": "fields.email_direction", "op": "eq", "value": "outbound" },
+                        { "any": [ { "field": "action", "op": "in", "value": ["blocked", "quarantined", "rejected"] },
+                                   { "field": "fields.email_verdict", "op": "in", "value": ["spam", "malware", "phishing"] } ] } ] },
+    "group_by": ["fields.email_from"], "window_s": 3600, "count": 5, "suppress_s": 3600,
+    "fields_in_alert": ["fields.email_from", "host", "fields.email_verdict", "fields.email_action", "fields.email_to"]
+  },
+  {
+    "id": "SENTRA-MAIL-004", "name": "Mass quarantine on the email gateway", "enabled": true, "severity": 2,
+    "mitre": ["T1566"], "sama": ["3.3.14", "3.3.16"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "20 or more e-mails quarantined by the gateway within 5 minutes - a mail-borne campaign or outbreak (or, if outbound-heavy, a possible internal compromise). Operational / threat signal to review the quarantine.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "email" },
+                        { "field": "action", "op": "eq", "value": "quarantined" } ] },
+    "group_by": ["host"], "window_s": 300, "count": 20, "suppress_s": 1800,
+    "fields_in_alert": ["host", "fields.email_verdict", "fields.email_direction", "fields.email_from"]
+  },
+  {
+    "id": "SENTRA-MAIL-005", "name": "Repeated sandbox-detected attachments or URLs", "enabled": true, "severity": 3,
+    "mitre": ["T1566.001", "T1204.002"], "sama": ["3.3.14", "3.3.16", "3.3.17"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "5 or more e-mails within 1 hour whose attachment (Libraesva QuickSand) or URL (URLSand sandbox) verdict was malicious - repeated sandbox detonations indicate a targeted malware / weaponised-document campaign.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "email" },
+                        { "any": [ { "field": "fields.attachment_verdict", "op": "re", "value": "malic|infect|threat|sandbox|dirty|block|danger|bad" },
+                                   { "field": "fields.url_verdict", "op": "re", "value": "malic|infect|threat|sandbox|phish|block|danger|bad" } ] } ] },
+    "group_by": ["host"], "window_s": 3600, "count": 5, "suppress_s": 3600,
+    "fields_in_alert": ["host", "fields.attachment_verdict", "fields.url_verdict", "fields.email_from", "fields.threat_name"]
+  }
+]

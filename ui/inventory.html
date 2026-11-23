@@ -1,0 +1,239 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ITAM Inventory</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- ITAM Inventory over /api/itam/inventory (read) and the asset routes (POST /assets, /assets/:id, /assets/:id/<action>; validated and
+     audited there): the whole register with facets, search, sortable columns you choose, saved views, CSV export and bulk changes;
+     data quality per asset with the missing fields, duplicates, spec outliers per model, stale and ghost assets; a drawer to see the
+     record (with which source set each field), edit it (a conflicting change is refused), move it through its lifecycle with a
+     reason, and its history. Viewers read; operators change. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1680px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:5px 11px;cursor:pointer}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn:disabled{opacity:.5}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:10px 14px;cursor:pointer;text-align:left;color:inherit;font:inherit}.t.on{outline:2px solid var(--acc)}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:22px;font-weight:800}.t .s{font-size:11px;color:var(--d-mute)}.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}
+.lay{display:grid;grid-template-columns:230px minmax(0,1fr);gap:12px}@media(max-width:1000px){.lay{grid-template-columns:1fr}}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-bottom:12px}.card h2{margin:0 0 8px;font-size:14px}
+.fac h3{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--d-mute);margin:10px 0 4px}.fac label{display:flex;gap:6px;align-items:center;font-size:12.5px;padding:2px 0;cursor:pointer}.fac label span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fac label b{color:var(--d-mute);font-weight:500}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.inp{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:inherit}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--d-line);font-size:12.5px;vertical-align:top;white-space:nowrap}th{color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;cursor:pointer;user-select:none}th.s::after{content:' ▾'}th.s.asc::after{content:' ▴'}
+tr.rw{cursor:pointer}tr.rw:hover{background:rgba(255,255,255,.03)}.tw{overflow:auto}
+.pill{display:inline-block;padding:0 7px;border-radius:999px;font-size:11px;font-weight:600;background:rgba(141,176,255,.16);color:var(--info);margin-right:3px}.pill.bad{background:rgba(255,123,128,.16);color:var(--bad)}.pill.warn{background:rgba(245,181,68,.16);color:var(--warn)}.pill.ok{background:rgba(95,210,122,.16);color:var(--ok)}
+.q{display:inline-block;width:34px;text-align:center;border-radius:6px;font-weight:800;font-size:11.5px;padding:1px 0}
+.empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad);font-size:13px;margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+.drw{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--d-panel);border-left:1px solid var(--d-line);padding:16px;overflow:auto;z-index:50;box-shadow:-10px 0 30px rgba(0,0,0,.4)}
+.dt{display:flex;gap:6px;margin:10px 0}.dt button{font:600 12.5px Inter,system-ui,sans-serif;background:transparent;color:var(--d-mute);border:1px solid var(--d-line);border-radius:8px;padding:5px 10px;cursor:pointer}.dt button.on{color:var(--d-ink);background:var(--d-raise)}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:4px 10px;font-size:13px}.kv div:nth-child(odd){color:var(--d-mute)}
+.f{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.f label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--d-mute)}.f .inp{width:100%}
+.colpick{position:absolute;background:var(--d-panel);border:1px solid var(--d-line);border-radius:10px;padding:8px;z-index:40;columns:2}.colpick label{display:block;font-size:12.5px;padding:2px 4px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT assets · the register</div><h1>Inventory</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn pri" id="b-add">＋ Add asset</button><button type="button" class="btn" id="rf">⟳</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div class="lay"><aside class="card fac" id="fac"></aside>
+<section><div class="card"><div class="bar"><input class="inp" id="q" placeholder="Search name, tag, serial, MAC, IP, model, owner…" aria-label="Search" style="min-width:300px;flex:1">
+  <label class="sm mut"><input type="checkbox" id="all"> include retired</label><span style="position:relative"><button type="button" class="btn" id="b-cols">Columns</button><div class="colpick" id="cols" hidden></div></span>
+  <select class="inp" id="views" aria-label="Saved views"><option value="">Saved views…</option></select><button type="button" class="btn" id="b-savev">Save view</button><button type="button" class="btn pri" id="b-xlsx">Export Excel</button><button type="button" class="btn" id="b-csv">Export CSV</button><button type="button" class="btn" id="b-imp">Import CSV</button><input type="file" id="imp-file" accept=".csv,text/csv" hidden></div>
+  <div class="card" id="imp" hidden></div>
+  <div class="bar" id="bulk" hidden><b id="bulkn"></b><select class="inp" id="bk-f"><option value="site">Set site</option><option value="department">Set department</option><option value="owner">Set owner</option><option value="custodian">Set custodian</option></select><input class="inp" id="bk-v" placeholder="value"><button type="button" class="btn pri" id="bk-go">Apply to selected</button><button type="button" class="btn" id="bk-x">Clear selection</button></div>
+  <div class="tw" id="tbl"></div><div class="bar" style="margin-top:8px"><span class="sm mut" id="pg"></span><span class="sp"></span><button type="button" class="btn" id="prev">‹</button><button type="button" class="btn" id="next">›</button></div></div>
+  <div class="card"><h2>Data quality</h2><div id="qual"></div></div><div class="card"><h2>Possible duplicates</h2><div id="dups"></div></div></section></div>
+<aside class="drw" id="drw" hidden></aside>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, F = {}, ISSUE = '', SORT = { k: 'quality', asc: true }, PAGE = 0, PS = 100, SEL = {}, D = null, DT = 'rec';
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var COLS = [['quality', 'Quality'], ['name', 'Name'], ['asset_tag', 'Tag'], ['type', 'Type'], ['status', 'Status'], ['site', 'Site'], ['department', 'Department'], ['owner', 'Owner'], ['vendor', 'Vendor'], ['model', 'Model'], ['serial', 'Serial'], ['mac', 'MAC'], ['ip', 'IP'], ['os', 'OS'], ['warranty_end', 'Warranty end'], ['support_end', 'Support end'], ['eol', 'End of life'], ['classification', 'Classification'], ['seen_days', 'Seen'], ['issues', 'Issues']];
+  var SHOW = ['quality', 'name', 'type', 'status', 'site', 'owner', 'model', 'serial', 'mac', 'ip', 'warranty_end', 'eol', 'seen_days', 'issues'];
+  try { var sv = JSON.parse(localStorage.getItem('zyb-inv-cols') || 'null'); if (Array.isArray(sv) && sv.length) SHOW = sv; } catch (e) { /* storage blocked: default columns */ }
+  var ISS = { stale: ['warn', 'not seen'], ghost: ['bad', 'retired but seen'], duplicate: ['bad', 'duplicate?'], outlier: ['warn', 'spec outlier'], incomplete: ['warn', 'incomplete'] };
+  var ACTIONS = [['activate', 'In use'], ['restock', 'Back to stock'], ['repair', 'To repair'], ['lost', 'Lost'], ['found', 'Found'], ['retire', 'Retire'], ['dispose', 'Dispose']];
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  var why = function (e) { return e.status === 403 ? 'Operators and administrators change assets.' : e.message; };
+  var qc = function (q) { return q >= 80 ? 'background:rgba(95,210,122,.16);color:var(--ok)' : q >= 60 ? 'background:rgba(245,181,68,.16);color:var(--warn)' : 'background:rgba(255,123,128,.16);color:var(--bad)'; };
+  function load() { return req('GET', '/inventory' + ($('all').checked ? '?all=1' : '')).then(function (v) { V = v; draw(); if (!$('drw').hidden && D) openAsset(D.asset.id); }).catch(function (e) { $('kp').innerHTML = '<div class="card" style="grid-column:1/-1"><div class="empty">' + esc(e.status === 404 ? 'The Inventory is not on this platform yet - run the update.' : 'Not reachable: ' + e.message) + '</div></div>'; }); }
+  function tile(id, l, v, s, c) { return '<button type="button" class="t ' + (c || '') + (ISSUE === id ? ' on' : '') + '" data-iss="' + id + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s) + '</div></button>'; }
+  function draw() {
+    var I = {}; V.facets.issue.forEach(function (f) { I[f.value] = f.count; });
+    $('up').textContent = V.total + ' assets · read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    $('kp').innerHTML = tile('', 'Assets', V.total, 'in the register') + tile('quality', 'Data quality', V.quality.avg == null ? '–' : V.quality.avg + ' %', 'average completeness', V.quality.avg != null && V.quality.avg < 70 ? 'warn' : '') + tile('incomplete', 'Incomplete', I.incomplete || 0, 'under 60 % filled', I.incomplete ? 'warn' : '')
+      + tile('duplicate', 'Possible duplicates', I.duplicate || 0, 'same serial / MAC / name', I.duplicate ? 'bad' : '') + tile('stale', 'Not seen', I.stale || 0, 'over ' + V.not_seen_days + ' days', I.stale ? 'warn' : '') + tile('outlier', 'Spec outliers', I.outlier || 0, 'vs the same model', '') + tile('ghost', 'Retired but seen', I.ghost || 0, 'include retired to see', I.ghost ? 'bad' : '');
+    var fac = function (k, label) { var L = V.facets[k] || []; if (!L.length) return ''; return '<h3>' + label + '</h3>' + L.slice(0, 12).map(function (f) { var on = (F[k] || []).indexOf(f.value) >= 0; return '<label><input type="checkbox" data-fk="' + k + '" data-fv="' + esc(f.value) + '"' + (on ? ' checked' : '') + '><span title="' + esc(f.value) + '">' + esc(f.value) + '</span><b>' + f.count + '</b></label>'; }).join(''); };
+    $('fac').innerHTML = '<div style="display:flex"><b class="sm">Filters</b><span class="sp"></span><button type="button" class="btn" id="fclear" style="padding:2px 8px">Clear</button></div>' + fac('type', 'Type') + fac('status', 'Status') + fac('site', 'Site') + fac('department', 'Department') + fac('vendor', 'Vendor');
+    $('cols').innerHTML = COLS.map(function (c) { return '<label><input type="checkbox" data-col="' + c[0] + '"' + (SHOW.indexOf(c[0]) >= 0 ? ' checked' : '') + '> ' + esc(c[1]) + '</label>'; }).join('');
+    var views = {}; try { views = JSON.parse(localStorage.getItem('zyb-inv-views') || '{}'); } catch (e) { /* storage blocked: no saved views */ }
+    $('views').innerHTML = '<option value="">Saved views…</option>' + Object.keys(views).map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('');
+    $('qual').innerHTML = '<div class="sm mut" style="margin-bottom:6px">Share of assets that have each field (only where the field matters for the type).</div>' + V.quality.by_field.map(function (f) { return '<div style="display:flex;gap:8px;align-items:center;font-size:12.5px;margin:3px 0"><span style="width:110px">' + esc(f.field) + '</span><span style="flex:1;height:8px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden"><i style="display:block;height:100%;width:' + (f.pct || 0) + '%;background:' + ((f.pct || 0) >= 80 ? '#2fb344' : (f.pct || 0) >= 50 ? '#f59f00' : '#e5484d') + '"></i></span><b style="width:70px;text-align:right">' + (f.pct == null ? '–' : f.pct + ' %') + '</b><span class="mut" style="width:70px">' + f.have + '/' + f.need + '</span></div>'; }).join('')
+      + (V.quality.by_site.length ? '<div class="sm" style="margin-top:8px">Weakest sites: ' + V.quality.by_site.slice(0, 4).map(function (s) { return esc(s.site) + ' ' + s.avg + ' % (' + s.assets + ')'; }).join(' · ') + '</div>' : '');
+    $('dups').innerHTML = V.duplicates.length ? '<table><thead><tr><th>Asset</th><th>Looks like</th><th>Matched on</th></tr></thead><tbody>' + V.duplicates.slice(0, 50).map(function (d) { return '<tr><td><a href="#" data-open="' + esc(d.a) + '" style="color:var(--info)">' + esc(d.a_name) + '</a></td><td><a href="#" data-open="' + esc(d.b) + '" style="color:var(--info)">' + esc(d.b_name) + '</a></td><td><span class="pill ' + (d.strength === 'strong' ? 'bad' : '') + '">' + esc(d.by.join(' + ')) + '</span></td></tr>'; }).join('') + '</tbody></table><div class="sm mut">Strong (serial / MAC): the same device recorded twice - retire one. Weak (name only): check.</div>' : '<div class="empty">No duplicate found.</div>';
+    drawTable();
+  }
+  function rows() {
+    var q = $('q').value.trim().toLowerCase();
+    var L = V.rows.filter(function (r) {
+      for (var k in F) if (F[k].length && F[k].indexOf(r[k] || '(none)') < 0) return false;
+      if (ISSUE && ISSUE !== 'quality' && r.issues.indexOf(ISSUE) < 0) return false;
+      if (q && [r.name, r.asset_tag, r.serial, r.mac, r.ip, r.model, r.vendor, r.owner, r.os, r.site].join(' ').toLowerCase().indexOf(q) < 0) return false; return true; });
+    var k = ISSUE === 'quality' ? 'quality' : SORT.k, asc = ISSUE === 'quality' ? true : SORT.asc;
+    L.sort(function (a, b) { var x = k === 'issues' ? a.issues.length : a[k], y = k === 'issues' ? b.issues.length : b[k]; if (x == null) return 1; if (y == null) return -1; return (x > y ? 1 : x < y ? -1 : 0) * (asc ? 1 : -1); });
+    return L;
+  }
+  function cell(r, k) {
+    if (k === 'quality') return '<span class="q" style="' + qc(r.quality) + '" title="missing: ' + esc(r.missing.join(', ') || 'nothing') + '">' + r.quality + '</span>';
+    if (k === 'issues') return r.issues.map(function (i) { var c = ISS[i] || ['', i]; return '<span class="pill ' + c[0] + '">' + esc(c[1]) + '</span>'; }).join('');
+    if (k === 'seen_days') return r.seen_days == null ? '<span class="mut">never</span>' : r.seen_days === 0 ? 'today' : r.seen_days + ' d';
+    if (k === 'name') return '<b>' + esc(r.name || r.id) + '</b>';
+    var v = r[k]; return v == null || v === '' ? '<span class="mut">–</span>' : esc(v);
+  }
+  function drawTable() {
+    var L = rows(), n = L.length, pages = Math.max(1, Math.ceil(n / PS)); if (PAGE >= pages) PAGE = pages - 1;
+    var cols = COLS.filter(function (c) { return SHOW.indexOf(c[0]) >= 0; });
+    $('tbl').innerHTML = n ? '<table><thead><tr><th><input type="checkbox" id="selall" aria-label="Select page"></th>' + cols.map(function (c) { return '<th data-sort="' + c[0] + '" class="' + (SORT.k === c[0] ? 's' + (SORT.asc ? ' asc' : '') : '') + '">' + esc(c[1]) + '</th>'; }).join('') + '</tr></thead><tbody>'
+      + L.slice(PAGE * PS, PAGE * PS + PS).map(function (r) { return '<tr class="rw" data-id="' + esc(r.id) + '"><td><input type="checkbox" data-sel="' + esc(r.id) + '"' + (SEL[r.id] ? ' checked' : '') + ' aria-label="Select"></td>' + cols.map(function (c) { return '<td>' + cell(r, c[0]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>'
+      : '<div class="empty">' + (V.rows.length ? 'Nothing matches the filters.' : 'The register is empty - add an asset, run Asset Discovery or import an export (ITAM Settings).') + '</div>';
+    $('pg').textContent = n ? (PAGE * PS + 1) + '–' + Math.min(n, PAGE * PS + PS) + ' of ' + n : '';
+    var ns = Object.keys(SEL).length; $('bulk').hidden = !ns; $('bulkn').textContent = ns + ' selected';
+  }
+  function openAsset(id) { req('GET', '/assets/' + encodeURIComponent(id)).then(function (d) { D = d; drawDrawer(); }, function (e) { toast(e.message); }); }
+  function drawDrawer() {
+    var a = D.asset, r = V.rows.filter(function (x) { return x.id === a.id; })[0] || { quality: null, missing: [], issues: [], outlier: [], duplicate_of: [] }, pv = a.prov || {};
+    var kv = function (l, v, f) { return '<div>' + esc(l) + '</div><div>' + (v == null || v === '' ? '<span class="mut">–</span>' : esc(v)) + (f && pv[f] ? ' <span class="pill" title="who set it">' + esc(pv[f]) + '</span>' : '') + '</div>'; };
+    var body = '';
+    if (DT === 'rec') body = '<div class="kv">' + kv('Type', a.type, 'type') + kv('Status', a.status) + kv('Asset tag', a.asset_tag, 'asset_tag') + kv('Serial', a.serial, 'serial') + kv('MAC', a.mac, 'mac') + kv('IP', a.mgmt_ip, 'mgmt_ip') + kv('Vendor / model', [a.vendor, a.model].filter(Boolean).join(' '), 'model') + kv('OS', a.os, 'os')
+      + kv('CPU / memory / disk', [a.cpu, a.mem_gb ? a.mem_gb + ' GB' : '', a.disk_gb ? a.disk_gb + ' GB disk' : ''].filter(Boolean).join(' · '), 'mem_gb') + kv('Site', a.site, 'site') + kv('Department', a.department, 'department') + kv('Owner / custodian', [a.owner, a.custodian].filter(Boolean).join(' / '), 'owner')
+      + kv('Purchase', a.purchase ? [String(a.purchase.date || '').slice(0, 10), a.purchase.po, a.purchase.supplier].filter(Boolean).join(' · ') : null, 'purchase') + kv('Warranty', a.warranty ? String(a.warranty.start || '?').slice(0, 10) + ' → ' + String(a.warranty.end || '?').slice(0, 10) : null, 'warranty')
+      + kv('Support', a.support ? [a.support.provider, a.support.contract, a.support.end ? 'until ' + String(a.support.end).slice(0, 10) : ''].filter(Boolean).join(' · ') : null, 'support') + kv('End of life', a.eol ? String(a.eol).slice(0, 10) : null, 'eol') + kv('Classification', a.classification, 'classification') + kv('CIA', a.cia ? 'C ' + (a.cia.c || '–') + ' · I ' + (a.cia.i || '–') + ' · A ' + (a.cia.a || '–') : null, 'cia')
+      + kv('Sources', (a.sources || []).map(function (s) { return (s.source || s) + (s.last_seen ? ' (' + String(s.last_seen).slice(0, 10) + ')' : ''); }).join(', ')) + kv('Last seen', a.last_seen ? String(a.last_seen).slice(0, 16).replace('T', ' ') : 'never') + '</div>'
+      + (r.missing.length ? '<div class="card" style="margin-top:10px"><b class="sm">Missing (' + r.quality + ' % complete):</b> <span class="sm">' + esc(r.missing.join(', ')) + '</span> · <a href="asset-autofill.html" style="color:var(--info)" class="sm">Asset Data Autopilot can fill some of these</a></div>' : '')
+      + (r.outlier.length ? '<div class="card"><b class="sm">Spec outlier:</b> <span class="sm">' + esc(r.outlier.join(' · ')) + '</span></div>' : '') + (r.duplicate_of.length ? '<div class="card"><b class="sm" style="color:var(--bad)">Possible duplicate of:</b> ' + r.duplicate_of.map(function (id) { var o = V.rows.filter(function (x) { return x.id === id; })[0]; return '<a href="#" data-open="' + esc(id) + '" style="color:var(--info)">' + esc(o ? o.name : id) + '</a>'; }).join(', ') + '</div>' : '');
+    if (DT === 'edit') { var fv = function (k, v) { return esc(v == null ? '' : v); };
+      body = '<div class="f">' + [['name', 'Name', a.name], ['asset_tag', 'Asset tag', a.asset_tag], ['serial', 'Serial', a.serial], ['mac', 'MAC', a.mac], ['mgmt_ip', 'IP', a.mgmt_ip], ['vendor', 'Vendor', a.vendor], ['model', 'Model', a.model], ['site', 'Site', a.site], ['department', 'Department', a.department], ['owner', 'Owner', a.owner], ['custodian', 'Custodian', a.custodian]].map(function (x) { return '<label>' + x[1] + '<input class="inp" data-e="' + x[0] + '" value="' + fv(x[0], x[2]) + '"></label>'; }).join('')
+        + '<label>Warranty start<input class="inp" type="date" data-e="w_start" value="' + esc(a.warranty && a.warranty.start ? String(a.warranty.start).slice(0, 10) : '') + '"></label><label>Warranty end<input class="inp" type="date" data-e="w_end" value="' + esc(a.warranty && a.warranty.end ? String(a.warranty.end).slice(0, 10) : '') + '"></label>'
+        + '<label>End of life<input class="inp" type="date" data-e="eol" value="' + esc(a.eol ? String(a.eol).slice(0, 10) : '') + '"></label><label>Notes<input class="inp" data-e="notes" value="' + fv('notes', a.notes) + '"></label></div><button type="button" class="btn pri" id="e-save" style="margin-top:10px">Save changes</button><div class="sm mut" style="margin-top:6px">What you change here is locked: discovery will not overwrite it.</div><div class="err" id="e-err"></div>'; }
+    if (DT === 'life') body = '<div class="sm">Now: <b>' + esc(a.status) + '</b></div><div class="f" style="margin-top:8px"><label>Reason (required)<input class="inp" id="l-why" placeholder="e.g. hardware failure, replaced by …"></label></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + ACTIONS.map(function (x) { return '<button type="button" class="btn" data-life="' + x[0] + '">' + esc(x[1]) + '</button>'; }).join('') + '</div><div class="err" id="l-err"></div>';
+    if (DT === 'hist') body = (D.lifecycle || []).slice().reverse().map(function (h) { return '<div class="sm" style="padding:4px 0;border-bottom:1px solid var(--d-line)"><b>' + esc(h.event) + '</b> · ' + esc(String(h.at).slice(0, 16).replace('T', ' ')) + ' · ' + esc(h.by) + (h.detail ? ' <span class="mut">' + esc(JSON.stringify(h.detail).slice(0, 160)) + '</span>' : '') + '</div>'; }).join('') || '<div class="empty">No history.</div>';
+    $('drw').innerHTML = '<div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;flex:1">' + esc(a.name || a.id) + '</h2>' + (r.quality != null ? '<span class="q" style="' + qc(r.quality) + '">' + r.quality + '</span>' : '') + '<button type="button" class="btn" id="d-x" aria-label="Close">✕</button></div><div class="sm mut">' + esc(a.id) + ' · updated ' + esc(String(a.updated_at || '').slice(0, 16).replace('T', ' ')) + '</div>'
+      + '<div class="dt">' + [['rec', 'Record'], ['edit', 'Edit'], ['life', 'Lifecycle'], ['hist', 'History']].map(function (t) { return '<button type="button" data-dt="' + t[0] + '" class="' + (DT === t[0] ? 'on' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>' + body;
+    $('drw').hidden = false;
+  }
+  $('drw').addEventListener('click', function (e) {
+    var t = e.target; if (t.id === 'd-x') { $('drw').hidden = true; return; }
+    var dt = t.closest('[data-dt]'); if (dt) { DT = dt.dataset.dt; drawDrawer(); return; }
+    var op = t.closest('[data-open]'); if (op) { e.preventDefault(); DT = 'rec'; openAsset(op.dataset.open); return; }
+    if (t.id === 'e-save') { var a = D.asset, b = { if_updated_at: a.updated_at }, g = function (k) { var i = document.querySelector('[data-e="' + k + '"]'); return i ? i.value.trim() : ''; };
+      ['name', 'asset_tag', 'serial', 'mac', 'mgmt_ip', 'vendor', 'model', 'site', 'department', 'owner', 'custodian', 'notes'].forEach(function (k) { var v = g(k); if (v !== String(a[k] == null ? '' : a[k])) b[k] = v || null; });
+      if (g('w_start') || g('w_end')) { var ws = g('w_start'), we = g('w_end'); if (ws && we && we < ws) { $('e-err').textContent = 'Warranty end is before its start.'; return; } if (ws !== String(a.warranty && a.warranty.start || '').slice(0, 10) || we !== String(a.warranty && a.warranty.end || '').slice(0, 10)) b.warranty = { start: ws || null, end: we || null, provider: a.warranty && a.warranty.provider || null }; }
+      if (g('eol') !== String(a.eol || '').slice(0, 10)) b.eol = g('eol') || null;
+      if (Object.keys(b).length === 1) { $('e-err').textContent = 'Nothing changed.'; return; }
+      req('POST', '/assets/' + encodeURIComponent(a.id), b).then(function () { toast('Saved'); DT = 'rec'; load(); }, function (er) { $('e-err').textContent = er.status === 409 ? er.message : why(er); }); return; }
+    var lf = t.closest('[data-life]'); if (lf) { var w = $('l-why').value.trim(); if (!w) { $('l-err').textContent = 'Give the reason first.'; return; }
+      req('POST', '/assets/' + encodeURIComponent(D.asset.id) + '/' + lf.dataset.life, { reason: w }).then(function () { toast('Status changed'); DT = 'hist'; load(); }, function (er) { $('l-err').textContent = why(er); }); }
+  });
+  $('kp').addEventListener('click', function (e) { var t = e.target.closest('[data-iss]'); if (!t) return; ISSUE = ISSUE === t.dataset.iss ? '' : t.dataset.iss; if (ISSUE === 'ghost' && !$('all').checked) { $('all').checked = true; load(); return; } PAGE = 0; draw(); });
+  $('fac').addEventListener('change', function (e) { var c = e.target.closest('[data-fk]'); if (!c) return; var k = c.dataset.fk; F[k] = F[k] || []; if (c.checked) F[k].push(c.dataset.fv); else F[k] = F[k].filter(function (x) { return x !== c.dataset.fv; }); PAGE = 0; drawTable(); });
+  $('fac').addEventListener('click', function (e) { if (e.target.id === 'fclear') { F = {}; ISSUE = ''; draw(); } });
+  $('tbl').addEventListener('click', function (e) {
+    var th = e.target.closest('[data-sort]'); if (th) { if (SORT.k === th.dataset.sort) SORT.asc = !SORT.asc; else SORT = { k: th.dataset.sort, asc: true }; if (ISSUE === 'quality') ISSUE = ''; drawTable(); return; }
+    if (e.target.closest('input')) return;
+    var r = e.target.closest('[data-id]'); if (r) { DT = 'rec'; openAsset(r.dataset.id); }
+  });
+  $('tbl').addEventListener('change', function (e) { var s = e.target.closest('[data-sel]'); if (s) { if (s.checked) SEL[s.dataset.sel] = 1; else delete SEL[s.dataset.sel]; drawTable(); return; }
+    if (e.target.id === 'selall') { Array.prototype.forEach.call(document.querySelectorAll('[data-sel]'), function (c) { if (e.target.checked) SEL[c.dataset.sel] = 1; else delete SEL[c.dataset.sel]; }); drawTable(); } });
+  $('bk-x').addEventListener('click', function () { SEL = {}; drawTable(); });
+  $('bk-go').addEventListener('click', function () { var f = $('bk-f').value, v = $('bk-v').value.trim(), ids = Object.keys(SEL); if (!v) { toast('Type the value first'); return; }
+    var done = 0, fail = null, next = function (i) { if (i >= ids.length) { toast(done + ' asset(s) updated' + (fail ? ' · stopped: ' + fail : '')); SEL = {}; load(); return; } var r = V.rows.filter(function (x) { return x.id === ids[i]; })[0], b = { if_updated_at: r && r.updated_at }; b[f] = v;
+      req('POST', '/assets/' + encodeURIComponent(ids[i]), b).then(function () { done++; next(i + 1); }, function (er) { fail = why(er); next(ids.length); }); }; next(0); });
+  $('b-cols').addEventListener('click', function () { $('cols').hidden = !$('cols').hidden; });
+  $('cols').addEventListener('change', function (e) { var c = e.target.closest('[data-col]'); if (!c) return; if (c.checked) SHOW.push(c.dataset.col); else SHOW = SHOW.filter(function (x) { return x !== c.dataset.col; }); SHOW = COLS.map(function (x) { return x[0]; }).filter(function (k) { return SHOW.indexOf(k) >= 0; }); try { localStorage.setItem('zyb-inv-cols', JSON.stringify(SHOW)); } catch (er) { /* storage blocked: columns for this visit only */ } drawTable(); });
+  $('b-savev').addEventListener('click', function () { var name = ($('q').value.trim() || Object.keys(F).map(function (k) { return (F[k] || []).join('+'); }).filter(Boolean).join(' ') || ISSUE || 'view') + ' (' + new Date().toLocaleDateString('en-GB') + ')';
+    var views = {}; try { views = JSON.parse(localStorage.getItem('zyb-inv-views') || '{}'); views[name] = { F: F, ISSUE: ISSUE, q: $('q').value, SORT: SORT, SHOW: SHOW }; localStorage.setItem('zyb-inv-views', JSON.stringify(views)); toast('Saved as "' + name + '"'); } catch (er) { toast('This browser does not allow saving views'); } draw(); });
+  $('views').addEventListener('change', function () { var n = $('views').value; if (!n) return; try { var w = JSON.parse(localStorage.getItem('zyb-inv-views') || '{}')[n]; if (w) { F = w.F || {}; ISSUE = w.ISSUE || ''; $('q').value = w.q || ''; SORT = w.SORT || SORT; SHOW = w.SHOW || SHOW; draw(); } } catch (er) { /* storage blocked */ } });
+  // ---- import: a CSV in the Inventory export's own layout (or ManageEngine / generic columns). A preview (dry run) first - nothing is
+  //      written until "Import" is pressed; the engine merges by serial / tag / MAC / name, so re-importing never duplicates (operators)
+  var IMP = null;
+  $('b-imp').addEventListener('click', function () { $('imp-file').value = ''; $('imp-file').click(); });
+  $('imp-file').addEventListener('change', function () { var f = this.files && this.files[0]; if (!f) return;
+    if (f.size > 8 * 1024 * 1024) { toast('The file is larger than 8 MB - split it'); return; }
+    var rd = new FileReader(); rd.onload = function () { IMP = { name: f.name, text: String(rd.result || ''), mapping: 'inventory' }; preview(); }; rd.onerror = function () { toast('The file could not be read'); }; rd.readAsText(f); });
+  function preview() { $('imp').hidden = false; $('imp').innerHTML = '<div class="mut">Checking ' + esc(IMP.name) + '…</div>';
+    req('POST', '/import/run', { format: 'csv', mapping: IMP.mapping, text: IMP.text, dry_run: true }).then(function (r) {
+      var P = r.preview || [], keys = []; P.slice(0, 10).forEach(function (x) { Object.keys(x.fields).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); }); });
+      var cell = function (v) { return v == null ? '' : typeof v === 'object' ? Object.keys(v).map(function (k) { return k + ' ' + v[k]; }).join(', ') : String(v); };
+      $('imp').innerHTML = '<h2>Import ' + esc(IMP.name) + ' - preview, nothing written yet</h2>'
+        + '<div class="bar"><label class="sm mut">Columns are <select class="inp" id="imp-map"><option value="inventory">this page\'s export</option><option value="generic">generic</option><option value="manageengine">ManageEngine AssetExplorer</option></select></label></div>'
+        + '<div style="margin:6px 0"><b>' + esc(P.length) + '</b> asset(s) to import of ' + esc(r.rows) + ' row(s)' + (r.matched_by_id ? ' · ' + esc(r.matched_by_id) + ' update existing assets by their Platform ID' : '') + (r.unknown_ids ? ' · <span class="pill warn">' + esc(r.unknown_ids) + ' Platform ID(s) not in this register - matched by serial / tag / MAC / name</span>' : '') + (r.skipped ? ' · <span class="pill warn">' + esc(r.skipped) + ' skipped: no name, serial, tag or MAC</span>' : '') + '</div>'
+        + (r.unmapped_columns.length ? '<div class="sm mut">Not imported (no matching field, or computed by the platform): ' + esc(r.unmapped_columns.join(', ')) + '</div>' : '')
+        + (P.length ? '<div class="tw" style="max-height:260px;margin-top:8px"><table><thead><tr><th>Row</th>' + keys.map(function (k) { return '<th>' + esc(k) + '</th>'; }).join('') + '</tr></thead><tbody>' + P.slice(0, 10).map(function (x) { return '<tr><td>' + esc(x.row) + '</td>' + keys.map(function (k) { return '<td>' + esc(cell(x.fields[k])) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' + (P.length > 10 ? '<div class="sm mut">first 10 of ' + esc(P.length) + ' shown</div>' : '') : '<div class="empty">Nothing in this file can be imported.</div>')
+        + '<div class="bar" style="margin-top:10px"><button type="button" class="btn pri" id="imp-go"' + (P.length ? '' : ' disabled') + '>Import ' + esc(P.length) + ' asset(s)</button><button type="button" class="btn" id="imp-x">Cancel</button><span class="sm mut">Existing assets are matched by serial, tag, MAC or name and updated, never duplicated. Imported owner, site and warranty win; discovery keeps the technical facts.</span></div>';
+      $('imp-map').value = IMP.mapping;
+    }).catch(function (e) { $('imp').innerHTML = '<div class="err">' + esc(e.status === 403 ? 'Importing needs the operator or administrator role.' : 'The file could not be checked: ' + e.message) + '</div><div class="bar" style="margin-top:8px"><button type="button" class="btn" id="imp-x">Close</button></div>'; }); }
+  $('imp').addEventListener('change', function (e) { if (e.target.id === 'imp-map' && IMP) { IMP.mapping = e.target.value; preview(); } });
+  $('imp').addEventListener('click', function (e) {
+    if (e.target.id === 'imp-x') { IMP = null; $('imp').hidden = true; $('imp').innerHTML = ''; return; }
+    if (e.target.id !== 'imp-go' || !IMP) return; e.target.disabled = true; e.target.textContent = 'Importing…';
+    req('POST', '/import/run', { format: 'csv', mapping: IMP.mapping, text: IMP.text, dry_run: false }).then(function (r) {
+      $('imp').innerHTML = '<h2>Imported ' + esc(IMP.name) + '</h2><div><b>' + esc(r.created) + '</b> new · <b>' + esc(r.updated) + '</b> updated' + (r.skipped ? ' · ' + esc(r.skipped) + ' skipped' : '') + (r.errors.length ? ' · <span class="pill bad">' + esc(r.errors.length) + ' error(s)</span>' : '') + '</div>'
+        + (r.errors.length ? '<div class="sm" style="margin-top:6px">' + r.errors.slice(0, 20).map(function (x) { return 'row ' + esc(x.row) + ': ' + esc(x.error); }).join('<br>') + '</div>' : '') + '<div class="bar" style="margin-top:8px"><button type="button" class="btn" id="imp-x">Close</button></div>';
+      toast('Import done: ' + r.created + ' new, ' + r.updated + ' updated'); IMP = null; load();
+    }).catch(function (er) { e.target.disabled = false; e.target.textContent = 'Import'; toast('Import failed: ' + er.message); });
+  });
+  // ---- Excel asset document: Summary (by type, status, site, department; warranty, support and end-of-life position; data quality),
+  //      All assets (every field the register holds, not only the columns on screen), one sheet per asset type, Warranty & end of
+  //      life (what expires or ends within 90 days / 12 months, with the days left) - and the writer's own Report sheet: who, when and
+  //      the filter in force, so a filtered export can never be read as the whole register
+  function filterDesc() { var p = []; var q = $('q').value.trim(); if (q) p.push('search "' + q + '"');
+    for (var k in F) if (F[k].length) p.push(k + ': ' + F[k].join(', ')); if (ISSUE) p.push('tile: ' + ISSUE);
+    p.push($('all').checked ? 'retired and disposed included' : 'active assets only (retired and disposed not included)'); return p.join(' · '); }
+  $('b-xlsx').addEventListener('click', function () {
+    if (!window.zybXlsx) { toast('The Excel writer did not load - press Ctrl+F5'); return; }
+    var L = rows(), today = new Date(), day = function (v) { if (!v) return null; var t = Date.parse(String(v).slice(0, 10) + 'T00:00:00Z'); return isNaN(t) ? null : Math.round((t - Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())) / 86400000); };
+    var C = [['id', 'Platform ID', 's', 16], ['name', 'Name', 's', 28], ['asset_tag', 'Tag', 's', 14], ['type', 'Type', 's', 14], ['status', 'Status', 's', 11], ['site', 'Site', 's', 16], ['department', 'Department', 's', 18],
+      ['owner', 'Owner', 's', 20], ['custodian', 'Custodian', 's', 18], ['vendor', 'Vendor', 's', 14], ['model', 'Model', 's', 22], ['serial', 'Serial', 's', 20], ['mac', 'MAC', 's', 18], ['ip', 'IP', 's', 15], ['os', 'OS', 's', 24],
+      ['cpu', 'CPU', 's', 20], ['mem_gb', 'Memory GB', 'n', 10], ['disk_gb', 'Disk GB', 'n', 10], ['purchase_date', 'Purchased', 'd', 11], ['purchase_cost', 'Cost', 'n', 10], ['supplier', 'Supplier', 's', 16], ['po', 'PO', 's', 12],
+      ['warranty_end', 'Warranty end', 'd', 12], ['support_end', 'Support end', 'd', 12], ['eol', 'End of life', 'd', 12], ['classification', 'Classification', 's', 13], ['seen_days', 'Last seen (days ago)', 'n', 10], ['quality', 'Data quality %', 'n', 9], ['issues', 'Issues', 's', 22]];
+    var cols = C.map(function (c) { return { h: c[1], t: c[2], w: c[3] }; }), line = function (r) { return C.map(function (c) { var v = r[c[0]]; return Array.isArray(v) ? v.join('; ') : v == null ? '' : v; }); };
+    var cnt = function (k) { var m = {}; L.forEach(function (r) { var v = r[k] || '(not recorded)'; m[v] = (m[v] || 0) + 1; }); return Object.keys(m).sort(function (a, b) { return m[b] - m[a]; }).map(function (v) { return [v, m[v]]; }); };
+    var band = function (k, soon, label) { var b = { 'Ended': 0 }; b['Within ' + label] = 0; b['Later'] = 0; b['Not recorded'] = 0; L.forEach(function (r) { var d = day(r[k]); if (d == null) b['Not recorded']++; else if (d < 0) b['Ended']++; else if (d <= soon) b['Within ' + label]++; else b['Later']++; }); return Object.keys(b).map(function (x) { return [x, b[x]]; }); };
+    var S = [['Assets in this document', L.length, '']], sec = function (title, list) { S.push(['', '', '']); S.push([title, '', '']); list.forEach(function (x) { S.push(['   ' + x[0], x[1], L.length ? Math.round(1000 * x[1] / L.length) / 10 : '']); }); };
+    sec('By type', cnt('type')); sec('By status', cnt('status')); sec('By site', cnt('site')); sec('By department', cnt('department')); sec('By vendor', cnt('vendor'));
+    sec('Warranty', band('warranty_end', 90, '90 days')); sec('Vendor support', band('support_end', 90, '90 days')); sec('End of life', band('eol', 365, '12 months'));
+    var q = L.filter(function (r) { return r.quality != null; }); sec('Data quality', [['Average data quality %', q.length ? Math.round(q.reduce(function (n, r) { return n + r.quality; }, 0) / q.length) : ''], ['Assets with an issue (duplicate, not seen, incomplete …)', L.filter(function (r) { return (r.issues || []).length; }).length]]);
+    var sheets = [{ name: 'Summary', columns: [{ h: 'Item', w: 52 }, { h: 'Assets', t: 'n', w: 10 }, { h: '% of assets', t: 'n', w: 12 }], rows: S }, { name: 'All assets', columns: cols, rows: L.map(line) }];
+    var types = cnt('type').slice(0, 25);   // a sheet per type, the 25 largest (Excel needs unique sheet names; the rest stay on All assets)
+    types.forEach(function (t) { sheets.push({ name: t[0], columns: cols, rows: L.filter(function (r) { return (r.type || '(not recorded)') === t[0]; }).map(line) }); });
+    var due = []; L.forEach(function (r) { [['warranty_end', 'Warranty', 90], ['support_end', 'Vendor support', 90], ['eol', 'End of life', 365]].forEach(function (k) { var d = day(r[k[0]]); if (d != null && d <= k[2]) due.push([r.name || r.id, r.type || '', r.site || '', r.owner || '', k[1], r[k[0]], d, d < 0 ? 'ended' : 'ends soon']); }); });
+    due.sort(function (a, b) { return a[6] - b[6]; });
+    sheets.push({ name: 'Warranty & end of life', columns: [{ h: 'Asset', w: 28 }, { h: 'Type', w: 14 }, { h: 'Site', w: 16 }, { h: 'Owner', w: 20 }, { h: 'What', w: 15 }, { h: 'Date', t: 'd', w: 12 }, { h: 'Days left', t: 'n', w: 10 }, { h: 'State', w: 11 }], rows: due });
+    var go = function (by) { window.zybXlsx.download('asset-register-' + today.toISOString().slice(0, 10) + '.xlsx', sheets, { title: 'IT asset register - ' + L.length + ' of ' + V.rows.length + ' assets', filter: filterDesc(), by: by || '',
+      notes: 'From the IT Asset Management register. Owners and custodians are personal data (PDPL): keep this file internal. "Not recorded" means the register has no value - it is not zero and not OK.' }); toast('Excel asset register: ' + L.length + ' assets, ' + sheets.length + ' sheets'); };
+    (window.zybXlsx.who ? window.zybXlsx.who() : Promise.resolve('unknown')).then(go, function () { go('unknown'); /* the file is still produced; it says who is unknown */ });
+  });
+  $('b-csv').addEventListener('click', function () { var L = rows(), cols = [['id', 'Platform ID']].concat(COLS.filter(function (c) { return SHOW.indexOf(c[0]) >= 0; })),   /* the id first: an export imported back updates the same assets */ cs = function (v) { v = v == null ? '' : Array.isArray(v) ? v.join('; ') : String(v); if (/^[=+\-@]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };
+    var csv = ['# ITAM inventory export ' + new Date().toISOString() + ' - ' + L.length + ' of ' + V.rows.length + ' assets (filters applied)', cols.map(function (c) { return cs(c[1]); }).join(',')].concat(L.map(function (r) { return cols.map(function (c) { return cs(r[c[0]]); }).join(','); })).join('\r\n');
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'itam-inventory-' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click(); a.remove(); });
+  $('b-add').addEventListener('click', function () { D = { asset: { id: '(new)', name: '', type: 'workstation', status: 'in_stock' }, lifecycle: [] }; $('drw').hidden = false;
+    $('drw').innerHTML = '<div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;flex:1">Add an asset</h2><button type="button" class="btn" id="d-x2" aria-label="Close">✕</button></div><div class="f" style="margin-top:10px"><label>Name<input class="inp" id="n-name"></label><label>Type<select class="inp" id="n-type">' + ['workstation', 'laptop', 'server', 'network', 'storage', 'printer', 'phone', 'ups', 'mobile', 'peripheral', 'vm', 'other'].map(function (t) { return '<option>' + t + '</option>'; }).join('') + '</select></label>'
+      + '<label>Asset tag<input class="inp" id="n-tag"></label><label>Serial<input class="inp" id="n-serial"></label><label>MAC<input class="inp" id="n-mac"></label><label>Site<input class="inp" id="n-site"></label><label>Department<input class="inp" id="n-dep"></label><label>Owner<input class="inp" id="n-owner"></label><label>Vendor<input class="inp" id="n-vendor"></label><label>Model<input class="inp" id="n-model"></label></div><button type="button" class="btn pri" id="n-save" style="margin-top:10px">Add to the register</button><div class="err" id="n-err"></div>';
+    $('d-x2').addEventListener('click', function () { $('drw').hidden = true; });
+    $('n-save').addEventListener('click', function () { var name = $('n-name').value.trim(); if (!name) { $('n-err').textContent = 'Name is required.'; return; }
+      var b = { name: name, type: $('n-type').value, status: 'in_stock' }; [['n-tag', 'asset_tag'], ['n-serial', 'serial'], ['n-mac', 'mac'], ['n-site', 'site'], ['n-dep', 'department'], ['n-owner', 'owner'], ['n-vendor', 'vendor'], ['n-model', 'model']].forEach(function (p) { var v = $(p[0]).value.trim(); if (v) b[p[1]] = v; });
+      req('POST', '/assets', b).then(function (r) { toast('Added'); var id = (r.asset || r).id; load().then(function () { DT = 'rec'; openAsset(id); }); }, function (er) { $('n-err').textContent = why(er); }); }); });
+  $('q').addEventListener('input', function () { PAGE = 0; drawTable(); }); $('all').addEventListener('change', load);
+  $('prev').addEventListener('click', function () { if (PAGE > 0) { PAGE--; drawTable(); } }); $('next').addEventListener('click', function () { PAGE++; drawTable(); });
+  $('dups').addEventListener('click', function (e) { var o = e.target.closest('[data-open]'); if (o) { e.preventDefault(); DT = 'rec'; openAsset(o.dataset.open); } });
+  $('rf').addEventListener('click', load);
+  load().then(function () { var m = /[#&]asset=([^&]+)/.exec(location.hash); if (m) openAsset(decodeURIComponent(m[1]));
+    // from Scanned Assets: #q=<host> searches the register for it, #add=<host> opens Add asset with the name filled in
+    var hv = function (k) { var x = new RegExp('[#&]' + k + '=([^&]+)').exec(location.hash); if (!x) return ''; try { return decodeURIComponent(x[1]).slice(0, 120); } catch (e) { return ''; /* a malformed link is ignored */ } };
+    var q = hv('q'), add = hv('add'); if (q) { $('q').value = q; PAGE = 0; drawTable(); } if (add) { $('b-add').click(); $('n-name').value = add; } });
+})();
+</script></body></html>

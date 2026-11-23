@@ -1,0 +1,95 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HR Movers</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.dots{display:flex;gap:3px}.dots i{display:block;width:14px;height:8px;border-radius:2px;background:rgba(255,255,255,.12)}.dots i.ok{background:#0ca30c}.dots i.nx{background:#3987e5}
+.steps{list-style:none;padding:0;margin:0}.steps li{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--tblr-border-color)}
+.steps .st{width:20px;text-align:center;font-weight:700}.steps .ok{color:#0ca30c}.steps .nx{color:#3987e5}
+.gchg{font-size:12.5px}.gchg .lv{color:#e5534b}.gchg .jn{color:#0ca30c}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">User Desktops · movers</div><h2 class="page-title">HR Movers</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn btn-primary" id="new"><i class="ti ti-arrows-exchange me-1"></i>New mover</button><a class="btn" href="hr-onboarding.html"><i class="ti ti-building-community me-1"></i>Directory settings</a><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>When someone changes department or job, their access should change with them. Enter the user name: the platform reads the account's current groups from Active Directory. Tick the groups they <b>leave</b> and the groups the new job needs to <b>join</b> (only from the administrator's allowed list, never an admin group). The receiving manager approves the access, then <b>an administrator who is neither the requester nor that manager</b> approves the change. On the effective date at 06:00 Riyadh time the platform removes the old groups first, adds the new ones, updates department and job title, and reads the account back to confirm. Privileged accounts and admin groups are never changed here - a domain administrator does that.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">Movers</h3>
+ <select class="form-select form-select-sm w-auto" id="fst" aria-label="Status"><option value="open">Open</option><option value="">All</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
+ <div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+  var L=null, FST='open', CUR=null, LOOK=null;
+  var STC={requested:['waiting for the manager','orange'],in_progress:['in progress','blue'],completed:['completed','green'],cancelled:['cancelled','secondary']};
+  function sb(s){var x=STC[s]||[s,'secondary'];return P.badge(x[0],x[1]);}
+  function dots(r){return '<div class="dots">'+r.steps.map(function(s){return '<i class="'+(s.done?'ok':r.next===s.key?'nx':'')+'" title="'+esc(s.name+(s.done?': done by '+(s.by||''):r.next===s.key?': next':': open'))+'"></i>';}).join('')+'</div>';}
+  function chg(r){return '<div class="gchg">'+(r.remove_groups||[]).map(function(g){return '<span class="lv">− '+esc(g)+'</span>';}).join(' ')+' '+(r.add_groups||[]).map(function(g){return '<span class="jn">+ '+esc(g)+'</span>';}).join(' ')+'</div>';}
+  function load(){return P.req('GET','/movers').then(function(v){L=v;draw();}).catch(function(e){P.fail($('list'),e);$('kpis').innerHTML='';});}
+  function draw(){var c=L.counts;
+    $('kpis').innerHTML=P.tile(c.open,'Open')+P.tile(c.waiting_manager,'Waiting for the manager',c.waiting_manager?'text-orange':'')+P.tile(c.waiting_approval,'Change waiting for approval',c.waiting_approval?'text-orange':'')
+      +P.tile(c.scheduled,'Change scheduled')+P.tile(c.failed,'Change failed',c.failed?'text-red':'')+P.tile(c.completed,'Completed');
+    var r=L.items.filter(function(x){return FST==='open'?(x.status==='requested'||x.status==='in_progress'):!FST||x.status===FST;});
+    $('list').innerHTML=(L.directory.automatic?'':'<div class="alert alert-warning m-3 mb-0">Automatic group changes are off: an administrator switches them on in <a href="hr-onboarding.html">HR Onboarding → Directory settings</a> ("Change movers\' groups automatically"). Until then the groups are changed by hand and recorded here.</div>')
+      +P.table([['Person',function(x){return '<b>'+esc(x.name)+'</b><div class="mut">'+esc(x.id)+' · '+esc(x.username)+'</div>';}],['Move',function(x){return esc(x.from_department)+' → '+esc(x.to_department)+(x.to_title?'<div class="mut">'+esc(x.to_title)+'</div>':'');}],
+      ['Groups',chg],['Effective',function(x){return esc(x.effective_date)+(x.due_at?'<div class="mut">change '+esc(P.dt(x.due_at))+'</div>':'');}],
+      ['Progress',function(x){return dots(x)+(x.applied&&x.applied.error&&!x.applied.at?'<div>'+P.badge('change failed','red')+'</div>':'');}],['Status',function(x){return sb(x.status);}]],r,function(x){return 'class="rowc" data-id="'+esc(x.id)+'"';},
+      L.items.length?'No mover matches the filter.':'No mover yet. Start with "New mover".');}
+  function newForm(){LOOK=null;
+    Z.open('HR Movers','New mover',P.form('mvlook',[['username','text','Active Directory user name',1]],{},'Read the account')+'<div class="mut mt-2">The platform reads the account and its current groups (read-only), so you choose which to leave.</div>');}
+  function newForm2(d,username){LOOK=d;
+    var auto=d.read&&d.found, priv=/\b(admins?|administrators?|operators?)\b/i;
+    var cur=auto?d.groups.filter(function(g){return !priv.test(g);}):[], join=(d.allowed_groups||[]).filter(function(g){return !(d.groups||[]).some(function(x){return x.toLowerCase()===g.toLowerCase();});});
+    var head=auto?Z.kv([['Account',esc(d.display_name||username)],['Employee number',esc(d.employee_id||'not recorded in AD')],['Department / title',esc((d.department||'—')+' · '+(d.title||'—'))],['Current groups',esc((d.groups||[]).join(', ')||'none')]])
+      +((d.blockers||[]).length?'<div class="alert alert-danger small mt-2"><b>Will not be changed automatically:</b> '+esc(d.blockers.join('; '))+'</div>':'')
+      :'<div class="alert alert-warning small">'+esc(d.read?(d.blockers||[]).join('; '):d.reason)+' - type the group names.</div>';
+    var f=[['name','text','Full name',1],['employee_id','text','Employee number',1],['username','text','Active Directory user name',1],['from_department','text','From department',1],['to_department','text','To department',1],['to_title','text','New job title'],
+      ['effective_date','date','Effective date',1],['manager','text','Receiving manager (platform user name)',1]];
+    f.push(auto?['remove_groups','multi','Groups to leave',0,cur]:['remove_groups','list','Groups to leave (comma separated)']);
+    f.push(auto&&join.length?['add_groups','multi','Groups to join (allowed list)',0,join]:['add_groups','list','Groups to join (comma separated)']);
+    f.push(['update_attributes','bool','Update department and job title in the directory'],['note','area','Note']);
+    Z.open('HR Movers','New mover',head+P.form('mvnew',f,{username:username,from_department:auto?d.department:'',name:auto?d.display_name:'',update_attributes:true,remove_groups:[],add_groups:[]},'Raise the request')
+      +'<div class="mut mt-2">The receiving manager approves next. Admin groups are never offered: they need a privileged-access request.</div>');}
+  function open(r){CUR=r;var a=r.applied||{},q=r.revert;
+    var h=Z.kv([['Status',sb(r.status)],['Move',esc(r.from_department)+' → '+esc(r.to_department)+(r.to_title?' · '+esc(r.to_title):'')],['Employee number',esc(r.employee_id)],['User name',esc(r.username)],['Effective',esc(r.effective_date)],
+      ['Receiving manager',esc(r.manager)],['Requested by',esc(r.requested_by)+' on '+esc(P.dt(r.requested_at))],['Groups',chg(r)+(r.already_member&&r.already_member.length?'<div class="mut">Already a member of '+esc(r.already_member.join(', '))+'</div>':'')]]);
+    h+=Z.sec('Steps','<ul class="steps">'+r.steps.map(function(s){return '<li><span class="st '+(s.done?'ok':r.next===s.key?'nx':'')+'">'+(s.done?'✓':r.next===s.key?'→':'·')+'</span><div><div class="small fw-semibold">'+esc(s.name)+'</div><div class="mut">'+(s.done?'by '+esc(s.by||''):r.next===s.key?'next':'open')+'</div></div></li>';}).join('')+'</ul>');
+    var d=r.directory;
+    if(d&&d.read&&d.found)h+=Z.sec('Directory account',Z.kv([['Name',esc(d.display_name||'—')],['Employee number',esc(d.employee_id||'not recorded in AD')],['Groups when read',esc((d.groups||[]).join(', ')||'none')],['Read',esc(P.dt(d.at))]])
+      +((d.blockers||[]).length?'<div class="alert alert-danger small mt-2 mb-0"><b>Will not be changed automatically:</b> '+esc(d.blockers.join('; '))+'</div>':''));
+    if(a.at)h+=Z.sec('Applied',a.manual?'<p class="small mb-0">By hand, recorded by '+esc(a.by)+': '+esc(a.directory_ref)+'</p>':'<div class="small">'+P.badge('applied and verified','green')+(q&&q.status==='done'?' '+P.badge('reverted','orange'):'')+'<div class="mut mt-1">'+esc(P.dt(a.at))+' · groups now: '+esc((a.groups_after||[]).join(', ')||'none')+'</div></div>');
+    if(a.error&&!a.at)h+='<div class="alert alert-danger small"><b>Change did not complete</b> ('+esc(a.attempts)+' attempt(s), last '+esc(P.dt(a.failed_at))+'): '+esc(a.error)+'</div>';
+    if(a.results&&a.results.length)h+=Z.sec('Per group',P.table([['Change',function(x){return esc(x.op==='attributes'?'department / title':(x.op==='leave'?'leave ':'join ')+x.group);}],['Result',function(x){return x.ok?P.badge('done','green')+(x.note?' <span class="mut">'+esc(x.note)+'</span>':''):P.badge('failed','red')+' <span class="mut">'+esc(x.error)+'</span>';}]],a.results,null,''));
+    h+=action(r);
+    if(a.at&&!a.manual&&r.before&&!(q&&q.status==='done'))h+=Z.sec('Revert',q&&q.status==='pending'?P.form('mvrd',[['decision','sel','Decision',1,[['approve','Approve - restore the previous groups'],['reject','Reject']]],['note','text','Note (required to reject)']],{},'Decide')+'<div class="mut">Asked by '+esc(q.requested_by)+': '+esc(q.reason)+'. Another administrator decides.</div>'
+      :P.form('mvrev',[['reason','text','Why the change must be undone',1]],{},'Ask to revert')+'<div class="mut">Administrators; a different administrator approves. The groups left are joined again and the groups joined are left.</div>');
+    if((r.status==='requested'||r.status==='in_progress')&&!a.at)h+=Z.sec('Cancel',P.form('mvx',[['reason','text','Reason',1]],{},'Cancel the request')+'<div class="mut">The requester, the manager or an administrator, before the change is applied.</div>');
+    h+=Z.sec('History','<ul class="small mb-0 ps-3">'+(r.history||[]).slice().reverse().map(function(x){return '<li>'+esc(P.dt(x.at))+' · '+esc(x.by)+' · '+esc(x.step.replace(/_/g,' '))+'</li>';}).join('')+'</ul>');
+    Z.open('HR Movers',r.id+' · '+r.name,h);}
+  function action(r){if(r.status!=='requested'&&r.status!=='in_progress')return '';var a=r.applied||{};
+    switch(r.next){
+      case 'manager':return Z.sec('Receiving manager approval',P.form('mvmgr',[['decision','sel','Decision',1,[['approve','Approve - the new job needs this access'],['reject','Reject - change the groups']]],['note','text','Note (required to reject)']],{},'Record the decision')+'<div class="mut">The receiving manager ('+esc(r.manager)+') or an administrator - never the person who raised it.</div>');
+      case 'approve':return Z.sec('Approve the directory change',P.form('mvapp',[['decision','sel','Decision',1,[['approve','Approve - change the groups on the effective date'],['reject','Reject']]],['note','text','Note (required to reject)']],{},'Record the decision')
+        +'<div class="mut">Administrators only, and not '+esc(r.requested_by)+' (requester) or '+esc(r.manager_ok&&r.manager_ok.by||'')+' (approved as manager). Applied on '+esc(r.effective_date)+' at 06:00 Riyadh time, or at once if that has passed.</div>');
+      case 'applied':
+        if(r.change&&r.change.mode==='automatic'&&!a.error)return Z.sec('Scheduled','<p class="small mb-0">The groups will change at <b>'+esc(P.dt(r.due_at))+'</b>, approved by '+esc(r.change.approved_by)+'.</p>');
+        return (a.error&&L.directory.automatic?Z.sec('Apply it now','<button type="button" class="btn btn-primary" data-act="retry"><i class="ti ti-refresh me-1"></i>Try again</button><div class="mut mt-1">Administrators. Fix the cause above first.</div>'):'')
+          +Z.sec('Record the change as done by hand',P.form('mvman',[['directory_ref','text','How it was changed (change / ticket)',1],['note','text','Note']],{},'Record')+'<div class="mut">Not the person moving.</div>');
+    }return '';}
+  function reopen(id){load().then(function(){P.req('GET','/movers/'+encodeURIComponent(id)).then(open).catch(function(e){P.toast(P.why(e));});});}
+  var POST={mvmgr:'manager',mvapp:'approve',mvman:'applied',mvx:'cancel',mvrev:'revert',mvrd:'revert/decide'};
+  document.addEventListener('submit',function(ev){var fm=ev.target;
+    if(fm.id==='mvlook'){ev.preventDefault();var u=P.body(fm).username||'';P.req('GET','/movers/lookup?username='+encodeURIComponent(u)).then(function(d){newForm2(d,u);}).catch(function(e){P.msg(fm,P.why(e));});return;}
+    if(fm.id==='mvnew'){ev.preventDefault();P.req('POST','/movers',P.body(fm)).then(function(r){P.toast(r.id+' raised - waiting for '+r.manager);load().then(function(){open(r);});}).catch(function(e){P.msg(fm,P.why(e));});return;}
+    if(POST[fm.id]&&CUR){ev.preventDefault();var id=CUR.id;P.req('POST','/movers/'+encodeURIComponent(id)+'/'+POST[fm.id],P.body(fm)).then(function(r){P.toast(r.status==='completed'&&fm.id==='mvapp'?'Approved - the groups were changed':'Recorded');reopen(id);}).catch(function(e){P.msg(fm,P.why(e));});}});
+  document.addEventListener('click',function(ev){var b=ev.target.closest('[data-act="retry"]');
+    if(b&&CUR){var id=CUR.id;b.disabled=true;P.req('POST','/movers/'+encodeURIComponent(id)+'/retry',{}).then(function(r){P.toast(r.applied&&r.applied.at?'Applied':'Still failing - see the reason');reopen(id);}).catch(function(e){b.disabled=false;P.toast(P.why(e));});return;}
+    var tr=ev.target.closest('#list tr[data-id]');if(tr&&L){P.req('GET','/movers/'+encodeURIComponent(tr.getAttribute('data-id'))).then(open).catch(function(e){P.toast(P.why(e));});}});
+  $('new').addEventListener('click',newForm);
+  $('fst').addEventListener('change',function(){FST=this.value;draw();});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

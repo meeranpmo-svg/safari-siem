@@ -1,0 +1,143 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cloud Data Stores</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--bg:#0b0e14;--pn:#121722;--rs:#18202d;--ln:#232c3c;--tx:#e8ecf3;--mu:#8c95a8;--bad:#ef5b6b;--warn:#f59f00;--ok:#3ccf91;--ac:#3b82f6}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 60px}
+.hero{text-align:center;padding:18px 10px 6px}.hero h1{margin:0;font-size:34px;font-weight:600}.hero p{max-width:920px;margin:8px auto 0;color:var(--mu);font-size:15px}
+.bar1{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:7px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.btn:hover{border-color:#3a4560}.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}.btn.sm{padding:4px 9px;font-size:12px}
+.tabs{display:flex;gap:6px;margin:4px 0 14px;border-bottom:1px solid var(--ln)}.tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--mu);font:600 14px Inter,"Segoe UI",system-ui,sans-serif;padding:8px 12px;cursor:pointer}.tab[aria-selected="true"]{color:var(--tx);border-bottom-color:var(--ac)}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:14px}.k{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:12px 16px;min-width:0}.k .v{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}.k .l{font-size:12px;color:var(--mu)}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:16px 18px;min-width:0;margin-bottom:14px}.card h2{margin:0 0 10px;font-size:17px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mu);font-weight:600;font-size:12px;padding:8px;border-bottom:1px solid var(--ln);white-space:nowrap}td{padding:9px 8px;border-bottom:1px solid #1a2130;vertical-align:middle}
+.tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--ln);background:var(--rs);white-space:nowrap;margin:1px}.tag.bad{border-color:rgba(239,91,107,.55);color:#ffb3bb}.tag.ok{border-color:rgba(60,207,145,.5);color:#8ce9c0}
+.inp{background:var(--bg);color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:7px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif;width:100%}
+.frm{display:flex;flex-direction:column;gap:8px}.frm label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mu)}.frm label.ck{flex-direction:row;align-items:center;gap:6px;color:var(--tx)}.frm label.ck .inp{width:auto}
+.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:12px;margin-bottom:12px}
+.note{background:var(--rs);border:1px solid var(--ln);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.empty{color:var(--mu);padding:22px;text-align:center}
+hr{border:0;border-top:1px solid var(--ln);margin:6px 0}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.g3{grid-template-columns:1fr}}@media (max-width:640px){.kpis{grid-template-columns:1fr 1fr}.hero h1{font-size:26px}}
+</style></head><body><main>
+<div class="hero"><h1>Cloud Data Stores</h1><p>Azure Blob, AWS S3 and Oracle Cloud Object Storage, read-only: where personal data and credentials sit, which stores are public, unencrypted or outside the Kingdom. Only counts are kept - never a value or file content.</p></div>
+<div id="err"></div>
+<div class="bar1"><span class="sm mu" id="scanst"></span><span class="sp"></span><button type="button" class="btn" id="scan" hidden><i class="ti ti-player-play"></i>Scan now</button><button type="button" class="btn" id="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button></div>
+<div class="tabs" role="tablist"><button type="button" class="tab" role="tab" data-tab="stores" aria-selected="true">Stores</button><button type="button" class="tab" role="tab" data-tab="conn" aria-selected="false" id="tab-conn" hidden>Connect</button></div>
+
+<section id="p-stores">
+ <div id="note"></div>
+ <div class="kpis" id="kpis"></div>
+ <div class="card"><h2>Providers</h2><div class="tw" id="prov"></div></div>
+ <div class="card"><h2>Stores</h2><div class="tw" id="stores"></div></div>
+ <div class="card" id="objcard"><h2>Objects with the most exposure</h2><div class="tw" id="objs"></div></div>
+</section>
+
+<section id="p-conn" hidden>
+ <div class="note">Every call is read-only. Credentials are stored sealed on the SIEM and are never shown again; leave a secret field empty to keep the stored one. Least privilege: Azure <b>Reader</b> on the subscriptions + <b>Storage Blob Data Reader</b> (the Microsoft 365 app can be reused); AWS a policy with List/Get only on S3; OCI a user in a group with <span class="mono">read buckets</span> and <span class="mono">read objects</span>.</div>
+ <div class="g3">
+  <div class="card"><h2>Microsoft Azure</h2><form class="frm" id="f-azure" novalidate>
+   <label class="ck"><input class="inp" type="checkbox" id="az-en"> Scan Azure</label>
+   <label class="ck"><input class="inp" type="checkbox" id="az-m365"> Use the Microsoft 365 app (no second secret)</label>
+   <label class="ck"><input class="inp" type="checkbox" id="az-disc"> Find storage accounts through Azure Resource Manager</label>
+   <label>Subscription IDs (comma separated, empty = all the app can read)<input class="inp" id="az-subs"></label>
+   <label>Objects per store (max)<input class="inp" type="number" id="az-max" min="1" max="100000"></label>
+   <hr><span class="sm mu" id="az-cred"></span>
+   <label>Tenant ID<input class="inp" id="az-tenant" autocomplete="off"></label><label>Client ID<input class="inp" id="az-client" autocomplete="off"></label><label>Client secret<input class="inp" type="password" id="az-secret" autocomplete="new-password"></label>
+   <div><button type="submit" class="btn pri">Save</button> <button type="button" class="btn" data-test="azure">Test</button> <span class="sm mu" data-msg="azure"></span></div></form></div>
+  <div class="card"><h2>Amazon Web Services</h2><form class="frm" id="f-aws" novalidate>
+   <label class="ck"><input class="inp" type="checkbox" id="aw-en"> Scan AWS S3</label>
+   <label>Account label<input class="inp" id="aw-label" maxlength="80"></label>
+   <label>Regions (comma separated)<input class="inp" id="aw-regions" placeholder="me-central-1, eu-west-1"></label>
+   <label>Objects per store (max)<input class="inp" type="number" id="aw-max" min="1" max="100000"></label>
+   <hr><span class="sm mu" id="aw-cred"></span>
+   <label>Access key ID<input class="inp" id="aw-key" autocomplete="off"></label><label>Secret access key<input class="inp" type="password" id="aw-secret" autocomplete="new-password"></label>
+   <div><button type="submit" class="btn pri">Save</button> <button type="button" class="btn" data-test="aws">Test</button> <span class="sm mu" data-msg="aws"></span></div></form></div>
+  <div class="card"><h2>Oracle Cloud</h2><form class="frm" id="f-oci" novalidate>
+   <label class="ck"><input class="inp" type="checkbox" id="oc-en"> Scan OCI Object Storage</label>
+   <label>Region<input class="inp" id="oc-region" placeholder="me-jeddah-1"></label>
+   <label>Compartment OCID<input class="inp" id="oc-comp"></label><label>Tenancy OCID<input class="inp" id="oc-ten"></label><label>User OCID<input class="inp" id="oc-user"></label>
+   <label>API key fingerprint<input class="inp" id="oc-fp"></label><label>Namespace (optional)<input class="inp" id="oc-ns"></label>
+   <hr><span class="sm mu" id="oc-cred"></span>
+   <label>API private key (PEM)<textarea class="inp mono" id="oc-pem" rows="3" autocomplete="off"></textarea></label>
+   <div><button type="submit" class="btn pri">Save</button> <button type="button" class="btn" data-test="oci">Test</button> <span class="sm mu" data-msg="oci"></span></div></form></div>
+ </div>
+ <div class="card"><h2>All providers</h2><form class="frm" id="f-gen" novalidate style="max-width:640px">
+  <label>Regions inside the Kingdom (comma separated; me-jeddah-1 and me-riyadh-1 are always counted)<input class="inp" id="g-kingdom"></label>
+  <label>Scan every (hours, 0 = only when someone presses Scan now)<input class="inp" type="number" id="g-hours" min="0" max="720"></label>
+  <div><button type="submit" class="btn pri">Save</button> <span class="sm mu" id="g-msg"></span></div></form></div>
+</section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',V=null,SET=null;
+  var PN={azure:'Azure',aws:'AWS',oci:'Oracle Cloud'};
+  function at(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc/cloud-data'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('The SIEM is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function tri(v,yes,no){return v===true?'<span class="tag '+(yes==='bad'?'bad':'ok')+'">'+esc(yes==='bad'?'yes':'yes')+'</span>':v===false?'<span class="tag '+(no==='bad'?'bad':'ok')+'">no</span>':'<span class="tag">not read</span>';}
+  function cats(o){var k=Object.keys(o||{});return k.length?k.map(function(c){return '<span class="tag'+(c==='credentials'||c==='health'||c==='financial'?' bad':'')+'">'+esc(c)+' '+esc(String(o[c]))+'</span>';}).join(''):'<span class="mu">none found</span>';}
+  function d16(v){return v?esc(new Date(v).toISOString().slice(0,16).replace('T',' ')):'<span class="mu">never</span>';}
+  function list(s){return String(s||'').split(',').map(function(x){return x.trim();}).filter(Boolean);}
+
+  function render(){
+    var v=V;if(!v)return;
+    $('note').innerHTML=v.configured?'':'<div class="note">'+esc(v.note||'No cloud provider is connected yet.')+'</div>';
+    var t=v.totals||{};
+    $('kpis').innerHTML=[[t.stores||0,'stores'],[t.public||0,'public'],[t.outside_kingdom||0,'outside the Kingdom'],[t.unencrypted||0,'not encrypted'],[t.objects_scanned||0,'objects read'],[t.objects_with_findings||0,'objects with findings']].map(function(x){return '<div class="k"><div class="v">'+esc(String(x[0]))+'</div><div class="l">'+esc(x[1])+'</div></div>';}).join('');
+    $('prov').innerHTML='<table><thead><tr><th>Provider</th><th>Connected</th><th>Stores</th><th>Last scan</th><th>Last good scan</th><th>Problem</th></tr></thead><tbody>'+(v.providers||[]).map(function(p){return '<tr><td>'+esc(PN[p.provider]||p.provider)+'</td><td>'+(p.configured?'<span class="tag ok">yes</span>':'<span class="tag">no</span>')+'</td><td>'+esc(String(p.stores||0))+'</td><td>'+d16(p.last_scan)+'</td><td>'+d16(p.last_ok)+'</td><td class="sm">'+esc(p.error||'')+'</td></tr>';}).join('')+'</tbody></table>';
+    var st=v.stores||[];
+    $('stores').innerHTML=!st.length?'<div class="empty">No store has been scanned yet.</div>':'<table><thead><tr><th>Store</th><th>Provider</th><th>Region</th><th>In the Kingdom</th><th>Public</th><th>Encrypted</th><th>Objects read</th><th>With findings</th><th>Data found</th><th>Last scan</th></tr></thead><tbody>'+st.map(function(s){
+      return '<tr><td><b>'+esc(s.name)+'</b><div class="sm mu">'+esc(s.account||'')+'</div>'+(s.truncated?'<span class="tag">partly read</span>':'')+(s.error?'<div class="sm" style="color:#ffb3bb">'+esc(s.error)+'</div>':'')+'</td><td>'+esc(PN[s.provider]||s.provider)+'</td><td>'+esc(s.region||'not read')+'</td><td>'+tri(s.in_kingdom,'ok','bad')+'</td><td>'+tri(s.public,'bad','ok')+(s.public_why?'<div class="sm mu">'+esc(s.public_why)+'</div>':'')+'</td><td>'+tri(s.encrypted,'ok','bad')+(s.cmk?' <span class="tag">own key</span>':'')+'</td><td>'+esc(String(s.objects_scanned||0))+' / '+esc(String(s.objects_seen||0))+'</td><td>'+esc(String(s.objects_with_findings||0))+'</td><td>'+cats(s.categories)+'</td><td>'+d16(s.last_scan)+'</td></tr>';}).join('')+'</tbody></table>';
+    var to=v.top_objects;
+    if(!to||to.hidden){$('objs').innerHTML='<div class="empty">Object names are shown to analysts and above.</div>';}
+    else $('objs').innerHTML=!to.length?'<div class="empty">No object with findings.</div>':'<table><thead><tr><th>Object</th><th>Store</th><th>Exposure</th><th>Found</th><th>Why</th></tr></thead><tbody>'+to.slice(0,100).map(function(o){var s=st.find(function(x){return x.id===o.store_id;})||{};return '<tr><td class="mono sm">'+esc(o.key)+'</td><td>'+esc(s.name||o.store_id)+'</td><td>'+esc(String((o.exposure||{}).score||0))+'</td><td>'+cats(o.categories)+'</td><td class="sm">'+((o.exposure||{}).why||[]).map(function(w){return esc(typeof w==='string'?w:(w.text||''));}).join('<br>')+'</td></tr>';}).join('')+'</tbody></table>';
+    var sc=v.scan||{};$('scanst').textContent=sc.running?'Scanning'+(sc.progress&&sc.progress.provider?' '+(PN[sc.progress.provider]||sc.progress.provider):'')+' - '+((sc.progress||{}).stores_done||0)+' of '+((sc.progress||{}).stores_total||0)+' stores':'';
+    $('scan').hidden=!at('operator');$('scan').disabled=!!sc.running;
+  }
+  function renderSet(){
+    var s=SET;if(!s)return;var S=s.settings||{},C=s.credentials||{},az=S.azure||{},aw=S.aws||{},oc=S.oci||{};
+    $('az-en').checked=!!az.enabled;$('az-m365').checked=!!az.use_m365_app;$('az-disc').checked=az.discover!==false;$('az-subs').value=(az.subscription_ids||[]).join(', ');$('az-max').value=az.max_objects_per_store||'';
+    $('aw-en').checked=!!aw.enabled;$('aw-label').value=aw.account_label||'';$('aw-regions').value=(aw.regions||[]).join(', ');$('aw-max').value=aw.max_objects_per_store||'';
+    $('oc-en').checked=!!oc.enabled;$('oc-region').value=oc.region||'';$('oc-comp').value=oc.compartment_id||'';$('oc-ten').value=oc.tenancy_id||'';$('oc-user').value=oc.user_id||'';$('oc-fp').value=oc.fingerprint||'';$('oc-ns').value=oc.namespace||'';
+    $('g-kingdom').value=(S.in_kingdom_regions||[]).join(', ');$('g-hours').value=S.schedule_hours==null?'':S.schedule_hours;
+    var cr=function(p){var c=C[p]||{};return c.configured?'Credentials stored'+(c.set_at?' on '+new Date(c.set_at).toISOString().slice(0,10):'')+'. Enter new values to replace them.':'No credentials stored yet.';};
+    $('az-cred').textContent=cr('azure')+(s.m365_app_available?' The Microsoft 365 app is available to reuse.':'');$('aw-cred').textContent=cr('aws');$('oc-cred').textContent=cr('oci');
+  }
+  function load(){
+    $('err').innerHTML='';
+    req('GET','/stores').then(function(v){V=v;render();},function(e){$('err').innerHTML='<div class="err">'+esc(e.status===404?'The SIEM does not have cloud discovery yet - run the update so the SIEM is updated too.':e.message)+'</div>';});
+    if(at('admin'))req('GET','/settings').then(function(s){SET=s;renderSet();},function(e){toast(e.message);});
+  }
+  function show(t){[].forEach.call(document.querySelectorAll('.tab'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});$('p-stores').hidden=t!=='stores';$('p-conn').hidden=t!=='conn';}
+  function msg(p,t){var el=document.querySelector('[data-msg="'+p+'"]');if(el)el.textContent=t;}
+  // settings first, then the secret (if any was typed); the secret fields are cleared either way
+  function save(p,settings,cred,clear){
+    var b={};b[p]=settings;msg(p,'Saving...');
+    req('POST','/settings',b).then(function(s){SET=s;renderSet();if(!cred)return null;return req('POST','/credentials',Object.assign({provider:p},cred));})
+      .then(function(){clear.forEach(function(id){$(id).value='';});msg(p,'Saved.');load();},function(e){clear.forEach(function(id){$(id).value='';});msg(p,e.message);});
+  }
+  $('f-azure').addEventListener('submit',function(e){e.preventDefault();var s={enabled:$('az-en').checked,use_m365_app:$('az-m365').checked,discover:$('az-disc').checked,subscription_ids:list($('az-subs').value)};if($('az-max').value)s.max_objects_per_store=parseInt($('az-max').value,10);
+    var c=null;if($('az-secret').value||$('az-tenant').value||$('az-client').value)c={tenant_id:$('az-tenant').value.trim(),client_id:$('az-client').value.trim(),client_secret:$('az-secret').value};save('azure',s,c,['az-secret']);});
+  $('f-aws').addEventListener('submit',function(e){e.preventDefault();var s={enabled:$('aw-en').checked,regions:list($('aw-regions').value)};if($('aw-label').value.trim())s.account_label=$('aw-label').value.trim();if($('aw-max').value)s.max_objects_per_store=parseInt($('aw-max').value,10);
+    var c=null;if($('aw-secret').value||$('aw-key').value)c={access_key_id:$('aw-key').value.trim(),secret_access_key:$('aw-secret').value};save('aws',s,c,['aw-secret','aw-key']);});
+  $('f-oci').addEventListener('submit',function(e){e.preventDefault();var s={enabled:$('oc-en').checked};[['region','oc-region'],['compartment_id','oc-comp'],['tenancy_id','oc-ten'],['user_id','oc-user'],['fingerprint','oc-fp'],['namespace','oc-ns']].forEach(function(x){var v=$(x[1]).value.trim();if(v)s[x[0]]=v;});
+    var c=$('oc-pem').value.trim()?{private_key_pem:$('oc-pem').value.trim()}:null;save('oci',s,c,['oc-pem']);});
+  $('f-gen').addEventListener('submit',function(e){e.preventDefault();var b={in_kingdom_regions:list($('g-kingdom').value)};if($('g-hours').value!=='')b.schedule_hours=parseInt($('g-hours').value,10);$('g-msg').textContent='Saving...';
+    req('POST','/settings',b).then(function(s){SET=s;renderSet();$('g-msg').textContent='Saved.';},function(x){$('g-msg').textContent=x.message;});});
+  document.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
+    if(b.classList.contains('tab'))return show(b.getAttribute('data-tab'));
+    if(b.id==='refresh')return load();
+    if(b.id==='scan'){b.disabled=true;req('POST','/scan',{}).then(function(){toast('Scan started.');load();},function(x){b.disabled=false;toast(x.message);});return;}
+    if(b.hasAttribute('data-test')){var p=b.getAttribute('data-test');msg(p,'Testing...');req('POST','/test',{provider:p}).then(function(r){msg(p,r.ok?'Connected: '+(r.count==null?'':r.count+' ')+(r.what||'found'):'Failed: '+(r.error||'no answer'));},function(x){msg(p,x.message);});}
+  });
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(x){/* not signed in: the engine decides */}$('tab-conn').hidden=!at('admin');load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

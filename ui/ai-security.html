@@ -1,0 +1,57 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Security</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-secops.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+</head><body><main class="so">
+<div class="so-head"><div><div class="eb">AI Team · AI Security</div><h1>AI Security</h1></div><span class="sp"></span>
+ <span class="so-chip" id="up">loading…</span><button type="button" class="so-btn" id="refresh" aria-label="Refresh">⟳ Refresh</button><button type="button" class="so-btn pri" id="rt" hidden>Run the red team now</button></div>
+<div id="err"></div>
+<p class="so-note" style="margin:-6px 0 12px">Every AI feature on the platform: what it may read, what it may only propose, who decides, how much it is used, what people did with its work, and a daily red team of the guard rails. <b>Prompt injection is mitigated, not solved</b> - the red team shows what the code stops, not that an attack is impossible.</p>
+<div class="so-kpis" id="kpis"></div>
+<div class="so-grid">
+ <section class="so-p w8"><h2>AI use <span class="c">last 14 days · calls, refusals and prompt-injection flags</span></h2><div class="so-ch"><canvas id="c-use"></canvas></div></section>
+ <section class="so-p"><h2>Tokens by feature <span class="c">14 days</span></h2><div class="so-ch"><canvas id="c-feat"></canvas></div></section>
+</div>
+<div class="so-tabs" role="tablist">
+ <button type="button" role="tab" data-tab="rt" aria-selected="true">Red team</button><button type="button" role="tab" data-tab="inv">Inventory</button><button type="button" role="tab" data-tab="q">Quality</button>
+ <button type="button" role="tab" data-tab="anom">Unusual use</button><button type="button" role="tab" data-tab="flags">Injection flags</button><button type="button" role="tab" data-tab="lim">Limits</button>
+</div>
+<div id="tab-rt"><div class="so-tw" id="rtl"></div><p class="so-note">Runs every 24 hours on canary data with no model call, so it is free. A failure is written to the SIEM log and shown here in red.</p></div>
+<div id="tab-inv" hidden><div class="so-tw" id="inv"></div></div>
+<div id="tab-q" hidden><section class="so-p w12"><h2>What people did with the AI's work <span class="c">acceptance shown once there are 3 decisions</span></h2><div class="so-ch short"><canvas id="c-q"></canvas></div><div class="so-tw" id="q" style="margin-top:10px"></div></section></div>
+<div id="tab-anom" hidden><div class="so-tw" id="anom"></div><p class="so-note">Today's AI calls per person against their own usual day (median over 14 days, robust z-score) and against the median user. A flag can mean a busy shift - or a misused or compromised account.</p></div>
+<div id="tab-flags" hidden><div class="so-tw" id="flags"></div><p class="so-note">Calls where the data the AI read contained text that looks like instructions to it. Only who, which feature and which signals are kept - never the text (PDPL).</p></div>
+<div id="tab-lim" hidden><div class="so-tw" id="lim"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc, C=window.zybCharts, esc=S.esc, $=function(i){return document.getElementById(i);}, O=null;
+  var NAMES={'soc.copilot':'SOC Copilot','soc.triage':'AI SOC analyst','soc.case-brief':'AI case brief','soc.hunt-assist':'AI hunt assistant','soc.ueba-assess':'AI behaviour assessment','netops.ask':'AI Network / Security Engineer','sysadmin.ask':'AI Windows / Exchange','dba.tuning':'AI Oracle DBA'};
+  function nm(f){return NAMES[f]||f;}
+  function kpi(l,v,s,cls,tab){return '<button type="button" class="so-kpi '+(cls||'')+'" data-go="'+esc(tab||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function load(){return S.req('GET','/soc/ai-security/overview').then(function(o){O=o;$('err').innerHTML='';draw();}).catch(function(e){$('err').innerHTML=S.errHtml(e,'AI Security');$('up').textContent='not loaded';});}
+  function draw(){var o=O,r=o.redteam,t=o.today;$('up').textContent='updated '+S.dt(o.generated_at);$('rt').hidden=!S.can('admin');
+    $('kpis').innerHTML=kpi('Guard rails',r?r.passed+' / '+r.total:'—',r?'red team '+S.ago(r.at):'not run yet',r?(r.passed===r.total?'ok':'crit'):'warn','rt')
+      +kpi('AI features',S.n(o.inventory.length),S.n(o.inventory.reduce(function(s,f){return s+f.tools;},0))+' tools, read-only or proposals','', 'inv')
+      +kpi('AI calls today',S.n(t.calls),S.n(t.tokens)+' tokens','','')+kpi('Refused today',S.n(t.refused),'size, rate or budget limits',t.refused?'warn':'','lim')
+      +kpi('Injection flags, 14 days',S.n(o.series.reduce(function(s,x){return s+x.flagged;},0)),'data that tried to instruct the AI',o.flags.length?'warn':'ok','flags')
+      +kpi('Unusual use today',S.n(o.anomalies.length),'people far above their usual',o.anomalies.length?'crit':'ok','anom');
+    C.area($('c-use'),o.series.map(function(x){return x.day.slice(5);}),[{label:'Calls',data:o.series.map(function(x){return x.calls;}),color:'acc'},{label:'Refused',type:'bar',data:o.series.map(function(x){return x.refused;}),color:'warn'},{label:'Injection flags',type:'bar',data:o.series.map(function(x){return x.flagged;}),color:'crit'}],{title:'AI calls, refusals and injection flags per day'});
+    var F=o.by_feature.filter(function(f){return f.tokens;});if(F.length)C.ring($('c-feat'),F.map(function(f){return nm(f.feature);}),F.map(function(f){return f.tokens;}),[],{v:S.n(F.reduce(function(s,f){return s+f.tokens;},0)),l:'tokens'},{title:'Tokens by AI feature'});else C.empty($('c-feat'),'No AI call in 14 days.');
+    $('rtl').innerHTML=r?'<table class="so-t"><thead><tr><th>Guard rail</th><th>Result</th><th>Detail</th></tr></thead><tbody>'+r.results.map(function(x){return '<tr><td><b>'+esc(x.name)+'</b><div class="so-why">'+esc(x.id)+'</div></td><td>'+(x.pass?'<span class="so-tag ok">pass</span>':'<span class="so-tag crit">FAIL</span>')+'</td><td class="so-why" style="max-width:640px;overflow-wrap:anywhere">'+esc(x.detail)+'</td></tr>';}).join('')+'</tbody></table><p class="so-note">Last run '+esc(S.dt(r.at))+' by '+esc(r.by)+'. '+esc(o.note)+'</p>':'<div class="so-empty">The red team has not run yet - it runs a minute after the SIEM starts, then every day.</div>';
+    $('inv').innerHTML='<table class="so-t"><thead><tr><th>AI feature</th><th>Reads</th><th>May only propose</th><th>Role-gated tools</th><th>Who decides</th><th>14 days</th></tr></thead><tbody>'+o.inventory.map(function(f){var u=f.usage;return '<tr><td><b>'+esc(f.name)+'</b><div class="so-why">'+esc(f.id)+'</div></td><td class="so-why">'+esc(f.read_tools.join(', ')||'—')+'</td><td>'+(f.proposes.length?f.proposes.map(function(p){return '<span class="so-tag warn">'+esc(p)+'</span>';}).join(''):'<span class="so-why">nothing</span>')+'</td><td class="so-why">'+esc(f.role_gated.join(', ')||'—')+'</td><td class="so-why">'+esc(f.decides)+'</td><td class="so-why">'+(u?S.n(u.calls)+' calls · '+S.n(u.tokens)+' tokens':'not used')+'</td></tr>';}).join('')+'</tbody></table>';
+    var Q=o.quality;C.bars($('c-q'),Q.map(function(q){return q.label;}),[{label:'Accepted',data:Q.map(function(q){return q.accepted;}),color:'ok'},{label:'Rejected',data:Q.map(function(q){return q.rejected;}),color:'crit'},{label:'Waiting',data:Q.map(function(q){return q.waiting;}),color:'mute'}],{stacked:true,horizontal:true,title:'Decisions on the AI\'s drafts and proposals'});
+    $('q').innerHTML='<table class="so-t"><thead><tr><th>Work</th><th>Accepted</th><th>Rejected</th><th>Waiting</th><th>Acceptance</th></tr></thead><tbody>'+Q.map(function(q){return '<tr><td><b>'+esc(q.label)+'</b></td><td>'+S.n(q.accepted)+'</td><td>'+S.n(q.rejected)+'</td><td>'+S.n(q.waiting)+'</td><td>'+(q.acceptance_pct===null?'<span class="so-why">needs 3 decisions</span>':esc(q.acceptance_pct)+'%')+'</td></tr>';}).join('')+'</tbody></table>';
+    $('anom').innerHTML=o.anomalies.length?'<table class="so-t"><thead><tr><th>Person</th><th>Calls today</th><th>Usual day</th><th>Why flagged</th></tr></thead><tbody>'+o.anomalies.map(function(a){return '<tr><td><b>'+esc(a.user)+'</b></td><td>'+S.n(a.today)+'</td><td>'+(a.usual==null?'—':S.n(a.usual))+'</td><td class="so-why">'+a.why.map(esc).join('; ')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">Nobody is far above their usual AI use today.</div>';
+    $('flags').innerHTML=o.flags.length?'<table class="so-t"><thead><tr><th>When</th><th>Person</th><th>Feature</th><th>Signals</th></tr></thead><tbody>'+o.flags.map(function(f){return '<tr><td class="so-why">'+esc(S.dt(f.at))+'</td><td>'+esc(f.user)+'</td><td>'+esc(nm(f.feature))+'</td><td>'+f.signals.map(function(s){return '<span class="so-tag warn">#'+esc(s)+'</span>';}).join('')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No injection-like text seen in 14 days.</div>';
+    var l=o.limits;$('lim').innerHTML='<table class="so-t"><thead><tr><th>Limit</th><th>Value</th><th>What happens</th></tr></thead><tbody>'
+      +[['Calls per person per hour',l.per_user_hour,'refused with 429 until the hour passes'],['Calls per person per day',l.per_user_day,'refused with 429 until tomorrow'],['Platform tokens per day',S.n(l.daily_tokens),'every AI feature stops until 00:00 UTC'],['Largest request (characters)',S.n(l.max_prompt_chars),'refused with 413 before any token is spent']].map(function(x){return '<tr><td>'+esc(x[0])+'</td><td><b>'+esc(x[1])+'</b></td><td class="so-why">'+esc(x[2])+'</td></tr>';}).join('')+'</tbody></table><p class="so-note">An administrator changes them in the SIEM configuration (ai_limits); a change applies without a restart.</p>';
+  }
+  function show(t){[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});['rt','inv','q','anom','flags','lim'].forEach(function(k){$('tab-'+k).hidden=k!==t;});}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-tab]'))){show(x.getAttribute('data-tab'));return;}
+    if((x=t.closest('.so-kpi'))){var g=x.getAttribute('data-go');if(g)show(g);return;}
+    if(t.id==='rt'){t.disabled=true;S.req('POST','/soc/ai-security/redteam',{}).then(function(r){S.toast('Red team: '+r.passed+' of '+r.total+' guard rails pass');return load();}).catch(function(e){S.toast(e.message);}).then(function(){t.disabled=false;});return;}
+    if(t.closest('#refresh'))load();
+  });
+  S.ready(load);
+})();
+</script></body></html>

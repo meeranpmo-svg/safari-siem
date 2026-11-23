@@ -1,0 +1,225 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Long-Running Queries</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+.fil{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.fil select,.fil input{max-width:280px}
+td.sql{font:12px Consolas,monospace;max-width:420px;white-space:pre-wrap;word-break:break-word;color:var(--mute)}
+.why{font-size:12px;color:var(--mute)}.why b{color:var(--bad)}
+pre.sqlb{background:#0b0c10;border:1px solid var(--edge);border-radius:8px;padding:10px;font:12px Consolas,monospace;max-height:260px;overflow:auto;white-space:pre;margin:6px 0}
+tr.sr{cursor:pointer}
+.lrq-g{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 12px}@media(max-width:1100px){.lrq-g{grid-template-columns:1fr}}.lrq-g .card{margin:0}
+.vd{display:inline-block;font-size:11px;font-weight:700;border-radius:10px;padding:1px 8px;margin:0 6px 3px 0}.vd.problem,.vd.over-expected,.vd.unusual{background:rgba(242,73,92,.2);color:#ff7b8a}.vd.outside-window,.vd.watch,.vd.new{background:rgba(255,152,48,.2);color:#ffb35c}.vd.expected,.vd.usual{background:rgba(115,191,105,.2);color:#8fd884}
+.vchips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.vchips button{border-radius:999px;padding:3px 10px;font-size:12px}.vchips button[aria-pressed="true"]{outline:2px solid #fff;outline-offset:1px}
+.uc{border:1px solid var(--edge);border-left:4px solid #6e7681;border-radius:8px;padding:8px 10px;margin:0 0 8px}.uc.expected{border-left-color:#73bf69}.uc.watch{border-left-color:#ff9830}.uc.problem{border-left-color:#f2495c}.uc b{font-size:13.5px}.uc .m{font-size:12px;color:var(--mute)}
+.hh{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;margin:4px 0 2px}.hh i{display:block;height:22px;border-radius:3px}.hl{display:grid;grid-template-columns:repeat(24,1fr);font-size:9.5px;color:var(--mute);text-align:center}
+.ucf{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;align-items:end}.ucf label{font-size:12px}.ucf input,.ucf select,.ucf textarea{width:100%}.ucf .days{display:flex;gap:4px;flex-wrap:wrap}.ucf .days label{display:flex;gap:2px;align-items:center}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Databases · sessions hurting performance</div><h1>Long-Running Queries</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="read">⟳ Read now</button></div>
+<div class="fil"><label class="small">Database <select id="db"></select></label><label class="small">Running at least <select id="min"><option value="30">30 s</option><option value="60" selected>1 min</option><option value="300">5 min</option><option value="900">15 min</option><option value="3600">1 h</option></select></label><label class="small"><input type="checkbox" id="auto" checked> refresh every 30 s</label><input type="search" id="q" placeholder="Search user, machine, SQL_ID, text…"></div>
+<div class="k" id="kp"><div class="empty">Choose a database.</div></div>
+<div class="card"><h2>Sessions <span class="c" id="sc"></span></h2><div class="tw" id="ses"></div>
+ <p class="note">Blockers first, then by how long they run. <b>Cancel SQL</b> stops only the running statement (the session and its open transaction stay; Oracle 18c+). <b>Kill session</b> ends the session and rolls back its open transaction - an hour of work can take as long to roll back. Both are <b>requests</b>: a different person - an administrator or a DBA approver - approves, and the database re-checks the session (same user, same statement, not a system account) before acting.</p></div>
+<div class="lrq-g"><div class="card"><h2>✦ Use cases <span class="c">what the DBAs say is normal · the most specific match wins</span><span class="sp"></span><button type="button" class="sm" id="uc-new" hidden>＋ Add a use case</button></h2><div id="uc"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Suggested use cases <span class="c">recurring queries no use case covers</span></h2><div id="ucs"><div class="empty">Loading…</div></div></div></div>
+<div class="lrq-g"><div class="card"><h2>Learned from past reads <span class="c" id="lrn-c"></span></h2><div id="lrn-h"></div><div class="tw" id="lrn"></div></div>
+<div class="card"><h2>Ask the AI DBA advisor <span class="c">reads the use cases and what was learned · proposes, never stops a session</span></h2><div id="lrq-ai"></div></div></div>
+<div class="card"><h2>Requests <span class="c" id="rc"></span></h2><div class="tw" id="req"></div></div>
+<div class="card" id="setc"><h2>Setup: session control</h2><div id="set"></div>
+ <details><summary class="small">Script for the DBA (install/oracle-session-control.sql)</summary><pre class="sqlb" id="sqltxt"></pre><button type="button" id="cpsql">Copy script</button></details></div>
+</main>
+<script type="text/plain" id="sql-ctl">-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE.
+--
+-- Session control for Databases -> Long-Running Queries: lets the platform CANCEL a running statement or KILL a session that
+-- is hurting the database, AFTER a named DBA approver has approved the request (four-eyes, recorded in the audit trail).
+--
+-- Run as a DBA (SYS or a DBA account) in the database (multitenant: in the PDB = the service name the platform uses).
+-- It creates:
+--   ZYB_OPS      a schema that cannot log in. It owns ONE procedure and holds the only powerful grant (ALTER SYSTEM),
+--                which nobody can use except through that procedure.
+--   ZYB_CONTROL  the login the platform uses for this. CREATE SESSION + EXECUTE on that one procedure - nothing else.
+--                The platform refuses to use it if it ever holds any other privilege.
+-- The read-only monitoring user (zyb_monitor) is NOT changed and never gets these rights.
+--
+-- What the procedure refuses, whatever the platform asks:
+--   - background / non-user sessions, and the sessions of Oracle and platform accounts (list below + ZYB_OPS.PROTECTED_USERS)
+--   - a session whose user is not the one that was approved, or whose SQL_ID changed since (the statement finished and the
+--     session is doing something else - nothing is cancelled or killed by mistake)
+--   - a SID / serial# that no longer exists
+-- Every call (done or refused) is written to ZYB_OPS.ACTION_LOG.
+--
+-- Change the password. To withdraw the capability at any time: DROP USER zyb_control CASCADE;
+
+CREATE USER zyb_ops NO AUTHENTICATION;                 -- 18c+: a schema nobody can log in to (11g/12c: IDENTIFIED BY &lt;random> ACCOUNT LOCK)
+GRANT ALTER SYSTEM TO zyb_ops;                          -- used ONLY inside zyb_ops.session_ctl (definer rights)
+GRANT SELECT ON sys.gv_$session TO zyb_ops;             -- direct grant: a definer-rights procedure does not see roles
+ALTER USER zyb_ops QUOTA 10M ON users;
+
+CREATE TABLE zyb_ops.protected_users (username VARCHAR2(128) PRIMARY KEY);   -- add your own (application owners, batch accounts …)
+CREATE TABLE zyb_ops.action_log (
+  at          TIMESTAMP DEFAULT SYSTIMESTAMP,
+  caller      VARCHAR2(128) DEFAULT SYS_CONTEXT('USERENV', 'SESSION_USER'),
+  mode_       VARCHAR2(10), inst_id NUMBER, sid NUMBER, serial# NUMBER, username VARCHAR2(128), sql_id VARCHAR2(13),
+  request_ref VARCHAR2(64), result VARCHAR2(400));
+
+CREATE OR REPLACE PROCEDURE zyb_ops.session_ctl (
+  p_mode      IN  VARCHAR2,     -- CANCEL (stop the running statement, 18c+) or KILL (end the session, roll back its transaction)
+  p_inst_id   IN  NUMBER,
+  p_sid       IN  NUMBER,
+  p_serial    IN  NUMBER,
+  p_username  IN  VARCHAR2,     -- the user that was approved
+  p_sql_id    IN  VARCHAR2,     -- the statement that was approved (NULL = do not check, e.g. an idle session holding locks)
+  p_ref       IN  VARCHAR2,     -- the platform's request id, for the log
+  p_result    OUT VARCHAR2
+) AUTHID DEFINER AS
+  v_user  VARCHAR2(128); v_type VARCHAR2(20); v_sql VARCHAR2(13); v_n NUMBER; v_mode VARCHAR2(10) := UPPER(p_mode);
+  PROCEDURE done(r VARCHAR2) IS BEGIN
+    p_result := r;
+    INSERT INTO zyb_ops.action_log (mode_, inst_id, sid, serial#, username, sql_id, request_ref, result) VALUES (v_mode, p_inst_id, p_sid, p_serial, p_username, p_sql_id, SUBSTR(p_ref, 1, 64), SUBSTR(r, 1, 400));
+    COMMIT;
+  END;
+BEGIN
+  IF v_mode NOT IN ('CANCEL', 'KILL') THEN done('REFUSED: mode must be CANCEL or KILL'); RETURN; END IF;
+  BEGIN
+    SELECT username, type, sql_id INTO v_user, v_type, v_sql FROM sys.gv_$session WHERE inst_id = p_inst_id AND sid = p_sid AND serial# = p_serial;
+  EXCEPTION WHEN NO_DATA_FOUND THEN done('GONE: the session no longer exists (it ended by itself)'); RETURN;
+  END;
+  IF v_type &lt;> 'USER' OR v_user IS NULL THEN done('REFUSED: not a user session'); RETURN; END IF;
+  IF v_user IN ('SYS', 'SYSTEM', 'SYSBACKUP', 'SYSDG', 'SYSKM', 'SYSRAC', 'DBSNMP', 'GSMADMIN_INTERNAL', 'XDB', 'AUDSYS', 'OUTLN', 'MDSYS', 'CTXSYS', 'ORDSYS', 'WMSYS', 'LBACSYS', 'DVSYS', 'GGSYS', 'ZYB_OPS', 'ZYB_CONTROL', 'ZYB_MONITOR') THEN
+    done('REFUSED: ' || v_user || ' is a protected account'); RETURN; END IF;
+  SELECT COUNT(*) INTO v_n FROM zyb_ops.protected_users WHERE username = v_user;
+  IF v_n > 0 THEN done('REFUSED: ' || v_user || ' is in ZYB_OPS.PROTECTED_USERS'); RETURN; END IF;
+  IF v_user &lt;> UPPER(p_username) THEN done('REFUSED: the session now belongs to ' || v_user || ', not ' || UPPER(p_username)); RETURN; END IF;
+  IF p_sql_id IS NOT NULL AND NVL(v_sql, '-') &lt;> p_sql_id THEN done('CHANGED: the session is no longer running SQL_ID ' || p_sql_id || ' - nothing done'); RETURN; END IF;
+  IF v_mode = 'CANCEL' THEN
+    EXECUTE IMMEDIATE 'ALTER SYSTEM CANCEL SQL ''' || TO_CHAR(p_sid) || ',' || TO_CHAR(p_serial) || ',@' || TO_CHAR(p_inst_id) || '''';
+    done('DONE: statement cancelled');
+  ELSE
+    EXECUTE IMMEDIATE 'ALTER SYSTEM KILL SESSION ''' || TO_CHAR(p_sid) || ',' || TO_CHAR(p_serial) || ',@' || TO_CHAR(p_inst_id) || ''' IMMEDIATE';
+    done('DONE: session killed (its open transaction is rolled back)');
+  END IF;
+EXCEPTION WHEN OTHERS THEN done('FAILED: ' || SUBSTR(SQLERRM, 1, 300));
+END;
+/
+
+CREATE USER zyb_control IDENTIFIED BY "Change-Me-Long-Random-2" DEFAULT TABLESPACE users QUOTA 0 ON users;
+GRANT CREATE SESSION TO zyb_control;
+GRANT EXECUTE ON zyb_ops.session_ctl TO zyb_control;
+-- optional: limit it like the monitoring user
+-- ALTER USER zyb_control PROFILE zyb_monitor_prof;
+</script>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,Z=window.zybDetail,esc=S.esc,$=function(i){return document.getElementById(i);};
+  var DBS=[],CUR=null,REQS=[],ROLE='viewer',ME='',timer=null;
+  function itam(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=m==='GET'?60000:120000;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else{var m=(j&&j.error)||('HTTP '+x.status);/* an engine before the 424 change hides the reason behind a bare 500 */if(x.status>=500&&/^internal error$/i.test(m))m='IT Asset Management failed while reading this database and did not say why (an older version). Update the server (update-platform.ps1) to see the reason here; until then the reason is in the server log: journalctl -u sentra-itam -n 50';bad(Object.assign(new Error(m),{status:x.status}));}};x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management could not be reached'));};x.send(b?JSON.stringify(b):null);});}
+  var can=function(r){var k={viewer:0,operator:1,admin:2};return (k[ROLE]||0)>=k[r];};
+  var dur=function(s){if(s==null)return '—';s=Math.round(s);return s>=3600?Math.floor(s/3600)+' h '+Math.round(s%3600/60)+' min':s>=60?Math.floor(s/60)+' min '+(s%60)+' s':s+' s';};
+  function dbSel(){var cur=$('db').value||(location.hash.match(/db=([^&]+)/)||[])[1];cur=cur?decodeURIComponent(cur):'';
+    $('db').innerHTML=DBS.length?DBS.map(function(d){return '<option value="'+esc(d.key)+'"'+(d.key===cur?' selected':'')+'>'+esc(d.label)+(d.service?' · '+esc(d.service):'')+'</option>';}).join(''):'<option value="">no monitored Oracle database</option>';}
+  function setupDraw(){var d=DBS.filter(function(x){return x.key===$('db').value;})[0];
+    if(!d){$('set').innerHTML='<p class="muted">Add a database in Databases first.</p>';return;}
+    var c=d.control||{};
+    $('set').innerHTML='<p>'+(c.configured&&c.ok?S.pill('session control ready','ok')+' set by '+esc(c.by||'')+' · '+esc(S.ago(c.at)):c.configured?S.pill('not usable','bad')+' '+esc(c.error||''):S.pill('not set up','warn')+' Reading works without it; cancelling or killing needs it.')+'</p>'
+      +'<p class="note">The read-only monitoring login is never given these rights. Your DBA runs the script below once: it creates <b>ZYB_CONTROL</b> (CREATE SESSION + EXECUTE on one procedure) and <b>ZYB_OPS.SESSION_CTL</b>, which refuses system accounts, a session that changed user or statement, and logs every call in ZYB_OPS.ACTION_LOG. The platform refuses a control login that holds any other privilege.</p>'
+      +(can('admin')?'<div class="form"><label>Session-control user<input id="cu" value="ZYB_CONTROL" autocomplete="off"></label><label>Password<input id="cp" type="password" autocomplete="new-password"></label><button type="button" id="csave">Test and save</button>'+(c.configured?' <button type="button" id="crem">Remove</button>':'')+'</div>':'<p class="muted">An administrator saves the login.</p>');}
+  function tiles(r){var t=r.totals;$('kp').innerHTML=S.tile('Sessions listed',S.n(t.sessions),'running ≥ '+dur(r.min_s)+' or blocking','')+S.tile('Blocking others',S.n(t.blockers),S.n(t.blocked)+' sessions waiting on them',t.blockers?'bad':'ok')+S.tile('Running over 1 h',S.n(t.over_1h),'',t.over_1h?'warn':'ok')+S.tile('Waiting for approval',S.n(REQS.filter(function(x){return x.status==='pending'&&x.db===r.database.key;}).length),'','')+S.tile('Read',S.ago(r.at),esc(r.database.label),'');}
+  function rows(){rows0();if(window.zybLrqDecorate)window.zybLrqDecorate(CUR);if(CUR&&CUR.notes&&CUR.notes.length)$('ses').insertAdjacentHTML('afterbegin','<p class="small muted" style="margin:0 0 8px">⚠ '+CUR.notes.map(esc).join('<br>⚠ ')+'</p>');}
+  function rows0(){if(!CUR)return;var q=$('q').value.trim().toLowerCase(),L=CUR.sessions.filter(function(x){return !q||[x.username,x.machine,x.program,x.osuser,x.sql_id,x.sql_text,x.event,x.module].join(' ').toLowerCase().indexOf(q)>=0;});
+    $('sc').textContent=L.length+'';var ctlOk=CUR.control&&CUR.control.ok;
+    $('ses').innerHTML=L.length?'<table><thead><tr><th>Session</th><th>User / from</th><th>Running</th><th>Why it hurts</th><th>SQL</th><th></th></tr></thead><tbody>'+L.map(function(x,i){
+      var lo=x.longop&&x.longop.total?'<div class="small">'+esc(x.longop.op)+' '+Math.round(x.longop.done/x.longop.total*100)+'% · '+dur(x.longop.remaining_s)+' left</div>':'';
+      return '<tr class="sr" data-i="'+i+'" data-sk="'+esc(x.key)+'" tabindex="0"><td class="mono">'+esc(x.sid)+','+esc(x.serial)+(x.inst_id?' @'+esc(x.inst_id):'')+'<div>'+(x.blocks>0?S.pill('blocking '+x.blocks,'bad'):x.status==='ACTIVE'?S.pill('active','warn'):S.pill(x.status.toLowerCase()))+'</div></td><td><b>'+esc(x.username)+'</b><div class="small muted">'+esc([x.machine,x.program].filter(Boolean).join(' · '))+'</div></td><td>'+(x.status==='ACTIVE'?dur(x.elapsed_s):'idle '+dur(x.elapsed_s))+lo+'</td><td class="why">'+x.why.map(function(w,k){return k===0&&x.blocks>0?'<b>'+esc(w)+'</b>':esc(w);}).join('<br>')+'</td><td class="sql">'+(x.sql_id?'<span class="mono">'+esc(x.sql_id)+'</span><br>':'')+esc((x.sql_text||'').slice(0,160))+'</td><td style="white-space:nowrap">'
+        +(can('operator')?(x.status==='ACTIVE'?'<button type="button" class="sm" data-act="cancel" data-k="'+esc(x.key)+'"'+(ctlOk?'':' title="session control is not set up - the request can be approved only after it is"')+'>Cancel SQL</button> ':'')+'<button type="button" class="sm" data-act="kill" data-k="'+esc(x.key)+'">Kill session</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(CUR.sessions.length?'No session matches the search.':'Nothing running longer than '+dur(CUR.min_s)+' and nothing blocking - the database is not being held up by a session right now.')+'</div>';}
+  function read(){var db=$('db').value;if(!db)return Promise.resolve();try{history.replaceState(null,'','#db='+encodeURIComponent(db));}catch(e){ /* address bar not updated (sandboxed frame): the page works without it */ }
+    $('up').textContent='reading…';
+    return itam('GET','/db-sessions/long?db='+encodeURIComponent(db)+'&min_s='+$('min').value).then(function(r){CUR=r;tiles(r);rows();$('up').textContent='read '+new Date(r.at).toLocaleTimeString('en-GB');})
+      .catch(function(e){CUR=null;$('kp').innerHTML='';$('ses').innerHTML='<p class="err">'+esc(e.status===404&&/not found/.test(e.message)?e.message:e.status===404?'Long-Running Queries needs the server update (IT Asset Management).':e.message)+'</p>';$('up').textContent='';});}
+  function reqDraw(){var w=REQS.filter(function(x){return x.status==='pending';}).length;$('rc').textContent=w?w+' waiting':'';
+    $('req').innerHTML=REQS.length?'<table><thead><tr><th>Request</th><th>Database · session</th><th>What</th><th>Why</th><th>Asked by</th><th>State</th><th></th></tr></thead><tbody>'+REQS.map(function(r,i){var s=r.session||{};
+      var st={pending:S.pill('waiting for approval','warn'),done:S.pill('done','ok'),gone:S.pill('session had ended','ok'),changed:S.pill('session changed - nothing done',''),refused:S.pill('refused by the database','bad'),failed:S.pill('failed','bad'),rejected:S.pill('rejected',''),expired:S.pill('expired','')}[r.status]||S.pill(r.status);
+      return '<tr><td class="mono">'+esc(r.id)+'</td><td>'+esc(r.database)+'<div class="small mono">'+esc(s.sid)+','+esc(s.serial)+' @'+esc(s.inst_id)+' · '+esc(s.username)+(s.sql_id?' · '+esc(s.sql_id):'')+'</div></td><td>'+(r.mode==='kill'?'<b>kill session</b>':'cancel SQL')+'</td><td class="small">'+esc(r.reason)+'</td><td>'+esc(r.requested_by)+'<div class="small muted">'+esc(S.ago(r.requested_at))+'</div></td><td>'+st+(r.decided_by?'<div class="small muted">'+esc(r.decided_by)+(r.comment?': '+esc(r.comment):'')+'</div>':'')+(r.result?'<div class="small">'+esc(r.result)+'</div>':'')+'</td><td>'+(r.status==='pending'&&can('operator')&&r.requested_by!==ME?'<button type="button" class="sm" data-ok="'+i+'">Approve</button> <button type="button" class="sm" data-no="'+i+'">Reject</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No request yet.</div>';}
+  function loadReqs(){if(!can('operator'))return Promise.resolve();return itam('GET','/db-sessions/requests').then(function(r){REQS=r.items||[];reqDraw();if(CUR)tiles(CUR);}).catch(function(){ /* a background refresh: the panel keeps its last state and the next refresh retries */ });}
+  function loadAll(){return itam('GET','/db-sessions').then(function(r){DBS=r.databases||[];dbSel();setupDraw();return read();}).then(loadReqs).catch(function(e){$('kp').innerHTML='<div class="card" style="grid-column:1/-1"><p class="err">'+esc(e.status===403?'Operators and administrators see this page (session details name people).':e.status===404?'Long-Running Queries needs the server update (IT Asset Management).':e.message)+'</p></div>';});}
+  function ask(title,html,fields,cb){Z.open('Long-Running Queries',title,html+fields.map(function(f){return '<label class="small" style="display:block;margin:8px 0">'+esc(f[1])+'<br><input id="'+f[0]+'" style="width:100%" autocomplete="off"></label>';}).join('')+'<p><button type="button" id="ask-ok">Send</button></p>');setTimeout(function(){var b=$('ask-ok');if(b)b.onclick=function(){var v={};fields.forEach(function(f){v[f[0]]=$(f[0]).value;});cb(v);};},50);}
+  function openSession(x){Z.open('Session '+x.sid+','+x.serial+(x.inst_id?' @'+x.inst_id:''),x.username,Z.kv([['Status',esc(x.status)],['Running',esc(dur(x.elapsed_s))],['Started',esc(x.exec_start||'—')],['Logged on',esc(x.logon||'—')],['Machine',esc(x.machine||'—')],['Program',esc(x.program||'—')],['Module',esc(x.module||'—')],['OS user',esc(x.osuser||'—')],['Wait',esc(x.state==='WAITING'?(x.event||'')+' ('+(x.wait_class||'')+') '+dur(x.wait_s):'on CPU')],['CPU used',esc(x.cpu_s==null?'—':dur(x.cpu_s))],['TEMP',esc(x.temp_mb==null?'—':x.temp_mb+' MB')],['PGA',esc(x.pga_mb==null?'—':x.pga_mb+' MB')],['Blocks',esc(x.blocks)],['Blocked by',esc(x.blocked_by?x.blocked_by+(x.blocked_by_inst?' @'+x.blocked_by_inst:''):'—')],['SQL_ID',esc(x.sql_id||'—')]])
+    +(x.intel?Z.sec('Verdict','<p>'+S.pill(x.intel.verdict.replace('-',' '),{problem:'bad','over-expected':'bad',unusual:'bad','outside-window':'warn',watch:'warn','new':'warn',expected:'ok',usual:'ok'}[x.intel.verdict]||'')+' '+esc(x.intel.why)+'</p>'+(x.intel.case&&x.intel.case.note?'<p class="small"><b>DBA note:</b> '+esc(x.intel.case.note)+'</p>':'')):'')
+    +Z.sec('Why it hurts','<ul>'+x.why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>')+(x.sql_text?Z.sec('Statement (literals masked)','<pre class="sqlb">'+esc(x.sql_text)+'</pre>'+(x.sql_id?'<p><a href="db-performance.html#tab=sql">Execution plan and history on Database Performance</a></p>':'')):''));}
+  function request(mode,k){var x=CUR.sessions.filter(function(s){return s.key===k;})[0];if(!x)return;
+    ask((mode==='kill'?'Kill session ':'Cancel SQL of ')+x.sid+','+x.serial,'<p>'+esc(x.username)+' on '+esc(x.machine||'?')+' - '+esc(x.why.join('; '))+'.</p>'+(mode==='kill'?'<p class="err small">Ends the session; its open transaction is rolled back (that can take as long as the work done).</p>':'<p class="small muted">Stops the running statement only.</p>')+'<p class="small muted">Goes to a DBA approver; nothing happens until they approve.</p>',[['rq-why','Why (what it is doing to the database)']],function(v){
+      itam('POST','/db-sessions/requests',{db:CUR.database.key,inst_id:x.inst_id,sid:x.sid,serial:x.serial,mode:mode,reason:v['rq-why']}).then(function(r){Z.close();S.toast('Request '+r.id+' sent for approval');loadReqs();}).catch(function(e){S.toast(e.message);});});}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-act][data-k]'))){request(x.getAttribute('data-act'),x.getAttribute('data-k'));return;}
+    if((x=t.closest('tr.sr'))&&!t.closest('button')){openSession(CUR.sessions.filter(function(s){var q=$('q').value.trim().toLowerCase();return !q||[s.username,s.machine,s.program,s.osuser,s.sql_id,s.sql_text,s.event,s.module].join(' ').toLowerCase().indexOf(q)>=0;})[+x.getAttribute('data-i')]);return;}
+    if((x=t.closest('[data-ok]'))){var a=REQS[+x.getAttribute('data-ok')];if(!window.confirm('Approve '+a.id+': '+(a.mode==='kill'?'KILL session':'cancel SQL')+' '+a.session.sid+','+a.session.serial+' ('+a.session.username+') on '+a.database+'?\n\nIt is sent to the database now.'))return;x.disabled=true;
+      itam('POST','/db-sessions/requests/'+encodeURIComponent(a.id)+'/decide',{decision:'approve'}).then(function(r){S.toast(r.id+': '+r.status+(r.result?' - '+r.result:''));loadReqs();read();}).catch(function(e){x.disabled=false;S.toast(e.message);});return;}
+    if((x=t.closest('[data-no]'))){var a2=REQS[+x.getAttribute('data-no')];ask('Reject '+a2.id,'',[['rj-why','Why it is rejected']],function(v){itam('POST','/db-sessions/requests/'+encodeURIComponent(a2.id)+'/decide',{decision:'reject',comment:v['rj-why']}).then(function(){Z.close();S.toast('Rejected');loadReqs();}).catch(function(e){S.toast(e.message);});});return;}
+    if(t.id==='csave'){t.disabled=true;itam('POST','/db-sessions/control',{db:$('db').value,username:$('cu').value.trim(),password:$('cp').value}).then(function(r){$('cp').value='';DBS=r.databases||DBS;setupDraw();S.toast('Session control tested and saved');read();}).catch(function(e){t.disabled=false;S.toast(e.message);});return;}
+    if(t.id==='crem'){if(!window.confirm('Remove the session-control login for this database? Approved requests can then no longer be carried out.'))return;itam('POST','/db-sessions/control/remove',{db:$('db').value}).then(function(r){DBS=r.databases||DBS;setupDraw();S.toast('Removed');}).catch(function(e){S.toast(e.message);});return;}
+    if(t.id==='read'){read();return;}
+    if(t.id==='cpsql'){try{navigator.clipboard.writeText($('sql-ctl').textContent);S.toast('Script copied');}catch(e){ /* clipboard blocked by the browser: the text stays selectable */ }return;}
+  });
+  document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;var x=e.target.closest&&e.target.closest('tr.sr');if(x)x.click();});
+  $('db').onchange=function(){CUR=null;setupDraw();read();if(window.zybLrqDb)window.zybLrqDb($('db').value);};
+  window.zybLrqRead=read;$('min').onchange=read;$('q').addEventListener('input',rows);
+  $('sqltxt').textContent=$('sql-ctl').textContent;
+  function tick(){clearInterval(timer);if($('auto').checked)timer=setInterval(function(){if(!document.hidden&&!(document.getElementById('zd')&&!document.getElementById('zd').hidden)){read();loadReqs();}},30000);}
+  $('auto').onchange=tick;
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);ROLE=String(j.role||'').toLowerCase();ME=String(j.user||'');}catch(e){ /* not JSON: treated as no data */ }if(!can('operator')){$('kp').innerHTML='<div class="card" style="grid-column:1/-1"><p>Operators and administrators see this page (session details name people).</p></div>';return;}loadAll();tick();};w.onerror=function(){loadAll();tick();};w.send();
+})();
+</script><script>
+/* Use cases, learning and the advisor (IT Asset Management /api/itam/db-sessions/cases | insights | ask). A use case only classifies
+   sessions - nothing here stops one; Stop stays the four-eyes request above. Writing a use case: a DBA approver or an administrator,
+   a person, with a reason (checked on the server). Every value is escaped; model text is escaped and never made into links. */
+(function(){
+  'use strict';
+  var S=window.zybSoc,Z=window.zybDetail,esc=S.esc,$=function(i){return document.getElementById(i);},DB='',CASES=null,INS=null,VF='',ANS=null,LAST=null;
+  var DAYN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],VL={problem:'problem','over-expected':'over its expected time',unusual:'unusual','outside-window':'outside its window',watch:'watch','new':'new',expected:'expected',usual:'usual'};
+  function itam(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: reported below */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&(j.error||j.message))||'HTTP '+x.status),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  /* the sessions table: a verdict pill on every row, a verdict filter above it */
+  window.zybLrqDecorate=function(cur){LAST=cur;if(!cur||!cur.intel)return;var I=cur.intel.verdicts||{};
+    var ch=[['','all'],['problem','problem'],['over-expected','over expected'],['unusual','unusual'],['outside-window','outside window'],['new','new'],['watch','watch'],['expected','expected'],['usual','usual']].filter(function(c){return !c[0]||I[c[0].replace('-','_')];});
+    var bar=$('lrq-vf');if(!bar){bar=document.createElement('div');bar.id='lrq-vf';bar.className='vchips';$('ses').parentNode.insertBefore(bar,$('ses'));}
+    bar.innerHTML=ch.map(function(c){var n=c[0]?I[c[0].replace('-','_')]:cur.sessions.length;return '<button type="button" data-vf="'+c[0]+'" aria-pressed="'+(VF===c[0])+'"><span class="vd '+esc(c[0]||'usual')+'" style="margin:0">'+esc(c[1])+'</span> '+n+'</button>';}).join('')+(cur.intel.attention?'<span class="small" style="align-self:center;color:#ff7b8a">'+cur.intel.attention+' need attention</span>':'');
+    [].forEach.call(document.querySelectorAll('#ses tr.sr'),function(tr){var x=cur.sessions.filter(function(s){return s.key===tr.getAttribute('data-sk');})[0];if(!x||!x.intel)return;
+      tr.hidden=!!VF&&x.intel.verdict!==VF;var td=tr.children[3];if(td&&!td.querySelector('.vd'))td.insertAdjacentHTML('afterbegin','<div><span class="vd '+esc(x.intel.verdict)+'" title="'+esc(x.intel.why)+'">'+esc(VL[x.intel.verdict]||x.intel.verdict)+'</span><span class="small">'+esc(x.intel.why)+'</span></div>');});};
+  function windowOf(c){return c.window||'any time';}
+  function drawCases(){if(!CASES)return;var C=CASES.cases.filter(function(c){return !c.db||c.db==='*'||c.db===DB;});$('uc-new').hidden=!CASES.can_edit;
+    $('uc').innerHTML=C.length?C.map(function(c){var m=[['user',c.match_username],['module',c.match_module],['program',c.match_program],['machine',c.match_machine],['SQL_ID',c.match_sql_id],['SQL contains',c.match_sql_text]].filter(function(z){return z[1];}).map(function(z){return esc(z[0])+' <b>'+esc(z[1])+'</b>';}).join(' · ');
+      return '<div class="uc '+esc(c.verdict)+'"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b>'+esc(c.name)+'</b><span class="vd '+(c.verdict==='problem'?'problem':c.verdict==='watch'?'watch':'expected')+'">'+esc(c.verdict)+(c.expected_max_min?' · up to '+esc(c.expected_max_min)+' min':'')+'</span><span class="sp" style="flex:1"></span>'+(CASES.can_edit?'<button type="button" class="sm" data-uce="'+esc(c.id)+'">Edit</button> <button type="button" class="sm" data-ucd="'+esc(c.id)+'">Remove</button>':'')+'</div>'
+        +'<div class="m">'+m+' · '+esc(windowOf(c))+(c.db&&c.db!=='*'?' · this database only':' · every database')+'</div>'+(c.note?'<div class="small">'+esc(c.note)+'</div>':'')+'<div class="m">v'+esc(c.version)+' · '+esc(c.updated_by||c.created_by||'')+(c.owner?' · owner '+esc(c.owner):'')+'</div></div>';}).join(''):'<div class="empty">No use case yet. '+(CASES.can_edit?'Add one, or accept a suggestion on the right.':'A DBA approver or an administrator adds them.')+'</div>';
+    var G=CASES.suggestions||[];$('ucs').innerHTML=G.length?G.map(function(g,i){return '<div class="uc"><b>'+esc(g.name)+'</b><div class="m">'+esc(g.why)+'</div>'+(g.sql_text?'<div class="m mono" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.sql_text)+'</div>':'')+'<div class="m">Proposed: expected up to <b>'+esc(g.expected_max_min)+' min</b>'+(g.from?' · '+esc(g.from)+'-'+esc(g.to):'')+'</div>'+(CASES.can_edit?'<button type="button" class="sm" data-ucs="'+i+'">Review and add</button>':'')+'</div>';}).join(''):'<div class="empty">Nothing to suggest: every query seen on 5+ days and running 10+ minutes is covered by a use case (or none ran that long yet).</div>';}
+  function form(c,title){var d=c.days||[];
+    Z.open('Long-Running Queries',title,'<div class="ucf"><label>Name<input id="u-name" maxlength="120" value="'+esc(c.name||'')+'"></label><label>Verdict<select id="u-v">'+['expected','watch','problem'].map(function(v){return '<option'+(c.verdict===v?' selected':'')+'>'+v+'</option>';}).join('')+'</select></label><label>Expected at most (min)<input id="u-max" type="number" min="1" max="10080" value="'+esc(c.expected_max_min||'')+'"></label>'
+      +'<label>Database<select id="u-db"><option value="*">every database</option><option value="'+esc(DB)+'"'+(c.db&&c.db!=='*'?' selected':'')+'>only this database</option></select></label>'
+      +'<label>Username<input id="u-us" maxlength="128" placeholder="APP_ERP or HR_*" value="'+esc(c.match_username||'')+'"></label><label>Module<input id="u-mo" maxlength="128" value="'+esc(c.match_module||'')+'"></label><label>Program<input id="u-pr" maxlength="128" value="'+esc(c.match_program||'')+'"></label><label>Machine<input id="u-ma" maxlength="128" value="'+esc(c.match_machine||'')+'"></label>'
+      +'<label>SQL_ID<input id="u-si" maxlength="20" value="'+esc(c.match_sql_id||'')+'"></label><label>SQL text contains<input id="u-st" maxlength="200" value="'+esc(c.match_sql_text||'')+'"></label>'
+      +'<label>From (Riyadh)<input id="u-fr" placeholder="23:00" maxlength="5" value="'+esc(c.from||'')+'"></label><label>To<input id="u-to" placeholder="04:00" maxlength="5" value="'+esc(c.to||'')+'"></label>'
+      +'<div style="grid-column:1/-1"><span class="small">Days (empty = every day; a window crossing midnight belongs to the day it starts)</span><div class="days">'+DAYN.map(function(n,i){return '<label><input type="checkbox" class="u-d" value="'+i+'"'+(d.indexOf(i)>=0?' checked':'')+'>'+n+'</label>';}).join('')+'</div></div>'
+      +'<label style="grid-column:1/-1">What the on-call DBA should do<textarea id="u-note" maxlength="500" rows="2">'+esc(c.note||'')+'</textarea></label><label>Owner<input id="u-ow" maxlength="120" value="'+esc(c.owner||'')+'"></label>'
+      +'<label style="grid-column:1/-1">Reason for this change (recorded)<input id="u-why" maxlength="300"></label></div><p class="err small" id="u-err"></p><button type="button" id="u-save">Save use case</button>');
+    $('u-save').onclick=function(){var b={name:$('u-name').value.trim(),verdict:$('u-v').value,db:$('u-db').value,match_username:$('u-us').value.trim(),match_module:$('u-mo').value.trim(),match_program:$('u-pr').value.trim(),match_machine:$('u-ma').value.trim(),match_sql_id:$('u-si').value.trim(),match_sql_text:$('u-st').value.trim(),from:$('u-fr').value.trim(),to:$('u-to').value.trim(),days:[].map.call(document.querySelectorAll('.u-d:checked'),function(x){return +x.value;}),note:$('u-note').value.trim(),owner:$('u-ow').value.trim(),reason:$('u-why').value.trim()};
+      var mx=$('u-max').value.trim();if(mx)b.expected_max_min=+mx;if(c.id){b.id=c.id;b.base_version=c.version;}
+      Object.keys(b).forEach(function(k){if(b[k]===''||(Array.isArray(b[k])&&!b[k].length&&k!=='days'))delete b[k];});
+      this.disabled=true;var self=this;itam('POST','/db-sessions/cases',b).then(function(){Z.close();S.toast('Use case saved - recorded in the audit trail');loadCases();if(window.zybLrqRead)window.zybLrqRead();},function(e){self.disabled=false;$('u-err').textContent=e.message;});};}
+  function drawLearned(){if(!INS)return;var F=INS.fingerprints||[],L=INS.learning||{};$('lrn-c').textContent=F.length?F.length+' query pattern(s) · '+(L.keep_days||45)+' days kept':'';
+    var mx=Math.max.apply(null,INS.by_hour.concat([1]));$('lrn-h').innerHTML='<div class="small muted">When long queries run (Riyadh hour, days seen)</div><div class="hh" role="img" aria-label="Long queries by hour of the day">'+INS.by_hour.map(function(n,h){var a=n?0.2+0.8*n/mx:0;return '<i title="'+String(h).padStart(2,'0')+':00 · '+n+'" style="background:'+(n?'rgba(184,119,217,'+a.toFixed(2)+')':'rgba(127,127,127,.12)')+'"></i>';}).join('')+'</div><div class="hl">'+INS.by_hour.map(function(_,h){return '<span>'+(h%3?'':h)+'</span>';}).join('')+'</div>';
+    $('lrn').innerHTML=F.length?'<table><thead><tr><th>Query</th><th class="num">Days seen</th><th class="num">Usually up to</th><th class="num">Longest</th><th>Usual hours</th></tr></thead><tbody>'+F.slice(0,20).map(function(f){return '<tr><td><span class="mono">'+esc(f.sql_id||'')+'</span> '+esc([f.username,f.module,f.program].filter(Boolean).join(' · '))+(f.sql_text?'<div class="small muted mono" style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(f.sql_text)+'</div>':'')+'</td><td class="num">'+esc(f.days)+'</td><td class="num">'+esc(f.usual_max_min)+' min</td><td class="num">'+esc(f.longest_min)+' min</td><td>'+esc((f.hours||[]).map(function(h){return String(h).padStart(2,'0')+':00';}).join(', ')||'—')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">Nothing learned yet: every read of this page is recorded; after 3 days a query has a "usual" and a session can be called unusual.</div>';}
+  function drawAsk(){$('lrq-ai').innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="lq-q" style="flex:1;min-width:220px" maxlength="2000" aria-label="Question for the DBA advisor" placeholder="e.g. Which recurring queries have no use case, and which use case looks too generous?"><button type="button" id="lq-ask">Ask</button></div>'+(ANS?'<div class="ans" style="white-space:pre-wrap;border:1px solid var(--edge);border-radius:8px;padding:10px;margin-top:8px">'+esc(ANS.answer)+'</div>':'');}
+  function loadCases(){if(!DB)return;return itam('GET','/db-sessions/cases?db='+encodeURIComponent(DB)).then(function(r){CASES=r;drawCases();},function(e){$('uc').innerHTML='<div class="empty">'+esc(e.status===404?'Use cases need the server update (IT Asset Management).':e.status===403?'Use cases are for operators and administrators.':e.message)+'</div>';$('ucs').innerHTML='';});}
+  function loadIns(){if(!DB)return;return itam('GET','/db-sessions/insights?db='+encodeURIComponent(DB)).then(function(r){INS=r;drawLearned();},function(e){$('lrn').innerHTML='<div class="empty">'+esc(e.status===403?'Learning is for operators and administrators.':e.message)+'</div>';});}
+  window.zybLrqDb=function(db){DB=db||'';CASES=null;INS=null;loadCases();loadIns();};
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-vf]'))){VF=x.getAttribute('data-vf');window.zybLrqDecorate(LAST);return;}
+    if(t.id==='uc-new'){form({verdict:'expected'},'Add a use case');return;}
+    if((x=t.closest('[data-uce]'))){var c=CASES.cases.filter(function(z){return z.id===x.getAttribute('data-uce');})[0];if(c)form(c,'Edit '+c.name);return;}
+    if((x=t.closest('[data-ucs]'))){var g=CASES.suggestions[+x.getAttribute('data-ucs')];form({name:g.name,verdict:'expected',expected_max_min:g.expected_max_min,db:DB,match_username:g.match_username,match_module:g.match_module,match_program:g.match_program,match_sql_id:g.match_sql_id,from:g.from,to:g.to},'Add the suggested use case');return;}
+    if((x=t.closest('[data-ucd]'))){var why=window.prompt('Why is this use case removed? (recorded)');if(!why)return;itam('POST','/db-sessions/cases/'+encodeURIComponent(x.getAttribute('data-ucd'))+'/delete',{reason:why}).then(function(){S.toast('Use case removed');loadCases();},function(e){S.toast(e.message);});return;}
+    if(t.id==='lq-ask'){var q=$('lq-q').value.trim();if(q.length<5){S.toast('Ask a full question');return;}t.disabled=true;t.textContent='Thinking…';itam('POST','/db-sessions/ask',{question:q}).then(function(r){ANS=r;drawAsk();},function(e){t.disabled=false;t.textContent='Ask';S.toast(e.status===424?'The AI advisor is not configured: '+e.message:e.message);});return;}
+  });
+  drawAsk();
+  (function wait(n){var d=$('db');if(d&&d.value){window.zybLrqDb(d.value);return;}if(n<60)setTimeout(function(){wait(n+1);},250);})(0);
+})();
+</script>
+</body></html>

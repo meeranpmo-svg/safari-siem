@@ -1,0 +1,326 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CMDB Studio</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--cs-bg:#0b0d12;--cs-panel:#12151c;--cs-raise:#181c25;--cs-line:#232837;--cs-ink:#e7eaf0;--cs-mute:#8b93a4;--cs-ok:#2fb344;--cs-warn:#f59f00;--cs-bad:#e5484d;--cs-acc:#5b8def;--cs-ai:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--cs-bg);color:var(--cs-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px;letter-spacing:-.01em}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--cs-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--cs-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--cs-raise);color:var(--cs-ink);border:1px solid var(--cs-line);border-radius:9px;padding:6px 12px;cursor:pointer;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--cs-acc);border-color:var(--cs-acc);color:#fff}.btn.ok{background:rgba(47,179,68,.18);border-color:rgba(47,179,68,.5);color:#7ee28f}.btn.ai{background:linear-gradient(135deg,#7c4dff,#5b8def);border:0;color:#fff}.btn.ghost{background:transparent}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--cs-panel);border:1px solid var(--cs-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--cs-mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:center;background:radial-gradient(circle at 12% 40%,rgba(163,113,247,.16),transparent 55%),var(--cs-panel)}
+.ring{position:relative;width:190px;height:190px;margin:auto}.ring svg{transform:rotate(-90deg)}.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.ring .v b{font-size:42px;line-height:1}.ring .v span{font-size:12px;color:var(--cs-mute);max-width:130px}.ring circle.fg{transition:stroke-dashoffset 1.2s cubic-bezier(.2,.7,.2,1)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.kpi{background:var(--cs-raise);border:1px solid var(--cs-line);border-radius:12px;padding:11px 13px;cursor:pointer;text-align:left;color:inherit;font:inherit}.kpi:hover{border-color:#3a4258}.kpi .n{font-size:25px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--cs-mute)}
+.types{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.tchip{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--cs-raise);border:1px solid var(--cs-line)}.tchip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
+.graph-wrap{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:12px}
+#graph{width:100%;height:auto;max-height:600px;background:radial-gradient(circle at 50% 50%,rgba(91,141,239,.08),transparent 62%);border-radius:12px;border:1px solid var(--cs-line)}
+#graph .nd{cursor:pointer}#graph .nd:hover circle.b{stroke:#fff}#graph .nd text{font:600 11px Inter,"Segoe UI",system-ui,sans-serif;fill:var(--cs-ink);pointer-events:none}
+#graph .nd text.t{fill:#0b0d12;font-size:10px;font-weight:800}
+#graph .ed{fill:none;stroke-width:1.8}#graph .ed.prop{stroke-dasharray:6 5;animation:flow 1.4s linear infinite}#graph .ed.ml{stroke:var(--cs-ai);stroke-dasharray:2 5;opacity:.85}
+#graph .hit circle.b{stroke:var(--cs-bad);stroke-width:3}#graph .halo{fill:none;stroke:var(--cs-bad);opacity:.5;animation:pulse 1.8s ease-out infinite}
+#graph .orbit{fill:none;stroke:#232837;stroke-dasharray:3 6}
+#graph g.layer{animation:fade .45s ease-out}
+@keyframes flow{to{stroke-dashoffset:-22}}@keyframes pulse{0%{r:26;opacity:.6}100%{r:40;opacity:0}}@keyframes fade{from{opacity:0}to{opacity:1}}
+.side{font-size:13px}.side h3{margin:0 0 4px;font-size:15px;word-break:break-word}.side .kv{display:grid;grid-template-columns:80px 1fr;gap:3px 8px;font-size:12.5px;margin:8px 0}.side .kv span:nth-child(odd){color:var(--cs-mute)}
+.layer-row{display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin:4px 0}.layer-row b{min-width:52px;color:var(--cs-bad)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--cs-mute)}.legend svg{vertical-align:middle;margin-right:4px}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.inp{background:#0b0d12;color:var(--cs-ink);border:1px solid var(--cs-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.q{border:1px solid var(--cs-line);border-radius:12px;padding:11px 12px;margin-bottom:8px;background:var(--cs-raise)}
+.q.pend{border-color:rgba(245,159,0,.45)}.q .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13.5px}.q .why{font-size:12.5px;color:var(--cs-mute);margin:5px 0}
+.conf{width:70px;height:6px;border-radius:4px;background:#232837;overflow:hidden;display:inline-block;vertical-align:middle}.conf i{display:block;height:100%;background:linear-gradient(90deg,#a371f7,#5b8def)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-ok{background:rgba(47,179,68,.15);color:#56d364}.p-warn{background:rgba(245,159,0,.16);color:#f5b544}.p-bad{background:rgba(229,72,77,.16);color:#ff7b80}.p-ai{background:rgba(163,113,247,.18);color:#c6a6ff}.p-mute{background:rgba(139,147,164,.16);color:#aab2c2}.p-acc{background:rgba(91,141,239,.18);color:#9dbbff}
+.lnk{background:none;border:0;color:#9dbbff;cursor:pointer;font:inherit;padding:0;text-align:left}.lnk:hover{text-decoration:underline}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #1b2030;font-size:13px}.li:last-child{border:0}
+.bar{flex:1;height:7px;border-radius:5px;background:#232837;overflow:hidden;min-width:60px}.bar i{display:block;height:100%;border-radius:5px}
+.tabs{display:flex;gap:4px;margin-bottom:10px}.tab{background:none;border:1px solid var(--cs-line);color:var(--cs-mute);border-radius:8px;padding:5px 11px;cursor:pointer;font:600 12.5px Inter,"Segoe UI",system-ui,sans-serif}.tab.on{color:var(--cs-ink);background:var(--cs-raise);border-color:#3a4258}
+.ask{display:flex;gap:8px;flex-wrap:wrap}.ask textarea{flex:1;min-width:240px;min-height:64px}
+.ans{white-space:pre-wrap;background:var(--cs-raise);border:1px solid var(--cs-line);border-radius:12px;padding:12px;margin-top:10px;font-size:13px}
+.steps{font-size:12px;color:var(--cs-mute);margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.empty{color:var(--cs-mute);padding:8px 0;font-size:13px}
+@media (max-width:1100px){.cols,.hero,.graph-wrap{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){#graph .ed.prop,#graph .halo,#graph g.layer{animation:none}.ring circle.fg{transition:none}}
+.tabbar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}.tabbar button{background:transparent;border:1px solid var(--cs-line);color:var(--cs-mute);border-radius:999px;padding:7px 15px;font:600 13px Inter,"Segoe UI",system-ui,sans-serif;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.tabbar button[aria-selected="true"]{background:#1a1f2e;color:var(--cs-ink);border-color:var(--cs-ai)}.tabbar .n{background:#2a2f3f;border-radius:999px;padding:0 7px;font-size:11px}
+.panel[hidden]{display:none!important}
+.ex-wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+#graph{max-height:none;min-height:520px}
+.act{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--cs-line);border-radius:12px;margin-bottom:8px;background:var(--cs-raise)}.act .ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none}
+.spark{width:100%;height:120px}
+.heat td{text-align:center;font-weight:700;font-size:12px;border-radius:6px}.heat td:first-child{text-align:left;font-weight:600}
+.heat{border-collapse:separate;border-spacing:4px}.heat td,.heat th{padding:4px 9px}
+table.t{width:100%;border-collapse:collapse;font-size:12.8px}table.t th{text-align:left;color:var(--cs-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--cs-line)}table.t td{padding:7px 8px;border-bottom:1px solid #1b2030;vertical-align:top}
+.grp{border:1px solid var(--cs-line);border-radius:12px;padding:11px 12px;background:var(--cs-raise)}.grp .mem{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.grp .mem button{font-size:11.5px;background:#10131a;border:1px solid var(--cs-line);border-radius:999px;color:var(--cs-ink);padding:2px 8px;cursor:pointer}
+.bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px dashed rgba(163,113,247,.5);border-radius:12px;margin-bottom:10px}
+@media (max-width:1100px){.ex-wrap{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT Asset Management · CMDB</div><h1>CMDB Studio</h1><div class="mute">Every configuration item, what it runs on and depends on, and what fails with it. Machine learning proposes missing links, finds duplicates, ranks what the estate stands on, groups CIs that work together and tracks CMDB health over time. People confirm every relationship.</div></div>
+ <span class="sp"></span><span class="mute sm" id="up"></span><button type="button" class="btn" id="snapbtn" hidden><i class="ti ti-camera"></i>Health snapshot</button><button type="button" class="btn" id="xls"><i class="ti ti-file-spreadsheet"></i>Excel</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+<div class="tabbar" id="tabbar" role="tablist"></div>
+
+<div class="panel" data-panel="overview">
+ <section class="card hero"><div class="ring" id="ring"></div><div><div class="kpis" id="kpis"></div><div class="types" id="types"></div><p class="mute sm" id="learned" style="margin:10px 0 0"></p></div></section>
+ <div class="cols">
+  <section class="card"><h2><i class="ti ti-list-check"></i>What to do next <span class="c">ranked from the ML findings</span></h2><div id="actions"></div></section>
+  <section class="card"><h2><i class="ti ti-chart-line"></i>CMDB health over time <span class="c" id="hc"></span></h2><div id="health"></div></section>
+ </div>
+</div>
+
+<div class="panel" data-panel="explorer" hidden>
+ <section class="card" id="gcard"><h2><i class="ti ti-affiliate"></i>Relationship explorer <span class="c">two hops around the selected CI · click a node to move to it</span></h2>
+  <div class="tools"><input class="inp" id="find" list="cilist" placeholder="Find a CI by name or IP" aria-label="Find a CI" style="flex:1;min-width:220px"><datalist id="cilist"></datalist>
+   <label class="sm" for="colorby">Colour by</label><select class="inp" id="colorby" aria-label="Colour by"><option value="type">type</option><option value="quality">data quality</option><option value="importance">importance</option></select>
+   <label class="sm"><input type="checkbox" id="blast"> blast radius</label><label class="sm"><input type="checkbox" id="showml" checked> ML proposals</label><button type="button" class="btn ghost" id="back" disabled><i class="ti ti-arrow-back-up"></i>Back</button></div>
+  <div class="ex-wrap"><div><svg id="graph" viewBox="0 0 1000 680" role="img" aria-label="Relationship graph"></svg>
+   <div class="legend"><span><svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#8b93a4" stroke-width="2"/></svg>confirmed</span><span><svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#f59f00" stroke-width="2" stroke-dasharray="6 5"/></svg>proposed, waiting for a person</span><span><svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#a371f7" stroke-width="2" stroke-dasharray="2 5"/></svg>ML proposal</span><span id="tlegend"></span></div></div>
+   <div class="side" id="side"></div></div></section>
+</div>
+
+<div class="panel" data-panel="decisions" hidden>
+ <section class="card"><h2><i class="ti ti-bulb"></i>Decisions <span class="c" id="dc"></span></h2>
+  <div class="tabs" role="tablist"><button type="button" class="tab on" data-tab="props" role="tab">ML proposals</button><button type="button" class="tab" data-tab="pending" role="tab">Waiting for a person</button><button type="button" class="tab" data-tab="calib" role="tab">What the ML learned from you</button></div>
+  <div id="props"></div><div id="pending" hidden></div><div id="calib" hidden></div></section>
+</div>
+
+<div class="panel" data-panel="importance" hidden>
+ <div class="cols">
+  <section class="card"><h2><i class="ti ti-crown"></i>Crown jewels <span class="c">PageRank over runs on / depends on / installed on / member of</span></h2><div id="imp"></div></section>
+  <section class="card"><h2><i class="ti ti-alert-triangle"></i>Criticality mismatches <span class="c">important to the estate, rated lower</span></h2><div id="mism"></div>
+   <section style="margin-top:14px"><h2 style="font-size:14px"><i class="ti ti-target-arrow"></i>Single points of failure</h2><div id="spof"></div></section></section>
+ </div>
+</div>
+
+<div class="panel" data-panel="groups" hidden>
+ <section class="card"><h2><i class="ti ti-circles-relation"></i>Service groups <span class="c">CIs that work together, found by label propagation on confirmed relationships</span></h2><div id="groups"></div></section>
+</div>
+
+<div class="panel" data-panel="quality" hidden>
+ <section class="card"><h2><i class="ti ti-grid-dots"></i>Coverage <span class="c">share of CIs with a relationship, an owner, a criticality, a serial number</span></h2><div class="cols"><div id="cov-type"></div><div id="cov-site"></div></div></section>
+ <div class="grid4">
+  <section class="card" id="c-qual"><h2><i class="ti ti-checklist"></i>Data quality <span class="c">lowest first</span></h2><div id="qual"></div></section>
+  <section class="card" id="c-dup"><h2><i class="ti ti-copy"></i>Possible duplicates <span class="c">serial, MAC, IP, similar names</span></h2><div id="dups"></div></section>
+  <section class="card" id="c-orph"><h2><i class="ti ti-unlink"></i>Orphans and anomalies</h2><div id="anom"></div><div id="orph"></div></section>
+ </div>
+</div>
+
+<div class="panel" data-panel="ai" hidden>
+ <section class="card"><h2><i class="ti ti-sparkles"></i>AI CMDB analyst <span class="c" id="ais"></span></h2>
+  <div class="ask"><textarea class="inp" id="q" maxlength="4000" placeholder="e.g. What fails if ESX host 3 goes down? Which servers have no owner? What is APP-01 missing?" aria-label="Question"></textarea><button type="button" class="btn ai" id="go"><i class="ti ti-send"></i>Ask</button></div>
+  <div class="sm mute" style="margin-top:6px">The analyst reads the CMDB with read-only tools. It may record a relationship as a proposal - it never confirms, edits, merges or deletes. CI names come from devices and people and are treated as data.</div>
+  <div id="out"></div></section>
+</div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', USER='', V=null, IN=null, FOCUS='', CI=null, HIST=[], TAB='props', PANEL='overview', SEL={};
+  var TCOL={server:'#5b8def',vm:'#3bc9db',network:'#f59f00',storage:'#a371f7',workstation:'#94d82d',laptop:'#94d82d',printer:'#f783ac',ups:'#ffd43b',software:'#63e6be',licence:'#63e6be',phone:'#ff922b',mobile:'#ff922b'};
+  var TAB3={server:'SRV',vm:'VM',network:'NET',storage:'STO',workstation:'PC',laptop:'LT',printer:'PRN',ups:'UPS',software:'SW',licence:'LIC',phone:'PH',mobile:'MOB',peripheral:'PER'};
+  var RCOL={runs_on:'#5b8def',depends_on:'#e5484d',connected_to:'#8b93a4',member_of:'#63e6be',installed_on:'#3bc9db'};
+  var KIND={learned:['learned from peers','ai'],neighbours:['LLDP / CDP','acc'],gateway:['likely gateway','mute']};
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function tc(t){return TCOL[t]||'#8b93a4';}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=240000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function pill(t,k){return '<span class="pill p-'+esc(k)+'">'+esc(t)+'</span>';}
+  function ciBtn(id,name){return '<button type="button" class="lnk" data-ci="'+esc(id)+'">'+esc(name||id)+'</button>';}
+  function relWord(t){return String(t||'').replace(/_/g,' ');}
+  function ringSvg(pct,size,stroke,col){var r=(size-stroke)/2,c=2*Math.PI*r,off=c*(1-(pct||0)/100);
+    return '<svg width="'+size+'" height="'+size+'"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="#232837" stroke-width="'+stroke+'"/><circle class="fg" cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';}
+  function colFor(p){return p==null?'#8b93a4':p>=80?'#2fb344':p>=55?'#f59f00':'#e5484d';}
+  function conf(c){return c==null?'':'<span class="conf" title="'+Math.round(c*100)+'% confidence"><i style="width:'+Math.round(c*100)+'%"></i></span> <span class="sm mute">'+Math.round(c*100)+'%</span>';}
+  function empty(t){return '<div class="empty">'+esc(t)+'</div>';}
+  function bars(list,val,max,col,label){return list.map(function(x){var v=val(x);return '<div class="li">'+label(x)+'<span class="bar"><i style="width:'+Math.max(4,Math.round(100*v/(max||1)))+'%;background:'+col(x)+'"></i></span><span class="sm mute">'+esc(v)+'</span></div>';}).join('');}
+  function calOf(key){return IN?(IN.proposals.find(function(p){return p.key===key;})||{}).calibrated:null;}
+
+  // ---------- tabs
+  function drawTabs(){var s=V.summary,np=V.proposals.length+V.pending.length,mm=IN?IN.mismatches.length:0,gu=IN?IN.groups.filter(function(g){return g.unmapped;}).length:0;
+    var T=[['overview','gauge','Overview',''],['explorer','affiliate','Explorer',''],['decisions','bulb','Decisions',np],['importance','crown','Importance',mm],['groups','circles-relation','Service groups',gu],['quality','checklist','Quality & coverage',s.duplicates+s.orphans],['ai','sparkles','AI analyst','']];
+    $('tabbar').innerHTML=T.map(function(t){return '<button type="button" role="tab" data-panel-go="'+t[0]+'" aria-selected="'+(PANEL===t[0])+'"><i class="ti ti-'+t[1]+'"></i>'+esc(t[2])+(t[3]?' <span class="n">'+esc(t[3])+'</span>':'')+'</button>';}).join('');
+    document.querySelectorAll('.panel').forEach(function(p){p.hidden=p.getAttribute('data-panel')!==PANEL;});}
+  function go(p){PANEL=p;drawTabs();if(p==='explorer')drawGraph();window.scrollTo({top:0,behavior:'smooth'});}
+
+  // ---------- overview
+  function drawTop(){var s=V.summary;
+    $('ring').innerHTML=ringSvg(s.quality_pct||0,190,15,colFor(s.quality_pct))+'<div class="v"><b>'+(s.quality_pct==null?'—':esc(s.quality_pct)+'%')+'</b><span>data quality of the active CIs</span></div>';
+    function k(n,l,c,g){return '<button type="button" class="kpi" data-go="'+esc(g)+'"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></button>';}
+    var cov=IN&&IN.coverage.overall?IN.coverage.overall.linked+'%':'—';
+    $('kpis').innerHTML=k(s.cis,'configuration items','','explorer')+k(cov,'have a relationship',IN&&IN.coverage.overall&&IN.coverage.overall.linked<70?'#f5b544':'#56d364','quality')+k(s.proposals,'ML proposals','#c6a6ff','decisions:props')+k(V.pending.length,'waiting for a person',V.pending.length?'#f5b544':'','decisions:pending')
+      +k(IN?IN.mismatches.length:'—','criticality mismatches',IN&&IN.mismatches.length?'#ff7b80':'','importance')+k(s.spof,'single points of failure',s.spof?'#ff7b80':'','importance')+k(s.duplicates,'possible duplicates',s.duplicates?'#f5b544':'','quality')+k(IN?IN.groups.length:'—','service groups','','groups');
+    $('types').innerHTML=Object.keys(s.by_type).map(function(t){return '<span class="tchip"><i style="background:'+tc(t)+'"></i>'+esc(t)+' '+esc(s.by_type[t])+'</span>';}).join('');
+    $('learned').textContent=V.learned.note;
+    $('cilist').innerHTML=V.cis.map(function(c){return '<option value="'+esc(c.name+(c.ip?' · '+c.ip:''))+'">';}).join('');
+    $('dc').textContent=V.proposals.length+' proposal(s) · '+V.pending.length+' waiting';
+    var A=[];function act(ic,col,t,d,g,n){if(n)A.push('<div class="act"><div class="ic" style="background:'+col+'22;color:'+col+'"><i class="ti ti-'+ic+'"></i></div><div style="flex:1"><b>'+esc(t)+'</b><div class="sm mute">'+esc(d)+'</div></div><button type="button" class="btn" data-go="'+esc(g)+'">Open</button></div>');}
+    if(IN){var hi=IN.proposals.filter(function(p){return p.calibrated>=0.7;}).length;
+      act('crown','#ff7b80',IN.mismatches.length+' important CI(s) rated too low','The estate stands on them but their criticality is low or unset - patch windows, monitoring and DR follow criticality.','importance',IN.mismatches.length);
+      act('bulb','#c6a6ff',hi+' high-confidence proposal(s) to confirm','Confidence 70%+ after learning from your past decisions - confirm in bulk after a check.','decisions:props',hi);
+      act('circles-relation','#f5b544',IN.groups.filter(function(g){return g.unmapped;}).length+' service group(s) with no business application','CIs that work together but no application on the Application Route Map uses them - name the service they run.','groups',IN.groups.filter(function(g){return g.unmapped;}).length);}
+    act('target-arrow','#ff7b80',s.spof+' single point(s) of failure','Three or more CIs fail with each of them - record the cluster or add redundancy.','importance',s.spof);
+    act('copy','#f5b544',s.duplicates+' possible duplicate(s)','Same serial, MAC, IP or a very similar name - merge in Asset Studio.','quality',s.duplicates);
+    act('unlink','#f5b544',s.orphans+' CI(s) with no relationship','Nothing in the CMDB says what they run on or connect to.','quality',s.orphans);
+    $('actions').innerHTML=A.length?A.join(''):empty('Nothing to do: no mismatch, proposal, single point of failure, duplicate or orphan.');
+    drawHealth();}
+  function drawHealth(){if(!IN){$('health').innerHTML=empty('Loading the history…');return;}
+    var H=IN.health,rows=H.history,q=H.quality;$('hc').textContent=rows.length+' daily snapshot(s) · quality target '+H.target+'%';
+    var W=520,Ht=120,pad=22,pts=rows.filter(function(r){return r.quality_pct!=null;});
+    var svg='';if(pts.length){var X=function(i){return pad+(W-2*pad)*(pts.length>1?i/(pts.length-1):.5);},Y=function(v){return Ht-14-(Ht-28)*v/100;};
+      svg='<svg class="spark" viewBox="0 0 '+W+' '+Ht+'" role="img" aria-label="CMDB quality and coverage over time"><line x1="'+pad+'" x2="'+(W-pad)+'" y1="'+Y(H.target)+'" y2="'+Y(H.target)+'" stroke="#2fb344" stroke-dasharray="4 5" opacity=".6"/><text x="'+(W-pad)+'" y="'+(Y(H.target)-4)+'" text-anchor="end" font-size="10" fill="#56d364">target '+H.target+'%</text>'
+        +['quality_pct','coverage_pct'].map(function(k,ki){var p=pts.map(function(r,i){return X(i).toFixed(1)+','+Y(r[k]||0).toFixed(1);}).join(' ');return '<polyline points="'+p+'" fill="none" stroke="'+(ki?'#3bc9db':'#a371f7')+'" stroke-width="2.4"/>'+pts.map(function(r,i){return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(r[k]||0).toFixed(1)+'" r="3" fill="'+(ki?'#3bc9db':'#a371f7')+'"><title>'+esc(r.day+': '+(ki?'coverage ':'quality ')+r[k]+'%')+'</title></circle>';}).join('');}).join('')+'</svg>';}
+    var tr=q.enough?pill((q.per_week>=0?'+':'')+q.per_week+' pts / week',q.per_week>=0?'ok':'bad')+' '+pill('projected '+q.projected_30d+'% in 30 days','acc')+' '+(q.days_to_target===0?pill('target reached','ok'):q.days_to_target?pill('target in ~'+q.days_to_target+' days','acc'):pill('not improving towards the target','warn')):'<span class="sm mute">'+esc(q.note)+'</span>';
+    var td=H.today||{};var today='<div class="row" style="margin:8px 0">'+pill('today: quality '+(td.quality_pct==null?'—':td.quality_pct+'%'),'acc')+' '+pill('related '+(td.coverage_pct==null?'—':td.coverage_pct+'%'),'acc')+' '+pill(td.orphans+' orphan(s)','mute')+' '+pill(td.proposals+' proposal(s)','mute')+'</div>';
+    $('health').innerHTML=today+(svg||empty('No snapshot yet - one is taken every day automatically'+(can('operator')?' (or press Health snapshot)':'')+'.'))+'<div class="legend"><span style="color:#c6a6ff">■ data quality</span><span style="color:#8cdcea">■ CIs with a relationship</span></div><div style="margin-top:8px">'+tr+'</div>';}
+
+  // ---------- decisions
+  function drawQueues(){
+    var hi=IN?IN.proposals.filter(function(p){return p.calibrated>=0.7;}):[];
+    var bulk=can('operator')&&V.proposals.length?'<div class="bulk"><b class="sm">Bulk</b><button type="button" class="btn sm" id="selhi">Select '+hi.length+' with 70%+ calibrated confidence</button><button type="button" class="btn sm" id="selnone">Clear</button><input class="inp" id="bulknote" placeholder="what you checked (e.g. verified in vCenter)" aria-label="Bulk note" style="flex:1;min-width:200px"><button type="button" class="btn ok" id="bulkgo"><i class="ti ti-checks"></i>Confirm selected (<span id="nsel">0</span>)</button></div>':'';
+    var list=V.proposals.slice().sort(function(a,b){return (calOf(b.key)||b.confidence)-(calOf(a.key)||a.confidence);});
+    $('props').innerHTML=bulk+(list.length?list.slice(0,80).map(function(p){var k=KIND[p.kind]||[p.kind,'mute'],c=calOf(p.key);
+      return '<div class="q" data-pkey="'+esc(p.key)+'"><div class="hd">'+(can('operator')?'<input type="checkbox" data-sel="'+esc(p.key)+'"'+(SEL[p.key]?' checked':'')+' aria-label="Select">':'')+pill(k[0],k[1])+ciBtn(p.from,p.from_name)+' <span class="mute">'+esc(relWord(p.type))+'</span> '+ciBtn(p.to,p.to_name)+'<span class="sp"></span>'+conf(c!=null?c:p.confidence)+(c!=null&&c!==p.confidence?' <span class="sm mute" title="rules said '+Math.round(p.confidence*100)+'%">calibrated</span>':'')+'</div><div class="why">'+esc(p.why)+'</div>'
+        +(can('operator')?'<div class="row"><button type="button" class="btn ok" data-accept="'+esc(p.key)+'"><i class="ti ti-check"></i>Confirm</button><input class="inp" data-reason placeholder="why not (for Not right)" aria-label="Reason" style="flex:1;min-width:140px"><button type="button" class="btn ghost" data-dismiss="'+esc(p.key)+'">Not right</button></div>':'')+'</div>';}).join('')
+      :empty('No proposals. The ML proposes links once the register has confirmed relationships to learn from, or Asset Discovery reports LLDP / CDP neighbours.'));
+    $('pending').innerHTML=V.pending.length?V.pending.map(function(p){
+      return '<div class="q pend" data-rel="'+esc(p.id)+'"><div class="hd">'+pill(p.source==='ai'?'AI analyst':p.source,p.source==='ai'?'ai':'warn')+ciBtn(p.from,p.from_name)+' <span class="mute">'+esc(relWord(p.type))+'</span> '+ciBtn(p.to,p.to_name)+'<span class="sp"></span>'+conf(p.confidence)+'</div>'
+        +(p.rationale?'<div class="why">'+esc(p.rationale)+'</div>':'')+(p.by?'<div class="sm mute">proposed by '+esc(p.by)+' - a different person decides</div>':'')
+        +(can('operator')?'<div class="row" style="margin-top:6px"><button type="button" class="btn ok" data-decide="confirm" data-id="'+esc(p.id)+'"><i class="ti ti-check"></i>Confirm</button><input class="inp" data-note placeholder="why it is wrong (to reject)" aria-label="Note" style="flex:1;min-width:140px"><button type="button" class="btn ghost" data-decide="reject" data-id="'+esc(p.id)+'">Reject</button></div>':'')+'</div>';}).join('')
+      :empty('Nothing waiting. Relationships proposed by sensors or the AI analyst appear here for a person to confirm or reject.');
+    $('calib').innerHTML=IN?'<table class="t"><thead><tr><th>Proposal kind</th><th>Confirmed</th><th>Rejected</th><th>Acceptance (smoothed)</th></tr></thead><tbody>'+IN.calibration.map(function(c){return '<tr><td><b>'+esc(c.label)+'</b></td><td>'+c.confirmed+'</td><td>'+c.rejected+'</td><td style="min-width:160px"><span class="bar" style="display:inline-block;width:120px;vertical-align:middle"><i style="width:'+Math.round(c.rate*100)+'%;background:'+colFor(c.rate*100)+'"></i></span> '+Math.round(c.rate*100)+'%'+(c.decisions?'':' <span class="sm mute">(no decision yet)</span>')+'</td></tr>';}).join('')+'</tbody></table><div class="sm mute" style="margin-top:8px">Every confirm and every "Not right" teaches the ML. A proposal\'s calibrated confidence blends what the rules say with how often you accepted that kind before; the more decisions, the more weight your history gets (up to 70%).</div>':empty('Loading…');
+    updSel();}
+  function updSel(){var n=Object.keys(SEL).filter(function(k){return SEL[k];}).length,e=$('nsel');if(e)e.textContent=n;}
+
+  // ---------- importance / groups / quality
+  function drawImportance(){if(!IN)return;
+    var top=IN.importance.slice(0,25),mx=top.length?top[0].score:1;
+    $('imp').innerHTML=top.some(function(r){return r.dependents>0;})?'<table class="t"><thead><tr><th>CI</th><th>Importance</th><th>Stand on it</th><th>Criticality</th></tr></thead><tbody>'+top.filter(function(r){return r.dependents>0||r.score>=60;}).map(function(r){return '<tr><td>'+ciBtn(r.id,r.name)+'<div class="sm mute">'+esc(r.type+(r.site?' · '+r.site:''))+'</div></td><td style="min-width:140px"><span class="bar" style="display:inline-block;width:100px;vertical-align:middle"><i style="width:'+Math.max(4,r.score)+'%;background:linear-gradient(90deg,#a371f7,#5b8def)"></i></span> '+r.score+'</td><td>'+r.dependents+'</td><td>'+(r.criticality?pill(r.criticality,r.criticality==='critical'||r.criticality==='high'?'bad':'mute'):pill('unrated','warn'))+'</td></tr>';}).join('')+'</tbody></table>':empty('No CI has others standing on it yet - confirm runs on / depends on relationships and the ranking appears.');
+    $('mism').innerHTML=IN.mismatches.length?IN.mismatches.map(function(r){return '<div class="li"><i class="ti ti-alert-triangle" style="color:#ff7b80"></i><span style="flex:1">'+ciBtn(r.id,r.name)+'<div class="sm mute">'+esc(r.mismatch)+'</div></span><a class="btn sm" href="asset-studio.html#'+encodeURIComponent(r.id)+'">Rate it</a></div>';}).join(''):empty('No mismatch: the most important CIs are rated high or critical.');
+    var sp=V.spof.slice(0,10),m2=sp.length?sp[0].impacted:1;
+    $('spof').innerHTML=sp.length?bars(sp,function(x){return x.impacted;},m2,function(x){return x.impacted>=3?'#e5484d':'#f59f00';},function(x){return '<span style="min-width:150px">'+ciBtn(x.id,x.name)+' <span class="sm mute">'+esc(x.type)+'</span></span>';}):empty('No CI has others running on or depending on it yet.');}
+  function drawGroups(){if(!IN)return;
+    $('groups').innerHTML=IN.groups.length?'<div class="grid4">'+IN.groups.map(function(g){return '<div class="grp"><div class="row"><b>'+esc(g.name)+'</b><span class="sp"></span>'+pill(g.size+' CIs','acc')+(g.unmapped?' '+pill('no business application','warn'):'')+'</div>'
+      +'<div class="sm mute" style="margin-top:4px">'+esc(Object.keys(g.types).map(function(t){return g.types[t]+' '+t;}).join(' · '))+(g.apps.length?' · used by '+g.apps.join(', '):'')+'</div>'
+      +'<div class="mem">'+g.members.map(function(m){return '<button type="button" data-ci="'+esc(m.id)+'" style="border-color:'+tc(m.type)+'66">'+esc(m.name)+'</button>';}).join('')+'</div>'
+      +(g.unmapped?'<div class="sm" style="margin-top:6px"><a class="lnk" href="app-route-map.html">Register the service these CIs run on the Application Route Map →</a></div>':'')+'</div>';}).join('')+'</div>':empty('No group yet: groups form from confirmed relationships between two or more CIs.');}
+  function heat(rows,label){if(!rows.length)return empty('No CI.');var F=IN.coverage.fields,LB={linked:'related',owner:'owner',criticality:'criticality',serial:'serial'};
+    function col(v){return v>=80?'rgba(47,179,68,.35)':v>=50?'rgba(245,159,0,.32)':'rgba(229,72,77,.32)';}
+    return '<table class="heat"><thead><tr><th class="sm mute" style="text-align:left">'+esc(label)+'</th><th class="sm mute">CIs</th>'+F.map(function(f){return '<th class="sm mute">'+esc(LB[f])+'</th>';}).join('')+'</tr></thead><tbody>'+rows.slice(0,14).map(function(r){return '<tr><td>'+esc(r.key)+'</td><td>'+r.cis+'</td>'+F.map(function(f){return '<td style="background:'+col(r[f])+'" title="'+esc(r[f]+'% of '+r.key+' '+LB[f])+'">'+r[f]+'%</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';}
+  function drawLists(){
+    $('dups').innerHTML=V.duplicates.length?V.duplicates.slice(0,12).map(function(d){return '<div class="li">'+ciBtn(d.a.id,d.a.name)+'<span class="mute">↔</span>'+ciBtn(d.b.id,d.b.name)+'<span class="sp"></span>'+conf(d.confidence)+'</div><div class="sm mute" style="margin:-2px 0 4px">'+esc(d.why)+'</div>';}).join(''):empty('No duplicate candidates.');
+    $('qual').innerHTML=V.quality.length?bars(V.quality.slice(0,12),function(x){return x.score;},100,function(x){return colFor(x.score);},function(x){return '<span style="min-width:150px" title="missing: '+esc(x.missing.join(', '))+'">'+ciBtn(x.id,x.name)+'<div class="sm mute">'+esc(x.missing.length?'missing '+x.missing.join(', '):'complete')+'</div></span>';}):empty('No active CIs in the register yet - add assets or run Asset Discovery.');
+    $('anom').innerHTML=V.anomalies.map(function(a){return '<div class="li" style="color:#ff9ea1"><i class="ti ti-alert-triangle"></i>'+esc(a.text)+'</div>';}).join('');
+    $('orph').innerHTML=V.orphans.length?'<div class="sm mute" style="margin:6px 0">No relationship at all ('+esc(V.orphans.length)+'):</div>'+V.orphans.slice(0,20).map(function(o){return '<div class="li">'+ciBtn(o.id,o.name)+'<span class="sm mute">'+esc(o.type)+'</span></div>';}).join(''):(V.anomalies.length?'':empty('No orphans or anomalies.'));
+    if(IN){$('cov-type').innerHTML=heat(IN.coverage.by_type,'by type');$('cov-site').innerHTML=heat(IN.coverage.by_site,'by site');}}
+
+  // ---------- the radial graph (explorer)
+  function nodeCol(n){var by=$('colorby').value;
+    if(by==='quality'&&V){var q=V.quality.find(function(x){return x.id===n.id;});return q?colFor(q.score):'#2fb344';}
+    if(by==='importance'&&IN){var r=IN.importance.find(function(x){return x.id===n.id;});var s=r?r.score:0;return s>=60?'#e5484d':s>=25?'#f59f00':s>0?'#a371f7':'#5b6478';}
+    return tc(n.type);}
+  function drawGraph(){
+    var svg=$('graph');if(!CI){svg.innerHTML='<text x="500" y="340" text-anchor="middle" fill="#8b93a4" font-size="15">'+esc(V&&V.cis.length?'Choose a CI to see its relationships':'The register has no CIs yet')+'</text>';$('side').innerHTML='';return;}
+    var W=1000,H=680,cx=W/2,cy=H/2,R1=190,R2=300,g=CI.graph,pos={},nodes={},hit={};
+    g.nodes.forEach(function(n){nodes[n.id]=n;});
+    if($('blast').checked)(CI.impact.layers||[]).forEach(function(l){l.forEach(function(x){hit[x.id]=1;});});
+    var ml=$('showml').checked?(CI.proposals||[]):[];
+    ml.forEach(function(p){[p.from,p.to].forEach(function(id){if(!nodes[id]){var c=(V.cis.find(function(x){return x.id===id;}))||{id:id,name:id===p.from?p.from_name:p.to_name,type:'other'};nodes[id]=Object.assign({hop:1,ml:1},c);}});});
+    var h1=Object.keys(nodes).filter(function(id){return nodes[id].hop===1;}),h2=Object.keys(nodes).filter(function(id){return nodes[id].hop===2;});
+    pos[CI.ci.id]=[cx,cy];
+    h1.forEach(function(id,i){var a=-Math.PI/2+2*Math.PI*i/Math.max(1,h1.length);pos[id]=[cx+R1*Math.cos(a),cy+R1*Math.sin(a),a];});
+    var kids={};h2.forEach(function(id){var e=g.edges.find(function(x){return (x.from===id&&pos[x.to]&&nodes[x.to].hop===1)||(x.to===id&&pos[x.from]&&nodes[x.from].hop===1);});var par=e?(e.from===id?e.to:e.from):h1[0];(kids[par]=kids[par]||[]).push(id);});
+    var slice=2*Math.PI/Math.max(1,h1.length);
+    Object.keys(kids).forEach(function(par){var base=(pos[par]||[0,0,0])[2]||0,ks=kids[par];ks.forEach(function(id,i){var a=base+(ks.length>1?(i/(ks.length-1)-.5)*slice*.8:0);pos[id]=[cx+R2*Math.cos(a),cy+R2*Math.sin(a),a];});});
+    var out='<g class="layer"><circle class="orbit" cx="'+cx+'" cy="'+cy+'" r="'+R1+'"/>'+(h2.length?'<circle class="orbit" cx="'+cx+'" cy="'+cy+'" r="'+R2+'"/>':'');
+    function line(a,b,cls,col,title){var p=pos[a],q=pos[b];if(!p||!q)return '';var mx=(p[0]+q[0])/2+(q[1]-p[1])*.08,my=(p[1]+q[1])/2-(q[0]-p[0])*.08;
+      return '<path class="ed '+cls+'" d="M'+p[0].toFixed(1)+' '+p[1].toFixed(1)+' Q'+mx.toFixed(1)+' '+my.toFixed(1)+' '+q[0].toFixed(1)+' '+q[1].toFixed(1)+'" stroke="'+col+'" marker-end="url(#ar)"><title>'+esc(title)+'</title></path>';}
+    out+='<defs><marker id="ar" viewBox="0 0 10 10" refX="24" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#8b93a4"/></marker></defs>';
+    g.edges.forEach(function(e){out+=line(e.from,e.to,e.status==='proposed'?'prop':'',e.status==='proposed'?'#f59f00':(RCOL[e.type]||'#8b93a4'),(nodes[e.from]||{}).name+' '+relWord(e.type)+' '+(nodes[e.to]||{}).name+' · '+e.status+' · '+e.source);});
+    ml.forEach(function(p){out+=line(p.from,p.to,'ml','#a371f7','ML proposal: '+p.why);});
+    Object.keys(pos).forEach(function(id){var n=id===CI.ci.id?CI.ci:nodes[id];if(!n)return;var p=pos[id],big=id===CI.ci.id,r=big?32:22,lab=String(n.name||id);if(lab.length>24)lab=lab.slice(0,23)+'…';
+      out+='<g class="nd'+(hit[id]?' hit':'')+'" data-node="'+esc(id)+'" transform="translate('+p[0].toFixed(1)+' '+p[1].toFixed(1)+')" tabindex="0" role="button" aria-label="'+esc(n.name+' ('+n.type+')')+'">'+(hit[id]?'<circle class="halo" r="28"/>':'')
+        +'<circle class="b" r="'+r+'" fill="'+nodeCol(n)+'" fill-opacity="'+(n.ml?.35:.92)+'" stroke="'+(big?'#fff':'#0b0d12')+'" stroke-width="'+(big?3:2)+'"/><text class="t" text-anchor="middle" dy="4">'+esc(TAB3[n.type]||'CI')+'</text>'
+        +'<text text-anchor="middle" dy="'+(r+15)+'">'+esc(lab)+'</text><title>'+esc(n.name+' · '+n.type+(n.ip?' · '+n.ip:''))+'</title></g>';});
+    svg.innerHTML=out+'</g>';
+    $('tlegend').innerHTML=Object.keys(RCOL).map(function(t){return '<span style="color:'+RCOL[t]+'">■ '+esc(relWord(t))+'</span>';}).join(' ');
+    var c=CI.ci,qq=CI.quality,L=CI.impact.layers||[],n=L.reduce(function(a,l){return a+l.length;},0),imp=IN?IN.importance.find(function(x){return x.id===c.id;}):null,grp=IN?IN.groups.find(function(g){return g.members.some(function(m){return m.id===c.id;});}):null;
+    $('side').innerHTML='<h3>'+esc(c.name)+'</h3>'+pill(c.type,'acc')+' '+pill(c.status||'','mute')
+      +'<div class="kv"><span>IP</span><span>'+esc(c.ip||'—')+'</span><span>Site</span><span>'+esc(c.site||'—')+'</span><span>Links</span><span>'+esc(g.edges.filter(function(e){return e.from===c.id||e.to===c.id;}).length)+'</span><span>Quality</span><span>'+(qq?esc(qq.score+'%'):'—')+'</span><span>Importance</span><span>'+(imp?esc(imp.score+' / 100 · '+imp.dependents+' stand on it'):'—')+'</span><span>Group</span><span>'+(grp?esc(grp.name):'—')+'</span></div>'
+      +(imp&&imp.mismatch?'<div class="sm" style="color:#ff9ea1;margin-bottom:6px"><i class="ti ti-alert-triangle"></i> '+esc(imp.mismatch)+'</div>':'')
+      +(qq&&qq.missing.length?'<div class="sm mute">Missing: '+esc(qq.missing.join(', '))+'</div>':'')
+      +'<div style="margin-top:10px;font-weight:700">If it fails: '+esc(n)+' CI(s) affected</div>'
+      +(L.length?L.map(function(l,i){return '<div class="layer-row"><b>'+(i?'then':'direct')+'</b><span>'+l.map(function(x){return ciBtn(x.id,x.name);}).join(', ')+'</span></div>';}).join(''):'<div class="sm mute">Nothing runs on or depends on it (confirmed or proposed).</div>')
+      +((CI.proposals||[]).length?'<div class="sm" style="margin-top:8px;color:#c6a6ff">'+esc(CI.proposals.length)+' ML proposal(s) involve this CI</div>':'')
+      +'<div class="row" style="margin-top:10px"><a class="btn sm" href="digital-twin.html">Simulate in Digital Twin</a></div>';
+    $('back').disabled=!HIST.length;}
+  function focus(id,push){if(!id)return;if(push&&FOCUS&&FOCUS!==id)HIST.push(FOCUS);FOCUS=id;
+    req('GET','/cmdb/studio/ci/'+encodeURIComponent(id)).then(function(r){CI=r;drawGraph();},function(e){toast(e.message);});}
+  function pickStart(){if(FOCUS&&V.cis.some(function(c){return c.id===FOCUS;}))return FOCUS;return (IN&&IN.importance[0]&&IN.importance[0].dependents&&IN.importance[0].id)||(V.spof[0]&&V.spof[0].id)||(V.proposals[0]&&V.proposals[0].from)||(V.cis[0]&&V.cis[0].id)||'';}
+  function drawAll(){drawTabs();drawTop();drawQueues();drawLists();drawImportance();drawGroups();}
+  function load(){
+    return Promise.all([req('GET','/cmdb/studio'),req('GET','/cmdb/studio/insights').catch(function(e){return {__err:e};})]).then(function(R){
+      V=R[0];IN=R[1]&&R[1].__err?null:R[1];$('main').hidden=false;$('err').innerHTML='';
+      if(!IN)toast('Insights could not be read: '+R[1].__err.message);
+      drawAll();$('ais').textContent=V.ai.enabled?'Claude '+V.ai.model:V.ai.reason;$('go').disabled=!(V.ai.enabled&&can('operator'));$('snapbtn').hidden=!can('operator');
+      $('up').textContent='updated '+new Date(V.generated_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      var s=pickStart();if(s)focus(s,false);else{CI=null;drawGraph();}},
+      function(e){$('main').hidden=true;$('err').innerHTML='<div class="card"><p>'+esc(e.status===404?'CMDB Studio is not installed yet - run the platform update (update-platform.ps1).':e.status===403?'You are not allowed to view the CMDB.':e.message)+'</p></div>';});}
+  function xls(){if(!V)return;var s=V.summary,sh=[{name:'Summary',columns:[{h:'Measure',w:36},{h:'Value',w:14}],rows:[['Configuration items',s.cis],['Data quality %',s.quality_pct],['Confirmed relationships',s.confirmed],['ML proposals',s.proposals],['Waiting for a person',V.pending.length],['Single points of failure',s.spof],['Possible duplicates',s.duplicates],['Orphans',s.orphans]]},
+      {name:'Data quality',columns:[{h:'CI',w:30},{h:'Type',w:12},{h:'Score',w:8},{h:'Missing',w:60}],rows:V.quality.map(function(q){return [q.name,q.type,q.score,q.missing.join(', ')];})},
+      {name:'Proposals',columns:[{h:'From',w:28},{h:'Relationship',w:14},{h:'To',w:28},{h:'Kind',w:16},{h:'Confidence',w:12},{h:'Calibrated',w:12},{h:'Why',w:60}],rows:V.proposals.map(function(p){return [p.from_name,relWord(p.type),p.to_name,p.kind,p.confidence,calOf(p.key),p.why];})},
+      {name:'Duplicates',columns:[{h:'CI',w:28},{h:'CI',w:28},{h:'Confidence',w:12},{h:'Why',w:50}],rows:V.duplicates.map(function(d){return [d.a.name,d.b.name,d.confidence,d.why];})}];
+    if(IN){sh.push({name:'Importance',columns:[{h:'CI',w:30},{h:'Type',w:12},{h:'Importance',w:12},{h:'Stand on it',w:12},{h:'Criticality',w:12},{h:'Mismatch',w:50}],rows:IN.importance.map(function(r){return [r.name,r.type,r.score,r.dependents,r.criticality||'',r.mismatch||''];})});
+      sh.push({name:'Service groups',columns:[{h:'Group',w:30},{h:'CIs',w:8},{h:'Applications',w:30},{h:'Members',w:80}],rows:IN.groups.map(function(g){return [g.name,g.size,g.apps.join(', ')||'(none)',g.members.map(function(m){return m.name;}).join(', ')];})});
+      sh.push({name:'Coverage by type',columns:[{h:'Type',w:20},{h:'CIs',w:8},{h:'Related %',w:10},{h:'Owner %',w:10},{h:'Criticality %',w:12},{h:'Serial %',w:10}],rows:IN.coverage.by_type.map(function(r){return [r.key,r.cis,r.linked,r.owner,r.criticality,r.serial];})});}
+    window.zybXlsx.download('cmdb-studio-'+String(V.generated_at).slice(0,10)+'.xlsx',sh,{title:('CMDB Studio - ' + ZYB_ORG.short),filter:'all active configuration items; generated '+V.generated_at,by:USER||ROLE});}
+  document.addEventListener('change',function(ev){var c=ev.target.closest('[data-sel]');if(c){SEL[c.getAttribute('data-sel')]=c.checked;updSel();}});
+  document.addEventListener('click',function(ev){
+    var t=ev.target.closest('[data-ci],[data-node],[data-accept],[data-dismiss],[data-decide],[data-tab],[data-go],[data-panel-go]');
+    var bid=ev.target.closest('button')&&ev.target.closest('button').id;
+    if(bid==='selhi'){(IN?IN.proposals:[]).forEach(function(p){if(p.calibrated>=0.7)SEL[p.key]=true;});drawQueues();return;}
+    if(bid==='selnone'){SEL={};drawQueues();return;}
+    if(bid==='bulkgo'){var keys=Object.keys(SEL).filter(function(k){return SEL[k];}),note=$('bulknote').value.trim();if(!keys.length){toast('Select proposals first');return;}if(note.length<5){$('bulknote').focus();toast('Say what you checked (5 characters or more) - it goes in the audit trail');return;}
+      ev.target.closest('button').disabled=true;req('POST','/cmdb/studio/accept-bulk',{keys:keys,note:note}).then(function(r){SEL={};toast(r.confirmed.length+' relationship(s) confirmed'+(r.skipped.length?', '+r.skipped.length+' no longer current':''));load();},function(e){toast(e.message);drawQueues();});return;}
+    if(bid==='snapbtn'){req('POST','/cmdb/studio/snapshot').then(function(){toast('Health snapshot recorded');load();},function(e){toast(e.message);});return;}
+    if(bid==='xls'){xls();return;}
+    if(!t)return;
+    if(t.hasAttribute('data-panel-go')){go(t.getAttribute('data-panel-go'));return;}
+    if(t.hasAttribute('data-ci')||t.hasAttribute('data-node')){focus(t.getAttribute('data-ci')||t.getAttribute('data-node'),true);if(t.hasAttribute('data-ci'))go('explorer');return;}
+    if(t.hasAttribute('data-tab')){TAB=t.getAttribute('data-tab');document.querySelectorAll('[data-tab]').forEach(function(b){b.classList.toggle('on',b===t);});['props','pending','calib'].forEach(function(x){$(x).hidden=TAB!==x;});return;}
+    if(t.hasAttribute('data-go')){var g=t.getAttribute('data-go').split(':');go(g[0]);if(g[1]){var b=document.querySelector('[data-tab="'+g[1]+'"]');if(b)b.click();}return;}
+    if(t.hasAttribute('data-accept')){t.disabled=true;req('POST','/cmdb/studio/accept',{key:t.getAttribute('data-accept')}).then(function(){toast('Relationship confirmed and recorded in the CMDB');load();},function(e){t.disabled=false;toast(e.message);});return;}
+    if(t.hasAttribute('data-dismiss')){var box=t.closest('.q'),why=box.querySelector('[data-reason]').value.trim();if(why.length<3){box.querySelector('[data-reason]').focus();toast('Say why it is not right (3 characters or more) - it is kept so the ML does not propose it again');return;}
+      req('POST','/cmdb/studio/dismiss',{key:t.getAttribute('data-dismiss'),reason:why}).then(function(){toast('Dismissed - it will not be proposed again');load();},function(e){toast(e.message);});return;}
+    if(t.hasAttribute('data-decide')){var d=t.getAttribute('data-decide'),bx=t.closest('.q'),note2=bx.querySelector('[data-note]').value.trim();if(d==='reject'&&!note2){bx.querySelector('[data-note]').focus();toast('Say why it is wrong to reject it');return;}
+      t.disabled=true;req('POST','/cmdb/studio/relationships/'+encodeURIComponent(t.getAttribute('data-id'))+'/decide',note2?{decision:d,note:note2}:{decision:d}).then(function(){toast(d==='confirm'?'Confirmed':'Rejected - it will not be proposed again');load();},function(e){t.disabled=false;toast(e.message);});}
+  });
+  document.addEventListener('keydown',function(ev){var n=ev.target.closest&&ev.target.closest('[data-node]');if(n&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();focus(n.getAttribute('data-node'),true);}});
+  $('find').addEventListener('change',function(){var v=this.value.trim().toLowerCase();if(!V||!v)return;var c=V.cis.find(function(x){return (x.name+(x.ip?' · '+x.ip:'')).toLowerCase()===v;})||V.cis.find(function(x){return String(x.name||'').toLowerCase().indexOf(v)>=0||x.ip===v;});
+    if(c){focus(c.id,true);this.value='';}else toast('No CI matches "'+this.value+'"');});
+  $('blast').addEventListener('change',drawGraph);$('showml').addEventListener('change',drawGraph);$('colorby').addEventListener('change',drawGraph);
+  $('back').addEventListener('click',function(){var p=HIST.pop();if(p)focus(p,false);});
+  $('refresh').addEventListener('click',load);
+  $('go').addEventListener('click',function(){var q=$('q').value.trim(),b=this;if(q.length<3){$('out').innerHTML='<div class="ans">Type a question first.</div>';return;}
+    b.disabled=true;$('out').innerHTML='<div class="ans mute">The analyst is reading the CMDB…</div>';
+    req('POST','/cmdb/studio/ai/ask',{question:q}).then(function(r){
+      $('out').innerHTML='<div class="ans">'+esc(r.answer)+'</div><div class="steps">'+esc(r.model)+' · '+r.steps.length+' step(s): '+esc(r.steps.map(function(s){return s.tool+(s.ok?'':' (refused)');}).join(', '))
+        +(r.proposed.length?' · '+r.proposed.length+' relationship(s) proposed - see Decisions → Waiting for a person':'')+(r.injection_signals.length?' · ⚠ text in the CMDB looked like instructions - treated as data':'')+'</div>';
+      if(r.proposed.length)load();
+    },function(e){$('out').innerHTML='<div class="ans">'+esc(e.message)+'</div>';}).then(function(){b.disabled=!(V&&V.ai&&V.ai.enabled&&can('operator'));});});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;USER=j.user||'';}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden&&!document.activeElement.matches('textarea,input,select'))load();},120000);
+})();
+</script></body></html>

@@ -1,0 +1,63 @@
+--- a/engine/discovery/methods/snmp.js	2026-10-12 11:35:26.370494084 +0000
++++ b/engine/discovery/methods/snmp.js	2026-10-12 11:35:26.377588759 +0000
+@@ -111,6 +111,34 @@
+   return out;
+ }
+ 
++async function entityRows(s, soft) {
++  const base = OID.entPhysicalEntry, rows = new Map();
++  for (const col of [5, 2, 11, 13]) {
++    const vbs = await soft(() => s.walk(`${base}.${col}`, { maxRows: 2000 }));
++    for (const vb of vbs || []) { const index = vb.oid.slice(base.length + 2 + String(col).length); if (!rows.has(index)) rows.set(index, { index, cols: {} }); rows.get(index).cols[col] = vb; }
++  }
++  return [...rows.values()];
++}
++// "Cisco Catalyst 9300 Series 48-port PoE Switch" / "C9300-48P chassis" → a model when the model-name column is empty
++function modelFromDescr(d) {
++  if (!d) return null;
++  const m = /\b((?:WS-|C)\d{4}[A-Z]{0,2}(?:-[A-Z0-9]+)+)\b/i.exec(d) || /\b(Catalyst\s+\d{4}[A-Z]?(?:\s+Series)?)/i.exec(d) || /\b(Nexus\s*\d{4}[A-Z0-9-]*)/i.exec(d);
++  return m && !/K9|-M$|UNIVERSAL|IPBASE|LANBASE/i.test(m[1]) ? m[1].trim() : null;   // not a software image name
++}
++// last resort for Cisco: the platform from the software image in sysDescr - "C2960X Software (C2960X-UNIVERSALK9-M)",
++// "Catalyst L3 Switch Software (CAT9K_IOSXE)" → "Catalyst 9000 series (CAT9K_IOSXE)". Marked as a family, not an exact model.
++function modelFromSysDescr(d) {
++  if (!d || !/cisco/i.test(d)) return null;
++  const direct = modelFromDescr(d); if (direct) return direct;
++  const img = /\(([A-Z0-9_]+?)(?:-[A-Z0-9]+)*-M\)|\((CAT\d+K[A-Z0-9_]*)\)|\b(C\d{4}[A-Z]{0,3})\s+Software/i.exec(d);
++  if (!img) return null;
++  const code = (img[1] || img[2] || img[3]).toUpperCase();
++  const fam = /^CAT(\d+)K/.exec(code);
++  if (fam) return `Catalyst ${fam[1]}000 series (${code})`;
++  const c = /^C(\d{4})([A-Z]{0,3})/.exec(code);
++  return c ? `Catalyst ${c[1]}${c[2] ? '-' + c[2] : ''} series (${code})` : `Cisco (${code})`;
++}
++
+ async function collect(host, cred, o = {}) {
+   const t0 = Date.now();
+   try {
+@@ -125,12 +153,15 @@
+       const phys = await soft(() => s.walk(OID.ifPhysAddress, { maxRows: 512 }));
+       for (const vb of phys || []) { const m = macOf(vb.value); if (m && !res.macs.includes(m)) res.macs.push(m); }
+       res.mac = res.macs[0] || null;
+-      const ent = await soft(() => s.table(OID.entPhysicalEntry, { maxRows: 4000 }));
+-      if (ent && ent.length) {
++      // ENTITY-MIB: only the columns needed (class .5, description .2, serial .11, model .13). Walking the whole entry
++      // ran out of rows on big switch stacks (hundreds of entities x 17 columns) before reaching serial / model.
++      const ent = await entityRows(s, soft);
++      if (ent.length) {
+         const withSerial = ent.filter((r) => str(r.cols[11]));
+-        const chassis = withSerial.find((r) => snmp.vbNumber(r.cols[5]) === 3) || withSerial[0];
+-        if (chassis) { res.serial = str(chassis.cols[11]); res.model = str(chassis.cols[13]) || null; }
++        const chassis = withSerial.find((r) => snmp.vbNumber(r.cols[5]) === 3) || withSerial[0] || ent.find((r) => snmp.vbNumber(r.cols[5]) === 3);
++        if (chassis) { res.serial = str(chassis.cols[11]) || null; res.model = str(chassis.cols[13]) || modelFromDescr(str(chassis.cols[2])) || null; }
+       }
++      if (!res.model) res.model = modelFromSysDescr(res.sys.descr);
+       const rem = await soft(() => s.table(OID.lldpRemEntry, { maxRows: 2000 }));
+       if (rem && rem.length) {
+         const loc = await soft(() => s.table(OID.lldpLocPortEntry, { maxRows: 2000 }));
+@@ -164,4 +195,4 @@
+   return out;
+ }
+ 
+-module.exports = { probe, collect, sessionOptions, parseLldp, parseCdp, parseArp, decodeManAddrIndex, errorClass, OID };
++module.exports = { modelFromSysDescr, modelFromDescr, probe, collect, sessionOptions, parseLldp, parseCdp, parseArp, decodeManAddrIndex, errorClass, OID };

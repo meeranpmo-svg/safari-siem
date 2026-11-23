@@ -1,0 +1,111 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Facilities &amp; Devices</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Facilities & Devices dashboard: the physical estate per site, only from what the platform actually monitors - the printer monitor
+     (/api/soc/printers), the availability scanner (/api/soc/netops/avail), the UPS-MIB reader (/api/soc/netops/ups), door access from
+     ZKBioSecurity (/api/soc/facilities/doors) and the site list (/api/itam/locations). CCTV / NVR comes from the recorders (/api/soc/facilities/cctv, cctv.html); its card
+     says "not connected" and shows no figure. Each source loads on its own;
+     a source that does not answer says so and never blanks the page. Read only. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;text-decoration:none}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px 14px;color:inherit;text-decoration:none;display:block}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:28px;font-weight:800;line-height:1.1}.t .s{font-size:11.5px;color:var(--d-mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.nc .v{color:var(--d-mute);font-size:18px}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:14px;margin-bottom:12px}.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:center}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.g2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px}@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);font-size:13px}th{color:var(--d-mute);font-weight:600;font-size:11.5px;text-transform:uppercase}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}.dot.ok{background:#2fb344}.dot.warn{background:#f59f00}.dot.bad{background:#e5484d}.dot.mute{background:#5b6273}
+.row{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+.empty{color:var(--d-mute);padding:12px;text-align:center}.err{color:var(--bad);font-size:13px}
+a.lk{color:var(--info);text-decoration:none}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Facilities &amp; Devices · from what the platform monitors</div><h1>Facilities &amp; Devices</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn" id="rf">⟳ Refresh</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div id="body"></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, D = {}, E = {};
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  function get(url) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open('GET', url); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || 'HTTP ' + x.status), { status: x.status })); }; x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(); }); }
+  function one(k, url) { return get(url).then(function (v) { D[k] = v; }, function (e) { D[k] = null; E[k] = e; }); }
+  function load() { E = {}; return Promise.all([one('pr', '/api/soc/printers'), one('av', '/api/soc/netops/avail'), one('loc', '/api/itam/locations'), one('ups', '/api/soc/netops/ups'), one('dr', '/api/soc/facilities/doors'), one('cc', '/api/soc/facilities/cctv')]).then(draw); }
+  function why(k, what) { var e = E[k]; return '<div class="empty">' + esc(!e ? 'not connected' : e.status === 404 ? what + ' is not on this platform yet - run the update' : e.status === 403 ? 'your role cannot read ' + what : what + ': ' + e.message) + '</div>'; }
+  var low = function (s) { return String(s || '').trim().toLowerCase(); };
+  function draw() {
+    $('up').textContent = 'read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    var P = D.pr && D.pr.items || [], PS = D.pr && D.pr.summary || null, A = (D.av && D.av.items || []).filter(function (h) { return h.monitor !== false; }), L = D.loc && D.loc.locations || [];
+    // sites: the saved list, plus any site a monitored printer or host names
+    var S = {}, site = function (n) { var k = low(n) || '(no site)'; return S[k] || (S[k] = { name: n || '(no site)', kind: '', hosts: 0, up: 0, down: 0, printers: 0, pfault: 0 }); };
+    L.forEach(function (l) { var s = site(l.name); s.kind = l.kind || ''; s.saved = true; });
+    A.forEach(function (h) { var s = site(h.site); s.hosts++; if (h.status === 'online') s.up++; else if (h.status === 'offline') s.down++; });
+    P.forEach(function (p) { var s = site(p.site); s.printers++; if (p.status === 'error' || p.status === 'offline') s.pfault++; });
+    var DR = D.dr || {}, DK = DR.kpis || {};
+    var U = D.ups && D.ups.ups || [], UK = D.ups && D.ups.kpis || null, UBAD = { 'on-battery': 1, depleted: 1, low: 1, fault: 1, bypass: 1 };
+    U.forEach(function (u) { var s = site(u.site); s.ups = (s.ups || 0) + 1; if (UBAD[u.state]) s.ubad = (s.ubad || 0) + 1; });
+    var sites = Object.keys(S).map(function (k) { return S[k]; }).sort(function (a, b) { return (b.down + b.pfault) - (a.down + a.pfault) || a.name.localeCompare(b.name); });
+    var known = A.filter(function (h) { return h.status === 'online' || h.status === 'offline' || h.status === 'degraded'; }), up = A.filter(function (h) { return h.status === 'online'; }).length;
+    var reach = known.length ? Math.round(up / known.length * 100) : null;
+    var T = function (l, v, s, cls, href) { return '<a class="t ' + (cls || '') + '" href="' + esc(href) + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s) + '</div></a>'; };
+    var NC = function (l, href) { return '<a class="t nc" href="' + esc(href) + '"><div class="l">' + esc(l) + '</div><div class="v">not connected</div><div class="s">no collector on this platform yet</div></a>'; };
+    $('kp').innerHTML = T('Sites', sites.filter(function (s) { return s.name !== '(no site)'; }).length, L.length ? L.length + ' in the site list' : 'from the monitored devices', '', 'asset-studio.html')
+      + (D.av ? T('Devices reachable', reach == null ? '–' : reach + ' %', up + ' of ' + known.length + ' answering', reach == null ? '' : reach < 95 ? 'warn' : 'ok', 'server-availability.html') : T('Devices reachable', '–', 'availability scanner not reachable', '', 'server-availability.html'))
+      + (PS ? T('Printer faults', PS.error + PS.offline, PS.total + ' printers · ' + PS.toner_low + ' toner low', PS.error + PS.offline ? 'bad' : 'ok', 'printers.html') : T('Printer faults', '–', 'printer monitor not reachable', '', 'printers.html'))
+      + (!D.ups ? T('UPS / power', '–', E.ups && E.ups.status === 404 ? 'UPS reader not on this platform yet' : 'UPS reader not reachable', '', 'network-onboarding.html')
+        : !U.length ? NC('UPS / power', 'network-onboarding.html').replace('no collector on this platform yet', 'no UPS added yet (role "ups")')
+        : T('UPS on battery / fault', UK.on_battery + UK.low + UK.fault, UK.ups + ' UPS · ' + UK.online + ' on mains' + (UK.min_runtime != null ? ' · shortest ' + UK.min_runtime + ' min' : ''), UK.on_battery + UK.low + UK.fault ? 'bad' : UK.not_answering ? 'warn' : 'ok', '#ups'))
+      + (!D.cc ? T('CCTV cameras offline', '–', E.cc && E.cc.status === 404 ? 'CCTV reader not on this platform yet' : 'CCTV reader not reachable', '', 'cctv.html')
+        : !D.cc.configured ? NC('CCTV / NVR', 'cctv.html').replace('no collector on this platform yet', 'no recorder added yet')
+        : T('CCTV cameras offline', D.cc.kpis.offline, D.cc.kpis.online + ' / ' + D.cc.kpis.cameras + ' online' + (D.cc.kpis.disks_failed ? ' · ' + D.cc.kpis.disks_failed + ' disk(s) not healthy' : ''), D.cc.kpis.offline || D.cc.kpis.disks_failed ? 'bad' : 'ok', 'cctv.html'))
+      + (!D.dr ? T('Door access', '–', E.dr && E.dr.status === 404 ? 'door access reader not on this platform yet' : 'door access reader not reachable', '', 'door-access.html')
+        : !DR.configured ? NC('Door access', 'door-access.html').replace('no collector on this platform yet', 'no ZKBio server added yet')
+        : T('Door controllers offline', DK.offline, DK.online + ' of ' + DK.controllers + ' online · ' + (DK.duress + DK.forced + DK.tamper) + ' door alarms 24 h', DK.offline || DK.duress + DK.forced + DK.tamper ? 'bad' : DK.not_reported || DK.unread ? 'warn' : 'ok', 'door-access.html'));
+    // needs attention: real items only
+    var att = [];
+    (DR.actions || []).filter(function (a) { return a.priority >= 60; }).forEach(function (a) { att.push({ lv: a.priority >= 80 ? 'bad' : 'warn', t: 'Door access: ' + a.title, d: a.detail, href: 'door-access.html' }); });
+    U.filter(function (u) { return UBAD[u.state]; }).forEach(function (u) { att.push({ lv: 'bad', t: (u.name || u.ip) + ' (' + (u.site || 'no site') + ') ' + u.state.replace('-', ' '), d: u.why, href: '#ups' }); });
+    U.filter(function (u) { return !UBAD[u.state] && (u.short_runtime || u.last_test === 'failed' || (u.ageing && u.ageing.flag)); }).forEach(function (u) { att.push({ lv: 'warn', t: (u.name || u.ip) + ' battery', d: [u.short_runtime ? u.minutes_left + ' min runtime' : '', u.last_test === 'failed' ? 'last self-test failed' : '', u.ageing && u.ageing.flag ? u.ageing.why : ''].filter(Boolean).join(' · '), href: '#ups' }); });
+    P.filter(function (p) { return p.status === 'error' || p.status === 'offline'; }).forEach(function (p) { att.push({ lv: 'bad', t: (p.name || p.ip) + ' (' + (p.site || 'no site') + ') ' + p.status, d: (p.issues || []).map(function (x) { return x.text; }).slice(0, 2).join(' · ') || 'not answering', href: 'printers.html' }); });
+    sites.filter(function (s) { return s.hosts && s.up === 0 && s.down > 0; }).forEach(function (s) { att.push({ lv: 'bad', t: s.name + ': no monitored device answers', d: s.down + ' device(s) offline - power, the building or every WAN path', href: 'server-availability.html' }); });
+    A.filter(function (h) { return h.status === 'offline'; }).slice(0, 8).forEach(function (h) { att.push({ lv: 'warn', t: (h.name || h.ip) + ' offline', d: (h.site || 'no site') + (h.duration_s ? ' · for ' + Math.round(h.duration_s / 60) + ' min' : ''), href: 'server-availability.html' }); });
+    P.filter(function (p) { return p.status === 'warning'; }).slice(0, 6).forEach(function (p) { att.push({ lv: 'warn', t: (p.name || p.ip) + ' warning', d: (p.issues || []).map(function (x) { return x.text; }).slice(0, 2).join(' · '), href: 'printers.html' }); });
+    var attH = att.length ? att.slice(0, 14).map(function (a) { return '<div class="row"><span class="dot ' + a.lv + '"></span><a class="lk" href="' + esc(a.href) + '"><b>' + esc(a.t) + '</b></a><div class="mut sm">' + esc(a.d) + '</div></div>'; }).join('')
+      : (D.pr || D.av ? '<div class="empty">Nothing needs attention: every monitored printer and device is answering.</div>' : '<div class="empty">No facilities source is reachable yet.</div>');
+    var siteH = sites.length ? '<table><thead><tr><th>Site</th><th>Devices answering</th><th>Printers</th><th>UPS</th></tr></thead><tbody>' + sites.map(function (s) {
+      var st = (s.hosts && s.up === 0 && s.down) || s.ubad ? 'bad' : s.down || s.pfault ? 'warn' : s.hosts || s.printers || s.ups ? 'ok' : 'mute';
+      return '<tr><td><span class="dot ' + st + '"></span><b>' + esc(s.name) + '</b>' + (s.kind ? ' <span class="mut sm">' + esc(s.kind) + '</span>' : '') + '</td><td>' + (s.hosts ? s.up + ' / ' + s.hosts + (s.down ? ' <span style="color:var(--bad)">· ' + s.down + ' down</span>' : '') : '<span class="mut">not monitored</span>') + '</td><td>' + (s.printers ? s.printers + (s.pfault ? ' <span style="color:var(--bad)">· ' + s.pfault + ' fault</span>' : '') : '<span class="mut">–</span>') + '</td><td>' + (s.ups ? s.ups + (s.ubad ? ' <span style="color:var(--bad)">· ' + s.ubad + ' on battery / fault</span>' : '') : '<span class="mut">–</span>') + '</td></tr>'; }).join('') + '</tbody></table>'
+      : '<div class="empty">No site yet. Add the sites in the IT Asset Register (Locations) and the devices to the availability scanner.</div>';
+    var prH = !D.pr ? why('pr', 'the printer monitor') : !P.length ? '<div class="empty">No printer is monitored yet - add them on Printers.</div>'
+      : '<div class="row">OK <b>' + PS.ok + '</b> · warning <b>' + PS.warning + '</b> · error <b>' + PS.error + '</b> · offline <b>' + PS.offline + '</b> · unknown <b>' + PS.unknown + '</b></div><div class="row">Toner low <b>' + PS.toner_low + '</b> · pages today <b>' + PS.pages_today + '</b> · last 30 days <b>' + PS.pages_30d + '</b></div>';
+    var avH = !D.av ? why('av', 'the availability scanner') : !A.length ? '<div class="empty">No device is in the availability scanner yet.</div>'
+      : '<div class="row">Online <b>' + up + '</b> · offline <b>' + A.filter(function (h) { return h.status === 'offline'; }).length + '</b> · degraded <b>' + A.filter(function (h) { return h.status === 'degraded'; }).length + '</b> · unknown <b>' + A.filter(function (h) { return h.status === 'unknown'; }).length + '</b></div>';
+    var nv = function (v, suf) { return v == null ? '<span class="mut">not reported</span>' : esc(v) + (suf || ''); };
+    var USTC = { online: 'ok', 'on-battery': 'bad', depleted: 'bad', low: 'bad', fault: 'bad', bypass: 'bad', 'not-answering': 'warn', unknown: 'mute', 'not-polled': 'mute' };
+    var upsH = !D.ups ? why('ups', 'the UPS reader') : !U.length ? '<div class="empty">' + esc(D.ups.reason || 'No UPS is monitored.') + '</div>'
+      : '<table><thead><tr><th>UPS</th><th>Site</th><th>State</th><th>Battery</th><th>Runtime</th><th>Load</th><th>Input</th><th>Self-test</th></tr></thead><tbody>' + U.map(function (u) {
+        return '<tr><td><span class="dot ' + (USTC[u.state] || 'mute') + '"></span><b>' + esc(u.name || u.ip) + '</b><div class="mut sm">' + esc([u.manufacturer, u.model].filter(Boolean).join(' ') || u.ip) + '</div></td><td>' + esc(u.site || '–') + '</td><td>' + esc(u.state.replace('-', ' ')) + '<div class="mut sm">' + esc(u.why) + '</div></td>'
+          + '<td>' + (u.battery ? esc(u.battery) : '<span class="mut">not reported</span>') + (u.charge_pct != null ? ' · ' + esc(u.charge_pct) + ' %' : '') + (u.temp_c != null ? ' · ' + esc(u.temp_c) + ' °C' : '') + '</td>'
+          + '<td' + (u.short_runtime ? ' style="color:var(--bad)"' : '') + '>' + nv(u.minutes_left, ' min') + (u.ageing && u.ageing.flag ? '<div class="sm" style="color:var(--warn)">' + esc(u.ageing.why) + '</div>' : '') + '</td><td>' + nv(u.load_pct, ' %') + '</td><td>' + nv(u.input_voltage, ' V') + '</td><td>' + (u.last_test ? esc(u.last_test) : '<span class="mut">not reported</span>') + '</td></tr>'; }).join('') + '</tbody></table>'
+        + (D.ups.actions && D.ups.actions.length ? '<div style="margin-top:8px">' + D.ups.actions.map(function (a) { return '<div class="row"><b>' + esc(a.title) + '</b><div class="mut sm">' + esc(a.detail) + '</div></div>'; }).join('') + '</div>' : '')
+        + '<div class="mut sm" style="margin-top:6px">' + esc(D.ups.note || '') + '</div>';
+    var nc = function (t, d) { return '<div class="card"><h2>' + t + ' <span class="c">not connected</span></h2><div class="mut sm">' + d + '</div></div>'; };
+    $('body').innerHTML = '<div class="g2"><div class="card"><h2>📌 Needs attention</h2>' + attH + '</div><div class="card"><h2>🏢 Sites</h2>' + siteH + (E.loc ? '<div class="mut sm" style="margin-top:6px">Site list: ' + esc(E.loc.status === 403 ? 'operators and above read the saved list' : 'not reachable') + ' - sites shown are the ones the devices name.</div>' : '') + '</div></div>'
+      + '<div class="g3"><div class="card"><h2>🖨️ Printers <span class="c"><a class="lk" href="printers.html">open</a></span></h2>' + prH + '</div><div class="card"><h2>🖥️ Device reachability <span class="c"><a class="lk" href="server-availability.html">open</a></span></h2>' + avH + '</div></div>'
+      + '<div class="card" id="ups"><h2>🔋 UPS / power <span class="c">UPS-MIB, read only · <a class="lk" href="network-onboarding.html">add a UPS</a></span></h2>' + upsH + '</div>'
+      + '<div class="g3">' + '<div class="card"><h2>📹 CCTV / NVR <span class="c"><a class="lk" href="cctv.html">open</a></span></h2>' + (!D.cc ? why('cc', 'the CCTV reader') : !D.cc.configured ? '<div class="empty">' + esc(D.cc.reason) + '</div>'
+        : '<div class="row">Cameras online <b>' + D.cc.kpis.online + '</b> · offline <b>' + D.cc.kpis.offline + '</b> · not reported <b>' + D.cc.kpis.not_reported + '</b> · recorders reachable <b>' + D.cc.kpis.reachable + ' / ' + D.cc.kpis.recorders + '</b></div><div class="row">Disks not healthy <b>' + D.cc.kpis.disks_failed + '</b> · group outages <b>' + D.cc.kpis.group_outages + '</b> · availability (7 days) <b>' + (D.cc.kpis.availability_7d == null ? '–' : D.cc.kpis.availability_7d + '%') + '</b></div>') + '</div>'
+      + '<div class="card"><h2>🔒 Door access <span class="c"><a class="lk" href="door-access.html">open</a></span></h2>' + (!D.dr ? why('dr', 'the door access reader') : !DR.configured ? '<div class="empty">' + esc(DR.reason) + '</div>'
+        : '<div class="row">Controllers online <b>' + DK.online + '</b> · offline <b>' + DK.offline + '</b> · not reported <b>' + DK.not_reported + '</b> · doors <b>' + DK.doors + '</b></div><div class="row">Last 24 h: duress <b>' + DK.duress + '</b> · forced <b>' + DK.forced + '</b> · tamper <b>' + DK.tamper + '</b> · held open <b>' + DK.held_open + '</b> · denied <b>' + DK.denied + '</b></div>') + '</div></div>'
+      + '<p class="mut sm">Only what is monitored is shown. A site with no monitored device reads "not monitored", never healthy.</p>';
+  }
+  $('rf').addEventListener('click', load);
+  load(); setInterval(function () { if (!document.hidden) load(); }, 120000);
+})();
+</script></body></html>

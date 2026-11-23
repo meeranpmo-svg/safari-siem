@@ -1,0 +1,362 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Add a Server</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI",system-ui,sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:16px;margin:0 0 12px}.card h2{margin:0 0 4px;font-size:16px;color:var(--title)}.card .sub{color:var(--mute);font-size:12.5px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--mute)}label b{color:var(--text);font-weight:600}
+input,select,textarea{font:14px "Segoe UI",system-ui,sans-serif;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 10px}
+textarea{font-family:Consolas,monospace;font-size:12px;min-height:70px}
+.chk{flex-direction:row;align-items:flex-start;gap:8px;color:var(--text);font-size:13px}.chk input{margin-top:3px}
+details{border:1px solid var(--edge);border-radius:10px;padding:10px 12px;margin:10px 0;background:var(--raise)}summary{cursor:pointer;font-weight:600;color:var(--title)}
+button{font:600 14px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 16px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.steps{list-style:none;margin:0;padding:0}.steps li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}.steps li:last-child{border:0}
+.ic{width:22px;flex:none;text-align:center;font-weight:700}.ic.ok{color:var(--ok)}.ic.bad{color:var(--bad)}.ic.run{color:var(--info)}.ic.wait{color:var(--mute)}.ic.warn{color:var(--warn)}
+.st small{display:block;color:var(--mute)}.st .err{color:var(--bad)}.st .fix{color:var(--warn)}
+.kv{display:grid;grid-template-columns:170px 1fr;gap:6px 12px;font-size:13.5px}.kv span:nth-child(odd){color:var(--mute)}
+.mono{font-family:Consolas,monospace;font-size:12.5px;word-break:break-all}.muted{color:var(--mute)}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08)}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}
+.box{border:1px solid var(--warn);background:rgba(227,179,65,.07);border-radius:10px;padding:12px;margin:10px 0}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+body.net .srv-only,body:not(.net) .net-only,body.v3 .v2c,body:not(.v3) .v3,body.nopriv .v3priv{display:none!important}
+@media (max-width:600px){.kv{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Asset discovery</div><h1>Add a server</h1></div><span class="sp"></span><a href="#" id="back" class="muted" style="color:var(--info)">← Asset Discovery</a></div>
+
+<div id="noadmin" class="card" hidden><h2>Administrators only</h2><p class="sub">Adding a server stores a login and scans the network, so it needs the System Admin role.</p></div>
+
+<form id="f" class="card" autocomplete="off">
+  <h2>1 · What are you adding?</h2>
+  <div class="grid" style="margin-bottom:10px">
+    <label><b>Device</b><select id="dtype"><option value="server">Server - Linux, Solaris, AIX (SSH login)</option><option value="network">Firewall, switch or router (SNMP)</option></select></label>
+    <label class="net-only"><b>Role</b><select id="drole"><option value="firewall">Firewall</option><option value="switch">Switch</option><option value="router">Router</option><option value="wireless">Wireless controller / access point</option><option value="load-balancer">Load balancer</option><option value="network">Other network device</option></select></label>
+  </div>
+  <p class="sub srv-only">Nothing is installed on the server; discovery only reads.</p><p class="sub net-only" style="margin:0 0 6px">Adding many devices? Use <a href="network-discovery.html" style="color:var(--info)">Network Discovery</a> (IP range, subnets or a CSV list).</p><p class="sub net-only">Discovery reads the device over SNMP (read-only): name, model, serial, firmware, location and its LLDP / CDP neighbours. Nothing is changed on the device.</p>
+  <div class="grid">
+    <label><b><span class="srv-only">Server</span><span class="net-only">Management</span> IP address *</b><input id="ip" placeholder="192.168.1.30" inputmode="decimal"></label>
+    <label><b>Name (optional)</b><input id="nm" placeholder="Oracle DB - Solaris"></label>
+    <label><b>Site *</b><select id="site"><option value="">Loading…</option></select></label>
+  </div>
+
+  <div class="net-only">
+  <h2 style="margin-top:16px">2 · SNMP (read-only)</h2><p class="sub">Use a read-only community or a read-only SNMP v3 user. The secret is stored encrypted and never shown again. UDP 161 must be open from the platform server ({{org.platform_addr}}) to the device.</p>
+  <div class="grid">
+    <label><b>SNMP version</b><select id="nver"><option value="v2c">v2c (community)</option><option value="v3">v3 (user + passwords, recommended)</option></select></label>
+    <label class="v2c"><b>Read-only community *</b><input id="ncomm" type="password" autocomplete="new-password"></label>
+    <label class="v3"><b>v3 user *</b><input id="nuser" placeholder="ashscan"></label>
+    <label class="v3"><b>Authentication</b><select id="nauth"><option value="sha">SHA</option><option value="sha256">SHA-256</option></select></label>
+    <label class="v3"><b>Authentication password * (8+)</b><input id="napw" type="password" autocomplete="new-password"></label>
+    <label class="v3"><b>Privacy (encryption)</b><select id="npriv"><option value="aes">AES</option><option value="none">None</option></select></label>
+    <label class="v3 v3priv"><b>Privacy password * (8+)</b><input id="nppw" type="password" autocomplete="new-password"></label>
+    <label><b>SNMP port</b><input id="nport" type="number" value="161" min="1" max="65535"></label>
+  </div></div>
+  <div class="srv-only">
+  <h2 style="margin-top:16px">2 · How to log in (read-only)</h2><p class="sub">A normal user is enough; never root. The password is stored encrypted, only used for this scan and never shown again.</p>
+  <div class="grid">
+    <label><b>SSH login</b><select id="sshuse"><option value="new">New login</option></select></label>
+    <label class="ssh-new"><b>User name *</b><input id="su" placeholder="ashscan"></label>
+    <label class="ssh-new"><b>Password</b><input id="sp" type="password" autocomplete="new-password" placeholder="or paste a private key below"></label>
+    <label class="ssh-new"><b>SSH port</b><input id="sport" type="number" value="22" min="1" max="65535"></label>
+  </div>
+  <details class="ssh-new"><summary>Use a private key instead of a password</summary><label style="margin-top:8px">Private key (OpenSSH / PEM)<textarea id="sk" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea></label></details>
+  </div>
+  <details id="urlsec" open><summary>Web addresses (optional): applications, management console (ILOM / iLO / iDRAC, firewall / switch web GUI)</summary>
+    <div id="urlrows" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:6px"><button type="button" id="urladd">+ Add a web address</button><span class="muted">Saved with the server in IT Asset Management. No logins in the address - only where to reach it.</span></div>
+  </details>
+  <details class="srv-only"><summary>Optional: SNMP (better model / OS detection)</summary><div class="grid" style="margin-top:8px"><label>Read-only community<input id="snmp" type="password" autocomplete="new-password" placeholder="leave empty to skip"></label></div></details>
+  <details class="srv-only"><summary>Optional: Oracle database on this server (edition, version, databases)</summary>
+    <div class="grid" style="margin-top:8px">
+      <label>Service name<input id="osvc" placeholder="PRODPDB1"></label>
+      <label>User<input id="ou" placeholder="SENTRA_MON"></label>
+      <label>Password<input id="op" type="password" autocomplete="new-password"></label>
+      <label>Port<input id="oport" type="number" value="1521" min="1" max="65535"></label>
+    </div><p class="sub" style="margin-top:6px">Use the read-only SENTRA_MON account (agents/oracle/create-monitor-user.sql). Leave the service name empty to skip. <b>Port</b>: the listener port this site uses - discovery looks for the database on it.</p></details>
+  <details class="srv-only"><summary>Optional: SQL Server on this server (edition, version, databases)</summary>
+    <div class="grid" style="margin-top:8px">
+      <label>Port<input id="mport" type="number" placeholder="1433 or your port" min="1" max="65535"></label>
+      <label>Login (SQL login with VIEW SERVER STATE)<input id="mu" placeholder="sentra_ro"></label>
+      <label>Password<input id="mp" type="password" autocomplete="new-password"></label>
+      <label>Database (optional)<input id="mdb" placeholder="master"></label>
+    </div><p class="sub" style="margin-top:6px">Leave the login empty to skip. A named instance listens on its own port - give that port (SQL Server Configuration Manager → TCP/IP → IPAll).</p></details>
+
+  <h2 style="margin-top:16px">3 · Approve the scan</h2><p class="sub">Every scan needs this approval once (the safety gate). It is recorded with your name.</p>
+  <label class="chk"><input type="checkbox" id="fw"> <span>The network allows the platform server to reach this server (ping, SSH 22, SNMP 161, and WinRM 5985/5986 where used).</span></label>
+  <div class="grid" style="margin-top:10px">
+    <label><b>Security team / SOC told *</b><input id="soc" placeholder="name of the person informed"></label>
+    <label><b>Date told *</b><input id="socd" type="date"></label>
+    <label><b>Approved by *</b><input id="appr"></label>
+  </div>
+  <div class="row"><button type="submit" class="pri" id="go">Add and scan</button><span class="muted" id="hint"></span></div>
+</form>
+
+<div class="card" id="prog" hidden><h2>Progress</h2><ul class="steps" id="steps"></ul><div id="act"></div></div>
+<div class="card" id="res" hidden><h2>What was found</h2><div id="found"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);}, API='/api/itam/discovery';
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var ROLE='viewer', USER='', S=null, CREDS=[];
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p.indexOf('/api/')===0?p:API+p);x.withCredentials=true;x.timeout=60000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j||{});else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the asset discovery service could not be reached'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
+  var IPV4=/^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+
+  // engine messages → what to do, in plain words
+  function plain(msg){
+    var m=String(msg||'');
+    // an Asset Discovery engine on the server that never got its later updates (the patch chain stopped)
+    if(/unknown method "(unix|db|storage|nutanix)"/.test(m)||(/kind must be one of/.test(m)&&!/db_login/.test(m)))return 'The Asset Discovery engine on the server is an OLDER version (no Solaris / Unix or database logins yet). Run scripts\\update-discovery-now.ps1 from your PC and send the output if it does not end with "db_login supported: yes".';
+    if(/site must be one of/.test(m))return 'Choose a site from the list.';
+    if(/targets are required/.test(m))return 'Enter the server IP address.';
+    if(/public/.test(m)&&/allow_public/.test(m))return 'That is a public internet address. Only internal addresses (10.x, 172.16-31.x, 192.168.x) can be scanned.';
+    if(/vault unavailable/.test(m))return 'The credential vault is not set up on the platform server, so the login cannot be stored (ask the platform administrator).';
+    if(/password or private_key|private_key/.test(m))return 'Give the SSH password or a private key.';
+    if(/username/.test(m))return 'Give the SSH user name.';
+    if(/target.service|dbname/.test(m))return 'The Oracle service name may only contain letters, digits, _ . $ # -';
+    if(/already in progress/.test(m))return 'A scan of this server is already running - wait a minute and press Retry.';
+    if(/concurrent runs/.test(m))return 'Other scans are running - press Retry in a minute.';
+    if(/checklist/.test(m))return 'Complete step 3 (approval).';
+    if(/not allowed|403/.test(m))return 'Your role is not allowed to do this (System Admin needed).';
+    return '';
+  }
+  // the login result on the device → what it means
+  function loginText(u){
+    if(!u)return null;
+    if(!u.error)return ['ok','Logged in over SSH'];
+    var e=String(u.error);
+    if(/host key changed/i.test(e))return ['bad','The server\'s SSH key CHANGED since it was trusted - check with the server owner before trusting it again (Asset Discovery → Trust).'];
+    if(/auth|denied|password/i.test(e))return ['bad','SSH refused the user name / password - check them and press Retry with the right login.'];
+    if(/timed? ?out|unreachable|refused|no route/i.test(e))return ['bad','SSH port not reachable from the platform server - open TCP '+($('sport').value||22)+' to this server.'];
+    return ['bad',e];
+  }
+
+  // ---- steps
+  var STEPS=[['cred','Save the login (encrypted)'],['scope','Create the scan for this server'],['gate','Record the approval'],['run1','Scan the server'],['trust','Confirm the server\'s SSH key'],['run2','Scan again with the login'],['show','Show the result']];
+  function paint(){
+    var net=S&&S.o&&S.o.dtype==='network';
+    $('steps').innerHTML=STEPS.map(function(s){var x=S.st[s[0]]||{};if(net)s=[s[0],s[1].replace("the server's SSH key",'the SSH key').replace('this server','this device').replace('the server','the device')];var ic={ok:'✔',bad:'✖',run:'…',warn:'!',skip:'–'}[x.s]||'○';var cls={ok:'ok',bad:'bad',run:'run',warn:'warn'}[x.s]||'wait';
+      return '<li><span class="ic '+cls+'">'+ic+'</span><span class="st">'+esc(s[1])+(x.t?'<small>'+x.t+'</small>':'')+(x.err?'<small class="err">'+esc(x.err)+'</small>':'')+(x.fix?'<small class="fix">→ '+esc(x.fix)+'</small>':'')+'</span></li>';}).join('');
+  }
+  function set(k,s,t,err){S.st[k]={s:s,t:t||'',err:err||'',fix:err?plain(err):''};paint();}
+  function fail(k,e){set(k,'bad','',e.message||String(e));$('act').innerHTML='<div class="row"><button type="button" class="pri" id="retry">Retry</button><span class="muted">Fix what is shown above (the form stays filled in), then Retry. Nothing is created twice.</span></div>';$('go').disabled=false;throw e;}
+
+  function form(){
+    var o={dtype:$('dtype').value,drole:$('drole').value,nver:$('nver').value,ncomm:$('ncomm').value,nuser:$('nuser').value.trim(),nauth:$('nauth').value,napw:$('napw').value,npriv:$('npriv').value,nppw:$('nppw').value,nport:+$('nport').value||161,ip:$('ip').value.trim(),name:$('nm').value.trim(),site:$('site').value,sshuse:$('sshuse').value,su:$('su').value.trim(),sp:$('sp').value,sk:$('sk').value.trim(),sport:+$('sport').value||22,
+      snmp:$('snmp').value,osvc:$('osvc').value.trim(),ou:$('ou').value.trim(),op:$('op').value,oport:+$('oport').value||1521,mport:+$('mport').value||1433,mu:$('mu').value.trim(),mp:$('mp').value,mdb:$('mdb').value.trim(),fw:$('fw').checked,soc:$('soc').value.trim(),socd:$('socd').value,appr:$('appr').value.trim()};
+    var miss=[];
+    if(!IPV4.test(o.ip))miss.push('a valid server IP address');
+    if(!o.site)miss.push('the site');
+    if(o.dtype==='network'){
+      if(o.nver==='v2c'){if(!o.ncomm)miss.push('the SNMP community');}
+      else{if(!o.nuser)miss.push('the SNMP v3 user');if(o.napw.length<8)miss.push('the SNMP v3 authentication password (8 characters or more)');if(o.npriv==='aes'&&o.nppw.length<8)miss.push('the SNMP v3 privacy password (8 characters or more)');}
+    }else if(o.sshuse==='new'){if(!o.su)miss.push('the SSH user name');if(!o.sp&&!o.sk)miss.push('the SSH password (or a private key)');}
+    if(o.osvc&&(!o.ou||!o.op))miss.push('the Oracle user and password (or clear the service name)');
+    if(o.mu&&!o.mp)miss.push('the SQL Server password (or clear the login)');
+    if((o.oport<1||o.oport>65535)||(o.mport<1||o.mport>65535))miss.push('a database port between 1 and 65535');
+    if(!o.fw)miss.push('the network confirmation in step 3');
+    if(!o.soc)miss.push('who in security / SOC was told');
+    if(!o.socd)miss.push('the date they were told');
+    if(!o.appr)miss.push('the approver\'s name');
+    o.links=[].map.call(document.querySelectorAll('#urlrows .urow'),function(r){return {label:r.querySelector('.u-l').value.trim(),url:r.querySelector('.u-u').value.trim(),kind:r.querySelector('.u-k').value};}).filter(function(l){return l.url;});
+    o.links.forEach(function(l){
+      if(/^[a-z]+:\/\/[^\/]*@/i.test(l.url)||/^[^\/]*@/.test(l.url))miss.push('the web address '+l.url.replace(/\/\/[^@]*@/,'//…@')+' without the user name / password');
+      else if(!/^(https?:\/\/)?[^\s\/]+(\.[^\s\/]+|:\d+)/i.test(l.url))miss.push('a valid web address instead of "'+l.url.slice(0,40)+'"');
+    });
+    return {o:o,miss:miss};
+  }
+
+  async function poll(runId,key){
+    var t0=Date.now(),r;
+    for(;;){
+      r=(await req('GET','/runs/'+encodeURIComponent(runId))).run||{};
+      var pg=r.progress||{};
+      set(key,'run','scanning… '+(pg.hosts_done||0)+'/'+(pg.hosts_total||1)+' host');
+      if(r.status&&r.status!=='running'&&r.status!=='queued')return r;
+      if(Date.now()-t0>5*60000)throw new Error('the scan is taking longer than 5 minutes - check Asset Discovery → Runs');
+      await sleep(2500);
+    }
+  }
+  function runNote(r){var b=(r.methods_blocked||[]).map(function(x){return x.method+': '+x.reason;});return (r.status==='finished'?'finished':r.status)+(b.length?' - not run: '+b.join('; '):'');}
+  async function device(){var j=await req('GET','/results?status=all&limit=50&q='+encodeURIComponent(S.o.ip));var d=(j.devices||[]).filter(function(x){return x.ip===S.o.ip;})[0];if(!d)return null;return (await req('GET','/results/'+encodeURIComponent(d.id))).device||d;}
+
+  // a login is created once; Retry with corrected details UPDATES it (same id) instead of creating a second one
+  async function ensureCred(key,kind,label,secret,target){
+    var sig=JSON.stringify([kind,secret,target]);
+    if(S.ids[key]&&S.sig[key]===sig)return;
+    if(S.ids[key])await req('POST','/credentials/'+encodeURIComponent(S.ids[key]),{label:label,secret:secret,target:target});
+    else S.ids[key]=(await req('POST','/credentials',{kind:kind,label:label,secret:secret,target:target})).credential.id;
+    S.sig[key]=sig;
+  }
+  // database probe: only the engines given, each also on the port this site uses
+  function dbMethod(o){
+    var ids=[],eng=[],ports={};
+    if(S.ids.ora){ids.push(S.ids.ora);eng.push('oracle');ports.oracle=[o.oport];}
+    if(S.ids.sql){ids.push(S.ids.sql);eng.push('mssql');ports.mssql=[o.mport];}
+    return ids.length?{enabled:true,engines:eng,credential_ids:ids,ports:ports}:{enabled:false};
+  }
+  async function go(){
+    var o=S.o;$('go').disabled=true;$('act').innerHTML='';$('prog').hidden=false;
+    // 1 credentials (created once; Retry reuses them)
+    if(!S.done.cred){
+      set('cred','run');
+      try{
+        if(o.dtype==='network'){
+          if(o.nver==='v2c')await ensureCred('snmp','snmp_v2c','SNMP v2c @ '+o.ip,{community:o.ncomm},{port:o.nport});
+          else{var v3s={user:o.nuser,auth_password:o.napw};if(o.npriv==='aes')v3s.priv_password=o.nppw;await ensureCred('snmp','snmp_v3','SNMP v3 '+o.nuser+' @ '+o.ip,v3s,{auth_protocol:o.nauth,priv_protocol:o.npriv,port:o.nport});}
+          delete S.ids.ssh;delete S.ids.ora;delete S.ids.sql;
+        }else{
+        if(o.sshuse==='new'){var sec={username:o.su};if(o.sk)sec.private_key=o.sk;else sec.password=o.sp;await ensureCred('ssh','ssh','SSH '+o.su+' @ '+o.ip,sec,{port:o.sport});}
+        else S.ids.ssh=o.sshuse;
+        if(o.snmp)await ensureCred('snmp','snmp_v2c','SNMP @ '+o.ip,{community:o.snmp},{});else delete S.ids.snmp;
+        if(o.osvc)await ensureCred('ora','db_login','Oracle '+o.ou+' @ '+o.ip+':'+o.oport+'/'+o.osvc,{username:o.ou,password:o.op},{engine:'oracle',port:o.oport,service:o.osvc});else delete S.ids.ora;
+        if(o.mu){var mt={engine:'mssql',port:o.mport};if(o.mdb)mt.database=o.mdb;await ensureCred('sql','db_login','SQL Server '+o.mu+' @ '+o.ip+':'+o.mport,{username:o.mu,password:o.mp},mt);}else delete S.ids.sql;
+        }
+      }catch(e){fail('cred',e);}
+      S.done.cred=true;set('cred','ok',o.dtype==='network'?'SNMP '+o.nver:'SSH'+(S.ids.snmp?' + SNMP':'')+(S.ids.ora?' + Oracle (port '+o.oport+')':'')+(S.ids.sql?' + SQL Server (port '+o.mport+')':''));
+    }
+    // 2 scope: one per server; an existing scope for exactly this IP is updated, not duplicated
+    if(!S.done.scope){
+      set('scope','run');
+      try{
+        var body=o.dtype==='network'
+          ?{name:'Network device '+o.ip,label:o.name||'',site:o.site,targets:[o.ip],infra:true,methods:{sweep:{enabled:true},snmp:{enabled:true,credential_ids:[S.ids.snmp]},unix:{enabled:false},db:{enabled:false}}}
+          :{name:'Server '+o.ip,label:o.name||'',site:o.site,targets:[o.ip],
+          methods:{sweep:{enabled:true},unix:{enabled:true,credential_id:S.ids.ssh},snmp:{enabled:!!S.ids.snmp,credential_ids:S.ids.snmp?[S.ids.snmp]:[]},db:dbMethod(o)}};
+        var list=(await req('GET','/scopes')).scopes||[];
+        var ex=list.filter(function(s){return (s.targets||[]).length===1&&(s.targets[0]===o.ip||s.targets[0]===o.ip+'/32')&&s.status!=='archived';})[0];
+        S.scope=ex?(await req('POST','/scopes/'+ex.id,body)).scope:(await req('POST','/scopes',body)).scope;
+        if(S.scope.status&&S.scope.status!=='active')S.scope=(await req('POST','/scopes/'+S.scope.id+'/enable',{})).scope||S.scope;
+      }catch(e){fail('scope',e);}
+      S.done.scope=true;set('scope','ok',esc(S.scope.name)+(o.name?' · '+esc(o.name):''));
+    }
+    // 3 approval (safety gate) - same checklist the scope page asks for
+    if(!S.done.gate){
+      set('gate','run');
+      try{S.scope=(await req('POST','/scopes/'+S.scope.id+'/checklist',{firewall:{snmp_161:true,ssh_22:true,winrm_5985_5986:true,icmp:true},soc_notified_name:o.soc,soc_notified_date:o.socd,approved_by:o.appr,note:(o.dtype==='network'?'Add a network device ('+o.drole+'): ':'Add a server: ')+o.ip})).scope;}catch(e){fail('gate',e);}
+      S.done.gate=true;set('gate','ok','approved by '+esc(o.appr)+', SOC: '+esc(o.soc)+' ('+esc(o.socd)+')');
+    }
+    // 4 first scan
+    if(!S.done.run1){
+      set('run1','run');var r;
+      try{r=await poll((await req('POST','/scopes/'+S.scope.id+'/run',{})).run.id,'run1');}catch(e){fail('run1',e);}
+      if(r.status==='failed')fail('run1',new Error(r.error||'the scan failed'));
+      S.done.run1=true;set('run1','ok',esc(runNote(r)));
+    }
+    // 5 SSH host key: discovery never sends a password to a server whose key nobody confirmed
+    if(!S.done.trust&&o.dtype==='network'){S.done.trust=true;S.done.run2=true;set('trust','skip','not needed - SNMP has no host key');set('run2','skip','not needed - the first scan already used SNMP');}
+    if(!S.done.trust){
+      var keys=((await req('GET','/trust')).items||[]).filter(function(k){return k.ip===o.ip&&k.kind==='ssh';});
+      var pend=keys.filter(function(k){return k.state!=='trusted';});
+      if(!keys.length){set('trust','warn','no SSH key was seen - SSH (port '+o.sport+') did not answer the scan');S.done.trust=true;S.done.run2=true;set('run2','skip','skipped (no SSH)');}
+      else if(!pend.length){S.done.trust=true;set('trust','ok','already trusted');}
+      else{
+        set('trust','warn','waiting for you');
+        var changed=pend.some(function(k){return k.state==='changed';});
+        $('act').innerHTML='<div class="box"><b>'+(changed?'⚠ The SSH key of this server CHANGED':'Confirm this is really '+esc(o.ip))+'</b><p class="muted" style="margin:6px 0">Compare with what the server shows for <span class="mono">ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub</span> (ask the server owner). Discovery only logs in after you confirm.</p>'
+          +pend.map(function(k){return '<div class="kv"><span>Key</span><span class="mono">'+esc((k.info&&k.info.type)||'ssh')+' SHA256 '+esc(k.fp)+'</span><span>First seen</span><span>'+esc(String(k.first_seen||'').replace('T',' ').slice(0,16))+'</span></div>';}).join('')
+          +'<div class="row"><button type="button" class="pri" id="trustgo">It matches - trust and scan again</button></div></div>';
+        $('trustgo').onclick=async function(){this.disabled=true;try{await req('POST','/trust',{ids:pend.map(function(k){return k.id;}),action:'trust'});}catch(e){this.disabled=false;toast(e.message);return;}S.done.trust=true;set('trust','ok','trusted');$('act').innerHTML='';go().catch(function(){ /* every step reports its own failure on the progress list */ });};
+        $('go').disabled=false;return;
+      }
+    }
+    // 6 second scan, now with the login
+    if(!S.done.run2){
+      set('run2','run');var r2;
+      try{r2=await poll((await req('POST','/scopes/'+S.scope.id+'/run',{})).run.id,'run2');}catch(e){fail('run2',e);}
+      S.done.run2=true;set('run2','ok',esc(runNote(r2)));
+    }
+    // 7 result
+    set('show','run');
+    var d;try{d=await device();}catch(e){fail('show',e);}
+    showDevice(d);
+    set('show',d?'ok':'warn',d?'see below':'the server did not answer the scan (ping / SSH / SNMP) - check the IP and the network');
+    $('go').disabled=false;
+  }
+
+  function showDevice(d){
+    $('res').hidden=false;
+    if(!d){$('found').innerHTML='<p class="muted">Nothing answered at '+esc(S.o.ip)+'.</p>';return;}
+    var x=d.extra||{},u=x.unix_login,db=x.db_login&&x.db_login.oracle,lt=loginText(u);
+    if(S.o.dtype==='network')lt=(d.methods_seen||[]).indexOf('snmp')>=0?['ok','SNMP answered']:['bad','SNMP did not answer - check the '+(S.o.nver==='v2c'?'community':'v3 user and passwords')+(', that the device allows SNMP from ' + ZYB_ORG.platform_addr + ', and that UDP ')+S.o.nport+' is open between them. Fix it and press Retry.'];
+    var rows=[['IP',d.ip],['Name',d.hostname||'–'],['Type',d.type||'–'],['Operating system',d.os||'–'],['Vendor / model',[d.vendor,d.model].filter(Boolean).join(' ')||'–'],['Serial',d.serial||'–']];
+    if(u&&!u.error)rows.push(['CPU',(u.sockets?u.sockets+' socket(s)':'')+(u.cores_per_socket?' × '+u.cores_per_socket+' cores':'')+(u.cpus?' · '+u.cpus+' threads':'')],['Memory',u.mem_gb?u.mem_gb+' GB':'–']);
+    var ms=x.db_login&&x.db_login.mssql;
+    if(ms)rows.push(['SQL Server',[ms.edition,ms.version].filter(Boolean).join(' · ')+(ms.instance?' · instance '+ms.instance:'')+(ms.databases&&ms.databases.length?' · databases: '+ms.databases.join(', '):'')]);
+    var lis=(x.db||[]).map(function(l){return l.engine+' on port '+l.port;});
+    if(lis.length)rows.push(['Database listeners',lis.join(', ')]);
+    if(db)rows.push(['Oracle',[db.edition,db.version].filter(Boolean).join(' · ')+(db.databases&&db.databases.length?' · databases: '+db.databases.join(', '):'')]);
+    if(S.o.dtype==='network'){var sy=d.sys||{};
+      if(sy.name)rows.push(['SNMP name',sy.name]);if(sy.descr)rows.push(['Firmware / description',String(sy.descr).slice(0,200)]);if(sy.location)rows.push(['Location (SNMP)',sy.location]);
+      if((d.neighbours||[]).length)rows.push(['Neighbours (LLDP / CDP)',d.neighbours.slice(0,8).map(function(n){return (n.remote_name||n.remote_ip||'?')+(n.local_port?' on '+n.local_port:'');}).join(', ')+(d.neighbours.length>8?' …':'')]);}
+    rows.push(['Found by',(d.methods_seen||[]).join(', ')||'–']);
+    var st=d.status==='approved'||d.asset_id?'<span class="pill ok">in IT Asset Management</span>':d.status==='ignored'?'<span class="pill warn">ignored</span>':'<span class="pill">new - not in IT Asset Management yet</span>';
+    $('found').innerHTML='<div class="kv">'+rows.map(function(r){return '<span>'+esc(r[0])+'</span><span>'+esc(r[1])+'</span>';}).join('')+'<span>Status</span><span>'+st+'</span></div>'
+      +(lt?'<p style="margin:10px 0 0"><span class="pill '+lt[0]+'">'+(lt[0]==='ok'?(S.o.dtype==='network'?'SNMP OK':'login OK'):(S.o.dtype==='network'?'SNMP problem':'login problem'))+'</span> '+esc(lt[1])+'</p>':'')
+      +(db&&db.partial&&db.partial.length?'<p class="muted">Oracle: '+esc(db.partial.join('; '))+'</p>':'')
+      +'<div id="lnk"></div>'
+      +(d.status==='new'?'<div class="row"><button type="button" class="pri" id="appr-go">Add to IT Asset Management</button><span class="muted">Licences (sockets, cores, Oracle edition) fill in automatically within the hour.</span></div>':'');
+    links(d);
+    if($('appr-go'))$('appr-go').onclick=async function(){this.disabled=true;try{var ap=await req('POST','/results/'+encodeURIComponent(d.id)+'/approve',{});if(S.o.dtype==='network'&&ap&&ap.asset_id)await roleTag(ap.asset_id);toast('Added to IT Asset Management');showDevice(await device());}catch(e){this.disabled=false;toast(e.message);}};
+  }
+
+  // a network device is saved as type "network" with its role as a tag (firewall, switch, ...) - the inventory's
+  // categories and the AI Network Engineer read those
+  async function roleTag(id){try{var a=await req('GET','/api/itam/assets/'+encodeURIComponent(id));var cur=(a&&(a.asset||a).tags)||[];
+    var tags=cur.indexOf(S.o.drole)>=0?cur:cur.concat([S.o.drole]);await req('POST','/api/itam/assets/'+encodeURIComponent(id),{type:'network',tags:tags});}catch(e){toast('Added, but the role could not be set: '+e.message);}}
+  // ---- web addresses (engine/asset-links.js): saved once the server is an asset; shown with a reachability check
+  var KL={app:'Application',mgmt:'Management console',api:'API',docs:'Documentation',other:'Other'};
+  function urlRow(v){v=v||{};var d=document.createElement('div');d.className='grid urow';d.style.marginBottom='6px';
+    d.innerHTML='<label>Label<input class="u-l" placeholder="ERP / ILOM console" value="'+esc(v.label||'')+('"></label><label>Web address<input class="u-u" placeholder="https://erp.' + ZYB_ORG.domain + ' or https://192.168.1.31" value="')+esc(v.url||'')+'" dir="ltr"></label>'
+      +'<label>Type<select class="u-k">'+Object.keys(KL).map(function(k){return '<option value="'+k+'"'+(k===(v.kind||'app')?' selected':'')+'>'+KL[k]+'</option>';}).join('')+'</select></label><div><button type="button" class="u-x">Remove</button></div>';
+    d.querySelector('.u-x').onclick=function(){d.remove();};$('urlrows').appendChild(d);}
+  function linksHtml(r){var L=r.links||[],C=r.checked||{};if(!L.length)return '';
+    return '<h2 style="margin-top:14px">Web addresses</h2><div class="kv">'+L.map(function(l){var c=C[l.url],st='';
+      if(c)st=c.ok?' <span class="pill ok">'+(c.status||'ok')+(c.ms!=null?' · '+c.ms+' ms':'')+'</span>':' <span class="pill bad">'+esc(c.error||('HTTP '+c.status))+'</span>';
+      if(c&&c.tls)st+=' <span class="pill '+(c.tls.days_left<30?'warn':c.tls.trusted?'ok':'warn')+'">certificate '+(c.tls.trusted?'':'not trusted, ')+'until '+esc(c.tls.valid_to)+' ('+c.tls.days_left+' d)</span>';
+      if(c&&c.redirect)st+=' <span class="muted">→ '+esc(c.redirect)+'</span>';
+      return '<span>'+esc(l.label)+'<br><small class="muted">'+esc(KL[l.kind]||l.kind)+'</small></span><span><a class="mono" href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer" style="color:var(--info)">'+esc(l.url)+'</a>'+st+'</span>';}).join('')+'</div>'
+      +'<div class="row"><button type="button" id="lnkchk">Check the addresses</button><span class="muted">One request to each address from the platform server: answers, status, HTTPS certificate expiry.</span></div>';}
+  function lnkWire(id){var b=$('lnkchk');if(b)b.onclick=async function(){b.disabled=true;b.textContent='Checking…';try{var r=await req('POST','/api/itam/asset-links/'+encodeURIComponent(id)+'/check',{});$('lnk').innerHTML=linksHtml(r);lnkWire(id);}catch(e){b.disabled=false;b.textContent='Check the addresses';toast(e.message);}};}
+  async function links(d){
+    var box=$('lnk');if(!box)return;var want=(S&&S.o.links)||[];
+    if(!d.asset_id){if(want.length)box.innerHTML='<p class="muted" style="margin-top:10px">'+want.length+' web address(es) will be saved when you add the server to IT Asset Management.</p>';return;}
+    try{
+      var r;
+      if(want.length&&S.linksSaved!==d.asset_id+JSON.stringify(want)){r=await req('POST','/api/itam/asset-links/'+encodeURIComponent(d.asset_id),{links:want});S.linksSaved=d.asset_id+JSON.stringify(want);toast('Web addresses saved with the server');}
+      else r=await req('GET','/api/itam/asset-links/'+encodeURIComponent(d.asset_id));
+      box.innerHTML=linksHtml(r);lnkWire(d.asset_id);
+    }catch(e){box.innerHTML='<p class="'+(e.status===404?'muted':'err')+'" style="margin-top:10px">'+((e.status===404&&e.message==='not found')||e.status===405?'Web addresses need the latest IT Asset Management update (run update-all) - they were not saved.':'Web addresses: '+esc(e.message))+'</p>';}
+  }
+  $('urladd').onclick=function(){urlRow();};urlRow();
+
+  // ---- wiring
+  function dview(){var n=$('dtype').value==='network';document.body.classList.toggle('net',n);document.body.classList.toggle('v3',$('nver').value==='v3');document.body.classList.toggle('nopriv',$('npriv').value==='none');
+    document.querySelector('.top h1').textContent=n?'Add a network device':'Add a server';}
+  $('dtype').onchange=dview;$('nver').onchange=dview;$('npriv').onchange=dview;
+  $('sshuse').onchange=function(){var nw=this.value==='new';[].forEach.call(document.querySelectorAll('.ssh-new'),function(el){el.style.display=nw?'':'none';});};
+  $('f').onsubmit=function(ev){ev.preventDefault();var r=form();if(r.miss.length){$('hint').textContent='Still needed: '+r.miss.join(', ')+'.';return;}$('hint').textContent='';
+    // same server again (Retry, or a corrected login): every step is repeated, nothing is duplicated - logins are reused or
+    // updated, the server's scan is updated, and it is scanned again
+    if(!S||S.o.ip!==r.o.ip){S={o:r.o,st:{},done:{},ids:{},sig:{},scope:null};}else{S.o=r.o;S.done={};S.st={};}
+    go().catch(function(){ /* every step reports its own failure on the progress list */ });};
+  document.addEventListener('click',function(e){if(e.target&&e.target.id==='retry'){e.preventDefault();$('f').requestSubmit?$('f').requestSubmit():$('f').onsubmit({preventDefault:function(){}});}});
+  $('back').onclick=function(e){e.preventDefault();try{if(window.top&&window.top.setView){window.top.setView('discovery');return;}}catch(x){ /* not inside the portal (or another origin): stay on this page */ }location.href='/#discovery';};
+  $('socd').value=new Date().toISOString().slice(0,10);
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);ROLE=String(j.role||'').toLowerCase();USER=j.user||j.name||'';}catch(e){ /* not JSON: treated as no data */ }start();};w.onerror=start;w.send();
+  function start(){
+    if(ROLE&&ROLE!=='admin'){$('noadmin').hidden=false;$('f').hidden=true;return;}
+    if(USER&&!$('appr').value)$('appr').value=USER;
+    if(/[?&]type=network/.test(location.search))$('dtype').value='network';dview();
+    var q=/[?&]ip=([0-9.]+)/.exec(location.search);if(q&&IPV4.test(q[1]))$('ip').value=q[1];
+    req('GET','/scopes').then(function(j){var s=j.sites||[];$('site').innerHTML=s.length?'<option value="">Choose…</option>'+s.map(function(x){return '<option>'+esc(x)+'</option>';}).join(''):'<option value="">No sites defined - add one in Asset Discovery settings</option>';if(s.length===1)$('site').value=s[0];})
+      .catch(function(e){$('site').innerHTML='<option value="">'+esc(e.status===403?'administrators only':e.message)+'</option>';});
+    req('GET','/credentials').then(function(j){CREDS=(j.credentials||[]).filter(function(c){return c.kind==='ssh';});$('sshuse').innerHTML='<option value="new">New login</option>'+CREDS.map(function(c){return '<option value="'+esc(c.id)+'">Existing: '+esc(c.label)+'</option>';}).join('');}).catch(function(){ /* a background refresh: the panel keeps its last state and the next refresh retries */ });
+  }
+})();
+</script></body></html>

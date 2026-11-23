@@ -1,0 +1,67 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PDPL Programme</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-assist.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+pre.letter{white-space:pre-wrap;font:13px/1.55 "Segoe UI",system-ui,sans-serif;background:rgba(255,255,255,.03);padding:12px;border-radius:8px}pre.letter[dir=rtl]{text-align:right}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">PDPL Programme</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>PDPL compliance is a business capability, not a legal checkbox: legal interprets, governance sets standards and ownership, IT builds the controls, marketing handles opt-ins and product builds privacy in by design. Each department names a <b>data steward</b> - the bridge between the compliance goals and its day-to-day work - and keeps short <b>team playbooks</b>. The obligations below are a controller's duties under the law and its Implementing Regulation, each with what the registers show and the penalty it carries. The maturity assessment scores four areas: data mapping and ownership, consent, team responsibilities and training, documentation and audit readiness.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Controller obligations and penalty exposure</h3></div><div class="table-responsive" id="obl"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="pen"></div></section>
+<div class="row row-cards mb-3">
+ <div class="col-lg-7"><section class="card h-100"><div class="card-header"><h3 class="card-title">Departments, data stewards and playbooks</h3><div class="card-actions d-flex gap-2"><button type="button" class="btn btn-sm" id="addst"><i class="ti ti-user-plus me-1"></i>Steward</button><button type="button" class="btn btn-sm" id="addpb"><i class="ti ti-book me-1"></i>Playbook</button></div></div><div class="table-responsive" id="depts"></div></section></div>
+ <div class="col-lg-5"><section class="card h-100"><div class="card-header"><h3 class="card-title">Maturity</h3><div class="card-actions"><button type="button" class="btn btn-sm btn-primary" id="assess"><i class="ti ti-clipboard-check me-1"></i>Assess</button></div></div><div class="card-body" id="mat"></div></section></div>
+</div>
+<div class="row row-cards mb-3">
+ <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h3 class="card-title">Measured from the registers</h3></div><div class="card-body" id="meas"></div></section></div>
+ <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h3 class="card-title">Training</h3><div class="card-actions"><button type="button" class="btn btn-sm" id="addtr"><i class="ti ti-school me-1"></i>Record a session</button></div></div><div class="table-responsive" id="train"></div></section></div>
+</div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Who does what</h3></div><div class="table-responsive" id="roles"></div><div class="card-footer small text-secondary" id="note"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+
+  var V=null, STC={met:'green',partly:'yellow',gap:'red',confirm:'azure'};
+  var TOPICS=[['consent','Consent'],['classification','Data classification'],['sharing','Sharing and disclosure'],['deletion','Deletion and retention'],['requests','Data subject requests'],['breach','Breach'],['marketing','Marketing'],['other','Other']];
+  function bar(v){return '<div class="progress progress-sm"><div class="progress-bar bg-'+(v>=75?'green':v>=50?'yellow':'red')+'" style="width:'+Number(v)+'%"></div></div>';}
+  function load(){return P.req('GET','/pdpl/programme').then(function(r){V=r;var o=r.obligations;
+    var m=r.maturity&&r.maturity.score;
+    $('kpis').innerHTML=P.tile(o.filter(function(x){return x.state==='met';}).length+' / '+o.length,'Obligations met')+P.tile(o.filter(function(x){return x.state==='gap';}).length,'Gaps',o.some(function(x){return x.state==='gap';})?'text-red':'')
+      +P.tile(r.departments.filter(function(d){return d.gap;}).length,'Departments without a steward',r.departments.some(function(d){return d.gap;})?'text-orange':'')+P.tile(m?m.overall+'% · '+m.level:'not assessed','Maturity');
+    $('obl').innerHTML=P.table([['Obligation',function(x){return esc(x.obligation);}],['State',function(x){return P.badge(x.state==='confirm'?'a person confirms':x.state,STC[x.state]);}],['What the registers show',function(x){return '<span class="small">'+esc(x.evidence)+'</span>';}],['If breached',function(x){return '<span class="small'+(x.criminal?' text-red':'')+'">'+esc(x.penalty)+'</span>';}]],o);
+    $('pen').textContent=r.penalties.note;
+    $('depts').innerHTML=P.table([['Department',function(d){return '<b>'+esc(d.department)+'</b><div class="mut">'+esc(d.activities.length)+' processing activities</div>';}],
+      ['Stewards',function(d){return d.stewards.length?d.stewards.map(function(s){return esc(s.user)+' <span class="mut">'+esc(s.role)+'</span>';}).join('<br>'):P.badge('no steward','orange');}],
+      ['Playbooks',function(d){return d.playbooks.length?d.playbooks.map(function(p){return esc(p.title)+(p.review_due?' '+P.badge('review','orange'):'');}).join('<br>'):'<span class="mut">none</span>';}]],r.departments,null,'Departments come from the owners in the records of processing - record those first, then name a steward for each.');
+    var h='';if(m){h+=Object.keys(m.categories).map(function(k){var c=m.categories[k];return '<div class="mb-2"><div class="d-flex justify-content-between small"><span>'+esc(c.name)+'</span><b>'+esc(c.score)+'%</b></div>'+bar(c.score)+'</div>';}).join('')+'<div class="mut">Last assessed by '+esc(r.maturity.assessed_by)+' on '+esc(P.dt(r.maturity.created_at))+'</div>';
+      if(r.history.length>1)h+='<div class="mut mt-1">History: '+r.history.map(function(x){return esc(String(x.at||'').slice(0,10))+' '+esc(x.overall)+'%';}).join(' · ')+'</div>';}else h='<span class="text-secondary">Not assessed yet. 16 questions across the four areas, answered yes / partly / no.</span>';
+    $('mat').innerHTML=h;
+    var M=r.measured,row=function(l,v){return '<div class="d-flex justify-content-between border-bottom py-1 small"><span>'+esc(l)+'</span><b>'+esc(v===null||v===undefined?'—':v)+'</b></div>';};
+    $('meas').innerHTML=row('Records of processing complete',M.ropa_complete_pct===null?null:M.ropa_complete_pct+'%')+row('Activities with a data steward',M.activities_with_steward_pct===null?null:M.activities_with_steward_pct+'%')+row('Consent purposes receiving events',M.consent_purposes_live)+row('Requests answered on time',M.dsr_on_time_pct===null?null:M.dsr_on_time_pct+'%')+row('Requirements confirmed by a person',M.requirements_confirmed_pct+'%')+'<div class="mut mt-1">A dash means nothing is recorded yet, not zero.</div>';
+    $('train').innerHTML=P.table([['Date',function(t){return esc(t.date);}],['Team',function(t){return esc(t.team);}],['Topic',function(t){return esc(t.topic)+'<div class="mut">'+esc(t.audience||'')+(t.onboarding?' · onboarding':'')+'</div>';}],['People',function(t){return esc(t.attendees);}]],r.training,null,'No training recorded.');
+    $('roles').innerHTML=P.table([['Function',function(k){return '<b>'+esc(k)+'</b>';}],['Responsibility',function(k){return esc(r.roles[k]);}]],Object.keys(r.roles));
+    $('note').textContent=r.note;}).catch(function(e){P.fail($('obl'),e);});}
+  $('addst').addEventListener('click',function(){Z.open('PDPL programme','Name a data steward',P.form('stform',[['department','text','Department (as in the records of processing)',1],['user','text','Platform user name',1],['role','sel','Role',1,[['data_steward','Data steward'],['deputy','Deputy'],['champion','Privacy champion']]]],{},'Save'));});
+  $('addpb').addEventListener('click',function(){Z.open('PDPL programme','Team playbook',P.form('pbform',[['team','text','Team',1],['title','text','Title (e.g. Collecting consent at the branch)',1],['topic','sel','Topic',1,TOPICS],['tool','text','Tool used (system / form)'],['steps','list','Steps (comma separated)'],['reviewed','date','Last reviewed']],{},'Save'));});
+  $('addtr').addEventListener('click',function(){Z.open('PDPL programme','Training session',P.form('trform',[['team','text','Team',1],['topic','text','Topic',1],['date','date','Date',1],['attendees','num','People trained',1],['audience','sel','Audience',0,[['all_staff','All staff'],['finance','Finance (vendor data, contracts)'],['customer_facing','Customer-facing (requests)'],['it_security','IT and security (technical controls)'],['hr','HR'],['marketing','Marketing'],['management','Management']]],['onboarding','bool','Part of onboarding for new hires'],['evidence','text','Evidence (attendance sheet reference)']],{},'Save'));});
+  $('assess').addEventListener('click',function(){var h='<form id="mform">'+Object.keys(V.questions).map(function(k){var c=V.questions[k];return '<h4 class="mt-2">'+esc(c.name)+'</h4>'+c.questions.map(function(q){return '<div class="mb-2"><div class="small">'+esc(q.question)+'</div><div class="btn-group btn-group-sm" role="group">'+['yes','partly','no'].map(function(v){var id='m-'+q.id.replace('.','-')+'-'+v;return '<input type="radio" class="btn-check" name="'+esc(q.id)+'" id="'+esc(id)+'" value="'+v+'"><label class="btn" for="'+esc(id)+'">'+v+'</label>';}).join('')+'</div></div>';}).join('');}).join('')
+    +'<div class="d-flex gap-2 align-items-center mt-2"><button type="submit" class="btn btn-primary">Score</button><span class="small text-secondary" data-msg></span></div></form>';Z.open('PDPL programme','Maturity assessment',h);});
+  var post=function(fm,path){P.req('POST',path,P.body(fm)).then(function(r){P.toast('Saved '+r.id);if(Z.close)Z.close();load();}).catch(function(e){P.msg(fm,P.why(e));});};
+  document.addEventListener('submit',function(ev){var fm=ev.target;
+    if(fm.id==='stform'){ev.preventDefault();post(fm,'/pdpl/stewards');}
+    if(fm.id==='pbform'){ev.preventDefault();post(fm,'/pdpl/playbooks');}
+    if(fm.id==='trform'){ev.preventDefault();post(fm,'/pdpl/training');}
+    if(fm.id==='mform'){ev.preventDefault();var a={};[].slice.call(fm.querySelectorAll('input:checked')).forEach(function(i){a[i.name]=i.value;});
+      P.req('POST','/pdpl/maturity',{answers:a}).then(function(r){P.toast('Maturity '+r.score.overall+'% · '+r.score.level);if(Z.close)Z.close();load();}).catch(function(e){P.msg(fm,P.why(e));});}});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

@@ -1,0 +1,427 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Identity &amp; Sign-in</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-autorefresh.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.hero{position:relative;overflow:hidden;border:1px solid #22314d;border-radius:18px;padding:22px 24px;margin:0 0 14px;background:radial-gradient(700px 300px at 90% -20%,rgba(163,113,247,.22),transparent 60%),radial-gradient(600px 300px at 0% 120%,rgba(56,120,255,.16),transparent 60%),linear-gradient(135deg,#0f1526,#0a0e18)}
+.hero .in{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:center}@media(max-width:800px){.hero .in{grid-template-columns:1fr}}
+.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.14em;color:#a9b4c8;text-transform:uppercase}.hero h1{margin:8px 0 6px;font-size:30px;color:#fff;line-height:1.1}.hero h1 span{background:linear-gradient(90deg,#a371f7,#79b8ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:#b9c4d6;margin:0 0 12px;max-width:760px}.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer;text-decoration:none;display:inline-block}.btn:hover{border-color:#4a5162}.btn.pri{background:#2a1f45;border-color:#6a4fb0;color:#dccbff}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 14px}
+.t{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:11px 13px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11.5px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.g2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px}@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}.p-acc{background:rgba(163,113,247,.16);color:#c9a8ff}
+.heat{display:grid;grid-template-columns:38px repeat(24,minmax(0,1fr));gap:2px;font-size:10px;color:var(--mute)}.heat i{display:block;height:16px;border-radius:3px;background:#161b26}.heat span{text-align:center}
+.legend{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--mute);margin-top:8px}.legend i{width:14px;height:10px;border-radius:2px;display:inline-block}
+.bars svg{width:100%;height:120px;display:block}
+.rk{display:flex;flex-direction:column;gap:8px}.rk .r{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px}
+.rk .sc{font:700 18px Consolas,monospace;text-align:center;border-radius:8px;padding:6px 0}.rk b{color:#fff}.rk .w{font-size:12px;color:var(--mute)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.tabs button{font:600 12.5px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:999px;padding:4px 12px;cursor:pointer}.tabs button.on{border-color:#a371f7;background:#2a1f45;color:#e3d4ff}
+input[type=search]{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;font:13px "Segoe UI",system-ui,sans-serif;min-width:220px}
+ul.plain{margin:0;padding-left:18px}ul.plain li{margin:4px 0}
+@media print{.acts,.tabs{display:none!important}body{background:#fff;color:#000}.card,.t,.hero{background:#fff;border-color:#bbb}}
+.top-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0}
+.top-tabs button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px 14px;cursor:pointer}
+.top-tabs button[aria-selected=true]{border-color:var(--acc);color:#fff;background:linear-gradient(180deg,rgba(163,113,247,.18),rgba(121,184,255,.08))}
+.top-tabs .n{display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:999px;background:rgba(255,123,114,.18);color:var(--bad);font-size:11px}
+.pane[hidden]{display:none}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.chips button{font:600 12px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:999px;padding:4px 11px;cursor:pointer}
+.chips button[aria-pressed=true]{border-color:var(--info);color:#fff}
+input,select,textarea{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px;font:13px "Segoe UI",system-ui,sans-serif}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.fg label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}.fg .wide{grid-column:1/-1}
+.btn.dang{color:var(--bad)}.btn.sm{padding:4px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:default}
+.row-acts{display:flex;gap:4px;flex-wrap:wrap}
+.edit{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:12px;margin:6px 0}
+.dlg-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:60}.dlg-bg.open{display:flex}
+.dlg{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;max-width:520px;width:calc(100% - 32px)}.dlg h3{margin:0 0 8px;color:#fff}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.warnb{border:1px solid rgba(227,179,65,.45);background:rgba(227,179,65,.07);border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:13px}
+.badb{border:1px solid rgba(255,123,114,.45);background:rgba(255,123,114,.07);border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:13px}
+.okb{border:1px solid rgba(63,185,80,.45);background:rgba(63,185,80,.07);border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:13px}
+.ai{border:1px solid rgba(163,113,247,.4);background:rgba(163,113,247,.07);border-radius:12px;padding:12px 14px}.ai .lbl{font:600 11px ui-monospace,Consolas,monospace;color:var(--acc);letter-spacing:.08em}
+.stat{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
+
+</style></head><body><main>
+<section class="hero"><div class="in"><div>
+  <div class="eb">Platform Administration · SAMA CSF 3.3.5 · NCA ECC 2-2 identity &amp; access</div>
+  <h1>Identity &amp; <span>Sign-in</span></h1>
+  <p>Every account, single sign-on, the MFA policy and the sign-in log in one place - with machine learning on the sign-in service's own records (each account's usual hours and addresses, spraying, brute force, explainable account risk) and an AI advisor. Every change is made by an administrator here, through the sign-in service, and recorded in its log; two-step verification is never bypassed.</p>
+  <div class="acts"><a class="btn" href="sso-access.html">SSO Access from AD</a><a class="btn" href="roles.html">Roles &amp; Functions</a><a class="btn" href="access-reviews.html">Access reviews</a><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+</div><div id="ring" aria-label="Identity posture score"></div></div></section>
+<div class="top-tabs" role="tablist" id="tabs">
+  <button type="button" role="tab" data-tab="overview">Overview</button><button type="button" role="tab" data-tab="users">Users</button><button type="button" role="tab" data-tab="sso">Single sign-on</button>
+  <button type="button" role="tab" data-tab="policy">MFA &amp; policy</button><button type="button" role="tab" data-tab="log">Sign-in log</button><button type="button" role="tab" data-tab="insights">Insights (ML)</button><button type="button" role="tab" data-tab="ai">AI advisor</button></div>
+<div id="msg"></div>
+<section class="pane" data-pane="overview">
+  <div class="k" id="kk"></div>
+  <div class="g2"><div class="card"><h2>What to do next <span class="c">from the findings - an administrator decides and changes it here</span></h2><ul class="plain" id="next"></ul></div>
+    <div class="card"><h2>Sign-in set-up</h2><div id="setupst"></div></div></div>
+</section>
+<section class="pane" data-pane="users" hidden>
+  <div class="card"><h2>Users <span class="c" id="ucount"></span><span style="flex:1"></span><button type="button" class="btn" id="uaddad" hidden>＋ Add AD user</button> <button type="button" class="btn pri" id="uadd">＋ Add user</button></h2>
+    <div id="adacc"></div>
+    <div id="uform"></div>
+    <div class="bar"><input type="search" id="uq" placeholder="Search name or account" aria-label="Search users" style="min-width:240px"><span class="chips" id="uchips"></span></div>
+    <div class="tw" id="users"></div>
+    <p class="note">Accounts of the sign-in service: local accounts and AD accounts (marked AD). People who sign in with single sign-on are not listed here - their role comes from their AD group (SSO Access from AD). A new account's password is shown once, in your browser only; give it to the person directly. Resetting a password signs the person out everywhere.</p></div>
+</section>
+<section class="pane" data-pane="sso" hidden><div class="card"><h2>Single sign-on (OpenID Connect) <span class="c" id="ssost"></span></h2><div id="sso"></div></div></section>
+<section class="pane" data-pane="policy" hidden><div class="card"><h2>MFA and local sign-in policy</h2><div id="policy"></div></div></section>
+<section class="pane" data-pane="log" hidden><div class="card"><h2>Sign-in log <span class="c" id="logc"></span><span style="flex:1"></span><button type="button" class="btn sm" id="logcsv">⬇ CSV</button></h2>
+  <div class="bar"><input type="search" id="lq" placeholder="Search account, address or detail" aria-label="Search the sign-in log" style="min-width:240px"><span class="chips" id="lchips"></span></div><div class="tw" id="log"></div>
+  <p class="note">Also kept in /var/log/sentra-auth.log on the server. Times in Riyadh time.</p></div></section>
+<section class="pane" data-pane="insights" hidden>
+<div class="g2">
+  <div class="card"><h2>When people sign in <span class="c" id="heatc"></span></h2><div class="heat" id="heat"></div>
+    <div class="legend">fewer <i style="background:#1d2a45"></i><i style="background:#2f4a8a"></i><i style="background:#5b7fe0"></i><i style="background:#a371f7"></i> more · <i style="background:#ff7b72"></i> failures only · Riyadh time</div></div>
+  <div class="card"><h2>Sign-ins and failures by day <span class="c" id="barsc"></span></h2><div class="bars" id="bars"></div><div class="note" id="trend"></div></div>
+</div>
+<div class="g2">
+  <div class="card"><h2>Unusual sign-ins <span class="c">machine learning on each account's own history</span></h2><div class="tabs" id="utabs"></div><div class="tw" id="unusual"></div>
+    <p class="note">Each account's usual hours and addresses are learned from its own earlier sign-ins (at least 5). A new address, an hour outside the account's usual range, no MFA, or a success just after failures add points; the reasons are listed with every row.</p></div>
+  <div class="card"><h2>Attacks on sign-in <span class="c">password spraying · brute force · credential stuffing</span></h2><div id="attacks"></div></div>
+</div>
+<div class="card"><h2>Accounts that need attention <span class="c">explainable identity risk, every point named</span><span style="flex:1"></span><input type="search" id="q" placeholder="Search account" aria-label="Search accounts"></h2><div class="rk" id="risk"></div></div>
+</section>
+<section class="pane" data-pane="ai" hidden><div class="card"><div class="ai"><div class="lbl">AI IDENTITY ADVISOR · READ-ONLY · A DRAFT TO VERIFY</div>
+  <p class="muted" style="margin:6px 0">The advisor reads the summary this page worked out (accounts with role and MFA, unusual sign-ins, attacks, account risk - addresses cut to /24, no passwords or codes) and answers in plain words. It cannot create, change or delete anything, and it never turns MFA off. Administrators only.</p>
+  <div id="aibox"></div></div></div></section>
+</main>
+<div class="dlg-bg" id="dlgbg" role="dialog" aria-modal="true" aria-labelledby="dlgt"><div class="dlg"><h3 id="dlgt"></h3><div id="dlgb"></div><div class="bar" style="margin-top:12px;justify-content:flex-end"><button type="button" class="btn" id="dlgno">Cancel</button><button type="button" class="btn pri" id="dlgok">OK</button></div></div></div>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var E=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var RIY=3*3600000,DAY=86400000,D=null,ERR='',UTAB='all',Q='',ME={},AIST=null,TAB='overview',UQ='',UCHIP='all',LQ='',LCHIP='all',UADD=false,UADDAD=false,UEDIT=null,RM=null,TEST=null,AIOUT=null,A=null;
+  function api(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.zybQuiet=true;x.open(m,u);x.withCredentials=true;x.timeout=120000;if(m==='POST')x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: the status explains */}if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(m==='POST'?JSON.stringify(b||{}):null);});}
+  var req=function(u){return api('GET',u);};
+  var pill=function(t,c){return '<span class="pill p-'+c+'">'+E(t)+'</span>';};
+  var low=function(s){return String(s||'').toLowerCase();};
+  var hr=function(t){return new Date(t+RIY).getUTCHours();},dow=function(t){return new Date(t+RIY).getUTCDay();},dayk=function(t){return new Date(t+RIY).toISOString().slice(0,10);};
+  var OK=/^(sign-?in|login|success|sso-sign-?in)$/i,FAIL=/^(failure|failed|sso-denied|denied|mfa-failed)$/i,LOCK=/^lockout$/i;
+  var median=function(a){if(!a.length)return 0;var b=a.slice().sort(function(x,y){return x-y;}),m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2;};
+  function mfaOf(u){var v=u.mfa!==undefined?u.mfa:u.mfaSetting;if(v===undefined||v===null||v==='')return null;return v===true||/^(on|yes|true|totp|enrolled|required)$/i.test(String(v));}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  var ago=function(t){var ms=Date.now()-Date.parse(t);if(!isFinite(ms))return 'never';var m=Math.round(ms/60000);return m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':Math.round(m/1440)+' d ago';};
+  var fmt=function(t){var d=new Date(Date.parse(t)+RIY);return isFinite(d)?d.toISOString().slice(0,16).replace('T',' '):'';};
+  // ---------- one confirmation dialog for every change that can lock someone out (no browser confirm(): it can be blocked)
+  var DLG=null;
+  function ask(title,html,okLabel,fn,typed){DLG={fn:fn,typed:typed};$('dlgt').textContent=title;$('dlgb').innerHTML=html+(typed?'<label style="display:block;margin-top:10px;font-size:12px;color:var(--mute)">Type <b>'+E(typed)+'</b> to confirm<input id="dlgin" autocomplete="off" style="width:100%;margin-top:4px"></label>':'');$('dlgok').textContent=okLabel;$('dlgbg').classList.add('open');setTimeout(function(){var i=$('dlgin')||$('dlgok');i.focus();},30);}
+  function closeDlg(){$('dlgbg').classList.remove('open');DLG=null;}
+  $('dlgno').addEventListener('click',closeDlg);
+  $('dlgok').addEventListener('click',function(){if(!DLG)return;if(DLG.typed&&($('dlgin').value||'').trim()!==DLG.typed){toast('Type '+DLG.typed+' exactly to confirm.');return;}var f=DLG.fn;closeDlg();f();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&DLG)closeDlg();});
+  function done(msg){return function(){toast(msg);load();};}
+  function fail(e){toast(e.status===403?'Only an administrator can change sign-in settings.':e.message);}
+  function post(u,b){return api('POST',u,b);}
+  var U=function(u){return '/auth/admin/users/'+encodeURIComponent(u);};
+  function analyse(d){
+    var now=Date.now(),users=(d.users||[]),ev=(d.events||[]).map(function(e){return {t:Date.parse(e.at),k:String(e.event||''),u:low(e.user),ip:String(e.ip||''),mfa:e.mfa,m:e.method||'',r:e.reason||''};}).filter(function(e){return isFinite(e.t);}).sort(function(a,b){return a.t-b.t;});
+    var ok=ev.filter(function(e){return OK.test(e.k);}),fail=ev.filter(function(e){return FAIL.test(e.k);}),lock=ev.filter(function(e){return LOCK.test(e.k);});
+    var span=ev.length?Math.max(1,Math.round((ev[ev.length-1].t-ev[0].t)/DAY)):0;
+    // heatmap day x hour
+    var H={};ev.forEach(function(e){if(!OK.test(e.k)&&!FAIL.test(e.k))return;var k=dow(e.t)+'|'+hr(e.t);H[k]=H[k]||{s:0,f:0};if(OK.test(e.k))H[k].s++;else H[k].f++;});
+    // per-day series + robust z on the last day of failures
+    var days={};ev.forEach(function(e){var k=dayk(e.t);days[k]=days[k]||{s:0,f:0};if(OK.test(e.k))days[k].s++;else if(FAIL.test(e.k))days[k].f++;});
+    var dk=Object.keys(days).sort().slice(-30),fz=null;
+    if(dk.length>=8){var base=dk.slice(0,-1).map(function(k){return days[k].f;}),m=median(base),mad=median(base.map(function(v){return Math.abs(v-m);}))||1,today=days[dk[dk.length-1]].f,z=(today-m)/(1.4826*mad);fz={today:today,usual:m,z:Math.round(z*10)/10,unusual:Math.abs(z)>=3&&today>m};}
+    // per-account baseline (successful sign-ins before each event): usual hours (circular range from the 10th-90th percentile), known addresses
+    var seen={},unusual=[];
+    ok.forEach(function(e){var b=seen[e.u]||(seen[e.u]={hours:[],ips:{},n:0});
+      if(b.n>=5){var pts=0,why=[];
+        if(e.ip&&!b.ips[e.ip]){pts+=40;why.push('first sign-in from '+e.ip);}
+        var hs=b.hours.slice().sort(function(x,y){return x-y;}),lo=hs[Math.floor(.1*(hs.length-1))],hi=hs[Math.ceil(.9*(hs.length-1))],h=hr(e.t);
+        if(h<lo-1||h>hi+1){pts+=25;why.push('at '+h+':00, usually '+lo+':00-'+hi+':00');}
+        if(e.mfa===false){pts+=20;why.push('without MFA');}
+        var pf=fail.filter(function(f){return f.u===e.u&&f.t<e.t&&e.t-f.t<30*60000;}).length;if(pf>=3){pts+=15;why.push(pf+' failures in the 30 minutes before');}
+        if(pts>=25)unusual.push({t:e.t,u:e.u,ip:e.ip,score:Math.min(100,pts),why:why,newip:!b.ips[e.ip]});}
+      b.n++;b.hours.push(hr(e.t));if(e.ip)b.ips[e.ip]=1;});
+    unusual.sort(function(a,b){return b.score-a.score||b.t-a.t;});
+    // attacks: windows of 10 minutes
+    var att=[],W=10*60000,byIp={},byUser={};
+    fail.forEach(function(f){if(f.ip)(byIp[f.ip]=byIp[f.ip]||[]).push(f);if(f.u)(byUser[f.u]=byUser[f.u]||[]).push(f);});
+    Object.keys(byIp).forEach(function(ip){var L=byIp[ip];for(var i=0;i<L.length;i++){var win=L.filter(function(x){return x.t>=L[i].t&&x.t-L[i].t<=W;}),us={};win.forEach(function(x){us[x.u]=1;});var nu=Object.keys(us).length;
+      if(nu>=5){att.push({kind:'Password spraying',who:ip,t:L[i].t,detail:nu+' different accounts failed from one address within 10 minutes',sev:'high',ok:ok.some(function(s){return s.ip===ip&&s.t>=L[i].t&&s.t-L[i].t<=6*3600000;})});break;}
+      if(win.length>=10){att.push({kind:'Brute force',who:ip,t:L[i].t,detail:win.length+' failures from one address within 10 minutes',sev:'high',ok:ok.some(function(s){return s.ip===ip&&s.t>=L[i].t&&s.t-L[i].t<=6*3600000;})});break;}}});
+    Object.keys(byUser).forEach(function(u){var L=byUser[u];for(var i=0;i<L.length;i++){var win=L.filter(function(x){return x.t>=L[i].t&&x.t-L[i].t<=W;}),ips={};win.forEach(function(x){if(x.ip)ips[x.ip]=1;});var ni=Object.keys(ips).length;
+      if(win.length>=5&&ni>=3){att.push({kind:'Credential stuffing',who:u,t:L[i].t,detail:win.length+' failures on one account from '+ni+' addresses within 10 minutes',sev:'high',ok:ok.some(function(s){return s.u===u&&s.t>=L[i].t&&s.t-L[i].t<=6*3600000;})});break;}}});
+    att.sort(function(a,b){return b.t-a.t;});
+    // explainable identity risk per account
+    var risk=users.map(function(u){var pts=[],add=function(n,w){pts.push([n,w]);},id=low(u.user),mf=mfaOf(u),last=Date.parse(u.lastLogin||u.last_login||'');
+      if(u.disabled)return null;
+      if(u.role==='admin'&&mf===false)add('administrator without MFA',35);else if(mf===false)add('no MFA',20);
+      if(u.breakglass)add('break-glass account (keep sealed; any use is reviewed)',10);
+      if(isFinite(last)&&now-last>90*DAY)add('no sign-in for '+Math.round((now-last)/DAY)+' days (dormant)',15);else if(!isFinite(last))add('never signed in',10);
+      if(u.locked)add('locked out now',15);
+      var nf=fail.filter(function(f){return f.u===id&&now-f.t<7*DAY;}).length;if(nf>=5)add(nf+' failed sign-ins in 7 days',Math.min(20,nf));
+      var un=unusual.filter(function(x){return x.u===id&&now-x.t<14*DAY;});if(un.length)add(un.length+' unusual sign-in(s) in 14 days',Math.min(25,10*un.length));
+      if(att.some(function(a){return a.who===id;}))add('targeted by credential stuffing',20);
+      var s=Math.min(100,pts.reduce(function(a,p){return a+p[1];},0));return s?{u:u.user,name:u.name||'',role:u.role||'',score:s,pts:pts}:null;}).filter(Boolean).sort(function(a,b){return b.score-a.score;});
+    var act=users.filter(function(u){return !u.disabled;}),mfaN=act.filter(function(u){return mfaOf(u)===true;}).length,admins=act.filter(function(u){return u.role==='admin';});
+    var mfaPct=act.length?Math.round(100*mfaN/act.length):null;
+    // posture: 100 minus capped, named points (MFA coverage, admins without MFA, dormant, attacks, unusual)
+    var post=[],P=function(n,w){if(w>0)post.push([n,w]);};
+    if(mfaPct!=null)P('MFA coverage '+mfaPct+'%',Math.round((100-mfaPct)*0.35));
+    P(admins.filter(function(u){return mfaOf(u)===false;}).length+' administrator(s) without MFA',Math.min(25,15*admins.filter(function(u){return mfaOf(u)===false;}).length));
+    var dorm=act.filter(function(u){var l=Date.parse(u.lastLogin||u.last_login||'');return isFinite(l)&&now-l>90*DAY;}).length;P(dorm+' dormant account(s)',Math.min(10,2*dorm));
+    P(att.filter(function(a){return now-a.t<7*DAY;}).length+' attack(s) in 7 days',Math.min(20,10*att.filter(function(a){return now-a.t<7*DAY;}).length));
+    P(att.filter(function(a){return a.ok;}).length+' attack(s) followed by a successful sign-in',Math.min(20,20*att.filter(function(a){return a.ok;}).length));
+    P(unusual.filter(function(x){return now-x.t<7*DAY;}).length+' unusual sign-in(s) in 7 days',Math.min(10,2*unusual.filter(function(x){return now-x.t<7*DAY;}).length));
+    var score=act.length?Math.max(0,100-post.reduce(function(a,p){return a+p[1];},0)):null;
+    return {ev:ev,ok:ok,fail:fail,lock:lock,span:span,H:H,days:days,dk:dk,fz:fz,unusual:unusual,att:att,risk:risk,act:act,admins:admins,mfaPct:mfaPct,dorm:dorm,score:score,post:post};
+  }
+  function ring(s,post){var r=70,c=2*Math.PI*r,v=s==null?0:s,col=s==null?'#6e7681':s>=85?'#3fb950':s>=70?'#79b8ff':s>=50?'#e3b341':'#ff7b72';
+    $('ring').innerHTML='<svg viewBox="0 0 180 180" width="210" height="210" role="img" aria-label="'+E(s==null?'identity posture not measured':'identity posture '+s+' of 100')+'"><title>'+E(post.map(function(p){return '-'+p[1]+' '+p[0];}).join('\n')||'nothing subtracted')+'</title><circle cx="90" cy="90" r="'+r+'" fill="none" stroke="#1d2433" stroke-width="12"/>'
+      +'<circle cx="90" cy="90" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="12" stroke-linecap="round" stroke-dasharray="'+(c*v/100).toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 90 90)"/>'
+      +'<text x="90" y="92" text-anchor="middle" fill="#fff" font-size="'+(s==null?16:40)+'" font-weight="700" font-family="Consolas,monospace">'+(s==null?'not measured':E(s))+'</text><text x="90" y="116" text-anchor="middle" fill="#a9b4c8" font-size="11">identity posture</text></svg>';}
+  function drawInsights(){
+    if(ERR){$('msg').innerHTML='<div class="card"><p>'+E(ERR)+'</p></div>';['kk','heat','bars','unusual','attacks','risk','next','utabs'].forEach(function(i){$(i).innerHTML='';});ring(null,[]);return;}
+    var A=analyse(D),t=function(l,v,s,c){return '<div class="t '+(c||'')+'"><div class="l">'+E(l)+'</div><div class="v">'+E(v)+'</div><div class="s">'+E(s)+'</div></div>';},d24=function(L){return L.filter(function(e){return Date.now()-e.t<DAY;}).length;};
+    $('msg').innerHTML=A.ev.length?'':'<div class="card"><p class="muted">The sign-in service sent no sign-in events yet. Accounts and MFA are shown; the heatmap, unusual sign-ins and attack detection start with the first sign-ins.</p></div>';
+    ring(A.score,A.post);
+    $('kk').innerHTML=t('Active accounts',A.act.length,A.admins.length+' administrators','info')+t('MFA coverage',A.mfaPct==null?'—':A.mfaPct+'%','active accounts',A.mfaPct==null?'':A.mfaPct>=95?'ok':A.mfaPct>=70?'warn':'bad')
+      +t('Sign-ins (24 h)',d24(A.ok),A.ev.length?A.span+' day(s) of events':'no events','')+t('Failures (24 h)',d24(A.fail),A.fz&&A.fz.unusual?'unusual: usual '+A.fz.usual+'/day':'learned daily baseline',d24(A.fail)?'warn':'ok')
+      +t('Lockouts (24 h)',d24(A.lock),'5 failures lock 15 min',d24(A.lock)?'warn':'ok')+t('Attacks detected',A.att.length,A.att.filter(function(a){return a.ok;}).length+' followed by a success',A.att.length?'bad':'ok')
+      +t('Unusual sign-ins',A.unusual.length,'from each account\'s baseline',A.unusual.length?'warn':'ok')+t('Dormant accounts',A.dorm,'no sign-in in 90 days',A.dorm?'warn':'ok');
+    // heatmap
+    var mx=1;Object.keys(A.H).forEach(function(k){mx=Math.max(mx,A.H[k].s+A.H[k].f);});var DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],h='<span></span>';
+    for(var x=0;x<24;x++)h+='<span>'+(x%3?'':x)+'</span>';
+    for(var dd=0;dd<7;dd++){h+='<span style="text-align:left">'+DN[dd]+'</span>';for(var hh=0;hh<24;hh++){var c=A.H[dd+'|'+hh],v=c?c.s+c.f:0,f=v/mx,bg=!v?'#161b26':c.s===0?'#ff7b72':f>.75?'#a371f7':f>.4?'#5b7fe0':f>.15?'#2f4a8a':'#1d2a45';
+      h+='<i style="background:'+bg+'" title="'+E(DN[dd]+' '+hh+':00 - '+(c?c.s+' sign-ins, '+c.f+' failures':'none'))+'"></i>';}}
+    $('heat').innerHTML=h;$('heatc').textContent=A.ev.length?A.ev.length+' events · '+A.span+' day(s)':'';
+    // daily bars
+    var K=A.dk;if(K.length){var W=600,Hh=120,bw=W/K.length,m2=1;K.forEach(function(k){m2=Math.max(m2,A.days[k].s+A.days[k].f);});
+      $('bars').innerHTML='<svg viewBox="0 0 '+W+' '+Hh+'" preserveAspectRatio="none" role="img" aria-label="'+E('sign-ins and failures over '+K.length+' days')+'">'+K.map(function(k,i){var d=A.days[k],hs=(Hh-14)*d.s/m2,hf=(Hh-14)*d.f/m2;
+        return '<rect x="'+(i*bw+1).toFixed(1)+'" y="'+(Hh-hs-hf).toFixed(1)+'" width="'+Math.max(1,bw-2).toFixed(1)+'" height="'+hs.toFixed(1)+'" fill="#5b7fe0"><title>'+E(k+': '+d.s+' sign-ins')+'</title></rect><rect x="'+(i*bw+1).toFixed(1)+'" y="'+(Hh-hf).toFixed(1)+'" width="'+Math.max(1,bw-2).toFixed(1)+'" height="'+hf.toFixed(1)+'" fill="#ff7b72"><title>'+E(k+': '+d.f+' failures')+'</title></rect>';}).join('')+'</svg>';
+      $('barsc').textContent=K[0]+' → '+K[K.length-1];}
+    else{$('bars').innerHTML='<div class="empty">No sign-in events yet.</div>';$('barsc').textContent='';}
+    $('trend').innerHTML=A.fz?(A.fz.unusual?pill('unusual','warn')+' '+E(A.fz.today+' failures on the last day against a usual '+A.fz.usual+' (robust z '+A.fz.z+')'):E('Failures on the last day: '+A.fz.today+', usual '+A.fz.usual+' - within the learned range.')):E('The daily failure baseline is learned after 8 days of events.');
+    // unusual
+    var tabs=[['all','All'],['newip','New address'],['nomfa','Without MFA']];$('utabs').innerHTML=tabs.map(function(x){return '<button type="button" data-utab="'+x[0]+'" class="'+(UTAB===x[0]?'on':'')+'" aria-pressed="'+(UTAB===x[0])+'">'+E(x[1])+'</button>';}).join('');
+    var U=A.unusual.filter(function(x){return UTAB==='all'||(UTAB==='newip'?x.newip:x.why.some(function(w){return /without MFA/.test(w);}));});
+    $('unusual').innerHTML=U.length?'<table><thead><tr><th>When</th><th>Account</th><th>Address</th><th>Score</th><th>Why</th></tr></thead><tbody>'+U.slice(0,50).map(function(x){return '<tr><td class="mono">'+E(new Date(x.t+RIY).toISOString().slice(0,16).replace('T',' '))+'</td><td>'+E(x.u)+'</td><td class="mono">'+E(x.ip||'—')+'</td><td>'+pill(x.score,x.score>=60?'bad':'warn')+'</td><td>'+E(x.why.join(' · '))+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">'+(A.ok.length?'Nothing unusual: every sign-in matches its account\'s learned hours and addresses (accounts need 5 earlier sign-ins to have a baseline).':'No successful sign-ins yet.')+'</div>';
+    // attacks
+    $('attacks').innerHTML=A.att.length?A.att.slice(0,20).map(function(a){return '<div style="border:1px solid var(--edge);border-radius:10px;padding:8px 10px;margin-bottom:8px;background:var(--raise)">'+pill(a.kind,'bad')+' <b>'+E(a.who)+'</b> <span class="muted mono">'+E(new Date(a.t+RIY).toISOString().slice(0,16).replace('T',' '))+'</span>'
+      +(a.ok?' '+pill('followed by a successful sign-in','bad'):'')+'<div class="muted" style="margin-top:4px">'+E(a.detail)+'</div></div>';}).join('')
+      :'<div class="empty">'+(A.fail.length?'No spraying, brute force or stuffing pattern in '+A.fail.length+' failed sign-in(s).':'No failed sign-ins in the events received.')+'</div><p class="note">Spraying = one address failing on 5+ accounts in 10 minutes; brute force = 10+ failures from one address in 10 minutes; stuffing = one account failing from 3+ addresses (5+ failures) in 10 minutes. The service also locks an account after 5 failures and blocks an address after 25 in 10 minutes.</p>';
+    // risk
+    var R=A.risk.filter(function(r){return !Q||(low(r.u)+' '+low(r.name)).indexOf(Q)>=0;});
+    $('risk').innerHTML=R.length?R.slice(0,40).map(function(r){var c=r.score>=60?'#ff7b72':r.score>=30?'#e3b341':'#79b8ff';return '<div class="r"><div class="sc" style="background:'+c+'22;color:'+c+'">'+E(r.score)+'</div><div><b>'+E(r.u)+'</b> '+(r.name?'<span class="muted">'+E(r.name)+'</span> ':'')+pill(r.role||'—','acc')
+      +'<div class="w">'+r.pts.map(function(p){return E('+'+p[1]+' '+p[0]);}).join(' · ')+'</div></div></div>';}).join(''):'<div class="empty">'+(Q?'No account matches.':'No account carries a risk indicator.')+'</div>';
+    // next steps
+    var nx=[],noMfaAdm=A.admins.filter(function(u){return mfaOf(u)===false;});
+    if(noMfaAdm.length)nx.push('Turn MFA on for administrator(s) '+noMfaAdm.map(function(u){return u.user;}).join(', ')+' (SAMA 3.3.5, NCA ECC 2-2-3).');
+    if(A.mfaPct!=null&&A.mfaPct<100)nx.push('Raise MFA coverage from '+A.mfaPct+'% to 100% - set the local MFA policy to Everyone, or move staff to single sign-on with MFA.');
+    A.att.filter(function(a){return a.ok;}).forEach(function(a){nx.push('Investigate '+a.who+': '+a.kind.toLowerCase()+' was followed by a successful sign-in - check the account\'s recent activity and reset its credentials if it was not the owner.');});
+    if(A.att.length&&!A.att.some(function(a){return a.ok;}))nx.push('Block or rate-limit the attacking address(es) at the firewall: '+A.att.map(function(a){return a.who;}).slice(0,5).join(', ')+'.');
+    if(A.dorm)nx.push('Review and disable '+A.dorm+' dormant account(s) (no sign-in for 90 days) in User Management.');
+    if(A.unusual.some(function(x){return x.score>=60;}))nx.push('Confirm the high-scoring unusual sign-ins with their owners.');
+    $('next').innerHTML=nx.length?nx.map(function(x){return '<li>'+E(x)+'</li>';}).join(''):'<li class="muted">Nothing to do from these findings.</li>';
+  }
+
+  // ---------- overview: sign-in set-up status
+  function drawSetup(){var s=D.sso||{},bg=(D.users||[]).filter(function(u){return u.breakglass&&!u.disabled;});
+    var rows=[['Single sign-on',s.enabled?pill('on','ok')+' '+E(s.provider||''):pill('off','mut'),s.enabled?'':'Staff use local accounts. Set up Entra ID under Single sign-on.'],
+      ['MFA on single sign-on',s.requireMfa?pill('required','ok'):pill('not required','warn'),s.requireMfa?'':'Turn on "Require MFA" so the amr claim is checked.'],
+      ['People with no mapped group',s.defaultRole==='none'?pill('denied','ok'):pill(s.defaultRole||'—','bad'),s.defaultRole&&s.defaultRole!=='none'?'Everyone who can sign in to the identity provider gets this role - set it to Deny access.':''],
+      ['MFA for local accounts',D.mfaPolicy==='all'?pill('everyone','ok'):D.mfaPolicy==='admins'?pill('administrators','warn'):pill('optional','bad'),D.mfaPolicy==='all'?'':'Require MFA for everyone (MFA & policy).'],
+      ['Who may use local sign-in',D.localLogin==='breakglass'?pill('break-glass only','ok'):pill('all local accounts','warn'),D.localLogin==='breakglass'?'':s.enabled?'When everyone signs in with SSO, limit local sign-in to break-glass accounts.':''],
+      ['Break-glass administrators',bg.length?pill(String(bg.length),'ok'):pill('none','warn'),bg.length?bg.map(function(u){return u.user;}).join(', '):'Keep one sealed local admin with MFA in case single sign-on fails.']];
+    $('setupst').innerHTML='<table><tbody>'+rows.map(function(r){return '<tr><td>'+E(r[0])+'</td><td>'+r[1]+'</td><td class="muted" style="font-size:12px">'+E(r[2])+'</td></tr>';}).join('')+'</tbody></table>';}
+  // ---------- users
+  function riskOf(u){var r=(A&&A.risk||[]).filter(function(x){return low(x.u)===low(u);})[0];return r||null;}
+  function dormant(u){var l=Date.parse(u.lastLogin||'');return isFinite(l)&&Date.now()-l>90*DAY;}
+  var UCH=[['all','All'],['admin','Administrators'],['nomfa','No MFA'],['locked','Locked'],['dormant','Dormant 90 d'],['disabled','Disabled'],['bg','Break-glass'],['risk','At risk']];
+  function uFilter(u){var r=riskOf(u.user);if(UQ&&(low(u.user)+' '+low(u.name)).indexOf(UQ)<0)return false;
+    return UCHIP==='all'||(UCHIP==='admin'&&u.role==='admin')||(UCHIP==='nomfa'&&!u.mfa&&!u.disabled)||(UCHIP==='locked'&&u.locked)||(UCHIP==='dormant'&&dormant(u))||(UCHIP==='disabled'&&u.disabled)||(UCHIP==='bg'&&u.breakglass)||(UCHIP==='risk'&&r&&r.score>=30);}
+  function genPw(){var cs='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789',ra=new Uint32Array(16),pw='';crypto.getRandomValues(ra);for(var i=0;i<14;i++)pw+=cs[ra[i]%cs.length];return pw+(2+ra[14]%8)+'!@#%'[ra[15]%4];}
+  function pwOk(p){return p.length>=12&&/[A-Za-z]/.test(p)&&/\d/.test(p);}
+  function adOn(){return !!(D.ldap&&D.ldap.enabled);}
+  function adListed(){return !!(D.ldap&&D.ldap.access==='listed');}
+  function drawUsers(){var L=(D.users||[]),me=low(D.me||ME.user);
+    var ab=$('uaddad');if(ab)ab.hidden=!(D.ldap&&adListed());
+    $('adacc').innerHTML=D.ldap?'<div class="bar" style="margin:4px 0 10px;flex-wrap:wrap"><b>Who may sign in with their AD account</b><span class="chips">'
+      +'<button type="button" data-adacc="listed" aria-pressed="'+adListed()+'">Only people added here</button><button type="button" data-adacc="groups" aria-pressed="'+!adListed()+'">Anyone in the SOC groups</button></span>'
+      +'<span class="muted" style="font-size:12px">'+(adListed()?'AD checks the password; the person must also be on this list (Add AD user), with the role set here.':'Anyone in a mapped AD group can sign in; the account appears here at the first sign-in, role from the group.')+(adOn()?'':' · AD sign-in is switched off on the server.')+'</span></div>':'';
+    $('ucount').textContent=L.length+' account(s) · '+L.filter(function(u){return u.role==='admin';}).length+' admin';
+    $('uchips').innerHTML=UCH.map(function(c){var n=c[0]==='all'?L.length:L.filter(function(u){var s=UCHIP;UCHIP=c[0];var k=uFilter(Object.assign({},u));UCHIP=s;return k;}).length;return '<button type="button" data-uchip="'+c[0]+'" aria-pressed="'+(UCHIP===c[0])+'">'+E(c[1])+' '+n+'</button>';}).join(' ');
+    if(UADDAD){$('uform').innerHTML='<div class="edit"><b>Add an AD account</b><div class="fg" style="margin-top:8px"><label>AD account<input id="na-user" placeholder="'+E(((D.ldap&&D.ldap.netbios&&D.ldap.netbios[0])||'DOMAIN')+'\\firstname.lastname')+'" autocomplete="off"><span>DOMAIN\\name, name@domain or name - the password stays in AD</span></label><label>Full name<input id="na-name"></label>'
+      +'<label>Role<select id="na-role"><option value="viewer">viewer</option><option value="operator">operator</option><option value="admin">admin</option></select></label></div>'
+      +'<div class="bar" style="margin-top:8px"><button type="button" class="btn pri" id="na-save">Add</button><button type="button" class="btn" id="nu-x">Cancel</button><span class="muted" style="font-size:12px">They sign in with their AD user name and password, then two-step verification.</span></div></div>';}
+    else $('uform').innerHTML=UADD?'<div class="edit"><b>New local account</b><div class="fg" style="margin-top:8px"><label>User name<input id="nu-user" placeholder="firstname.lastname" autocomplete="off"></label><label>Full name<input id="nu-name"></label>'
+      +'<label>Role<select id="nu-role"><option value="viewer">viewer</option><option value="operator">operator</option><option value="admin">admin</option></select></label>'
+      +'<label>Initial password<span class="bar" style="margin:0"><input id="nu-pw" autocomplete="new-password" style="flex:1"><button type="button" class="btn sm" data-gen="nu-pw">🎲 Generate</button></span><span>12+ characters with letters and digits; shown here once</span></label>'
+      +'<label>Two-step verification (MFA)<select id="nu-mfa"><option value="on">Required - set up at first sign-in</option><option value="policy">Follow the policy</option><option value="off">Not required</option></select></label>'
+      +'<label style="flex-direction:row;align-items:center;gap:6px;margin-top:20px"><input type="checkbox" id="nu-en" checked> Account enabled</label></div>'
+      +'<div class="bar" style="margin-top:8px"><button type="button" class="btn pri" id="nu-save">Create account</button><button type="button" class="btn" id="nu-x">Cancel</button><span class="muted" style="font-size:12px">To give it a job role (e.g. Penetration Testing Engineer), open Roles &amp; Functions after it is created.</span></div></div>':'';
+    var R=L.filter(uFilter);
+    $('users').innerHTML=R.length?'<table><thead><tr><th>Account</th><th>Role</th><th>Status</th><th>MFA</th><th>Last sign-in</th><th>Risk (ML)</th><th></th></tr></thead><tbody>'+R.map(function(u){var r=riskOf(u.user),self=low(u.user)===me,
+      mfaTxt=u.mfaSetting==='on'?'required':u.mfaSetting==='off'?'not required':'policy ('+(u.mfaRequired?'required':'not required')+')';
+      var row='<tr'+(u.disabled?' style="opacity:.6"':'')+'><td><b>'+E(u.user)+'</b>'+(self?' '+pill('you','info'):'')+(u.breakglass?' '+pill('break-glass','warn'):'')+(u.source==='ad'?' '+pill('AD','info')+(adListed()?(u.listed?'':' '+pill('not allowed','bad')):''):'')+'<div class="muted" style="font-size:12px">'+E(u.name||'')+'</div></td>'
+        +'<td>'+pill(u.role,u.role==='admin'?'bad':u.role==='operator'?'info':'mut')+'</td><td>'+(u.disabled?pill('disabled','mut'):u.locked?pill('locked','bad'):pill('enabled','ok'))+'</td>'
+        +'<td style="font-size:12px">'+E(mfaTxt)+'<div>'+(u.mfa?pill('enrolled','ok')+' <span class="muted">'+E(String(u.recoveryLeft==null?'':u.recoveryLeft))+' codes</span>':'<span class="muted">not enrolled</span>')+'</div></td>'
+        +'<td style="font-size:12px">'+(u.lastLogin?E(ago(u.lastLogin))+'<div class="muted">'+E(u.lastMethod||'')+'</div>':'never')+'</td>'
+        +'<td>'+(r?'<span title="'+E(r.pts.map(function(p){return '+'+p[1]+' '+p[0];}).join('\n'))+'" class="pill p-'+(r.score>=60?'bad':r.score>=30?'warn':'info')+'">'+r.score+'</span>':'<span class="muted">—</span>')+'</td>'
+        +'<td><div class="row-acts"><button type="button" class="btn sm" data-uedit="'+E(u.user)+'">✎ Edit</button>'
+        +(self?'':'<button type="button" class="btn sm" data-utog="'+E(u.user)+'" data-v="'+(u.disabled?0:1)+'">'+(u.disabled?'▶ Enable':'⏸ Disable')+'</button>')
+        +(u.locked?'<button type="button" class="btn sm" data-uunlock="'+E(u.user)+'">🔓 Unlock</button>':'')
+        +(u.source==='ad'&&adListed()&&!self?(u.listed?'<button type="button" class="btn sm" data-adrm="'+E(u.user)+'">✕ Remove access</button>':'<button type="button" class="btn sm" data-adallow="'+E(u.user)+'">✓ Allow</button>'):'')+'</div></td></tr>';
+      if(UEDIT===u.user)row+='<tr><td colspan="7"><div class="edit"><b>✎ '+E(u.user)+'</b><div class="fg" style="margin-top:8px"><label>Full name<input id="eu-name" value="'+E(u.name||'')+'"></label>'
+        +'<label>Role<select id="eu-role"'+(self||(u.source==='ad'&&!adListed())?' disabled':'')+'>'+['viewer','operator','admin'].map(function(x){return '<option'+(u.role===x?' selected':'')+'>'+x+'</option>';}).join('')+'</select></label>'
+        +'<label>Two-step verification (MFA)<select id="eu-mfa">'+[['on','Required'],['policy','Follow the policy'],['off','Not required']].map(function(o){return '<option value="'+o[0]+'"'+(u.mfaSetting===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></label>'
+        +(u.source==='ad'?'<label>Password<span class="muted">kept in Active Directory - change it there</span></label>':'<label>New password (optional)<span class="bar" style="margin:0"><input id="eu-pw" autocomplete="new-password" style="flex:1"><button type="button" class="btn sm" data-gen="eu-pw">🎲</button></span><span>Signs the person out everywhere</span></label>')
+        +(u.role==='admin'?'<label style="flex-direction:row;align-items:center;gap:6px;margin-top:20px"><input type="checkbox" id="eu-bg"'+(u.breakglass?' checked':'')+'> Break-glass (keeps local sign-in when SSO is enforced)</label>':'')+'</div>'
+        +'<div class="bar" style="margin-top:8px"><button type="button" class="btn pri" data-usave="'+E(u.user)+'">Save changes</button><button type="button" class="btn" id="eu-x">Cancel</button>'
+        +(u.mfa?'<button type="button" class="btn" data-ureset="'+E(u.user)+'">↺ Reset authenticator</button>':'')+(self?'':'<button type="button" class="btn dang" data-udel="'+E(u.user)+'" style="margin-left:auto">🗑 Delete account</button>')+'</div>'
+        +(r?'<p class="note">Risk '+r.score+': '+E(r.pts.map(function(p){return '+'+p[1]+' '+p[0];}).join(' · '))+'</p>':'')+'</div></td></tr>';
+      return row;}).join('')+'</tbody></table>':'<div class="empty">'+(L.length?'No account matches.':'No local accounts.')+'</div>';}
+  function saveUser(k){var u=(D.users||[]).filter(function(x){return x.user===k;})[0];if(!u)return;
+    var b={name:$('eu-name').value.trim(),mfa:$('eu-mfa').value},pw=$('eu-pw')?$('eu-pw').value:'',me=low(D.me||ME.user)===low(k);if(!me&&!(u.source==='ad'&&!adListed()))b.role=$('eu-role').value;
+    if(pw){if(!pwOk(pw)){toast('The new password needs 12+ characters with letters and digits.');return;}b.password=pw;}
+    var bgEl=$('eu-bg'),go=function(){post(U(k)+'/update',b).then(function(){return bgEl&&bgEl.checked!==!!u.breakglass?post(U(k)+'/breakglass',{on:bgEl.checked}):null;}).then(function(){UEDIT=null;done('Account '+k+' updated')();}).catch(fail);};
+    var risky=b.mfa==='off'&&u.mfaSetting!=='off', demote=b.role&&u.role==='admin'&&b.role!=='admin';
+    if(risky)ask('Turn MFA off for '+k+'?','<p>'+(u.role==='admin'?'<b>'+E(k)+' is an administrator.</b> SAMA CSF 3.3.5 and NCA ECC 2-2-3 expect MFA for every privileged account. ':'')+'Their authenticator enrolment stays, but sign-in will no longer ask for it.</p>','Turn MFA off',go,k);
+    else if(demote&&(D.users||[]).filter(function(x){return x.role==='admin'&&!x.disabled;}).length<=1)toast('This is the last enabled administrator - give another account admin first.');
+    else if(pw)ask('Reset the password of '+k+'?','<p>'+E(k)+' is signed out everywhere and signs in with the new password. Give it to them directly - never by e-mail or chat.</p>','Reset password',go);
+    else go();}
+  // ---------- single sign-on
+  function drawSso(){var s=D.sso||{};$('ssost').innerHTML=s.enabled?pill('enabled','ok'):pill('disabled','mut');if(!RM)RM=Object.keys(s.roleMap||{}).map(function(k){return [k,s.roleMap[k]];});
+    $('sso').innerHTML='<div class="fg"><label>Provider<select id="sso-prov">'+['Microsoft Entra ID','ADFS','Okta','ManageEngine ADSelfService Plus','Other OpenID Connect'].map(function(p){return '<option'+(String(s.provider||'').toLowerCase()===p.toLowerCase()?' selected':'')+'>'+p+'</option>';}).join('')+'</select></label>'
+      +'<label class="wide">Issuer URL<input id="sso-iss" dir="ltr" placeholder="https://login.microsoftonline.com/&lt;tenant-id&gt;/v2.0" value="'+E(s.issuer||'')+'"></label>'
+      +'<label>Client (application) ID<input id="sso-cid" dir="ltr" value="'+E(s.clientId||'')+'"></label><label>Client secret<input id="sso-sec" type="password" dir="ltr" autocomplete="off" placeholder="'+(s.hasSecret?'stored - leave blank to keep':'paste the client secret')+'"></label>'
+      +'<label class="wide">Redirect URI (register this in the provider)<input id="sso-red" dir="ltr" value="'+E(s.redirectUri||'')+'"></label>'
+      +'<label>Scopes<input id="sso-scp" dir="ltr" value="'+E(s.scopes||'openid profile email')+'"></label><label>Role claim<select id="sso-rc"><option value="groups"'+(s.roleClaim==='groups'?' selected':'')+'>groups (AD / Entra groups)</option><option value="roles"'+(s.roleClaim==='roles'?' selected':'')+'>roles (app roles)</option></select></label>'
+      +('<label>Allowed e-mail domains<input id="sso-dom" dir="ltr" placeholder="' + ZYB_ORG.domain + '" value="')+E(s.allowedDomains||'')+'"></label><label>People with no mapped role<select id="sso-def">'+[['none','Deny access'],['viewer','viewer'],['operator','operator']].map(function(o){return '<option value="'+o[0]+'"'+(s.defaultRole===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></label>'
+      +'<label style="flex-direction:row;align-items:center;gap:6px;margin-top:20px"><input type="checkbox" id="sso-mfa"'+(s.requireMfa?' checked':'')+'> Require MFA (amr claim)</label></div>'
+      +'<h4 style="margin:14px 0 6px;color:#fff">Role mapping <span class="muted" style="font-weight:400;font-size:12px">group or app-role value → platform role; the highest match wins · for AD groups with four-eyes use <a href="sso-access.html" style="color:var(--info)">SSO Access from AD</a></span></h4>'
+      +RM.map(function(r,i){return '<div class="bar"><input id="rm-k-'+i+'" dir="ltr" placeholder="SENTRA-SOC-Operators" value="'+E(r[0])+'" style="min-width:280px"> → <select id="rm-v-'+i+'">'+['viewer','operator','admin'].map(function(v){return '<option'+(r[1]===v?' selected':'')+'>'+v+'</option>';}).join('')+'</select><button type="button" class="btn sm" data-rmdel="'+i+'">✕</button></div>';}).join('')
+      +'<button type="button" class="btn sm" id="rmadd">＋ Add mapping</button>'
+      +'<div class="bar" style="margin-top:14px"><button type="button" class="btn pri" id="ssosave">Save</button><button type="button" class="btn" id="ssotest">🔎 Test connection</button>'+(s.enabled?'<button type="button" class="btn dang" id="ssooff">Disable single sign-on</button>':'<button type="button" class="btn" id="ssoon">▶ Enable single sign-on</button>')+'</div>'
+      +(TEST?'<div class="'+(TEST.error?'badb':'okb')+'">'+(TEST.error?'❌ '+E(TEST.error):'✅ Discovery and signing keys reached · '+E(TEST.issuer||'')+' · '+E(String(TEST.keys||0))+' keys · amr '+(TEST.amrSupported?'supported':'not advertised - check the MFA claims'))+'</div>':'')
+      +(s.defaultRole&&s.defaultRole!=='none'?'<div class="badb">People with no mapped role get <b>'+E(s.defaultRole)+'</b> - anyone who can sign in to the identity provider gets in. Set it to Deny access.</div>':'')
+      +(!s.requireMfa?'<div class="warnb">MFA is not required on single sign-on: turn on Require MFA, and require MFA for this app in Conditional Access.</div>':'');}
+  function readRM(){RM=RM.map(function(r,i){return [($('rm-k-'+i)||{}).value||'',($('rm-v-'+i)||{}).value||'viewer'];});var m={};RM.forEach(function(r){if(r[0].trim())m[r[0].trim()]=r[1];});return m;}
+  function ssoBody(){var b={provider:$('sso-prov').value,issuer:$('sso-iss').value.trim(),clientId:$('sso-cid').value.trim(),redirectUri:$('sso-red').value.trim(),scopes:$('sso-scp').value.trim(),roleClaim:$('sso-rc').value,allowedDomains:$('sso-dom').value.trim(),defaultRole:$('sso-def').value,requireMfa:$('sso-mfa').checked,roleMap:readRM()};if($('sso-sec').value)b.clientSecret=$('sso-sec').value;return b;}
+  // ---------- policy (guarded: never a setting that locks every administrator out)
+  function drawPolicy(){var s=D.sso||{},bg=(D.users||[]).filter(function(u){return u.breakglass&&!u.disabled&&u.role==='admin';});
+    $('policy').innerHTML='<div class="fg"><label>MFA for local accounts<select id="pol-mfa">'+[['all','Everyone (recommended)'],['admins','Administrators only'],['optional','Optional']].map(function(o){return '<option value="'+o[0]+'"'+(D.mfaPolicy===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></label>'
+      +'<label>Who may use local sign-in<select id="pol-loc"><option value="all"'+(D.localLogin==='all'?' selected':'')+'>All local accounts</option><option value="breakglass"'+(D.localLogin==='breakglass'?' selected':'')+'>Break-glass accounts only (everyone else uses SSO)</option></select></label></div>'
+      +'<div class="bar" style="margin-top:10px"><button type="button" class="btn pri" id="polsave">Save policy</button><span class="muted" style="font-size:12px">Sessions last '+E(String(D.hours||''))+' hours · 5 failures lock an account for 15 minutes · 25 failures in 10 minutes block the address.</span></div>'
+      +'<p class="note">Break-glass only is allowed when single sign-on is on and at least one enabled administrator is marked break-glass ('+(bg.length?E(bg.map(function(u){return u.user;}).join(', ')):'none yet')+') - otherwise nobody could sign in if SSO fails.</p>';}
+  // ---------- sign-in log
+  var LCH=[['all','All'],['ok','Sign-ins'],['fail','Failures'],['lock','Lockouts'],['sso','SSO'],['admin','Admin changes']];
+  function lFilter(e){if(LQ&&(low(e.user)+' '+low(e.ip)+' '+low(e.reason)+' '+low(e.event)).indexOf(LQ)<0)return false;
+    var k=String(e.event||'');return LCHIP==='all'||(LCHIP==='ok'&&OK.test(k))||(LCHIP==='fail'&&FAIL.test(k))||(LCHIP==='lock'&&LOCK.test(k))||(LCHIP==='sso'&&/sso/i.test(k+' '+(e.method||'')))||(LCHIP==='admin'&&/^(config|reset-mfa|unlock|breakglass|user-)/i.test(k));}
+  function drawLog(){var L=(D.events||[]).slice().sort(function(a,b){return Date.parse(b.at)-Date.parse(a.at);}),R=L.filter(lFilter);
+    $('lchips').innerHTML=LCH.map(function(c){return '<button type="button" data-lchip="'+c[0]+'" aria-pressed="'+(LCHIP===c[0])+'">'+E(c[1])+'</button>';}).join(' ');$('logc').textContent=R.length+' of '+L.length+' event(s)';
+    $('log').innerHTML=R.length?'<table><thead><tr><th>When</th><th>Event</th><th>Account</th><th>Method</th><th>MFA</th><th>Address</th><th>Detail</th></tr></thead><tbody>'+R.slice(0,500).map(function(e){var k=String(e.event||'');
+      return '<tr><td class="mono">'+E(fmt(e.at))+'</td><td>'+pill(k,OK.test(k)?'ok':FAIL.test(k)||LOCK.test(k)?'bad':'info')+'</td><td>'+E(e.user||'')+'</td><td>'+E(e.method||'')+'</td><td>'+(e.mfa===true?'✅':e.mfa===false?'—':'')+'</td><td class="mono">'+E(e.ip||'')+'</td><td class="muted" style="font-size:12px">'+E(e.reason||'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(L.length?'No event matches.':'No sign-in events yet.')+'</div>';}
+  function csv(){var R=(D.events||[]).filter(lFilter),cell=function(v){var s=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
+    var t='# Identity & Sign-in log export '+new Date().toISOString()+' filter '+LCHIP+(LQ?' search '+LQ:'')+' rows '+R.length+'\n'+['at','event','user','method','mfa','ip','detail'].join(',')+'\n'+R.map(function(e){return [e.at,e.event,e.user,e.method,e.mfa,e.ip,e.reason].map(cell).join(',');}).join('\n');
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv'}));a.download='signin-log.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);}
+  // ---------- AI advisor: the summary sent is what this page worked out, addresses cut to /24, no secrets
+  var mask=function(s){return String(s||'').replace(/\b(\d{1,3}\.\d{1,3}\.\d{1,3})\.\d{1,3}\b/g,'$1.x');};
+  function facts(){var s=D.sso||{},d24=function(L){return L.filter(function(e){return Date.now()-e.t<DAY;}).length;};
+    return {kpis:{active:A.act.length,admins:A.admins.length,mfa_pct:A.mfaPct,admins_no_mfa:A.admins.filter(function(u){return mfaOf(u)===false;}).length,dormant:A.dorm,locked:(D.users||[]).filter(function(u){return u.locked;}).length,
+        breakglass:(D.users||[]).filter(function(u){return u.breakglass;}).length,signins_24h:d24(A.ok),failures_24h:d24(A.fail),lockouts_24h:d24(A.lock),attacks:A.att.length,attacks_followed_by_success:A.att.filter(function(a){return a.ok;}).length,
+        unusual:A.unusual.length,posture:A.score,days_of_events:A.span,sso_enabled:!!s.enabled,sso_require_mfa:!!s.requireMfa,local_login_breakglass_only:D.localLogin==='breakglass'},
+      policy:'local MFA '+D.mfaPolicy+'; local sign-in '+D.localLogin+'; SSO '+(s.enabled?'on ('+(s.provider||'')+'), no-group role '+s.defaultRole:'off'),
+      accounts:(D.users||[]).filter(function(u){return !u.disabled;}).map(function(u){var r=riskOf(u.user);return {user:u.user,role:u.role,mfa:mfaOf(u),risk:r?r.score:0,why:r?r.pts.map(function(p){return mask(p[0]);}):[]};}).sort(function(a,b){return b.risk-a.risk;}).slice(0,60),
+      unusual:A.unusual.slice(0,30).map(function(x){return {user:x.u,at:new Date(x.t).toISOString(),score:x.score,why:x.why.map(mask)};}),
+      attacks:A.att.slice(0,20).map(function(a){return {kind:a.kind,who:mask(a.who),at:new Date(a.t).toISOString(),detail:a.detail,ok:a.ok};}),
+      posture_points:A.post.map(function(p){return p[0]+' (-'+p[1]+')';})};}
+  function drawAi(){var st=AIST||{};
+    $('aibox').innerHTML=(st.enabled?'<div class="bar"><input id="aiq" maxlength="600" placeholder="Ask a question, or leave empty for the identity brief" style="flex:1;min-width:280px"><button type="button" class="btn pri" id="aigo">✨ Ask the advisor</button></div>'
+      +'<div class="bar"><button type="button" class="btn sm" data-aiq="Which accounts should I fix first, and how?">Which accounts first?</button><button type="button" class="btn sm" data-aiq="Are the sign-in attacks a real threat, and what should the firewall team block?">Attacks - real threat?</button><button type="button" class="btn sm" data-aiq="What would a SAMA CSF 3.3.5 auditor flag in this identity set-up?">What would SAMA flag?</button></div>'
+      :'<p class="muted">'+E(st.reason||'The AI advisor is not available.')+'</p>')+'<div id="aiout"></div>';
+    if(AIOUT)drawAiOut();}
+  function drawAiOut(){var o=$('aiout');if(!o)return;if(AIOUT.error){o.innerHTML='<p style="color:var(--bad)">'+E(AIOUT.error)+'</p>';return;}
+    o.innerHTML='<div style="margin-top:10px">'+pill(AIOUT.label||'AI draft','info')+'<p style="white-space:pre-wrap;margin-top:8px">'+E(AIOUT.answer||'')+'</p>'+((AIOUT.injection_signals||[]).length?'<p class="note">Some account text looked like instructions to the AI; it was treated as data.</p>':'')+'</div>';}
+  function askAi(q,btn){btn.disabled=true;var t=btn.textContent;btn.textContent='Thinking…';api('POST','/api/itam/identity-advisor/ask',{question:q||'',facts:facts()}).then(function(r){AIOUT=r;}).catch(function(e){AIOUT={error:e.status===403?'The AI identity advisor is for administrators.':e.message};}).then(function(){btn.disabled=false;btn.textContent=t;drawAiOut();});}
+  // ---------- tabs and render
+  function tab(t){TAB=t;[].forEach.call(document.querySelectorAll('#tabs button'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});[].forEach.call(document.querySelectorAll('.pane'),function(p){p.hidden=p.getAttribute('data-pane')!==t;});try{history.replaceState(null,'','#'+t);}catch(e){ /* sandboxed frame: the tab still switches */ }}
+  function render(){drawInsights();if(ERR||!D)return;A=analyse(D);
+    var n=function(id,v){var b=document.querySelector('#tabs [data-tab="'+id+'"]');if(!b)return;var x=b.querySelector('.n');if(x)x.remove();if(v)b.insertAdjacentHTML('beforeend','<span class="n">'+v+'</span>');};
+    n('users',(D.users||[]).filter(function(u){return u.locked||(u.role==='admin'&&!u.mfa&&!u.disabled);}).length);n('insights',A.att.length+A.unusual.filter(function(x){return x.score>=60;}).length);
+    drawSetup();drawUsers();drawSso();drawPolicy();drawLog();drawAi();}
+  function load(){
+    return Promise.all([req('/auth/admin/config'),req('/auth/whoami').catch(function(){return {};}),req('/api/itam/identity-advisor/status').catch(function(e){return {enabled:false,reason:e.status===404?'The AI identity advisor is not installed on this server yet - run the update.':e.status===403?'The AI identity advisor is for administrators.':e.message};})])
+      .then(function(r){D=r[0];ME=r[1]||{};AIST=r[2];ERR='';RM=null;render();},function(e){D=null;ERR=e.status===403||e.status===401?'Identity & Sign-in is for administrators: it reads and changes every account and sign-in setting of the sign-in service.':'The sign-in service did not answer ('+e.message+').';render();
+        ['users','sso','policy','log','aibox','setupst'].forEach(function(i){$(i).innerHTML='';});});}
+  // ---------- events
+  document.addEventListener('click',function(e){var t;
+    if((t=e.target.closest('#tabs [data-tab]'))){tab(t.getAttribute('data-tab'));return;}
+    if((t=e.target.closest('[data-utab]'))){UTAB=t.getAttribute('data-utab');drawInsights();return;}
+    if(e.target.closest('#refresh')){load();return;}
+    if((t=e.target.closest('[data-uchip]'))){UCHIP=t.getAttribute('data-uchip');drawUsers();return;}
+    if((t=e.target.closest('[data-lchip]'))){LCHIP=t.getAttribute('data-lchip');drawLog();return;}
+    if(e.target.closest('#uadd')){UADD=true;UADDAD=false;UEDIT=null;drawUsers();var f=$('nu-user');if(f)f.focus();return;}
+    if(e.target.closest('#uaddad')){UADDAD=true;UADD=false;UEDIT=null;drawUsers();var fa=$('na-user');if(fa)fa.focus();return;}
+    if(e.target.closest('#nu-x')||e.target.closest('#eu-x')){UADD=false;UADDAD=false;UEDIT=null;drawUsers();return;}
+    if(e.target.closest('#na-save')){var ba={ad:true,user:$('na-user').value.trim(),name:$('na-name').value.trim(),role:$('na-role').value};
+      if(!/^[A-Za-z0-9._@\\-]{2,120}$/.test(ba.user)){toast('AD account: DOMAIN\\name, name@domain or name.');return;}
+      var ga=function(){post('/auth/admin/users',ba).then(function(){UADDAD=false;done(ba.user+' added - they can sign in with their AD password')();}).catch(fail);};
+      if(ba.role==='admin')ask('Give '+ba.user+' the administrator role?','<p>Administrators manage accounts, sign-in policy and every connection.</p>','Add as administrator',ga,ba.user);else ga();return;}
+    if((t=e.target.closest('[data-adacc]'))){var want=t.getAttribute('data-adacc');if((want==='listed')===adListed())return;
+      var lose=(D.users||[]).filter(function(u){return u.source==='ad'&&!u.listed;}).length;
+      var gp2=function(){post('/auth/admin/policy',{adAccess:want}).then(done(want==='listed'?'Only people added here can sign in with AD':'Anyone in the SOC groups can sign in with AD')).catch(fail);};
+      if(want==='listed')ask('Only people added here?','<p>From now on an AD account can sign in only after an administrator adds it here (Add AD user), with the role set here.'+(lose?' <b>'+lose+' AD account(s)</b> on this list are not added yet: they are signed out now and cannot sign in until you press ✓ Allow next to them.':'')+'</p>','Limit AD sign-in',gp2);
+      else ask('Let anyone in the SOC groups sign in?','<p>Everyone in a mapped AD group can sign in; the role comes from the group, and the account is created at the first sign-in.</p>','Allow the groups',gp2);return;}
+    if((t=e.target.closest('[data-adallow]'))){var ka=t.getAttribute('data-adallow'),ua=(D.users||[]).filter(function(x){return x.user===ka;})[0]||{};post('/auth/admin/users',{ad:true,user:ka,role:ua.role||'viewer'}).then(done(ka+' can sign in with AD')).catch(fail);return;}
+    if((t=e.target.closest('[data-adrm]'))){var kr=t.getAttribute('data-adrm');ask('Remove AD access for '+kr+'?','<p>They are signed out now and cannot sign in until an administrator allows them again. Their history stays.</p>','Remove access',function(){post(U(kr)+'/update',{listed:false}).then(done(kr+' can no longer sign in')).catch(fail);},kr);return;}
+    if((t=e.target.closest('[data-gen]'))){var f2=$(t.getAttribute('data-gen'));f2.value=genPw();f2.select();return;}
+    if(e.target.closest('#nu-save')){var b={user:$('nu-user').value.trim(),name:$('nu-name').value.trim(),role:$('nu-role').value,password:$('nu-pw').value,mfa:$('nu-mfa').value,disabled:!$('nu-en').checked};
+      if(!/^[A-Za-z0-9._@-]{2,100}$/.test(b.user)){toast('User name: letters, digits and . _ @ - only (2-100).');return;}
+      if((D.users||[]).some(function(u){return low(u.user)===low(b.user);})){toast(b.user+' already exists.');return;}
+      if(!pwOk(b.password)){toast('Initial password: 12+ characters with letters and digits (press Generate).');return;}
+      var go=function(){post('/auth/admin/users',b).then(function(){UADD=false;done('Account '+b.user+' created - give the password to the person directly')();}).catch(fail);};
+      if(b.role==='admin'&&b.mfa==='off')ask('Create an administrator without MFA?','<p>SAMA CSF 3.3.5 expects MFA for every privileged account.</p>','Create anyway',go,b.user);else go();return;}
+    if((t=e.target.closest('[data-uedit]'))){var k=t.getAttribute('data-uedit');UEDIT=UEDIT===k?null:k;UADD=false;drawUsers();return;}
+    if((t=e.target.closest('[data-usave]'))){saveUser(t.getAttribute('data-usave'));return;}
+    if((t=e.target.closest('[data-utog]'))){var k2=t.getAttribute('data-utog'),dis=t.getAttribute('data-v')==='1',u2=(D.users||[]).filter(function(x){return x.user===k2;})[0]||{};
+      if(dis&&u2.role==='admin'&&(D.users||[]).filter(function(x){return x.role==='admin'&&!x.disabled;}).length<=1){toast('This is the last enabled administrator.');return;}
+      var g2=function(){post(U(k2)+'/update',{disabled:dis}).then(done(k2+(dis?' disabled':' enabled'))).catch(fail);};
+      if(dis)ask('Disable '+k2+'?','<p>They are signed out and cannot sign in until an administrator enables the account again.</p>','Disable',g2);else g2();return;}
+    if((t=e.target.closest('[data-uunlock]'))){post(U(t.getAttribute('data-uunlock'))+'/unlock',{}).then(done('Account unlocked')).catch(fail);return;}
+    if((t=e.target.closest('[data-ureset]'))){var k3=t.getAttribute('data-ureset');ask('Reset the authenticator of '+k3+'?','<p>Their authenticator and recovery codes are removed; they set MFA up again at their next sign-in. Use this when a phone is lost or replaced.</p>','Reset authenticator',function(){post(U(k3)+'/reset-mfa',{}).then(done('Authenticator reset - MFA set-up at next sign-in')).catch(fail);});return;}
+    if((t=e.target.closest('[data-udel]'))){var k4=t.getAttribute('data-udel');ask('Delete '+k4+'?','<p>The account is removed from the sign-in service. This cannot be undone - disabling keeps the history and can be reversed.</p>','Delete account',function(){post(U(k4)+'/delete',{}).then(function(){UEDIT=null;done('Account '+k4+' deleted')();}).catch(fail);},k4);return;}
+    if(e.target.closest('#rmadd')){readRM();RM.push(['','viewer']);drawSso();return;}
+    if((t=e.target.closest('[data-rmdel]'))){readRM();RM.splice(+t.getAttribute('data-rmdel'),1);drawSso();return;}
+    if(e.target.closest('#ssosave')){var sb=ssoBody();if(sb.defaultRole!=='none'&&D.sso&&D.sso.enabled){ask('Let everyone in?','<p>People with no mapped role will get <b>'+E(sb.defaultRole)+'</b>.</p>','Save anyway',function(){post('/auth/admin/sso',sb).then(done('Single sign-on settings saved')).catch(fail);});return;}post('/auth/admin/sso',sb).then(done('Single sign-on settings saved')).catch(fail);return;}
+    if(e.target.closest('#ssotest')){post('/auth/admin/sso',ssoBody()).then(function(){return post('/auth/admin/sso/test',{});}).then(function(j){TEST=j;drawSso();}).catch(function(x){TEST={error:x.message};drawSso();});return;}
+    if(e.target.closest('#ssoon')){var bb=ssoBody();if(!bb.issuer||!bb.clientId){toast('Fill in the issuer and the client ID, then Test connection first.');return;}bb.enabled=true;ask('Enable single sign-on?','<p>Local accounts keep working until you limit local sign-in to break-glass accounts.</p>','Enable',function(){post('/auth/admin/sso',bb).then(done('Single sign-on enabled')).catch(fail);});return;}
+    if(e.target.closest('#ssooff')){if(D.localLogin==='breakglass'){toast('Local sign-in is break-glass only: allow all local accounts (MFA & policy) before disabling single sign-on, or only break-glass accounts could sign in.');return;}
+      ask('Disable single sign-on?','<p>Everyone signs in with a local account; people who only have an SSO identity cannot sign in.</p>','Disable single sign-on',function(){post('/auth/admin/sso',{enabled:false}).then(done('Single sign-on disabled')).catch(fail);},'disable');return;}
+    if(e.target.closest('#polsave')){var mp=$('pol-mfa').value,ll=$('pol-loc').value,bg2=(D.users||[]).filter(function(u){return u.breakglass&&!u.disabled&&u.role==='admin';});
+      if(ll==='breakglass'&&!(D.sso&&D.sso.enabled)){toast('Break-glass only needs single sign-on on - otherwise nobody else could sign in.');return;}
+      if(ll==='breakglass'&&!bg2.length){toast('Mark at least one enabled administrator as break-glass first (Users → Edit).');return;}
+      var gp=function(){post('/auth/admin/policy',{mfaPolicy:mp,localLogin:ll}).then(done('Sign-in policy saved')).catch(fail);};
+      if(mp==='optional')ask('Make MFA optional for local accounts?','<p>Accounts without an authenticator will sign in with a password alone. SAMA CSF 3.3.5 and NCA ECC 2-2-3 expect MFA.</p>','Save anyway',gp,'optional');else gp();return;}
+    if(e.target.closest('#logcsv')){csv();return;}
+    if((t=e.target.closest('[data-aiq]'))){$('aiq').value=t.getAttribute('data-aiq');askAi($('aiq').value,$('aigo'));return;}
+    if((t=e.target.closest('#aigo'))){askAi($('aiq').value.trim(),t);return;}
+  });
+  $('q').addEventListener('input',function(){Q=low(this.value.trim());if(D)drawInsights();});
+  $('uq').addEventListener('input',function(){UQ=low(this.value.trim());if(D){var p=this.selectionStart;drawUsers();}});
+  $('lq').addEventListener('input',function(){LQ=low(this.value.trim());if(D)drawLog();});
+  var h=(location.hash||'').slice(1);tab(['overview','users','sso','policy','log','insights','ai'].indexOf(h)>=0?h:'overview');
+  // keep the page current: every 30 s, never while someone is typing, editing or has a dialog open (vendor/zyb-autorefresh.js)
+  if(window.zybAutoRefresh)window.zybAutoRefresh({load:load,every:30,into:document.querySelector('.acts')});
+  load();
+})();
+</script>
+</body></html>

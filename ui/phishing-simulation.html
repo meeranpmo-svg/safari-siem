@@ -1,0 +1,112 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Phishing Simulation</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;text-decoration:none;display:inline-flex;gap:6px;align-items:center}.btn:hover{border-color:#3a4258}.btn.pri{background:#2b4b8f;border-color:#3d63b5}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.card h2 .c{font-weight:400;font-size:12px;color:var(--d-mute)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}@media(max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px 14px}.kpi .n{font-size:28px;font-weight:800;line-height:1.15}.kpi .l{font-size:12.5px;color:var(--d-mute)}.kpi .s{font-size:11.5px;color:var(--d-mute);margin-top:2px}
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}@media(max-width:1100px){.grid2{grid-template-columns:1fr}}
+.chart svg{width:100%;height:220px;display:block}
+.dep{display:grid;grid-template-columns:150px 1fr 70px;gap:10px;align-items:center;margin:7px 0;font-size:13px}.dep .b{height:12px;background:#232837;border-radius:6px;position:relative;overflow:visible}.dep .b i{display:block;height:100%;border-radius:6px}.dep .b u{position:absolute;top:-4px;bottom:-4px;width:2px;background:#e7eaf0;opacity:.6}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:700}.v-bad{background:rgba(229,72,77,.15);color:#ff7b80}.v-warn{background:rgba(245,159,0,.15);color:#f5b544}.v-ok{background:rgba(47,179,68,.15);color:#5fd27a}.v-mute{background:#232837;color:var(--d-mute)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:12px}
+.why{margin:3px 0 0;padding-left:16px;font-size:12px;color:var(--d-mute)}
+.banner{border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}.banner.bad{background:rgba(229,72,77,.12);border:1px solid #7a2b2e}.banner.inf{background:rgba(91,141,239,.08);border:1px solid #2b4a6b}
+input[type=text],input[type=password],input[type=search]{background:#0d1017;color:inherit;border:1px solid var(--d-line);border-radius:8px;padding:7px 10px;font:inherit}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--d-mute)}
+.ans{white-space:pre-wrap;border:1px solid var(--d-line);border-radius:10px;padding:12px;margin-top:10px;background:var(--d-raise)}
+.toast{position:fixed;right:18px;bottom:18px;background:#1d2330;border:1px solid #3a4258;border-radius:10px;padding:10px 14px;z-index:60}
+ol.steps{margin:0;padding-left:18px}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Security awareness · Microsoft Defender Attack Simulation Training</div><h1>Phishing Simulation</h1><div class="mute sm">How staff respond to simulated phishing: who clicks, who reports, which departments and lures need attention, and whether training works. Campaigns are launched in Microsoft Defender; this page reads their results (read-only) and machine learning turns them into trends and fair comparisons. Results about people are indicators, not proof of carelessness.</div></div>
+<div class="sp"></div><span class="mute sm" id="asof"></span><button type="button" class="btn" id="sync" hidden>Sync now</button><button type="button" class="btn" id="xls">Excel</button><button type="button" class="btn" id="refresh">Refresh</button></div>
+<div class="banner bad" id="err" hidden></div>
+<div id="nc" hidden></div>
+<div id="main" hidden>
+<div class="kpis" id="kpis"></div>
+<div class="card" id="fcard"><h2>What needs attention <span class="c">most important first</span></h2><div id="findings"></div></div>
+<div class="grid2">
+<div class="card chart"><h2>Campaigns <span class="c" id="trend"></span></h2><div id="chart"></div></div>
+<div class="card"><h2>Departments <span class="c">smoothed click rate · white line = organisation · small departments are pulled toward it</span></h2><div id="deps"></div></div>
+</div>
+<div class="card"><h2>Campaign results</h2><div id="camps"></div></div>
+<div class="grid2">
+<div class="card" id="pcard"><h2>People to support <span class="c">risk indicator from their own results - not proof</span></h2><div id="people"></div></div>
+<div><div class="card"><h2>Training <span class="c">indicator</span></h2><div id="training"></div></div>
+<div class="card"><h2>AI awareness advisor <span class="c">sees aggregates only - no names; changes nothing</span></h2><div id="ai"></div></div></div>
+</div>
+</div>
+<div class="card" id="setcard" hidden><h2>Connection <span class="c">administrator · read-only Graph app registration</span></h2><div id="settings"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);},V=null,ANS=null,Q='',ALL=false;
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function rc(r){return r==null?'#6e7681':r>=30?'#e5484d':r>=15?'#f59f00':'#2fb344';}
+  function kpi(n,l,s,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div>'+(s?'<div class="s">'+esc(s)+'</div>':'')+'</div>';}
+  function settingsForm(s){return '<div class="form"><label>Directory (tenant) id<input type="text" id="s-ten" value="'+esc(s.tenant_id||'')+'" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></label><label>Application (client) id<input type="text" id="s-cli" value="'+esc(s.client_id||'')+'"></label><label>Client secret '+(s.secret_set?'(stored - leave empty to keep)':'')+'<input type="password" id="s-sec" autocomplete="new-password"></label></div>'
+    +'<p class="mute sm">Grant the app registration these <b>application</b> permissions with admin consent: '+esc((s.permissions||[]).join(', '))+'. Nothing is launched or changed from here - campaigns are run in Microsoft Defender → Attack simulation training.</p>'
+    +'<label class="sm"><input type="checkbox" id="s-dep" '+(s.departments!==false?'checked':'')+'> Group results by department (reads the department from Entra ID)</label> <label class="sm" style="margin-left:14px"><input type="checkbox" id="s-en" '+(s.enabled?'checked':'')+'> Enabled</label>'
+    +'<div style="margin-top:10px;display:flex;gap:8px"><button type="button" class="btn pri" id="s-save">Save</button><button type="button" class="btn" id="s-test">Test the connection</button></div>'
+    +(s.last_test?'<p class="sm" style="margin-top:8px">Last test '+esc(String(s.last_test.at||'').slice(0,16).replace('T',' '))+': '+(s.last_test.ok?pill('ok','v-ok'):pill('failed','v-bad')+' '+esc(s.last_test.error||''))+'</p>':'');}
+  function draw(){var v=V;$('sync').hidden=!v.can_sync;$('asof').textContent=v.synced_at?'results read '+new Date(v.synced_at).toLocaleString():'';
+    $('setcard').hidden=!v.can_admin;if(v.can_admin)$('settings').innerHTML=settingsForm(v.settings||{});
+    if(!v.connected){$('main').hidden=true;$('nc').hidden=false;$('nc').innerHTML='<div class="banner inf"><b>No simulation results yet.</b> '+esc(v.reason)+(v.can_admin?' - fill in the connection below.':'')+' Nothing is shown rather than made-up rates.</div>';return;}
+    $('nc').hidden=true;$('main').hidden=false;
+    var S=v.summary,t=v.trend;
+    $('kpis').innerHTML=kpi(S.campaigns,'Campaigns read',S.people+' people')+kpi(S.click_rate==null?'–':S.click_rate+'%','Click / compromise rate','latest '+(S.last_click_rate==null?'–':S.last_click_rate+'%'),rc(S.click_rate))+kpi(S.report_rate==null?'–':S.report_rate+'%','Reported the simulation','')
+      +kpi(S.resilience==null?'–':S.resilience,'Resilience (reported / compromised)','above 1 = more report than fall for it',S.resilience==null?'':S.resilience>=1?'#5fd27a':'#f5b544')+kpi(S.repeat_clickers,'Repeat clickers','compromised in 2+ simulations',S.repeat_clickers?'#f5b544':'')
+      +kpi(S.ttc_median_min==null?'–':S.ttc_median_min+' min','Median time to click','after launch')+kpi(S.training_completion==null?'–':S.training_completion+'%','Assigned training completed','')+kpi(t.verdict,'Trend over campaigns',t.click_per_month==null?'needs 3 campaigns':(t.click_per_month>0?'+':'')+t.click_per_month+' pts/month clicks',t.verdict==='improving'?'#5fd27a':t.verdict==='worsening'?'#ff7b80':'');
+    $('findings').innerHTML=v.findings.length?'<table><thead><tr><th>Level</th><th>Finding</th><th>Evidence</th><th>What to do</th></tr></thead><tbody>'+v.findings.map(function(f){return '<tr><td>'+pill(f.severity,f.severity==='high'?'v-bad':'v-warn')+'</td><td><b>'+esc(f.title)+'</b></td><td class="sm">'+esc(f.why)+'</td><td class="sm"><ol class="steps">'+f.fix.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol></td></tr>';}).join('')+'</tbody></table>':'<div class="mute">Nothing stands out in the results.</div>';
+    $('trend').textContent=t.click_per_month==null?'trend after 3 campaigns':'clicks '+(t.click_per_month>0?'+':'')+t.click_per_month+' · reports '+(t.report_per_month>0?'+':'')+t.report_per_month+' points a month ('+t.verdict+')';
+    chart();
+    var org=S.click_rate||0;
+    $('deps').innerHTML=v.departments.length?v.departments.slice(0,14).map(function(d){return '<div class="dep"><span title="'+esc(d.people+' people · '+d.targets+' targets')+'">'+esc(d.dept)+(d.flag?' '+pill('above','v-bad'):'')+'</span><div class="b"><i style="width:'+Math.min(100,d.smoothed*2)+'%;background:'+rc(d.smoothed)+'"></i><u style="left:'+Math.min(100,org*2)+'%"></u></div><span class="sm">'+esc(d.smoothed)+'% <span class="mute">('+esc(d.click_rate)+')</span></span></div>';}).join('')+'<p class="mute sm">Bar = smoothed rate (raw in brackets). A department is flagged only when it stands above the organisation by more than its own uncertainty.</p>':'<div class="mute">No department recorded.</div>';
+    $('camps').innerHTML='<table><thead><tr><th>Campaign</th><th>Technique</th><th>Launched</th><th>Targets</th><th>Clicked</th><th>Reported</th><th>Median time to click</th><th>Within 5 min</th><th>Training done</th></tr></thead><tbody>'+v.campaigns.slice().reverse().map(function(c){return '<tr><td><b>'+esc(c.name)+'</b></td><td class="sm">'+esc(c.technique)+'</td><td class="sm">'+esc(String(c.launched||'').slice(0,10))+'</td><td>'+c.targets+'</td><td style="color:'+rc(c.click_rate)+'">'+esc(c.click_rate)+'%</td><td>'+esc(c.report_rate)+'%</td><td>'+esc(c.ttc_median_min==null?'–':c.ttc_median_min+' min')+'</td><td>'+esc(c.within5==null?'–':c.within5+'%')+'</td><td>'+c.training_completed+' / '+c.training_assigned+'</td></tr>';}).join('')+'</tbody></table>';
+    var T=v.training;$('training').innerHTML='<p>People who completed training: <b>'+esc(T.completed_people)+'</b></p><p>Compromise rate - trained: <b>'+esc(T.rate_trained==null?'–':T.rate_trained+'%')+'</b> · not trained: <b>'+esc(T.rate_untrained==null?'–':T.rate_untrained+'%')+'</b></p><p class="mute sm">'+esc(T.note)+'.</p>';
+    people();ai();}
+  function chart(){var C=V.campaigns;if(!C.length){$('chart').innerHTML='<div class="mute">No campaign.</div>';return;}
+    var W=760,H=200,n=C.length,bw=Math.min(60,(W-60)/n),mx=Math.max.apply(null,C.map(function(c){return Math.max(c.click_rate||0,c.report_rate||0);}).concat([10]));
+    var y=function(v){return H-10-(v/mx)*(H-30);},g='';[0,mx/2,mx].forEach(function(v){g+='<line x1="40" x2="'+W+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#232837"/><text x="34" y="'+(y(v)+4)+'" text-anchor="end" fill="#8b93a4" font-size="11">'+Math.round(v)+'%</text>';});
+    C.forEach(function(c,i){var x=50+i*((W-60)/n);g+='<g><title>'+esc(c.name+': '+c.click_rate+'% clicked, '+c.report_rate+'% reported')+'</title><rect x="'+x+'" y="'+y(c.click_rate||0)+'" width="'+(bw/2-2)+'" height="'+(H-10-y(c.click_rate||0))+'" fill="#e5484d"/><rect x="'+(x+bw/2)+'" y="'+y(c.report_rate||0)+'" width="'+(bw/2-2)+'" height="'+(H-10-y(c.report_rate||0))+'" fill="#2fb344"/><text x="'+(x+bw/2)+'" y="'+(H+8)+'" text-anchor="middle" fill="#8b93a4" font-size="10">'+esc(String(c.launched||'').slice(5,10))+'</text></g>';});
+    $('chart').innerHTML='<svg viewBox="0 0 '+W+' '+(H+14)+'" preserveAspectRatio="none" role="img" aria-label="Click and report rate per campaign">'+g+'</svg><div class="sm mute"><span style="color:#ff7b80">■</span> clicked · <span style="color:#5fd27a">■</span> reported - per campaign, oldest left</div>';}
+  function people(){if(!V.people){$('people').innerHTML='<div class="mute">Results about named people are shown to operators and administrators (PDPL). Departments and campaigns above carry the same lessons without naming anyone.</div>';return;}
+    var q=Q.toLowerCase(),L=V.people.filter(function(p){return !q||[p.name,p.email,p.dept].join(' ').toLowerCase().indexOf(q)>=0;});
+    $('people').innerHTML='<div class="banner inf" style="margin-bottom:8px">Indicators to plan support and training - never a basis for discipline on their own.</div><input type="search" id="pq" placeholder="Filter by name, e-mail or department" value="'+esc(Q)+'" style="width:100%;max-width:360px;margin-bottom:8px">'
+      +'<table><thead><tr><th>Indicator</th><th>Person</th><th>Department</th><th>Clicked / simulations</th><th>Reported</th></tr></thead><tbody>'+L.slice(0,ALL||q?200:25).map(function(p){return '<tr><td><b style="color:'+rc(p.risk/2)+'">'+p.risk+'</b></td><td><b>'+esc(p.name||p.email)+'</b><div class="mute sm">'+esc(p.email)+'</div><ul class="why">'+p.why.map(function(w){return '<li>'+(w.pts>0?'+':'')+w.pts+' '+esc(w.txt)+'</li>';}).join('')+'</ul></td><td class="sm">'+esc(p.dept||'–')+'</td><td>'+p.compromised+' / '+p.seen+'</td><td>'+p.reported+'</td></tr>';}).join('')+'</tbody></table>'+(!ALL&&!q&&L.length>25?'<button type="button" class="btn" id="pall" style="margin-top:8px">Show all '+L.length+'</button>':'');
+    var pq=$('pq');pq.addEventListener('input',function(){Q=this.value;var pos=this.selectionStart;people();var n=$('pq');n.focus();n.setSelectionRange(pos,pos);});}
+  function ai(){var a=V.ai||{};
+    if(!a.enabled){$('ai').innerHTML='<div class="mute">The advisor is off: '+esc(a.reason||'not configured')+'.</div>';return;}
+    if(!a.for_role){$('ai').innerHTML='<div class="mute">The advisor is for operators and administrators.</div>';return;}
+    $('ai').innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="aq" style="flex:1;min-width:220px" placeholder="e.g. What should our next simulation test, and for whom?"><button type="button" class="btn pri" id="ask">Ask</button></div>'+(ANS?'<div class="ans">'+esc(ANS.answer)+'</div>':'');}
+  function load(){$('err').hidden=true;return req('GET','/phishsim').then(function(v){V=v;draw();},function(e){$('main').hidden=true;$('err').hidden=false;$('err').textContent=e.status===404?'Phishing Simulation is not installed on the server yet - run the update (update-platform.ps1).':e.message;});}
+  document.addEventListener('click',function(ev){var t=ev.target.closest('button');if(!t)return;
+    if(t.id==='pall'){ALL=true;return people();}
+    if(t.id==='refresh')return load();
+    if(t.id==='sync'){t.disabled=true;t.textContent='Reading…';return req('POST','/phishsim/sync').then(function(r){toast('Read '+r.read+' of '+r.simulations+' simulations');t.disabled=false;t.textContent='Sync now';load();},function(e){t.disabled=false;t.textContent='Sync now';toast(e.message);});}
+    if(t.id==='s-save'){var b={enabled:$('s-en').checked,tenant_id:$('s-ten').value.trim(),client_id:$('s-cli').value.trim(),departments:$('s-dep').checked};var sec=$('s-sec').value;if(sec)b.client_secret=sec;
+      return req('POST','/phishsim/settings',b).then(function(){toast('Saved');load();},function(e){toast(e.message);});}
+    if(t.id==='s-test')return req('POST','/phishsim/test').then(function(r){toast(r.ok?'Connection works - simulations are readable':'Test failed: '+r.error);load();},function(e){toast(e.message);});
+    if(t.id==='ask'){var q=$('aq').value.trim();if(q.length<5)return toast('Ask a full question');t.disabled=true;t.textContent='Thinking…';return req('POST','/phishsim/ask',{question:q}).then(function(r){ANS=r;ai();},function(e){t.disabled=false;t.textContent='Ask';toast(e.message);});}
+    if(t.id==='xls'&&V&&V.connected){var sh=[{name:'Summary',columns:[{h:'Measure',w:36},{h:'Value',w:16}],rows:[['Campaigns',V.summary.campaigns],['People',V.summary.people],['Click rate %',V.summary.click_rate],['Report rate %',V.summary.report_rate],['Resilience',V.summary.resilience],['Repeat clickers',V.summary.repeat_clickers],['Trend',V.trend.verdict]]},
+        {name:'Campaigns',columns:[{h:'Campaign',w:36},{h:'Technique',w:20},{h:'Launched',w:12},{h:'Targets',t:'n'},{h:'Click %',t:'n'},{h:'Report %',t:'n'},{h:'Median min to click',t:'n'}],rows:V.campaigns.map(function(c){return [c.name,c.technique,String(c.launched||'').slice(0,10),c.targets,c.click_rate,c.report_rate,c.ttc_median_min];})},
+        {name:'Departments',columns:[{h:'Department',w:24},{h:'People',t:'n'},{h:'Targets',t:'n'},{h:'Click %',t:'n'},{h:'Smoothed %',t:'n'},{h:'Flagged',w:8}],rows:V.departments.map(function(d){return [d.dept,d.people,d.targets,d.click_rate,d.smoothed,d.flag?'yes':''];})}];
+      if(V.people)sh.push({name:'People (indicators)',columns:[{h:'Indicator',t:'n'},{h:'Name',w:24},{h:'E-mail',w:28},{h:'Department',w:18},{h:'Clicked',t:'n'},{h:'Simulations',t:'n'},{h:'Reported',t:'n'}],rows:V.people.map(function(p){return [p.risk,p.name,p.email,p.dept,p.compromised,p.seen,p.reported];})});
+      return window.zybXlsx.download('phishing-simulation-'+new Date().toISOString().slice(0,10)+'.xlsx',sh,{title:('Phishing Simulation - ' + ZYB_ORG.short),filter:V.people?'includes people (operator) - indicators, not proof':'aggregates only',by:'phishing simulation'});}
+  });
+  load();
+})();
+</script></body></html>

@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SIEM Health and SLA</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#ffffff;--mute:#8C93A1;--accent:#D7262D}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1400px;margin:0 auto;padding:18px 16px 40px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px}.top h1{margin:0;font-size:21px;color:var(--title)}.top .eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.top .sp{flex:1}.top .up{font-size:12px;color:var(--mute)}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden}.seg button{background:none;border:0;color:var(--text);font:600 12.5px "Segoe UI",system-ui,sans-serif;padding:6px 12px;cursor:pointer;opacity:.7}.seg button[aria-pressed="true"]{background:rgba(255,255,255,.1);opacity:1}
+.seg button:focus-visible,.ref:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+.ref{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 11px;font:600 12.5px "Segoe UI",system-ui,sans-serif;cursor:pointer}
+#sla{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:16px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">CISO · SIEM</div><h1>SIEM Health, Tickets &amp; SLA</h1></div><span class="sp"></span><span class="up" id="up"></span>
+<div class="seg" id="days" role="group" aria-label="Period"><button type="button" data-d="7" aria-pressed="false">7 days</button><button type="button" data-d="30" aria-pressed="true">30 days</button><button type="button" data-d="90" aria-pressed="false">90 days</button></div>
+<button type="button" class="ref" id="ref">⟳ Refresh</button></div>
+<div id="sla" aria-live="polite"><div class="zs-m">Loading live data from the SIEM…</div></div>
+</main>
+<script src="vendor/zyb-sla.js"></script>
+<script>
+(function(){
+  var up=document.getElementById('up'),first=true;
+  var v=window.zybSLA.render(document.getElementById('sla'),{mode:'full',days:30,onload:function(){up.textContent='updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' · refreshes every minute';if(first&&location.hash){first=false;v.open(decodeURIComponent(location.hash.slice(1)));}}});
+  document.getElementById('days').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(this.querySelectorAll('button'),function(x){x.setAttribute('aria-pressed',String(x===b));});v.reload(+b.getAttribute('data-d'));});
+  document.getElementById('ref').addEventListener('click',function(){v.reload();});
+})();
+</script>
+</body></html>

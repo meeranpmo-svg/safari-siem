@@ -1,0 +1,126 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Executive Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:#2b4b8f;border-color:#3d63b5}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.card h2 .c{font-weight:400;font-size:12px;color:var(--d-mute)}
+.hero{display:grid;grid-template-columns:300px 1fr;gap:14px}@media(max-width:1000px){.hero{grid-template-columns:1fr}}
+.idx{text-align:center}.idx .g{font-size:13px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-top:4px}
+.ml{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}.chip{border:1px solid var(--d-line);border-radius:999px;padding:3px 10px;font-size:12px;background:var(--d-raise)}
+.pills{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}@media(max-width:1200px){.pills{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pl{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:12px;text-decoration:none;color:inherit;display:block}.pl:hover{border-color:#3a4258}
+.pl .s{font-size:30px;font-weight:800;line-height:1.1}.pl .n{font-weight:600;font-size:13px}.bar{height:6px;border-radius:3px;background:#232837;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%}
+.pl ul{margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--d-mute)}
+.banner{border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}.banner.bad{background:rgba(229,72,77,.12);border:1px solid #7a2b2e}.banner.inf{background:rgba(91,141,239,.08);border:1px solid #2b4a6b}
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}@media(max-width:1100px){.grid2{grid-template-columns:1fr}}
+.att{display:flex;flex-direction:column;gap:8px}.att a{display:grid;grid-template-columns:92px 1fr auto;gap:10px;align-items:start;border:1px solid var(--d-line);border-left-width:4px;border-radius:10px;padding:9px 12px;text-decoration:none;color:inherit;background:var(--d-raise)}
+.att a:hover{border-color:#3a4258}.att .k{font:600 10.5px ui-monospace,Consolas,monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--d-mute)}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:700}.v-bad{background:rgba(229,72,77,.15);color:#ff7b80}.v-warn{background:rgba(245,159,0,.15);color:#f5b544}.v-ok{background:rgba(47,179,68,.15);color:#5fd27a}.v-mute{background:#232837;color:var(--d-mute)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:12px}
+.chart svg{width:100%;height:220px;display:block}.lg{display:flex;gap:10px;flex-wrap:wrap;font-size:12px}.lg button{background:none;border:1px solid var(--d-line);border-radius:999px;color:inherit;font:inherit;padding:2px 10px;cursor:pointer}.lg button[aria-pressed="false"]{opacity:.45}
+.ans{white-space:pre-wrap;border:1px solid var(--d-line);border-radius:10px;padding:12px;margin-top:10px;background:var(--d-raise)}
+input[type=text]{background:#0d1017;color:inherit;border:1px solid var(--d-line);border-radius:8px;padding:7px 10px;font:inherit}
+.toast{position:fixed;right:18px;bottom:18px;background:#1d2330;border:1px solid #3a4258;border-radius:10px;padding:10px 14px;z-index:60}
+@media print{.btn,#aicard,.lg{display:none!important}body{background:#fff;color:#000}.card,.pl,.att a{background:#fff;border-color:#ccc}}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Command center · CIO · CISO · board</div><h1>Executive Dashboard</h1><div class="mute sm">One health index for IT and cyber security, read live from the platform's own modules (Reporting Center, AI CISO, Risk Studio). What is not measured says so - it is never scored as good or bad. Trends and forecasts come from this dashboard's own daily history.</div></div>
+<div class="sp"></div><span class="mute sm" id="asof"></span><button type="button" class="btn" id="snap" hidden>Record today</button><button type="button" class="btn" id="xls">Excel</button><button type="button" class="btn" id="print">Print</button><button type="button" class="btn" id="refresh">Refresh</button></div>
+<div class="banner bad" id="err" hidden></div>
+<div id="main" hidden>
+<div id="alert"></div>
+<div class="hero"><div class="card idx" id="idx"></div><div class="card"><h2>Five pillars <span class="c">score 0-100 · weight · change since a week ago · click for the detail page</span></h2><div class="pills" id="pills"></div></div></div>
+<div class="card chart"><h2>Health index over time <span class="c" id="chc"></span></h2><div class="lg" id="lg"></div><div id="chart"></div></div>
+<div class="grid2">
+<div class="card"><h2>Needs the executive <span class="c">decisions waiting, risks above appetite, what got worse, what is not measured - ranked</span></h2><div class="att" id="att"></div></div>
+<div><div class="card"><h2>Movers <span class="c">KPIs the ML marks as changing</span></h2><div id="movers"></div></div>
+<div class="card"><h2>Coverage <span class="c">which areas the figures come from</span></h2><div id="cov"></div></div></div>
+</div>
+<div class="card" id="wfcard"><h2>Business requests to IT <span class="c">Workflow Automation - how the IT teams answer the CISO office, risk, audit, HR, GRC, governance and the DPO</span><a class="btn" href="workflow-automation.html" style="margin-left:auto">Open</a></h2><div id="wf"><div class="muted">Loading…</div></div></div>
+<div class="card" id="aicard"><h2>AI executive brief <span class="c">the Reporting Center's read-only analyst, from the executive report only</span></h2><div id="ai"></div></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);},V=null,ANS=null,SHOW={index:true},COLS={index:'#8db0ff',cyber:'#e5484d',compliance:'#a371f7',resilience:'#2fb344',operations:'#f59f00',risk:'#00a3bf'};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function scol(p){return p==null?'#3a3f4b':p>=85?'#2fb344':p>=70?'#8db0ff':p>=50?'#f59f00':'#e5484d';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function safeLink(h){return /^[a-z0-9-]+\.html(#[a-z0-9-]*)?$/i.test(String(h||''))?h:'#';}
+  function ring(p,g){var r=92,c=2*Math.PI*r,v=p==null?0:p;return '<svg viewBox="0 0 230 230" width="220" height="220" role="img" aria-label="Executive health index '+(p==null?'withheld':p)+'"><circle cx="115" cy="115" r="'+r+'" fill="none" stroke="#232837" stroke-width="18"/><circle cx="115" cy="115" r="'+r+'" fill="none" stroke="'+scol(p)+'" stroke-width="18" stroke-linecap="round" stroke-dasharray="'+(c*v/100)+' '+c+'" transform="rotate(-90 115 115)"/><text x="115" y="125" text-anchor="middle" fill="#e7eaf0" font-size="54" font-weight="800">'+(p==null?'–':p)+'</text><text x="115" y="152" text-anchor="middle" fill="#8b93a4" font-size="13">of 100</text></svg>';}
+  function draw(){var v=V;$('asof').textContent='as of '+new Date(v.at).toLocaleString();$('snap').hidden=!v.can_snapshot;
+    var m=v.ml||{},t=m.trend;
+    $('alert').innerHTML=m.unusual?'<div class="banner bad"><b>Unusual today:</b> the index is '+esc(m.unusual.today)+' against a usual '+esc(m.unusual.usual)+' over the last two weeks (robust z '+esc(m.unusual.z)+'). Look at the pillar that moved.</div>':'';
+    $('idx').innerHTML=ring(v.index)+'<div class="g" style="color:'+scol(v.index)+'">'+esc(v.index==null?'withheld':v.grade)+'</div>'+(v.index==null?'<div class="mute sm" style="margin-top:6px">'+esc(v.withheld_why)+'</div>':'')
+      +'<div class="ml">'+(t?'<span class="chip" title="least-squares over '+esc(t.days)+' days">'+(t.verdict==='improving'?'▲':t.verdict==='worsening'?'▼':'▬')+' '+esc(t.verdict)+' '+(t.per_week>0?'+':'')+esc(t.per_week)+'/week</span>':'<span class="chip">trend after 7 days ('+esc(m.days||0)+' held)</span>')
+      +(m.forecast_30d!=null?'<span class="chip">in 30 days ≈ '+esc(m.forecast_30d)+'</span>':'')+'<span class="chip">'+esc(v.measured)+' of 5 pillars measured</span></div>'
+      +'<div class="ml"><span class="chip">'+esc(v.decisions_waiting)+' decisions waiting</span>'+(v.risks?'<span class="chip">'+esc(v.risks.high)+' high risks · '+esc(v.risks.over_appetite)+' over appetite</span>':'')+'</div>';
+    var pc=m.pillar_change||{};
+    $('pills').innerHTML=v.pillars.map(function(p){var ch=pc[p.id];return '<a class="pl" href="'+safeLink(p.page)+'" data-pid="'+esc(p.id)+'"><div class="n">'+esc(p.name)+'</div><div class="mute sm">weight '+p.weight+'%</div><div class="s" style="color:'+scol(p.score)+'">'+(p.measured?p.score:'—')+'</div>'
+      +'<div class="bar"><i style="width:'+(p.score||0)+'%;background:'+scol(p.score)+'"></i></div>'+(ch!=null&&ch!==0?'<div class="sm" style="color:'+(ch>0?'#5fd27a':'#ff7b80')+'">'+(ch>0?'▲ +':'▼ ')+esc(ch)+' since a week ago</div>':'')
+      +(p.measured?'<ul>'+p.items.slice(0,4).map(function(i){return '<li>'+esc(i.label)+': '+esc(i.value)+esc(i.unit)+'</li>';}).join('')+'</ul>':'<div class="mute sm">not measured: '+esc(p.why||'')+'</div>')+'</a>';}).join('');
+    chart();
+    var KC={decision:['decision','#5b8def'],risk:['risk','#e5484d'],trend:['getting worse','#f59f00'],gap:['not measured','#6e7681']},SC={critical:'v-bad',high:'v-bad',medium:'v-warn',low:'v-mute'};
+    $('att').innerHTML=v.attention.length?v.attention.map(function(a){var k=KC[a.kind]||[a.kind,'#6e7681'];return '<a href="'+safeLink(a.link)+'" style="border-left-color:'+k[1]+'"><span class="k">'+esc(k[0])+'</span><span><b>'+esc(a.title)+'</b><div class="mute sm">'+esc(a.why)+'</div></span>'+pill(a.severity,SC[a.severity]||'v-mute')+'</a>';}).join(''):'<div class="mute">Nothing is waiting for the executive.</div>';
+    var mv=(v.insights||[]).filter(function(i){return i.verdict==='worsening'||i.verdict==='improving'||i.unusual;});
+    $('movers').innerHTML=mv.length?'<table><thead><tr><th>Measure</th><th>Direction</th><th>Change</th><th>In 30 days</th></tr></thead><tbody>'+mv.slice(0,12).map(function(i){return '<tr><td>'+esc(i.label)+(i.unusual?' '+pill('unusual','v-warn'):'')+'</td><td>'+pill(i.verdict,i.verdict==='improving'?'v-ok':i.verdict==='worsening'?'v-bad':'v-mute')+'</td><td>'+esc(i.change&&i.change.delta!=null?(i.change.delta>0?'+':'')+i.change.delta:'')+'</td><td>'+esc(i.forecast==null?'':i.forecast)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="mute sm">No KPI is moving yet - the Reporting Center records KPIs once a day and needs a few days of history.</div>';
+    var ST={ok:['reading','v-ok'],not_installed:['not installed','v-mute'],not_connected:['not connected','v-warn'],error:['error','v-bad'],restricted:['restricted','v-mute']};
+    $('cov').innerHTML='<table><tbody>'+(v.sections||[]).map(function(s){var st=ST[s.state]||[s.state,'v-mute'];return '<tr><td>'+esc(s.title)+(s.state!=='ok'&&s.note?'<div class="mute sm">'+esc(s.note)+'</div>':'')+'</td><td>'+pill(st[0],st[1])+'</td></tr>';}).join('')
+      +(v.sources||[]).filter(function(s){return s.state!=='ok';}).map(function(s){return '<tr><td>'+esc(s.name)+(s.error?'<div class="mute sm">'+esc(s.error)+'</div>':'')+'</td><td>'+pill(s.state,s.state==='error'?'v-bad':'v-mute')+'</td></tr>';}).join('')+'</tbody></table>';
+    ai();}
+  function chart(){var H=V.history||[],m=V.ml||{};
+    var keys=['index'].concat(V.pillars.map(function(p){return p.id;}));
+    $('lg').innerHTML=keys.map(function(k){var nm=k==='index'?'Index':(V.pillars.find(function(p){return p.id===k;})||{}).name;return '<button type="button" data-line="'+k+'" aria-pressed="'+(!!SHOW[k])+'" style="border-color:'+COLS[k]+'">'+esc(nm)+'</button>';}).join('');
+    $('chc').textContent=H.length?H.length+' day'+(H.length>1?'s':'')+' held · dashed = 30-day forecast':'';
+    if(H.length<2){$('chart').innerHTML='<div class="mute sm" style="padding:20px 0">The line appears after 2 daily records ('+H.length+' so far). The index is recorded once a day when it can be computed.</div>';return;}
+    var W=1000,Hh=200,n=H.length+(m.forecast_30d!=null?30:0),x=function(i){return 40+i*(W-50)/Math.max(1,n-1);},y=function(v){return 10+(100-v)/100*(Hh-20);};
+    var g='';[0,25,50,75,100].forEach(function(v){g+='<line x1="40" x2="'+W+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#232837"/><text x="34" y="'+(y(v)+4)+'" text-anchor="end" fill="#8b93a4" font-size="11">'+v+'</text>';});
+    keys.forEach(function(k){if(!SHOW[k])return;var pts=[];H.forEach(function(h,i){var val=k==='index'?h.index:(h.pillars||{})[k];if(val!=null)pts.push(x(i).toFixed(1)+','+y(val).toFixed(1));});
+      if(pts.length>1)g+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+COLS[k]+'" stroke-width="'+(k==='index'?3:1.6)+'"/>';});
+    if(SHOW.index&&m.forecast_30d!=null){var li=H.length-1,lv=H[li].index;if(lv!=null)g+='<line x1="'+x(li)+'" y1="'+y(lv)+'" x2="'+x(n-1)+'" y2="'+y(m.forecast_30d)+'" stroke="'+COLS.index+'" stroke-width="2" stroke-dasharray="6 5"/><text x="'+(x(n-1)-4)+'" y="'+(y(m.forecast_30d)-8)+'" text-anchor="end" fill="#8db0ff" font-size="12">≈ '+m.forecast_30d+'</text>';}
+    g+='<text x="40" y="'+(Hh+14)+'" fill="#8b93a4" font-size="11">'+esc(H[0].day)+'</text><text x="'+x(H.length-1)+'" y="'+(Hh+14)+'" text-anchor="middle" fill="#8b93a4" font-size="11">'+esc(H[H.length-1].day)+'</text>';
+    $('chart').innerHTML='<svg viewBox="0 0 '+W+' '+(Hh+20)+'" preserveAspectRatio="none" role="img" aria-label="Health index history">'+g+'</svg>';}
+  function ai(){var a=V.ai||{};
+    if(!a.enabled){$('ai').innerHTML='<div class="mute">The AI brief is off: '+esc(a.reason||'not configured')+'.</div>';return;}
+    if(!a.for_role){$('ai').innerHTML='<div class="mute">The AI brief is for operators and administrators.</div>';return;}
+    $('ai').innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn pri" id="brief">Write this week\'s brief</button><input type="text" id="aq" style="flex:1;min-width:260px" placeholder="…or ask, e.g. What should the board know about DR this month?"><button type="button" class="btn" id="ask">Ask</button></div>'
+      +(ANS?'<div class="ans">'+esc(ANS.answer)+'</div><div class="mute sm">'+esc((ANS.steps||[]).map(function(s){return s.tool;}).join(' → '))+' · the analyst reads the executive report and its history; it changes nothing</div>':'');}
+  // Workflow Automation (GET /workflow/attention): service to the business - on time, overdue, open per team, what needs this person
+  function wf(){return req('GET','/workflow/attention').then(function(a){var w=a.summary,P=(a.priorities||[]).map(function(p){return {p:p,pts:p.why.reduce(function(n,q){return n+q[1];},0)};}).sort(function(x,y){return y.pts-x.pts;});
+      var done=w.teams.reduce(function(n,x){return n+x.n;},0),ont=w.teams.reduce(function(n,x){return n+x.on_time;},0),open=w.teams.reduce(function(n,x){return n+x.open;},0);
+      var t=function(v,l,c){return '<div style="min-width:130px"><div style="font-size:24px;font-weight:700'+(c?';color:var(--d-'+c+')':'')+'">'+esc(String(v))+'</div><div class="k">'+esc(l)+'</div></div>';};
+      var h='<div style="display:flex;gap:22px;flex-wrap:wrap;margin-bottom:12px">'+t(done?Math.round(ont/done*100)+' %':'—',done?'fulfilled on time ('+ont+' of '+done+')':'on time - no history yet',done?(ont/done>=0.9?'ok':ont/done>=0.7?'warn':'bad'):'')+t(w.all_overdue,'overdue across the IT teams',w.all_overdue?'bad':'ok')+t(open,'open with the IT teams')+t(w.approvals,'waiting for your approval',w.approvals?'warn':'')+'</div>';
+      var T=w.teams.filter(function(x){return x.open||x.overdue;}).sort(function(a2,b2){return b2.overdue-a2.overdue||b2.open-a2.open;});
+      h+=T.length?'<div style="display:flex;gap:8px;flex-wrap:wrap">'+T.map(function(x){return '<div style="border:1px solid var(--d-line);border-left:4px solid var(--d-'+(x.overdue?'bad':'ok')+');border-radius:9px;padding:7px 11px"><div style="font-weight:600">'+esc(x.name)+'</div><div class="k">'+esc(x.open)+' open · '+esc(x.overdue)+' overdue'+(x.n?' · '+esc(x.on_time)+' of '+esc(x.n)+' on time':'')+'</div></div>';}).join('')+'</div>'
+        :'<div class="muted">No request is open with an IT team.</div>';
+      if(P.length)h+='<div class="att" style="margin-top:12px">'+P.slice(0,5).map(function(x){return '<a href="'+esc(x.p.page)+'" style="border-left-color:var(--d-'+(x.pts>=45?'bad':'warn')+')"><span class="k">'+esc(x.p.kind)+'</span><span>'+esc(x.p.ref)+' '+esc(x.p.text)+'</span><span class="k">'+esc(x.pts)+'</span></a>';}).join('')+'</div>';
+      $('wf').innerHTML=h;},function(e){if(e.status===404){$('wfcard').hidden=true;return;}$('wfcard').hidden=false;$('wf').innerHTML='<div class="muted">Workflow Automation could not be read: '+esc(e.message)+'</div>';});}
+  function load(){$('err').hidden=true;wf();return req('GET','/exec-dashboard').then(function(v){V=v;$('main').hidden=false;draw();},function(e){$('main').hidden=true;$('err').hidden=false;$('err').textContent=e.status===404?'The Executive Dashboard is not installed on the server yet - run the update (update-platform.ps1).':e.message;});}
+  function run(q,btn){btn.disabled=true;var t=btn.textContent;btn.textContent='Writing…';return req('POST','/exec-dashboard/brief',q?{question:q}:{}).then(function(r){ANS=r;ai();},function(e){btn.disabled=false;btn.textContent=t;toast(e.message);});}
+  document.addEventListener('click',function(ev){var t=ev.target.closest('button');if(!t)return;
+    if(t.dataset.line){SHOW[t.dataset.line]=!SHOW[t.dataset.line];return chart();}
+    if(t.id==='refresh')return load();
+    if(t.id==='print')return window.print();
+    if(t.id==='brief')return run('',t);
+    if(t.id==='ask'){var q=$('aq').value.trim();if(q.length<5)return toast('Ask a full question');return run(q,t);}
+    if(t.id==='snap'){t.disabled=true;return req('POST','/exec-dashboard/snapshot').then(function(r){toast('Recorded '+r.index+' for '+r.day);t.disabled=false;load();},function(e){t.disabled=false;toast(e.message);});}
+    if(t.id==='xls'&&V){var sheets=[{name:'Index',columns:[{h:'Measure',w:36},{h:'Value',w:16},{h:'Note',w:60}],rows:[['Executive health index',V.index==null?'withheld':V.index,V.withheld_why||V.grade],['Trend per week',V.ml.trend?V.ml.trend.per_week:'',V.ml.trend?V.ml.trend.verdict:'needs 7 days'],['Forecast in 30 days',V.ml.forecast_30d==null?'':V.ml.forecast_30d,''],['Decisions waiting',V.decisions_waiting,'']].concat(V.pillars.map(function(p){return [p.name+' (weight '+p.weight+'%)',p.measured?p.score:'not measured',p.measured?p.items.map(function(i){return i.label+' '+i.value+i.unit;}).join('; '):p.why];}))},
+        {name:'Needs the executive',columns:[{h:'Kind',w:14},{h:'Severity',w:10},{h:'Item',w:60},{h:'Why',w:60},{h:'Where',w:24}],rows:V.attention.map(function(a){return [a.kind,a.severity,a.title,a.why,a.link];})},
+        {name:'KPIs',columns:[{h:'Area',w:16},{h:'Measure',w:40},{h:'Value',w:14},{h:'Unit',w:8}],rows:V.kpis.map(function(k){return [k.section,k.label,k.value==null?'not measured':k.value,k.unit];})},
+        {name:'History',columns:[{h:'Day',w:12},{h:'Index',t:'n'}].concat(V.pillars.map(function(p){return {h:p.name,w:16};})),rows:V.history.map(function(h){return [h.day,h.index].concat(V.pillars.map(function(p){var x=(h.pillars||{})[p.id];return x==null?'':x;}));})}];
+      return window.zybXlsx.download('executive-dashboard-'+new Date().toISOString().slice(0,10)+'.xlsx',sheets,{title:('Executive Dashboard - ' + ZYB_ORG.short),filter:'live platform figures',by:'executive dashboard'});}
+  });
+  load();
+})();
+</script></body></html>

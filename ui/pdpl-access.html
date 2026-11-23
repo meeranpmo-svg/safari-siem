@@ -1,0 +1,75 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Access Intelligence</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.pol{cursor:pointer;border-left:3px solid var(--tblr-border-color)}.pol.on{outline:1px solid var(--tblr-primary)}.pol.hi{border-left-color:var(--tblr-red)}.pol.md{border-left-color:var(--tblr-orange)}
+.pol .au-num{font-size:20px}.flow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}.flow span{padding:3px 8px;border-radius:12px;background:rgba(255,255,255,.05)}.flow i{color:var(--tblr-secondary)}
+pre.api{white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;background:rgba(255,255,255,.03);padding:10px;border-radius:8px}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">Access Intelligence</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><span id="chain"></span><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>
+ <div class="flow mb-1"><span><i class="ti ti-plug"></i> Connected sources</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-list-search"></i> Access events</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-shield-check"></i> Policies</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-user-search"></i> Identity view</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-gavel"></i> Review by another person</span></div>
+ The claims, medical-review and fraud systems send who opened which record and why. Policies flag sensitive records opened with no purpose, investigations with no case reference, sensitive exports and deletions; volume indicators compare each person with their own usual day. Health data needs tiered access with every stage documented (PDPL Art. 23, Implementing Regulation Art. 26). <b>Behavioural indicators, not proof of wrongdoing</b> - a reviewer who is not the person concerned records justified or escalated.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<h3 class="mb-2">Policy hits <span class="mut" id="polhint">click a policy to filter the exceptions</span></h3>
+<div class="row row-cards mb-3" id="policies"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Exceptions <span class="card-subtitle ms-2" id="excsum"></span></h3><div class="card-actions"><select class="form-select form-select-sm w-auto" id="excst" aria-label="Status"><option value="open">Open</option><option value="all">All</option></select></div></div><div class="table-responsive" id="exc"><div class="card-body text-secondary">Loading…</div></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Volume indicators (last 30 days)</h3></div><div class="table-responsive" id="ind"></div></section>
+<div class="row row-cards mb-3">
+ <div class="col-lg-7"><section class="card"><div class="card-header"><h3 class="card-title">Identity view - who opens sensitive records (30 days)</h3></div><div class="table-responsive" id="users"></div></section></div>
+ <div class="col-lg-5"><section class="card"><div class="card-header"><h3 class="card-title">Connected sources</h3><div class="card-actions d-flex gap-2"><input class="form-control form-control-sm w-auto" id="kname" placeholder="System name" maxlength="80" aria-label="System name"><button type="button" class="btn btn-sm btn-primary" id="kissue">Connect</button></div></div>
+  <div id="knew" class="px-3"></div><div class="table-responsive" id="keys"></div><div class="card-body small" id="api"></div></section></div>
+</div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Indicator settings (administrators)</h3></div><div class="card-body" id="set"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+  var V=null, POL=null;
+  var HIGH={no_purpose:1,investigation_no_case:1,delete:1};
+  function stb(s){return P.badge(s,s==='open'?'orange':s==='escalated'?'red':'green');}
+  function load(){return P.req('GET','/pdpl/access').then(function(r){V=r;draw();}).catch(function(e){P.fail($('exc'),e);['ind','users','keys'].forEach(function(id){$(id).innerHTML='';});});}
+  function draw(){var r=V,t=r.totals;
+    $('chain').innerHTML=r.chain.ok?P.badge('journal intact · '+r.chain.length+' events','green'):P.badge('journal integrity FAILED at entry '+r.chain.broken_at,'red');
+    $('kpis').innerHTML=P.tile(t.events,'Access events (30 days)')+P.tile(t.sensitive,'Sensitive records opened')+P.tile(t.exceptions_open,'Open exceptions',t.exceptions_open?'text-orange':'')+P.tile(t.indicators_open,'Open indicators',t.indicators_open?'text-orange':'');
+    var counts={};r.exceptions.forEach(function(x){if(x.status!=='open')return;(x.types||[]).forEach(function(k){counts[k]=(counts[k]||0)+1;});});
+    $('policies').innerHTML=Object.keys(r.labels).map(function(k){return '<div class="col-6 col-md"><div class="card card-sm pol '+(HIGH[k]?'hi':'md')+(POL===k?' on':'')+'" data-pol="'+esc(k)+'" role="button" tabindex="0"><div class="card-body"><div class="au-num">'+esc(counts[k]||0)+'</div><div class="au-lbl">'+esc(r.labels[k])+'</div></div></div></div>';}).join('');
+    var st=$('excst').value, rows=r.exceptions.filter(function(x){return (st==='all'||x.status==='open')&&(!POL||(x.types||[]).indexOf(POL)>=0);});
+    $('excsum').textContent=rows.length+' shown'+(POL?' · policy: '+r.labels[POL]:'');
+    $('exc').innerHTML=P.table([['When',function(x){return esc(P.dt(x.at));}],['User',function(x){return '<b>'+esc(x.user)+'</b><div class="mut">'+esc(x.system)+'</div>';}],['Record',function(x){return esc(x.record_ref)+'<div class="mut">'+esc(x.action)+(x.sensitive?' · sensitive':'')+((x.categories||[]).length?' · '+esc(x.categories.join(', ')):'')+'</div>';}],
+      ['Purpose',function(x){return esc(x.purpose||'none')+(x.reason?'<div class="mut">'+esc(x.reason)+'</div>':'')+(x.case_ref?'<div class="mut">case '+esc(x.case_ref)+'</div>':'');}],['Policy',function(x){return (x.types||[]).map(function(k){return P.badge(r.labels[k]||k,HIGH[k]?'red':'orange');}).join(' ');}],
+      ['Status',function(x){return stb(x.status)+(x.review?'<div class="mut">'+esc(x.review.by)+': '+esc(x.review.note)+'</div>':'');}],['',function(x){return x.status==='open'?'<button type="button" class="btn btn-sm" data-rev="exc" data-id="'+esc(x.id)+'" data-user="'+esc(x.user)+'">Review</button>':'';}]],rows,null,
+      r.keys.length?'No exception for this filter.':'No connected source yet. Connect the claims, medical-review and fraud systems (Connected sources) - until then this page has nothing to show.');
+    $('ind').innerHTML=P.table([['Day',function(i){return esc(i.day);}],['User',function(i){return '<b>'+esc(i.user)+'</b>';}],['Indicator',function(i){return P.badge(i.type==='volume'?'volume':'sensitive exports','orange')+'<div class="mut">'+esc(i.why)+'</div>';}],
+      ['Status',function(i){return stb(i.status)+(i.review?'<div class="mut">'+esc(i.review.by)+': '+esc(i.review.note)+'</div>':'');}],['',function(i){return i.status==='open'?'<button type="button" class="btn btn-sm" data-rev="ind" data-id="'+esc(i.id)+'" data-user="'+esc(i.user)+'">Review</button>':'';}]],r.indicators,null,'No unusual volume in the last 30 days (a person is compared with their own usual day once 7 days of history exist).');
+    $('users').innerHTML=P.table([['User',function(u){return '<b>'+esc(u.user)+'</b>';}],['Records opened',function(u){return esc(u.n);}],['Sensitive',function(u){return esc(u.sensitive);}],['Sensitive exports',function(u){return esc(u.exports);}],['Active days',function(u){return esc(u.days);}]],r.users,null,'Nothing received in the last 30 days.')
+      +(r.systems.length?'<div class="card-body mut">By source: '+r.systems.map(function(s){return esc(s.name)+' '+esc(s.n);}).join(' · ')+'</div>':'');
+    $('keys').innerHTML=P.table([['Source',function(k){return '<b>'+esc(k.name)+'</b><div class="mut">'+esc(k.id)+' · '+esc(k.events)+' events</div>';}],['Last event',function(k){return k.revoked_at?P.badge('disconnected','secondary'):k.last_used?esc(P.dt(k.last_used)):P.badge('never','orange');}],['',function(k){return k.revoked_at?'':'<button type="button" class="btn btn-sm" data-krevoke="'+esc(k.id)+'">Disconnect</button>';}]],r.keys,null,'No source connected.');
+    var a=r.api;$('api').innerHTML='<div class="fw-semibold mb-1">How a system sends its access log</div><pre class="api">'+esc(a.events+'\n'+a.auth+'\n{"events":[{"at":"2026-10-20T09:15:00+03:00","user":"<user name>","record_ref":"<claim no.>","action":"view","purpose":"claim_handling","sensitive":true,"categories":["health"]}]}')+'</pre><div class="mut">Up to '+esc(a.max)+' events per call. action: '+esc(a.actions.join(', '))+'. purpose: '+esc(a.purposes.join(', '))+'. Send reason with "other" and case_ref with "fraud_investigation".</div>';
+    var s=r.settings;$('set').innerHTML=P.form('sform',[['min_volume','num','Minimum records in a day before a volume indicator'],['multiplier','num','Times the person\'s usual day'],['export_limit','num','Sensitive exports / prints in a day']],s,'Save')+'<p class="mut mt-2">'+esc(r.note)+'</p>';}
+  function review(kind,id,user){Z.open('Access review',(kind==='exc'?'Exception ':'Indicator ')+id,'<p class="small">User: <b>'+esc(user)+'</b>. You cannot review your own access. Record whether it was justified (with the business reason) or escalate it under the access policy.</p>'
+    +P.form('rform',[['decision','sel','Decision',1,[['justified','Justified'],['escalated','Escalate']]],['note','text','Reason / what was checked (at least 10 characters)',1]],{},'Record review')+'<input type="hidden" id="rkind" value="'+esc(kind)+'"><input type="hidden" id="rid" value="'+esc(id)+'">');}
+  document.addEventListener('click',function(ev){
+    var pl=ev.target.closest('[data-pol]');if(pl){var k=pl.getAttribute('data-pol');POL=POL===k?null:k;draw();return;}
+    var rv=ev.target.closest('[data-rev]');if(rv){review(rv.getAttribute('data-rev'),rv.getAttribute('data-id'),rv.getAttribute('data-user'));return;}
+    var kr=ev.target.closest('[data-krevoke]');if(kr){P.req('POST','/pdpl/access/keys/'+encodeURIComponent(kr.getAttribute('data-krevoke'))+'/revoke',{}).then(function(){P.toast('Source disconnected');load();}).catch(function(e){P.toast(P.why(e));});return;}});
+  document.addEventListener('keydown',function(ev){var pl=ev.target.closest&&ev.target.closest('[data-pol]');if(pl&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();pl.click();}});
+  $('excst').addEventListener('change',draw);
+  $('kissue').addEventListener('click',function(){var n=$('kname').value.trim();if(!n)return;P.req('POST','/pdpl/access/keys',{name:n}).then(function(r){$('kname').value='';
+    $('knew').innerHTML='<div class="alert alert-warning small mt-2">Key for <b>'+esc(r.name)+'</b> - copy it now, it is shown once: <code id="knewkey">'+esc(r.key)+'</code></div>';load();}).catch(function(e){P.toast(P.why(e));});});
+  document.addEventListener('submit',function(ev){var fm=ev.target;
+    if(fm.id==='rform'){ev.preventDefault();var b=P.body(fm),kind=$('rkind').value,id=$('rid').value;
+      var p=kind==='exc'?P.req('POST','/pdpl/access/exceptions/'+encodeURIComponent(id)+'/review',b):P.req('POST','/pdpl/access/indicators/review',Object.assign({id:id},b));
+      p.then(function(){P.toast(id+': review recorded');if(Z.close)Z.close();load();}).catch(function(e){P.msg(fm,P.why(e));});}
+    if(fm.id==='sform'){ev.preventDefault();P.req('POST','/pdpl/access/settings',P.body(fm)).then(function(){P.toast('Settings saved');load();}).catch(function(e){P.msg(fm,P.why(e));});}});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

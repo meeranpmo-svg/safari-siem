@@ -1,0 +1,135 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NCA ECC Verification</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-assist.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.sub{display:block;width:100%;text-align:left;border:1px solid var(--tblr-border-color);border-left-width:4px;border-radius:8px;padding:8px 10px;background:transparent;color:inherit;height:100%}
+.sub:hover{background:rgba(255,255,255,.03)}.sub.on{box-shadow:0 0 0 1px #3987e5 inset}
+.sub.s-compliant{border-left-color:#0ca30c}.sub.s-partial{border-left-color:#fab219}.sub.s-gap{border-left-color:#d03b3b}.sub.s-not_verified{border-left-color:#6b7280}.sub.s-not_applicable{border-left-color:#374151;opacity:.7}
+.stack{display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.06);margin-top:6px}.stack span{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;margin-top:6px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.dhead{font-size:12px;font-weight:700;margin:10px 0 6px}.tabs-zyb .btn{margin-right:6px}
+textarea.csv{font:12px/1.4 ui-monospace,Consolas,monospace;min-height:140px}
+.sub.s-fully_compliant{border-left-color:#0ca30c}.sub.s-partially_compliant{border-left-color:#fab219}.sub.s-not_compliant{border-left-color:#d03b3b}.sub.s-not_assessed{border-left-color:#6b7280}
+.pcts{font-size:10.5px;margin-top:4px;line-height:1.35}.pcts b{font-weight:700}.ncah{font-size:11.5px;font-weight:400}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">GRC · Regulators &amp; frameworks · NCA</div><h2 class="page-title">NCA ECC Verification</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn" id="grc"><i class="ti ti-list-check me-1"></i>Send gaps to GRC</button><button type="button" class="btn" id="csv"><i class="ti ti-download me-1"></i>Export CSV</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>The NCA Essential Cybersecurity Controls as a register for {{org.short}}: 5 domains, 29 subdomains. The platform verifies each control against what it already holds - the GRC policy and risk registers, the asset register and owners, hardening, patching, backups and drills, the attack surface and testing cadence, certificates, mail, vendors, PDPL - and, through the SIEM, log collection, monitoring, incident and threat management. Each control reads <b>verified</b>, a <b>gap</b>, or <b>not measured</b> with the source to connect; nothing unconnected counts as a pass. A person records the manual controls with evidence and a second person approves (the CISO or an administrator). The AI Cybersecurity Compliance Officer re-checks on every patrol. Register controls (ZS-…) are this platform's plain-language register; the <b>official ECC controls</b> are imported from the NCA document and mapped by subdomain. The score is indicative - it is not NCA's own assessment.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div class="row g-3 mb-3">
+ <div class="col-lg-8"><section class="card h-100"><div class="card-header"><h3 class="card-title">Subdomains <span class="mut">(click one to filter the controls)</span></h3></div><div class="card-body" id="subs"><span class="text-secondary">Loading…</span></div></section></div>
+ <div class="col-lg-4"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-plug-connected me-1"></i>Evidence sources</h3></div><div class="card-body" id="srcs"><span class="text-secondary">Loading…</span></div></section></div>
+</div>
+<div class="tabs-zyb mb-2"><button type="button" class="btn btn-primary" data-tab="controls">Controls</button><button type="button" class="btn" data-tab="official">Official ECC list</button><button type="button" class="btn" data-tab="profile">Profile</button></div>
+<section class="card mb-3" data-pane="controls"><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">Register controls <span class="mut" id="filt"></span></h3>
+ <select class="form-select form-select-sm w-auto" id="fsub" aria-label="Subdomain"><option value="">All subdomains</option></select>
+ <select class="form-select form-select-sm w-auto" id="fres" aria-label="Result"><option value="">All results</option><option value="gap">Gaps</option><option value="verified">Verified automatically</option><option value="not_measured">Not measured</option><option value="no_evidence">No evidence yet</option><option value="pending">Waiting for approval</option><option value="met">Met (approved)</option><option value="partial">Partial</option><option value="not_applicable">Not applicable</option></select></div>
+ <div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="note"></div></section>
+<section class="card mb-3" data-pane="official" hidden><div class="card-header"><h3 class="card-title">Official ECC control list</h3></div><div class="card-body">
+ <div id="cov" class="mb-3"></div>
+ <div class="mb-3"><div class="fw-semibold mb-1">Import (administrator)</div><div class="mut mb-2">From the NCA ECC document: one control per line as CSV with the columns <b>code, title, specification</b> (in Excel: File → Save As → CSV). The code is the ECC number (e.g. 2-10-3-1); its subdomain decides which register controls it may map to. Importing replaces the list; mappings whose code is gone are dropped.</div>
+  <input type="file" class="form-control mb-2" id="file" accept=".csv,text/csv"><textarea class="form-control csv mb-2" id="paste" placeholder="code,title,specification&#10;2-10-3-1,…,…"></textarea>
+  <button type="button" class="btn btn-primary" id="imp">Import the list</button> <span class="mut" id="impmsg"></span></div>
+ <div id="unmapped"></div></div></section>
+<section class="card mb-3" data-pane="profile" hidden><div class="card-header"><h3 class="card-title">ECC profile (administrator)</h3></div><div class="card-body" id="prof"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+  var V=null, SUB='', RES='';
+  var RC={verified:['verified','green'],met:['met (approved)','green'],partial:['partial','yellow'],gap:['gap','red'],pending:['waiting for approval','orange'],not_measured:['not measured','secondary'],no_evidence:['no evidence yet','secondary'],not_applicable:['not applicable','secondary']};
+  var SC={compliant:'Compliant',partial:'Partial',gap:'Gap',not_verified:'Not verified',not_applicable:'Not applicable'};
+  // NCA's assessment language: each control is fully, partially or not compliant, or not assessed yet (no evidence / source not
+  // connected / waiting for approval - never counted as compliant); every subdomain, domain and the overall show the share of each
+  var NS={fully_compliant:['Fully compliant','green'],partially_compliant:['Partially compliant','yellow'],not_compliant:['Not compliant','red'],not_assessed:['Not assessed','secondary'],not_applicable:['Not applicable','secondary']};
+  var NL={fully:['Fully compliant','green'],partially:['Partially compliant','yellow'],not:['Not compliant','red'],not_assessed:['Not assessed','secondary'],not_applicable:['Not applicable','secondary']};
+  var NSEG=[['fully','#0ca30c','Fully compliant'],['partially','#fab219','Partially compliant'],['not','#d03b3b','Not compliant'],['not_assessed','#6b7280','Not assessed']];
+  function nstack(n){if(!n||!n.applicable)return '<div class="stack"></div>';return '<div class="stack">'+NSEG.filter(function(g){return n.pct[g[0]];}).map(function(g){return '<span style="width:'+n.pct[g[0]]+'%;background:'+g[1]+'" title="'+esc(g[2]+': '+n.pct[g[0]]+'% ('+n.counts[g[0]]+' of '+n.applicable+')')+'"></span>';}).join('')+'</div>';}
+  function npcts(n){if(!n||!n.applicable)return '<div class="pcts mut">not applicable</div>';return '<div class="pcts">'+NSEG.map(function(g){return '<span class="me-2" style="color:'+g[1]+'">'+esc(g[2].replace(' compliant',''))+' <b>'+esc(n.pct[g[0]])+'%</b></span>';}).join('')+'</div>';}
+  function nsb(st){var x=NS[st]||[st,'secondary'];return P.badge(x[0],x[1]);}
+  var SRC={grc:'GRC policy register',risk:'Risk & action registers',drills:'DR & BCM drills',ownership:'Asset ownership',hardening:'Hardening',pentest:'Attack surface',cadence:'Security testing cadence',certs:'Certificates',mail:'Mail reputation / DMARC',vendor:'Vendor risk',pdpl:'AI PDPL Consultant',siem:'SIEM (SAMA evidence, log flow, retention)'};
+  function rb(r){var x=RC[r]||[r,'secondary'];return P.badge(x[0],x[1]);}
+  function load(){return P.req('GET','/nca-ecc').then(function(v){V=v;draw();}).catch(function(e){P.fail($('list'),e);$('subs').innerHTML='';$('srcs').innerHTML='';});}
+  function draw(){var v=V,c=v.counts||{};
+    var n=v.nca||{pct:{},counts:{}};
+    $('kpis').innerHTML=P.tile((NS[n.status]||['—'])[0],'Overall (NCA assessment)',n.status==='fully_compliant'?'text-green':n.status==='not_compliant'?'text-red':n.status==='partially_compliant'?'text-yellow':'')
+      +P.tile((n.pct.fully||0)+'%','Fully compliant ('+(n.counts.fully||0)+' controls)','text-green')+P.tile((n.pct.partially||0)+'%','Partially compliant ('+(n.counts.partially||0)+')','text-yellow')
+      +P.tile((n.pct.not||0)+'%','Not compliant ('+(n.counts.not||0)+')',n.counts.not?'text-red':'')+P.tile((n.pct.not_assessed||0)+'%','Not assessed yet ('+(n.counts.not_assessed||0)+')')
+      +P.tile(v.official_total?v.coverage.mapped+' / '+v.coverage.total:'not imported','Official controls mapped',v.official_total&&v.coverage.unmapped?'text-orange':'')
+      +P.tile(v.score===null||v.score===undefined?'—':v.score+'%','Weighted score (partial = half, indicative)')+P.tile(c.not_measured||0,'Not measured (connect a source)');
+    $('subs').innerHTML=v.domains.map(function(d){var ss=v.subdomains.filter(function(s){return s.domain===d.code;});
+      return '<div class="dhead">'+esc(d.code)+' · '+esc(d.name)+' '+nsb(d.nca&&d.nca.status)+'<div class="ncah">'+npcts(d.nca)+'</div></div><div class="row g-2">'+ss.map(function(s){
+        var dec=s.decide&&!(v.profile.applicability||{})[s.code];
+        var ns=(s.nca&&s.nca.status)||s.status;
+        return '<div class="col-6 col-md-4 col-xl-3"><button type="button" class="sub s-'+esc(ns)+(SUB===s.code?' on':'')+'" data-sub="'+esc(s.code)+'"><div class="d-flex justify-content-between gap-1"><b class="small">'+esc(s.code)+'</b><span class="mut">'+esc((NS[ns]||[ns])[0])+'</span></div>'
+          +'<div class="small text-truncate" title="'+esc(s.name)+'">'+esc(s.name)+'</div>'+nstack(s.nca)+npcts(s.nca)+(dec?'<div class="mut mt-1">applicability to decide</div>':'')+'</button></div>';}).join('')+'</div>';}).join('')
+      +'<div class="legend">'+NSEG.map(function(g){return '<span><i style="background:'+g[1]+'"></i>'+esc(g[2])+'</span>';}).join('')+'<span class="mut">Not assessed = no evidence yet, source not connected, or waiting for approval - never counted as compliant.</span></div>';
+    $('srcs').innerHTML='<ul class="list-unstyled mb-2">'+(v.sources||[]).map(function(s){return '<li class="d-flex justify-content-between py-1 border-bottom"><span class="small">'+esc(SRC[s.id]||s.id)+'</span>'+(s.connected?P.badge('connected','green'):P.badge('not connected','secondary'))+'</li>';}).join('')+'</ul>'
+      +'<div class="mut">A source that is not connected leaves its controls "not measured" - each one names what to connect. <a href="connections.html">Connections &amp; Setup</a></div>';
+    var fs=$('fsub');if(fs.options.length<2)v.subdomains.forEach(function(s){var o=document.createElement('option');o.value=s.code;o.textContent=s.code+' '+s.name;fs.appendChild(o);});fs.value=SUB;
+    rows();drawOfficial();drawProfile();$('note').textContent=v.note;}
+  function rows(){var r=V.controls.filter(function(x){return (!SUB||x.subdomain===SUB)&&(!RES||x.result===RES);});
+    $('filt').textContent='('+r.length+' of '+V.controls.length+')';
+    $('list').innerHTML=P.table([['Control',function(x){return '<b>'+esc(x.id)+'</b><div class="mut">'+esc(x.subdomain)+' '+esc(x.subdomain_name)+'</div>';}],['What it asks',function(x){return esc(x.title)+(x.official.length?'<div class="mut">official: '+esc(x.official.join(', '))+'</div>':'');}],
+      ['Result',function(x){var l=NL[x.nca_level];return (l?P.badge(l[0],l[1])+' ':'')+rb(x.result)+(x.conflict?' '+P.badge('record disagrees','red'):'')+'<div class="mut">'+(x.automated?'checked automatically':'manual - a person records it')+'</div>';}],['Why',function(x){return '<span class="small">'+esc(x.why||'')+'</span>';}]],r,function(x){return 'class="rowc" data-id="'+esc(x.id)+'"';},'No control matches the filter.');}
+  function open(x){var c=x.confirmation;
+    var h=Z.kv([['Subdomain',esc(x.subdomain+' '+x.subdomain_name)],['NCA level',NL[x.nca_level]?P.badge(NL[x.nca_level][0],NL[x.nca_level][1]):'—'],['Result',rb(x.result)],['Why',esc(x.why||'')],['Evidence expected',esc(x.evidence_hint)],['Official ECC controls',esc(x.official.join(', ')||'none mapped')]]);
+    if(x.automated)h+=Z.sec('Automated evidence','<p class="small mb-0">'+esc(x.auto||'nothing to read yet')+'</p>');
+    if(c)h+=Z.sec('Recorded','<p class="small mb-1">'+esc(c.status.replace('_',' '))+' by '+esc(c.by)+' on '+esc(P.dt(c.at))+'</p>'+(c.evidence?'<p class="small mb-1">Evidence: '+esc(c.evidence)+'</p>':'')+(c.note?'<p class="small mb-1">Note: '+esc(c.note)+'</p>':'')
+      +(c.approved_by?'<p class="small mb-0">Approved by '+esc(c.approved_by)+'</p>':'<div class="mt-2"><button type="button" class="btn btn-sm btn-success" data-decide="approve">Approve</button> <button type="button" class="btn btn-sm" data-decide="reject">Reject</button><div class="mut mt-1">The CISO or an administrator - never the person who recorded it.</div></div>'));
+    h+=Z.sec('Record this control',P.form('cform',[['status','sel','Status',1,[['compliant','Compliant'],['partial','Partial'],['non_compliant','Non-compliant'],['not_applicable','Not applicable']]],['evidence','text','Evidence (document, report or record relied on)'],['note','area','Note (required for non-compliant / not applicable)']],{},'Record')
+      +'<div class="mut">A second person approves it before it counts. Automated evidence wins: a verified gap is never hidden by a record.</div>');
+    Z.open('NCA ECC',x.id+' · '+x.title,h+'<input type="hidden" id="cid" value="'+esc(x.id)+'">');}
+  function reopen(id){load().then(function(){var x=V.controls.find(function(q){return q.id===id;});if(x)open(x);});}
+  function drawOfficial(){var cv=V.coverage||{};
+    $('cov').innerHTML=V.official_total?'<div class="d-flex flex-wrap gap-3"><div><div class="au-num">'+esc(cv.total)+'</div><div class="au-lbl">official controls</div></div><div><div class="au-num">'+esc(cv.mapped)+'</div><div class="au-lbl">mapped</div></div><div><div class="au-num'+(cv.unmapped?' text-orange':'')+'">'+esc(cv.unmapped)+'</div><div class="au-lbl">not mapped</div></div></div>'
+      +'<div class="small mt-2">'+Object.keys(cv.by_result||{}).map(function(k){return (k==='unmapped'?P.badge('not mapped','secondary'):rb(k))+' '+esc(cv.by_result[k]);}).join(' &nbsp; ')+'</div>'
+      :'<div class="text-secondary">No official list imported yet. Import it below from the NCA ECC document - until then the register controls stand on their own.</div>';
+    if(!V.official_total||!cv.unmapped){$('unmapped').innerHTML='';return;}
+    P.req('GET','/nca-ecc/suggest').then(function(s){var by={};(s.suggestions||[]).forEach(function(x){by[x.code]=x;});
+      $('unmapped').innerHTML='<div class="d-flex align-items-center mb-2"><div class="fw-semibold me-auto">Not mapped yet</div>'+((s.suggestions||[]).length?'<button type="button" class="btn btn-sm btn-primary" id="acceptall">Accept all suggestions</button>':'')+'</div>'
+        +P.table([['Official',function(o){return '<b>'+esc(o.code)+'</b><div class="mut">subdomain '+esc(o.subdomain)+'</div>';}],['Title',function(o){return '<span class="small">'+esc(o.title)+'</span>';}],
+          ['Suggested register control',function(o){var g=by[o.code];return g?esc(g.control)+'<div class="mut">'+esc(g.title)+'</div>':'<span class="text-secondary">none</span>';}],
+          ['',function(o){var g=by[o.code];return g?'<button type="button" class="btn btn-sm" data-accept="'+esc(o.code)+'">Accept</button>':'';}]],cv.unmapped_list||[],null,'Every official control is mapped.')
+        +'<div class="mut mt-1">A suggestion is the register control in the same subdomain whose wording overlaps most. Nothing is mapped until an administrator accepts it.</div>';}).catch(function(e){$('unmapped').innerHTML='<div class="alert alert-warning">'+esc(P.why(e))+'</div>';});}
+  function drawProfile(){var p=V.profile||{},a=p.applicability||{},n=p.applicability_note||{};
+    var A=[['applies','Applies'],['not_applicable','Does not apply']];
+    $('prof').innerHTML=P.form('pform',[['ciso_user','text','CISO (user name)'],['function_established','date','Cybersecurity function established'],['reports_to','text','The cybersecurity function reports to (role)'],['strategy_approved','date','Cybersecurity strategy approved'],['committee_last_met','date','Cybersecurity steering committee last met'],
+      ['cloud','sel','4-2 Cloud computing and hosting - does it apply?',0,A],['cloud_note','text','Why (required when it does not apply)'],['ics','sel','5-1 Industrial control systems - does it apply?',0,A],['ics_note','text','Why (required when it does not apply)']],
+      {ciso_user:p.ciso_user,function_established:p.function_established,reports_to:p.reports_to,strategy_approved:p.strategy_approved,committee_last_met:p.committee_last_met,cloud:a['4-2'],cloud_note:n['4-2'],ics:a['5-1'],ics_note:n['5-1']},'Save profile')
+      +'<div class="mut mt-2">ECC expects the cybersecurity function to be independent of IT: a function reporting to the CIO or IT reads as a gap. '+(p.updated_by?'Last saved by '+esc(p.updated_by)+' on '+esc(P.dt(p.updated_at))+'.':'')+'</div>';}
+  function csv(t){var out=[],row=[],f='',q=false;for(var i=0;i<t.length;i++){var ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++;}else q=false;}else f+=ch;}else if(ch==='"')q=true;else if(ch===','){row.push(f);f='';}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(f);f='';if(row.some(function(x){return x.trim();}))out.push(row);row=[];}else f+=ch;}
+    row.push(f);if(row.some(function(x){return x.trim();}))out.push(row);
+    if(out.length&&/^\s*code\s*$/i.test(out[0][0]||''))out.shift();
+    return out.map(function(r){return {code:(r[0]||'').trim(),title:(r[1]||'').trim(),spec:(r[2]||'').trim()};});}
+  $('file').addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;if(f.size>2000000){P.toast('The file is larger than 2 MB');return;}var r=new FileReader();r.onload=function(){$('paste').value=String(r.result||'');};r.readAsText(f);});
+  $('imp').addEventListener('click',function(){var rows=csv($('paste').value||'');if(!rows.length){$('impmsg').textContent='Paste the CSV or choose the file first.';return;}
+    $('imp').disabled=true;P.req('POST','/nca-ecc/official',{rows:rows,replace:true}).then(function(r){$('impmsg').textContent=r.imported+' imported'+(r.error_count?', '+r.error_count+' refused: '+r.errors.slice(0,3).join('; '):'')+'.';load();})
+      .catch(function(e){$('impmsg').textContent=P.why(e);}).then(function(){$('imp').disabled=false;});});
+  document.addEventListener('click',function(ev){
+    var t=ev.target.closest('[data-tab]');if(t){[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.className='btn'+(b===t?' btn-primary':'');});[].forEach.call(document.querySelectorAll('[data-pane]'),function(p){p.hidden=p.getAttribute('data-pane')!==t.getAttribute('data-tab');});return;}
+    var d=ev.target.closest('[data-sub]');if(d){SUB=SUB===d.getAttribute('data-sub')?'':d.getAttribute('data-sub');draw();return;}
+    var tr=ev.target.closest('#list tr[data-id]');if(tr&&V){open(V.controls.find(function(x){return x.id===tr.getAttribute('data-id');}));return;}
+    var a=ev.target.closest('[data-accept]');if(a){P.req('POST','/nca-ecc/mapping',{accept:[a.getAttribute('data-accept')]}).then(function(){P.toast('Mapped');load();}).catch(function(e){P.toast(P.why(e));});return;}
+    if(ev.target.closest('#acceptall')){var codes=(V.coverage.unmapped_list||[]).map(function(o){return o.code;});P.req('POST','/nca-ecc/mapping',{accept:codes}).then(function(r){P.toast(r.accepted+' mapped');load();}).catch(function(e){P.toast(P.why(e));});return;}
+    var dc=ev.target.closest('[data-decide]');if(dc){var id=$('cid').value,dec=dc.getAttribute('data-decide'),note='';if(dec==='reject'){note=window.prompt('Why is it rejected?')||'';if(!note)return;}
+      P.req('POST','/nca-ecc/confirm/'+encodeURIComponent(id)+'/decide',{decision:dec,note:note}).then(function(){P.toast(dec==='approve'?'Approved':'Rejected');reopen(id);}).catch(function(e){P.toast(P.why(e));});}});
+  document.addEventListener('submit',function(ev){var fm=ev.target;
+    if(fm.id==='cform'){ev.preventDefault();var id=$('cid').value,b=P.body(fm);b.id=id;P.req('POST','/nca-ecc/confirm',b).then(function(){P.toast('Recorded - waiting for approval');reopen(id);}).catch(function(e){P.msg(fm,P.why(e));});}
+    if(fm.id==='pform'){ev.preventDefault();var o=P.body(fm),body={ciso_user:o.ciso_user,function_established:o.function_established,reports_to:o.reports_to,strategy_approved:o.strategy_approved,committee_last_met:o.committee_last_met,applicability:{},applicability_note:{}};
+      if(o.cloud)body.applicability['4-2']=o.cloud;if(o.ics)body.applicability['5-1']=o.ics;if(o.cloud_note)body.applicability_note['4-2']=o.cloud_note;if(o.ics_note)body.applicability_note['5-1']=o.ics_note;
+      Object.keys(body).forEach(function(k){if(body[k]===undefined||body[k]==='')delete body[k];});
+      P.req('POST','/nca-ecc/profile',body).then(function(){P.toast('Profile saved');load();}).catch(function(e){P.msg(fm,P.why(e));});}});
+  $('fsub').addEventListener('change',function(){SUB=this.value;draw();});
+  $('fres').addEventListener('change',function(){RES=this.value;rows();});
+  $('grc').addEventListener('click',function(){P.req('POST','/nca-ecc/gaps-to-grc',{}).then(function(r){P.toast(r.created.length+' GRC action(s) created'+(r.skipped.length?', '+r.skipped.length+' already tracked':''));}).catch(function(e){P.toast(P.why(e));});});
+  $('csv').addEventListener('click',function(){P.req('GET','/nca-ecc/export').then(function(r){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r.csv],{type:'text/csv'}));a.download=r.filename;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);}).catch(function(e){P.toast(P.why(e));});});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

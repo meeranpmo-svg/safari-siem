@@ -1,0 +1,29 @@
+diff --git a/engine/discovery/methods/vcenter.js b/engine/discovery/methods/vcenter.js
+index 3cc2c00..102e740 100644
+--- a/engine/discovery/methods/vcenter.js
++++ b/engine/discovery/methods/vcenter.js
+@@ -4,7 +4,7 @@
+  * The only non-GET requests are our own session login (POST /api/session, Basic auth) and logout (DELETE /api/session).
+  * Every inventory call is a GET under /api/vcenter/; anything else is refused by guard() before a socket is opened.
+  *
+- *   collect(cred, {request?}) → {ok, hosts[{id, name, state}], vms[{id, name, host_id, host_name, power_state, guest_os,
++ *   collect(cred, {request?}) → {ok, hosts[{id, name, state, ip}], vms[{id, name, host_id, host_name, power_state, guest_os,
+  *                                 hostname, ips[], macs[], uuid}]} | {ok:false, error_class}
+  *   test(cred) → {ok, latency_ms} | {ok:false, error_class}
+  * Paths (vSphere Automation REST 7.0U2+/8.0): /api/vcenter/host, /api/vcenter/vm?hosts=<id>, /api/vcenter/vm/<id>,
+@@ -78,6 +78,15 @@ async function collect(cred, o = {}) {
+   try {
+     await c.login();
+     const hosts = list(await c.get('/api/vcenter/host')).map((h) => ({ id: String(h.host || h.id || ''), name: h.name || null, state: String(h.connection_state || '').toLowerCase() || null }));
++    // the REST host list has no address: each host's management VMkernel IP comes from the read-only vSphere SOAP reader
++    // (virt-capacity.js, allow-listed methods only). A role that cannot read host networking simply leaves it empty.
++    if (hosts.length && o.hostIps !== false) {
++      try {
++        const addr = await require('../../virt-capacity').vcSoap(cred.target || {}, cred.secret || {}, { request: o.request }).hostAddresses();
++        const byId = new Map(addr.map((a) => [a.id, a])), byName = new Map(addr.map((a) => [String(a.name).toLowerCase(), a]));
++        for (const h of hosts) { const a = byId.get(h.id) || byName.get(String(h.name || '').toLowerCase()); if (a && a.ip) { h.ip = a.ip; h.vmk = a.vmk; } }
++      } catch (e) { /* addresses stay empty - DNS is the fallback */ }
++    }
+     const vms = []; const seen = new Set();
+     const max = o.maxVms || 5000;
+     for (const h of hosts) {

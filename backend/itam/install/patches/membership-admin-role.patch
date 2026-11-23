@@ -1,0 +1,54 @@
+diff --git a/repos/sentra-itam/engine/monitoring-membership.js b/repos/sentra-itam/engine/monitoring-membership.js
+index 43c7130..a0bee09 100644
+--- a/engine/monitoring-membership.js
++++ b/engine/monitoring-membership.js
+@@ -45,6 +45,9 @@ function createMembership({ assets, store, audit, discovery, log, now = Date.now
+     return r.json;
+   }
+   const SYS = { user: 'system:itam-log-collection', role: 'viewer' };
++  // the SIEM is told the caller's REAL role: a source is created, paused or removed only for an administrator (the routes
++  // check too; this keeps a non-admin path - e.g. a retire by an operator - from acting with admin rights on the SIEM)
++  function mustAdmin(who) { if (!who || who.role !== 'admin') throw bad('only an administrator can change SIEM log collection', 403); }
+ 
+   function mustAsset(id) {
+     const a = assets.raw(String(id || ''));
+@@ -118,6 +121,7 @@ function createMembership({ assets, store, audit, discovery, log, now = Date.now
+   }
+ 
+   async function enable(id, who) {
++    mustAdmin(who);
+     const a = mustAsset(id);
+     if (a.status === 'disposed' || a.status === 'retired') throw bad(`asset is ${a.status}`, 409);
+     const cur = sourceOf(a);
+@@ -138,6 +142,7 @@ function createMembership({ assets, store, audit, discovery, log, now = Date.now
+   }
+ 
+   async function setPaused(id, who, paused, reason) {
++    mustAdmin(who);
+     const a = mustAsset(id);
+     const sid = sourceOf(a);
+     if (!sid) throw bad('this asset has no SIEM log source', 409);
+@@ -149,6 +154,7 @@ function createMembership({ assets, store, audit, discovery, log, now = Date.now
+   }
+ 
+   async function stop(id, who, opts) {
++    mustAdmin(who);
+     const a = mustAsset(id);
+     if (!opts || opts.confirm !== true) throw bad('confirm:true is required to stop log collection for this asset', 400);
+     const sid = sourceOf(a) || ((await detail(id)).source_id);
+@@ -185,7 +191,14 @@ function createMembership({ assets, store, audit, discovery, log, now = Date.now
+     if (action !== 'retire' && action !== 'dispose') return;
+     const a = assets.raw(String(id || ''));
+     if (!a || !sourceOf(a)) return;
+-    setPaused(id, who || SYS, true, `asset ${action === 'retire' ? 'retired' : 'disposed'} in the inventory`).catch((e) => lg.warn('log collection: lifecycle pause failed', { asset_id: id, err: e.message }));
++    // retired / disposed by someone who is not an administrator: collection keeps running and the asset is flagged for an
++    // administrator to pause it (an operator must not be able to switch a server's logs off by retiring it)
++    if (!who || who.role !== 'admin') {
++      patch(a.id, (x) => { x.log_collection = Object.assign({}, x.log_collection || {}, { review: { reason: `asset ${action === 'retire' ? 'retired' : 'disposed'} by ${(who && who.user) || 'unknown'} - an administrator decides whether to pause its SIEM source`, at: new Date(now()).toISOString(), by: (who && who.user) || '' } }); });
++      A(who || SYS, 'asset.log-collection.pause-pending', a.id, { action });
++      return;
++    }
++    setPaused(id, who, true, `asset ${action === 'retire' ? 'retired' : 'disposed'} in the inventory`).catch((e) => lg.warn('log collection: lifecycle pause failed', { asset_id: id, err: e.message }));
+   }
+ 
+   return { list, detail, setup, enable, pause: (id, who, reason) => setPaused(id, who, true, reason), resume: (id, who) => setPaused(id, who, false), stop, bulk, onLifecycle, invalidate, statusOf, BULK_MAX };

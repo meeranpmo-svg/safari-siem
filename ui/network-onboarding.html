@@ -1,0 +1,143 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network Onboarding &amp; Architecture</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1600px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tabs button{background:transparent;border:1px solid var(--d-line);color:var(--d-mute);border-radius:999px;padding:6px 14px;font:600 13px Inter,"Segoe UI",system-ui,sans-serif;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.tabs button[aria-selected="true"]{color:#fff;border-color:var(--d-acc);background:rgba(91,141,239,.2)}
+.vendors{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:14px}.vt{background:var(--d-raise);border:1px solid var(--d-line);border-radius:14px;padding:14px;cursor:pointer;text-align:left;color:inherit;font:inherit}.vt:hover{border-color:#3a4258}.vt[aria-pressed="true"]{border-color:var(--d-acc);background:#172036}.vt i{font-size:26px;color:#8db0ff}.vt b{display:block;margin-top:6px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.form label{font-size:11.5px;color:var(--d-mute);display:flex;flex-direction:column;gap:3px}.form .w{grid-column:1/-1}.form h4{grid-column:1/-1;margin:8px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#8db0ff}
+.inp,select.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif;width:100%}
+pre.code{background:#0a0c10;border:1px solid var(--d-line);border-radius:10px;padding:10px;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;margin:6px 0 10px;color:#cfd6e4}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.v-ok{background:rgba(47,179,68,.15);color:#56d364}.v-bad{background:rgba(229,72,77,.2);color:#ff8a8e}.v-warn{background:rgba(245,159,0,.18);color:#f5b544}.v-mute{background:rgba(139,147,164,.16);color:#aab2c2}.v-info{background:rgba(91,141,239,.18);color:#8db0ff}
+.steps{list-style:none;margin:0;padding:0}.steps li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #1b2030}.steps .ic{font-size:18px;width:22px;text-align:center}.s-ok{color:#56d364}.s-fail{color:#ff8a8e}.s-warn,.s-pending{color:#f5b544}.s-manual,.s-skip{color:#8b93a4}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12.8px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--d-line)}td{padding:7px 8px;border-bottom:1px solid #1b2030;vertical-align:top}
+.mx td.c{text-align:center;cursor:pointer;min-width:44px}.mx th.v{writing-mode:vertical-rl;transform:rotate(180deg);height:150px;white-space:nowrap;vertical-align:bottom}
+.cell{display:inline-block;width:26px;height:22px;border-radius:5px;line-height:22px;font-size:12px;font-weight:800}.k-pass{background:rgba(47,179,68,.25);color:#56d364}.k-fail{background:rgba(229,72,77,.3);color:#ff8a8e}.k-nm{background:rgba(139,147,164,.14);color:#8b93a4}.k-na{background:transparent;color:#3a3f4b}
+.arch{overflow-x:auto}.arch svg{display:block;max-width:none}.arch .nd{cursor:pointer}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1100px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network</div><h1>Network Onboarding &amp; Architecture</h1><div class="sm mute">Add a Palo Alto, FortiGate, Genian NAC, Cisco UCS, Cisco switch or router in one form. The platform verifies it with a read-only account, places it in the WAN / LAN route map, draws the architecture and checks its configuration against NCA ECC and CIS. Every fix is a change plan another person approves.</div></div><div class="sp"></div>
+ <span class="sm mute" id="me"></span><button class="btn" id="xls" type="button"><i class="ti ti-file-spreadsheet"></i>Excel</button><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <section class="card"><div class="kpis" id="kpis"></div></section>
+ <div class="tabs" id="tabs" role="tablist"></div>
+ <div id="view"></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var CAT=null, OB=null, AR=null, TAB='onboard', VEND='', LAST=null, SEL='', CELL='', FIX=null, ROLE='viewer', RANK={viewer:0,analyst:1,operator:2,admin:3};
+  var can=function(r){return (RANK[ROLE]||0)>=RANK[r];};
+  var VICON={paloalto:'shield-lock',fortigate:'shield-half','cisco-ios':'switch-horizontal','cisco-asa':'shield',genian:'fingerprint','cisco-ucs':'server-bolt'};
+  var LCOL={internet:'#8db0ff',edge:'#e64980',wan:'#22b8cf',firewall:'#fd7e14',core:'#5b8def',distribution:'#845ef7',access:'#12b886',compute:'#fab005',nac:'#94d82d',other:'#8b93a4'};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: the status says enough */}if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function api(m,p,b){return req(m,'/api/soc/netops'+p,b);}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function stPill(s){return pill(s||'not onboarded',s==='onboarded'?'v-ok':s==='blocked'?'v-bad':s?'v-warn':'v-mute');}
+  function load(){$('err').hidden=true;return Promise.all([api('GET','/onboard/catalogue'),api('GET','/onboard'),api('GET','/architecture')]).then(function(r){CAT=r[0];OB=r[1];AR=r[2];$('main').hidden=false;
+      $('me').textContent=can('admin')?'Administrator - onboard devices and place them in the route map':can('operator')?'Operator - verify and propose fixes':'Read-only';draw();})
+    .catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>Network onboarding is not available</h2>'+note(e.status===404?'Not installed on the SIEM - run the update (update-platform.ps1).':e.message);});}
+  function draw(){var s=AR.summary;function kp(n,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    $('kpis').innerHTML=kp(s.devices,'network devices')+kp(s.onboarded,'onboarded and verified')+kp(s.blocked,'blocked (over-privileged / unreadable)',s.blocked?'#ff7b80':'')+kp(s.in_map+' / '+s.devices,'in the route map',s.in_map<s.devices?'#f5b544':'')
+      +kp(s.compliance_pct==null?'—':s.compliance_pct+'%','configuration baseline met',s.compliance_pct==null?'':s.compliance_pct>=90?'#56d364':s.compliance_pct>=70?'#f5b544':'#ff7b80')+kp(s.failing_controls,'failing controls',s.failing_controls?'#ff7b80':'');
+    var T=[['onboard','plus','Onboard a device'],['devices','list-check','Onboarded ('+OB.items.length+')'],['arch','topology-star-3','Architecture'],['config','shield-check','Configuration architecture']];
+    $('tabs').innerHTML=T.map(function(t){return '<button type="button" role="tab" data-tab="'+t[0]+'" aria-selected="'+(TAB===t[0])+'"><i class="ti ti-'+t[1]+'"></i>'+esc(t[2])+'</button>';}).join('');
+    $('view').innerHTML=TAB==='onboard'?onboardView():TAB==='devices'?devicesView():TAB==='arch'?archView():configView();}
+  // ---------- onboard
+  function onboardView(){var tiles='<div class="vendors">'+CAT.vendors.map(function(v){return '<button type="button" class="vt" data-vendor="'+v.vendor+'" aria-pressed="'+(VEND===v.vendor)+'"><i class="ti ti-'+(VICON[v.vendor]||'device-desktop')+'"></i><b>'+esc(v.label)+'</b><span class="sm mute">'+esc(v.creds.map(function(c){return c==='api'?'API key':c==='api_user'?'read-only user':c==='snmp'?'SNMPv3':'SSH';}).join(' + '))+'</span></button>';}).join('')+'</div>';
+    if(!VEND)return '<section class="card"><h2>What are you adding?</h2>'+tiles+note('Pick the device type. The form asks only for what that device needs, and the guide beside it shows how to create the read-only account first.')+'</section>';
+    var v=CAT.vendors.find(function(x){return x.vendor===VEND;}),f='';
+    f+='<label>Name<input class="inp" id="o-name" placeholder="e.g. FGT-JED-01"></label><label>Management IP<input class="inp" id="o-ip" placeholder="10.x.x.x"></label><label>Site<input class="inp" id="o-site" placeholder="e.g. Riyadh DC"></label><label>Role<select class="inp" id="o-role">'+v.roles.map(function(r){return '<option'+(r===v.role?' selected':'')+'>'+esc(r)+'</option>';}).join('')+'</select></label>'
+      +'<label>Criticality<select class="inp" id="o-crit"><option value="3">high</option><option value="2" selected>medium</option><option value="1">low</option></select></label><label>API host (if not the IP)<input class="inp" id="o-apihost"></label>';
+    if(v.creds.indexOf('api')>=0)f+='<h4>Read-only API</h4><label class="w">API key / token<input class="inp" id="c-token" type="password" autocomplete="off"></label><label>Certificate SHA-256 fingerprint<input class="inp" id="c-fp" placeholder="AA:BB:… (pins the device certificate)"></label>'+(VEND==='fortigate'?'<label>VDOM<input class="inp" id="c-vdom" placeholder="root"></label>':'<label>Port<input class="inp" id="c-port" placeholder="'+(VEND==='genian'?'8443':'443')+'"></label>');
+    if(v.creds.indexOf('api_user')>=0)f+='<h4>Read-only UCS Manager user</h4><label>Username<input class="inp" id="c-user" autocomplete="off"></label><label>Password<input class="inp" id="c-pass" type="password" autocomplete="off"></label><label class="w">Certificate SHA-256 fingerprint<input class="inp" id="c-fp"></label>';
+    if(v.creds.indexOf('snmp')>=0)f+='<h4>SNMPv3 (monitoring)</h4><label>User<input class="inp" id="s-user" autocomplete="off"></label><label>Auth (SHA) password<input class="inp" id="s-auth" type="password" autocomplete="off"></label><label>Privacy (AES) password<input class="inp" id="s-priv" type="password" autocomplete="off"></label><label>&nbsp;<span class="sm mute">SNMP v2c is refused: it sends the community in clear text.</span></label>';
+    if(v.creds.indexOf('ssh')>=0)f+='<h4>Read-only SSH login (show commands, configuration audit)</h4><label>Username<input class="inp" id="h-user" autocomplete="off"></label><label>Password<input class="inp" id="h-pass" type="password" autocomplete="off"></label>';
+    var guide='<h2>1. Create the read-only account</h2><pre class="code">'+esc(v.account.join('\n'))+'</pre><h2>2. Send its logs to the SIEM</h2><pre class="code">'+esc(v.logs.join('\n'))+'</pre><div class="sm mute">Credentials are stored on the SIEM (secrets.json, owner-only) and never shown again. An account with more than read rights is refused.</div>';
+    var res=LAST&&LAST.vendor===VEND?'<section class="card"><h2>3. Verification - '+esc(LAST.id)+' '+stPill(LAST.status)+'</h2>'+stepsList(LAST)+(LAST.note?note(LAST.note):'')+'</section>':'';
+    return '<section class="card"><h2>What are you adding?</h2>'+tiles+'</section><div class="cols"><section class="card"><h2>'+esc(v.label)+'</h2>'+(can('admin')?'<div class="form">'+f+'</div><div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="go"><i class="ti ti-plug-connected"></i>Onboard and verify</button></div>':note('An administrator onboards devices (credentials are admin-only).'))+'</section><section class="card">'+guide+'</section></div>'+res;}
+  function stepsList(r){var IC={ok:'circle-check',fail:'circle-x',warn:'alert-triangle',pending:'clock',manual:'hand-stop',skip:'minus'};
+    return '<ul class="steps">'+r.steps.map(function(s){return '<li><span class="ic s-'+s.state+'"><i class="ti ti-'+(IC[s.state]||'point')+'"></i></span><div style="flex:1"><b>'+esc(s.label)+'</b> <span class="sm s-'+s.state+'">'+esc(s.state)+'</span><div class="sm mute">'+esc(s.detail)+'</div>'+(s.fix?'<div class="sm" style="color:#f5b544">'+esc(s.fix)+'</div>':'')+'</div></li>';}).join('')+'</ul>';}
+  function collect(){var g=function(id){var e=$(id);return e?e.value.trim():'';},b={vendor:VEND,name:g('o-name'),ip:g('o-ip'),site:g('o-site'),role:g('o-role'),criticality:parseInt(g('o-crit'),10),credentials:{}};if(g('o-apihost'))b.api_host=g('o-apihost');
+    if($('c-token')&&g('c-token'))b.credentials.api={token:g('c-token'),fingerprint256:g('c-fp')||undefined,vdom:g('c-vdom')||undefined,port:g('c-port')?parseInt(g('c-port'),10):undefined};
+    if($('c-user'))b.credentials.api={username:g('c-user'),password:g('c-pass'),fingerprint256:g('c-fp')||undefined};
+    if($('s-user')&&g('s-user'))b.credentials.snmp={version:'3',user:g('s-user'),authProto:'sha',authKey:g('s-auth'),privKey:g('s-priv')};
+    if($('h-user')&&g('h-user'))b.credentials.ssh={username:g('h-user'),password:g('h-pass')};return b;}
+  // ---------- onboarded
+  function devicesView(){if(!OB.items.length)return note('No device onboarded through this page yet. Devices added earlier in the AI Network Engineer appear in the architecture; verify them here by onboarding them again with a read-only account.');
+    return '<section class="card"><table><thead><tr><th>Device</th><th>Status</th><th>Steps</th><th>Verified</th><th></th></tr></thead><tbody>'+OB.items.map(function(r){var d=r.device||{};
+      return '<tr><td><b>'+esc(d.name||r.id)+'</b><div class="sm mute">'+esc([r.vendor,d.ip,d.site,d.role].filter(Boolean).join(' · '))+'</div></td><td>'+stPill(r.status)+'</td><td>'+r.steps.map(function(s){return '<span class="pill '+(s.state==='ok'?'v-ok':s.state==='fail'?'v-bad':s.state==='manual'||s.state==='skip'?'v-mute':'v-warn')+'" title="'+esc(s.label+': '+s.detail)+'">'+esc(s.key)+'</span>';}).join(' ')+'</td>'
+        +'<td class="sm">'+esc(r.verified_at?new Date(r.verified_at).toLocaleString():'—')+'</td><td class="row">'+(can('operator')?'<button class="btn sm" type="button" data-verify="'+esc(r.id)+'">Verify again</button>':'')+(can('admin')&&r.steps.some(function(s){return s.key==='routemap'&&s.state!=='ok';})?'<button class="btn sm pri" type="button" data-map="'+esc(r.id)+'">Add to the route map</button>':'')+(SEL===r.id?'':'<button class="btn sm" type="button" data-steps="'+esc(r.id)+'">Details</button>')+'</td></tr>'
+        +(SEL===r.id?'<tr><td colspan="5">'+stepsList(r)+(r.note?note(r.note):'')+'</td></tr>':'');}).join('')+'</tbody></table></section>';}
+  // ---------- architecture diagram
+  function archView(){if(!AR.layers.length)return note('No network device yet. Onboard the firewalls, switches, routers, NAC and UCS - the architecture is drawn from them, the route map and the CDP / LLDP neighbours.');
+    var W=1200,rowH=96,pad=150,pos={},h=AR.layers.length*rowH+30,s='';
+    AR.layers.forEach(function(L,i){var y=20+i*rowH,n=L.nodes.length,step=(W-pad-40)/Math.max(n,1);s+='<rect x="8" y="'+(y-4)+'" width="'+(W-16)+'" height="'+(rowH-12)+'" rx="10" fill="'+(i%2?'#10131a':'#12151c')+'" stroke="#1b2030"/><text x="22" y="'+(y+40)+'" fill="'+(LCOL[L.id]||'#8b93a4')+'" font-size="12" font-weight="700" font-family="Inter,sans-serif">'+esc(L.label)+'</text>';
+      L.nodes.forEach(function(nd,j){pos[nd.id]={x:pad+step*j+step/2,y:y+38};});});
+    var lines='';AR.links.forEach(function(l){var a=pos[l.a],b=pos[l.b];if(!a||!b)return;lines+='<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+(l.via==='route map'?'#5b8def':'#4a5268')+'" stroke-width="2" '+(l.via==='route map'?'':'stroke-dasharray="5 4"')+'><title>'+esc(l.kind+' · '+l.via)+'</title></line>';});
+    var nodes='';AR.layers.forEach(function(L){L.nodes.forEach(function(nd){var p=pos[nd.id],c=nd.state==='up'?'#2fb344':nd.state==='down'?'#e5484d':'#8b93a4',fails=(AR.matrix.find(function(m){return m.device===nd.id;})||{}).fails||0;
+      nodes+='<g class="nd" data-node="'+esc(nd.id)+'"><rect x="'+(p.x-62)+'" y="'+(p.y-22)+'" width="124" height="44" rx="9" fill="#151a24" stroke="'+(LCOL[L.id]||'#8b93a4')+'" stroke-width="'+(SEL===nd.id?3:1.5)+'"/><circle cx="'+(p.x-50)+'" cy="'+(p.y-10)+'" r="4" fill="'+c+'"/>'
+        +'<text x="'+p.x+'" y="'+(p.y-3)+'" text-anchor="middle" fill="#e7eaf0" font-size="11" font-weight="700" font-family="Inter,sans-serif">'+esc(String(nd.name).slice(0,17))+'</text><text x="'+p.x+'" y="'+(p.y+12)+'" text-anchor="middle" fill="#8b93a4" font-size="9.5" font-family="Inter,sans-serif">'+esc(String(nd.model||nd.vendor||'').slice(0,20))+'</text>'
+        +(fails?'<circle cx="'+(p.x+56)+'" cy="'+(p.y-20)+'" r="9" fill="#e5484d"/><text x="'+(p.x+56)+'" y="'+(p.y-16)+'" text-anchor="middle" fill="#fff" font-size="10" font-weight="800">'+fails+'</text>':'')+'<title>'+esc(nd.name+' · '+(nd.ip||'')+' · '+nd.state+(fails?' · '+fails+' failing control(s)':''))+'</title></g>';});});
+    var detail=SEL?nodeDetail(SEL):'<div class="sm mute">Click a device for its configuration controls.</div>';
+    return '<section class="card"><h2>Network architecture <span class="c">layers from the device roles · solid = route map link · dashed = CDP / LLDP neighbour · red badge = failing controls</span></h2><div class="arch"><svg width="'+W+'" height="'+h+'" viewBox="0 0 '+W+' '+h+'" role="img" aria-label="Network architecture diagram">'+s+lines+nodes+'</svg></div>'+detail+'</section>';}
+  function nodeDetail(id){var m=AR.matrix.find(function(x){return x.device===id;});if(!m)return '';return '<div style="margin-top:12px"><b>'+esc(m.name)+'</b> <span class="sm mute">'+esc(m.vendor+' · '+m.site)+'</span>'+controlRows(m)+'</div>';}
+  function controlRows(m){return '<table style="margin-top:8px"><tbody>'+m.controls.filter(function(c){return c.state!=='n/a';}).map(function(c){var def=AR.controls.find(function(x){return x.id===c.control;});
+    return '<tr><td>'+cell(c.state)+'</td><td><b>'+esc(def.name)+'</b><div class="sm mute">'+esc(def.refs)+'</div></td><td class="sm">'+esc(c.detail||'')+'</td><td>'+(c.state==='fail'&&can('operator')?'<button class="btn sm" type="button" data-fix="'+esc(m.device+'|'+c.control)+'">Propose fix</button>':'')+'</td></tr>';}).join('')+'</tbody></table>';}
+  function cell(st){var k=st==='pass'?['k-pass','✓']:st==='fail'?['k-fail','✕']:st==='n/a'?['k-na','·']:['k-nm','?'];return '<span class="cell '+k[0]+'" title="'+esc(st)+'">'+k[1]+'</span>';}
+  // ---------- configuration architecture
+  function configView(){if(!AR.matrix.length)return note('No network device yet.');
+    var head='<tr><th>Device</th>'+AR.controls.map(function(c){return '<th class="v" title="'+esc(c.name+' · '+c.refs)+'">'+esc(c.name)+'</th>';}).join('')+'<th>Met</th></tr>';
+    var rows=AR.matrix.map(function(m){var app=m.controls.filter(function(c){return c.state==='pass'||c.state==='fail';}).length;
+      return '<tr><td><b>'+esc(m.name)+'</b><div class="sm mute">'+esc(m.vendor+' · '+m.site)+'</div></td>'+m.controls.map(function(c){return '<td class="c" data-cell="'+esc(m.device+'|'+c.control)+'">'+cell(c.state)+'</td>';}).join('')+'<td>'+(app?Math.round(m.passes/app*100)+'%':'—')+'</td></tr>'
+        +(CELL&&CELL.split('|')[0]===m.device?'<tr><td colspan="'+(AR.controls.length+2)+'">'+cellDetail(m,CELL.split('|')[1])+'</td></tr>':'');}).join('');
+    return '<section class="card"><h2>Configuration architecture <span class="c">baseline controls per device, mapped to NCA ECC and CIS Controls v8 · ✓ met · ✕ failing · ? not measured · · not applicable</span></h2><div style="overflow-x:auto"><table class="mx">'+head+rows+'</table></div></section>'+(FIX?fixView():'');}
+  function cellDetail(m,cid){var c=m.controls.find(function(x){return x.control===cid;}),def=AR.controls.find(function(x){return x.id===cid;});
+    return '<div class="row"><b>'+esc(def.name)+'</b>'+cell(c.state)+'<span class="sm mute">'+esc(def.refs)+'</span></div><div class="sm">'+esc(c.detail||'')+'</div>'+(c.state==='fail'&&can('operator')?'<div class="row" style="margin-top:8px"><button class="btn sm pri" type="button" data-fix="'+esc(m.device+'|'+cid)+'">Propose the fix (another person approves)</button></div>':'');}
+  function fixView(){return '<section class="card"><h2>Change plan proposed <span class="c">'+esc(FIX.device+' · '+FIX.control)+'</span>'+pill(FIX.automatic?'runs automatically after approval':'applied by an engineer after approval',FIX.automatic?'v-ok':'v-info')+'</h2>'
+    +FIX.plans.map(function(p){return '<div class="sm"><b>'+esc(p.id)+'</b> '+esc(p.title)+' · '+esc(p.status)+' · risk '+esc(p.risk)+'</div>';}).join('')
+    +(FIX.commands?'<div class="cols" style="margin-top:8px"><div><div class="sm mute">Change</div><pre class="code">'+esc(FIX.commands.join('\n'))+'</pre></div><div><div class="sm mute">Rollback</div><pre class="code">'+esc(FIX.rollback.join('\n'))+'</pre></div></div>':'')+note(FIX.note)+'</section>';}
+  // ---------- Excel
+  function xls(){var sheets=[{name:'Devices',columns:[{h:'Device',w:24},{h:'Vendor',w:12},{h:'Role',w:14},{h:'Site',w:18},{h:'IP',w:16},{h:'Layer',w:14},{h:'State',w:10},{h:'Model',w:24},{h:'Onboarding',w:14}],rows:[].concat.apply([],AR.layers.map(function(L){return L.nodes.filter(function(n){return n.id!=='internet';}).map(function(n){return [n.name,n.vendor,n.role,n.site,n.ip,L.label,n.state,n.model,n.onboarding||''];});}))},
+      {name:'Configuration',columns:[{h:'Device',w:24},{h:'Vendor',w:12}].concat(AR.controls.map(function(c){return {h:c.id,w:12};})),rows:AR.matrix.map(function(m){return [m.name,m.vendor].concat(m.controls.map(function(c){return c.state;}));})},
+      {name:'Controls',columns:[{h:'Control',w:16},{h:'Name',w:50},{h:'Framework',w:36}],rows:AR.controls.map(function(c){return [c.id,c.name,c.refs];})},
+      {name:'Failing controls',columns:[{h:'Device',w:24},{h:'Control',w:40},{h:'Detail',w:80}],rows:[].concat.apply([],AR.matrix.map(function(m){return m.controls.filter(function(c){return c.state==='fail';}).map(function(c){return [m.name,(AR.controls.find(function(x){return x.id===c.control;})||{}).name,c.detail||''];});}))},
+      {name:'Onboarding',columns:[{h:'Device',w:24},{h:'Status',w:12},{h:'Step',w:28},{h:'State',w:10},{h:'Detail',w:70}],rows:[].concat.apply([],OB.items.map(function(r){return r.steps.map(function(s){return [(r.device&&r.device.name)||r.id,r.status,s.label,s.state,s.detail];});}))},
+      {name:'Links',columns:[{h:'From',w:22},{h:'To',w:22},{h:'Kind',w:10},{h:'Source',w:30}],rows:AR.links.map(function(l){return [l.a,l.b,l.kind,l.via];})}];
+    window.zybXlsx.download('network-architecture-'+new Date(AR.at).toISOString().slice(0,10)+'.xlsx',sheets,{title:('Network onboarding & architecture - ' + ZYB_ORG.short),filter:'all network devices',by:ROLE});}
+  // ---------- events
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-tab],[data-vendor],[data-verify],[data-map],[data-steps],[data-node],[data-cell],[data-fix],button[id]');if(!el)return;
+    if(el.dataset.tab){TAB=el.dataset.tab;return draw();}
+    if(el.dataset.vendor){VEND=el.dataset.vendor;return draw();}
+    if(el.dataset.steps){SEL=el.dataset.steps;return draw();}
+    if(el.dataset.node){SEL=SEL===el.dataset.node?'':el.dataset.node;return draw();}
+    if(el.dataset.cell){CELL=CELL===el.dataset.cell?'':el.dataset.cell;return draw();}
+    if(el.dataset.verify){el.disabled=true;el.textContent='Verifying…';return api('POST','/onboard/'+encodeURIComponent(el.dataset.verify)+'/verify').then(function(r){SEL=r.id;toast(r.id+': '+r.status);return load();}).catch(function(e){el.disabled=false;toast(e.message);});}
+    if(el.dataset.map){el.disabled=true;return api('GET','/onboard/'+encodeURIComponent(el.dataset.map)+'/route-map').then(function(p){return api('POST','/onboard/'+encodeURIComponent(el.dataset.map)+'/route-map',{baseVersion:p.version});}).then(function(r){toast('In the route map (version '+r.version+', '+r.links_added+' link(s) added)');return api('POST','/onboard/'+encodeURIComponent(el.dataset.map)+'/verify');}).then(load).catch(function(e){el.disabled=false;toast(e.message);});}
+    if(el.dataset.fix){var p=el.dataset.fix.split('|');el.disabled=true;return api('POST','/architecture/fix',{device:p[0],control:p[1]}).then(function(r){FIX=r;TAB='config';toast('Change plan proposed - another person approves it');return load();}).catch(function(e){el.disabled=false;toast(e.message);});}
+    var id=el.id;
+    if(id==='refresh')return load();
+    if(id==='xls'&&AR)return xls();
+    if(id==='go'){var b=collect();el.disabled=true;el.textContent='Onboarding and verifying…';return api('POST','/onboard',b).then(function(r){LAST=r;toast(r.id+': '+r.status);return load();}).catch(function(e){el.disabled=false;el.innerHTML='<i class="ti ti-plug-connected"></i>Onboard and verify';toast(e.message);});}
+  });
+  req('GET','/dashboards/whoami.json').then(function(w){ROLE=String((w&&w.role)||'viewer').toLowerCase();}).catch(function(){ROLE='viewer';/* no identity: read-only */}).then(load);
+})();
+</script></body></html>

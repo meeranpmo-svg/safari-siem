@@ -1,0 +1,138 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RAS Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><link rel="stylesheet" href="vendor/zyb-riskprog.css"><script src="vendor/zyb-riskprog.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- RAS Management: the Risk Appetite Statement kept in the system instead of the workbook. A new metric (from an insurance template or
+     blank), a change to a metric's definition or retiring one is a proposal a different administrator approves; the limits of an
+     existing metric keep their own limit-change approval (Risk appetite). The year's RAS is frozen and recorded as approved by the
+     Board (requested by one person, recorded by another, with the Board reference); what changed since is listed.
+     API: /api/itam/brisk/ras/proposals, /brisk/ras/approvals (engine/risk-programme.js), /brisk/ras. -->
+<style>
+.g3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr);gap:14px;margin-bottom:14px}@media(max-width:1100px){.g3{grid-template-columns:1fr 1fr}}@media(max-width:700px){.g3{grid-template-columns:1fr}}.g3 .card{margin:0}
+.dn{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.dn svg{flex:none;width:140px;height:140px}.dn .lg{display:grid;gap:4px;font-size:12.5px}.dn .lg i,.lgd i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:-1px}.dn .lg b{margin-inline-start:4px}
+.sb{display:grid;grid-template-columns:minmax(0,40%) minmax(0,1fr) 30px;gap:8px;align-items:center;font-size:12.5px;padding:3px 0}.sb .tr{height:14px;border-radius:6px;background:#1b2332;overflow:hidden;display:flex}.sb .tr i{display:block;height:100%}.sb b{text-align:end}.sb span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lgd{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--mu);margin-top:8px}
+.vt{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:6px 0 2px;margin:8px 0}.vt .v{flex:0 0 auto;min-width:110px;text-align:center;font-size:11.5px;position:relative}.vt .v::before{content:"";position:absolute;top:13px;inset-inline-start:0;inset-inline-end:0;height:2px;background:#2a3446;z-index:0}.vt .v:first-child::before{inset-inline-start:50%}.vt .v:last-child::before{inset-inline-end:50%}
+.vt .dot{position:relative;z-index:1;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;margin:0 auto 4px;font-size:13px;color:#fff;background:var(--c);border:3px solid var(--pn)}
+.dr{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.dr svg{width:96px;height:96px;flex:none}
+.chg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.chg span{font-size:12px;border-radius:999px;padding:2px 9px;border:1px solid var(--c);color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
+.pp{border:1px solid var(--ln);border-inline-start:4px solid var(--c);border-radius:10px;padding:9px 11px;margin-bottom:8px;background:#0f141e}
+.df{display:grid;grid-template-columns:110px minmax(0,1fr) 18px minmax(0,1fr);gap:4px 8px;font-size:12px;margin-top:6px;align-items:baseline}.df .k{color:var(--mu)}.df .o{color:#ff9e98;text-decoration:line-through;text-decoration-color:rgba(255,123,114,.5)}.df .n{color:#9be3a7}.df .a{color:var(--mu)}
+.lad{margin-top:4px}.lad svg{width:100%;height:74px;display:block;direction:ltr}.lad .w{font-size:12px;color:#f5c26b}
+.fn{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.fn div{border-radius:10px;padding:8px 10px;background:#0f141e;border:1px solid var(--ln)}.fn b{display:block;font-size:20px}.fn span{font-size:11.5px;color:var(--mu)}
+</style></head><body><main>
+<section class="rp-hero"><div class="eb">Enterprise risk · risk appetite statement</div><h1>RAS management</h1>
+ <p>Add, change and retire appetite metrics here instead of in the workbook. Every change is a proposal a second administrator approves, and the year's RAS is approved by the Board as a frozen version, so you can always see what changed since.</p>
+ <div class="rp-top rp-noprint"><a class="btn" href="risk-appetite.html"><i class="ti ti-table"></i>Risk appetite</a><a class="btn" href="ras-cockpit.html"><i class="ti ti-gauge"></i>Cockpit</a><a class="btn" href="risk-catalogue.html"><i class="ti ti-category"></i>Insurance templates</a><button type="button" class="btn" id="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button></div></section>
+<div id="err"></div>
+<div class="k" id="kk"></div>
+<div id="viz"></div>
+<div class="g2"><div class="card" id="board"></div><div class="card" id="pend"></div></div>
+<div class="card" id="newcard" hidden><h2><i class="ti ti-plus"></i>Propose a new metric <span class="c">a second administrator approves it before it is in the RAS</span></h2>
+ <div class="form"><label class="f w">Start from an insurance template (optional)<select class="inp" id="n-tpl"><option value="">blank</option></select></label>
+ <label class="f">Section<input class="inp" id="n-sec" list="secs" maxlength="80" placeholder="e.g. INSURANCE RISK"></label><datalist id="secs"></datalist>
+ <label class="f">Metric<input class="inp" id="n-comp" maxlength="120"></label><label class="f">Responsible department<input class="inp" id="n-resp" maxlength="80"></label>
+ <label class="f">Frequency<select class="inp" id="n-freq"><option value="monthly">monthly</option><option value="quarterly">quarterly</option></select></label>
+ <label class="f w">Description<input class="inp" id="n-desc" maxlength="2000"></label><label class="f">Formula<input class="inp" id="n-form" maxlength="500"></label><label class="f">Source<input class="inp" id="n-src" maxlength="200"></label>
+ <div class="w sm mu" id="n-kind"></div>
+ <label class="f">Capacity floor<input class="inp" id="n-cap_floor" maxlength="80"></label><label class="f">Tolerance floor<input class="inp" id="n-tol_floor" maxlength="80"></label><label class="f">Appetite floor<input class="inp" id="n-app_floor" maxlength="80"></label>
+ <label class="f">Appetite ceiling<input class="inp" id="n-app_ceil" maxlength="80"></label><label class="f">Tolerance ceiling<input class="inp" id="n-tol_ceil" maxlength="80"></label><label class="f">Capacity ceiling<input class="inp" id="n-cap_ceil" maxlength="80"></label>
+ <div class="w lad" id="n-lad"></div><div class="w sm mu">Limits come from your Board-approved RAS - a template never carries one. Leave them empty for a metric that is monitored only.</div>
+ <label class="f w">Why (required)<input class="inp" id="n-note" maxlength="1000"></label><div class="w"><button type="button" class="btn pri" id="n-go">Propose the metric</button></div></div></div>
+<div class="card" id="editcard" hidden><h2><i class="ti ti-edit"></i>Change or retire a metric <span class="c">the definition only - limits change on Risk appetite → Limits</span></h2>
+ <div class="form"><label class="f w">Metric<select class="inp" id="e-id"></select></label>
+ <label class="f">Metric name<input class="inp" id="e-comp" maxlength="120"></label><label class="f">Responsible department<input class="inp" id="e-resp" maxlength="80"></label><label class="f">Frequency<select class="inp" id="e-freq"><option value="monthly">monthly</option><option value="quarterly">quarterly</option></select></label>
+ <label class="f w">Description<input class="inp" id="e-desc" maxlength="2000"></label><label class="f">Formula<input class="inp" id="e-form" maxlength="500"></label><label class="f">Source<input class="inp" id="e-src" maxlength="200"></label>
+ <label class="f w">Why (required)<input class="inp" id="e-note" maxlength="1000"></label><div class="w"><button type="button" class="btn pri" id="e-go">Propose the change</button> <button type="button" class="btn" id="e-ret">Propose retiring it</button></div></div></div>
+<div class="card"><h2><i class="ti ti-history"></i>Decided proposals</h2><div class="tw" id="hist"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.ZRP,esc=Z.esc,$=Z.$,val=Z.val,P=null,A=null,M=[];
+  var LIM=['cap_floor','tol_floor','app_floor','app_ceil','tol_ceil','cap_ceil'],F=['component','description','formula','source','responsibility','frequency'],EK={component:'comp',description:'desc',formula:'form',source:'src',responsibility:'resp',frequency:'freq'};
+  function tile(l,v,s,a){return '<div class="t" style="--a:'+a+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s)+'</div></div>';}
+  function load(){return Promise.all([Z.req('GET','/brisk/ras/proposals'),Z.req('GET','/brisk/ras/approvals'),Z.req('GET','/brisk/ras')]).then(function(r){P=r[0];A=r[1];M=r[2].metrics;$('err').innerHTML='';draw();})
+    .catch(function(e){$('err').innerHTML='<div class="err">'+esc(e.message)+'</div>';});}
+  // ---------- graphics, from the RAS and the proposals as they are
+  var KC={floor:'#0ea5e9',ceiling:'#f97316',band:'#a78bfa',boolean:'#14b8a6',manual:'#eab308',none:'#5b6478'},KL={floor:'floor (higher is better)',ceiling:'ceiling (lower is better)',band:'band (floor and ceiling)',boolean:'yes / no',manual:'zone set by a person',none:'monitored, no limits'};
+  if(window.zybLang)window.zybLang.extend({terms:{'RAS composition':'تكوين بيان الرغبة','Metrics by section':'المؤشرات حسب القسم','Owning departments':'الإدارات المالكة','floor (higher is better)':'حد أدنى (الأعلى أفضل)','ceiling (lower is better)':'حد أعلى (الأدنى أفضل)','band (floor and ceiling)':'نطاق (أدنى وأعلى)','yes / no':'نعم / لا','zone set by a person':'منطقة يحددها شخص','monitored, no limits':'متابعة بلا حدود',
+    'Approval versions':'نسخ الاعتماد','approved':'معتمد','rejected':'مرفوض','pending':'قيد الانتظار','superseded':'مستبدل','Proposals':'المقترحات','waiting':'بانتظار القرار','unchanged since approval':'لم يتغير منذ الاعتماد','changed since approval':'تغير منذ الاعتماد','limits out of order: capacity ≤ tolerance ≤ appetite (floors), appetite ≤ tolerance ≤ capacity (ceilings)':'الحدود ليست بالترتيب: القدرة ≤ التحمل ≤ الرغبة (الحدود الدنيا)، الرغبة ≤ التحمل ≤ القدرة (الحدود العليا)'},
+    patterns:[[/^(\d+) metrics$/,function(m){return m[1]+' مؤشر';}]]});
+  function donut(segs,center,sub){var tot=segs.reduce(function(a,x){return a+x.v;},0),R=52,C=2*Math.PI*R,off=0;
+    return '<div class="dn"><svg viewBox="0 0 140 140" role="img" aria-label="'+esc(segs.map(function(x){return x.l+' '+x.v;}).join(', '))+'"><circle r="'+R+'" cx="70" cy="70" fill="none" stroke="#1b2332" stroke-width="18"/>'+(tot?segs.filter(function(x){return x.v;}).map(function(x){var len=x.v/tot*C,o='<circle r="'+R+'" cx="70" cy="70" fill="none" stroke="'+x.c+'" stroke-width="18" stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+(-off).toFixed(2)+'" transform="rotate(-90 70 70)"><title>'+esc(x.l+': '+x.v)+'</title></circle>';off+=len;return o;}).join(''):'')
+      +'<text x="70" y="70" text-anchor="middle" font-size="26" font-weight="800" fill="currentColor">'+esc(String(center))+'</text><text x="70" y="88" text-anchor="middle" font-size="11" fill="#8c95a8">'+esc(sub)+'</text></svg><div class="lg">'+segs.filter(function(x){return x.v;}).map(function(x){return '<div><i style="background:'+x.c+'"></i>'+esc(x.l)+'<b>'+x.v+'</b></div>';}).join('')+'</div></div>';}
+  function viz(){var K=Object.keys(KC),by=function(f){var o={};M.forEach(function(m){var k=f(m)||'(none)';(o[k]=o[k]||[]).push(m);});return Object.keys(o).map(function(k){return {k:k,m:o[k]};}).sort(function(a,b){return b.m.length-a.m.length;});};
+    var sec=by(function(m){return m.section_title;}),own=by(function(m){return m.responsibility;}),mx=Math.max(1,sec.length?sec[0].m.length:1),mo=Math.max(1,own.length?own[0].m.length:1);
+    var h='<div class="g3"><div class="card"><h2><i class="ti ti-chart-donut"></i>RAS composition</h2>'+donut(K.map(function(k){return {l:KL[k],v:M.filter(function(m){return (m.kind||'none')===k;}).length,c:KC[k]};}),M.length,'metrics')+'</div>';
+    h+='<div class="card"><h2><i class="ti ti-layout-rows"></i>Metrics by section</h2>'+(sec.length?sec.map(function(x){return '<div class="sb"><span title="'+esc(x.k)+'">'+esc(x.k)+'</span><span class="tr">'+K.map(function(k){var n=x.m.filter(function(m){return (m.kind||'none')===k;}).length;return n?'<i style="width:'+(n/mx*100).toFixed(1)+'%;background:'+KC[k]+'" title="'+esc(KL[k]+': '+n)+'"></i>':'';}).join('')+'</span><b>'+x.m.length+'</b></div>';}).join(''):'<div class="empty">No metric yet - import the RAS workbook or propose one below.</div>')
+      +'<div class="lgd">'+K.map(function(k){return '<span><i style="background:'+KC[k]+'"></i>'+esc(KL[k])+'</span>';}).join('')+'</div></div>';
+    h+='<div class="card"><h2><i class="ti ti-building"></i>Owning departments</h2>'+(own.length?own.slice(0,10).map(function(x){return '<div class="sb"><span title="'+esc(x.k)+'">'+esc(x.k)+'</span><span class="tr"><i style="width:'+(x.m.length/mo*100).toFixed(1)+'%;background:#6366f1"></i></span><b>'+x.m.length+'</b></div>';}).join(''):'<div class="empty">-</div>')
+      +'<div class="fn" style="margin-top:10px">'+[['pending','#f59f00'],['approved','#2fb344'],['rejected','#e5484d']].map(function(x){return '<div style="border-color:'+x[1]+'"><b style="color:'+x[1]+'">'+P.proposals.filter(function(p){return p.state===x[0];}).length+'</b><span>'+esc(x[0])+'</span></div>';}).join('')+'</div></div></div>';
+    $('viz').innerHTML=h;}
+  // the six limits on one scale, drawn while they are typed (what the server will read; it checks them again)
+  var LIMS=['cap_floor','tol_floor','app_floor','app_ceil','tol_ceil','cap_ceil'],LN={cap_floor:'capacity',tol_floor:'tolerance',app_floor:'appetite',app_ceil:'appetite',tol_ceil:'tolerance',cap_ceil:'capacity'};
+  function ladder(){var el=$('n-lad');if(!el)return;var V=LIMS.map(function(k){var m=/-?\d+(?:\.\d+)?/.exec(val('n-'+k));return m?{k:k,v:Number(m[0])}:null;}).filter(Boolean);
+    if(V.length<2){el.innerHTML='';return;}
+    var fl=V.filter(function(x){return /floor/.test(x.k);}),ce=V.filter(function(x){return /ceil/.test(x.k);}),bad=false;
+    for(var i=1;i<fl.length;i++)if(fl[i].v<fl[i-1].v)bad=true;for(i=1;i<ce.length;i++)if(ce[i].v<ce[i-1].v)bad=true;if(fl.length&&ce.length&&fl[fl.length-1].v>ce[0].v)bad=true;
+    var lo=Math.min.apply(null,V.map(function(x){return x.v;})),hi=Math.max.apply(null,V.map(function(x){return x.v;})),pad=(hi-lo||1)*0.12;lo-=pad;hi+=pad;var W=1000,X=function(v){return 10+(v-lo)/(hi-lo)*(W-20);};
+    // left of the floors (red -> amber), the appetite band (green), right of the ceilings (amber -> red)
+    var seg='',prev=10,col,stops=V.slice().sort(function(a,b){return a.v-b.v;}),cols={cap_floor:'#e5484d',tol_floor:'#f2683c',app_floor:'#f59f00',app_ceil:'#2fb344',tol_ceil:'#f59f00',cap_ceil:'#f2683c'},after={cap_floor:'#f2683c',tol_floor:'#f59f00',app_floor:'#2fb344',app_ceil:'#f59f00',tol_ceil:'#f2683c',cap_ceil:'#e5484d'};
+    col=stops[0].k.indexOf('floor')>=0?cols[stops[0].k]:'#2fb344';
+    stops.forEach(function(x){seg+='<rect x="'+prev.toFixed(1)+'" y="22" width="'+Math.max(0,X(x.v)-prev).toFixed(1)+'" height="16" fill="'+col+'" opacity=".8"/>';prev=X(x.v);col=after[x.k];});
+    seg+='<rect x="'+prev.toFixed(1)+'" y="22" width="'+Math.max(0,W-10-prev).toFixed(1)+'" height="16" fill="'+col+'" opacity=".8"/>';
+    var tk=V.map(function(x){var px=X(x.v);return '<line x1="'+px.toFixed(1)+'" x2="'+px.toFixed(1)+'" y1="16" y2="44" stroke="#fff" stroke-width="2"/><text x="'+px.toFixed(1)+'" y="12" text-anchor="middle" font-size="12" fill="#c7cedb">'+esc(LN[x.k])+'</text><text x="'+px.toFixed(1)+'" y="60" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">'+esc(String(x.v))+'</text>';}).join('');
+    el.innerHTML='<svg viewBox="0 0 '+W+' 66" preserveAspectRatio="none" role="img" aria-label="limits on one scale">'+seg+tk+'</svg>'+(bad?'<div class="w">⚠ '+esc('limits out of order: capacity ≤ tolerance ≤ appetite (floors), appetite ≤ tolerance ≤ capacity (ceilings)')+'</div>':'');}
+  document.addEventListener('input',function(ev){if(ev.target.id&&/^n-(cap|tol|app)_/.test(ev.target.id))ladder();});
+  function draw(){viz();ladder();var pend=P.proposals.filter(function(p){return p.state==='pending';}),cur=A.current,ap=A.approvals.find(function(a){return a.state==='pending';}),d=cur&&cur.drift,ch=d?d.added.length+d.removed.length+d.limits_changed.length:0;
+    $('kk').innerHTML=tile('Active metrics',M.length,'in the RAS now','#f97316')+tile('Proposals waiting',pend.length,'for a second administrator',pend.length?'#f59f00':'#3a4258')
+      +tile('Board approval',cur?cur.year+' v'+(cur.id.split('-v')[1]||''):'none',cur?'ref '+cur.board_ref:'the RAS has not been approved in the system',cur?'#2fb344':'#e5484d')+tile('Changed since approval',cur?ch:'-',cur?(d.unchanged?'identical to what the Board approved':'metrics added, removed or with new limits'):'',cur&&ch?'#f59f00':'#3a4258');
+    // the Board approval
+    var h='<h2><i class="ti ti-certificate"></i>Board approval of the RAS</h2>';
+    var VS=A.approvals.slice().reverse(),VC={approved:['#2fb344','✓'],rejected:['#e5484d','✕'],pending:['#f59f00','…'],superseded:['#5b6478','↺']};
+    if(VS.length)h+='<div class="sm mu">Approval versions</div><div class="vt">'+VS.map(function(a){var c=VC[a.state]||['#5b6478','?'];return '<div class="v" style="--c:'+c[0]+'"><div class="dot">'+c[1]+'</div><b>'+esc(a.year+' v'+a.version)+'</b><div class="mu">'+esc(a.state)+'</div><div class="mu">'+esc(String(a.decided_at||a.at).slice(0,10))+'</div></div>';}).join('')+'</div>';
+    if(cur){var tot=Math.max(1,A.metrics_now),chn=ch,pc=Math.round((1-Math.min(chn,tot)/tot)*100),R=36,Cc=2*Math.PI*R,len=pc/100*Cc;
+      h+='<div class="dr"><svg viewBox="0 0 96 96" role="img" aria-label="'+esc(pc+' % unchanged')+'"><circle r="'+R+'" cx="48" cy="48" fill="none" stroke="'+(chn?'#f59f00':'#1b2332')+'" stroke-width="10"/><circle r="'+R+'" cx="48" cy="48" fill="none" stroke="#2fb344" stroke-width="10" stroke-dasharray="'+len.toFixed(2)+' '+(Cc-len+0.01).toFixed(2)+'" transform="rotate(-90 48 48)"/><text x="48" y="54" text-anchor="middle" font-size="18" font-weight="800" fill="currentColor">'+chn+'</text></svg><div class="sm" style="min-width:0;flex:1">'+esc(chn?'changed since approval':'unchanged since approval')+'<div class="chg">'+d.added.map(function(m){return '<span style="--c:#2fb344">+ '+esc(m.id)+'</span>';}).join('')+d.removed.map(function(m){return '<span style="--c:#e5484d">− '+esc(m.id)+'</span>';}).join('')+d.limits_changed.map(function(m){return '<span style="--c:#f59f00">≠ '+esc(m.id)+'</span>';}).join('')+'</div></div></div>';}
+    if(cur){h+='<div class="sm"><b>'+esc(cur.year)+'</b> approved on '+esc(String(cur.decided_at).slice(0,10))+' (recorded by '+esc(cur.decided_by)+'), Board reference <b>'+esc(cur.board_ref)+'</b> - '+cur.count+' metrics, fingerprint '+esc(cur.fingerprint)+'.</div>';
+      h+=d.unchanged?'<div class="note">The RAS in the system is exactly what the Board approved.</div>':'<div class="note" style="color:#f5c26b">Changed since the approval:</div><ul class="sm">'+d.added.map(function(m){return '<li>added '+esc(m.id)+' '+esc(m.component)+'</li>';}).join('')+d.removed.map(function(m){return '<li>retired '+esc(m.id)+' '+esc(m.component)+'</li>';}).join('')+d.limits_changed.map(function(m){return '<li>limits of '+esc(m.id)+' '+esc(m.component)+'</li>';}).join('')+'</ul>';}
+    else h+='<div class="sm mu">No Board approval recorded yet.</div>';
+    if(ap){h+='<div class="card" style="background:#0e131c;margin:10px 0 0"><div class="sm"><b>'+esc(ap.id)+'</b> waiting: asked by '+esc(ap.requested_by)+' on '+esc(String(ap.at).slice(0,10))+' - '+ap.count+' metrics. '+esc(ap.note)+'</div>'
+      +(Z.can('admin')&&ap.requested_by!==Z.me()?'<div class="flt" style="margin-top:6px"><input class="inp" id="b-ref" placeholder="Board resolution / meeting" maxlength="120"><input class="inp" id="b-note" placeholder="Note (required to reject)" maxlength="1000"><button type="button" class="btn pri xs" data-bdec="approve" data-id="'+esc(ap.id)+'">Record the approval</button><button type="button" class="btn xs" data-bdec="reject" data-id="'+esc(ap.id)+'">Reject</button></div>':'<div class="sm mu" style="margin-top:4px">A different administrator records the Board\'s decision.</div>')+'</div>';}
+    else if(Z.can('operator'))h+='<div class="flt" style="margin-top:10px"><input class="inp" id="b-year" type="number" min="2020" max="2100" value="'+new Date().getFullYear()+'" style="width:100px" aria-label="Year"><input class="inp" id="b-rnote" placeholder="For which Board meeting (required)" maxlength="1000" style="flex:1;min-width:200px"><button type="button" class="btn" id="b-ask">Freeze the RAS for Board approval</button></div>';
+    $('board').innerHTML=h;
+    // waiting proposals
+    var KD={'new':['#2fb344','ti-plus','new metric'],edit:['#6366f1','ti-edit','change'],retire:['#e5484d','ti-archive','retire']},LK={cap_floor:'capacity floor',tol_floor:'tolerance floor',app_floor:'appetite floor',app_ceil:'appetite ceiling',tol_ceil:'tolerance ceiling',cap_ceil:'capacity ceiling'};
+    $('pend').innerHTML='<h2><i class="ti ti-inbox"></i>Proposals waiting <span class="c">four eyes</span></h2>'+(pend.length?pend.map(function(p){var mine=p.by===Z.me(),k=KD[p.kind]||KD.edit,F=Object.keys(p.fields||{});
+      return '<div class="pp" style="--c:'+k[0]+'"><div><i class="ti '+k[1]+'" style="color:'+k[0]+'"></i> <b>'+esc(p.id)+'</b> '+Z.pill(k[2],k[0])+' '+esc(p.metric||'')+' <b>'+esc(p.fields.component||'')+'</b></div>'
+        +'<div class="sm mu">'+esc(p.by)+' · '+esc(String(p.at).slice(0,10))+' · '+esc(p.note)+(p.template?' · template '+esc(p.template):'')+'</div>'
+        +(F.length&&p.kind==='edit'?'<div class="df">'+F.map(function(f){return '<span class="k">'+esc(f)+'</span><span class="o">'+esc(p.before&&p.before[f]!=null?p.before[f]:'-')+'</span><span class="a">→</span><span class="n">'+esc(p.fields[f])+'</span>';}).join('')+'</div>'
+          :F.length?'<div class="sm" style="margin-top:4px">'+F.filter(function(f){return f!=='component';}).map(function(f){return '<span class="mu">'+esc(f.replace('_',' '))+'</span> '+esc(p.fields[f]);}).join(' · ')+'</div>':'')
+        +(p.raw?'<div class="chg">'+Object.keys(LK).filter(function(x){return p.raw[x];}).map(function(x){return '<span style="--c:'+(/app/.test(x)?'#2fb344':/tol/.test(x)?'#f59f00':'#e5484d')+'">'+esc(LK[x])+' '+esc(p.raw[x])+'</span>';}).join('')+'</div>':'')
+        +(Z.can('admin')&&!mine?'<div class="flt" style="margin-top:6px"><input class="inp" id="pn-'+esc(p.id)+'" placeholder="Note (required to reject)" maxlength="1000"><button type="button" class="btn pri xs" data-pdec="approve" data-id="'+esc(p.id)+'">Approve</button><button type="button" class="btn xs" data-pdec="reject" data-id="'+esc(p.id)+'">Reject</button></div>':'<div class="sm mu" style="margin-top:4px">'+(mine?'Yours - a different administrator decides.':'An administrator decides.')+'</div>')+'</div>';}).join(''):'<div class="empty">Nothing waiting.</div>');
+    var done=P.proposals.filter(function(p){return p.state!=='pending';});
+    $('hist').innerHTML=done.length?'<table><thead><tr><th>Proposal</th><th>Metric</th><th>Proposed</th><th>Decision</th></tr></thead><tbody>'+done.map(function(p){return '<tr><td><b>'+esc(p.id)+'</b> '+esc(p.kind)+'</td><td>'+esc(p.metric||'')+' '+esc(p.fields.component||'')+'</td><td class="sm">'+esc(p.by)+' · '+esc(p.note)+'</td><td class="sm">'+Z.pill(p.state,p.state==='approved'?'#2fb344':'#e5484d')+' '+esc(p.decided_by)+(p.decision_note?' - '+esc(p.decision_note):'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No decided proposal yet.</div>';
+    // forms
+    $('newcard').hidden=$('editcard').hidden=!Z.can('operator');
+    var tp=$('n-tpl');if(tp.options.length<2)tp.innerHTML+=P.templates.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.id+' · '+t.component)+'</option>';}).join('');
+    $('secs').innerHTML=P.sections.map(function(s){return '<option value="'+esc(s.title)+'">';}).join('');
+    var e=$('e-id'),keep=e.value;e.innerHTML=M.map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.id+' · '+m.component)+'</option>';}).join('');if(keep)e.value=keep;fillEdit();
+    var want=(location.search.match(/[?&]template=([A-Z0-9-]+)/)||[])[1];if(want&&!tp.dataset.done){tp.value=want;tp.dataset.done='1';useTpl();$('newcard').scrollIntoView({block:'start'});}}
+  function useTpl(){var t=P.templates.find(function(x){return x.id===val('n-tpl');});ladder();if(!t){$('n-kind').textContent='';return;}
+    $('n-comp').value=t.component;$('n-desc').value=t.description;$('n-form').value=t.formula;$('n-freq').value=t.frequency;
+    $('n-kind').textContent='Template '+t.id+': a '+t.kind+' metric in '+t.unit+' - '+(t.kind==='floor'?'give the floors (appetite, tolerance, capacity)':t.kind==='ceiling'?'give the ceilings':'give both floors and ceilings')+'.';}
+  function fillEdit(){var m=M.find(function(x){return x.id===val('e-id');});if(!m)return;F.forEach(function(k){$('e-'+EK[k]).value=m[k]||(k==='frequency'?'monthly':'');});}
+  function post(p,b,msg){return Z.req('POST',p,b).then(function(){Z.toast(msg);return load();}).catch(function(e){Z.toast(e.message);});}
+  document.addEventListener('change',function(ev){if(ev.target.id==='n-tpl')useTpl();if(ev.target.id==='e-id')fillEdit();});
+  document.addEventListener('click',function(ev){var t=ev.target.closest('#refresh,#n-go,#e-go,#e-ret,#b-ask,[data-bdec],[data-pdec]');if(!t)return;
+    if(t.id==='refresh'){load();return;}
+    if(t.id==='n-go'){var raw={},any=false;LIM.forEach(function(k){raw[k]=val('n-'+k);if(raw[k])any=true;});
+      post('/brisk/ras/proposals',{kind:'new',template:val('n-tpl')||undefined,fields:{section_title:val('n-sec'),component:val('n-comp'),description:val('n-desc'),formula:val('n-form')||undefined,source:val('n-src')||undefined,responsibility:val('n-resp'),frequency:val('n-freq')},raw:any?raw:undefined,note:val('n-note')},'Proposed - a second administrator approves it');return;}
+    if(t.id==='e-go'||t.id==='e-ret'){var m=M.find(function(x){return x.id===val('e-id');});if(!m)return;
+      if(t.id==='e-ret'){post('/brisk/ras/proposals',{kind:'retire',metric:m.id,note:val('e-note')},'Retirement proposed');return;}
+      var f={};F.forEach(function(k){var v=val('e-'+EK[k]);if(v&&v!==String(m[k]||(k==='frequency'?'monthly':'')))f[k]=v;});
+      if(!Object.keys(f).length){Z.toast('Nothing changed in the definition');return;}post('/brisk/ras/proposals',{kind:'edit',metric:m.id,fields:f,note:val('e-note')},'Change proposed');return;}
+    if(t.id==='b-ask'){post('/brisk/ras/approvals',{year:Number(val('b-year')),note:val('b-rnote')},'The RAS is frozen for the Board');return;}
+    if(t.dataset.bdec){post('/brisk/ras/approvals/'+encodeURIComponent(t.dataset.id)+'/decision',{decision:t.dataset.bdec,board_ref:val('b-ref')||undefined,note:val('b-note')||undefined},t.dataset.bdec==='approve'?'Board approval recorded':'Rejected');return;}
+    if(t.dataset.pdec){post('/brisk/ras/proposals/'+encodeURIComponent(t.dataset.id)+'/decision',{decision:t.dataset.pdec,note:val('pn-'+t.dataset.id)||undefined},t.dataset.pdec==='approve'?'Approved - the RAS is updated':'Rejected');}});
+  Z.whoami(load);
+})();
+</script></body></html>

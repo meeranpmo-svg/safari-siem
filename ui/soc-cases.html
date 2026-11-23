@@ -1,0 +1,172 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Investigations &amp; Cases</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-secops.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-copilot.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+</head><body><main class="so">
+<div class="so-head"><div><div class="eb">Security Operations · Investigations</div><h1>Investigations &amp; Cases</h1></div><span class="sp"></span>
+ <span class="so-chip" id="up">loading…</span><button type="button" class="so-btn" id="refresh" aria-label="Refresh">⟳ Refresh</button><button type="button" class="so-btn pri" id="new" hidden>+ New case</button></div>
+<div id="err"></div>
+<form id="newf" class="so-p w12 so-form" hidden style="margin-bottom:12px"><div class="so-fil" style="margin:0"><label style="flex:1">Case title<input name="title" maxlength="300" required></label>
+ <label>Severity<select name="severity"><option value="4">Critical</option><option value="3">High</option><option value="2" selected>Medium</option><option value="1">Low</option></select></label>
+ <label style="flex:1">Description<input name="description" maxlength="2000"></label><button type="submit" class="so-btn pri">Open case</button><button type="button" class="so-btn" id="newx">Cancel</button></div><span class="so-err" data-msg></span></form>
+<div class="so-kpis" id="kpis"></div>
+<div class="so-grid">
+ <section class="so-p w6"><h2>Cases opened vs closed <span class="c">last 14 days</span></h2><div class="so-ch short"><canvas id="c-trend"></canvas></div></section>
+ <section class="so-p w3"><h2>Open by stage</h2><div class="so-ch short"><canvas id="c-stage"></canvas></div></section>
+ <section class="so-p w3"><h2>Workload <span class="c">open cases per owner</span></h2><div class="so-ch short"><canvas id="c-own"></canvas></div></section>
+</div>
+<div id="cins" hidden>
+<div class="so-grid">
+ <section class="so-p w4"><h2>At risk of an SLA breach <span class="c">forecast from comparable closed cases</span></h2><ul class="so-list" id="ci-risk"></ul></section>
+ <section class="so-p w4"><h2>Stalled <span class="c">no activity for twice the usual gap</span></h2><ul class="so-list" id="ci-stall"></ul></section>
+ <section class="so-p w4"><h2>Possible duplicates <span class="c">open cases with overlapping scope</span></h2><ul class="so-list" id="ci-dup"></ul></section>
+</div>
+<div class="so-grid">
+ <section class="so-p w6"><h2>Where cases wait <span class="c">median time in each stage · 90 days</span></h2><div id="ci-stage"></div></section>
+ <section class="so-p w6"><h2>Suggested owners <span class="c">who closed comparable cases fastest, less their load</span></h2><ul class="so-list" id="ci-own"></ul></section>
+</div>
+<p class="so-note" id="ci-note"></p>
+</div>
+<div class="so-fil">
+ <input type="search" id="q" placeholder="Search case id, title, description" aria-label="Search cases">
+ <select id="st" aria-label="Status"><option value="active">Active</option><option value="all">All</option><option value="open">Open</option><option value="investigating">Investigating</option><option value="contained">Contained</option><option value="eradicated">Eradicated</option><option value="recovered">Recovered</option><option value="closed">Closed</option></select>
+ <select id="sev" aria-label="Minimum severity"><option value="">Any severity</option><option value="4">Critical</option><option value="3">High and above</option><option value="2">Medium and above</option></select>
+ <select id="own" aria-label="Owner"><option value="">Anyone</option><option value="me">Mine</option><option value="-">Unassigned</option></select>
+ <label class="so-why"><input type="checkbox" id="br"> SLA breached only</label>
+</div>
+<div class="so-tw" id="list"><div class="so-empty">Loading…</div></div>
+<div id="ws"></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc, C=window.zybCharts, esc=S.esc, $=function(i){return document.getElementById(i);};
+  var F={status:'active',severity_min:'',owner:'',breached:false,q:''}, OPEN='', TAB='overview', W=null, SUM=null;
+  var STAGES=['open','investigating','contained','eradicated','recovered','closed'];
+  var SEVN=['Info','Low','Medium','High','Critical'];
+  (function(){var u=new URLSearchParams(location.search);if(u.get('id'))OPEN=u.get('id');if(u.get('status'))F.status=u.get('status');if(u.get('breached'))F.breached=true;if(u.get('owner'))F.owner=u.get('owner');})();
+  function hrs(h){return h==null?'—':h<24?h+' h':Math.round(h/24*10)/10+' d';}
+  function kpi(l,v,s,cls,act){return '<button type="button" class="so-kpi '+(cls||'')+'" data-k="'+esc(act||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function sevTag(s){return '<span class="so-sev s'+esc(s)+'"></span>'+esc(SEVN[s]||s);}
+  function slaTag(x){if(!x)return '';var a=[];if(x.ack_breached)a.push('<span class="so-tag crit">ack SLA breached</span>');if(x.resolve_breached)a.push('<span class="so-tag crit">resolve SLA breached</span>');
+    if(!a.length&&x.resolve_due)a.push('<span class="so-tag">due '+esc(S.dt(x.resolve_due))+'</span>');return a.join('');}
+  function loadSum(){return S.req('GET','/soc/cases/summary').then(function(s){SUM=s;drawSum();}).catch(function(e){$('err').innerHTML=S.errHtml(e,'Investigations & Cases');});}
+  function drawSum(){var s=SUM;
+    $('kpis').innerHTML=kpi('Open cases',S.n(s.open),'oldest '+(s.oldest_open||'—'),'',  'active')+kpi('SLA breached',S.n(s.sla.ack_breached+s.sla.resolve_breached),s.sla.ack_breached+' acknowledge · '+s.sla.resolve_breached+' resolve',(s.sla.ack_breached+s.sla.resolve_breached)?'crit':'ok','breached')
+      +kpi('Unassigned',S.n(s.unassigned),'take ownership',s.unassigned?'warn':'','unassigned')+kpi('Actions awaiting approval',S.n(s.approvals_pending),'containment waits for an approver',s.approvals_pending?'warn':'','approvals')
+      +kpi('Closed in 30 days',S.n(s.closed_30d),Object.keys(s.by_resolution).map(function(k){return k+' '+s.by_resolution[k];}).join(' · ')||'none','ok','closed')+kpi('Median time to close',hrs(s.median_close_h),'cases closed in 30 days','','');
+    C.bars($('c-trend'),s.series.map(function(r){return r.day.slice(5);}),[{label:'Opened',data:s.series.map(function(r){return r.opened;}),color:'acc'},{label:'Closed',data:s.series.map(function(r){return r.closed;}),color:'ok'}],{title:'Cases opened and closed per day'});
+    var st=STAGES.filter(function(k){return s.by_status[k];});
+    C.ring($('c-stage'),st.length?st:['No open case'],st.length?st.map(function(k){return s.by_status[k];}):[1],st.length?[]:['line'],{v:S.n(s.open),l:'open'},{title:'Open cases by stage',onClick:function(i){if(st[i]){F.status=st[i];$('st').value=st[i];loadList();}}});
+    if(s.owners.length)C.bars($('c-own'),s.owners.slice(0,8).map(function(o){return o.owner;}),[{label:'Open cases',data:s.owners.slice(0,8).map(function(o){return o.open;}),color:'purple'}],{horizontal:true,title:'Open cases per owner'});
+    else C.empty($('c-own'),'No case has an owner yet.');
+    $('new').hidden=!S.can('operator');
+  }
+  function loadList(){var p=['status='+encodeURIComponent(F.status),'limit=200'];if(F.severity_min)p.push('severity_min='+F.severity_min);if(F.owner)p.push('owner='+encodeURIComponent(F.owner));if(F.breached)p.push('breached=true');if(F.q)p.push('q='+encodeURIComponent(F.q));
+    return S.req('GET','/cases?'+p.join('&')).then(function(r){$('up').textContent='updated '+S.dt(Date.now());
+      if(!r.items.length){$('list').innerHTML='<div class="so-empty">No case matches. Cases are opened from the Alert Queue (accept an AI triage with "open a case"), from XDR incidents, or with New case.</div>';return;}
+      $('list').innerHTML='<table class="so-t"><thead><tr><th>Case</th><th>Severity</th><th>Stage</th><th>Owner</th><th>Alerts</th><th>SLA</th><th>Updated</th></tr></thead><tbody>'+r.items.map(function(c){
+        return '<tr class="r" data-case="'+esc(c.id)+'" tabindex="0"><td><b>'+esc(c.id)+'</b><div class="sum">'+esc(c.title)+'</div></td><td>'+sevTag(c.severity)+'</td><td><span class="so-tag">'+esc(c.status)+'</span></td><td class="so-why">'+esc(c.owner||'unassigned')+'</td><td>'+S.n((c.alerts||[]).length)+'</td><td>'+slaTag(c.sla_state)+rTag(c.id)+'</td><td class="so-why">'+esc(S.ago(c.updated))+'</td></tr>';}).join('')+'</tbody></table>';
+      if(OPEN){var o=OPEN;OPEN='';openCase(o);}
+    }).catch(function(e){$('list').innerHTML=S.errHtml(e,'the case list');});}
+  function openCase(id){if(window.zybCopilot)window.zybCopilot.context({kind:'case',id:id});return S.req('GET','/soc/cases/'+encodeURIComponent(id)+'/workspace').then(function(w){W=w;drawWs();$('ws').scrollIntoView({behavior:'smooth',block:'start'});}).catch(function(e){S.toast(e.message);});}
+  function tabBtn(k,l,n){return '<button type="button" role="tab" data-tab="'+k+'" aria-selected="'+(TAB===k)+'">'+esc(l)+(n!=null?'<b>'+esc(n)+'</b>':'')+'</button>';}
+
+  // ---- insights (GET /soc/cases/insights, analysts and above)
+  var INS=null;
+  function rTag(id){var f=INS&&INS.forecasts[id];return f&&f.judged&&f.breach_risk!=null&&f.breach_risk>=50?'<span class="so-tag '+(f.breach_risk>=80?'crit':'warn')+'" title="'+esc(f.why)+'">breach risk '+esc(f.breach_risk)+'%</span>':'';}
+  function loadIns(){if(!S.can('analyst'))return Promise.resolve();return S.req('GET','/soc/cases/insights').then(function(r){INS=r;drawIns();},function(e){$('cins').hidden=false;$('ci-risk').innerHTML='<li class="so-empty">'+(e.status===404?'The case insights arrive with the SIEM update (update-all.ps1).':esc(e.message))+'</li>';});}
+  function cli(id,main,sub,right){return '<li class="cl" tabindex="0" data-case="'+esc(id)+'"><span class="grow" style="min-width:0;white-space:normal"><b>'+esc(id)+'</b> '+main+(sub?'<div class="so-why" style="white-space:normal">'+sub+'</div>':'')+'</span>'+(right||'')+'</li>';}
+  function drawIns(){var r=INS;$('cins').hidden=false;
+    $('ci-risk').innerHTML=r.at_risk.length?r.at_risk.map(function(x){return cli(x.id,esc(x.title),esc(x.forecast.why),'<span class="so-tag '+(x.forecast.breach_risk>=80?'crit':'warn')+'">'+esc(x.forecast.breach_risk)+'%</span>');}).join(''):'<li class="so-empty">No open case is likely to breach its resolve SLA'+(r.closed_90d<5?' (forecasts start from 5 closed cases of the same severity; '+esc(r.closed_90d)+' closed in 90 days)':'')+'.</li>';
+    $('ci-stall').innerHTML=r.stalled.length?r.stalled.map(function(x){return cli(x.id,esc(x.title),esc(x.stalled.why),'<span class="n">'+esc(hrs(x.stalled.idle_h))+'</span>');}).join(''):'<li class="so-empty">Every open case has recent activity.</li>';
+    $('ci-dup').innerHTML=r.duplicates.length?r.duplicates.map(function(d){return '<li><span class="grow" style="white-space:normal"><a href="#" data-goc="'+esc(d.a)+'">'+esc(d.a)+'</a> ↔ <a href="#" data-goc="'+esc(d.b)+'">'+esc(d.b)+'</a> <span class="so-tag">'+esc(d.similarity)+'%</span><div class="so-why" style="white-space:normal">'+esc(d.why)+'</div></span></li>';}).join('')+'<li class="so-why" style="white-space:normal">Candidates only: open both and decide; close one as “duplicate” if they are the same incident.</li>':'<li class="so-empty">No two open cases share their scope.</li>';
+    var st=r.stages,mx=Math.max.apply(null,[1].concat(st.rows.map(function(x){return x.median_h;})));
+    $('ci-stage').innerHTML=st.rows.length?st.rows.map(function(x){return '<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:8px;align-items:center;margin:4px 0;font-size:12.5px"><span>'+esc(x.status)+'</span><div style="height:10px;border-radius:5px;background:var(--so-line)"><div style="height:10px;border-radius:5px;width:'+(100*x.median_h/mx).toFixed(1)+'%;background:'+(x.status===st.bottleneck?'var(--so-crit)':'var(--so-acc)')+'"></div></div><span class="so-why">'+esc(hrs(x.median_h))+'</span></div>';}).join('')+'<p class="so-note">'+esc(st.why)+'</p>':'<p class="so-empty">'+esc(st.why)+'</p>';
+    $('ci-own').innerHTML=r.suggestions.length?r.suggestions.map(function(x){return cli(x.id,esc(x.title),esc(x.owner.why),'<span class="so-tag ai">'+esc(x.owner.user)+'</span>');}).join(''):'<li class="so-empty">No unassigned case has a suggestion yet.</li>';
+    $('ci-note').textContent=r.note;}
+  function mlTab(){var m=W.ml,c=W.case,can=S.can('operator');if(!m)return '<p class="so-empty">The case statistics arrive with the SIEM update.</p>';
+    var h='';
+    if(m.forecast)h+='<div class="so-why">Time to close</div><p>'+esc(m.forecast.why)+'</p>'+(m.forecast.judged?'<p>Expected close around <b>'+esc(S.dt(m.forecast.expected_close))+'</b>'+(m.forecast.breach_risk!=null?' · breach risk <span class="so-tag '+(m.forecast.breach_risk>=80?'crit':m.forecast.breach_risk>=50?'warn':'ok')+'">'+esc(m.forecast.breach_risk)+'%</span>':'')+'</p>':'');
+    if(m.stalled)h+='<p><span class="so-tag warn">stalled</span> '+esc(m.stalled.why)+'</p>';
+    if(m.suggested_owner)h+='<div class="so-why">Suggested owner</div><p><b>'+esc(m.suggested_owner.user)+'</b> - '+esc(m.suggested_owner.why)+(m.suggested_owner.others.length?' · also: '+m.suggested_owner.others.map(esc).join(', '):'')+'</p>'+(can?'<p><button type="button" class="so-btn" id="sugown">Assign to '+esc(m.suggested_owner.user)+'</button></p>':'');
+    h+='<div class="so-why">Similar past cases</div>'+(m.similar.length?'<table class="so-t"><thead><tr><th>Case</th><th>Similar</th><th>Closed as</th><th>Took</th><th>Note</th></tr></thead><tbody>'+m.similar.map(function(x){return '<tr><td><a href="#" data-goc="'+esc(x.id)+'">'+esc(x.id)+'</a><div class="so-why">'+esc(x.title)+'</div><div>'+x.shared.map(function(e){return '<span class="so-tag ent">'+esc(e)+'</span>';}).join('')+'</div></td><td>'+esc(x.similarity)+'%</td><td>'+esc(x.resolution)+'</td><td>'+esc(hrs(x.close_h))+'</td><td>'+esc(x.note||'—')+(x.owner?'<div class="so-why">'+esc(x.owner)+'</div>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<p class="so-empty">No closed case in 90 days shares this scope (entities, rules, ATT&CK).</p>')
+      +'<p class="so-note">Statistics over this SIEM\'s own cases: the forecast is how long comparable cases took, not a promise; similar cases are there to read, not a verdict.</p>';
+    return h;}
+  function drawWs(){var w=W,c=w.case,can=S.can('operator'),si=STAGES.indexOf(c.status);
+    var h='<div class="so-ws" id="wsp"><div class="so-head" style="margin:0"><div><div class="eb">'+esc(c.id)+' · '+sevTag(c.severity)+'</div><h2>'+esc(c.title)+'</h2></div><span class="sp"></span><span class="so-sla">'+slaTag(c.sla_state)+'</span><button type="button" class="so-btn" id="wsclose">Close panel</button></div>'
+      +'<div class="so-steps" aria-label="Case stage">'+STAGES.map(function(s,i){return '<div class="so-step'+(i<si?' done':'')+(i===si?' cur':'')+'">'+esc(s)+'</div>';}).join('')+'</div>'
+      +'<div class="so-tabs" role="tablist">'+tabBtn('overview','Overview')+tabBtn('alerts','Alerts',w.alerts.length)+tabBtn('timeline','Timeline',w.timeline.length)+tabBtn('tasks','Tasks',(c.tasks||[]).length)+tabBtn('evidence','Evidence',(c.evidence||[]).length)+tabBtn('approvals','Approvals',(c.recommended_actions||[]).length)+tabBtn('suggested','Suggested alerts',w.suggested.length)+tabBtn('ml','Forecast & similar',W.ml&&W.ml.similar?W.ml.similar.length:null)+tabBtn('brief','AI brief')+'</div><div id="tabb">'+tab()+'</div></div>';
+    $('ws').innerHTML=h;
+  }
+  function tab(){var w=W,c=w.case,can=S.can('operator');
+    if(TAB==='overview')return '<dl class="so-kv"><div><dt>Stage</dt><dd>'+esc(c.status)+'</dd></div><div><dt>Owner</dt><dd>'+esc(c.owner||'unassigned')+'</dd></div><div><dt>Opened</dt><dd>'+esc(S.dt(c.created))+'</dd></div><div><dt>Acknowledge due</dt><dd>'+esc(S.dt(c.sla_state&&c.sla_state.ack_due))+'</dd></div><div><dt>Resolve due</dt><dd>'+esc(S.dt(c.sla_state&&c.sla_state.resolve_due))+'</dd></div><div><dt>Playbook</dt><dd>'+esc(c.playbook_name||'none')+'</dd></div></dl>'
+      +(c.description?'<p>'+esc(c.description)+'</p>':'')
+      +'<div class="so-why">Scope</div><p>'+(w.scope.length?w.scope.map(function(x){return '<span class="so-tag ent">'+esc(x.entity)+' · '+esc(x.alerts)+'</span>';}).join(''):'<span class="so-why">no user, host or IP on the case alerts</span>')+'</p>'
+      +(can?'<form class="so-form" id="f-stage"><div class="so-fil" style="margin:0"><label>Move to<select name="status">'+STAGES.filter(function(s){return s!==c.status;}).map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('')+'</select></label>'
+        +'<label>Resolution (to close)<select name="resolution"><option value="">—</option><option value="true-positive">True positive</option><option value="false-positive">False positive</option><option value="benign">Benign</option><option value="duplicate">Duplicate</option><option value="other">Other</option></select></label>'
+        +'<label style="flex:1">Note<input name="note" maxlength="1000"></label><button type="submit" class="so-btn pri">Update stage</button> '+(c.owner!==S.user()?'<button type="button" class="so-btn" id="mine">Take ownership</button>':'')+'</div><span class="so-err" data-msg></span></form>'
+        +'<form class="so-form" id="f-note"><label>Add a note<textarea name="text" rows="2" maxlength="20000"></textarea></label><div><button type="submit" class="so-btn">Add note</button> <span class="so-err" data-msg></span></div></form>':'');
+    if(TAB==='alerts')return w.alerts.length?'<table class="so-t"><thead><tr><th>Priority</th><th>Alert</th><th>Entities</th><th>Seen</th><th>Status</th></tr></thead><tbody>'+w.alerts.map(function(a){return '<tr><td>'+(a.priority!=null?'<span class="so-score '+esc(a.label)+'">'+esc(a.priority)+'</span>':'—')+'</td><td><a href="soc-alerts.html?status=all&id='+encodeURIComponent(a.id)+'">'+esc(a.id)+'</a> <b>'+esc(a.rule_name)+'</b><div class="sum">'+esc(a.summary||'')+'</div></td><td>'+a.entities.slice(0,4).map(function(e){return '<span class="so-tag ent">'+esc(e)+'</span>';}).join('')+'</td><td class="so-why">'+esc(S.dt(a.ts_first))+'<br>'+S.n(a.count)+' events</td><td class="so-why">'+esc(a.status)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No alert on this case.</div>';
+    if(TAB==='timeline')return '<ul class="so-tl">'+w.timeline.slice().reverse().map(function(x){var k=String(x.kind);return '<li class="'+(k.indexOf('alert:')===0?'al':k.indexOf('ai:')===0?'ai':'')+'"><div class="w">'+esc(S.dt(x.at))+' · '+esc(x.by||'')+' · '+esc(k)+(x.ref?' · '+esc(x.ref):'')+'</div>'+esc(x.text||'')+'</li>';}).join('')+'</ul>';
+    if(TAB==='tasks'){var T=c.tasks||[];return (T.length?'<ul class="so-list">'+T.map(function(t){return '<li><input type="checkbox" data-task="'+esc(t.id)+'"'+(t.done?' checked':'')+(can?'':' disabled')+' aria-label="Done: '+esc(t.title)+'"><span class="grow">'+esc(t.title)+(t.phase?' <span class="so-tag">'+esc(t.phase)+'</span>':'')+(t.kind==='automatable'?' <span class="so-tag warn">needs approval</span>':'')+'</span><span class="so-why">'+esc(t.done?'done by '+(t.by||''):'')+'</span></li>';}).join('')+'</ul>':'<div class="so-empty">No task. A playbook adds its tasks; you can add your own.</div>')
+      +(can?'<form class="so-form" id="f-task"><div class="so-fil" style="margin:0"><label style="flex:1">New task<input name="title" maxlength="300"></label><button type="submit" class="so-btn">Add task</button></div><span class="so-err" data-msg></span></form>':'');}
+    if(TAB==='evidence'){var E=c.evidence||[];return (E.length?'<table class="so-t"><thead><tr><th>Evidence</th><th>Reference</th><th>Added</th></tr></thead><tbody>'+E.map(function(e){return '<tr><td>'+esc(e.name)+' <span class="so-tag">'+esc(e.kind)+'</span></td><td><span class="so-q">'+esc(e.ref)+'</span></td><td class="so-why">'+esc(e.by)+'<br>'+esc(S.dt(e.at))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No evidence recorded yet.</div>')
+      +(can?'<form class="so-form" id="f-ev"><div class="so-fil" style="margin:0"><label>Name<input name="name" maxlength="300"></label><label style="flex:1">Reference (event id, search query, file hash, ticket)<input name="ref" maxlength="4000"></label><label>Kind<select name="kind"><option value="reference">Reference</option><option value="search">Search</option><option value="file">File</option><option value="ticket">Ticket</option></select></label><button type="submit" class="so-btn">Add evidence</button></div><span class="so-err" data-msg></span></form>':'');}
+    if(TAB==='approvals'){var A=c.recommended_actions||[];return A.length?'<table class="so-t"><thead><tr><th>Action</th><th>Targets</th><th>Status</th></tr></thead><tbody>'+A.map(function(a){return '<tr><td><b>'+esc(a.title)+'</b><div class="so-why">'+esc(a.action)+' · '+esc(a.id)+'</div></td><td>'+(a.targets||[]).map(function(t){return '<span class="so-tag ent">'+esc(t)+'</span>';}).join('')+'</td><td><span class="so-tag '+(a.status==='approved'?'ok':a.status==='rejected'?'crit':'warn')+'">'+esc(a.status)+'</span>'+(a.decided_by?'<div class="so-why">by '+esc(a.decided_by)+'</div>':'')+'</td></tr>';}).join('')+'</tbody></table><p class="so-note">Approvers decide on <a href="soc-response.html">Playbooks &amp; Approvals</a>. Recording a decision executes nothing.</p>':'<div class="so-empty">No response action is waiting for approval.</div>';}
+    if(TAB==='suggested')return w.suggested.length?'<p class="so-note">Open alerts in no case that share a user, host or IP with this case within 72 hours. Add the ones that belong to this investigation.</p><table class="so-t"><thead><tr>'+(can?'<th></th>':'')+'<th>Priority</th><th>Alert</th><th>Shared</th><th>Seen</th></tr></thead><tbody>'+w.suggested.map(function(a){return '<tr>'+(can?'<td><input type="checkbox" data-sug="'+esc(a.id)+'" aria-label="Add '+esc(a.id)+'"></td>':'')+'<td>'+(a.priority!=null?'<span class="so-score">'+esc(a.priority)+'</span>':'—')+'</td><td>'+esc(a.id)+' <b>'+esc(a.rule_name)+'</b><div class="sum">'+esc(a.summary||'')+'</div></td><td>'+a.shared.map(function(e){return '<span class="so-tag ent">'+esc(e)+'</span>';}).join('')+'</td><td class="so-why">'+esc(S.ago(a.ts_last))+'</td></tr>';}).join('')+'</tbody></table>'+(can?'<p><button type="button" class="so-btn pri" id="addsug">Add selected to the case</button></p>':''):'<div class="so-empty">No other open alert shares a user, host or IP with this case.</div>';
+    if(TAB==='ml')return mlTab();
+    if(TAB==='brief')return briefHtml();
+    return '';
+  }
+  function briefHtml(){var b=W.brief,ai=W.ai||{},can=S.can('operator');
+    var run=can?(ai.enabled?'<button type="button" class="so-btn pri" id="brief">✦ '+(b?'Rewrite':'Write')+' the investigation brief with AI</button>':'<p class="so-err">'+esc(ai.reason||'The AI is not available.')+'</p>'):'<p class="so-why">Running the AI needs the operator role.</p>';
+    if(!b)return '<div class="so-ai"><p>The AI reads the case, its alerts, related activity, events and indicators, and drafts a brief: summary, timeline with references, scope, containment, gaps, next steps and a report paragraph. A person reviews it and adds it to the case as their note.</p>'+run+'</div>';
+    var d=b.draft,mk=function(x){return '<span class="'+(x.verified?'ok':'un')+'">'+(x.verified?'✓':'⚠')+'</span>';};
+    var h='<div class="so-ai"><div class="so-why">AI draft · '+esc(b.by)+' · '+esc(S.dt(b.at))+' · requested by '+esc(b.requested_by)+' · '+esc(b.state)+'</div><p>'+esc(d.summary)+'</p>'
+      +'<p class="so-why">Containment: <b>'+esc(d.containment)+'</b></p>'
+      +(d.timeline.length?'<div class="so-why">Timeline</div><ul class="so-ev">'+d.timeline.map(function(x){return '<li>'+mk(x)+'<span>'+(x.at?'<span class="so-why">'+esc(x.at)+'</span> ':'')+esc(x.what)+' <b>'+esc(x.ref)+'</b></span></li>';}).join('')+'</ul>':'')
+      +['users','hosts','ips'].map(function(k){var L=(d.scope||{})[k]||[];return L.length?'<div class="so-why">Scope · '+k+'</div><p>'+L.map(function(x){return '<span class="so-tag '+(x.verified?'ent':'warn')+'">'+(x.verified?'':'⚠ ')+esc(x.value)+'</span>';}).join('')+'</p>':'';}).join('')
+      +(d.gaps.length?'<div class="so-why">Gaps</div><ul>'+d.gaps.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>':'')
+      +(d.next_steps.length?'<div class="so-why">Next steps</div><ul>'+d.next_steps.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>':'')
+      +(d.report?'<div class="so-why">Report paragraph</div><p>'+esc(d.report)+'</p>':'')
+      +(b.unverified?'<p class="so-err">'+esc(b.unverified)+' item(s) cite something no tool returned (⚠) - check them yourself.</p>':'')
+      +((b.injection_signals||[]).length?'<p class="so-err">The case data contained text that looks like instructions to the AI - review with extra care.</p>':'');
+    if(b.state==='draft'&&can)h+='<form class="so-form" id="f-brief"><label>Note (optional)<input name="note" maxlength="1000"></label><div><button type="submit" class="so-btn ok" data-bd="add">Add to the case as my note</button> <button type="submit" class="so-btn bad" data-bd="discard">Discard</button></div><span class="so-err" data-msg></span></form>';
+    else if(b.state!=='draft')h+='<p class="so-why">'+esc(b.state)+' by '+esc(b.decided_by)+' '+esc(S.dt(b.decided_at))+'</p>';
+    return h+run+'</div>';
+  }
+  function post(p,b,msg,fm){return S.req('POST',p,b).then(function(){S.toast(msg);return Promise.all([openCase(W.case.id),loadSum(),loadList()]);}).catch(function(e){var m=fm&&fm.querySelector('[data-msg]');if(m)m.textContent=e.message;else S.toast(e.message);});}
+  var BD='add';
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('.so-kpi'))){var k=x.getAttribute('data-k');if(k==='breached'){F.breached=true;$('br').checked=true;}else if(k==='unassigned'){F.owner='-';$('own').value='-';}else if(k==='closed'){F.status='closed';$('st').value='closed';}else if(k==='approvals'){location.href='soc-response.html';return;}else if(k==='active'){F.status='active';F.breached=false;F.owner='';$('st').value='active';$('br').checked=false;$('own').value='';}loadList();return;}
+    if((x=t.closest('tr[data-case],li[data-case]'))){openCase(x.getAttribute('data-case'));return;}
+    if((x=t.closest('[data-tab]'))){TAB=x.getAttribute('data-tab');drawWs();return;}
+    if(t.id==='wsclose'){$('ws').innerHTML='';W=null;return;}
+    if(t.id==='sugown'){post('/cases/'+encodeURIComponent(W.case.id)+'/owner',{owner:W.ml.suggested_owner.user},W.case.id+' assigned to '+W.ml.suggested_owner.user);return;}
+    if((x=t.closest('[data-goc]'))){ev.preventDefault();openCase(x.getAttribute('data-goc'));return;}
+    if(t.id==='mine'){post('/cases/'+encodeURIComponent(W.case.id)+'/owner',{owner:S.user()},'You own '+W.case.id);return;}
+    if((x=t.closest('[data-task]'))){post('/cases/'+encodeURIComponent(W.case.id)+'/tasks/'+encodeURIComponent(x.getAttribute('data-task')),{done:x.checked},x.checked?'Task done':'Task reopened');return;}
+    if(t.id==='addsug'){var ids=[].map.call(document.querySelectorAll('[data-sug]:checked'),function(i){return i.getAttribute('data-sug');});if(!ids.length){S.toast('Select the alerts to add first');return;}post('/cases/'+encodeURIComponent(W.case.id)+'/alerts',{alert_ids:ids},ids.length+' alert(s) added');return;}
+    if(t.id==='brief'){t.disabled=true;t.textContent='Investigating… (this takes a minute)';S.req('POST','/soc/cases/'+encodeURIComponent(W.case.id)+'/brief',{}).then(function(){S.toast('AI brief ready - review it');TAB='brief';return openCase(W.case.id);}).catch(function(e){t.disabled=false;t.textContent='✦ Write the investigation brief with AI';S.toast(e.message);});return;}
+    if((x=t.closest('[data-bd]')))BD=x.getAttribute('data-bd');
+    if(t.id==='new'){$('newf').hidden=false;$('newf').elements.title.focus();return;}
+    if(t.id==='newx'){$('newf').hidden=true;return;}
+    if(t.closest('#refresh')){loadSum();loadIns().then(loadList);if(W)openCase(W.case.id);}
+  });
+  document.addEventListener('submit',function(ev){var fm=ev.target,f=fm.elements,id=W&&W.case.id;
+    if(fm.id==='newf'){ev.preventDefault();var nb={title:f.title.value.trim(),severity:+f.severity.value,auto_playbook:false};if(f.description.value.trim())nb.description=f.description.value.trim();
+      S.req('POST','/cases',nb).then(function(c){S.toast('Case '+c.id+' opened');fm.reset();fm.hidden=true;loadSum();loadList();openCase(c.id);}).catch(function(e){fm.querySelector('[data-msg]').textContent=e.message;});return;}
+    if(!id)return;ev.preventDefault();
+    if(fm.id==='f-stage'){var b={status:f.status.value};if(f.resolution.value)b.resolution=f.resolution.value;if(f.note.value.trim())b.note=f.note.value.trim();post('/cases/'+encodeURIComponent(id)+'/status',b,'Moved to '+b.status,fm);}
+    if(fm.id==='f-note')post('/cases/'+encodeURIComponent(id)+'/notes',{text:f.text.value},'Note added',fm);
+    if(fm.id==='f-task')post('/cases/'+encodeURIComponent(id)+'/tasks',{title:f.title.value},'Task added',fm);
+    if(fm.id==='f-ev')post('/cases/'+encodeURIComponent(id)+'/evidence',{name:f.name.value,ref:f.ref.value,kind:f.kind.value},'Evidence recorded',fm);
+    if(fm.id==='f-brief'){var bb={decision:BD};if(f.note.value.trim())bb.note=f.note.value.trim();post('/soc/cases/'+encodeURIComponent(id)+'/brief/decide',bb,BD==='add'?'Brief added to the case as your note':'Brief discarded',fm);}
+  });
+  document.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&ev.target.matches&&ev.target.matches('tr[data-case],li[data-case]'))openCase(ev.target.getAttribute('data-case'));});
+  var qt=null;$('q').addEventListener('input',function(){clearTimeout(qt);var v=this.value;qt=setTimeout(function(){F.q=v.trim();loadList();},300);});
+  $('st').addEventListener('change',function(){F.status=this.value;loadList();});$('sev').addEventListener('change',function(){F.severity_min=this.value;loadList();});
+  $('own').addEventListener('change',function(){F.owner=this.value;loadList();});$('br').addEventListener('change',function(){F.breached=this.checked;loadList();});
+  $('st').value=F.status;$('own').value=F.owner;$('br').checked=F.breached;
+  window.zybCopilotRefresh=function(){loadSum();loadList();if(W)openCase(W.case.id);};
+  S.ready(function(){loadSum();loadIns().then(loadList,loadList);});
+})();
+</script></body></html>

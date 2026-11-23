@@ -1,0 +1,34 @@
+# SYNTHETIC TEST DATA - not from any real system. Hosts are test-*, addresses are RFC 5737 documentation ranges
+# (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) or RFC 1918, domains are *.example. One syslog line per row;
+# lines starting with '#' are skipped by tests/replay.js, tests/bench.js and tests/api.test.js.
+# Mix: linux (sshd, sudo), fortigate (traffic, utm, event), cisco (ASA), cef, nginx (syslog-wrapped).
+<38>May  1 10:00:00 test-host-01 sshd[2211]: Accepted publickey for alice from 192.0.2.10 port 50522 ssh2: RSA SHA256:SYNTHETIC
+<38>May  1 10:00:01 test-host-01 sshd[2212]: Failed password for carol from 198.51.100.7 port 2222 ssh2
+<38>May  1 10:00:02 test-host-01 sshd[2213]: Failed password for invalid user test-admin from 203.0.113.50 port 40100 ssh2
+<38>May  1 10:00:03 test-host-01 sshd[2214]: Failed password for invalid user test-admin from 203.0.113.50 port 40101 ssh2
+<38>May  1 10:00:04 test-host-01 sshd[2215]: Failed password for invalid user test-oracle from 203.0.113.50 port 40102 ssh2
+<38>May  1 10:00:05 test-host-02 sshd[3101]: Accepted password for bob from 10.1.1.20 port 51000 ssh2
+<38>May  1 10:00:06 test-host-02 sshd[3101]: pam_unix(sshd:session): session opened for user bob(uid=1001) by (uid=0)
+<85>May  1 10:00:07 test-host-02 sudo[3150]:      bob : TTY=pts/0 ; PWD=/home/bob ; USER=root ; COMMAND=/usr/bin/systemctl status nginx
+<85>May  1 10:00:08 test-host-02 sudo[3151]:      bob : 3 incorrect password attempts ; TTY=pts/0 ; PWD=/home/bob ; USER=root ; COMMAND=/usr/bin/id
+<38>May  1 10:00:09 test-host-03 sshd[4001]: Disconnected from user alice 192.0.2.10 port 50522
+<189>date=2024-05-01 time=10:00:10 devname="test-fw-01" devid="FGT60FTK0000TEST" eventtime=1714557610000000000 tz="+0300" logid="0000000013" type="traffic" subtype="forward" level="notice" vd="root" srcip=10.1.1.5 srcport=51234 srcintf="port1" dstip=203.0.113.80 dstport=445 dstintf="wan1" proto=6 action="deny" policyid=0 service="SMB" trandisp="noop" duration=0 sentbyte=0 rcvdbyte=0
+<189>date=2024-05-01 time=10:00:11 devname="test-fw-01" devid="FGT60FTK0000TEST" logid="0000000013" type="traffic" subtype="forward" level="notice" srcip=10.1.1.6 srcport=40000 dstip=198.51.100.53 dstport=53 proto=17 action="accept" policyid=5 user="CORP\Alice" sentbyte=120 rcvdbyte=300
+<189>date=2024-05-01 time=10:00:12 devname="test-fw-01" devid="FGT60FTK0000TEST" logid="0000000013" type="traffic" subtype="forward" level="notice" srcip=10.1.1.8 srcport=40010 dstip=198.51.100.80 dstport=443 proto=6 action="accept" policyid=7 service="HTTPS" sentbyte=5400 rcvdbyte=88000
+<185>date=2024-05-01 time=10:00:13 devname="test-fw-01" logid="0419016384" type="utm" subtype="ips" eventtype="signature" level="alert" severity="critical" srcip=203.0.113.66 dstip=10.1.1.20 srcport=4444 dstport=80 proto=6 action="dropped" attack="Synthetic.Test.Exploit" attackid=99999 msg="web_server: Synthetic.Test.Exploit"
+<188>date=2024-05-01 time=10:00:14 devname="test-fw-01" logid="0316013056" type="utm" subtype="webfilter" eventtype="ftgd_blk" level="warning" srcip=10.1.1.7 dstip=203.0.113.99 action="blocked" hostname="test-bad.example" url="/payload" catdesc="Malicious Websites" method="domain"
+<185>date=2024-05-01 time=10:00:15 devname="test-fw-01" logid="0101039426" type="event" subtype="vpn" level="alert" action="ssl-login-fail" tunneltype="ssl-web" remip=203.0.113.200 user="bob" reason="sslvpn_login_permission_denied" msg="SSL user failed to logged in"
+<185>date=2024-05-01 time=10:00:16 devname="test-fw-01" logid="0100032002" type="event" subtype="system" level="alert" user="admin" ui="https(203.0.113.201)" action="login" status="failed" reason="passwd_invalid" msg="Administrator admin login failed from https(203.0.113.201) because of invalid password"
+<190>date=2024-05-01 time=10:00:17 devname="test-fw-01" logid="0100044547" type="event" subtype="system" level="information" user="admin" ui="GUI(10.1.1.2)" action="Edit" cfgtid=1 cfgpath="firewall.policy" cfgobj="5" msg="Edit firewall.policy 5"
+<164>May 01 2024 10:00:18 test-asa-01 : %ASA-4-106023: Deny tcp src outside:203.0.113.14/4444 dst inside:10.0.0.5/22 by access-group "OUTSIDE_IN" [0x0, 0x0]
+<164>May 01 2024 10:00:19 test-asa-01 : %ASA-4-106023: Deny udp src outside:203.0.113.15/5353 dst inside:10.0.0.6/161 by access-group "OUTSIDE_IN" [0x0, 0x0]
+<166>May 01 2024 10:00:20 test-asa-01 : %ASA-6-302013: Built outbound TCP connection 123456 for outside:198.51.100.10/443 (198.51.100.10/443) to inside:10.1.1.5/51000 (203.0.113.1/51000)
+<166>May 01 2024 10:00:21 test-asa-01 : %ASA-6-302013: Built outbound TCP connection 123457 for outside:198.51.100.11/443 (198.51.100.11/443) to inside:10.1.1.9/51010 (203.0.113.1/51010)
+<134>May  1 10:00:22 test-ids-01 CEF:0|Synthetic Vendor|Test IDS|1.0|100|Suspicious Test Traffic|8|src=203.0.113.5 dst=10.2.2.2 spt=1234 dpt=443 proto=TCP act=blocked msg=synthetic test alert one cs1Label=Rule cs1=TEST-RULE-1
+<134>May  1 10:00:23 test-ids-01 CEF:0|Synthetic Vendor|Test IDS|1.0|101|Synthetic Port Scan|5|src=203.0.113.6 dst=10.2.2.3 spt=2345 dpt=22 proto=TCP act=alerted msg=synthetic test alert two cs1Label=Rule cs1=TEST-RULE-2
+<134>May  1 10:00:24 test-av-01 CEF:0|Synthetic Vendor|Test AV|2.1|200|Test File Detected|6|src=10.2.2.4 suser=dave fname=eicar.com act=quarantined msg=synthetic eicar detection
+<190>May  1 10:00:25 test-web-01 nginx: 198.51.100.23 - - [01/May/2024:10:00:25 +0300] "GET /portal/login?next=%2F HTTP/1.1" 200 5120 "https://test-site.example/" "Mozilla/5.0 (SyntheticTest)"
+<190>May  1 10:00:26 test-web-01 nginx: 198.51.100.23 - - [01/May/2024:10:00:26 +0300] "POST /portal/login HTTP/1.1" 302 0 "https://test-site.example/portal/login" "Mozilla/5.0 (SyntheticTest)"
+<190>May  1 10:00:27 test-web-01 nginx: 192.0.2.44 - - [01/May/2024:10:00:27 +0000] "GET /wp-login.php HTTP/1.1" 404 153 "-" "SyntheticScanner/1.0"
+<190>May  1 10:00:28 test-web-01 nginx: 192.0.2.44 - - [01/May/2024:10:00:28 +0000] "GET /.env HTTP/1.1" 404 153 "-" "SyntheticScanner/1.0"
+<190>May  1 10:00:29 test-web-01 nginx: 203.0.113.77 - jdoe [01/May/2024:10:00:29 +0000] "POST /api/upload HTTP/2.0" 500 12 "-" "curl/8.0-synthetic"

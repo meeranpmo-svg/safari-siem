@@ -1,0 +1,150 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SAMA CSF Audit</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}.btn:hover{border-color:#3a4258}.btn.pri{background:#2b4b8f;border-color:#3d63b5}.btn.sm2{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:default}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:14px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.card h2 .c{font-weight:400;font-size:12px;color:var(--d-mute)}
+.card h3{margin:14px 0 6px;font-size:12px;color:var(--d-mute);text-transform:uppercase;letter-spacing:.05em}
+.hero{display:grid;grid-template-columns:240px 1fr;gap:14px}@media(max-width:1000px){.hero{grid-template-columns:1fr}}
+.ring{text-align:center}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:800px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;cursor:pointer}.kpi .n{font-size:26px;font-weight:800}.kpi .l{font-size:12px;color:var(--d-mute)}.kpi.bad .n{color:var(--bad)}.kpi.warn .n{color:var(--warn)}.kpi.ok .n{color:var(--ok)}
+.g2{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}@media(max-width:1100px){.g2{grid-template-columns:1fr}}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:700;margin:1px 2px;white-space:nowrap}.v-bad{background:rgba(229,72,77,.15);color:var(--bad)}.v-warn{background:rgba(245,159,0,.15);color:var(--warn)}.v-ok{background:rgba(47,179,68,.15);color:var(--ok)}.v-mute{background:#232837;color:var(--d-mute)}.v-info{background:rgba(91,141,239,.15);color:var(--info)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:12px;white-space:nowrap}
+.tw{overflow-x:auto}tr[data-gap]{cursor:pointer}tr[data-gap]:hover td{background:rgba(255,255,255,.03)}
+.bar{height:8px;background:#232837;border-radius:5px;overflow:hidden;min-width:120px}.bar i{display:block;height:100%}
+.att{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--d-line);cursor:pointer}.att:last-child{border:0}.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.bad{background:var(--bad)}.dot.warn{background:var(--warn)}.dot.info{background:var(--info)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.chips button[aria-pressed="true"]{border-color:#3d63b5;background:rgba(61,99,181,.25)}
+input,select,textarea{background:#0d1017;color:inherit;border:1px solid var(--d-line);border-radius:8px;padding:7px 10px;font:inherit}textarea{width:100%;resize:vertical}
+.frm{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:6px 0}.frm label{font-size:12px;color:var(--d-mute);display:flex;flex-direction:column;gap:3px}
+.banner{border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}.banner.bad{background:rgba(229,72,77,.12);border:1px solid #7a2b2e}.banner.inf{background:rgba(91,141,239,.08);border:1px solid #2b4a6b}
+.why{margin:4px 0 0;padding-left:18px;font-size:12.5px}
+.ans{border:1px solid var(--d-line);border-radius:10px;padding:12px;margin-top:10px;background:var(--d-raise)}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:95;overflow:auto}#dlg>div{background:var(--d-panel);border:1px solid var(--d-line);border-radius:14px;max-width:820px;width:100%;padding:18px}
+.toast{position:fixed;right:18px;bottom:18px;background:#1d2330;border:1px solid #3a4258;border-radius:10px;padding:10px 14px;z-index:96;max-width:520px}
+.empty{color:var(--d-mute);padding:8px 0}
+.mat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}@media(max-width:1100px){.mat{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sd{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:var(--d-raise);border:1px solid var(--d-line);border-radius:9px;padding:6px 8px;margin-bottom:5px;cursor:pointer;color:inherit;font:inherit}.sd:hover,.sd.on{border-color:#3d63b5}
+.lv{flex:none;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}.lv0,.lv1{background:#b42318}.lv2{background:#e5484d}.lv3{background:#2f8f46}.lv4{background:#2fb344}.lv5{background:#1f9e89}.lvn{background:#3a4258}
+.flow{display:flex;gap:4px;margin:8px 0}.flow span{flex:1;text-align:center;padding:5px;border-radius:8px;background:var(--d-raise);border:1px solid var(--d-line);font-size:12px;color:var(--d-mute)}.flow span.on{border-color:#3d63b5;color:var(--d-ink);background:rgba(61,99,181,.22);font-weight:700}.flow span.done{color:var(--ok);border-color:#285c36}
+@media print{.btn,.chips,.frm,#q{display:none!important}body{background:#fff;color:#000}.card,.kpi{background:#fff;border-color:#ccc}}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Compliance · SAMA Cyber Security Framework · Insurance Authority</div><h1>SAMA CSF Audit</h1><div class="mute sm">The audit of {{org.short}} against the SAMA Cyber Security Framework and the Insurance Authority items: how much is implemented in each domain, and the remediation of every gap - owner, due date, plan, and closure with the evidence relied on, confirmed by the CISO or an administrator who did not request it. Whether a requirement is met is decided by the automated assessment (GRC, hardening, pentest / VAPT, SIEM and operations evidence) - a gap closed on paper is shown beside the rate, never counted as implemented. Machine learning forecasts when the gaps close and which will miss their due date; the AI internal auditor drafts the audit memo. Indicative, from the platform - not SAMA's or the external auditor's opinion.</div></div>
+<div class="sp"></div><span class="mute sm" id="asof"></span><a class="btn" href="sama-ia.html">SAMA CSF Assessment</a><button type="button" class="btn" id="xls" hidden>Excel (audit sheet)</button><button type="button" class="btn" id="print">Print</button><button type="button" class="btn" id="refresh">Refresh</button></div>
+<div class="banner bad" id="err" hidden></div>
+<div id="main" hidden>
+<div class="hero"><div class="card ring" id="ring"></div><div class="card"><div class="kpis" id="kpis"></div><div class="mute sm" style="margin-top:8px" id="learn"></div></div></div>
+<div class="card"><h2>Maturity by subdomain <span class="c" id="matc"></span></h2><div class="mat" id="mat"></div><div class="sm mute" style="margin-top:6px">Indicative level from the platform's evidence (the rule for each level is in the tooltip and in <a href="sama-ia.html">SAMA CSF Assessment</a>) - not SAMA's or an auditor's rating. Click a subdomain to see its gaps.</div></div>
+<div class="card"><h2>What needs attention <span class="c">most urgent first · click to open the gap</span></h2><div id="attn"></div></div>
+<div class="g2">
+<div class="card"><h2>Implementation by domain <span class="c">from the assessment's evidence</span></h2><div class="tw" id="doms"></div></div>
+<div class="card"><h2>Closure forecast <span class="c">open gaps per day, least-squares line</span></h2><div id="fc"></div></div>
+</div>
+<div class="card"><h2>Gap remediation tracker <span class="c" id="gc"></span></h2><div class="chips" id="chips"></div><div class="frm"><input type="search" id="q" placeholder="Filter by requirement, subdomain, title or owner" style="flex:1;min-width:240px"><select id="dom"><option value="">all domains</option></select></div><div class="tw" id="gaps"></div></div>
+<div class="card"><h2>Audit memo <span class="c">internal-audit style: condition, risk, recommendation, management action · the CISO approves</span></h2><div id="memo"></div></div>
+</div>
+<div id="dlg" hidden><div id="dlgb"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',USER='',V=null,F='open',Q='',DOM='',SUB='',MEMOS=null,CUR=null;
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=300000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){/* not JSON: reported below with the status */}if(x.status>=200&&x.status<300&&j!==null)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=function(){bad(new Error('IT Asset Management did not answer'));};x.ontimeout=function(){bad(new Error('IT Asset Management took too long to answer'));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5200);}
+  var ST={open:['v-bad','Open'],in_progress:['v-warn','In progress'],closure_requested:['v-info','Awaiting confirmation'],closed:['v-ok','Closed']};
+  var VER={verified:['v-ok','verified by the assessment'],closed_not_verified:['v-warn','closed - not yet verified'],regressed_after_closure:['v-bad','regressed after closure'],met_by_assessment:['v-ok','now met by the assessment']};
+  var RES={gap:'v-bad',partial:'v-warn',pending:'v-info',not_measured:'v-mute',no_evidence:'v-mute'};
+  function pill(m,k){var x=m[k]||['v-mute',k];return '<span class="pill '+x[0]+'">'+esc(x[1])+'</span>';}
+  function sevPill(s){return '<span class="pill '+(s==='high'?'v-bad':s==='medium'?'v-warn':'v-mute')+'">'+esc(s)+'</span>';}
+  function ringSvg(v,label,sub,col){var r=70,C=2*Math.PI*r,f=v==null?0:Math.min(1,v/100);return '<svg viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="'+esc(label)+'"><circle cx="90" cy="90" r="'+r+'" fill="none" stroke="#232837" stroke-width="14"/><circle cx="90" cy="90" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+(C*f)+' '+C+'" transform="rotate(-90 90 90)"/><text x="90" y="94" text-anchor="middle" fill="#e7eaf0" font-size="36" font-weight="800">'+esc(v==null?'—':v+'%')+'</text><text x="90" y="118" text-anchor="middle" fill="#8b93a4" font-size="12">'+esc(sub)+'</text></svg><div style="font-weight:700">'+esc(label)+'</div>';}
+  function kpi(l,v,cls,f,t){return '<div class="kpi '+(cls||'')+'" data-f="'+esc(f||'')+'" title="'+esc(t||'')+'"><div class="n">'+esc(String(v))+'</div><div class="l">'+esc(l)+'</div></div>';}
+  function load(){return req('GET','/sama-audit').then(function(v){V=v;$('err').hidden=true;$('main').hidden=false;$('xls').hidden=!can('operator');draw();if(can('operator'))loadMemos();else $('memo').innerHTML='<div class="empty">The audit memo names owners and approvers: shown to operators and administrators.</div>';$('asof').textContent='as of '+String(v.generated_at).slice(0,16).replace('T',' ')+' UTC';})
+    .catch(function(e){$('err').hidden=false;$('err').textContent=e.status===404?'This IT Asset Management does not have the SAMA CSF Audit yet - run the update.':e.status===409?e.message:'Could not load the SAMA audit: '+e.message;});}
+  function draw(){var k=V.kpis,col=k.rate==null?'#4a5162':k.rate>=85?'#3a8f4d':k.rate>=60?'#f5b544':'#e5484d';
+    $('ring').innerHTML=ringSvg(k.rate,'Implementation rate',k.implemented+' of '+k.requirements+' requirements',col);
+    $('kpis').innerHTML=kpi('Gaps closed',k.closed+' / '+k.gaps,k.closed===k.gaps&&k.gaps?'ok':'','closed')+kpi('Open',k.open,k.open?'bad':'ok','open')+kpi('In progress',k.in_progress,k.in_progress?'warn':'','in_progress')+kpi('Awaiting confirmation',k.closure_requested,k.closure_requested?'warn':'','closure_requested','a closure the CISO / an administrator has to confirm')
+      +kpi('Overdue',k.overdue,k.overdue?'bad':'ok','overdue')+kpi('No owner',k.unassigned,k.unassigned?'warn':'ok','unassigned')+kpi('Likely to miss the due date',k.high_risk_due,k.high_risk_due?'warn':'ok','risk','50 % or more, from how long the team\'s own gaps took to close')+kpi('Closed, not yet verified',k.closed_not_verified+(k.regressed?' · '+k.regressed+' regressed':''),k.closed_not_verified||k.regressed?'warn':'ok','paper','closed by people while the assessment does not show the requirement met');
+    $('learn').textContent='Assessment score '+(V.score==null?'—':V.score+' %')+' · '+V.readiness.at_target+' of '+V.readiness.subdomains+' subdomains at the indicative level '+V.target_level+' · due-date risk learned from '+V.learn.closed_durations+' closed gap(s)'+(V.learn.median_days_to_close!=null?' (median '+V.learn.median_days_to_close+' days to close)':'')+' · '+V.ia.name+' ('+V.ia.circular+')';
+    $('attn').innerHTML=V.attention.length?V.attention.map(function(a){return '<div class="att" data-open="'+esc(a.id)+'"><span class="dot '+esc(a.level)+'"></span><div>'+esc(a.text)+'</div></div>';}).join(''):'<div class="empty">Nothing urgent: no gap is overdue, regressed or waiting for confirmation.</div>';
+    $('doms').innerHTML='<table><thead><tr><th>Domain</th><th>Implemented</th><th>Not implemented</th><th>N/A</th><th>Implementation</th></tr></thead><tbody>'+V.domains.map(function(d){var c=d.rate==null?'#4a5162':d.rate>=85?'#3a8f4d':d.rate>=60?'#f5b544':'#e5484d';
+      return '<tr><td><b>'+esc(d.id)+'</b> '+esc(d.name)+'</td><td style="color:var(--ok)">'+d.implemented+'</td><td style="color:var(--bad)">'+d.not_implemented+'</td><td class="mute">'+d.not_applicable+'</td><td><div class="bar"><i style="width:'+(d.rate||0)+'%;background:'+c+'"></i></div><span class="sm">'+(d.rate==null?'—':d.rate+' %')+(d.closed_not_verified?' · <span class="pill v-warn">'+d.closed_not_verified+' closed, not verified</span>':'')+'</span></td></tr>';}).join('')+'</tbody></table>';
+    var fc=V.forecast;$('fc').innerHTML=(fc.all_closed_by?'<div style="font-size:26px;font-weight:800">'+esc(fc.all_closed_by)+'</div><div class="sm mute">projected day the last gap closes · about '+esc(fc.closed_per_week)+' closed a week</div>':'<div class="empty">'+esc(fc.note)+'</div>')+(fc.all_closed_by?'<div class="sm" style="margin-top:6px">'+esc(fc.note)+'</div>':'')
+      +'<div class="sm mute" style="margin-top:8px">Learned from '+fc.days+' daily count(s) of open gaps. A forecast, not a commitment: it moves as gaps open and close.</div>'
+      +(V.trend&&V.trend.forecast_30d!=null?'<div class="sm" style="margin-top:6px">Assessment score in 30 days, on its trend: <b>'+esc(V.trend.forecast_30d)+' %</b></div>':'');
+    var DN={'3.1':'Leadership and Governance','3.2':'Risk Management and Compliance','3.3':'Operations and Technology','3.4':'Third Party Cyber Security'};
+    $('matc').textContent=k.at_target+' of '+V.subdomains.length+' at level '+V.target_level+' or above · '+k.below_target+' below · '+k.not_assessed+' not assessed yet';
+    $('mat').innerHTML=Object.keys(DN).map(function(d){var L=V.subdomains.filter(function(x){return x.domain===d;});return '<div><h3>'+esc(d+' '+DN[d])+'</h3>'+L.map(function(x){
+      return '<button type="button" class="sd'+(SUB===x.id?' on':'')+'" data-sub="'+esc(x.id)+'" title="'+esc(x.why)+'"><span class="lv '+(x.level==null?'lvn':'lv'+x.level)+'">'+(x.level==null?'—':x.level)+'</span><span style="flex:1;min-width:0"><b class="mono">'+esc(x.id)+'</b> '+esc(x.name)+'<div class="sm mute">'+esc(x.level==null?x.level_name:x.level_name)+(x.open_gaps?' · '+x.open_gaps+' open gap(s)':'')+(x.overdue?' · <b style="color:var(--bad)">'+x.overdue+' overdue</b>':'')+(x.owners.length?' · '+esc(x.owners.join(', ')):'')+(x.decide?' · applicability to decide':'')+'</div></span></button>';}).join('')+'</div>';}).join('');
+    var dsel=$('dom');if(dsel.options.length===1)V.domains.forEach(function(d){var o=document.createElement('option');o.value=d.id;o.textContent=d.id+' '+d.name;dsel.appendChild(o);});
+    drawGaps();if(CUR)openGap(CUR);}
+  function filt(g){if(DOM&&g.domain!==DOM)return false;if(SUB&&g.subdomain!==SUB)return false;if(Q){var s=(g.id+' '+g.subdomain+' '+g.subdomain_name+' '+g.title+' '+g.owner).toLowerCase();if(s.indexOf(Q)<0)return false;}
+    if(F==='all')return true;if(F==='open')return g.status!=='closed';if(F==='open_x')return g.status==='open';if(F==='overdue')return g.overdue;if(F==='unassigned')return g.status!=='closed'&&!g.owner;if(F==='risk')return g.status!=='closed'&&g.miss&&g.miss.p!=null&&g.miss.p>=0.5;if(F==='paper')return g.verification==='closed_not_verified'||g.verification==='regressed_after_closure';return g.status===F;}
+  function drawGaps(){var G=V.gaps.filter(filt);
+    var cnt=function(f){var o=F;F=f;var n=V.gaps.filter(filt).length;F=o;return n;};
+    $('chips').innerHTML=[['open','Not closed'],['open_x','Open'],['in_progress','In progress'],['closure_requested','Awaiting confirmation'],['overdue','Overdue'],['risk','Likely late'],['unassigned','No owner'],['closed','Closed'],['paper','Closed, not verified'],['all','All']].map(function(c){return '<button type="button" class="btn sm2" data-chip="'+esc(c[0])+'" aria-pressed="'+(F===c[0])+'">'+esc(c[1])+' ('+cnt(c[0])+')</button>';}).join('');
+    $('gc').textContent=G.length+' shown · sorted by priority'+(SUB?' · subdomain '+SUB+' (click it again to clear)':'');
+    $('gaps').innerHTML=G.length?'<table><thead><tr><th>Ref</th><th>Requirement</th><th>Severity</th><th>Assessment</th><th>Status</th><th>Owner</th><th>Due</th><th>Priority</th></tr></thead><tbody>'+G.map(function(g){
+      return '<tr data-gap="'+esc(g.id)+'"><td class="mono"><b>'+esc(g.id)+'</b><div class="sm mute">'+esc(g.subdomain)+'</div></td><td>'+esc(g.title)+'<div class="sm mute">'+esc(g.subdomain_name)+' · '+esc(g.pillar)+'</div></td><td>'+sevPill(g.severity)+'</td><td><span class="pill '+(RES[g.result]||'v-mute')+'">'+esc(g.result.replace(/_/g,' '))+'</span></td>'
+      +'<td>'+pill(ST,g.status)+(g.verification?'<div>'+pill(VER,g.verification)+'</div>':'')+'</td><td>'+esc(g.owner||'—')+'</td><td>'+esc(g.due||'—')+(g.overdue?' <span class="pill v-bad">overdue</span>':g.miss&&g.miss.p!=null&&g.status!=='closed'?' <span class="pill '+(g.miss.p>=0.5?'v-warn':'v-mute')+'" title="'+esc(g.miss.why)+'">'+Math.round(g.miss.p*100)+' % late</span>':'')+'</td><td>'+esc(g.priority)+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">'+(V.gaps.length?'No gap matches this filter.':'No gap: the assessment shows every applicable requirement met.')+'</div>';}
+  function openGap(id){var g=V.gaps.find(function(x){return x.id===id;});if(!g){CUR=null;return;}CUR=id;var op=can('operator'),si=['open','in_progress','closure_requested','closed'].indexOf(g.status);
+    var h='<div style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1"><div class="eb">'+esc(g.subdomain)+' '+esc(g.subdomain_name)+' · '+esc(g.pillar)+'</div><h2 style="margin:4px 0">'+esc(g.id)+' '+esc(g.title)+'</h2></div><button type="button" class="btn sm2" id="dlgx">Close</button></div>';
+    h+='<div class="flow">'+['Open','In progress','Awaiting confirmation','Closed'].map(function(n,i){return '<span class="'+(i<si?'done':i===si?'on':'')+'">'+esc(n)+'</span>';}).join('')+'</div>';
+    h+='<div>'+sevPill(g.severity)+' <span class="pill '+(RES[g.result]||'v-mute')+'">assessment: '+esc(g.result.replace(/_/g,' '))+'</span> '+(g.verification?pill(VER,g.verification):'')+'</div>';
+    h+='<h3>Why the assessment does not show it met</h3><div class="sm">'+esc(g.why_result)+'</div><h3>Evidence that closes it</h3><div class="sm">'+esc(g.evidence_hint||'—')+'</div>'+(g.recommend?'<h3>Recommendation</h3><div class="sm">'+esc(g.recommend)+'</div>':'');
+    h+='<h3>Priority '+esc(g.priority)+'</h3><ul class="why">'+g.priority_why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>';
+    if(g.miss&&g.status!=='closed')h+='<h3>Due-date risk</h3><div class="sm">'+(g.miss.p!=null?'<b>'+Math.round(g.miss.p*100)+' %</b> chance of missing '+esc(g.due)+' - ':'')+esc(g.miss.why||'')+'</div>';
+    if(g.closure)h+='<h3>Closure</h3><div class="sm">Requested'+(g.closure.by?' by '+esc(g.closure.by):'')+' '+esc(String(g.closure.at||'').slice(0,16).replace('T',' '))+(g.closure.evidence?' - evidence: <b>'+esc(g.closure.evidence)+'</b>':'')+(g.closed_by?' · confirmed by '+esc(g.closed_by):'')+'</div>';
+    if(op&&g.status!=='closed')h+='<h3>Remediation</h3><div class="frm"><label>Owner<input id="gown" value="'+esc(g.owner)+'" style="width:180px"></label><label>Due<input type="date" id="gdue" value="'+esc(g.due)+'"></label>'+(g.status!=='closure_requested'?'<label>Status<select id="gst"><option value="open"'+(g.status==='open'?' selected':'')+'>Open</option><option value="in_progress"'+(g.status==='in_progress'?' selected':'')+'>In progress</option></select></label>':'')+'</div>'
+      +'<textarea id="gplan" rows="3" placeholder="Remediation plan">'+esc(g.plan)+'</textarea><div class="frm"><input id="gnote" placeholder="note for the history (optional)" style="flex:1"><button type="button" class="btn pri" id="gsave">Save</button></div>';
+    if(op&&(g.status==='open'||g.status==='in_progress'))h+='<h3>Request closure</h3><div class="frm"><input id="gev" placeholder="evidence relied on: document, report, change or record" style="flex:1;min-width:280px"><button type="button" class="btn" id="gclose">Request closure</button></div><div class="sm mute">The CISO or an administrator who did not request it confirms the closure. The requirement counts as implemented only when the assessment shows it met.</div>';
+    if(op&&g.status==='closure_requested')h+='<h3>Confirm the closure</h3><div class="frm"><input id="gdn" placeholder="note (required to reject)" style="flex:1"><button type="button" class="btn pri" data-dec="approve"'+(g.closure&&g.closure.by===USER?' disabled title="you requested it - another person confirms"':'')+'>Confirm closure</button><button type="button" class="btn" data-dec="reject">Reject</button></div>';
+    if(op&&g.status==='closed')h+='<h3>Reopen</h3><div class="frm"><input id="grr" placeholder="reason" style="flex:1"><button type="button" class="btn" id="greopen">Reopen</button></div>';
+    if(g.history.length)h+='<h3>History</h3><ul class="why">'+g.history.slice().reverse().map(function(x){return '<li>'+esc(String(x.at).slice(0,16).replace('T',' '))+' <b>'+esc(x.by)+'</b> '+esc(x.what)+(x.note?' - '+esc(x.note):'')+'</li>';}).join('')+'</ul>';
+    $('dlgb').innerHTML=h;$('dlg').hidden=false;}
+  function act(p,b,msg){return req('POST','/sama-audit/gaps/'+encodeURIComponent(CUR)+p,b).then(function(){toast(msg);return load();}).catch(function(e){toast(e.message);});}
+  function loadMemos(){req('GET','/sama-audit/memos').then(function(m){MEMOS=m;drawMemos();}).catch(function(e){$('memo').innerHTML='<p class="banner bad">'+esc(e.message)+'</p>';});}
+  function drawMemos(){var m=MEMOS,ai=m.ai||{},h='<div class="frm"><button type="button" class="btn" data-memo="rules">Draft with the rules</button><button type="button" class="btn pri" data-memo="ai"'+(ai.enabled?'':' disabled title="'+esc(ai.reason||'')+'"')+'>Draft with the AI internal auditor</button>'+(ai.enabled?'':'<span class="sm mute">AI is off: '+esc(ai.reason||'')+'</span>')+'</div>';
+    var d=m.items[0];
+    if(d){h+='<div class="ans"><div class="sm mute">'+esc(d.id)+' · '+esc(d.source==='ai'?'drafted by the AI internal auditor':'drafted by the rules')+' · requested by '+esc(d.requested_by)+' · <span class="pill '+(d.state==='approved'?'v-ok':d.state==='rejected'?'v-bad':'v-warn')+'">'+esc(d.state)+'</span>'+(d.decided_by?' by '+esc(d.decided_by):'')+(d.flags&&d.flags.length?' · <span class="pill v-warn" title="'+esc(d.flags.join('; '))+'">'+d.flags.length+' safety note(s)</span>':'')+'</div>'
+      +'<p>'+esc(d.summary)+'</p>'+(d.findings.length?'<table><thead><tr><th>Ref</th><th>Finding</th><th>Risk</th><th>Recommendation</th></tr></thead><tbody>'+d.findings.map(function(f){return '<tr><td class="mono">'+esc(f.id)+'</td><td>'+esc(f.finding)+'</td><td>'+sevPill(f.risk)+'</td><td>'+esc(f.recommendation)+'</td></tr>';}).join('')+'</tbody></table>':'')
+      +(d.management_actions.length?'<h3>Management actions</h3><table><tbody>'+d.management_actions.map(function(a){return '<tr><td class="mono">'+esc(a.id)+'</td><td>'+esc(a.action)+'</td><td>'+esc(a.horizon)+'</td><td class="mute">'+esc(a.owner)+'</td></tr>';}).join('')+'</tbody></table>':'')
+      +(d.state==='draft'?'<div class="frm"><input id="mnote" placeholder="note (required to reject)" style="flex:1"><button type="button" class="btn pri" data-mdec="approve" data-id="'+esc(d.id)+'"'+(d.requested_by===USER?' disabled title="you requested it - the CISO / another administrator approves"':'')+'>Approve</button><button type="button" class="btn" data-mdec="reject" data-id="'+esc(d.id)+'">Reject</button></div>':'')+'</div>';}
+    else h+='<div class="empty">No memo drafted yet.</div>';
+    $('memo').innerHTML=h;}
+  function toSheets(L){return L.map(function(s){return {name:s.name,columns:s.rows[0].map(function(h){return {h:String(h)};}),rows:s.rows.slice(1)};});}
+  function xls(){req('GET','/sama-audit/export').then(function(x){window.zybXlsx.download(x.filename,toSheets(x.sheets));}).catch(function(e){toast(e.message);});}
+
+  document.addEventListener('click',function(ev){var t=ev.target.closest('button,tr[data-gap],.att,.kpi,#dlg');if(!t)return;var g=function(a){return t.getAttribute(a);};
+    if(t.id==='dlg'&&ev.target===t){$('dlg').hidden=true;CUR=null;return;}
+    if(t.id==='dlgx'){$('dlg').hidden=true;CUR=null;return;}
+    if(t.matches('tr[data-gap]'))return openGap(g('data-gap'));
+    if(g('data-open'))return openGap(g('data-open'));
+    if(t.matches('.kpi')&&g('data-f')){F=g('data-f')==='open'?'open_x':g('data-f');drawGaps();return $('gaps').scrollIntoView({behavior:'smooth',block:'start'});}
+    if(g('data-chip')){F=g('data-chip');return drawGaps();}
+    if(g('data-sub')){SUB=SUB===g('data-sub')?'':g('data-sub');F='all';draw();return $('gaps').scrollIntoView({behavior:'smooth',block:'start'});}
+    if(t.id==='gsave'){var b={owner:$('gown').value.trim()||undefined,due:$('gdue').value||undefined,plan:$('gplan').value.trim()||undefined,note:$('gnote').value.trim()||undefined};if($('gst'))b.status=$('gst').value;return act('',b,'Saved');}
+    if(t.id==='gclose'){var e1=$('gev').value.trim();if(!e1)return toast('Name the evidence relied on');return act('/close',{evidence:e1},'Closure requested - the CISO confirms it');}
+    if(g('data-dec')){var n1=$('gdn').value.trim();if(g('data-dec')==='reject'&&!n1)return toast('Say why the closure is rejected');return act('/decide',{decision:g('data-dec'),note:n1||undefined},g('data-dec')==='approve'?'Closure confirmed':'Closure rejected');}
+    if(t.id==='greopen'){var r1=$('grr').value.trim();if(!r1)return toast('A reason is required');return act('/reopen',{reason:r1},'Reopened');}
+    if(g('data-memo')){t.disabled=true;toast('Drafting the memo…');return req('POST','/sama-audit/memo',{use_ai:g('data-memo')==='ai'}).then(function(){loadMemos();}).catch(function(e){t.disabled=false;toast(e.message);});}
+    if(g('data-mdec')){var n2=$('mnote').value.trim();if(g('data-mdec')==='reject'&&!n2)return toast('Say why it is rejected');return req('POST','/sama-audit/memos/'+encodeURIComponent(g('data-id'))+'/decide',{decision:g('data-mdec'),note:n2||undefined}).then(function(){toast('Memo '+g('data-mdec')+'d');loadMemos();}).catch(function(e){toast(e.message);});}
+    if(t.id==='xls')return xls();if(t.id==='refresh')return load();if(t.id==='print')return window.print();
+  });
+  $('q').addEventListener('input',function(){Q=this.value.trim().toLowerCase();drawGaps();});
+  $('dom').addEventListener('change',function(){DOM=this.value;drawGaps();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('dlg').hidden){$('dlg').hidden=true;CUR=null;}});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;USER=String(j.user||'');}catch(e){/* no identity: stays viewer */}load();};w.onerror=load;w.send();
+})();
+</script></body></html>

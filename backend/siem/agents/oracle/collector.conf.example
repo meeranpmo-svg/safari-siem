@@ -1,0 +1,39 @@
+# /etc/sentra-oracle/collector.conf - Sentra SIEM Oracle collector (sentra-oracle-collector.sh). KEY=value, no spaces
+# around "=". Owner: the Oracle software owner (e.g. oracle), mode 600.
+
+# --- the SIEM: Log Sources > Add source > "Oracle Database - health & performance" gives the source id and the token
+SIEM_URL=https://<portal host name or platform server address>
+SOURCE_ID=ora-prod19c
+# file holding only the ingest token (shown once when the source is created); mode 600
+TOKEN_FILE=/etc/sentra-oracle/token
+# the SIEM's certificate is usually not from a public CA: give its CA / certificate file (PEM) ...
+CA_FILE=/etc/sentra-oracle/siem-ca.pem
+# ... and/or pin its public key (curl format sha256//<base64>)
+PIN_PUBKEY=
+
+# --- the database
+ORACLE_HOME=/u01/app/oracle/product/19.0.0/dbhome_1
+ORACLE_SID=PROD
+# TNS_ADMIN=/u01/app/oracle/product/19.0.0/dbhome_1/network/admin
+# EITHER an Oracle wallet alias (recommended; no password file):   DB_CONNECT=/@SENTRA_MON
+# OR the account + service, with the password in PASSWORD_FILE (mode 600, one line, no double quote):
+DB_CONNECT=SENTRA_MON@//localhost:1521/PRODPDB1
+PASSWORD_FILE=/etc/sentra-oracle/db-password
+MON_USER=SENTRA_MON
+LISTENER=LISTENER
+
+# --- what to collect
+INTERVAL=60
+# performance (load profile, waits, active SQL, blocking, long queries, plan changes, TEMP/UNDO, memory, limits, ASM, host)
+PERF=1
+# Oracle Diagnostics Pack (Active Session History). 1 ONLY if the database is licensed for the Diagnostics Pack.
+PACK_ASH=0
+# unified audit trail: logons, failed logons, grants, user changes (what the enabled audit policies record)
+AUDIT=1
+AUDIT_MAX_ROWS=2000
+# alert log: auto = from V$DIAG_INFO, or a full path
+ALERT_LOG=auto
+
+# --- local state (spooled batches, audit checkpoint, tablespace growth history)
+STATE_DIR=/var/lib/sentra-oracle
+SPOOL_MAX=500

@@ -1,0 +1,46 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sensitive Data Controls</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+pre.letter{white-space:pre-wrap;font:13px/1.55 "Segoe UI",system-ui,sans-serif;background:rgba(255,255,255,.03);padding:12px;border-radius:8px}pre.letter[dir=rtl]{text-align:right}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">Sensitive Data Controls</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Sensitive data (health, genetic, biometric, criminal, religious, ethnic origin) and credit data carry stricter rules: explicit consent or another documented basis, access by named roles only, encryption, masking outside production, every access logged, and an impact assessment. Health data follows the Council of Health Insurance / MoH controls with every processing stage documented; credit data needs consent and the person told of every disclosure request. Each activity in the records of processing that holds such data is listed with what is in place and what is missing.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Activities with sensitive data</h3></div><div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="note"></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Gaps raised to Governance</h3></div><div id="finds" class="card-body"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+
+  var V=null;
+  var LABEL={lawful_basis:'Explicit consent / documented lawful basis',encryption_at_rest:'Encrypted at rest',masking_nonprod:'Masked outside production',access_logged:'Every access logged (SOC)',health_chi:'CHI / MoH health data controls, stages documented',credit_notice:'Credit: consent + notice of each disclosure request',biometric_purpose:'Biometric: identification purpose only'};
+  function load(){return P.req('GET','/pdpl/sensitive').then(function(r){V=r;var a=r.activities;
+    $('kpis').innerHTML=P.tile(a.filter(function(x){return x.sensitive.length;}).length,'Sensitive activities')+P.tile(a.filter(function(x){return x.gaps;}).length,'With gaps',a.some(function(x){return x.gaps;})?'text-red':'')+P.tile(a.filter(function(x){return x.sensitive.indexOf('health')>=0;}).length,'Health data')+P.tile(a.filter(function(x){return x.credit;}).length,'Credit data (own class)');
+    $('list').innerHTML=P.table([['Activity',function(x){return '<b>'+esc(x.name)+'</b><div class="mut">'+esc(x.id)+' · '+esc(x.owner||'no owner')+'</div>';}],['Sensitive data',function(x){return esc(x.sensitive.join(', ')||'—');}],['Credit data',function(x){return x.credit?P.badge('credit - explicit consent','orange'):'—';}],
+      ['Controls',function(x){var ok=x.controls.filter(function(c){return c.ok;}).length;return P.badge(ok+' / '+x.controls.length,ok===x.controls.length?'green':x.recorded?'yellow':'red');}],
+      ['Missing',function(x){return x.gaps?'<span class="small">'+esc(x.controls.filter(function(c){return !c.ok;}).map(function(c){return c.label;}).join('; '))+'</span>':P.badge('none','green');}],
+      ['Access tiers',function(x){return esc(x.access_tiers.join(', ')||'—');}]],a,function(x){return 'class="rowc" data-id="'+esc(x.id)+'"';},'No processing activity declares sensitive or credit data. If the records of processing are complete, nothing is needed here.');
+    $('finds').innerHTML=r.findings.length?'<ul class="mb-0">'+r.findings.map(function(f){return '<li>'+P.badge(f.severity,f.severity==='high'?'red':'orange')+' '+esc(P.ar(f,'title'))+' <span class="mut">('+esc(f.requirement)+')</span></li>';}).join('')+'</ul>':'<span class="text-secondary">No gaps.</span>';
+    $('note').textContent=r.note;}).catch(function(e){P.fail($('list'),e);});}
+  function open(x){
+    var applicable=x.controls.map(function(c){return c.control;}), cur={};x.controls.forEach(function(c){cur[c.control]=c.ok;});
+    var F=Object.keys(LABEL).filter(function(k){return applicable.indexOf(k)>=0;}).map(function(k){return [k,'bool',LABEL[k]];})
+      .concat([['access_tiers','list','Roles allowed (comma separated, e.g. claims-adjuster, medical-reviewer)'],['access_review','date','Access last reviewed'],['evidence','text','Evidence (document or ticket reference)']]);
+    cur.access_tiers=x.access_tiers;cur.evidence=x.evidence;
+    Z.open('Sensitive data controls',x.id+' · '+x.name,'<p class="small text-secondary">The impact assessment is recorded on the DPIA page; access review counts for 6 months.</p>'+P.form('sform',F,cur,'Save controls')+'<input type="hidden" id="sid" value="'+esc(x.id)+'">');}
+  $('list').addEventListener('click',function(ev){var tr=ev.target.closest('tr[data-id]');if(!tr||!V)return;open(V.activities.find(function(a){return a.id===tr.getAttribute('data-id');}));});
+  document.addEventListener('submit',function(ev){var fm=ev.target;if(fm.id!=='sform')return;ev.preventDefault();
+    P.req('POST','/pdpl/sensitive/'+encodeURIComponent($('sid').value),P.body(fm)).then(function(r){P.toast((r?r.name:'')+': '+(r?r.gaps:0)+' gap(s) left');if(Z.close)Z.close();load();}).catch(function(e){P.msg(fm,P.why(e));});});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

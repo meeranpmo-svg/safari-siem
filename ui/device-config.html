@@ -1,0 +1,83 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Device Configuration</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+[hidden]{display:none!important}
+.types{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin:12px 0}
+.ty{background:var(--card,#12151c);border:1px solid var(--edge);border-radius:14px;padding:14px;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.ty:hover{border-color:#3a4258}.ty[aria-pressed="true"]{border-color:#2f81f7;background:rgba(47,129,247,.08)}
+.ty .n{font-size:26px;font-weight:800}.seg{display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.06);margin:8px 0 6px}.seg i{display:block;height:100%}
+.s-covered{background:#3fb950}.s-waiting{background:#d29922}.s-silent{background:#f85149}.s-not-onboarded{background:#a371f7}.s-no-connector{background:#6e7681}.s-paused{background:#30363d}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute)}.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.lg .covered:before{background:#3fb950}.lg .waiting:before{background:#d29922}.lg .silent:before{background:#f85149}.lg .not-onboarded:before{background:#a371f7}.lg .no-connector:before{background:#6e7681}
+pre.snip{white-space:pre-wrap;background:rgba(0,0,0,.35);border:1px solid var(--edge);border-radius:8px;padding:10px;font-size:12px;overflow-x:auto}
+.tabs2{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.tabs2 button[aria-selected="true"]{border-color:#2f81f7;color:#fff;background:rgba(47,129,247,.2)}
+.ans{white-space:pre-wrap;border:1px solid var(--edge);border-radius:10px;padding:12px;margin-top:10px}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">SIEM · onboarding</div><h1>Device Configuration</h1><div class="muted small">Every device the asset register says must send logs, by device type, with the real number in each state and the exact configuration to apply on the device. Nothing here changes a device: its administrator applies the configuration under change control, and the device turns green by itself when its logs arrive.</div></div>
+<div class="sp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="muted small" id="up"></span><a href="log-assurance.html" class="btn">Log assurance →</a><button type="button" id="sample" hidden>Record today</button><button type="button" id="xls">Excel</button><button type="button" id="refresh">Refresh</button></div></div>
+<div class="banner" id="nc" hidden></div>
+<div id="body">
+<div class="k" id="kk"></div>
+<div class="lg" style="margin-top:8px"><span class="covered">sending</span><span class="waiting">waiting for the device</span><span class="silent">stopped</span><span class="not-onboarded">not enrolled</span><span class="no-connector">no connector</span></div>
+<div class="types" id="types"></div>
+<div class="tabs2" id="tabs"></div>
+<div id="view"></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc,esc=Z.esc,$=function(i){return document.getElementById(i);};
+  var V=null,SEL='',TAB='devices',ANS=null;
+  var STL={covered:['sending','ok'],waiting:['waiting for the device','warn'],silent:['stopped','bad'],'not-onboarded':['not enrolled',''],'no-connector':['no connector',''],paused:['paused',''],unknown:['unknown','']};
+  var ORDER=['covered','waiting','silent','not-onboarded','no-connector','paused'];
+  function why(e){return e.status===404?'Device configuration is not installed on the SIEM yet - run the update.':e.message;}
+  function seg(c,total){return '<div class="seg">'+ORDER.map(function(s){return c[s]?'<i class="s-'+s+'" style="width:'+(c[s]/Math.max(1,total)*100)+'%" title="'+esc(STL[s][0]+': '+c[s])+'"></i>':'';}).join('')+'</div>';}
+  function cur(){return V.types.find(function(t){return t.kind===SEL;})||null;}
+  function draw(v){V=v;$('up').textContent='updated '+new Date().toLocaleTimeString();$('sample').hidden=!Z.can('operator');
+    if(v.inventory&&v.inventory.connected===false){$('nc').hidden=false;$('nc').textContent='The asset register did not answer ('+(v.inventory.error||'not connected')+') - the device list cannot be built. Nothing is shown rather than an empty "all good".';}else $('nc').hidden=true;
+    var S=v.summary;
+    $('kk').innerHTML=Z.tile('Devices that must log',Z.n(S.devices),S.types+' types')+Z.tile('Sending',Z.n(S.covered),S.coverage_pct==null?'':S.coverage_pct+' %',S.coverage_pct!=null&&S.coverage_pct<90?'warn':'ok')
+      +Z.tile('Waiting for the device',Z.n(S.waiting),'source ready, device not configured',S.waiting?'warn':'ok')+Z.tile('Stopped',Z.n(S.silent),'',S.silent?'bad':'ok')
+      +Z.tile('Not enrolled',Z.n(S.not_onboarded),'')+Z.tile('No connector',Z.n(S.no_connector),'')+Z.tile('Findings',Z.n(S.findings),'',S.findings?'warn':'ok');
+    if(!v.types.length){$('types').innerHTML='<div class="empty">No device in the asset register needs to send logs yet. Assets come from Asset Discovery and vCenter / Prism; which types must log is set in Log assurance → policy.</div>';$('tabs').innerHTML='';$('view').innerHTML='';return;}
+    if(!SEL)SEL=v.types[0].kind;
+    $('types').innerHTML=v.types.map(function(t){var c=t.counts,todo=c.waiting+c.silent+c['not-onboarded'];
+      return '<button type="button" class="ty" data-kind="'+esc(t.kind)+'" aria-pressed="'+(t.kind===SEL)+'"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(t.title)+'</b><span class="n">'+t.total+'</span></div>'+seg(c,t.total)
+        +'<div class="small muted">'+Z.n(c.covered)+' sending'+(todo?' · <span style="color:#d29922">'+todo+' to fix</span>':'')+(t.mode?' · '+esc(t.mode==='token'?'agent':t.mode):'')+'</div>'
+        +(t.learned&&t.learned.median_days!=null?'<div class="small muted">usually sends within '+esc(t.learned.median_days)+' day(s) of being set up</div>':'')+'</button>';}).join('');
+    var T=[['devices','Devices'],['setup','Setup guide'],['findings','Findings ('+v.findings.length+')'],['ai','AI assistant']];
+    $('tabs').innerHTML=T.map(function(x){return '<button type="button" data-tab="'+x[0]+'" aria-selected="'+(TAB===x[0])+'">'+esc(x[1])+'</button>';}).join('');
+    $('view').innerHTML=TAB==='devices'?devices():TAB==='setup'?setup():TAB==='findings'?findings():ai();}
+  function devices(){var t=cur();if(!t)return '';
+    return '<div class="card"><h2>'+esc(t.title)+' <span class="c">'+t.total+' device(s) · '+(t.covered_pct==null?'':t.covered_pct+' % sending')+'</span></h2><div class="tw"><table><thead><tr><th>Device</th><th>Site</th><th>State</th><th>Last log</th><th>SIEM source</th></tr></thead><tbody>'
+      +t.devices.map(function(d){var st=STL[d.state]||[d.state,''];return '<tr data-dev="'+esc(d.asset_id)+'"><td><b>'+esc(d.name)+'</b><div class="muted small mono">'+esc(d.ip||'')+'</div></td><td>'+esc(d.site||'–')+'</td><td>'+Z.pill(st[0],st[1])+(d.waiting_days!=null?'<div class="muted small">'+esc(d.waiting_days)+' day(s)</div>':'')+(d.unstable?'<div>'+Z.pill('keeps dropping out','warn')+'</div>':'')+(d.auto_onboarded?'<div class="muted small">enrolled automatically</div>':'')+'</td><td>'+esc(d.last_seen?Z.ago(d.last_seen):'never')+'</td><td class="small mono">'+esc(d.source_id||'–')+'</td></tr>';}).join('')+'</tbody></table></div></div>';}
+  function setup(){var t=cur();if(!t)return '';var s=t.setup;
+    if(t.kind==='no-connector')return '<div class="card"><h2>No automatic connector</h2><div class="empty">The vendor / OS of these devices is not in the connector catalogue. Set the vendor and OS in the asset register, or add each device in Connect &amp; Onboard with a generic syslog template.</div></div>';
+    if(!s)return '<div class="card"><h2>'+esc(t.title)+'</h2><div class="empty">No device of this type has a SIEM source yet, so there is no device-specific configuration to show. Enrol them in Log assurance (or let automatic enrolment do it) and the exact configuration appears here.</div></div>';
+    return '<div class="card"><h2>How to configure '+esc(t.title)+' <span class="c">apply on the device under change control</span></h2><p>'+esc((s.summary&&s.summary.en)||'')+'</p>'
+      +(s.syslog_target?'<p>Syslog target: <b class="mono">'+esc(s.syslog_target)+'</b>'+(s.tls_target?' · TLS <b class="mono">'+esc(s.tls_target)+'</b>':'')+'</p>':'')+(s.kit_url?'<p>Agent kit: <span class="mono">'+esc(s.kit_url)+'</span></p>':'')
+      +(s.instructions||[]).map(function(i,k){return '<h4 style="margin:12px 0 4px">'+esc(i.title&&i.title.en||'')+' <button type="button" class="btn" data-copy="'+k+'">Copy</button></h4><pre class="snip">'+esc(i.body)+'</pre>';}).join('')
+      +'<p class="note">This is the configuration for one device of this type (the first with a source); each device\'s own values are in Log assurance → Device config. Logs arrive within a minute of the device being configured.</p></div>';}
+  function findings(){var L=V.findings;return '<div class="card"><h2>Findings <span class="c">most severe first</span></h2>'+(L.length?'<div class="tw"><table><thead><tr><th>Severity</th><th>Type</th><th>Finding</th><th>Why</th><th>What to do</th></tr></thead><tbody>'
+      +L.map(function(f){return '<tr data-finding><td>'+Z.pill(f.severity,f.severity==='high'?'bad':f.severity==='medium'?'warn':'')+'</td><td class="small">'+esc(f.type)+'</td><td><b>'+esc(f.title)+'</b></td><td class="small">'+esc(f.why)+'</td><td class="small">'+esc(f.fix)+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">Nothing to fix.</div>')
+      +'<p class="note">Time to first log per type is learned from the daily samples ('+esc(V.learning.samples)+' in 14 days); with fewer than 3 connected devices of a type only the grace period applies.</p></div>';}
+  function ai(){var a=V.ai||{};if(!a.enabled)return '<div class="card"><div class="empty">The AI configuration assistant is off: '+esc(a.reason||'not configured')+'.</div></div>';if(!Z.can('operator'))return '<div class="card"><div class="empty">The AI assistant is for operators and administrators.</div></div>';
+    return '<div class="card"><h2>AI configuration assistant <span class="c">reads the device list and setup guides; changes nothing</span></h2><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="aq" style="flex:1;min-width:320px" placeholder="e.g. Which devices should we configure first, and what are the exact steps?"><button type="button" id="ask">Ask</button></div>'+(ANS?'<div class="ans">'+esc(ANS.answer)+'</div>':'')+'</div>';}
+  function load(){return Z.req('GET','/collection/devices').then(draw,function(e){$('nc').hidden=false;$('nc').textContent=why(e);});}
+  document.addEventListener('click',function(ev){var t=ev.target.closest('[data-kind],[data-tab],[data-copy],button[id]');if(!t)return;
+    if(t.dataset.kind){SEL=t.dataset.kind;TAB='devices';return draw(V);}
+    if(t.dataset.tab){TAB=t.dataset.tab;return draw(V);}
+    if(t.dataset.copy!=null){var s=cur()&&cur().setup;var txt=s&&s.instructions[+t.dataset.copy]&&s.instructions[+t.dataset.copy].body;if(txt&&navigator.clipboard)navigator.clipboard.writeText(txt).then(function(){Z.toast('Copied');},function(){Z.toast('Copy not allowed here - select the text');});return;}
+    if(t.id==='refresh')return load();
+    if(t.id==='sample'){t.disabled=true;return Z.req('POST','/collection/devices/sample').then(function(r){Z.toast('Recorded '+r.sources+' sources for '+r.day);t.disabled=false;load();},function(e){t.disabled=false;Z.toast(why(e));});}
+    if(t.id==='ask'){var q=$('aq').value.trim();if(q.length<3)return;t.disabled=true;t.textContent='Thinking…';return Z.req('POST','/collection/devices/ask',{question:q}).then(function(r){ANS=r;draw(V);},function(e){t.disabled=false;t.textContent='Ask';Z.toast(why(e));});}
+    if(t.id==='xls'&&V){var rows=[];V.types.forEach(function(ty){ty.devices.forEach(function(d){rows.push([ty.title,d.name,d.ip,d.site,(STL[d.state]||[d.state])[0],d.last_seen?new Date(d.last_seen).toISOString().slice(0,16):'never',d.waiting_days==null?'':d.waiting_days,d.source_id||'']);});});
+      var sheets=[{name:'By type',columns:[{h:'Type',w:30},{h:'Devices',t:'n'},{h:'Sending',t:'n'},{h:'Waiting',t:'n'},{h:'Stopped',t:'n'},{h:'Not enrolled',t:'n'},{h:'No connector',t:'n'},{h:'Usual days to first log',w:14}],rows:V.types.map(function(ty){var c=ty.counts;return [ty.title,ty.total,c.covered,c.waiting,c.silent,c['not-onboarded'],c['no-connector'],ty.learned&&ty.learned.median_days!=null?ty.learned.median_days:''];})},
+        {name:'Devices',columns:[{h:'Type',w:26},{h:'Device',w:26},{h:'IP',w:16},{h:'Site',w:14},{h:'State',w:20},{h:'Last log',w:18},{h:'Waiting days',t:'n'},{h:'SIEM source',w:20}],rows:rows},
+        {name:'Findings',columns:[{h:'Severity',w:10},{h:'Type',w:20},{h:'Finding',w:50},{h:'Why',w:50},{h:'What to do',w:60}],rows:V.findings.map(function(f){return [f.severity,f.type,f.title,f.why,f.fix];})}];
+      return window.zybXlsx.download('device-configuration-'+new Date().toISOString().slice(0,10)+'.xlsx',sheets,{title:('Device Configuration - ' + ZYB_ORG.short),filter:'every device the asset register says must log',by:Z.user()||Z.role()});}
+  });
+  Z.ready(load);
+})();
+</script></body></html>

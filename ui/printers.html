@@ -1,0 +1,177 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Printers</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.tabs{display:flex;gap:6px;margin:0 0 12px;border-bottom:1px solid var(--edge);flex-wrap:wrap}.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 14px;font-size:14px;color:var(--mute)}.tabs button.on{color:var(--title);border-bottom-color:#3fb950}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{margin-left:auto;font-weight:400;color:var(--mute);font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t.on{outline:2px solid var(--info)}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:22px;font-weight:700;margin-top:2px}.t .s{font-size:11.5px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}button.sm{padding:3px 9px;font-size:12px}
+select,input,textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}th.n,td.n{text-align:right;font-variant-numeric:tabular-nums}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}td>b{white-space:nowrap}
+tbody tr.ck{cursor:pointer}tbody tr.ck:hover td{background:rgba(255,255,255,.035)}.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap;margin:1px 2px 1px 0}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;align-items:end;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:12px;margin:10px 0}.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.f{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.brs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}.brs .t .s{font-size:12px}.f input[type=search]{flex:1;min-width:200px}
+[hidden]{display:none!important}
+.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}.err{color:var(--bad)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.days{display:flex;align-items:flex-end;gap:2px;height:46px}.days i{flex:1;background:var(--info);border-radius:2px 2px 0 0;min-height:1px;opacity:.85}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Facilities &amp; Devices · Xerox + YSoft SAFEQ 6</div><h1>Printers</h1></div><span class="sp"></span><span class="muted" id="up"></span><a id="sqlink" hidden target="_blank" rel="noopener noreferrer" style="color:var(--info);font-size:13px">Open SAFEQ console ↗</a><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="tabs" role="tablist"><button type="button" data-tab="fleet" class="on">🖨️ Printers</button><button type="button" data-tab="usage">📊 Usage (SAFEQ)</button><button type="button" data-tab="set">⚙️ Settings</button></div>
+
+<div id="tab-fleet">
+  <div class="k" id="kpi"></div>
+  <div class="card" id="brc"><h2>Branches <span class="c">click a branch to filter</span></h2><div class="brs" id="brs"></div></div>
+  <div class="card"><h2>🖨️ Printers <span class="c" id="cnt"></span></h2>
+    <div class="f"><input type="search" id="q" placeholder="Search name, IP, model, site, serial" aria-label="Search"><select id="fs" aria-label="Status"><option value="">All</option><option value="attention">Needs attention</option><option value="offline">Offline</option><option value="error">Error</option><option value="warning">Warning</option><option value="ok">OK</option></select><select id="fb" aria-label="Branch"><option value="">All branches</option></select></div>
+    <div class="tw" id="tbl"><div class="empty">Loading…</div></div></div>
+</div>
+
+<div id="tab-usage" hidden>
+  <div class="card"><h2>📊 Printing usage from SAFEQ <span class="c" id="ucnt"></span></h2><div id="usage"><div class="empty">Loading…</div></div></div>
+</div>
+
+<div id="tab-set" hidden><div class="card"><h2>⚙️ Settings <span class="c">administrators · the SNMP password is write-only</span></h2><div id="set"><div class="empty">Loading…</div></div></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var V=null, U=null, F='', VIEW=[], UP=0, BR=(new URLSearchParams(location.search).get('branch')||''), MINE=[];
+  // branch = the printer's site; "mine" = the branches an administrator assigned to this engineer (User Desktops → Settings)
+  var brOf=function(p){return (p.site||'').trim()||'Unassigned';};
+  var inBranch=function(p){if(!BR)return true;if(BR==='mine')return MINE.some(function(b){return b.toLowerCase()===brOf(p).toLowerCase();});return brOf(p).toLowerCase()===BR.toLowerCase();};
+  function req(m,url,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc/printers'+url);x.withCredentials=true;x.timeout=60000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('the SIEM is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  var ST={ok:['OK','ok'],warning:['Warning','warn'],error:['Error','bad'],offline:['Offline','bad'],unknown:['Not polled yet','']};
+  function bar(p,inv){if(p==null)return '<span class="muted">—</span>';var c=inv?(p>=90?'#ff7b72':p>=75?'#e3b341':'#3fb950'):(p<=5?'#ff7b72':p<=15?'#e3b341':'#3fb950');return '<span style="display:inline-block;width:56px;height:7px;border-radius:4px;background:rgba(255,255,255,.08);vertical-align:middle;margin-right:5px;overflow:hidden"><i style="display:block;height:100%;width:'+Math.max(2,p)+'%;background:'+c+'"></i></span>'+p+'%';}
+  function toner(s){var t=((s&&s.supplies)||[]).filter(function(x){return /toner|ink/.test(x.type);});if(!t.length)return '<span class="muted">—</span>';return t.slice(0,4).map(function(x){var n=x.name.replace(/cartridge|toner/ig,'').trim()||'Toner';return '<div style="white-space:nowrap;font-size:12px" title="'+esc(x.name)+'">'+bar(x.pct)+' <span class="muted">'+esc(n.slice(0,12))+'</span></div>';}).join('');}
+  function fmt(n){return n==null?'—':Number(n).toLocaleString();}
+  function ago(t){if(!t)return 'never';var s=Math.round((Date.now()-t)/1000);return s<90?s+' s ago':s<5400?Math.round(s/60)+' min ago':Math.round(s/3600)+' h ago';}
+
+  function sumOf(items){var s={total:items.length,ok:0,warning:0,error:0,offline:0,toner_low:0,pages_today:0,pages_30d:0};items.forEach(function(p){if(s[p.status]!=null)s[p.status]++;if(p.issues.some(function(x){return /% left$/.test(x.text);}))s.toner_low++;s.pages_today+=p.pages_today||0;s.pages_30d+=p.pages_30d||0;});return s;}
+  function drawBranches(){
+    var by={};V.items.forEach(function(p){var b=brOf(p);var x=by[b]||(by[b]={n:0,att:0,off:0});x.n++;if(p.status==='warning'||p.status==='error')x.att++;if(p.status==='offline')x.off++;});
+    var names=Object.keys(by).sort();
+    $('brs').innerHTML=names.map(function(b){var x=by[b];return '<button type="button" class="t'+(BR===b?' on':'')+'" data-br="'+esc(b)+'"><div class="l">'+esc(b)+'</div><div class="s">'+x.n+' printer'+(x.n===1?'':'s')+(x.off?' · <span style="color:var(--bad)">'+x.off+' offline</span>':'')+(x.att?' · <span style="color:var(--warn)">'+x.att+' need attention</span>':'')+'</div></button>';}).join('');
+    $('brc').hidden=names.length<2&&!BR;
+    $('fb').innerHTML='<option value="">All branches</option>'+(MINE.length?'<option value="mine"'+(BR==='mine'?' selected':'')+'>My branches ('+esc(MINE.join(', '))+')</option>':'')+names.map(function(b){return '<option value="'+esc(b)+'"'+(BR===b?' selected':'')+'>'+esc(b)+'</option>';}).join('')+(BR&&BR!=='mine'&&names.indexOf(BR)<0?'<option value="'+esc(BR)+'" selected>'+esc(BR)+' (no printer)</option>':'');
+  }
+  function draw(){
+    drawBranches();
+    var s=BR?sumOf(V.items.filter(inBranch)):V.summary;
+    var tiles=[['Printers',s.total,'','',s.ok+' OK'],['Needs attention',s.warning+s.error,(s.error?'bad':s.warning?'warn':'ok'),'attention',''],['Offline',s.offline,s.offline?'bad':'ok','offline',''],['Toner low',s.toner_low,s.toner_low?'warn':'ok','toner',''],['Pages today',fmt(s.pages_today),'','',''],['Pages 30 days',fmt(s.pages_30d),'','','from the page counters']];
+    $('kpi').innerHTML=tiles.map(function(t){return '<button type="button" class="t '+t[2]+(F===t[3]&&t[3]?' on':'')+'" data-f="'+t[3]+'"><div class="l">'+esc(t[0])+'</div><div class="v">'+t[1]+'</div>'+(t[4]?'<div class="s">'+esc(t[4])+'</div>':'')+'</button>';}).join('');
+    var q=$('q').value.trim().toLowerCase(), fs=$('fs').value;
+    VIEW=V.items.filter(function(p){var sn=p.snapshot||{};
+      if(F==='attention'||fs==='attention'){if(!(p.status==='warning'||p.status==='error'))return false;}else if(F==='offline'&&p.status!=='offline')return false;else if(F==='toner'&&!p.issues.some(function(x){return /% left$/.test(x.text);}))return false;
+      if(fs&&fs!=='attention'&&p.status!==fs)return false;
+      if(!inBranch(p))return false;
+      return !q||(p.name+' '+p.ip+' '+(p.model||sn.model||'')+' '+(p.site||'')+' '+(p.serial||sn.serial||'')).toLowerCase().indexOf(q)>=0;});
+    $('cnt').textContent=VIEW.length+' of '+V.items.length+(V.stats.last_poll_at?' · polled '+ago(V.stats.last_poll_at):'');
+    $('tbl').innerHTML=VIEW.length?'<table><thead><tr><th>Printer</th><th>IP</th><th>Site</th><th>Status</th><th>Toner</th><th>Problems</th><th class="n">Pages today</th><th class="n">30 days</th><th class="n">Counter</th><th></th></tr></thead><tbody>'+VIEW.map(function(p,i){var sn=p.snapshot||{},st=ST[p.status]||[p.status,''];
+      return '<tr class="ck" tabindex="0" data-i="'+i+'"><td><b>'+esc(p.name)+'</b><div class="muted" style="font-size:11.5px">'+esc(p.model||sn.model||'')+'</div></td><td class="mono">'+esc(p.ip)+'</td><td>'+esc(p.site||'—')+'</td><td><span class="pill '+st[1]+'">'+esc(st[0])+'</span></td><td>'+toner(sn)+'</td><td>'+(p.issues.filter(function(x){return x.level!=='info';}).slice(0,3).map(function(x){return '<span class="pill '+(x.level==='bad'?'bad':'warn')+'">'+esc(x.text.slice(0,60))+'</span>';}).join('')||'<span class="muted">—</span>')+'</td><td class="n">'+fmt(p.pages_today)+'</td><td class="n">'+fmt(p.pages_30d)+'</td><td class="n">'+fmt(sn.pages_total)+'</td><td><button type="button" class="sm" data-poll="'+esc(p.id)+'">Check now</button></td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">'+(V.items.length?'No printer matches.':'No printers yet. Printers registered in IT Asset Management (type printer, with an IP) are added automatically every 30 minutes — or add them in <a href="#" data-tab="set" style="color:var(--info)">Settings</a>.')+(V.settings.snmp.set?'':' <b>Set the SNMP community in Settings first.</b>')+'</div>';
+  }
+  function detail(p){
+    var sn=p.snapshot||{},st=ST[p.status]||[p.status,''];var max=Math.max.apply(null,[1].concat((p.pages_by_day||[]).map(function(d){return d.pages;})));
+    var html=Z.kv([['Status',Z.pill(st[0],st[1]==='ok'?'ok':st[1]==='bad'?'bad':st[1]==='warn'?'warn':'')+(sn.ok?' <span class="muted">'+esc(sn.printer_status||'')+'</span>':'')],['IP',esc(p.ip)],['Model',esc(p.model||sn.model||'—')],['Serial',esc(p.serial||sn.serial||'—')],['Site / location',esc([p.site,p.location,sn.location].filter(Boolean).join(' · ')||'—')],['In SAFEQ',p.safeq_name?esc(p.safeq_name)+(V.safeq_console?' · <a href="'+esc(V.safeq_console)+'" target="_blank" rel="noopener noreferrer" style="color:var(--info)">open console ↗</a>':''):'<span class="muted">not matched</span>'],['Page counter',fmt(sn.pages_total)],['Last checked',esc(ago(sn.at))+(sn.ok?'':' — '+esc(sn.error||'no answer'))]])
+      +(p.issues.length?Z.sec('Needs attention',p.issues.map(function(x){return '<div>'+Z.pill(x.level==='bad'?'problem':x.level==='warn'?'warning':'info',x.level==='bad'?'bad':x.level==='warn'?'warn':'')+' '+esc(x.text)+'</div>';}).join('')):'')
+      +((sn.supplies||[]).length?Z.sec('Supplies',Z.tbl(['Supply','Type','Level'],sn.supplies.map(function(x){return [esc(x.name),esc(x.type),x.pct!=null?bar(x.pct,x.type==='waste toner'):(x.state==='ok'?'OK':'unknown')];}))):'')
+      +((sn.trays||[]).length?Z.sec('Paper trays',Z.tbl(['Tray','Paper'],sn.trays.map(function(x){return [esc(x.name),x.pct!=null?x.pct+'%':(x.state==='ok'?'some':'unknown')];}))):'')
+      +((sn.alerts||[]).length?Z.sec('Alerts on the printer',Z.tbl(['Alert','Severity'],sn.alerts.map(function(a){return [esc(a.text),esc(a.severity)];}))):'')
+      +((p.pages_by_day||[]).length?Z.sec('Pages per day (30 days)','<div class="days">'+p.pages_by_day.map(function(d){return '<i title="'+esc(d.day)+': '+d.pages+'" style="height:'+Math.round(d.pages/max*100)+'%"></i>';}).join('')+'</div>'):'');
+    Z.open('Printer',p.name,html);
+  }
+
+  function drawUsage(){
+    var ps=(U&&U.periods)||[];
+    var sel=$('uper')?$('uper').value:'';var cur=ps.filter(function(x){return x.id===sel;})[0]||ps[0];
+    var imp='<details'+(ps.length?'':' open')+'><summary style="cursor:pointer;font-weight:600">⬆ Import a SAFEQ usage report (CSV)</summary><form class="form" id="uf"><label>Period<input id="up-per" value="'+new Date().toISOString().slice(0,7)+'" placeholder="2026-10"></label><label style="grid-column:span 2">CSV file<input type="file" id="up-file" accept=".csv,text/csv"></label><button type="submit" class="pri">Import</button></form>'
+      +'<p class="note">In the SAFEQ 6 web interface run a report with <b>user, department, device, pages (colour / B&amp;W) and cost</b> for the period, export it as <b>CSV</b>, and import it here. Column names are recognised automatically (e.g. User name, Department, Device name, Total pages, Colour, B&amp;W, Cost). Importing the same period again replaces it.</p></details>';
+    if(!cur){$('usage').innerHTML='<div class="empty">No SAFEQ report imported yet.</div>'+imp;wireUsage();return;}
+    var tb=function(title,list){return Z.sec(title,list.length?Z.tbl(['Name','Pages','Colour','B&W','Cost'],list.slice(0,15).map(function(x){return [esc(x.name),fmt(x.pages),fmt(x.color),fmt(x.mono),x.cost?fmt(Math.round(x.cost*100)/100):'—'];})):'<p class="muted">not in this report</p>');};
+    $('ucnt').textContent=(cur.source==='safeq'?'pulled from SAFEQ ':'imported ')+new Date(cur.imported_at).toLocaleString()+(cur.source==='safeq'?'':' by '+cur.by);
+    $('usage').innerHTML='<div class="f"><label class="muted" style="display:flex;gap:6px;align-items:center">Period <select id="uper">'+ps.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===cur.id?' selected':'')+'>'+esc(x.period)+'</option>';}).join('')+'</select></label></div>'
+      +'<div class="k">'+[['Pages',fmt(cur.totals.pages)],['Colour',fmt(cur.totals.color)],['Black & white',fmt(cur.totals.mono)],['Cost',cur.totals.cost?fmt(cur.totals.cost):'—'],['Colour share',cur.totals.pages?Math.round(cur.totals.color/cur.totals.pages*100)+'%':'—']].map(function(t){return '<div class="t" style="cursor:default"><div class="l">'+esc(t[0])+'</div><div class="v">'+t[1]+'</div></div>';}).join('')+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px">'+(U.users_shown===false?Z.sec('Top users','<p class="muted">Per-user printing is shown to operators and administrators only (personal data under PDPL).</p>'):tb('Top users',cur.by_user))+tb('By department',cur.by_department)+tb('By printer',cur.by_printer)+'</div>'+imp;
+    wireUsage();
+  }
+  function wireUsage(){
+    if($('uper'))$('uper').onchange=drawUsage;
+    var f=$('uf');if(!f)return;
+    f.onsubmit=function(e){e.preventDefault();var file=$('up-file').files[0];if(!file){toast('Choose the CSV file');return;}if(file.size>20*1024*1024){toast('File larger than 20 MB');return;}
+      var r=new FileReader();r.onload=function(){req('POST','/usage/import',{csv:String(r.result),period:$('up-per').value.trim()}).then(function(x){toast('Imported '+x.rows+' rows ('+fmt(x.pages)+' pages) for '+x.period);loadUsage();}).catch(function(er){toast(er.message);});};r.readAsText(file);};
+  }
+
+  function drawSet(){
+    var s=V.settings;
+    $('set').innerHTML='<h3 style="margin:2px 0 6px;font-size:14px">SNMP access to the printers</h3><p class="note" style="margin-top:0">Read-only. Set the same SNMP read community (or SNMPv3 user) on the Xerox printers — Embedded Web Server → Properties → Connectivity → Protocols → SNMP. '+(s.snmp.set?'<span class="pill ok">set (SNMP v'+esc(s.snmp.version)+')</span>':'<span class="pill bad">not set</span>')+'</p>'
+      +'<form class="form" id="sf"><label>Version<select id="s-v"><option value="2c">v2c (community)</option><option value="3">v3 (user)</option></select></label><label class="v2">Read community<input id="s-c" type="password" autocomplete="new-password" placeholder="'+(s.snmp.set?'stored — enter to replace':'e.g. the read-only community')+'"></label>'
+      +'<label class="v3" hidden>User<input id="s-u"></label><label class="v3" hidden>Auth password (SHA)<input id="s-a" type="password" autocomplete="new-password"></label><label class="v3" hidden>Privacy password (AES)<input id="s-p" type="password" autocomplete="new-password"></label>'
+      +'<label>Toner warning at (%)<input id="s-w" type="number" min="1" max="50" value="'+s.toner_warn_pct+'"></label><label>Toner critical at (%)<input id="s-x" type="number" min="0" max="30" value="'+s.toner_crit_pct+'"></label>'
+      +'<label><span><input type="checkbox" id="s-sync"'+(s.sync_inventory?' checked':'')+'> Add printers from IT Asset Management automatically</span></label><button type="submit" class="pri">Save</button></form>'
+      +'<h3 style="margin:18px 0 6px;font-size:14px">Printers</h3><p class="note" style="margin-top:0">'+(V.stats.last_sync_at?'Last sync from IT Asset Management '+esc(ago(V.stats.last_sync_at))+': '+V.stats.last_sync.added+' added, '+V.stats.last_sync.removed+' removed'+(V.stats.last_sync.skipped_no_ip.length?', <b>no IP: '+esc(V.stats.last_sync.skipped_no_ip.slice(0,5).join(', '))+'</b>':''):V.stats.last_sync_error?'<span class="err">Sync failed: '+esc(V.stats.last_sync_error)+'</span>':'Not synced yet.')+'</p>'
+      +'<p><button type="button" id="s-syncnow">Sync from IT Asset Management now</button></p>'
+      +'<form class="form" id="af"><label>Name<input id="a-n" placeholder="XRX-HQ-2F" maxlength="120"></label><label>IP address<input id="a-ip" placeholder="192.168.1.31" required></label><label>Site<input id="a-s" placeholder="Riyadh HQ"></label><label>Name in SAFEQ (optional)<input id="a-q" placeholder="device name in SAFEQ reports"></label><button type="submit">➕ Add printer</button></form>'
+      +('<p class="note">Network: UDP 161 from the SIEM server (' + ZYB_ORG.platform_addr + ') to the printers must be allowed.</p>')
+      +'<h3 style="margin:22px 0 6px;font-size:14px">YSoft SAFEQ 6 - console link and automatic pull</h3><div id="sqset"><div class="empty">Loading…</div></div>';
+    drawSafeq();
+    var tg=function(){var v3=$('s-v').value==='3';[].forEach.call(document.querySelectorAll('#sf .v3'),function(x){x.hidden=!v3;});[].forEach.call(document.querySelectorAll('#sf .v2'),function(x){x.hidden=v3;});};$('s-v').value=s.snmp.version||'2c';tg();$('s-v').onchange=tg;
+    $('sf').onsubmit=function(e){e.preventDefault();var b={toner_warn_pct:+$('s-w').value,toner_crit_pct:+$('s-x').value,sync_inventory:$('s-sync').checked};
+      if($('s-v').value==='3'){if($('s-u').value)b.snmp={version:'3',user:$('s-u').value.trim(),authKey:$('s-a').value,privKey:$('s-p').value};}else if($('s-c').value)b.snmp={version:'2c',community:$('s-c').value};
+      req('PUT','/settings',b).then(function(){toast('Saved — printers are polled within 5 minutes');load();}).catch(function(er){toast(er.message);});};
+    $('s-syncnow').onclick=function(){var bt=this;bt.disabled=true;req('POST','/sync',{}).then(function(r){toast(r.fetched+' printers in IT Asset Management: '+r.added+' added, '+r.removed+' removed'+(r.skipped_no_ip.length?' · no IP: '+r.skipped_no_ip.slice(0,3).join(', '):''));load();}).catch(function(er){toast(er.message);}).then(function(){bt.disabled=false;});};
+    $('af').onsubmit=function(e){e.preventDefault();req('POST','',{name:$('a-n').value.trim(),ip:$('a-ip').value.trim(),site:$('a-s').value.trim(),safeq_name:$('a-q').value.trim()}).then(function(p){toast(p.name+' added');req('POST','/'+encodeURIComponent(p.id)+'/poll',{}).catch(function(e){toast('Added, but the first poll did not start: '+e.message+' - it is polled on the next cycle');}).then(load);}).catch(function(er){toast(er.message);});};
+  }
+
+  /* SAFEQ: the console link for everyone; operators see the pull settings, administrators change them */
+  function drawSafeq(){
+    req('GET','/safeq').then(function(q){
+      var lu=q.last_usage,ld=q.last_devices,last=function(x,what){return !x?'not pulled yet':x.ok?'last pull '+ago(x.at)+' · '+what(x):'<span class="err">last pull failed '+esc(ago(x.at))+': '+esc(x.error)+'</span>';};
+      $('sqset').innerHTML='<p class="note" style="margin-top:0">Read-only: the SIEM only reads these addresses (GET). Use a SAFEQ 6 REST API endpoint, or the address of a scheduled SAFEQ report export. CSV and JSON are both read; column names are recognised automatically (user, department / cost centre, device, colour, B&amp;W, total pages, cost; for printers: name, IP address, model, serial, location). <b>{from}</b>, <b>{to}</b> and <b>{period}</b> in an address become this month\'s dates.</p>'
+        +'<form class="form" id="sqf"><label style="grid-column:1/-1">SAFEQ console (web link)<input id="sq-c" dir="ltr" value="'+esc(q.console_url)+('" placeholder="https://safeq.' + ZYB_ORG.domain + ':9443/"></label>')
+        +'<label style="grid-column:1/-1">Usage (pages per user / department / printer)<input id="sq-u" dir="ltr" value="'+esc(q.usage_url)+('" placeholder="https://safeq.' + ZYB_ORG.domain + ':9443/…?from={from}&amp;to={to}"></label>')
+        +'<label style="grid-column:1/-1">Printer list<input id="sq-d" dir="ltr" value="'+esc(q.devices_url)+('" placeholder="https://safeq.' + ZYB_ORG.domain + ':9443/…"></label>')
+        +'<label>Authentication<select id="sq-a"><option value="none">None</option><option value="header">API key in a header</option><option value="bearer">Bearer token</option><option value="basic">User name + password</option></select></label>'
+        +'<label class="sqh">Header name<input id="sq-hn" value="'+esc(q.header_name)+'" placeholder="X-Api-Key"></label><label class="sqb">User name<input id="sq-un" value="'+esc(q.username)+'"></label>'
+        +'<label class="sqs"><span id="sq-sl">Secret</span><input id="sq-s" type="password" autocomplete="new-password" placeholder="'+(q.secret_set?'stored - enter to replace':'')+'"></label>'
+        +'<label>Pull every (minutes)<input id="sq-i" type="number" min="15" max="1440" value="'+esc(q.interval_min)+'"></label>'
+        +'<label>Certificate SHA-256 (self-signed only)<input id="sq-fp" dir="ltr" value="'+esc(q.tls.fingerprint256)+'" placeholder="AA:BB:…"></label><label>CA file on the SIEM server<input id="sq-ca" dir="ltr" value="'+esc(q.tls.ca_file)+'" placeholder="/etc/ssl/certs/corp-ca.pem"></label>'
+        +'<div style="grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap"><button type="submit" class="pri">Save</button><button type="button" data-sqt="usage">Test usage</button><button type="button" data-sqt="devices">Test printer list</button><button type="button" id="sq-pull">Pull now</button></div></form>'
+        +'<p class="note">Usage: '+last(lu,function(x){return x.periods.map(function(p){return esc(p.period)+': '+fmt(p.rows)+' rows, '+fmt(p.pages)+' pages';}).join(' · ');})+'<br>Printer list: '+last(ld,function(x){return fmt(x.rows)+' rows, '+x.added+' added, '+x.updated+' updated'+(x.skipped?', '+x.skipped+' without an IP':'');})+'</p><div id="sq-res"></div>';
+      $('sq-a').value=q.auth;var tg=function(){var a=$('sq-a').value;[].forEach.call(document.querySelectorAll('#sqf .sqh'),function(x){x.hidden=a!=='header';});[].forEach.call(document.querySelectorAll('#sqf .sqb'),function(x){x.hidden=a!=='basic';});[].forEach.call(document.querySelectorAll('#sqf .sqs'),function(x){x.hidden=a==='none';});$('sq-sl').textContent=a==='basic'?'Password':a==='bearer'?'Token':'API key';};tg();$('sq-a').onchange=tg;
+      $('sqf').onsubmit=function(e){e.preventDefault();var b={console_url:$('sq-c').value.trim(),usage_url:$('sq-u').value.trim(),devices_url:$('sq-d').value.trim(),auth:$('sq-a').value,header_name:$('sq-hn').value.trim(),username:$('sq-un').value.trim(),interval_min:+$('sq-i').value,fingerprint256:$('sq-fp').value.trim(),ca_file:$('sq-ca').value.trim()};if($('sq-s').value)b.secret=$('sq-s').value;
+        req('PUT','/safeq',b).then(function(){toast('SAFEQ settings saved');drawSafeq();load();}).catch(function(er){toast(er.message);});};
+      [].forEach.call(document.querySelectorAll('[data-sqt]'),function(bt){bt.onclick=function(){bt.disabled=true;$('sq-res').innerHTML='<div class="empty">Asking SAFEQ…</div>';req('POST','/safeq/test',{which:bt.getAttribute('data-sqt')}).then(function(r){
+        $('sq-res').innerHTML='<div class="note"><span class="pill ok">'+esc(r.format.toUpperCase())+' · '+fmt(r.rows)+' rows</span> Columns: '+esc(r.columns.join(', '))+'</div>'+(r.sample.length?'<div class="tw">'+Z.tbl(r.columns.slice(0,10),r.sample.map(function(x){return r.columns.slice(0,10).map(function(c){return esc(x[c]);});}))+'</div>':'');}).catch(function(er){$('sq-res').innerHTML='<p class="err">'+esc(er.message)+'</p>';}).then(function(){bt.disabled=false;});};});
+      $('sq-pull').onclick=function(){var bt=this;bt.disabled=true;req('POST','/safeq/pull',{which:'all'}).then(function(r){var m=[];if(r.devices)m.push(r.devices.ok?'printers: '+r.devices.added+' added, '+r.devices.updated+' updated':'printers failed: '+r.devices.error);if(r.usage)m.push(r.usage.ok?'usage: '+r.usage.periods.map(function(p){return p.period+' '+fmt(p.pages)+' pages';}).join(', '):'usage failed: '+r.usage.error);toast(m.join(' · ')||'nothing to pull - add an address first');drawSafeq();load();U=null;}).catch(function(er){toast(er.message);}).then(function(){bt.disabled=false;});};
+    }).catch(function(e){$('sqset').innerHTML='<p class="note">'+(e.status===403?'Operators and administrators see the SAFEQ connection.':e.status===404?'The SIEM on the server does not have the SAFEQ pull yet - run the update.':esc(e.message))+'</p>';});
+  }
+  function load(){req('GET','').then(function(v){V=v;draw();if(v.safeq_console){$('sqlink').href=v.safeq_console;$('sqlink').hidden=false;}else $('sqlink').hidden=true;if(!$('tab-set').hidden||!$('set').getAttribute('data-d')){drawSet();$('set').setAttribute('data-d','1');}$('up').textContent='updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});})
+    .catch(function(e){$('tbl').innerHTML='<p class="err">'+(e.status===404?'The SIEM on the server does not have the printer module yet — run the update.':'Cannot load printers ('+esc(e.message)+').')+'</p>';$('set').innerHTML=$('tbl').innerHTML;});}
+  function loadUsage(){req('GET','/usage').then(function(u){U=u;drawUsage();}).catch(function(e){$('usage').innerHTML='<p class="err">'+esc(e.message)+'</p>';});}
+  function tab(n){[].forEach.call(document.querySelectorAll('.tabs [data-tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===n);});['fleet','usage','set'].forEach(function(k){$('tab-'+k).hidden=k!==n;});if(n==='usage'&&!U)loadUsage();if(n==='set'&&V)drawSet();}
+  document.addEventListener('click',function(e){var t=e.target;
+    var tb=t.closest('[data-tab]');if(tb){e.preventDefault();tab(tb.getAttribute('data-tab'));return;}
+    var bb=t.closest('[data-br]');if(bb){var bv=bb.getAttribute('data-br');BR=BR===bv?'':bv;draw();return;}
+    var f=t.closest('[data-f]');if(f){var v=f.getAttribute('data-f');F=F===v?'':v;draw();return;}
+    var pl=t.closest('[data-poll]');if(pl){e.stopPropagation();pl.disabled=true;req('POST','/'+encodeURIComponent(pl.getAttribute('data-poll'))+'/poll',{}).then(function(s){toast(s.ok?'Answered':'No answer: '+(s.error||''));load();}).catch(function(er){toast(er.message);pl.disabled=false;});return;}
+    var r=t.closest('tr[data-i]');if(r){detail(VIEW[+r.getAttribute('data-i')]);}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.matches&&e.target.matches('tr[data-i]'))detail(VIEW[+e.target.getAttribute('data-i')]);});
+  $('fb').addEventListener('change',function(){BR=this.value;if(V)draw();});
+  // the engineer's own branches (assigned on User Desktops); a printer page without IT Asset Management just has no "My branches"
+  (function(){var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){var me='';try{me=String(JSON.parse(w.responseText).user||'').toLowerCase();}catch(e){/* no user: no assignment */}
+    var x=new XMLHttpRequest();x.open('GET','/api/itam/desktops/settings');x.withCredentials=true;x.zybQuiet=true;x.onload=function(){if(x.status!==200)return;try{var e=(JSON.parse(x.responseText).engineers||[]).find(function(y){return String(y.user).toLowerCase()===me;});if(e){MINE=e.branches;if(!BR)BR='mine';if(V)draw();}}catch(er){/* settings unreadable: no "My branches" */}};x.onerror=function(){/* IT Asset Management not reachable: all branches */};x.send();};w.onerror=function(){/* no identity: all branches */};w.send();})();
+  $('q').addEventListener('input',function(){if(V)draw();});$('fs').addEventListener('change',function(){if(V)draw();});
+  $('refresh').onclick=function(){load();if(U)loadUsage();};
+  load();setInterval(function(){if(!document.hidden&&$('tab-set').hidden)load();},120000);
+})();
+</script></body></html>

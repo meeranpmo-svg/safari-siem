@@ -1,0 +1,457 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>User Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-autorefresh.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+/* User Management - one register of everyone who can reach the platform. Same canvas and type scale as the main page; the brand switch
+   (html.org-brand) turns the accent {{org.short}} blue. Colour that means something (bad / warn / ok) keeps its meaning. */
+:root{color-scheme:dark;--bg:#0B0F17;--panel:#111723;--raise:#161D2B;--well:#0D131D;--border:#263247;--edge:#1B2434;--text:#E6EBF3;--title:#fff;--mute:#93A0B6;--soft:#C3CCDA;
+  --acc:#4F8CF7;--acc-s:rgba(79,140,247,.14);--acc-b:rgba(79,140,247,.40);--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--ai:#a371f7}
+html.org-brand,html.zyb-modern.org-brand:root{--bg:#060B12;--panel:#0D131D;--raise:#111823;--well:#0A0F18;--border:#1F2A3B;--edge:#161E2A;--text:#E5E9F0;--mute:#919CAD;--soft:#C4CBD7;--acc:#2E9E5B;--acc-s:rgba(68,114,187,.14);--acc-b:rgba(68,114,187,.40)}
+*{box-sizing:border-box}html.zyb-modern:root body,body{margin:0;background:var(--bg)!important;color:var(--text);font:14px/1.5 "Inter","IBM Plex Sans","Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:1440px;margin:0 auto;padding:24px 24px 56px}
+a{color:inherit}.muted{color:var(--mute)}.mono{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace}.err{color:var(--bad)}.empty{color:var(--mute);padding:14px 2px}.note{color:var(--mute);font-size:12px;margin-top:10px}
+/* header */
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin:0 0 18px}
+.eb{font:600 11.5px "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.head h1{margin:6px 0 4px;font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--title)}.head p{margin:0;max-width:760px;color:var(--mute);font-size:14.5px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;border-radius:9px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:600 13px inherit;font-family:inherit;text-decoration:none;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--acc-b)}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn.pri:hover{filter:brightness(1.08)}.btn.sm{height:30px;padding:0 10px;font-size:12.5px}.btn.dang{color:var(--bad)}.btn:disabled{opacity:.5;cursor:default}
+/* KPI strip */
+.k{display:grid;grid-template-columns:200px repeat(6,minmax(0,1fr));gap:12px;margin:0 0 18px}@media(max-width:1200px){.k{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:700px){.k{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.t{position:relative;background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:14px 16px;text-align:left;font:inherit;color:inherit;cursor:pointer;transition:border-color .15s}
+.t:hover{border-color:var(--acc-b)}.t.on{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}.t:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.t .l{font-size:12.5px;color:var(--soft);font-weight:500}.t .v{font:600 26px "IBM Plex Mono",ui-monospace,monospace;color:var(--title);margin:6px 0 2px;line-height:1.1}.t .s{font-size:11.5px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+.t.ring{display:flex;align-items:center;gap:12px;cursor:default}.t.ring svg{flex:0 0 auto}
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--edge);margin:0 0 14px}
+.tabs button{position:relative;height:42px;padding:0 16px;background:none;border:0;color:var(--mute);font:600 14px inherit;font-family:inherit;cursor:pointer}
+.tabs button[aria-selected=true]{color:var(--title)}.tabs button[aria-selected=true]:after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;border-radius:2px;background:var(--acc)}
+.tabs .n{display:inline-block;min-width:20px;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--raise);font-size:11.5px;color:var(--soft)}
+.pane[hidden]{display:none}
+/* toolbar */
+.tool{position:sticky;top:0;z-index:5;display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 0;margin:0 0 6px;background:var(--bg)}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:3px}
+.seg button{height:30px;padding:0 12px;border:0;border-radius:7px;background:none;color:var(--mute);font:600 12.5px inherit;font-family:inherit;cursor:pointer}.seg button[aria-pressed=true]{background:var(--acc-s);color:var(--title);box-shadow:inset 0 0 0 1px var(--acc-b)}
+.seg .n{margin-left:5px;color:var(--mute);font-weight:500}
+input[type=search],select{height:38px;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:0 12px;font:13px inherit;font-family:inherit}
+input[type=search]{min-width:200px;flex:0 1 300px}input[type=search]:focus,select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-s)}
+.fchip{display:inline-flex;align-items:center;gap:6px;height:30px;font-size:12.5px;font-weight:600;color:var(--title);background:var(--acc-s);border:1px solid var(--acc-b);border-radius:999px;padding:0 4px 0 12px}.fchip button{background:none;border:0;color:inherit;cursor:pointer;font-size:13px;padding:0 6px}
+.sp{flex:1}
+.bulk{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;margin:0 0 10px;border-radius:12px;background:var(--acc-s);border:1px solid var(--acc-b)}.bulk[hidden]{display:none}
+/* table */
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:16px;min-width:0;margin:0 0 14px}.card h2{margin:0 0 12px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12.5px}
+.tw{overflow-x:auto;background:var(--panel);border:1px solid var(--edge);border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th{position:sticky;top:0;text-align:left;font-weight:600;font-size:12px;color:var(--mute);padding:11px 12px;border-bottom:1px solid var(--edge);white-space:nowrap;background:var(--panel)}
+td{padding:10px 12px;border-bottom:1px solid var(--edge);vertical-align:middle}tbody tr:last-child td{border-bottom:0}
+#users tbody tr{cursor:pointer}#users tbody tr:hover td{background:rgba(255,255,255,.025)}#users tbody tr.sel td{background:var(--acc-s)}
+.who{display:flex;align-items:center;gap:11px;min-width:220px}.av{width:34px;height:34px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;font:700 12.5px inherit;color:var(--title);background:var(--acc-s);box-shadow:inset 0 0 0 1px var(--acc-b)}
+.av.svc{border-radius:9px;color:var(--soft);background:var(--raise);box-shadow:inset 0 0 0 1px var(--border)}.who b{display:block;color:var(--title);font-weight:600}.who small{display:block;color:var(--mute);font-size:12px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.14);color:var(--bad)}.p-warn{background:rgba(227,179,65,.14);color:var(--warn)}.p-ok{background:rgba(63,185,80,.13);color:var(--ok)}.p-info{background:var(--acc-s);color:var(--title)}.p-mut{background:rgba(147,160,182,.12);color:var(--mute)}
+.src{display:inline-block;font:600 10.5px "IBM Plex Mono",ui-monospace,monospace;border:1px solid var(--border);border-radius:5px;padding:1px 6px;margin-right:4px;color:var(--soft)}
+.sc{font:700 12.5px "IBM Plex Mono",ui-monospace,monospace;border-radius:7px;padding:3px 8px;display:inline-block;min-width:34px;text-align:center}
+.why{font-size:11.5px;color:var(--mute);margin-top:3px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}td.muted{white-space:nowrap}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
+/* side panel */
+.drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:70;opacity:0;pointer-events:none;transition:opacity .15s}.drawer-bg.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(480px,100vw);z-index:71;background:var(--panel);border-left:1px solid var(--border);box-shadow:-24px 0 60px rgba(0,0,0,.4);transform:translateX(100%);transition:transform .2s ease;display:flex;flex-direction:column}
+.drawer.open{transform:none}.drawer header{display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--edge)}.drawer header .av{width:44px;height:44px;font-size:15px}
+.drawer header b{display:block;font-size:17px;color:var(--title)}.drawer header small{color:var(--mute)}.drawer .body{padding:16px 20px;overflow:auto;flex:1}
+.drawer h4{margin:18px 0 8px;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:13.5px}.kv dt{color:var(--mute)}.kv dd{margin:0;overflow-wrap:anywhere}
+.reasons{list-style:none;margin:0;padding:0}.reasons li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--edge)}.reasons li:last-child{border-bottom:0}
+.act{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.act select{height:34px}
+.x{margin-left:auto;background:none;border:0;color:var(--mute);font-size:20px;cursor:pointer;line-height:1}
+/* dialog, AI, peers */
+.dlg-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:90}.dlg-bg.open{display:flex}
+.dlg{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;max-width:540px;width:calc(100% - 32px);max-height:90vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.5)}.dlg h3{margin:0 0 10px;color:#fff;font-size:17px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.ai{border:1px solid rgba(163,113,247,.4);background:rgba(163,113,247,.07);border-radius:14px;padding:16px}.ai .lbl{font:600 11px "IBM Plex Mono",ui-monospace,monospace;color:var(--ai);letter-spacing:.1em}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.peer{display:grid;grid-template-columns:170px 1fr 60px;gap:10px;align-items:center;font-size:13px;margin:6px 0}.peer .b{display:flex;height:14px;border-radius:5px;overflow:hidden;background:var(--well)}.peer .b i{display:block;height:100%}
+#filt{max-width:230px}#sort{max-width:200px}
+/* the platform theme (vivid) styles tiles and buttons through --v-* / --m-*: on this page they follow the page's accent, so the brand
+   switch turns them {{org.short}} blue too */
+html.zyb-modern main{--v-acc:var(--acc);--v-acc-ink:#fff;--m-acc:var(--acc);--m-acc2:var(--acc);--m-acc-soft:var(--acc-s)}
+html.zyb-modern main .btn.pri{background:var(--acc)!important;border-color:var(--acc)!important;color:#fff!important}
+html.zyb-modern.org-brand:root body{background:#060B12!important}
+html.zyb-modern.org-brand main{--v-bg:#060B12;--v-panel:#0D131D;--v-panel2:#101723;--v-line:#161E2A;--v-line2:#1F2A3B;--v-line3:#2A374C;--v-on:#101E34;--v-on-line:#284A80;--m-surf:#0D131D;--m-surf2:#101723;--m-line:#161E2A;--m-line2:#1F2A3B;
+  --bg:#060B12;--panel:#0D131D;--raise:#111823;--well:#0A0F18;--border:#1F2A3B;--edge:#161E2A;--text:#E5E9F0;--mute:#919CAD;--soft:#C4CBD7}
+@media print{.tool,.acts,.tabs,.drawer,.drawer-bg{display:none!important}body{background:#fff!important;color:#000}}
+</style>
+</head><body><main>
+<section class="head"><div>
+  <div class="eb">Platform administration · SAMA CSF 3.3.5 · NCA ECC 2-2</div>
+  <h1>User Management</h1>
+  <p>Everyone who can reach the platform in one register - local accounts, single sign-on through AD groups and the people in Active Directory, matched on the user name. Machine learning compares each person with their department; every score says why.</p>
+</div><div class="acts"><a class="btn pri" id="signin" href="identity-signin.html#users" hidden>＋ Add user</a><a class="btn" href="roles.html">Job roles</a><a class="btn" href="sso-access.html">SSO Access from AD</a><a class="btn" href="access-reviews.html">Access reviews</a><button type="button" class="btn" id="xlsx">Excel</button><button type="button" class="btn" id="refresh" title="Read again">⟳</button></div></section>
+<div class="k" id="kk"></div>
+<nav class="tabs" role="tablist" aria-label="User Management sections">
+  <button type="button" role="tab" data-tab="people" aria-selected="true">People<span class="n" id="tn-people"></span></button>
+  <button type="button" role="tab" data-tab="dir" aria-selected="false">Directory &amp; peer groups</button>
+  <button type="button" role="tab" data-tab="checks" aria-selected="false">Checks<span class="n" id="fc"></span></button>
+  <button type="button" role="tab" data-tab="ml" aria-selected="false">Insights (ML)<span class="n" id="tn-ml"></span></button>
+  <button type="button" role="tab" data-tab="ai" aria-selected="false">AI access review</button>
+</nav>
+<section class="pane" id="pane-people">
+  <div class="tool">
+    <div class="seg" id="kind" role="group" aria-label="Kind of account"></div>
+    <input id="q" type="search" placeholder="Search name, account, department" aria-label="Search people">
+    <select id="filt" aria-label="Filter"><option value="">All</option></select>
+    <select id="sort" aria-label="Sort"><option value="score">Sort: review score</option><option value="name">Sort: name</option><option value="last">Sort: last sign-in</option><option value="role">Sort: access level</option></select>
+    <span id="fchip"></span><span class="sp"></span><span class="muted" id="uc"></span>
+  </div>
+  <div class="bulk" id="bulk" hidden><b id="bulkn"></b><span class="sp"></span>
+    <select id="bulkrole" aria-label="New access level"><option value="">Change access level to…</option><option value="viewer">viewer</option><option value="operator">operator</option><option value="admin">admin</option></select>
+    <button type="button" class="btn sm" id="bulken">Enable</button><button type="button" class="btn sm dang" id="bulkdis">Disable</button><button type="button" class="btn sm" id="bulkx">Clear</button></div>
+  <div class="tw" id="users"><div class="empty">Loading…</div></div>
+  <p class="note"><span class="src">LOCAL</span> account in the sign-in service · <span class="src">SSO</span> job role from an AD group · <span class="src">AD</span> found in Active Directory. Click a person for their details and actions. <span class="muted" id="up"></span></p>
+</section>
+<section class="pane" id="pane-dir" hidden><div class="g2">
+  <div class="card"><h2>Active Directory <span class="c" id="adst"></span><span class="sp"></span><span id="adbtns"></span></h2><div id="adbox"></div></div>
+  <div class="card"><h2>Peer groups (ML) <span class="c">access level by AD department - an outlier holds a level above the department's usual one</span></h2><div id="peers"></div></div>
+</div></section>
+<section class="pane" id="pane-checks" hidden><div class="card"><h2>Checks <span class="c">SAMA CSF 3.3.5 - what an auditor will ask about</span></h2><div id="find"><div class="empty">Loading…</div></div></div></section>
+<section class="pane" id="pane-ml" hidden><div id="mlbox"><div class="empty">Loading…</div></div>
+  <p class="note">Computed in this page from the register above (platform accounts, SSO job roles, Active Directory). Each finding is a lead for the access review, not a decision - and nothing here changes an account.</p></section>
+<section class="pane" id="pane-ai" hidden><div class="ai"><div class="lbl">AI ACCESS REVIEW · READ-ONLY · A DRAFT TO VERIFY</div>
+  <p class="muted" style="margin:8px 0">The AI reads the review list this page worked out (each person's level, MFA and the reasons behind their score - no passwords, codes or addresses) and drafts the access review: who to disable, who to step down, what to confirm with managers. It changes nothing.</p>
+  <div id="aibox"></div></div></section>
+</main>
+<div class="drawer-bg" id="drbg"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drn" aria-hidden="true"><header><span class="av" id="drav"></span><div><b id="drn"></b><small id="drs"></small></div><button type="button" class="x" id="drx" aria-label="Close">×</button></header><div class="body" id="drb"></div></aside>
+<div class="dlg-bg" id="dlgbg" role="dialog" aria-modal="true" aria-labelledby="dlgt"><div class="dlg"><h3 id="dlgt"></h3><div id="dlgb"></div><div class="bar" style="margin-top:14px;justify-content:flex-end"><button type="button" class="btn" id="dlgno">Cancel</button><button type="button" class="btn pri" id="dlgok">OK</button></div></div></div>
+<div class="dlg-bg" id="wpbg" role="dialog" aria-modal="true" aria-labelledby="wpt" style="z-index:95"><div class="dlg" style="max-width:740px"><h3 id="wpt">Welcome e-mail preview</h3>
+  <div class="bar" style="gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><label class="muted" style="font-size:12px">Language <select id="wp-lang" aria-label="Language of the welcome kit"><option value="both">Arabic and English</option><option value="ar">Arabic</option><option value="en">English</option></select></label><span class="muted" style="font-size:12px" id="wp-for"></span></div>
+  <div style="font-size:12px;margin-bottom:6px"><span class="muted">Subject:</span> <b id="wps"></b></div>
+  <iframe id="wpf" sandbox="" title="welcome e-mail preview" style="width:100%;height:60vh;border:1px solid var(--border);border-radius:8px;background:#fff"></iframe>
+  <p class="muted" style="font-size:12px;margin:8px 0 0">Exactly what the person receives. Nothing is sent from this preview, and the e-mail never contains a password.</p>
+  <div class="bar" style="margin-top:12px;justify-content:flex-end"><button type="button" class="btn" id="wpx">Close</button></div></div></div>
+<script src="vendor/zyb-xlsx.js"></script>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var esc=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},LV=['viewer','analyst','operator','admin'],ROLE='viewer',ME='',LOC=null,SCFG=null,LOCERR='',D={roles:[],assignments:[]},AD=null,ADERR='',AIST=null,AIOUT=null,P=[],Q='',F='',SORT='score',SEL={},DAY=86400000;
+  function req(m,url,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,url);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b!==undefined)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: the status explains */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('the server did not answer'));};x.send(b!==undefined?JSON.stringify(b):null);});}
+  function who(){return new Promise(function(ok){var x=new XMLHttpRequest();x.open('GET','/dashboards/whoami.json');x.onload=function(){try{ok(JSON.parse(x.responseText));}catch(e){ok(null);}};x.onerror=function(){ok(null);};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function pill(t,c){return '<span class="pill p-'+c+'">'+esc(t)+'</span>';}
+  function when(s){var t=s?Date.parse(s):NaN;return isFinite(t)?new Date(t).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—';}
+  var lc=function(x){return String(x||'').trim().toLowerCase();};
+  function admin(){return ROLE==='admin';}function op(){return RANK[ROLE]>=RANK.operator;}
+  function mfaOf(u){var v=u.mfa!==undefined?u.mfa:u.totp!==undefined?u.totp:u.mfa_enrolled;if(v===undefined||v===null||v==='')return null;return v===true||/^(on|yes|true|totp|enrolled|required)$/i.test(String(v));}
+  function lastOf(u){return u.last_login||u.last_signin||u.lastLogin||u.last_seen||u.last||null;}
+  function roleOf(id){return (D.roles||[]).filter(function(r){return r.id===id;})[0]||null;}
+  function isSvc(user){return /^(system|svc|service|duty|ai)[:._-]/i.test(String(user));}
+  // ---------- one dialog for every change (no browser confirm(): it can be blocked)
+  var DLG=null;function ask(t,h,lab,fn,typed){DLG={fn:fn,typed:typed};$('dlgt').textContent=t;$('dlgb').innerHTML=h+(typed?'<label style="display:block;margin-top:10px;font-size:12px;color:var(--mute)">Type <b>'+esc(typed)+'</b> to confirm<input id="dlgin" autocomplete="off" style="width:100%;margin-top:4px;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 8px"></label>':'');$('dlgok').textContent=lab;$('dlgbg').classList.add('open');setTimeout(function(){($('dlgin')||$('dlgok')).focus();},30);}
+  $('dlgno').addEventListener('click',function(){$('dlgbg').classList.remove('open');DLG=null;});
+  $('dlgok').addEventListener('click',function(){if(!DLG)return;if(DLG.typed&&(($('dlgin')||{}).value||'').trim()!==DLG.typed){toast('Type '+DLG.typed+' exactly to confirm.');return;}var cur=DLG,keep=cur.fn();if(keep===false)return;/* the form refused: stay open with what was typed */if(DLG===cur){$('dlgbg').classList.remove('open');DLG=null;}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&DLG){$('dlgbg').classList.remove('open');DLG=null;}});
+  // ---------- Create account for a person in AD: a platform account through the sign-in service's own admin API (the same call as
+  // Identity & Sign-in -> Add user), prefilled from AD; a role, optionally a job role (Roles & Functions), MFA set up at first sign-in,
+  // a generated initial password shown once for the administrator to hand over. Administrators only (the service checks it too).
+  function genPw(){var a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789',o='',r=new Uint32Array(16);crypto.getRandomValues(r);for(var i=0;i<16;i++)o+=a[r[i]%a.length];return o.slice(0,4)+'-'+o.slice(4,8)+'-'+o.slice(8,12)+'-'+o.slice(12);}
+  function createFor(sam){var p=P.filter(function(x){return x.ad&&x.ad.sam===sam;})[0];if(!p)return;var pw=genPw(),fi='width:100%;margin-top:4px;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 8px',lb='display:block;margin-top:10px;font-size:12px;color:var(--mute)';
+    var jr=(D.roles||[]).filter(function(r){return r&&r.id&&r.name;});
+    ask('Create a platform account','<p style="margin:0 0 6px">For <b>'+esc(p.name||sam)+'</b> from Active Directory'+(p.ad.department?' ('+esc(p.ad.department)+')':'')+'. <span id="ca-intro"></span></p>'
+      +'<label style="'+lb+'">User name<input id="ca-user" value="'+esc(sam)+'" autocomplete="off" style="'+fi+'"></label>'
+      +'<label style="'+lb+'">Full name<input id="ca-name" value="'+esc(p.name||'')+'" style="'+fi+'"></label>'
+      +'<label style="'+lb+'">How they sign in<select id="ca-how" style="'+fi+'"><option value="ad"'+(adConf()?'':' disabled')+'>Their AD account - Windows user name and password (no platform password)</option><option value="local">A local account with its own password (no AD account, or break-glass)</option></select></label><div id="ca-adnote"></div>'
+      +'<label style="'+lb+'">Role (what they may do)<select id="ca-role" style="'+fi+'"><option value="viewer">viewer - read only</option><option value="operator">operator - work and request changes</option><option value="admin">admin - manage users and settings</option></select></label>'
+      +(jr.length?'<label style="'+lb+'">Job role (optional - limits the menu to their job)<select id="ca-job" style="'+fi+'"><option value="">— none —</option>'+jr.map(function(r){return '<option value="'+esc(r.id)+'" data-base="'+esc(r.base||'')+'">'+esc(r.name)+(r.base?' ('+esc(r.base)+')':'')+'</option>';}).join('')+'</select></label>':'')
+      +'<label id="ca-pwl" style="'+lb+'">Initial password - shown once, give it to the person directly<input id="ca-pw" value="'+esc(pw)+'" autocomplete="off" style="'+fi+';font-family:Consolas,monospace"></label>'
+      +'<label id="ca-mfal" style="'+lb+'">Two-step verification<select id="ca-mfa" style="'+fi+'"><option value="on">Required - set up at first sign-in</option><option value="policy">Follow the policy</option></select></label>'
+      +'<label style="'+lb+'">E-mail (from AD)<input id="ca-mail" type="email" value="'+esc(p.ad.mail||'')+'" autocomplete="off" style="'+fi+'"></label>'
+      +'<label style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:13px"><input type="checkbox" id="ca-welcome"'+(p.ad.mail?' checked':'')+' style="margin-top:3px"><span>E-mail the <b>welcome kit</b>: the sign-in link, user name, role and first-sign-in steps. <span class="muted">It never contains the password - you give that to the person directly.</span></span></label>'
+      +'<label style="'+lb+'">Language of the welcome kit<select id="ca-lang" style="'+fi+'"><option value="both">Arabic and English</option><option value="ar">Arabic</option><option value="en">English</option></select></label>'
+      +'<p style="margin:8px 0 0"><button type="button" class="btn sm" id="ca-preview">Preview the welcome e-mail</button></p>'
+      +'<p class="muted" style="font-size:12px;margin:10px 0 0">For many people at once, give their AD group a role in <a href="sso-access.html" style="color:var(--info)">SSO Access from AD</a> - they then sign in with their own AD password and no account is needed here.</p>',
+      'Create account',function(){var b={user:($('ca-user').value||'').trim(),name:($('ca-name').value||'').trim(),role:$('ca-role').value,password:$('ca-pw').value,mfa:$('ca-mfa').value,disabled:false},job=$('ca-job')?$('ca-job').value:'',mail=($('ca-mail').value||'').trim(),wel=$('ca-welcome').checked,lang=$('ca-lang').value;
+        if(!/^[A-Za-z0-9._@-]{2,100}$/.test(b.user)){toast('User name: letters, digits and . _ @ - only (2-100).');return false;}
+        if(wel&&!/^[^\s@<>"',;]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(mail)){toast('E-mail: give the person\'s e-mail address for the welcome kit, or untick it.');return false;}
+        if($('ca-how')&&$('ca-how').value==='ad'){createAd(b,job,mail,wel,lang);return;}
+        if(!(b.password.length>=12&&/[A-Za-z]/.test(b.password)&&/\d/.test(b.password))){toast('Initial password: 12+ characters with letters and digits.');return false;}
+        req('POST','/auth/admin/users',b).then(function(){return job?req('POST','/api/itam/roles/assign',{user:b.user,role_id:job}).then(function(){return true;},function(e){toast('Account created, but the job role was not given: '+e.message);return false;}):true;})
+          .then(function(){return wel?sendWelcome({user:b.user,email:mail,name:b.name,role:b.role,job:job?((roleOf(job)||{}).name||job):'',lang:lang}).then(function(){return '<p style="color:var(--ok,#1a9c5b)">✓ Welcome kit e-mailed to '+esc(mail)+'.</p>';},function(e){return '<p class="err">The welcome kit was not sent: '+esc(e.message)+'</p>';}):'';})
+          .then(function(wh){ask('Account created','<p>'+esc(b.user)+' can now sign in as <b>'+esc(b.role)+'</b>'+(job?' with the job role <b>'+esc((roleOf(job)||{}).name||job)+'</b>':'')+'.</p>'+wh+'<p>Initial password (not shown again) - give it to the person directly, not by e-mail:</p><p style="font:600 18px Consolas,monospace;letter-spacing:.04em">'+esc(b.password)+'</p><p class="muted" style="font-size:12px">They set up two-step verification at first sign-in.</p>','Done',function(){});load();})
+          .catch(function(e){toast(e.status===403?'Creating accounts needs the administrator role.':e.status===409||/exists/i.test(e.message)?b.user+' already has an account.':'The account was not created: '+e.message);});});
+    var j=$('ca-job');if(j)j.addEventListener('change',function(){var o=j.options[j.selectedIndex],bs=o&&o.getAttribute('data-base');if(bs)$('ca-role').value=bs;});
+    var hw=$('ca-how');hw.value=adConf()?'ad':'local';hw.addEventListener('change',caHow);caHow();}
+  // sign-in with Active Directory: the sign-in service's AD account (POST /auth/admin/users {ad:true}) - no platform password
+  function adConf(){return !!(SCFG&&SCFG.ldap);}
+  function caHow(){var ad=$('ca-how').value==='ad',L=(SCFG&&SCFG.ldap)||{},n=$('ca-adnote');$('ca-pwl').hidden=ad;$('ca-mfal').hidden=ad;
+    $('ca-intro').textContent=ad?'They sign in with their own Windows (AD) user name and password - the platform keeps no password for them - then set up two-step verification.':'They sign in with this user name and the password below, then set up two-step verification.';
+    n.innerHTML=!ad?'':(!L.enabled?'<p class="muted" style="font-size:12px;margin:6px 0 0;color:var(--warn,#c98a00)">AD sign-in is switched off on the server: they can sign in once an administrator switches it on (setup-ad-signin).</p>':'')
+      +(L.access!=='listed'?'<p class="muted" style="font-size:12px;margin:6px 0 0">AD access is set to <i>anyone in the SOC groups</i>: their role comes from their AD group at sign-in. Switch Identity &amp; Sign-in to <i>Only people added here</i> to set the role here.</p>':'');}
+  function createAd(b,job,mail,wel,lang){
+    req('POST','/auth/admin/users',{ad:true,user:b.user,name:b.name,role:b.role}).then(function(j){var key=(j&&j.user)||b.user,jn=job?((roleOf(job)||{}).name||job):'';
+      return (job?req('POST','/api/itam/roles/assign',{user:key,role_id:job}).then(function(){return '';},function(e){return '<p class="err">The job role was not given: '+esc(e.message)+'</p>';}):Promise.resolve(''))
+        .then(function(jw){return (wel?sendWelcome({user:b.user,email:mail,name:b.name,role:b.role,job:jn,lang:lang,signin:'ad'}).then(function(){return '<p style="color:var(--ok,#1a9c5b)">✓ Welcome kit e-mailed to '+esc(mail)+'.</p>';},function(e){return '<p class="err">The welcome kit was not sent: '+esc(e.message)+'</p>';}):Promise.resolve('')).then(function(wh){return jw+wh;});})
+        .then(function(wh){ask('AD account added','<p><b>'+esc(b.user)+'</b> can now sign in with their own Windows (AD) user name and password as <b>'+esc(b.role)+'</b>'+(jn?' with the job role <b>'+esc(jn)+'</b>':'')+'.</p>'+wh+'<p class="muted" style="font-size:12px">No platform password was created. They set up two-step verification at first sign-in; their password is changed in Windows as usual.</p>','Done',function(){});load();});})
+    .catch(function(e){toast(e.status===403?'Adding accounts needs the administrator role.':e.status===409?b.user+' already has access.':'Not added: '+e.message);});}
+  // ---------- the welcome kit (engine/welcome-mail.js): link, user name, role and first-sign-in steps through the platform e-mail relay
+  function sendWelcome(b){return req('POST','/api/itam/welcome/send',b);}
+  // the preview: the engine composes it (POST /welcome/preview, nothing sent), shown in a sandboxed frame (no scripts, no links followed)
+  var WP=null;
+  function previewWelcome(b){WP=b;$('wp-lang').value=b.lang||'both';$('wp-for').textContent='for '+b.user;$('wps').textContent='';$('wpf').srcdoc='';$('wpbg').classList.add('open');drawPreview();}
+  function drawPreview(){var b=WP;if(!b)return;req('POST','/api/itam/welcome/preview',{user:b.user,name:b.name||'',role:b.role||'viewer',job:b.job||'',lang:$('wp-lang').value,signin:b.signin||'local'}).then(function(r){if(WP!==b)return;$('wps').textContent=r.subject||'';$('wpf').srcdoc=r.html||'';},function(e){if(WP!==b)return;$('wpbg').classList.remove('open');WP=null;toast(e.status===403?'The welcome e-mail preview is for administrators.':'No preview: '+e.message);});}
+  function closePreview(){$('wpbg').classList.remove('open');WP=null;}
+  $('wp-lang').addEventListener('change',drawPreview);$('wpx').addEventListener('click',closePreview);
+  $('wpbg').addEventListener('click',function(e){if(e.target.id==='wpbg')closePreview();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&WP){e.stopImmediatePropagation();closePreview();}},true);
+  function personPreview(p){var u=p.local;if(!u)return;previewWelcome({user:u.user,name:p.name||u.name||'',role:u.role,job:p.job?p.job.name:''});}
+  function welcomeFor(p){var u=p.local;if(!u)return;var a=p.ad||{},fi='width:100%;margin-top:4px;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 8px';
+    ask('Send the welcome e-mail to '+u.user,'<p style="margin:0 0 8px">The sign-in link, their user name, role'+(p.job?' and job role':'')+' and the first-sign-in steps. It never contains a password.</p><label style="display:block;font-size:12px;color:var(--mute)">E-mail<input id="wl-mail" type="email" value="'+esc(a.mail||'')+'" style="'+fi+'"></label><p style="margin:8px 0 0"><button type="button" class="btn sm" id="wl-preview">Preview the e-mail</button></p>','Send',function(){var m=($('wl-mail').value||'').trim();
+      if(!/^[^\s@<>"',;]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(m)){toast('E-mail: give an e-mail address.');return false;}
+      sendWelcome({user:u.user,email:m,name:p.name||u.name||'',role:u.role,job:p.job?p.job.name:''}).then(function(){toast('Welcome e-mail sent to '+m);},function(e){toast(e.status===403?'Sending the welcome e-mail needs the administrator role.':'Not sent: '+e.message);});});}
+  // ---------- the register: local accounts + SSO job roles + AD, matched on the user name (sAMAccountName or UPN), never on names
+  function build(){
+    var L=LOC||[],A=(AD&&AD.users)||[],byAd={},people={},now=Date.now();
+    A.forEach(function(a){if(a.sam)byAd[lc(a.sam)]=a;if(a.upn)byAd[lc(a.upn)]=a;});
+    var key=function(name){var a=byAd[lc(name)];return a?'ad:'+lc(a.sam):'acct:'+lc(name);};
+    var get=function(k,a){return people[k]||(people[k]={k:k,ad:a||null,local:null,sso:[]});};
+    L.forEach(function(u){var k=key(u.user),p=get(k,byAd[lc(u.user)]);p.local=u;});
+    (D.assignments||[]).forEach(function(x){if(x.source!=='sso-group')return;var k=key(x.user),p=get(k,byAd[lc(x.user)]);if(!p.sso.some(function(s){return s.role_id===x.role_id;}))p.sso.push(x);});
+    A.forEach(function(a){get('ad:'+lc(a.sam),a);});
+    var out=Object.keys(people).map(function(k){var p=people[k],u=p.local,a=p.ad,hand=u?(D.assignments||[]).filter(function(x){return !x.source&&lc(x.user)===lc(u.user);})[0]:null;
+      var jr=hand?roleOf(hand.role_id):p.sso.length?roleOf(p.sso[0].role_id):null;
+      p.name=(u&&u.name)||(a&&a.display_name)||(u&&u.user)||(a&&a.sam);p.account=u?u.user:p.sso.length?p.sso[0].user:'';p.dept=a?a.department||'':'';p.title=a?a.title||'':'';
+      p.access=!!((u&&!u.disabled)||p.sso.length);p.level=u?u.role:jr?jr.base:'';p.job=jr;p.jobSrc=hand?'hand':p.sso.length?'sso':'';p.mfa=u?mfaOf(u):null;
+      p.last=u&&lastOf(u)?lastOf(u):a&&a.last_logon?a.last_logon:null;p.disabled=!!(u&&u.disabled);
+      // the review score: named points, nothing hidden
+      var pts=[],add=function(w,why){pts.push([w,why]);};
+      if(a&&!a.enabled&&p.access)add(60,'disabled in AD (a leaver?) but can still sign in to the platform');
+      if(u&&!u.disabled&&u.role==='admin'&&p.mfa===false)add(40,'administrator without MFA');else if(u&&!u.disabled&&p.mfa===false)add(20,'no MFA');
+      var lt=Date.parse(u&&lastOf(u)||'');if(u&&!u.disabled){if(isFinite(lt)&&now-lt>90*DAY)add(20,'no platform sign-in for '+Math.round((now-lt)/DAY)+' days');else if(!isFinite(lt)&&lastOf(u)===null&&u.lastLogin===undefined&&u.last_login===undefined){/* the service does not report sign-ins: not counted */}}
+      if(u&&!u.disabled&&!a&&AD&&AD.users&&!u.breakglass&&!isSvc(u.user))add(15,'no AD account of this name - who owns it?');
+      if(u&&a&&a.admin_count&&!u.disabled)add(10,'a privileged AD account (adminCount) signs in to the platform - use a separate everyday account');
+      if(u&&hand&&jr&&u.role&&jr.base&&u.role!==jr.base)add(15,'base level '+u.role+' differs from the job role '+jr.name+' ('+jr.base+')');
+      p.pts=pts;return p;});
+    // peer groups (ML): within an AD department of 3+ people with access, a level held by a third or fewer of the peers and above the
+    // department's median is an outlier - "admin while 4 of 5 in Claims are viewer"
+    var dept={};out.forEach(function(p){if(p.access&&p.dept&&p.level)(dept[p.dept]=dept[p.dept]||[]).push(p);});
+    Object.keys(dept).forEach(function(d){var G=dept[d];if(G.length<3)return;var r=G.map(function(p){return RANK[p.level]||0;}).sort(function(x,y){return x-y;}),med=r[Math.floor((r.length-1)/2)];
+      G.forEach(function(p){var mine=RANK[p.level]||0,same=G.filter(function(q){return q.level===p.level;}).length;if(mine>med&&same<=Math.max(1,Math.floor(G.length*0.34))){var medN=G.filter(function(q){return (RANK[q.level]||0)===med;}).length;
+        p.outlier=true;p.pts.push([25,p.level+' while '+medN+' of '+G.length+' in '+d+' are '+LV[med]]);}});});
+    out.forEach(function(p){p.score=Math.min(100,p.pts.reduce(function(s,x){return s+x[0];},0));});
+    P=out;return {dept:dept};}
+  var FILT={access:['With access',function(p){return p.access;}],admin:['Administrators',function(p){return p.access&&p.level==='admin';}],nomfa:['Local accounts without MFA',function(p){return p.local&&!p.disabled&&p.mfa===false;}],
+    leaver:['Disabled in AD, can still sign in',function(p){return p.ad&&!p.ad.enabled&&p.access;}],orphan:['No AD account',function(p){return p.pts.some(function(x){return /no AD account/.test(x[1]);});}],
+    outlier:['Peer outliers (ML)',function(p){return !!p.outlier;}],review:['Need review (score 30+)',function(p){return p.score>=30;}],sso:['Single sign-on (job role from AD)',function(p){return p.sso.length>0;}],
+    adonly:['In AD, no platform access',function(p){return p.ad&&p.ad.enabled&&!p.access&&!p.local;}],disabled:['Disabled here',function(p){return p.disabled;}]};
+  function rows(){var L=P.filter(function(p){return (!F||FILT[F][1](p))&&(!Q||[p.name,p.account,p.ad&&p.ad.sam,p.dept,p.title].join(' ').toLowerCase().indexOf(Q)>=0);});
+    var by={score:function(a,b){return b.score-a.score||String(a.name).localeCompare(String(b.name));},name:function(a,b){return String(a.name).localeCompare(String(b.name));},last:function(a,b){return (Date.parse(b.last||'')||0)-(Date.parse(a.last||'')||0);},role:function(a,b){return (RANK[b.level]||-1)-(RANK[a.level]||-1);}};
+    return L.sort(by[SORT]);}
+  // ---------- what kind of account: a person, a service / system account, or a room / resource mailbox. Only people get "Create
+  // account"; the other two have their own switch so meeting rooms and $SYSTEM objects do not crowd the people list.
+  var KIND='person',TAB='people',OPEN=null;
+  var ROOM=/\b(meeting|conference|board|training|interview)\s*room\b|\broom\s*\d|\bauditorium\b|\bboardroom\b|\bhall\b|\bprojector\b|\bpool car\b/i;
+  var SYS=/^(\$|__|_|svc[-_.]|sa[-_.]|service[-_.]|sql|iis[-_.]|krbtgt$|guest$|defaultaccount$|wdagutility|healthmailbox|systemmailbox|federatedemail|migration\.|discoverysearchmailbox|exchange|msol_|aad_|sync_|azureadssoacc|ad[-_]?sync|backup[-_.]|scan(ner)?[-_.]|noreply|no-reply)/i;
+  function kindOf(p){var n=String(p.name||''),s=String((p.ad&&p.ad.sam)||p.account||'');
+    if(ROOM.test(n))return 'room';
+    if(SYS.test(s)||SYS.test(n)||isSvc(s)||/^[A-Z0-9$_-]{14,}$/.test(s.replace(/[^A-Za-z0-9$_-]/g,''))&&/\d/.test(s)&&!/[a-z]/.test(s))return 'svc';
+    return 'person';}
+  function initials(p){var w=String(p.name||p.account||'?').replace(/[^\p{L}\p{N} ]/gu,' ').trim().split(/\s+/);return ((w[0]||'?')[0]+((w[1]||'')[0]||'')).toUpperCase();}
+  function scCol(sc){return sc>=60?'#ff7b72':sc>=30?'#e3b341':sc?'#79b8ff':'#3fb950';}
+  function inKind(p){return KIND==='all'||p.kind===KIND;}
+  function view(){return rows().filter(inKind);}
+  function tile(l,v,s,cls,f){return '<button type="button" class="t '+(cls||'')+(F===f?' on':'')+'" data-f="'+f+'" aria-pressed="'+(F===f)+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function ring(){var acc=P.filter(function(p){return p.access;}),s=acc.length?Math.max(0,Math.round(100-acc.reduce(function(t,p){return t+p.score;},0)/acc.length)):null,r=26,c=2*Math.PI*r,col=s==null?'#6e7681':s>=85?'#3fb950':s>=70?'#79b8ff':s>=50?'#e3b341':'#ff7b72';
+    return '<div class="t ring" id="ring"><svg viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="'+esc(s==null?'access hygiene not measured':'access hygiene '+s+' of 100')+'"><circle cx="32" cy="32" r="'+r+'" fill="none" stroke="var(--edge)" stroke-width="7"/><circle cx="32" cy="32" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="7" stroke-linecap="round" stroke-dasharray="'+(c*(s||0)/100).toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" fill="#fff" font-size="'+(s==null?10:16)+'" font-weight="700" font-family="IBM Plex Mono,Consolas,monospace">'+(s==null?'—':s)+'</text></svg><div><div class="l">Access hygiene</div><div class="s">'+(s==null?'not measured':'100 less the average review score')+'</div></div></div>';}
+  function draw(){var M=build();P.forEach(function(p){p.kind=kindOf(p);});
+    var K=P.filter(inKind),n=function(f){return K.filter(FILT[f][1]).length;};
+    $('kk').innerHTML=ring()+tile('With access',n('access'),K.length+' in this list','','access')+tile('Administrators',n('admin'),'with access','','admin')+tile('Without MFA',n('nomfa'),'local accounts',n('nomfa')?'bad':'ok','nomfa')
+      +tile('Leavers with access',n('leaver'),'disabled in AD',n('leaver')?'bad':'ok','leaver')+tile('Need review',n('review'),'score 30 or more',n('review')?'warn':'ok','review')+tile('In AD, no access',n('adonly'),'can be given an account','','adonly');
+    try{drawMl();}catch(e){var mb=$('mlbox');if(mb)mb.innerHTML='<p class="err">Insights could not be drawn: '+esc(e.message)+'</p>';/* shown on the page; the other tabs still work */}
+    var KN={person:0,svc:0,room:0};P.forEach(function(p){KN[p.kind]++;});
+    $('kind').innerHTML=[['person','People'],['svc','Service & system'],['room','Rooms & resources'],['all','All']].map(function(x){return '<button type="button" data-kind="'+x[0]+'" aria-pressed="'+(KIND===x[0])+'">'+esc(x[1])+'<span class="n">'+(x[0]==='all'?P.length:KN[x[0]])+'</span></button>';}).join('');
+    var fs=$('filt');if(fs.options.length<2)Object.keys(FILT).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=FILT[k][0];fs.appendChild(o);});fs.value=F;
+    var L=view();$('uc').textContent=L.length+' shown';$('tn-people').textContent=K.length;
+    $('fchip').innerHTML=F?'<span class="fchip">'+esc(FILT[F][0])+'<button type="button" id="fclr" aria-label="Clear filter" title="Clear filter">✕</button></span>':'';
+    var errTxt=LOCERR&&!P.length?'<p class="err" style="padding:14px">'+esc(LOCERR)+'</p>':'';
+    $('users').innerHTML=errTxt||(!L.length?'<div class="empty" style="padding:18px">'+(P.length?'No one matches.':'No accounts.')+'</div>'
+      :(LOCERR?'<p class="note" style="padding:0 14px">'+esc(LOCERR)+'</p>':'')+'<table><thead><tr><th style="width:36px">'+(admin()?'<input type="checkbox" id="selall" aria-label="Select all local accounts shown">':'')+'</th><th>Person</th><th>Sources</th><th>Access level</th><th>Job role</th><th>MFA</th><th>Last sign-in</th><th>Status</th><th>Review (ML)</th><th></th></tr></thead><tbody>'+L.map(function(p){
+        var me=p.local&&lc(p.local.user)===ME,can=admin()&&p.local&&!me,sc=p.score,col=scCol(sc),sel=p.local&&SEL[p.local.user];
+        return '<tr data-u="'+esc(p.local?p.local.user:'')+'" data-k="'+esc(p.k)+'"'+(sel?' class="sel"':'')+'><td>'+(can?'<input type="checkbox" data-sel="'+esc(p.local.user)+'"'+(sel?' checked':'')+' aria-label="Select '+esc(p.local.user)+'">':'')+'</td>'
+          +'<td><div class="who"><span class="av'+(p.kind!=='person'?' svc':'')+'">'+esc(initials(p))+'</span><div><b>'+esc(p.name)+(me?' '+pill('you','info'):'')+(p.local&&p.local.breakglass?' '+pill('break-glass','warn'):'')+'</b><small>'+esc([p.account||(p.ad&&p.ad.sam),p.dept,p.title].filter(Boolean).join(' · '))+'</small></div></div></td>'
+          +'<td>'+(p.local?'<span class="src">LOCAL</span>':'')+(p.sso.length?'<span class="src" title="'+esc('job role from AD group '+p.sso[0].via)+'">SSO</span>':'')+(p.ad?'<span class="src" title="'+esc(p.ad.enabled?'enabled in AD':'disabled in AD')+'">AD'+(p.ad.enabled?'':' ✕')+'</span>':'')+'</td>'
+          +'<td>'+(p.level?pill(p.level,p.level==='admin'?'bad':p.level==='operator'?'info':'mut'):'<span class="muted">—</span>')+'</td>'
+          +'<td>'+(p.job?esc(p.job.name)+(p.jobSrc==='sso'?'<div class="why">from '+esc(p.sso[0].via)+'</div>':''):'<span class="muted">'+(p.access?'none':'—')+'</span>')+'</td>'
+          +'<td>'+(p.local?(p.mfa===null?'<span class="muted">—</span>':p.mfa?pill('on','ok'):pill('off','bad')):p.sso.length?'<span class="muted" title="enforced by the identity provider">via Entra</span>':'<span class="muted">—</span>')+'</td>'
+          +'<td class="muted">'+esc(when(p.last))+'</td><td>'+(p.disabled?pill('disabled','mut'):p.access?pill('active','ok'):pill('no access','mut'))+'</td>'
+          +'<td><span class="sc" style="background:'+col+'22;color:'+col+'" title="'+esc(p.pts.map(function(x){return '+'+x[0]+' '+x[1];}).join('\n')||'nothing to review')+'">'+sc+'</span>'+(p.pts.length?'<div class="why">'+esc(p.pts[0][1])+(p.pts.length>1?' (+'+(p.pts.length-1)+')':'')+'</div>':'')+'</td>'
+          +'<td style="white-space:nowrap;text-align:right">'+(can?'<button type="button" class="btn sm'+(p.disabled?'':' dang')+'" data-toggle="'+(p.disabled?'0':'1')+'">'+(p.disabled?'Enable':'Disable')+'</button>':'')
+          +(admin()&&!p.local&&p.ad&&p.ad.enabled&&!p.sso.length&&p.kind==='person'?'<button type="button" class="btn sm pri" data-create="'+esc(p.ad.sam)+'">Create account</button>':'')+'</td></tr>';}).join('')+'</tbody></table>');
+    paintBulk();drawPeers(M.dept);drawAd();drawChecks();drawAi();if(OPEN)openPerson(OPEN,true);}
+  function paintBulk(){var ns=Object.keys(SEL).filter(function(k){return SEL[k];}).length;$('bulk').hidden=!ns;$('bulkn').textContent=ns+' selected';}
+  // ---------- tabs
+  function tab(t){TAB=t;[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});['people','dir','checks','ml','ai'].forEach(function(x){$('pane-'+x).hidden=x!==t;});}
+  /* ---------- Insights (ML), from the register already built (P) and the AD list (AD.users):
+     - job-title peers: people with the same title (normalised) and access, a level above the title's most common one held by a third
+       or fewer of them - the department view misses a title spread over departments
+     - group creep: AD group memberships far above the department's (robust z on the median and MAD, departments of 5+) - access that
+       accumulated with every move
+     - dormant accounts: enabled AD accounts by last sign-in (30 / 90 / 180 days / never) - the ones with platform access first
+     - privilege concentration: administrators as a share of people with access, overall and per department
+     - what drives the review score: points summed per reason across everyone - the control that clears the most */
+  function med(a){var x=a.slice().sort(function(p,q){return p-q;}),n=x.length;return n?(n%2?x[(n-1)/2]:(x[n/2-1]+x[n/2])/2):null;}
+  function normTitle(t){return String(t||'').toLowerCase().replace(/\b(senior|sr\.?|junior|jr\.?|assistant|asst\.?|lead|principal|chief)\b/g,'').replace(/[^a-z\u0600-\u06ff ]/g,' ').replace(/\s+/g,' ').trim();}
+  function drawMl(){var box=$('mlbox');if(!box||!P)return;var now=Date.now(),acc=P.filter(function(p){return p.access&&p.kind==='person';}),F=[];
+    // job-title peers
+    var byT={};acc.forEach(function(p){var t=normTitle(p.title);if(t&&p.level)(byT[t]=byT[t]||[]).push(p);});var tout=[];
+    Object.keys(byT).forEach(function(t){var G=byT[t];if(G.length<3)return;var cnt={};G.forEach(function(p){cnt[p.level]=(cnt[p.level]||0)+1;});var mode=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]||(RANK[a]||0)-(RANK[b]||0);})[0];
+      G.forEach(function(p){if((RANK[p.level]||0)>(RANK[mode]||0)&&cnt[p.level]<=Math.max(1,Math.floor(G.length/3)))tout.push({p:p,t:t,mode:mode,n:G.length,m:cnt[mode]});});});
+    // group creep
+    var A=(AD&&AD.users)||[],byD={};A.forEach(function(a){if(a.enabled&&a.department&&a.groups!=null)(byD[a.department]=byD[a.department]||[]).push(a);});var creep=[];
+    Object.keys(byD).forEach(function(d){var G=byD[d];if(G.length<5)return;var v=G.map(function(a){return +a.groups||0;}),m=med(v),mad=med(v.map(function(x){return Math.abs(x-m);}))||Math.max(1,m*0.2);
+      G.forEach(function(a){var z=0.6745*((+a.groups||0)-m)/mad;if(z>=3.5&&(+a.groups||0)-m>=5)creep.push({a:a,d:d,m:m,z:Math.round(z*10)/10});});});
+    creep.sort(function(x,y){return y.z-x.z;});
+    // dormancy
+    var B=[['under 30 days',30],['30-90 days',90],['90-180 days',180],['over 180 days',1e9]],bk=[0,0,0,0],never=0,dormAcc=[];
+    A.filter(function(a){return a.enabled;}).forEach(function(a){var t=Date.parse(a.last_logon||'');if(!isFinite(t)){never++;return;}var d=(now-t)/DAY;for(var i=0;i<B.length;i++)if(d<B[i][1]){bk[i]++;break;}
+      if(d>=90){var pp=P.filter(function(p){return p.ad===a&&p.access;})[0];if(pp)dormAcc.push({p:pp,days:Math.round(d)});}});
+    dormAcc.sort(function(x,y){return y.days-x.days;});
+    // privilege concentration
+    var adm=acc.filter(function(p){return p.level==='admin';}),dep={};acc.forEach(function(p){var d=p.dept||'no department';dep[d]=dep[d]||{n:0,a:0};dep[d].n++;if(p.level==='admin')dep[d].a++;});
+    var share=acc.length?Math.round(100*adm.length/acc.length):0;
+    // drivers
+    var drv={};P.forEach(function(p){(p.pts||[]).forEach(function(x){var k=String(x[1]).replace(/\d+ days/,'N days').replace(/ while .*$/,' (peer outlier)').replace(/base level .*/,'base level differs from the job role');drv[k]=drv[k]||{p:0,n:0};drv[k].p+=x[0];drv[k].n++;});});
+    var dk=Object.keys(drv).sort(function(a,b){return drv[b].p-drv[a].p;}).slice(0,7),dmx=Math.max.apply(null,dk.map(function(k){return drv[k].p;}).concat([1]));
+    var bar=function(l,v,mx,c,r){return '<div style="display:grid;grid-template-columns:minmax(150px,260px) 1fr 110px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0"><span>'+esc(l)+'</span><span style="height:9px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden"><i style="display:block;height:100%;width:'+(v/mx*100).toFixed(1)+'%;background:'+c+'"></i></span><span class="muted">'+esc(r)+'</span></div>';};
+    var person=function(p){return '<a href="#" data-open="'+esc(p.k)+'">'+esc(p.name||p.account)+'</a>';};
+    var h='<div class="g2"><div class="card"><h2>What drives the review score <span class="c">points summed across everyone</span></h2>'+(dk.length?dk.map(function(k){return bar(k,drv[k].p,dmx,'#e5484d',drv[k].n+' people');}).join('')+'<p class="muted" style="font-size:12px">Fix the top line first - one control clears it for everyone.</p>':'<div class="empty">No review point on anyone.</div>')+'</div>'
+      +'<div class="card"><h2>Administrators <span class="c">share of people with access</span></h2><div style="font-size:28px;font-weight:800;color:'+(share>15?'#ff7b72':share>8?'#e3b341':'#3fb950')+'">'+share+'%</div><div class="muted" style="font-size:12px">'+esc(adm.length+' of '+acc.length+' - least privilege usually keeps this under 10%')+'</div>'
+      +Object.keys(dep).filter(function(d){return dep[d].a;}).sort(function(a,b){return dep[b].a-dep[a].a;}).slice(0,8).map(function(d){return bar(d,dep[d].a,Math.max(1,adm.length),'#e3b341',dep[d].a+' of '+dep[d].n);}).join('')+'</div></div>'
+      +'<div class="g2" style="margin-top:12px"><div class="card"><h2>Same job title, higher access <span class="c">'+tout.length+'</span></h2>'+(tout.length?'<table><tbody>'+tout.slice(0,30).map(function(x){return '<tr><td>'+person(x.p)+'</td><td>'+esc(x.p.title||'')+'</td><td>'+esc(x.p.level+' while '+x.m+' of '+x.n+' with this title are '+x.mode)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No title has an outlier (needs 3+ people with the same title and access).</div>')+'</div>'
+      +'<div class="card"><h2>AD group creep <span class="c">'+creep.length+'</span></h2>'+(creep.length?'<table><tbody>'+creep.slice(0,30).map(function(x){return '<tr><td>'+esc(x.a.display_name||x.a.sam)+'</td><td>'+esc(x.d)+'</td><td>'+esc(x.a.groups+' groups against a usual '+x.m+' (z '+x.z+')')+'</td></tr>';}).join('')+'</tbody></table><p class="muted" style="font-size:12px">Access that piled up with each move - review the groups with the person\'s manager.</p>':'<div class="empty">'+esc(A.some(function(a){return a.groups!=null;})?'No one is far above their department (needs 5+ people per department).':'The directory read did not include group counts - refresh Active Directory.')+'</div>')+'</div></div>'
+      +'<div class="card" style="margin-top:12px"><h2>Dormant directory accounts <span class="c">enabled accounts by last sign-in</span></h2>'+(A.length?B.map(function(b,i){return bar(b[0],bk[i],Math.max.apply(null,bk.concat([never,1])),i>=2?'#ff7b72':i===1?'#e3b341':'#3fb950',bk[i]+' accounts');}).join('')+bar('never signed in',never,Math.max.apply(null,bk.concat([never,1])),'#8C93A1',never+' accounts')
+        +(dormAcc.length?'<p style="font-size:12.5px;margin:10px 0 4px"><b>'+dormAcc.length+' of them can still reach this platform</b> - remove that access first:</p><div>'+dormAcc.slice(0,20).map(function(x){return person(x.p)+' <span class="muted">('+x.days+' d)</span>';}).join(' · ')+'</div>':''):'<div class="empty">Active Directory is not read yet (Directory &amp; peer groups).</div>')+'</div>';
+    box.innerHTML=h;var n=tout.length+creep.length+dormAcc.length;$('tn-ml').textContent=n?String(n):'';}
+  // ---------- the person's details and actions, in a side panel
+  function closePerson(){OPEN=null;$('drawer').classList.remove('open');$('drbg').classList.remove('open');$('drawer').setAttribute('aria-hidden','true');}
+  function openPerson(k,refresh){var p=P.filter(function(x){return x.k===k;})[0];if(!p){closePerson();return;}OPEN=k;
+    var u=p.local,a=p.ad,me=u&&lc(u.user)===ME,can=admin()&&u&&!me,sc=p.score,col=scCol(sc),jr=(D.roles||[]).filter(function(r){return r&&r.id&&r.name;});
+    $('drav').textContent=initials(p);$('drav').className='av'+(p.kind!=='person'?' svc':'');$('drn').textContent=p.name||'';$('drs').textContent=[p.account||(a&&a.sam),p.dept,p.title].filter(Boolean).join(' · ');
+    var h='<div class="act">'+(p.disabled?pill('disabled','mut'):p.access?pill('active','ok'):pill('no platform access','mut'))+(p.level?' '+pill(p.level,p.level==='admin'?'bad':p.level==='operator'?'info':'mut'):'')+' <span class="sc" style="background:'+col+'22;color:'+col+'">review '+sc+'</span>'+(p.kind!=='person'?' '+pill(p.kind==='room'?'room / resource':'service / system','mut'):'')+'</div>';
+    h+='<h4>Platform account</h4><dl class="kv"><dt>Account</dt><dd>'+(u?esc(u.user)+(u.breakglass?' '+pill('break-glass','warn'):''):p.sso.length?esc(p.sso[0].user)+' <span class="muted">(single sign-on)</span>':'<span class="muted">none</span>')+'</dd>'
+      +'<dt>Access level</dt><dd>'+(p.level?esc(p.level):'—')+'</dd><dt>Job role</dt><dd>'+(p.job?esc(p.job.name)+(p.jobSrc==='sso'?' <span class="muted">from AD group '+esc(p.sso[0].via)+'</span>':p.jobSrc==='hand'?' <span class="muted">set by hand</span>':''):'—')+'</dd>'
+      +'<dt>Two-step (MFA)</dt><dd>'+(u?(p.mfa===null?'not reported':p.mfa?'on':'<span class="err">off</span>'):p.sso.length?'via the identity provider':'—')+'</dd><dt>Last sign-in</dt><dd>'+esc(when(p.last))+'</dd></dl>';
+    h+='<h4>Active Directory</h4>'+(a?'<dl class="kv"><dt>User name</dt><dd class="mono">'+esc(a.sam)+'</dd><dt>Sign-in name</dt><dd class="mono">'+esc(a.upn||'—')+'</dd><dt>E-mail</dt><dd>'+esc(a.mail||'—')+'</dd><dt>Department</dt><dd>'+esc(a.department||'—')+'</dd><dt>Title</dt><dd>'+esc(a.title||'—')+'</dd>'
+      +'<dt>In AD</dt><dd>'+(a.enabled?'enabled':'<span class="err">disabled</span>')+(a.admin_count?' · '+pill('privileged (adminCount)','warn'):'')+'</dd><dt>Last AD sign-in</dt><dd>'+esc(when(a.last_logon))+'</dd>'+(a.groups!=null?'<dt>Groups</dt><dd>'+esc(String(a.groups))+'</dd>':'')+'</dl>':'<p class="muted">No AD account of this name.</p>');
+    h+='<h4>Why this score</h4>'+(p.pts.length?'<ul class="reasons">'+p.pts.map(function(x){return '<li><span class="sc" style="background:'+scCol(x[0])+'22;color:'+scCol(x[0])+'">+'+x[0]+'</span><span>'+esc(x[1])+'</span></li>';}).join('')+'</ul>':'<p class="muted">Nothing to review.</p>');
+    if(admin()){h+='<h4>Actions</h4>';
+      if(can){h+='<div class="act"><select id="pa-role" aria-label="Access level">'+['viewer','operator','admin'].map(function(r){return '<option'+(u.role===r?' selected':'')+'>'+r+'</option>';}).join('')+'</select><button type="button" class="btn sm" id="pa-saverole">Change level</button></div>'
+          +(jr.length?'<div class="act"><select id="pa-job" aria-label="Job role"><option value="">— no job role —</option>'+jr.map(function(r){return '<option value="'+esc(r.id)+'"'+(p.job&&p.job.id===r.id&&p.jobSrc==='hand'?' selected':'')+'>'+esc(r.name)+(r.base?' ('+esc(r.base)+')':'')+'</option>';}).join('')+'</select><button type="button" class="btn sm" id="pa-savejob">Set job role</button></div>':'')
+          +'<div class="act"><button type="button" class="btn sm'+(p.disabled?'':' dang')+'" id="pa-toggle">'+(p.disabled?'Enable account':'Disable account')+'</button>'+(p.mfa!==null?'<button type="button" class="btn sm" id="pa-mfa">Reset two-step verification</button>':'')+'<button type="button" class="btn sm" id="pa-welcome">Send welcome e-mail</button><button type="button" class="btn sm" id="pa-wpreview">Preview welcome e-mail</button><a class="btn sm" href="identity-signin.html#users">Password &amp; more…</a></div>';}
+      else if(me)h+='<p class="muted">This is you - another administrator changes your own account.</p>';
+      else if(!u&&a&&a.enabled&&!p.sso.length&&p.kind==='person')h+='<div class="act"><button type="button" class="btn pri sm" id="pa-create">Create platform account</button><span class="muted" style="font-size:12px">or give their AD group a role in <a href="sso-access.html">SSO Access from AD</a></span></div>';
+      else if(!u&&p.sso.length)h+='<p class="muted">Access comes from the AD group <b>'+esc(p.sso[0].via)+'</b> - change it in AD or in <a href="sso-access.html">SSO Access from AD</a>.</p>';
+      else if(p.kind!=='person')h+='<p class="muted">Not a person - no platform account is offered.</p>';}
+    $('drb').innerHTML=h;
+    if(!refresh){$('drawer').classList.add('open');$('drbg').classList.add('open');$('drawer').setAttribute('aria-hidden','false');setTimeout(function(){$('drx').focus();},30);}}
+  function upd(user,b,okMsg){return req('POST','/auth/admin/users/'+encodeURIComponent(user)+'/update',b).then(function(){toast(okMsg);load();},function(er){toast('Not changed: '+er.message);});}
+  function setDisabled(user,dis){var go=function(){upd(user,{disabled:dis},user+(dis?' disabled':' enabled'));};
+    if(dis)ask('Disable '+user+'?','<p>They are signed out at once and cannot sign in until an administrator enables the account again.'+(isSvc(user)?' <b>'+esc(user)+' looks like a service account: disabling it can stop a platform function.</b>':'')+'</p>','Disable',go,isSvc(user)?user:null);else go();}
+  function setRole(users,role){if(!role||!users.length)return;var go=function(){var i=0,okN=0,bad=[];(function next(){if(i>=users.length){SEL={};toast(okN+' changed to '+role+(bad.length?' · not changed: '+bad.join(', '):''));load();return;}var u=users[i++];req('POST','/auth/admin/users/'+encodeURIComponent(u)+'/update',{role:role}).then(function(){okN++;next();},function(){bad.push(u);next();});})();};
+    ask('Change '+users.length+' account(s) to '+role+'?','<p>'+users.map(esc).join(', ')+'</p>'+(role==='admin'?'<p><b>Administrators manage users and settings.</b> SAMA CSF 3.3.5 expects few administrators, each with MFA.</p>':'<p>The new level applies at their next request.</p>'),'Change to '+role,go,role==='admin'?'admin':null);}
+  function drawPeers(dept){var K=Object.keys(dept).filter(function(d){return dept[d].length>=2;}).sort(function(a,b){return dept[b].length-dept[a].length;}).slice(0,12),cols={viewer:'#3fb950',analyst:'#79b8ff',operator:'#5b7fe0',admin:'#ff7b72'};
+    $('peers').innerHTML=!AD||!AD.users?'<div class="empty">Read Active Directory to compare people with their department.</div>':!K.length?'<div class="empty">No AD department has two or more people with platform access yet.</div>'
+      :K.map(function(d){var G=dept[d],c={};G.forEach(function(p){c[p.level]=(c[p.level]||0)+1;});return '<div class="peer"><span title="'+esc(d)+'">'+esc(d)+'</span><span class="b">'+LV.filter(function(l){return c[l];}).map(function(l){return '<i style="width:'+(100*c[l]/G.length)+'%;background:'+cols[l]+'" title="'+esc(c[l]+' '+l)+'"></i>';}).join('')+'</span><span class="muted">'+G.length+(G.some(function(p){return p.outlier;})?' ⚠':'')+'</span></div>';}).join('')
+        +'<div class="legend" style="font-size:11px;color:var(--mute);margin-top:6px">'+LV.map(function(l){return '<i style="display:inline-block;width:12px;height:9px;border-radius:2px;background:'+cols[l]+'"></i> '+l;}).join(' &nbsp; ')+' · ⚠ = an outlier in this department</div>';}
+  function drawAd(){var c=AD&&AD.connection;
+    var au=AD&&AD.settings&&AD.settings.auto_hours;
+    $('adst').textContent=ADERR?'':AD&&AD.last?'read '+when(AD.last.at)+' by '+AD.last.by+(AD.last.group?' · group '+AD.last.group:' · everyone')+' · '+AD.last.count+' people'+(au?' · re-read every '+au+' h':''):'';
+    $('adbtns').innerHTML=op()&&c&&c.ok?'<button type="button" class="btn" id="adr">⟳ Read the directory now</button>'+(admin()?' <button type="button" class="btn" id="adg">Limit to a group</button> <select id="adauto" title="Re-read the directory automatically"><option value="0">Re-read: only when pressed</option>'+[6,12,24].map(function(h){return '<option value="'+h+'"'+(au===h?' selected':'')+'>Re-read every '+h+' h</option>';}).join('')+'</select>':''):admin()?'<a class="btn" href="connections.html#cn-ad">Connect Active Directory</a>':'';
+    $('adbox').innerHTML=ADERR?'<div class="empty">'+esc(ADERR)+'</div>':!c?'<div class="empty">Loading…</div>':!c.ok?'<div class="empty">'+esc(c.why)+(admin()?' - or use <a href="connections.html#cn-ad" style="color:var(--info)">Integration Hub → Active Directory → Connect Active Directory</a>, which finds the domain controllers and the certificate for you.':'')+'</div>':!AD.last?'<div class="empty">The directory has not been read yet - press "Read the directory now".</div>'
+      :'<p class="muted" style="margin:0">'+(AD.users||[]).length+' people read from the directory ('+(AD.users||[]).filter(function(u){return u.enabled;}).length+' enabled). Matched on the user name only: '+P.filter(function(p){return p.ad&&p.access;}).length+' have platform access, '+P.filter(FILT.adonly[1]).length+' do not. '+esc(AD.note||'')+'</p>';}
+  function drawChecks(){var C=[],acc=P.filter(function(p){return p.access;}),adm=acc.filter(function(p){return p.level==='admin';});
+    var lv=P.filter(FILT.leaver[1]);if(lv.length)C.push(['high','Disabled in AD but can still sign in: '+lv.map(function(p){return p.account||p.name;}).join(', '),'Disable the platform account (or remove the person from the AD group) - SAMA 3.3.5 leaver process.']);
+    var nm=P.filter(FILT.nomfa[1]);if(nm.length)C.push(['high','Local account(s) without MFA: '+nm.map(function(p){return p.account;}).join(', '),'Turn MFA on in Identity & Sign-in → Users (SAMA 3.3.5, NCA ECC 2-2-3).']);
+    if(adm.length>3)C.push(['medium',adm.length+' administrators','Keep administrators to the few people who manage users and settings.']);
+    if(adm.length===1)C.push(['low','Only one administrator ('+(adm[0].account||adm[0].name)+')','A second named administrator, or a sealed break-glass account, avoids being locked out.']);
+    var ol=P.filter(FILT.outlier[1]);if(ol.length)C.push(['medium','Access level unusual for the department: '+ol.map(function(p){return p.account||p.name;}).join(', '),'Confirm with the manager that the level is needed, or step it down (least privilege).']);
+    var mis=P.filter(function(p){return p.pts.some(function(x){return /differs from the job role/.test(x[1]);});});if(mis.length)C.push(['medium','Base level differs from the job role for: '+mis.map(function(p){return p.account;}).join(', '),'Open Job roles & functions and assign the role again - it sets the base level to match.']);
+    var st=P.filter(function(p){return p.pts.some(function(x){return /no platform sign-in/.test(x[1]);});});if(st.length)C.push(['medium','No sign-in for 90+ days: '+st.map(function(p){return p.account;}).join(', '),'Disable accounts nobody uses (periodic access review).']);
+    var or=P.filter(FILT.orphan[1]);if(or.length)C.push(['low','Local account(s) with no AD account: '+or.map(function(p){return p.account;}).join(', '),'Name an owner, or disable them; break-glass accounts are marked in Identity & Sign-in.']);
+    $('fc').textContent=C.length;
+    $('find').innerHTML=!P.length?'<div class="empty">—</div>':!C.length?'<div class="empty">No issues: every account has MFA, no leaver can sign in, levels fit their departments.</div>'
+      :'<table><thead><tr><th>Severity</th><th>Check</th><th>What to do</th></tr></thead><tbody>'+C.map(function(c){return '<tr><td>'+pill(c[0],{high:'bad',medium:'warn',low:'mut'}[c[0]])+'</td><td>'+esc(c[1])+'</td><td class="muted">'+esc(c[2])+'</td></tr>';}).join('')+'</tbody></table>';}
+  function facts(){var acc=P.filter(function(p){return p.access;}),adm=acc.filter(function(p){return p.level==='admin';}),loc=acc.filter(function(p){return p.local;});
+    return {kpis:{active:acc.length,admins:adm.length,mfa_pct:loc.length?Math.round(100*loc.filter(function(p){return p.mfa===true;}).length/loc.length):null,admins_no_mfa:adm.filter(function(p){return p.local&&p.mfa===false;}).length,
+        dormant:P.filter(function(p){return p.pts.some(function(x){return /no platform sign-in/.test(x[1]);});}).length,breakglass:loc.filter(function(p){return p.local.breakglass;}).length},
+      policy:'access review of '+P.length+' people: '+P.filter(FILT.leaver[1]).length+' leavers with access, '+P.filter(FILT.outlier[1]).length+' peer outliers, '+P.filter(FILT.orphan[1]).length+' with no AD account, '+P.filter(FILT.sso[1]).length+' via single sign-on',
+      accounts:P.filter(function(p){return p.access||p.score;}).sort(function(a,b){return b.score-a.score;}).slice(0,60).map(function(p){return {user:p.account||(p.ad&&p.ad.sam)||p.name,role:p.level||'',mfa:p.local?p.mfa:null,risk:p.score,why:p.pts.map(function(x){return x[1];}).concat(p.dept?['department '+p.dept]:[]).slice(0,8)};})};}
+  function drawAi(){var st=AIST||{},b=$('aibox');if(!b)return;
+    b.innerHTML=(!admin()?'<p class="muted">The AI access review is for administrators.</p>':st.enabled?'<div class="bar"><button type="button" class="btn pri" id="aigo">✨ Draft the access review</button><button type="button" class="btn" data-aiq="Which people should be disabled now, and why?">Who to disable?</button><button type="button" class="btn" data-aiq="Who has more access than their role needs (least privilege), and what level should they have?">Least privilege</button><button type="button" class="btn" data-aiq="Write the questions to send each manager to confirm their people\'s access.">Manager confirmations</button></div>'
+      :'<p class="muted">'+esc(st.reason||'The AI access review is not available.')+'</p>')+'<div id="aiout"></div>';
+    if(AIOUT)drawAiOut();}
+  function drawAiOut(){var o=$('aiout');if(!o||!AIOUT)return;o.innerHTML=AIOUT.error?'<p class="err">'+esc(AIOUT.error)+'</p>':'<div style="margin-top:8px">'+pill(AIOUT.label||'AI draft','info')+'<p style="white-space:pre-wrap;margin-top:8px">'+esc(AIOUT.answer||'')+'</p></div>';}
+  var REVIEWQ='Draft the quarterly access review for SAMA CSF 3.3.5 from the review list: 1. people to disable now (leavers, dormant), each with the reason 2. people whose access level is higher than their role or department needs, with the level they should have 3. accounts with no owner or no MFA 4. what to confirm with which manager 5. what the list cannot show.';
+  function askAi(q,btn){btn.disabled=true;var t=btn.textContent;btn.textContent='Thinking…';req('POST','/api/itam/identity-advisor/ask',{question:q,facts:facts()}).then(function(r){AIOUT=r;}).catch(function(e){AIOUT={error:e.status===403?'The AI access review is for administrators.':e.message};}).then(function(){btn.disabled=false;btn.textContent=t;drawAiOut();});}
+  function load(){
+    return Promise.all([who(),req('GET','/auth/admin/config').catch(function(e){return {__err:e};}),req('GET','/api/itam/roles').catch(function(){return null;}),req('GET','/api/itam/ad-directory').catch(function(e){return {__err:e};}),req('GET','/api/itam/identity-advisor/status').catch(function(e){return {enabled:false,reason:e.status===404?'The AI advisor is not installed on this server yet - run the update.':e.status===403?'The AI access review is for administrators.':e.message};})]).then(function(r){
+      if(r[0]){var rl=String(r[0].role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;ME=lc(r[0].user);}
+      $('signin').hidden=!admin();
+      if(r[1]&&r[1].__err){LOC=null;LOCERR=r[1].__err.status===403||r[1].__err.status===401?'Only administrators see the platform accounts. People below come from Active Directory and single sign-on job roles only.':'The sign-in service did not answer ('+r[1].__err.message+').';}
+      else{LOCERR='';LOC=((r[1]&&r[1].users)||[]).filter(function(u){return u&&u.user;});}
+      SCFG=(r[1]&&!r[1].__err)?r[1]:null;
+      D=r[2]||{roles:[],assignments:[]};
+      if(r[3]&&r[3].__err){AD=null;ADERR=r[3].__err.status===403?'Directory users are personal data: operators and administrators only.':r[3].__err.status===404?'Directory users are not installed on this server yet - run the update.':r[3].__err.message;}else{AD=r[3];ADERR='';}
+      AIST=r[4];
+      if(!LOC&&!AD&&RANK[ROLE]<RANK.operator){P=[];$('users').innerHTML='<p class="err">'+esc(LOCERR||'Only administrators see the platform accounts.')+'</p>';$('kk').innerHTML='';drawAd();drawAi();ring();$('find').innerHTML='<div class="empty">—</div>';$('peers').innerHTML='';return;}
+      $('up').textContent='read '+new Date().toLocaleTimeString('en-GB');draw();});}
+  $('kk').addEventListener('click',function(e){var b=e.target.closest('[data-f]');if(!b)return;var f=b.getAttribute('data-f');F=F===f||!f?'':f;tab('people');draw();});
+  document.addEventListener('change',function(e){
+    if(e.target.id==='adauto'){req('POST','/api/itam/ad-directory/settings',{group:(AD&&AD.settings&&AD.settings.group)||'',auto_hours:Number(e.target.value)}).then(function(v){AD=v;draw();toast(Number(e.target.value)?'The directory is re-read every '+e.target.value+' h':'The directory is read only when pressed');}).catch(function(x){toast(x.message);});return;}
+    if(e.target.id==='filt'){F=e.target.value;draw();return;}
+    if(e.target.id==='bulkrole'){var r=e.target.value;e.target.value='';setRole(Object.keys(SEL).filter(function(k){return SEL[k]&&lc(k)!==ME;}),r);return;}
+  });
+  document.addEventListener('click',function(e){var t;
+    if((t=e.target.closest('[data-tab]'))){tab(t.getAttribute('data-tab'));return;}
+    if((t=e.target.closest('#mlbox [data-open]'))){e.preventDefault();openPerson(t.getAttribute('data-open'));return;}
+    if((t=e.target.closest('[data-kind]'))){KIND=t.getAttribute('data-kind');draw();return;}
+    if(e.target.id==='fclr'){F='';draw();return;}
+    if((t=e.target.closest('[data-toggle]'))&&admin()){e.stopPropagation();setDisabled(t.closest('tr').getAttribute('data-u'),t.getAttribute('data-toggle')==='1');return;}
+    if((t=e.target.closest('[data-create]'))){createFor(t.getAttribute('data-create'));return;}
+    if((t=e.target.closest('[data-sel]'))){SEL[t.getAttribute('data-sel')]=t.checked;t.closest('tr').classList.toggle('sel',t.checked);paintBulk();return;}
+    if(e.target.id==='selall'){var on=e.target.checked;[].forEach.call(document.querySelectorAll('[data-sel]'),function(c){c.checked=on;SEL[c.getAttribute('data-sel')]=on;c.closest('tr').classList.toggle('sel',on);});paintBulk();return;}
+    // a row opens the person's panel (not when a checkbox, button or link in it was clicked)
+    if((t=e.target.closest('#users tbody tr'))&&!e.target.closest('input,button,a')){openPerson(t.getAttribute('data-k'));return;}
+    if(e.target.id==='drx'||e.target.id==='drbg'){closePerson();return;}
+    if(e.target.id==='pa-saverole'){var p0=P.filter(function(x){return x.k===OPEN;})[0];if(p0&&p0.local){var nr=$('pa-role').value;if(nr===p0.local.role){toast('Already '+nr+'.');return;}setRole([p0.local.user],nr);}return;}
+    if(e.target.id==='pa-savejob'){var p1=P.filter(function(x){return x.k===OPEN;})[0];if(!p1||!p1.local)return;var jid=$('pa-job').value,user=p1.local.user;
+      req('POST','/api/itam/roles/assign',{user:user,role_id:jid||null}).then(function(){toast(jid?'Job role '+((roleOf(jid)||{}).name||jid)+' given to '+user:'Job role removed from '+user);load();},function(er){toast('Not changed: '+er.message);});return;}
+    if(e.target.id==='pa-toggle'){var p2=P.filter(function(x){return x.k===OPEN;})[0];if(p2&&p2.local)setDisabled(p2.local.user,!p2.disabled);return;}
+    if(e.target.id==='pa-mfa'){var p3=P.filter(function(x){return x.k===OPEN;})[0];if(!p3||!p3.local)return;var u3=p3.local.user;
+      ask('Reset two-step verification for '+u3+'?','<p>Their authenticator is removed; they set up a new one at their next sign-in. Confirm who they are first (in person or a call back to a known number) - this is how accounts are taken over.</p>','Reset',function(){req('POST','/auth/admin/users/'+encodeURIComponent(u3)+'/reset-mfa',{}).then(function(){toast('Two-step verification reset for '+u3);load();},function(er){toast('Not reset: '+er.message);});},u3);return;}
+    if(e.target.id==='pa-wpreview'||e.target.id==='wl-preview'){var p6=P.filter(function(x){return x.k===OPEN;})[0];if(p6&&p6.local)personPreview(p6);return;}
+    if(e.target.id==='ca-preview'){var jv=$('ca-job')?$('ca-job').value:'',un=($('ca-user').value||'').trim();if(!/^[A-Za-z0-9._@-]{2,100}$/.test(un)){toast('User name: letters, digits and . _ @ - only (2-100).');return;}
+      previewWelcome({user:un,name:($('ca-name').value||'').trim(),role:$('ca-role').value,job:jv?((roleOf(jv)||{}).name||jv):'',lang:$('ca-lang').value,signin:$('ca-how')?$('ca-how').value:'local'});return;}
+    if(e.target.id==='pa-welcome'){var p5=P.filter(function(x){return x.k===OPEN;})[0];if(p5&&p5.local)welcomeFor(p5);return;}
+    if(e.target.id==='pa-create'){var p4=P.filter(function(x){return x.k===OPEN;})[0];if(p4&&p4.ad){closePerson();createFor(p4.ad.sam);}return;}
+    if(e.target.id==='bulkx'){SEL={};draw();return;}
+    if(e.target.id==='bulken'){var LE=Object.keys(SEL).filter(function(k){return SEL[k]&&lc(k)!==ME;});if(!LE.length)return;var i=0,okE=0;(function next(){if(i>=LE.length){SEL={};toast(okE+' enabled');load();return;}var u=LE[i++];req('POST','/auth/admin/users/'+encodeURIComponent(u)+'/update',{disabled:false}).then(function(){okE++;next();},next);})();return;}
+    if(e.target.id==='bulkdis'){var L=Object.keys(SEL).filter(function(k){return SEL[k]&&lc(k)!==ME;});if(!L.length)return;
+      ask('Disable '+L.length+' account(s)?','<p>'+L.map(esc).join(', ')+'</p><p>Each is signed out at once and cannot sign in until enabled again.</p>','Disable '+L.length,function(){var i=0,okN=0,bad=[];(function next(){if(i>=L.length){SEL={};toast(okN+' disabled'+(bad.length?' · not changed: '+bad.join(', '):''));load();return;}var u=L[i++];req('POST','/auth/admin/users/'+encodeURIComponent(u)+'/update',{disabled:true}).then(function(){okN++;next();},function(){bad.push(u);next();});})();},String(L.length));return;}
+    if(e.target.id==='adr'){var b=e.target;b.disabled=true;req('POST','/api/itam/ad-directory/refresh',{}).then(function(v){AD=v;ADERR='';draw();toast((v.users||[]).length+' people read from the directory');}).catch(function(x){b.disabled=false;toast(x.message);});return;}
+    if(e.target.id==='adg'){ask('Limit to a group','<p>Read only the members of one AD group (its name or DN), or leave empty for everyone.</p><input id="adgin" value="'+esc(AD&&AD.settings&&AD.settings.group||'')+'" style="width:100%;height:38px;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:0 10px">','Save',function(){var g=(document.getElementById('adgin')||{}).value||'';req('POST','/api/itam/ad-directory/settings',{group:g.trim(),auto_hours:(AD&&AD.settings&&AD.settings.auto_hours)||0}).then(function(v){AD=v;draw();toast('Saved - read the directory again');}).catch(function(x){toast(x.message);});});return;}
+    if((t=e.target.closest('[data-aiq]'))){askAi(t.getAttribute('data-aiq'),t);return;}
+    if(e.target.id==='aigo'){askAi(REVIEWQ,e.target);return;}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&OPEN&&!DLG)closePerson();if(e.key==='Enter'&&e.target.closest&&e.target.closest('#users tbody tr')&&e.target.tagName==='TR')openPerson(e.target.getAttribute('data-k'));});
+  $('q').addEventListener('input',function(){Q=this.value.trim().toLowerCase();draw();});
+  $('sort').addEventListener('change',function(){SORT=this.value;draw();});
+  $('refresh').addEventListener('click',load);
+  $('xlsx').addEventListener('click',function(){if(!window.zybXlsx)return;window.zybXlsx.download('user-management.xlsx',[{name:'People',columns:[{h:'Name',w:28},{h:'Account',w:24},{h:'Kind',w:12},{h:'Department',w:18},{h:'Sources',w:14},{h:'Access level',w:12},{h:'Job role',w:26},{h:'MFA',w:8},{h:'Last sign-in',w:20},{h:'Status',w:10},{h:'Review score',w:10},{h:'Reasons',w:60}],
+    rows:view().map(function(p){return [p.name,p.account||(p.ad&&p.ad.sam)||'',{person:'person',svc:'service / system',room:'room / resource'}[p.kind],p.dept,[p.local?'local':'',p.sso.length?'sso':'',p.ad?'ad':''].filter(Boolean).join('+'),p.level||'',p.job?p.job.name:'',p.local?(p.mfa===null?'':p.mfa?'on':'off'):p.sso.length?'via Entra':'',p.last||'',p.disabled?'disabled':p.access?'active':'no access',p.score,p.pts.map(function(x){return '+'+x[0]+' '+x[1];}).join('; ')];})}],{title:'User Management - access review',filter:[{person:'people',svc:'service & system',room:'rooms & resources',all:'all kinds'}[KIND],F?FILT[F][0]:'',Q?'search: '+Q:''].filter(Boolean).join(' · '),by:ME});});
+  // keep the page current: every 30 s, never while someone is typing, editing or has a dialog open (vendor/zyb-autorefresh.js)
+  if(window.zybAutoRefresh)window.zybAutoRefresh({load:load,every:30,into:document.querySelector('.acts')});
+  load();
+})();
+</script>
+</body></html>

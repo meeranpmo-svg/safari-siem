@@ -1,0 +1,206 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Platform Health</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{margin-left:auto;font-weight:400;color:var(--mute);font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin:0 0 10px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:22px;font-weight:700;margin-top:2px}.t .s{font-size:11.5px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.na .v{color:var(--mute);font-size:15px}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}button.sm{padding:3px 9px;font-size:12px}
+select,input{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}td>b{white-space:nowrap}
+tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(255,255,255,.035)}.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap;margin:1px 2px 1px 0}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:12px;margin:10px 0}.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.tabs{display:flex;gap:6px;margin:0 0 12px;border-bottom:1px solid var(--edge)}.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 14px;font-size:14px;color:var(--mute)}.tabs button.on{color:var(--title);border-bottom-color:#3fb950}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.tabs{flex-wrap:wrap}.mono{overflow-wrap:anywhere}#kk .t{min-width:0}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Platform · server &amp; backup</div><h1>Platform Health &amp; Backup</h1></div><span class="sp"></span>
+  <span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="k" id="kk"></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="iss" class="on">⚠️ Issues <span id="ni"></span></button><button type="button" role="tab" data-tab="hw">🖥️ Hardware</button><button type="button" role="tab" data-tab="sto">💽 Storage</button><button type="button" role="tab" data-tab="svc">⚙️ Services &amp; network</button><button type="button" role="tab" data-tab="bk">🗄️ Backup</button><button type="button" role="tab" data-tab="err">🧯 Errors &amp; jobs <span id="ne"></span></button></div>
+<div id="tab-iss" class="card"><h2>What needs attention <span class="c">checked every minute</span></h2><div class="tw" id="iss"><div class="empty">Loading…</div></div></div>
+<div id="tab-hw" class="card" hidden><h2>Hardware <span class="c" id="hwc"></span></h2><div id="hw"></div></div>
+<div id="tab-sto" class="card" hidden><h2>File systems</h2><div class="tw" id="sto"></div></div>
+<div id="tab-svc" class="card" hidden><h2>Services</h2><div class="tw" id="svc"></div><div id="svcctl"></div><h2 style="margin-top:16px">Network interfaces</h2><div class="tw" id="net"></div><h2 style="margin-top:16px">Time &amp; certificate</h2><div id="misc"></div></div>
+<div id="tab-err" class="card" hidden><h2>Errors &amp; background jobs <span class="c">every failure is caught, counted and kept here - the engines keep running</span></h2><div id="err"><div class="empty">Loading…</div></div></div>
+<div id="tab-bk" class="card" hidden><h2>Backup of the whole platform <span class="c">encrypted · daily, time in Backup settings</span></h2><div id="bk"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', H=null, SV=null;
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  var SEV={crit:['Critical','bad'],warn:['Warning','warn'],info:['Info','info']};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function gb(b){if(b==null)return '–';var u=['B','KB','MB','GB','TB'],i=0;while(b>=1024&&i<4){b/=1024;i++;}return (b>=100||i===0?Math.round(b):b.toFixed(1))+' '+u[i];}
+  function dur(s){if(s==null)return '–';var d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?d+' d '+h+' h':h?h+' h '+m+' m':m+' m';}
+  function dt(t){try{return t?new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';}catch(e){return t||'';}}
+  function ago(t){var s=(Date.now()-Date.parse(t))/1000;return isNaN(s)?'':s<3600?Math.round(s/60)+' min ago':s<172800?Math.round(s/3600)+' h ago':Math.round(s/86400)+' days ago';}
+  function bar(p){if(p==null)return '';var c=p>=95?'#ff7b72':p>=85?'#e3b341':'#3fb950';return '<span style="display:inline-block;width:70px;height:7px;border-radius:4px;background:rgba(255,255,255,.08);vertical-align:middle;margin-right:6px;overflow:hidden"><i style="display:block;height:100%;width:'+Math.min(100,p)+'%;background:'+c+'"></i></span>';}
+  function tile(l,v,s,cls,go){return '<button type="button" class="t '+(cls||'')+'" data-go="'+go+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function tab(t){[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===t);});['iss','hw','sto','svc','bk','err'].forEach(function(x){$('tab-'+x).hidden=x!==t;});if(t==='err')loadErr();}
+  function pill(t,c){return '<span class="pill '+(c||'')+'">'+esc(t)+'</span>';}
+  function draw(){
+    var h=H, s=h.system||{}, hw=h.hardware||{}, B=h.backup||null, L=B&&B.last;
+    var worst=(h.storage||[]).reduce(function(m,f){return f.pct>m.pct?f:m;},{pct:0,mount:'–'});
+    var up=(h.services||[]).filter(function(x){return x.active==='active';}).length;
+    var age=new Date(h.time*1000);
+    $('up').textContent=h.host+' · '+h.os+' · up '+dur(h.uptime)+' · checked '+ago(age.toISOString());
+    if(Date.now()-age>5*60000)$('up').innerHTML+=' '+pill('data is stale - is zyb-health.timer running?','bad');
+    var crit=h.issues.filter(function(i){return i.sev==='crit';}).length,warn=h.issues.filter(function(i){return i.sev==='warn';}).length;
+    $('kk').innerHTML=tile('Overall',h.status==='ok'?'Healthy':h.status==='critical'?'Critical':'Warning',crit+' critical · '+warn+' warnings',h.status==='ok'?'ok':h.status==='critical'?'bad':'warn','tab:iss')
+      +tile('CPU',(s.cpu_pct!=null?s.cpu_pct+'%':'–'),'load '+(s.load||[]).join(' / ')+' · '+s.cores+' cores',s.cpu_pct>=90?'bad':s.cpu_pct>=75?'warn':'','sys:cpu')
+      +tile('Memory',(s.mem&&s.mem.pct!=null?s.mem.pct+'%':'–'),s.mem?gb(s.mem.total)+' · swap '+s.mem.swap_pct+'%':'',s.mem&&s.mem.pct>=95?'bad':s.mem&&s.mem.pct>=90?'warn':'','sys:mem')
+      +tile('Fullest disk',worst.pct+'%',worst.mount,worst.pct>=95?'bad':worst.pct>=85?'warn':'ok','tab:sto')
+      +tile('Temperature',hw.temp_max!=null?hw.temp_max+' °C':'–',hw.virtual?'virtual machine ('+hw.virt+')':(hw.temps||[]).length+' sensors',hw.temp_max>=90?'bad':hw.temp_max>=80?'warn':'','tab:hw')
+      +tile('Services',up+' / '+(h.services||[]).length,'running',up<(h.services||[]).length?'bad':'ok','tab:svc')
+      +tile('Last backup',L?(L.ok?'OK':'FAILED'):'none',L?ago(L.at)+(L.remote==='ok'?' · copied off':L.remote==='failed'?' · copy failed':' · on this server only'):'no backup yet',!L||L.ok===false?'bad':L.remote!=='ok'?'warn':'ok','tab:bk')
+      +tile('Next backup',B&&B.next?dt(B.next.replace(/ [A-Z]+$/,'')):'–',B?(B.copies||0)+' kept · '+gb(B.dest_bytes):'','','tab:bk');
+    $('ni').innerHTML=h.issues.length?pill(String(h.issues.length),crit?'bad':'warn'):'';
+    $('iss').innerHTML=h.issues.length?'<table><thead><tr><th>Severity</th><th>Area</th><th>Problem</th><th>What to do</th></tr></thead><tbody>'+h.issues.map(function(i,n){return '<tr data-iss="'+n+'" tabindex="0"><td>'+pill(SEV[i.sev][0],SEV[i.sev][1])+'</td><td>'+esc(i.area)+'</td><td><b>'+esc(i.text)+'</b></td><td class="muted">'+esc(i.fix||'')+'</td></tr>';}).join('')+'</tbody></table>':'<p>'+pill('No problems found','ok')+'</p>';
+    // hardware
+    $('hwc').textContent=hw.virtual?'virtual machine - the physical host is monitored by vCenter / ESXi':'physical server';
+    $('hw').innerHTML=Z.kv([['Server',esc([hw.vendor,hw.model].filter(Boolean).join(' ')||'–')+(hw.virtual?' '+pill('virtual ('+hw.virt+')','info'):'')],['CPU',esc(hw.cpu||'–')+' · '+s.cores+' cores'],['BIOS / firmware',esc(hw.bios||'–')],['Kernel',esc(h.kernel)],['Memory errors (ECC)',hw.ecc&&hw.ecc.available?(hw.ecc.ue?pill(hw.ecc.ue+' uncorrectable','bad'):'')+' '+(hw.ecc.ce?pill(hw.ecc.ce+' corrected','warn'):pill('none','ok')):'<span class="muted">not reported by this server</span>'],['Kernel errors (24 h)',s.kernel_errors_24h?(s.kernel_errors_24h.io+s.kernel_errors_24h.hardware+s.kernel_errors_24h.fs?pill('disk I/O '+s.kernel_errors_24h.io+' · hardware '+s.kernel_errors_24h.hardware+' · file system '+s.kernel_errors_24h.fs,'bad'):pill('none','ok')):'–']])
+      +Z.sec('Temperatures',(hw.temps||[]).length?Z.tbl(['Sensor','°C'],hw.temps.map(function(t){return [esc(t.sensor),'<span style="color:'+(t.c>=90?'#ff7b72':t.c>=80?'#e3b341':'inherit')+'">'+t.c+'</span>'];})):'<p class="muted">'+(hw.virtual?'A virtual machine has no temperature sensors - check the host in vCenter.':'No sensors found.')+'</p>')
+      +Z.sec('Disks','<div class="tw"><table><thead><tr><th>Disk</th><th>Model</th><th>Type</th><th>Size</th><th>SMART health</th><th>Temp</th><th>Power-on</th><th>Bad sectors / wear</th></tr></thead><tbody>'+(hw.disks||[]).map(function(d,n){var m=d.smart;return '<tr data-disk="'+n+'" tabindex="0"><td><b>'+esc(d.dev)+'</b></td><td>'+esc(d.model||'–')+'</td><td>'+esc(d.type)+'</td><td>'+esc(d.size||'')+'</td><td>'+(m?(m.passed?pill('PASSED','ok'):pill('FAILED','bad')):'<span class="muted">'+(hw.virtual?'virtual disk':hw.smart_available?'no data':'install smartmontools')+'</span>')+'</td><td>'+(m&&m.temp!=null?m.temp+' °C':'–')+'</td><td>'+(m&&m.hours!=null?Math.round(m.hours/24)+' days':'–')+'</td><td>'+(m?[m.realloc!=null?'reallocated '+m.realloc:'',m.pending!=null?'pending '+m.pending:'',m.wear_pct!=null?'wear '+m.wear_pct+'%':'',m.media_errors!=null?'media errors '+m.media_errors:''].filter(Boolean).join(' · ')||'–':'–')+'</td></tr>';}).join('')+'</tbody></table></div>')
+      +((hw.raid||[]).length?Z.sec('RAID',Z.tbl(['Array','Level','State','Disks'],hw.raid.map(function(r){return [esc(r.dev),esc(r.level),r.degraded?pill('DEGRADED','bad'):pill(r.state,'ok'),r.up+' / '+r.disks+' ['+esc(r.map)+']'];}))):'');
+    $('sto').innerHTML='<table><thead><tr><th>Mount</th><th>Device</th><th>Size</th><th>Used</th><th>Free</th><th>Used %</th><th>Inodes</th><th></th></tr></thead><tbody>'+(h.storage||[]).map(function(f,n){return '<tr data-fs="'+n+'" tabindex="0"><td><b>'+esc(f.mount)+'</b></td><td class="mono">'+esc(f.dev)+'</td><td>'+gb(f.total)+'</td><td>'+gb(f.used)+'</td><td>'+gb(f.avail)+'</td><td>'+bar(f.pct)+f.pct+'%</td><td>'+(f.inode_pct!=null?f.inode_pct+'%':'–')+'</td><td>'+(f.readonly?pill('read-only','bad'):'')+'</td></tr>';}).join('')+'</tbody></table>';
+    drawSvc();
+    $('net').innerHTML=(h.network||[]).length?'<table><thead><tr><th>Interface</th><th>Link</th><th>Speed</th><th>Errors (rx / tx)</th><th>Dropped</th><th>MAC</th></tr></thead><tbody>'+h.network.map(function(x){return '<tr><td><b>'+esc(x.name)+'</b></td><td>'+(x.state==='up'?pill('up','ok'):pill(x.state,'bad'))+'</td><td>'+(x.speed>0?x.speed+' Mb/s':'–')+'</td><td>'+x.rx_err+' / '+x.tx_err+'</td><td>'+x.rx_drop+'</td><td class="mono">'+esc(x.mac)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">–</div>';
+    $('misc').innerHTML=Z.kv([['Clock (NTP)',s.ntp?pill('synchronised','ok'):pill('not synchronised','warn')],['Portal certificate',h.tls?esc(h.tls.subject)+' · expires '+esc(dt(h.tls.expires))+' '+(h.tls.days<0?pill('expired','bad'):h.tls.days<=30?pill(h.tls.days+' days','warn'):pill(h.tls.days+' days','ok')):'<span class="muted">not found</span>'],['Failed system services',(s.failed_units||[]).length?esc(s.failed_units.join(', ')):pill('none','ok')]]);
+    drawBackup();
+  }
+  function drawBackup(){
+    var B=H.backup, L=B&&B.last, c=(B&&B.config)||{};
+    $('bk').innerHTML=(B?Z.kv([['Last backup',L?(L.ok?pill('OK','ok'):pill('FAILED','bad'))+' '+esc(dt(L.at))+' · '+gb(L.size)+' · '+L.seconds+' s'+(L.error?'<div class="err">'+esc(L.error)+'</div>':''):'–'],['Last good backup',esc(B.last_ok_at?dt(B.last_ok_at)+' ('+ago(B.last_ok_at)+')':'never')],['Next scheduled',esc(B.next||'–')],
+        ['Copy off this server',c.remote?esc(c.remote)+' '+(L&&L.remote==='ok'?pill('copied','ok'):L&&L.remote==='failed'?pill('failed: '+(L.remote_error||''),'bad'):''):pill('not set - backups are only on this server','warn')],
+        ['Kept here',esc(c.dest)+' · '+(B.copies||0)+' backups · '+gb(B.dest_bytes)+' · '+c.keep_days+' days (min '+c.keep_min+')'],['Encryption','AES-256 · key '+esc(c.key_file)+' <span class="muted">(keep a copy off the server)</span>'],
+        ['SIEM log events',c.events_days?'last '+c.events_days+' days included':'table definitions only (CH_EVENT_DAYS=0)'],['Checked after writing',c.verify?pill('yes','ok'):pill('no','warn')]]):'<p class="muted">No backup has run yet.</p>')
+      +'<p style="margin-top:12px">'+(can('admin')?'<button type="button" class="pri" id="bknow">▶ Run backup now</button> ':'')+'<span class="muted" id="bkq"></span></p>'
+      +Z.sec('Backup settings','<div id="bkset"><span class="muted">Loading…</span></div>')
+      +(B&&(B.history||[]).length?Z.sec('History','<div class="tw"><table><thead><tr><th>When</th><th>Result</th><th>Size</th><th>Took</th><th>Copy off</th><th>Started by</th></tr></thead><tbody>'+B.history.map(function(x,n){return '<tr data-bkh="'+n+'" tabindex="0"><td>'+esc(dt(x.at))+'</td><td>'+(x.ok?pill('OK','ok'):pill('FAILED','bad'))+'</td><td>'+gb(x.size)+'</td><td>'+x.seconds+' s</td><td>'+(x.remote==='ok'?pill('copied','ok'):x.remote==='failed'?pill('failed','bad'):'<span class="muted">–</span>')+'</td><td>'+esc(x.by||'')+'</td></tr>';}).join('')+'</tbody></table></div>'):'')
+      +Z.sec('Restore','<ol style="line-height:1.8;margin:0;padding-left:20px"><li>List: <span class="mono">sudo zyb-restore list</span></li><li>Check a backup: <span class="mono">sudo zyb-restore verify &lt;file&gt;</span></li><li>Look inside / copy single files back: <span class="mono">sudo zyb-restore extract &lt;file&gt;</span></li><li>Full restore of this server: <span class="mono">sudo zyb-restore apply &lt;file&gt;</span> (saves the current files first)</li><li>New server: install the platform, copy <span class="mono">/etc/zyb-backup/backup.key</span> from your safe copy, then <span class="mono">apply</span>.</li></ol>');
+    drawSettings();
+  }
+  function load(){var x=new XMLHttpRequest();x.open('GET','/dashboards/health.json?t='+Date.now());x.onload=function(){try{if(x.status!==200)throw 0;H=JSON.parse(x.responseText);draw();loadSvc();}catch(e){loadSvc();$('kk').innerHTML='';$('iss').innerHTML='<p class="err">No health data yet. Run the update (it installs the health monitor), or check: sudo systemctl status zyb-health.timer</p>';}};x.onerror=function(){$('iss').innerHTML='<p class="err">Not reachable.</p>';};x.send();}
+  /* services: state from health.json, start / stop / restart through the SIEM (zyb-svcctl, root helper, allow list) */
+  function ctlFor(name,active){
+    if(!SV||!SV.available||!can('admin')||SV.allow.indexOf(name)<0)return '';
+    var b=function(a,l,cls){return '<button type="button" class="sm'+(cls?' '+cls:'')+'" data-sc="'+a+'" data-n="'+esc(name)+'"'+(SV.queued?' disabled':'')+'>'+l+'</button> ';};
+    return active?b('restart','↻ Restart')+(SV.no_stop.indexOf(name)<0?b('stop','■ Stop'):''):b('start','▶ Start','pri');
+  }
+  function drawSvc(){
+    var h=H||{},list=(h.services||[]).slice(),seen={};list.forEach(function(x){seen[x.name]=1;});
+    if(SV&&SV.allow)SV.allow.forEach(function(n){if(!seen[n]&&!/\.timer$/.test(n))list.push({name:n,active:'',sub:'',extra:true});});
+    var ctl=SV&&SV.available&&can('admin');
+    $('svc').innerHTML='<table><thead><tr><th>Service</th><th>State</th><th>Since</th><th>Restarts</th>'+(ctl?'<th>Control</th>':'')+'</tr></thead><tbody>'+list.map(function(x,n){var real=(h.services||[]).indexOf(x)>=0;return '<tr'+(real?' data-svc="'+n+'" tabindex="0"':'')+'><td><b>'+esc(x.name)+'</b></td><td>'+(x.extra?'<span class="muted">not in the health list</span>':x.active==='active'?pill('running','ok'):pill(x.active||'stopped','bad'))+'</td><td>'+esc(x.since?dt(x.since.replace(/ [A-Z+0-9]+$/,'')):'–')+'</td><td>'+(x.extra?'–':(x.restarts||0))+'</td>'+(ctl?'<td style="white-space:nowrap">'+(/^container /.test(x.name)?'<span class="muted">docker</span>':ctlFor(x.name,x.extra?true:x.active==='active'))+'</td>':'')+'</tr>';}).join('')+'</tbody></table>';
+    var hist=(SV&&SV.history)||[];
+    $('svcctl').innerHTML=(SV&&!SV.available&&can('admin')?'<p class="note">Start / stop / restart from here needs the service-control helper on the server — run the update (it installs zyb-svcctl with install-platform.sh).</p>':'')
+      +(SV&&SV.queued?'<p class="note">⏳ '+esc(SV.queued.action+' '+SV.queued.name)+' requested by '+esc(SV.queued.by)+' — running…</p>':'')
+      +(hist.length?'<h2 style="margin-top:16px">Recent service actions</h2><div class="tw"><table><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Result</th><th>Reason</th></tr></thead><tbody>'+hist.slice(0,15).map(function(e){return '<tr><td class="mono">'+esc(dt(e.at))+'</td><td>'+esc(e.by||'–')+'</td><td><b>'+esc(e.action+' '+e.name)+'</b></td><td>'+(e.ok?pill('OK','ok'):pill('refused / failed','bad'))+'<div class="muted" style="font-size:11.5px">'+esc(e.message||'')+'</div></td><td>'+esc(e.reason||'')+'</td></tr>';}).join('')+'</tbody></table></div>':'')
+      +(SV&&SV.available&&can('admin')?'<p class="note">Only the services listed in /etc/zyb-svcctl.conf on the server can be controlled. The SIEM and nginx can be restarted but not stopped from here (the portal runs on them). Every action needs a reason and is written to the audit log.</p>':'');
+  }
+  function svcApi(m,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc/platform/service');x.withCredentials=true;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors[0])))||'HTTP '+x.status),{status:x.status}));};x.onerror=function(){bad(new Error('the SIEM is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function loadSvc(){return svcApi('GET').then(function(r){SV=r;drawSvc();}).catch(function(){SV=null;});}
+  function svcAction(btn){var a=btn.getAttribute('data-sc'),n=btn.getAttribute('data-n');
+    var why=window.prompt((a==='stop'?'STOP ':a==='restart'?'Restart ':'Start ')+n+'?\nReason (kept in the audit log):','');if(!why||why.trim().length<3){if(why!==null)toast('A reason is needed');return;}
+    if(a==='stop'&&!window.confirm('Stop '+n+'? Pages that use it stop working until it is started again.'))return;
+    btn.disabled=true;svcApi('POST',{name:n,action:a,reason:why.trim()}).then(function(r){toast(a+' '+n+' requested - it runs within a few seconds');var k=0,iv=setInterval(function(){loadSvc().then(function(){var done=SV&&SV.history&&SV.history[0]&&SV.history[0].id===r.id;if(done||++k>20){clearInterval(iv);if(done)toast(SV.history[0].message);load();}});},3000);}).catch(function(er){btn.disabled=false;toast(er.message);});}
+  function api(m,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc/platform/backup');x.withCredentials=true;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(new Error((j&&(j.error||(j.errors&&j.errors[0])))||'HTTP '+x.status));};x.onerror=function(){bad(new Error('the SIEM is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+
+  /* backup settings: read from the root helper's settings.json (through the SIEM), changed by admins - the SIEM only
+     queues the change; zyb-backup --apply-settings (root) checks every value again and writes /etc/zyb-backup.conf */
+  function setApi(b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('PUT','/api/soc/platform/backup/settings');x.withCredentials=true;x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||'HTTP '+x.status));};x.onerror=function(){bad(new Error('the SIEM is not reachable'));};x.send(JSON.stringify(b));});}
+  function drawSettings(){
+    var el=$('bkset');if(!el)return;
+    api('GET').then(function(r){
+      var c=r.settings;
+      if(!c){el.innerHTML='<p class="muted">Settings not reported yet - run the update (it installs the backup settings helper).</p>';return;}
+      var la=c.last_apply,ad=can('admin'),I=function(id,v,ph,t){return '<input id="'+id+'" '+(t?'type="'+t+'" ':'')+'value="'+esc(v==null?'':String(v))+'" placeholder="'+esc(ph||'')+'"'+(ad?'':' disabled')+' style="width:100%">';};
+      var L=function(t,inner,hint){return '<label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px">'+esc(t)+inner+(hint?'<span class="muted" style="font-size:11.5px">'+hint+'</span>':'')+'</label>';};
+      el.innerHTML=(r.settings_pending?'<p>'+pill('change waiting to be applied - a few seconds','warn')+'</p>':'')
+        +(la?'<p class="muted" style="margin:0 0 8px">Last change '+esc(dt(la.at))+' by '+esc(la.by)+(la.error?' - <span class="err">not applied: '+esc(la.error)+'</span>':' - applied')+'</p>'+(la.warnings&&la.warnings.length?'<p>'+la.warnings.map(function(w){return pill(w,'warn');}).join(' ')+'</p>':''):'')
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">'
+        +L('Daily backup time',I('bs_t',c.schedule,'01:30','time'),'server time')
+        +L('Keep backups (days)',I('bs_kd',c.keep_days,'14','number'),'at least 7')+L('Always keep at least',I('bs_km',c.keep_min,'3','number'),'at least 3')
+        +L('SIEM log events (days)',I('bs_ev',c.events_days,'0','number'),'0 = table definitions only; events are large - check the free space')
+        +'</div><h4 style="margin:14px 0 6px">Copy off this server'+(!c.remote_dir&&!c.sftp_target?' '+pill('not set - a backup on the same server is lost with it','warn'):'')+'</h4>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">'
+        +L('Network share / disk folder',I('bs_rd',c.remote_dir,'/mnt/backup'),c.remote_dir?(c.remote_dir_state==='mounted'?'mounted':c.remote_dir_state==='folder'?'<span class="err">a local folder, not a mounted share</span>':'<span class="err">does not exist</span>'):'under /mnt, /media, /srv or /backup - mount the share on the server first (e.g. /etc/fstab)')
+        +L('SFTP target',I('bs_st',c.sftp_target,'backup@backup-server:/backups/sentra'),'key login, no password')
+        +L('SFTP key file on the server',I('bs_sk',c.sftp_key,'/root/.ssh/zyb_backup'))
+        +'</div><div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px">'
+        +L('Extra folders to include',I('bs_ex',c.extra_paths,'/srv/portal /etc/pki'),'space separated; the platform folders are always included')
+        +'<label style="display:flex;gap:8px;align-items:center;font-size:12.5px"><input type="checkbox" id="bs_ve"'+(c.verify?' checked':'')+(ad?'':' disabled')+'> Read every new backup back to prove it can be restored</label></div>'
+        +'<p class="muted" style="margin-top:10px">Kept on this server in <span class="mono">'+esc(c.dest)+'</span> · encryption key fingerprint <span class="mono">'+esc(c.key_fingerprint||'–')+'</span> - make sure your offline copy of <span class="mono">/etc/zyb-backup/backup.key</span> has the same fingerprint (<span class="mono">sha256sum backup.key</span>); without it no backup can be restored.</p>'
+        +(ad?'<p><button type="button" class="pri" id="bs_save">Save settings</button> <span id="bs_msg" class="muted"></span></p>':'<p class="muted">Only administrators change these settings.</p>');
+      if(!ad)return;
+      $('bs_save').onclick=function(){var b=this;b.disabled=true;$('bs_msg').textContent='';
+        setApi({schedule:$('bs_t').value,keep_days:+$('bs_kd').value,keep_min:+$('bs_km').value,events_days:+$('bs_ev').value,verify:$('bs_ve').checked,remote_dir:$('bs_rd').value.trim(),sftp_target:$('bs_st').value.trim(),sftp_key:$('bs_sk').value.trim(),extra_paths:$('bs_ex').value.trim()})
+          .then(function(){$('bs_msg').textContent='Saved - applying…';var k=0,iv=setInterval(function(){api('GET').then(function(x){if(!x.settings_pending||++k>15){clearInterval(iv);b.disabled=false;drawSettings();var a=x.settings&&x.settings.last_apply;toast(a&&a.error?'Not applied: '+a.error:'Backup settings applied');}});},2000);})
+          .catch(function(er){b.disabled=false;$('bs_msg').innerHTML='<span class="err">'+esc(er.message)+'</span>';});};
+    }).catch(function(e){el.innerHTML='<p class="muted">'+esc(e.message)+'</p>';});
+  }
+  /* errors & background jobs of both engines (engine/errors.js in IT Asset Management, util/errors.js in the SIEM) */
+  var ERR={};
+  function getJ(url){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.zybQuiet=true;x.open('GET',url);x.withCredentials=true;x.timeout=30000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status===200&&j)ok(j);else bad(new Error(x.status===403?'administrators only':x.status===404?'this engine does not report errors yet - run the update':(j&&j.error)||('HTTP '+x.status)));};x.onerror=function(){bad(new Error('no answer from the engine'));};x.ontimeout=function(){bad(new Error('the engine took too long to answer'));};x.send();});}
+  function jobState(j){return j.state==='failing'?pill('failing ('+j.consecutive+' in a row)','bad'):j.state==='last run failed'?pill('last run failed','warn'):j.state==='ok'?pill('OK','ok'):pill(j.state,'info');}
+  function loadErr(){
+    if(!can('admin')){$('err').innerHTML='<p class="muted">Only administrators see the platform\'s error register.</p>';return;}
+    var el=$('err');
+    Promise.all([getJ('/api/itam/platform/errors').then(function(j){return {ok:j};},function(e){return {e:e.message};}),getJ('/api/soc/platform/errors').then(function(j){return {ok:j};},function(e){return {e:e.message};})]).then(function(r){
+      ERR={itam:r[0].ok,siem:r[1].ok};
+      var fail=0;[r[0].ok,r[1].ok].forEach(function(v){if(v)fail+=v.failing;});
+      $('ne').innerHTML=fail?pill(String(fail),'bad'):'';
+      el.innerHTML=[['itam','IT Asset Management',r[0]],['siem','SIEM',r[1]]].map(function(x){var k=x[0],v=x[2].ok;
+        if(!v)return Z.sec(x[1],'<p class="muted">'+esc(x[2].e)+'</p>');
+        var p=v.process||{};
+        return Z.sec(x[1]+' — background jobs',(v.jobs.length?'<div class="tw"><table><thead><tr><th>Job</th><th>State</th><th>Runs</th><th>Failures</th><th>Last error</th><th>Last OK</th></tr></thead><tbody>'+v.jobs.map(function(j,n){return '<tr tabindex="0" data-ej="'+k+':'+n+'"><td class="mono">'+esc(j.name)+'</td><td>'+jobState(j)+'</td><td>'+j.runs+'</td><td>'+j.failures+'</td><td>'+(j.last_error?'<span class="err">'+esc(j.last_error)+'</span><div class="muted" style="font-size:11.5px">'+esc(dt(j.last_error_at))+'</div>':'–')+'</td><td>'+esc(j.last_ok?ago(j.last_ok):'–')+'</td></tr>';}).join('')+'</tbody></table></div>':'<p class="muted">No background job has run yet since the engine started.</p>')
+          +'<p class="muted" style="margin-top:6px">Safety net since the engine started: '+(p.unhandled||0)+' unhandled promise(s) caught'+(p.uncaught?', '+p.uncaught+' uncaught exception(s) - the engine restarted':'')+(p.last?' · last: '+esc(p.last.kind+' - '+p.last.error)+' ('+esc(dt(p.last.at))+')':'')+'</p>')
+          +Z.sec(x[1]+' — server errors (HTTP 5xx)',v.server.length?'<div class="tw"><table><thead><tr><th>When</th><th>Request</th><th>Status</th><th>Error</th></tr></thead><tbody>'+v.server.slice(0,30).map(function(e){return '<tr><td class="mono">'+esc(dt(e.at))+'</td><td class="mono">'+esc(e.method+' '+e.path)+'</td><td>'+pill(String(e.status),'bad')+'</td><td>'+esc(e.error)+'</td></tr>';}).join('')+'</tbody></table></div>':'<p class="muted">None since the engine started.</p>')
+          +(k==='itam'?Z.sec('Pages — errors reported by browsers',v.client.length?'<div class="tw"><table><thead><tr><th>When</th><th>Page</th><th>Who</th><th>Kind</th><th>Message</th><th>Reference</th></tr></thead><tbody>'+v.client.slice(0,50).map(function(e){return '<tr><td class="mono">'+esc(dt(e.at))+'</td><td class="mono">'+esc(e.page)+'</td><td>'+esc(e.user)+'</td><td>'+esc(e.kind+(e.status?' '+e.status:''))+'</td><td>'+esc(e.message)+(e.url?'<div class="muted mono" style="font-size:11.5px">'+esc(e.url)+'</div>':'')+'</td><td class="mono">'+esc(e.ref||'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<p class="muted">No page has reported an error since the engine started.</p>'):'');
+      }).join('')+'<div id="aiuse"></div><p class="muted" style="margin-top:10px">A person who saw an error message can quote its reference (E-…) - it is in the page errors above. Details with stack traces are in the engine logs (journalctl -u sentra-itam / sentra-siem).</p>';
+      loadAi();
+    });
+  }
+  /* AI use today (engine/ai-guard.js): calls, tokens, refusals and prompt-injection FLAGS - a flag is a heuristic for review,
+     not proof and not a block; what the AI may do is enforced in code whatever it was told */
+  function loadAi(){
+    Promise.all([getJ('/api/itam/platform/ai-usage').catch(function(){return null;}),getJ('/api/soc/platform/ai-usage').catch(function(){return null;})]).then(function(r){
+      var el=$('aiuse');if(!el)return;
+      el.innerHTML=Z.sec('AI use today',[['IT Asset Management',r[0]],['SIEM',r[1]]].map(function(x){var v=x[1];if(!v)return '<p class="muted">'+esc(x[0])+': not reported (engine not updated yet)</p>';
+        var fl=v.recent.filter(function(y){return y.injection_signals||y.refused;}).slice(0,15);
+        return '<p><b>'+esc(x[0])+'</b>: '+v.day.calls+' calls · '+v.day.tokens.toLocaleString()+' / '+v.limits.daily_tokens.toLocaleString()+' tokens · '+v.day.refused+' refused · '+(v.day.flagged?pill(v.day.flagged+' flagged as possible prompt injection','warn'):'0 flagged')+'</p>'
+          +(fl.length?'<div class="tw"><table><thead><tr><th>When</th><th>Who</th><th>Feature</th><th>What</th></tr></thead><tbody>'+fl.map(function(y){return '<tr><td class="mono">'+esc(dt(y.at))+'</td><td>'+esc(y.user)+'</td><td class="mono">'+esc(y.feature||'')+'</td><td>'+(y.refused?pill('refused','bad')+' '+esc(y.refused):pill('injection signals '+y.injection_signals.join(','),'warn')+' <span class="muted">text in the question or in data the AI read looked like instructions - review it</span>')+'</td></tr>';}).join('')+'</tbody></table></div>':'');
+      }).join('')+'<p class="muted">Limits per person: '+esc(String(((r[0]||r[1]||{}).limits||{}).per_user_hour||'-'))+' an hour, '+esc(String(((r[0]||r[1]||{}).limits||{}).per_user_day||'-'))+' a day (config ai.limits / ai_limits).</p>');
+    });
+  }
+  document.addEventListener('click',function(e){var r=e.target.closest&&e.target.closest('[data-ej]');if(!r)return;var a=r.getAttribute('data-ej').split(':'),j=ERR[a[0]]&&ERR[a[0]].jobs[+a[1]];if(!j)return;
+    Z.open('Background job',j.name,Z.kv([['State',jobState(j)],['Runs',String(j.runs)],['Failures',String(j.failures)+' ('+j.consecutive+' in a row)'],['Last run',esc(dt(j.last_run))],['Last OK',esc(dt(j.last_ok))],['Last error',j.last_error?'<span class="err">'+esc(j.last_error)+'</span> · '+esc(dt(j.last_error_at)):'–']])+'<p class="muted" style="margin-top:8px">A failed run does not stop the job: it runs again on its schedule. If it keeps failing, the last error says what to fix (a password, a host that is down, a permission).</p>');});
+  var POLL=null;
+  function watch(){if(POLL)return;var n=0;POLL=setInterval(function(){n++;api('GET').then(function(r){var st=r.status&&r.status.last;$('bkq').textContent=r.queued?'queued - starting…':'running or finished - refreshing…';if(!r.queued&&st&&Date.now()-Date.parse(st.at)<10*60000){clearInterval(POLL);POLL=null;H.backup=r.status;drawBackup();draw();toast(st.ok?'Backup finished: '+gb(st.size):'Backup FAILED: '+st.error);}});if(n>240){clearInterval(POLL);POLL=null;}},5000);}
+  document.addEventListener('click',function(e){var t=e.target;
+    var tb=t.closest('[data-tab]');if(tb){tab(tb.getAttribute('data-tab'));return;}
+    var g=t.closest('[data-go]');if(g){var a=g.getAttribute('data-go').split(':');if(a[0]==='tab')tab(a[1]);else{var s=H.system;Z.open(a[1]==='cpu'?'CPU':'Memory',H.host,a[1]==='cpu'?Z.kv([['Use now',(s.cpu_pct!=null?s.cpu_pct+'%':'–')],['Load 1 / 5 / 15 min',s.load.join(' / ')],['Cores',s.cores],['Model',esc(H.hardware.cpu||'')]])+'<p class="muted">Load above 2 × cores for long periods means the server is overloaded.</p>':Z.kv([['Total',gb(s.mem.total)],['Available',gb(s.mem.avail)],['Used',s.mem.pct+'%'],['Swap',gb(s.mem.swap_total)+' · '+s.mem.swap_pct+'% used']]));}return;}
+    var r;
+    if((r=t.closest('[data-iss]'))){var i=H.issues[+r.getAttribute('data-iss')];Z.open('Issue',i.text,Z.kv([['Severity',pill(SEV[i.sev][0],SEV[i.sev][1])],['Area',esc(i.area)],['What to do',esc(i.fix||'–')]]));return;}
+    if((r=t.closest('[data-disk]'))){var d=H.hardware.disks[+r.getAttribute('data-disk')];Z.open('Disk',d.dev,Z.kv([['Model',esc(d.model||'–')],['Type',esc(d.type)],['Size',esc(d.size||'')]].concat(d.smart?Object.keys(d.smart).map(function(k){return [esc(k),esc(String(d.smart[k]))];}):[['SMART','<span class="muted">not available</span>']]))+'<p class="mono">sudo smartctl -a /dev/'+esc(d.dev)+'</p>');return;}
+    if((r=t.closest('[data-fs]'))){var f=H.storage[+r.getAttribute('data-fs')];Z.open('File system',f.mount,Z.kv([['Device',esc(f.dev)],['Size',gb(f.total)],['Used',gb(f.used)+' ('+f.pct+'%)'],['Free',gb(f.avail)],['Inodes used',f.inode_pct!=null?f.inode_pct+'%':'–'],['Read-only',f.readonly?'yes':'no']])+'<p class="muted">Biggest folders: <span class="mono">sudo du -xh --max-depth=2 '+esc(f.mount)+' | sort -h | tail -20</span></p>');return;}
+    if((r=t.closest('[data-svc]'))){var v=H.services[+r.getAttribute('data-svc')],n=v.name.replace(/^container /,'');Z.open('Service',v.name,Z.kv([['State',esc(v.active+' / '+v.sub)],['Since',esc(v.since||'–')],['Restarts',String(v.restarts||0)]])+'<p class="mono">'+(/^container /.test(v.name)?'sudo docker logs --tail 50 '+esc(n):'sudo systemctl status '+esc(n)+'<br>sudo journalctl -u '+esc(n)+' -n 50')+'</p>');return;}
+    if((r=t.closest('[data-bkh]'))){var x=H.backup.history[+r.getAttribute('data-bkh')];Z.open('Backup',dt(x.at),Z.kv([['Result',x.ok?pill('OK','ok'):pill('FAILED','bad')],['File',esc(x.file||'–')],['Size',gb(x.size)],['Took',x.seconds+' s'],['Items',String(x.items||'')],['Copy off',esc(x.remote+(x.remote_error?' - '+x.remote_error:''))],['Started by',esc(x.by||'')],['Error',esc(x.error||'–')]])+(x.file?'<p class="mono">sudo zyb-restore verify '+esc(x.file)+'</p>':''));return;}
+    var scb=t.closest('[data-sc]');if(scb){e.stopPropagation();svcAction(scb);return;}
+    if(t.id==='bknow'){t.disabled=true;api('POST',{}).then(function(){toast('Backup requested - it starts within a few seconds');$('bkq').textContent='queued - starting…';watch();}).catch(function(er){t.disabled=false;toast(er.message);});}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.matches&&e.target.matches('tr[tabindex]'))e.target.click();});
+  $('refresh').onclick=function(){load();if(!$('tab-err').hidden)loadErr();};
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script></body></html>

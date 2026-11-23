@@ -1,0 +1,12 @@
+--- a/engine/ai/jobs.js	2026-10-19 19:52:02.874610261 +0000
++++ b/engine/ai/jobs.js	2026-10-19 19:52:02.884216802 +0000
+@@ -51,7 +51,8 @@
+     if (callsToday() >= dailyCap) { logCall(job, { status: 'cap', code: 'cap', model: null }, null); return finish(id, { status: 'failed', error: { code: 'cap', message: `Daily cap of ${dailyCap} AI calls reached — resets at midnight (Riyadh).` } }); }
+     if (userCallsLastHour(job.user) >= perUser) { logCall(job, { status: 'cap', code: 'cap', model: null }, null); return finish(id, { status: 'failed', error: { code: 'cap', message: `Per-user cap of ${perUser} AI calls per hour reached — try again later.` } }); }
+     const settings = getSettings();
+-    const pair = sanitisePair(prepared.system, prepared.prompt, settings.redact_terms);
++    // masked by Python too when it answers identically (engine/ai/guard-py.js, step 9j-a); otherwise sanitise.js, as before
++    let pair; try { pair = await require('./guard-py').guardFor(config).sanitisePair(prepared.system, prepared.prompt, settings.redact_terms); } catch (e) { pair = sanitisePair(prepared.system, prepared.prompt, settings.redact_terms); }
+     const t0 = Date.now(); let res;
+     try { res = await provider.call({ system: pair.system, prompt: pair.prompt }); } catch (e) { res = { ok: false, code: 'internal', message: 'The AI call failed unexpectedly.' }; log.error('jobs: provider threw', { err: e.message }); }
+     const call = logCall(job, { status: res.ok ? 'ok' : res.code === 'refusal' ? 'refusal' : 'error', code: res.ok ? null : res.code, model: res.model || null, ms: Date.now() - t0, out_chars: res.text ? res.text.length : 0, tokens_in: res.usage ? res.usage.input : 0, tokens_out: res.usage ? res.usage.output : 0, truncated: !!res.truncated }, pair);

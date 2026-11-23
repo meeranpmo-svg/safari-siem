@@ -1,0 +1,147 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Scope Studio</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--ss-bg:#0b0d12;--ss-panel:#12151c;--ss-raise:#181c25;--ss-line:#232837;--ss-ink:#e7eaf0;--ss-mute:#8b93a4;--ss-ok:#2fb344;--ss-warn:#f59f00;--ss-bad:#e5484d;--ss-acc:#5b8def;--ss-ai:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--ss-bg);color:var(--ss-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px;letter-spacing:-.01em}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--ss-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--ss-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--ss-raise);color:var(--ss-ink);border:1px solid var(--ss-line);border-radius:9px;padding:7px 13px;cursor:pointer;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--ss-acc);border-color:var(--ss-acc);color:#fff}.btn.ai{background:linear-gradient(135deg,#7c4dff,#5b8def);border:0;color:#fff}.btn.ghost{background:transparent}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--ss-panel);border:1px solid var(--ss-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--ss-mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:240px 1fr;gap:18px;align-items:center;background:radial-gradient(circle at 15% 40%,rgba(91,141,239,.18),transparent 55%),var(--ss-panel)}
+.ring{position:relative;width:200px;height:200px;margin:auto}.ring svg{transform:rotate(-90deg)}.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .v b{font-size:44px;line-height:1}.ring .v span{font-size:12px;color:var(--ss-mute)}
+.ring circle.fg{transition:stroke-dashoffset 1.2s cubic-bezier(.2,.7,.2,1)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--ss-raise);border:1px solid var(--ss-line);border-radius:12px;padding:12px 14px}.kpi .n{font-size:26px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ss-mute)}
+.cols{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px}
+.map{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.cell{border-radius:10px;padding:9px 10px;border:1px solid var(--ss-line);background:var(--ss-raise);cursor:pointer;text-align:left;color:inherit;font:inherit;position:relative;overflow:hidden}
+.cell b{display:block;font:600 12px ui-monospace,Consolas,monospace}.cell .sm{color:var(--ss-mute)}
+.cell.ok{border-color:rgba(47,179,68,.45);background:linear-gradient(180deg,rgba(47,179,68,.14),var(--ss-raise))}
+.cell.gap{border-color:rgba(229,72,77,.6);background:linear-gradient(180deg,rgba(229,72,77,.18),var(--ss-raise));animation:gap 2.4s ease-in-out infinite}
+.cell.dev{border-color:rgba(245,159,0,.5);background:linear-gradient(180deg,rgba(245,159,0,.13),var(--ss-raise))}
+.cell.sel{box-shadow:0 0 0 2px var(--ss-acc)}
+@keyframes gap{50%{box-shadow:0 0 0 3px rgba(229,72,77,.25)}}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--ss-mute)}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.prop{border:1px solid var(--ss-line);border-radius:14px;padding:14px;margin-bottom:10px;background:var(--ss-raise)}
+.prop.ai{border-color:rgba(163,113,247,.55);background:linear-gradient(180deg,rgba(163,113,247,.10),var(--ss-raise))}
+.prop h3{margin:0;font-size:14.5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.prop ul{margin:8px 0;padding-left:18px;font-size:13px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-ok{background:rgba(47,179,68,.15);color:#56d364}.p-warn{background:rgba(245,159,0,.16);color:#f5b544}.p-bad{background:rgba(229,72,77,.16);color:#ff7b80}.p-ai{background:rgba(163,113,247,.18);color:#c6a6ff}.p-mute{background:rgba(139,147,164,.16);color:#aab2c2}
+.meth{display:grid;grid-template-columns:150px 1fr 44px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}.bar{height:7px;border-radius:5px;background:#232837;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#5b8def,#2fb344);border-radius:5px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.inp{background:#0b0d12;color:var(--ss-ink);border:1px solid var(--ss-line);border-radius:8px;padding:7px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.scopes{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px}
+.sc{border:1px solid var(--ss-line);border-radius:14px;padding:14px;background:var(--ss-raise)}
+.sc .hd{display:flex;gap:12px;align-items:center}.gauge{width:58px;height:58px;flex:0 0 auto;position:relative}.gauge svg{transform:rotate(-90deg)}.gauge b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px}
+.spark{width:100%;height:46px;margin:8px 0 4px}
+.rec{font-size:12.8px;margin:5px 0;display:flex;gap:7px;align-items:flex-start}.rec .dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:0 0 auto}
+.anom{border-left:3px solid var(--ss-bad);background:rgba(229,72,77,.08);padding:7px 10px;border-radius:6px;font-size:12.8px;margin:8px 0}
+.ask{display:flex;gap:8px;flex-wrap:wrap}.ask textarea{flex:1;min-width:240px;min-height:70px}
+.ans{white-space:pre-wrap;background:var(--ss-raise);border:1px solid var(--ss-line);border-radius:12px;padding:12px;margin-top:10px;font-size:13px}
+.steps{font-size:12px;color:var(--ss-mute);margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.empty{color:var(--ss-mute);padding:10px 0}
+@media (max-width:1000px){.cols,.hero{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.cell.gap{animation:none}.ring circle.fg{transition:none}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Asset Discovery · scopes</div><h1>Scope Studio</h1><div class="mute">What your scopes cover, what they miss, and how to tune them - learned from your own scans, with an AI advisor that drafts proposals a System Admin decides on</div></div>
+ <span class="sp"></span><span class="mute sm" id="up"></span><button type="button" class="btn" id="refresh"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+<section class="card hero"><div class="ring" id="ring"></div><div><div class="kpis" id="kpis"></div><p class="mute sm" id="learned" style="margin:10px 0 0"></p></div></section>
+<div class="cols">
+ <section class="card"><h2><i class="ti ti-grid-dots"></i>Coverage map <span class="c">every /24 the platform knows an address in</span><span class="sp"></span><label class="sm mute"><input type="checkbox" id="onlygap"> gaps only</label></h2>
+  <div class="map" id="map"></div>
+  <div class="legend"><span><i style="background:#2fb344"></i>covered by a scope</span><span><i style="background:#e5484d"></i>assets, no scope</span><span><i style="background:#f59f00"></i>devices only, no scope</span></div></section>
+ <section class="card"><h2><i class="ti ti-bulb"></i>Proposals <span class="c" id="pc"></span></h2><div id="props"></div></section>
+</div>
+<section class="card"><h2><i class="ti ti-heartbeat"></i>Scope health <span class="c">0-100, every point explained · trend = devices seen per run</span></h2><div class="scopes" id="scopes"></div></section>
+<div class="cols">
+ <section class="card" id="aic"><h2><i class="ti ti-sparkles"></i>AI scope advisor <span class="c" id="ais"></span></h2>
+  <div class="ask"><textarea class="inp" id="q" maxlength="4000" placeholder="For example: which subnets are we missing, and what should we scan first?" aria-label="Question"></textarea><button type="button" class="btn ai" id="go"><i class="ti ti-sparkles"></i>Ask</button></div>
+  <div id="out"></div></section>
+ <section class="card"><h2><i class="ti ti-school"></i>What it learned <span class="c">from this platform's own scans</span></h2><div id="learn"></div></section>
+</div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, SEL='';
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=240000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function pill(t,k){return '<span class="pill p-'+esc(k)+'">'+esc(t)+'</span>';}
+  function ringSvg(pct,size,stroke,col){var r=(size-stroke)/2,c=2*Math.PI*r,off=c*(1-(pct||0)/100);
+    return '<svg width="'+size+'" height="'+size+'" aria-hidden="true"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="#232837" stroke-width="'+stroke+'"/><circle class="fg" cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';}
+  function colFor(p){return p==null?'#5b8def':p>=80?'#2fb344':p>=55?'#f59f00':'#e5484d';}
+  function spark(xs){if(!xs||xs.length<2)return '<div class="mute sm" style="margin:8px 0">'+(xs&&xs.length?'one run so far':'no finished run yet')+'</div>';
+    var w=320,h=46,mx=Math.max.apply(null,xs)||1,pts=xs.map(function(v,i){return [(i*(w-8)/(xs.length-1)+4).toFixed(1),(h-4-(v/mx)*(h-10)).toFixed(1)];});
+    var last=pts[pts.length-1], low=xs[xs.length-1]<0.5*Math.max.apply(null,xs.slice(0,-1));
+    return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" aria-label="devices seen per run: '+esc(xs.join(', '))+'"><polyline fill="none" stroke="#5b8def" stroke-width="2" points="'+pts.map(function(p){return p.join(',');}).join(' ')+'"/>'
+      +'<circle cx="'+last[0]+'" cy="'+last[1]+'" r="3.5" fill="'+(low?'#e5484d':'#5b8def')+'"/></svg>';}
+  function draw(){
+    var v=V,s=v.summary;
+    $('ring').innerHTML=ringSvg(s.coverage_pct||0,200,16,colFor(s.coverage_pct))+'<div class="v"><b>'+(s.coverage_pct==null?'—':esc(s.coverage_pct)+'%')+'</b><span>of assets with an IP are in a scope</span></div>';
+    function k(n,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    $('kpis').innerHTML=k(s.assets_covered+' / '+s.assets_with_ip,'assets covered')+k(s.covered+' / '+s.subnets,'subnets covered')+k(s.uncovered,'subnets missed',s.uncovered?'#ff7b80':'')+k(s.healthy+' / '+s.scopes,'scopes healthy')+k(v.proposals.length,'proposals',v.proposals.length?'#c6a6ff':'');
+    var L=v.learned||{},dm=L.duration_model;
+    $('learned').textContent=(L.note||'')+(dm?' Run-time model: '+dm.n+' runs, fit R² '+dm.r2+'.':'');
+    var onlyGap=$('onlygap').checked, cells=v.coverage.filter(function(c){return !onlyGap||!c.covered;});
+    $('map').innerHTML=cells.length?cells.map(function(c){var k=c.covered?'ok':c.assets?'gap':'dev';
+      return '<button type="button" class="cell '+k+(SEL===c.subnet?' sel':'')+'" data-sub="'+esc(c.subnet)+'" title="'+esc(c.subnet+' · '+c.assets+' asset(s), '+c.devices+' device(s)'+(c.scopes.length?' · '+c.scopes.join(', '):' · no scope'))+'"><b>'+esc(c.subnet.replace('/24',''))+'</b><span class="sm">'+esc(c.assets)+' assets · '+esc(c.devices)+' found</span><div class="sm">'+esc(c.covered?c.scopes[0]+(c.scopes.length>1?' +'+(c.scopes.length-1):''):'no scope')+'</div></button>';}).join('')
+      :'<div class="empty">'+(onlyGap?'No gaps: every known subnet is covered by a scope.':'No address is known yet: add assets with a management IP, or run a passive method (AD, vCenter) first.')+'</div>';
+    $('pc').textContent=v.proposals.length+' waiting · learned from coverage gaps and drafted by the AI advisor';
+    $('props').innerHTML=v.proposals.length?v.proposals.map(prop).join(''):'<div class="empty">No proposal: every subnet with assets is covered. New gaps appear here on their own.</div>';
+    $('scopes').innerHTML=v.scopes.length?v.scopes.map(scope).join(''):'<div class="empty">No scope yet. Accept a proposal above, or add one in Asset Discovery.</div>';
+    var y=(L.method_yield)||{}, ks=Object.keys(y);
+    $('learn').innerHTML=(dm?'<p class="sm">Expected run time ≈ '+esc(Math.round(dm.a))+' s + '+esc(Math.round(dm.b*1000))+' s per 1,000 addresses × active methods <span class="mute">(least squares over '+esc(dm.n)+' finished runs, R² '+esc(dm.r2)+')</span></p>':'<p class="mute sm">Run time is learned after 3 finished runs.</p>')
+      +(ks.length?'<div class="sm mute" style="margin:6px 0">How often each method found devices (scopes that ran it twice or more):</div>'+ks.map(function(m){var o=y[m];return '<div class="meth"><span>'+esc(m)+'</span><span class="bar"><i style="width:'+Math.round(o.rate*100)+'%"></i></span><span class="sm">'+esc(o.found+'/'+o.scopes)+'</span></div>';}).join(''):'<p class="mute sm">Method statistics appear once scopes have run each method twice.</p>');
+    var ai=v.ai||{};$('ais').textContent=ai.enabled?'Claude '+ai.model+' · read-only tools + drafts only':'off - '+(ai.reason||'');$('go').disabled=!(ai.enabled&&can('admin'));
+    if(!can('admin'))$('ais').textContent+=' · System Admins ask the advisor';
+  }
+  function prop(p){var ai=p.kind==='ai-draft';
+    var mw=(p.methods_why||[]).map(function(m){var c=m.confidence==null?null:Math.round(m.confidence*100);return '<div class="meth"><span>'+esc(m.name||m.method)+'</span><span class="bar">'+(c==null?'':'<i style="width:'+c+'%"></i>')+'</span><span class="sm">'+(c==null?'':c+'%')+'</span></div><div class="sm mute" style="margin:-2px 0 4px 158px">'+esc(m.why)+'</div>';}).join('');
+    return '<div class="prop'+(ai?' ai':'')+'" data-prop="'+esc(p.key)+'"><h3>'+(ai?pill('AI draft','ai'):pill('learned gap','bad'))+' '+esc(p.name)+'<span class="sp"></span>'+(p.estimate?'<span class="sm mute">≈ '+esc(p.estimate)+' per run</span>':'')+'</h3>'
+      +'<div class="sm mute" style="margin-top:4px">'+esc((p.targets||[]).join(', '))+(p.site?' · '+esc(p.site):'')+'</div><ul>'+(p.why||[]).map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>'+mw
+      +(can('admin')?'<div class="row" style="margin-top:8px"><input class="inp" data-pname value="'+esc(p.name)+'" aria-label="Scope name" style="flex:1;min-width:160px"><select class="inp" data-psite aria-label="Site">'+V.sites.map(function(s){return '<option'+(s===p.site?' selected':'')+'>'+esc(s)+'</option>';}).join('')+'</select>'
+        +'<button type="button" class="btn pri" data-accept="'+esc(p.key)+'"><i class="ti ti-check"></i>Create scope</button><button type="button" class="btn ghost" data-dismiss="'+esc(p.key)+'">Not needed</button></div>'
+        +'<div class="sm mute" style="margin-top:6px">The scope is created with a manual schedule; its active methods stay blocked until the pre-scan checklist is completed.</div>':'<div class="sm mute">A System Admin creates or dismisses it.</div>')+'</div>';}
+  function scope(s){var col=colFor(s.health),g={good:'ok',fair:'warn',poor:'bad'}[s.grade];
+    return '<div class="sc" data-scope="'+esc(s.id)+'"><div class="hd"><div class="gauge">'+ringSvg(s.health,58,7,col)+'<b>'+esc(s.health)+'</b></div><div style="min-width:0"><div style="font-weight:700">'+esc(s.name)+'</div><div class="sm mute">'+pill(s.grade,g)+' · '+esc(s.runs)+' run(s) · '+esc(s.found)+' device(s) found'+(s.estimate?' · ≈ '+esc(s.estimate)+' per run':'')+'</div></div></div>'
+      +spark(s.trend)+(s.anomaly?'<div class="anom">⚠ '+esc(s.anomaly.text)+'</div>':'')
+      +(s.why.length?'<details class="sm"><summary class="mute">Why '+esc(s.health)+'</summary>'+s.why.map(function(w){return '<div>'+esc(w.points)+' · '+esc(w.why)+'</div>';}).join('')+'</details>':'')
+      +s.recommendations.map(function(r){var c=r.severity==='high'?'#e5484d':r.severity==='medium'?'#f59f00':'#5b8def';return '<div class="rec"><span class="dot" style="background:'+c+'"></span><span>'+esc(r.text)+(r.confidence!=null?' <span class="mute">('+Math.round(r.confidence*100)+'% learned)</span>':'')+'</span></div>';}).join('')
+      +(can('admin')?'<div class="row" style="margin-top:10px"><button type="button" class="btn" data-run="'+esc(s.id)+'"><i class="ti ti-player-play"></i>Run now</button><a class="btn ghost" href="/#discovery-scopes">Edit / checklist</a></div>':'')+'</div>';}
+  function load(){
+    req('GET','/discovery/advisor').then(function(v){V=v;$('main').hidden=false;$('err').innerHTML='';draw();$('up').textContent='updated '+new Date(v.generated_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});},
+      function(e){$('main').hidden=true;$('err').innerHTML='<div class="card"><p>'+esc(e.status===403?'Scope Studio is for operators and System Admins (it shows the network layout).':e.status===404?'Scope Studio is not installed yet - run the platform update (update-platform.ps1).':e.message)+'</p></div>';});
+  }
+  document.addEventListener('click',function(ev){var t=ev.target.closest('[data-sub],[data-accept],[data-dismiss],[data-run]');if(!t)return;
+    if(t.hasAttribute('data-sub')){SEL=t.getAttribute('data-sub');draw();var p=document.querySelector('[data-prop="new:'+SEL.replace(/"/g,'')+'"]');if(p){p.scrollIntoView({behavior:'smooth',block:'center'});p.style.boxShadow='0 0 0 2px #5b8def';setTimeout(function(){p.style.boxShadow='';},1600);}return;}
+    if(t.hasAttribute('data-accept')){var box=t.closest('.prop');t.disabled=true;
+      req('POST','/discovery/advisor/accept',{key:t.getAttribute('data-accept'),name:box.querySelector('[data-pname]').value.trim(),site:box.querySelector('[data-psite]').value}).then(function(r){toast('Scope "'+r.scope.name+'" created'+(r.left_off&&r.left_off.length?' - left off: '+r.left_off.map(function(x){return x.method;}).join(', '):'')+'. Complete its pre-scan checklist to run the active methods.');load();},function(e){t.disabled=false;toast(e.message);});return;}
+    if(t.hasAttribute('data-dismiss')){var why=window.prompt('Why is this proposal not needed? (recorded in the audit trail)','');if(!why||why.trim().length<3)return;
+      req('POST','/discovery/advisor/dismiss',{key:t.getAttribute('data-dismiss'),reason:why.trim()}).then(function(){toast('Dismissed');load();},function(e){toast(e.message);});return;}
+    if(t.hasAttribute('data-run')){t.disabled=true;req('POST','/discovery/scopes/'+encodeURIComponent(t.getAttribute('data-run'))+'/run',{}).then(function(){toast('Scan started - the result appears in Asset Discovery');},function(e){toast(e.message);}).then(function(){t.disabled=false;});}
+  });
+  $('onlygap').addEventListener('change',function(){if(V)draw();});
+  $('refresh').addEventListener('click',load);
+  $('go').addEventListener('click',function(){var q=$('q').value.trim(),b=this;if(q.length<3){$('out').innerHTML='<div class="ans">Type a question first.</div>';return;}
+    b.disabled=true;$('out').innerHTML='<div class="ans mute">The advisor is looking at coverage, scope health and what was learned…</div>';
+    req('POST','/discovery/advisor/ai/ask',{question:q}).then(function(r){
+      $('out').innerHTML='<div class="ans">'+esc(r.answer)+'</div><div class="steps">'+esc(r.model)+' · '+r.steps.length+' step(s): '+esc(r.steps.map(function(s){return s.tool+(s.ok?'':' (refused)');}).join(', '))
+        +(r.drafted.length?' · '+r.drafted.length+' draft(s) added to Proposals for your decision':'')+(r.injection_signals.length?' · ⚠ text in the network data looked like instructions - treated as data':'')+'</div>';
+      if(r.drafted.length)load();
+    },function(e){$('out').innerHTML='<div class="ans">'+esc(e.message)+'</div>';}).then(function(){b.disabled=!(V&&V.ai&&V.ai.enabled&&can('admin'));});});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden&&!document.activeElement.matches('textarea,input,select'))load();},120000);
+})();
+</script></body></html>

@@ -1,0 +1,106 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Audit Automation Flow</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Audit Automation Flow: how the audit work runs on the platform, live and read-only. Sources -> use-case tests -> continuous control
+     monitoring and analytics -> proposed findings -> accepted into engagements -> owners and action plans -> re-test -> closed, with
+     evidence requests, department attestations and escalations beside the flow. Every number comes from GET /api/itam/audit-flow
+     (engine/automation-flow.js), computed from the modules' own records at request time. A module not installed is grey and says so;
+     a stage with no records says what to connect. Nothing is entered here. Operators and administrators (the flow names people). -->
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--ai:#a78bfa}
+[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 48px}
+.hero{border:1px solid var(--edge);border-radius:18px;padding:20px 22px;margin:0 0 14px;background:var(--panel)}
+.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.14em;color:var(--info);text-transform:uppercase}.hero h1{margin:8px 0 6px;font-size:28px;color:var(--title);line-height:1.1}
+.hero p{color:var(--text);margin:0;max-width:1000px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px;font-size:13px}.bar label{color:var(--mute)}.bar select{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:5px 8px;font:inherit}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+.col{display:flex;flex-direction:column;gap:8px;flex:1 1 104px;min-width:104px;max-width:240px}
+.ar{display:flex;align-items:center;color:var(--mute);font-size:18px;padding:0 1px}[dir=rtl] .ar{transform:scaleX(-1)}
+.st{display:block;flex:1;text-decoration:none;color:var(--text);background:var(--raise);border:1.5px solid var(--border);border-radius:12px;padding:10px 11px;min-width:0}
+.st:hover,.st:focus{border-color:var(--info);outline:none}
+.st .hd{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--mute)}.st .dot{width:9px;height:9px;border-radius:50%;background:var(--mute);flex:none}
+.st .nm{font-weight:700;color:var(--title);font-size:14.5px;margin:4px 0 2px}.st .n{font-size:22px;font-weight:800;color:var(--title)}.st .u{font-size:11.5px;color:var(--mute)}
+.st ul{margin:6px 0 0;padding:0;list-style:none;font-size:12px;color:var(--text)}.st li{margin:2px 0;overflow-wrap:anywhere}
+.st .sk{display:inline-block;margin-top:6px;font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;border:1px solid var(--border);color:var(--text)}
+.st .cy{font-size:11.5px;color:var(--mute);margin-top:4px}
+.st.ok{border-color:var(--ok)}.st.ok .dot{background:var(--ok)}.st.part{border-color:var(--warn)}.st.part .dot{background:var(--warn)}.st.part .sk{border-color:var(--warn)}
+.st.off .dot{background:var(--mute)}.st.missing{border-style:dashed}.st.missing .dot{background:transparent;border:1px solid var(--mute)}.st.bn{box-shadow:0 0 0 2px var(--bad)}
+.lanes{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,360px));gap:10px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:10px 12px 12px;border-bottom:3px solid var(--a,var(--border))}
+.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:22px;font-weight:800;margin-top:2px;color:var(--title);overflow-wrap:anywhere}.t .s{font-size:11.5px;color:var(--mute)}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:start;color:var(--mute);font-weight:600;padding:5px 6px;border-bottom:1px solid var(--edge)}td{padding:5px 6px;border-bottom:1px solid var(--edge);vertical-align:top;overflow-wrap:anywhere}
+td a{color:var(--info)}.grp td{font-weight:700;color:var(--title);padding-top:10px}.od{color:var(--bad);font-weight:700}
+.empty{color:var(--mute);padding:8px 0}.muted{color:var(--mute)}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.err{background:var(--raise);border:1px solid var(--bad);border-radius:12px;padding:10px;margin-bottom:12px;font-size:13px}
+.steps{margin:0;padding-inline-start:20px;font-size:13px}.steps li{margin:4px 0}.steps b{color:var(--title)}
+</style>
+</head><body><main>
+<section class="hero"><div class="eb">Audit · how the automation works</div><h1>Audit Automation Flow</h1>
+<p>From the platform's own records to findings that are closed after a re-test: use cases test every record, continuous control monitoring tests the audit trail, analytics test the datasets, findings are proposed for an auditor to accept into an engagement, the owner answers with an action plan, an auditor re-tests, and the finding closes. Each stage below is counted from its own records, with what is stuck there and for how long.</p></section>
+<div id="err"></div>
+<div class="bar"><label for="sd">Stuck after</label><select id="sd"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select><span class="muted" id="gen"></span></div>
+<div class="k" id="kk"></div>
+<div class="card"><h2>The flow, live <span class="c">click a stage to open its page · green = working · amber = items stuck · grey = no records yet · dashed = not installed</span></h2><div class="flow" id="flow"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Beside the flow <span class="c">evidence requests, department attestations, escalations</span></h2><div class="lanes" id="lanes"></div></div>
+<div class="g2"><div class="card"><h2>Bottleneck <span class="c">the stage whose stuck items add up to the most days</span></h2><div id="bn"></div></div>
+ <div class="card"><h2>Cycle time <span class="c">median, from the records' own timestamps</span></h2><div class="tw" id="cyc"></div></div></div>
+<div class="card"><h2>Stuck items <span class="c">oldest first, with the owner and the page where each is worked</span></h2><div class="tw" id="stuck"></div></div>
+<div class="card"><h2>What each stage does <span class="c">and who decides</span></h2><ol class="steps" id="how"></ol></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);},E=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var API='/audit-flow',LAYOUT=[['sources'],['tests'],['ccm','analytics'],['proposed'],['engaged'],['owners'],['retest'],['closed']];
+  var HOW=[['Sources','the platform\'s own records each use case reads (leavers, joiners, privileged access, changes, access reviews, assets, risks, DSRs, breaches, contracts); a source with no records makes its use cases not testable, never effective.'],
+    ['Use-case tests','the Audit Command Center runs 21 audit use cases over every record in the period (no sampling), daily or on Run now.'],
+    ['Control monitoring','the whole audit trail is tested daily (segregation of duties, decisions by a person, after-hours changes ...); an auditor explains each exception or marks it for a finding.'],
+    ['Audit analytics','duplicates, gaps, Benford, outliers and joins over datasets; a run with exceptions is reviewed by a different person.'],
+    ['Proposed findings','a use case or control with exceptions becomes a proposed finding; an auditor accepts it into an engagement in fieldwork or dismisses it with a reason.'],
+    ['Accepted into engagements','the IT, Cyber Security and Internal Audit Teams raise the finding in an engagement and issue it to a named owner.'],
+    ['Owners & action plans','the owner records management\'s response, the action plan and a due date, then marks it implemented.'],
+    ['Re-test','an auditor (never the owner) re-tests the remediation; where the finding came from a use case, the same test re-runs on the records after the implementation date.'],
+    ['Closed','closed after a clean re-test, or risk accepted by the Head of Audit.']];
+  function get(u){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(null);});}
+  var page=function(h){return /^[a-z0-9-]+\.html(#[a-z0-9-]+)?$/.test(String(h||''))?h:'#';};
+  var SL={ok:'working',part:'items stuck',off:'no records yet',missing:'not installed'};
+  function card(s,i,bn){var n=s.count==null?'—':s.count;
+    return '<a class="st '+E(s.status)+(bn?' bn':'')+'" href="'+E(page(s.href))+'" data-stage="'+E(s.id)+'" data-status="'+E(s.status)+'" aria-label="'+E(s.title+': '+(SL[s.status]||s.status)+((s.lines||[]).length?', '+s.lines.join(', '):''))+'">'
+      +'<div class="hd"><span class="dot"></span>'+(i!=null?E(i)+' · ':'')+E(SL[s.status]||s.status)+'</div><div class="nm">'+E(s.title)+'</div>'
+      +'<div><span class="n">'+E(n)+'</span> <span class="u">'+E(s.count==null?'':s.unit)+'</span></div>'
+      +'<ul>'+(s.lines||[]).map(function(l){return '<li>'+E(l)+'</li>';}).join('')+'</ul>'
+      +(s.stuck?'<span class="sk">'+E(s.stuck)+' stuck</span>':'')
+      +(s.cycle&&s.cycle.median_days!=null?'<div class="cy">median '+E(s.cycle.median_days)+' d · '+E(s.cycle.n)+' item(s)</div>':'')
+      +(s.gap&&(s.status==='ok'||s.status==='part')?'<div class="cy">'+E(s.gap)+'</div>':'')+'</a>';}
+  function tile(l,v,s,c){return '<div class="t" style="--a:'+c+'"><div class="l">'+E(l)+'</div><div class="v" title="'+E(v)+'">'+E(v)+'</div><div class="s">'+E(s)+'</div></div>';}
+  function draw(v){var by={},num=0;v.stages.forEach(function(s){by[s.id]=s;});var bn=v.bottleneck&&v.bottleneck.stage;
+    $('flow').innerHTML=LAYOUT.map(function(col,ci){var cards=col.map(function(id){var s=by[id];if(!s)return '';num++;return card(s,num,id===bn);}).join('');return (ci?'<div class="ar" aria-hidden="true">&#8594;</div>':'')+'<div class="col">'+cards+'</div>';}).join('');
+    $('lanes').innerHTML=(v.lanes||[]).map(function(s){return card(s,null,false);}).join('')||'<div class="empty">Nothing beside the flow.</div>';
+    var k=v.kpis||{};$('gen').textContent='computed '+String(v.generated_at||'').replace('T',' ').slice(0,16)+' UTC';
+    $('kk').innerHTML=tile('Stages working',k.working+' / '+k.stages,(k.partly||0)+' with items stuck',k.working===k.stages?'var(--ok)':'var(--warn)')
+      +tile('Stuck items',k.stuck,'waiting '+v.stuck_days+' day(s) or more',k.stuck?'var(--warn)':'var(--ok)')
+      +tile('Oldest stuck',k.stuck?k.oldest_days+' d':'—','days since it reached its stage',k.oldest_days>30?'var(--bad)':'var(--border)')
+      +tile('Bottleneck',bn?v.bottleneck.title:'none',bn?v.bottleneck.stuck+' item(s) stuck':'nothing is stuck',bn?'var(--bad)':'var(--ok)')
+      +tile('Not installed',k.not_installed,'modules to install with the update',k.not_installed?'var(--warn)':'var(--ok)');
+    $('bn').innerHTML=bn?'<p><b>'+E(v.bottleneck.title)+'</b> - '+E(v.bottleneck.why)+'</p><p class="muted"><a href="'+E(page(by[bn]&&by[bn].href))+'" style="color:var(--info)">Open '+E(v.bottleneck.title)+'</a></p>':'<div class="empty">'+E(v.bottleneck?v.bottleneck.why:'nothing is stuck in the flow')+'</div>';
+    var all=v.stages.concat(v.lanes||[]);
+    $('cyc').innerHTML='<table><thead><tr><th>Stage</th><th>Median</th><th>Items</th><th>Measured</th></tr></thead><tbody>'+all.filter(function(s){return s.cycle;}).map(function(s){var c=s.cycle;return '<tr><td>'+E(s.title)+'</td><td>'+(c.median_days==null?'<span class="muted">—</span>':E(c.median_days)+' d')+'</td><td>'+E(c.n)+'</td><td class="muted">'+E(c.median_days==null&&c.why?c.of+' ('+c.why+')':c.of)+'</td></tr>';}).join('')+'</tbody></table>';
+    var rows=all.filter(function(s){return s.items&&s.items.length;});
+    $('stuck').innerHTML=rows.length?'<table><thead><tr><th>Item</th><th>Age</th><th>Owner</th><th>Waiting for</th></tr></thead><tbody>'+rows.map(function(s){
+      return '<tr class="grp" data-group="'+E(s.id)+'"><td colspan="4">'+E(s.title)+' · '+E(s.stuck)+' stuck</td></tr>'+s.items.map(function(x){return '<tr data-item="'+E(x.id)+'"><td><a href="'+E(page(x.href))+'">'+E(x.title||x.id)+'</a></td><td'+(x.overdue?' class="od"':'')+'>'+(x.age_days==null?'—':E(x.age_days)+' d')+(x.overdue?' · overdue':'')+'</td><td>'+E(x.owner||'—')+'</td><td>'+E(x.waiting_for)+'</td></tr>';}).join('')
+        +(s.more?'<tr><td colspan="4" class="muted">… and '+E(s.more)+' more on the stage\'s page</td></tr>':'');}).join('')+'</tbody></table>':'<div class="empty">Nothing is stuck: no item has waited '+E(v.stuck_days)+' day(s) or more, and no clock has passed.</div>';
+    $('how').innerHTML=HOW.map(function(x){return '<li><b>'+E(x[0])+'</b> - '+E(x[1])+'</li>';}).join('');}
+  function load(){var d=$('sd').value;get(API+'?stuck_days='+encodeURIComponent(d)).then(function(v){$('err').innerHTML='';draw(v);},function(e){
+    $('err').innerHTML='<div class="err">'+E(e.status===403?'Your role cannot open this page: the flow names people (PDPL) - an operator or administrator opens it.':e.status===404?'The automation flow is not installed - run the update.':e.message)+'</div>';
+    $('flow').innerHTML='<div class="empty">The flow appears when the records can be read.</div>';$('lanes').innerHTML='';$('kk').innerHTML='';$('bn').innerHTML='';$('cyc').innerHTML='';$('stuck').innerHTML='';
+    $('how').innerHTML=HOW.map(function(x){return '<li><b>'+E(x[0])+'</b> - '+E(x[1])+'</li>';}).join('');});}
+  $('sd').addEventListener('change',load);
+  load();
+})();
+</script></body></html>

@@ -1,0 +1,94 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Advanced Rogue Detection</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1680px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.bad{border-color:#5a2a2d;color:#ff8a8e}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;cursor:pointer}.kpi[aria-pressed="true"]{border-color:var(--d-acc)}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.inp,select.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.c-rogue{background:rgba(229,72,77,.22);color:#ff8a8e}.c-suspicious,.c-suspect{background:rgba(245,99,0,.2);color:#ff9b5c}.c-unverified{background:rgba(139,147,164,.16);color:#aab2c2}.c-trusted{background:rgba(47,179,68,.15);color:#56d364}.c-guest{background:rgba(91,141,239,.2);color:#8db0ff}
+.risk{display:inline-flex;align-items:center;gap:6px}.risk i{display:block;width:60px;height:7px;border-radius:4px;background:#1b2030;overflow:hidden}.risk i b{display:block;height:100%}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px;border-bottom:1px solid var(--d-line)}td{padding:7px 6px;border-bottom:1px solid #1b2030;vertical-align:top}
+tr.dv{cursor:pointer}tr.dv:hover td{background:#151924}.mono{font:12px ui-monospace,Consolas,monospace}
+.why{margin:6px 0;padding:0;list-style:none}.why li{display:flex;gap:8px;font-size:12.5px;margin:3px 0}.why b{min-width:36px;text-align:right;color:#ff9b5c}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.src{display:flex;gap:8px;flex-wrap:wrap;font-size:12px}.src span{border:1px solid var(--d-line);border-radius:999px;padding:3px 10px}.src span.z{border-color:#5a4a1d;color:#f5b544}
+.bulk{position:sticky;bottom:10px;background:#1a2030;border:1px solid #2e3747;border-radius:12px;padding:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:640px){main{padding:12px 12px 40px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}table{display:block;overflow-x:auto}.top h1{font-size:20px}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · Access</div><h1>Advanced Rogue Detection</h1><div class="sm mute">Every device on {{org.short}}'s LANs, joined by MAC address from the switch ports, the firewall's DHCP and ARP tables and Genian NAC - with the ones that should not be there, each risk point explained. Blocking is a change plan a second person approves.</div></div><div class="sp"></div>
+ <a class="btn" href="network-access.html"><i class="ti ti-shield-lock"></i>Network access (NAC)</a><a class="btn" href="switch-port-map.html"><i class="ti ti-plug-connected"></i>Switch Port Map</a><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <section class="card"><div class="kpis" id="kpis"></div><div class="src" id="src" style="margin-top:10px"></div></section>
+ <section class="card" id="list"></section>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var V=null,CF='',OPEN='',SEL={},ROLE='viewer';
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc/netops'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('The SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function when(t){return t?new Date(t).toLocaleString():'—';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  var CAN=function(){return ROLE==='operator'||ROLE==='admin';};
+  function load(){$('err').hidden=true;return req('GET','/rogue').then(function(v){V=v;$('main').hidden=false;draw();}).catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>Rogue detection is not available</h2>'+note(e.status===404?'It is not installed on the SIEM yet - run the update (update-platform.ps1).':e.message);});}
+  var KS=[['devices','devices',''],['rogue','rogue','#ff8a8e'],['suspicious','suspicious','#ff9b5c'],['unverified','unverified',''],['trusted','trusted','#56d364'],['guest','guests','#8db0ff'],['expired_guests','guest access expired','#f5b544'],['unmanaged_ports','ports with an unmanaged switch','#ff9b5c']];
+  var SRCN={switch_ports:'switch ports',switch_arp:'switch ARP',firewall_dhcp:'firewall DHCP',firewall_arp:'firewall ARP',nac:'Genian NAC'};
+  function match(d){if(CF==='expired_guests'&&!d.note)return false;if(CF==='unmanaged_ports'&&!(d.port_macs>=3))return false;if(CF&&['expired_guests','unmanaged_ports','devices'].indexOf(CF)<0&&d.class!==CF)return false;
+    var q=($('q')&&$('q').value||'').trim().toLowerCase();return !q||(d.mac+' '+d.vendor+' '+d.ips.join(' ')+' '+d.hosts.join(' ')+' '+(d.port?d.port.switch+' '+d.port.port:'')+' '+(d.firewall||'')+' '+(d.iface||'')+' '+(d.vlan_name||'')).toLowerCase().indexOf(q)>=0;}
+  function draw(){var k=V.kpis;
+    $('kpis').innerHTML=KS.map(function(x){var v=k[x[0]];return '<div class="kpi" role="button" tabindex="0" data-k="'+x[0]+'" aria-pressed="'+(CF===x[0])+'"><div class="n" style="color:'+(v&&x[2]?x[2]:'inherit')+'">'+esc(v)+'</div><div class="l">'+esc(x[1])+'</div></div>';}).join('');
+    $('src').innerHTML='<span class="mute" style="border:0;padding:3px 0">Seen by:</span>'+Object.keys(SRCN).map(function(s){var n=V.sources[s]||0;return '<span class="'+(n?'':'z')+'" title="'+esc(n?'':'nothing from this source - not connected, or its login cannot read it')+'">'+esc(SRCN[s]+' '+n)+'</span>';}).join('')
+      +(V.nac_connected?'':'<span class="z">NAC not connected - "never seen by NAC" is not scored</span>')+(V.oui_loaded?'':'<span class="z">OUI vendor list not loaded on the SIEM</span>');
+    var h='<h2><i class="ti ti-spy"></i>Devices <span class="c">'+esc(V.note)+'</span></h2>';
+    if(V.private){$('list').innerHTML=h+note('MAC addresses, IPs and host names identify people\'s devices (PDPL), so the device list is for analysts and above. The counts above are for everyone.');return;}
+    if(!V.devices.length){$('list').innerHTML=h+note('No device seen yet. Devices appear when the Switch Port Map reads a switch, when the FortiGate API login can read DHCP and ARP, or when Genian NAC is connected.');return;}
+    var L=V.devices.filter(match);
+    h+='<div class="row" style="margin-bottom:8px"><input class="inp" id="q" style="flex:1;min-width:220px;max-width:420px" placeholder="Find a MAC, IP, host, vendor or switch port" aria-label="Find" value="'+esc(($('q')&&$('q').value)||'')+'"><span class="sm mute">'+L.length+' of '+V.devices.length+'</span></div>';
+    if(!L.length){$('list').innerHTML=h+note('No device matches.');return;}
+    h+='<table><thead><tr>'+(CAN()?'<th><input type="checkbox" id="all" aria-label="Select all shown"></th>':'')+'<th>Device</th><th>Class</th><th>Risk</th><th>Where</th><th>Seen by</th><th>Last seen</th></tr></thead><tbody>';
+    L.slice(0,500).forEach(function(d){var c=d.risk>=50?'#e5484d':d.risk>=25?'#f59f00':'#5c6476';
+      h+='<tr class="dv" data-d="'+esc(d.mac)+'">'+(CAN()?'<td><input type="checkbox" data-sel="'+esc(d.mac)+'"'+(SEL[d.mac]?' checked':'')+' aria-label="Select '+esc(d.mac)+'"></td>':'')
+        +'<td><span class="mono">'+esc(d.mac)+'</span>'+(d.randomised?' '+pill('private MAC','c-unverified'):'')+'<div class="sm">'+esc(d.vendor||'—')+'</div><div class="sm mute">'+esc(d.hosts.concat(d.ips).slice(0,3).join(' · '))+'</div></td>'
+        +'<td>'+pill(d.class,'c-'+d.class)+(d.note?'<div class="sm" style="color:#f5b544">'+esc(d.note)+'</div>':'')+'</td><td><span class="risk"><i><b style="width:'+d.risk+'%;background:'+c+'"></b></i>'+esc(d.risk)+'</span></td>'
+        +'<td class="sm">'+(d.port?esc(d.port.switch+' '+d.port.port)+(d.vlan!=null?'<div class="mute">VLAN '+esc(d.vlan)+(d.vlan_name?' '+esc(d.vlan_name):'')+'</div>':''):esc(d.firewall?d.firewall+(d.iface?' · '+d.iface:''):'—'))+'</td><td class="sm">'+esc(d.seen_by.join(', '))+'</td><td class="sm">'+esc(when(d.last))+'</td></tr>';
+      if(OPEN===d.mac){h+='<tr><td colspan="'+(CAN()?7:6)+'"><ul class="why">'+(d.why.length?d.why.map(function(w){return '<li><b>+'+esc(w.points)+'</b><span>'+esc(w.why)+'</span></li>';}).join(''):'<li><b>0</b><span>no risk reason found</span></li>')+'</ul>'
+        +'<div class="sm">'+(d.nac?'NAC: '+esc(d.nac.status)+' · ':'')+(d.dhcp_vci?'DHCP vendor class: '+esc(d.dhcp_vci)+' · ':'')+'first seen '+esc(when(d.first))+(d.label?' · '+esc(d.label.label)+' by '+esc(d.label.by)+(d.label.until?' until '+esc(when(d.label.until)):'')+(d.label.note?' - '+esc(d.label.note):''):'')+'</div>'
+        +(CAN()?'<div class="row" style="margin-top:8px"><button class="btn sm" type="button" data-lab="trusted" data-m="'+esc(d.mac)+'">Trust</button><select class="inp" id="gd-'+esc(d.mac)+'" aria-label="Guest days"><option value="1">1 day</option><option value="7" selected>7 days</option><option value="30">30 days</option></select><button class="btn sm" type="button" data-lab="guest" data-m="'+esc(d.mac)+'">Guest</button><button class="btn sm" type="button" data-lab="suspect" data-m="'+esc(d.mac)+'">Suspect</button>'+(d.label?'<button class="btn sm" type="button" data-lab="clear" data-m="'+esc(d.mac)+'">Clear label</button>':'')
+          +(d.can_block?'<button class="btn sm bad" type="button" data-block="'+esc(d.mac)+'"><i class="ti ti-plug-x"></i>Propose blocking the port</button>':'<span class="sm mute">Not on a read switch port - block it in Genian NAC or on the firewall.</span>')+'</div>':'')+'</td></tr>';}});
+    h+='</tbody></table>'+(L.length>500?'<div class="sm mute">First 500 of '+L.length+' shown - narrow the search.</div>':'');
+    var n=Object.keys(SEL).length;if(CAN()&&n)h+='<div class="bulk"><b>'+n+' selected</b><button class="btn sm" type="button" data-bulk="trusted">Trust</button><button class="btn sm" type="button" data-bulk="guest">Guest 7 days</button><button class="btn sm" type="button" data-bulk="suspect">Suspect</button><button class="btn sm" type="button" data-bulk="clear">Clear labels</button><button class="btn sm" type="button" id="unsel">Clear selection</button></div>';
+    $('list').innerHTML=h;var q=$('q');if(q&&document.activeElement!==q&&q.value)q.setSelectionRange(q.value.length,q.value.length);}
+  function label(macs,lab,days){var b={macs:macs,label:lab};if(lab==='guest')b.days=days||7;if(lab==='trusted'){var nt=prompt('Why is it trusted? (owner, asset tag)');if(!nt)return;b.note=nt;}
+    req('POST','/rogue/label',b).then(function(r){toast(r.changed.length+' device(s): '+lab);SEL={};return load();}).catch(function(e){toast(e.message);});}
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-k],[data-lab],[data-block],[data-bulk],[data-sel],#all,tr.dv,button[id]');if(!el)return;
+    if(el.dataset.k){CF=CF===el.dataset.k||el.dataset.k==='devices'?'':el.dataset.k;draw();return;}
+    if(el.dataset.sel!==undefined){if(el.checked)SEL[el.dataset.sel]=1;else delete SEL[el.dataset.sel];ev.stopPropagation();draw();return;}
+    if(el.id==='all'){V.devices.filter(match).slice(0,500).forEach(function(d){if(el.checked)SEL[d.mac]=1;else delete SEL[d.mac];});draw();return;}
+    if(el.dataset.lab){var gd=$('gd-'+el.dataset.m);label([el.dataset.m],el.dataset.lab,gd?Number(gd.value):7);return;}
+    if(el.dataset.bulk){label(Object.keys(SEL),el.dataset.bulk,7);return;}
+    if(el.dataset.block){var why=prompt('Why block this device? (shown on the change plan)');if(!why)return;el.disabled=true;req('POST','/rogue/block',{mac:el.dataset.block,reason:why}).then(function(r){toast('Change plan '+r.plan+' proposed: shut '+r.switch+' '+r.port+' - a second person approves it');el.disabled=false;}).catch(function(e){el.disabled=false;toast(e.message);});return;}
+    if(el.id==='unsel'){SEL={};draw();return;}
+    if(el.id==='refresh'){load();return;}
+    if(el.classList&&el.classList.contains('dv')){OPEN=OPEN===el.dataset.d?'':el.dataset.d;draw();}});
+  document.addEventListener('keydown',function(ev){var k=ev.target.closest&&ev.target.closest('[data-k]');if(k&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();k.click();}});
+  document.addEventListener('input',function(ev){if(ev.target.id==='q'){var c=ev.target.selectionStart;draw();var q=$('q');if(q){q.focus();q.setSelectionRange(c,c);}}});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{ROLE=JSON.parse(w.responseText).role||'viewer';}catch(e){ROLE='viewer';/* unknown identity: least privilege */}load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

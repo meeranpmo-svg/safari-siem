@@ -1,0 +1,12 @@
+--- a/engine/main.js	2026-10-19 19:52:02.898610262 +0000
++++ b/engine/main.js	2026-10-19 19:52:02.905261384 +0000
+@@ -52,7 +52,8 @@
+ 
+   // AI job result dispatch → validate the model JSON, store the result, apply advisory output.
+   async function onResult(job, prepared, res, meta) {
+-    const out = validateOutput(job.feature, res.text, prepared.ctx, res);
++    // checked by Python too when it answers identically (engine/ai/guard-py.js, step 9j-a); otherwise validate.js, as before
++    let out; try { out = await require('./ai/guard-py').guardFor(config).validateOutput(job.feature, res.text, prepared.ctx, res); } catch (e) { out = validateOutput(job.feature, res.text, prepared.ctx, res); }
+     const id = `air_${Math.random().toString(16).slice(2, 10)}`;
+     const rec = { id, feature: job.feature, at: new Date().toISOString(), call_id: meta.call_id, ai: out.ai, validation: out.validation, ai_label: 'AI — verify' };
+     let applied = 0;

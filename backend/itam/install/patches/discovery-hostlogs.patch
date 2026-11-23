@@ -1,0 +1,86 @@
+--- a/engine/discovery/index.js	2026-10-13 20:20:53.416337416 +0000
++++ b/engine/discovery/index.js	2026-10-13 20:20:53.423303326 +0000
+@@ -431,7 +431,7 @@
+   // ---------------- SIEM connect ----------------
+   async function connect(assetId, body, who) { return siem.connect(assetId, body || {}, who); }
+   function connections() {
+-    return assets.all().filter((a) => a.siem && a.siem.source_id).map((a) => ({ asset_id: a.id, name: a.name, mgmt_ip: a.mgmt_ip, site: a.site, type: a.type, source_id: a.siem.source_id, kind: a.siem.kind, state: a.siem.state, last_seen: a.siem.last_seen, checked_at: a.siem.checked_at, alert: !!a.siem.alert, connected_at: a.siem.connected_at, connected_by: a.siem.connected_by }));
++    return assets.all().filter((a) => a.siem && a.siem.source_id).map((a) => ({ asset_id: a.id, name: a.name, mgmt_ip: a.mgmt_ip, site: a.site, type: a.type, source_id: a.siem.source_id, kind: a.siem.kind, state: a.siem.state, via: a.siem.via || null, last_seen: a.siem.last_seen, checked_at: a.siem.checked_at, alert: !!a.siem.alert, connected_at: a.siem.connected_at, connected_by: a.siem.connected_by }));
+   }
+   function connectCandidates() {
+     return assets.all().filter((a) => a.discovery && !(a.siem && a.siem.source_id) && a.status !== 'disposed' && a.status !== 'retired').map((a) => { const k = siem.kindFor(a); return { asset_id: a.id, name: a.name, mgmt_ip: a.mgmt_ip, site: a.site, class: a.discovery.class, suggested_kind: k.kind, reason: k.reason }; });
+@@ -493,6 +493,17 @@
+       return lastCoverage;
+     }
+     const srcs = got.sources.map(normSource);
++    // per-host view: every machine that itself sent logs (SIEM GET /reporting-hosts). Precise for servers that share
++    // one agent or syslog source - the source can be busy while one of its servers has gone quiet. Older SIEM: skipped.
++    const repByHost = new Map(); const repByIp = new Map();
++    try {
++      const rh = await siem.call('GET', '/reporting-hosts?hours=168', { user: 'system:itam-discovery', role: 'viewer' });
++      if (rh && rh.status === 200 && rh.json && Array.isArray(rh.json.hosts)) for (const h of rh.json.hosts) {
++        const r = { id: h.src_id || null, kind: null, last_seen: h.last_seen || null, host: String(h.host || '').toLowerCase() };
++        if (r.host) { repByHost.set(r.host, r); if (r.host.indexOf('.') > 0 && !repByHost.has(r.host.split('.')[0])) repByHost.set(r.host.split('.')[0], r); }
++        if (h.ip && !repByIp.has(h.ip)) repByIp.set(h.ip, r);
++      }
++    } catch (e) { /* SIEM without /reporting-hosts - source matching below still applies */ }
+     const byIp = new Map(); const byHost = new Map(); const byMac = new Map(); const byId = new Map();
+     for (const s of srcs) { if (s.ip) byIp.set(s.ip, s); for (const h of s.hosts) if (!byHost.has(h)) byHost.set(h, s); for (const m of s.macs) if (!byMac.has(m)) byMac.set(m, s); byId.set(s.id, s); }
+     per = live.map((a) => {
+@@ -501,6 +512,12 @@
+       if (!s && a.mgmt_ip && byIp.has(a.mgmt_ip)) { s = byIp.get(a.mgmt_ip); by = 'ip'; }
+       if (!s) { for (const h of assetHosts(a)) if (byHost.has(h)) { s = byHost.get(h); by = 'hostname'; break; } }
+       if (!s) { for (const m of assetMacs(a)) if (byMac.has(m)) { s = byMac.get(m); by = 'mac'; break; } }
++      let hs = null;
++      for (const h of assetHosts(a)) if (repByHost.has(h)) { hs = repByHost.get(h); break; }
++      if (!hs && a.mgmt_ip && repByIp.has(a.mgmt_ip)) hs = repByIp.get(a.mgmt_ip);
++      const hostOk = !!(hs && sourceRecent(hs, now, silentMs));
++      const own = !!(s && by === 'source');   // the asset's own source: its health stands on its own
++      if (hs && (hostOk || !own || !sourceRecent(s, now, silentMs))) return covItem(a, hs, hostOk ? 'covered' : 'silent', 'host-logs');
+       const status = !s ? 'absent' : (sourceRecent(s, now, silentMs) ? 'covered' : 'silent');
+       return covItem(a, s, status, by);
+     });
+--- a/engine/discovery/siem.js	2026-10-13 20:20:53.424337415 +0000
++++ b/engine/discovery/siem.js	2026-10-13 20:20:53.428337415 +0000
+@@ -120,15 +120,37 @@
+     try { r = await call('GET', '/onboard/sources', { user: 'system:itam-discovery', role: 'viewer' }); } catch (e) { lastHealth = { at: new Date(now).toISOString(), ok: false, error: e.message }; return lastHealth; }
+     if (r.status !== 200 || !r.json || !Array.isArray(r.json.sources)) { lastHealth = { at: new Date(now).toISOString(), ok: false, error: `SIEM HTTP ${r.status}` }; return lastHealth; }
+     const rows = new Map(r.json.sources.map((s) => [s.id, s]));
++    // the server's own logs may arrive through ANOTHER source (one agent source shared by many servers, a syslog relay):
++    // GET /reporting-hosts lists every machine that sent logs, so such an asset is receiving, "via" that source
++    const rep = new Map();
++    try {
++      const rh = await call('GET', '/reporting-hosts?hours=168', { user: 'system:itam-discovery', role: 'viewer' });
++      if (rh && rh.status === 200 && rh.json && Array.isArray(rh.json.hosts)) for (const h of rh.json.hosts) {
++        const k = String(h.host || '').toLowerCase(); if (!k) continue;
++        if (!rep.has(k)) rep.set(k, h); if (k.indexOf('.') > 0 && !rep.has(k.split('.')[0])) rep.set(k.split('.')[0], h);
++        if (h.ip && !rep.has('ip:' + h.ip)) rep.set('ip:' + h.ip, h);
++      }
++    } catch (e) { /* older SIEM without /reporting-hosts */ }
++    const hostRow = (a) => {
++      for (const v of [a.name, a.hostname, a.fqdn]) { const k = String(v || '').toLowerCase().trim(); if (!k) continue; if (rep.has(k)) return rep.get(k); if (k.indexOf('.') > 0 && rep.has(k.split('.')[0])) return rep.get(k.split('.')[0]); }
++      return a.mgmt_ip && rep.has('ip:' + a.mgmt_ip) ? rep.get('ip:' + a.mgmt_ip) : null;
++    };
+     let silent = 0;
+     for (const a of connected) {
+       const row = rows.get(a.siem.source_id);
+-      const last = row && row.last_seen ? Number(row.last_seen) : null;
++      let last = row && row.last_seen ? Number(row.last_seen) : null;
+       const since = last || Date.parse(a.siem.connected_at) || now;
+-      const state = !row ? 'missing' : row.state || 'waiting';
+-      const alert = !row || (state !== 'receiving' && now - since > silentMs);
++      let state = !row ? 'missing' : row.state || 'waiting';
++      let via = null;
++      const h = state !== 'receiving' ? hostRow(a) : null;
++      const ht = h && h.last_seen ? Date.parse(h.last_seen) : NaN;
++      if (h && Number.isFinite(ht) && h.src_id !== a.siem.source_id) {
++        if (now - ht <= silentMs) { state = 'receiving'; via = h.src_id; last = ht; }
++        else if (!last || ht > last) { via = h.src_id; last = ht; }
++      }
++      const alert = state !== 'receiving' && (!row || now - (last || since) > silentMs);
+       if (alert) silent++;
+-      store.collection('assets').patch(a.id, (x) => { x.siem = Object.assign({}, x.siem, { state, last_seen: last ? new Date(last).toISOString() : null, checked_at: new Date(now).toISOString(), alert }); });
++      store.collection('assets').patch(a.id, (x) => { x.siem = Object.assign({}, x.siem, { state, via, last_seen: last ? new Date(last).toISOString() : null, checked_at: new Date(now).toISOString(), alert }); });
+     }
+     if (findings) findings.syncKinds(['siem_silent'], { user: 'system:itam-discovery', role: 'system' });
+     lastHealth = { at: new Date(now).toISOString(), ok: true, checked: connected.length, silent };

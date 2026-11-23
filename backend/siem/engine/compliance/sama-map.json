@@ -1,0 +1,209 @@
+{
+  "_about": [
+    "SAMA Cyber Security Framework -> Sentra SIEM evidence map. DRAFT: VERIFY WITH THE COMPLIANCE TEAM before it is used in front of SAMA or an auditor.",
+    "Control ids and titles are copied exactly from sentra-grcai/engine/catalogue.js (engine/compliance/sama-catalogue.js). Every catalogue control is listed here: either siem_evidenced=true with checks, or siem_evidenced=false (n/a for the SIEM, owned by GRC) with the reason.",
+    "Each check: {id, title, kind, params, on_fail: gap|partial, action}. kind is one of the evaluators in engine/compliance/sama.js (see 'kinds'). action is the recommended step that closes the check when it fails.",
+    "Status of a control = covered when every check passes; otherwise the worst on_fail of the failing checks (gap > partial). A check whose evidence is unavailable (e.g. ClickHouse down, no asset inventory) counts as partial, never as passing. max_status caps controls the SIEM can only partly evidence (the rest is GRC evidence).",
+    "Coverage % = (covered + 0.5 x partial) / number of SIEM-evidenced controls x 100.",
+    "Rules declare the controls they evidence in their own `sama` array (engine/detect/rules/*.json); rules_tagged checks count ENABLED rules carrying the control id.",
+    "Thresholds such as required retention and required source classes are admin settings (POST /api/soc/compliance/sama/settings); params here are defaults."
+  ],
+  "version": 1,
+  "framework": "sama",
+  "verify_with_compliance_team": true,
+  "scoring": { "covered": 1, "partial": 0.5, "gap": 0 },
+  "kinds": {
+    "sources_active": "configured or seen log sources that are not silent >= params.min",
+    "silent_sources": "configured sources silent longer than their silent_after_s <= params.max",
+    "hosts_reporting": "distinct hosts that sent events in the active window >= params.min",
+    "required_source_classes": "every class in settings.required_source_classes has at least one reporting source/host",
+    "source_class": "params.class has at least one reporting source/host",
+    "retention": "effective hot retention (ClickHouse TTL, else config) >= settings.required_retention_days",
+    "detector_running": "real-time detector loaded with rules and without rule load errors",
+    "rules_tagged": "enabled rules tagged with this control >= params.min",
+    "rules_enabled": "at least params.min of params.rules are enabled (default: all)",
+    "rule_topics": "every topic in params.topics has at least one enabled rule; topics with no rule yet are listed with their action",
+    "alert_triage": "alerts in the period: acknowledged-or-closed share >= params.min_ack_pct and average MTTA <= params.max_mtta_h",
+    "cases_handled": "cases created or closed in the period >= params.min_cases",
+    "case_sla": "case resolve-SLA compliance in the period >= params.min_resolve_pct",
+    "playbooks": "response playbooks available >= params.min",
+    "escalation": "high/critical alerts (severity >= params.min_severity) escalated to a case or closed with a reason >= params.min_pct",
+    "intel_feed": "threat-intel indicators loaded >= params.min_indicators",
+    "intel_fresh": "newest threat-intel list file is younger than params.max_age_days",
+    "ioc_matching": "IOC-matching rules enabled (params.rules); reports IOC matches in the period",
+    "ad_sync": "AD identity sync enabled, last run ok and younger than params.max_age_h",
+    "ueba": "UEBA enabled and its detectors ran within params.max_age_h",
+    "asset_coverage": "hosts reporting / known assets (config.enrich.assets + settings.known_assets / expected_asset_count) >= params.min_pct",
+    "vendor_accounts": "third-party account patterns defined in settings.vendor_account_patterns"
+  },
+  "source_classes": {
+    "domain_controllers": { "title": "Domain controllers", "src_types": ["windows"], "kdc_event_codes": ["4768", "4769", "4771"], "use_ad_servers": true, "host_patterns": [] },
+    "windows_servers": { "title": "Windows servers", "src_types": ["windows"], "exclude_classes": ["domain_controllers"] },
+    "firewall_network": { "title": "Firewall / network", "src_types": ["fortigate", "cisco"] },
+    "microsoft_365": { "title": "Microsoft 365", "src_types": ["m365"] },
+    "exchange": { "title": "Exchange", "src_types": ["exchange"] },
+    "linux": { "title": "Linux servers", "src_types": ["linux"] },
+    "web": { "title": "Web servers / portal", "src_types": ["nginx", "iis"] },
+    "defender": { "title": "Microsoft Defender (endpoint)", "src_types": ["windows"], "channel_contains": "defender" },
+    "vulnerability_scanner": { "title": "Vulnerability scanner", "src_types": ["tenable", "nessus", "qualys", "openvas"], "src_id_patterns": ["*tenable*", "*nessus*", "*qualys*", "*openvas*"] }
+  },
+  "controls": {
+    "3.1.1": { "title": "Cyber Security Governance", "siem_evidenced": false, "reason": "Governance structure and committee evidence — owned by GRC." },
+    "3.1.2": { "title": "Cyber Security Strategy", "siem_evidenced": false, "reason": "Strategy documents — owned by GRC." },
+    "3.1.3": { "title": "Cyber Security Policy", "siem_evidenced": false, "reason": "Policy documents and approvals — owned by GRC." },
+    "3.1.4": { "title": "Cyber Security Roles & Responsibilities", "siem_evidenced": false, "reason": "RACI / job descriptions — owned by GRC." },
+    "3.1.5": { "title": "Cyber Security in Project Management", "siem_evidenced": false, "reason": "Project security reviews — owned by PMO / GRC." },
+    "3.1.6": { "title": "Cyber Security Awareness", "siem_evidenced": false, "reason": "Awareness programme records — owned by GRC." },
+    "3.1.7": { "title": "Cyber Security Training", "siem_evidenced": false, "reason": "Training records — owned by HR / GRC." },
+    "3.2.1": { "title": "Cyber Security Risk Management", "siem_evidenced": false, "reason": "Risk register and treatment — owned by Risk / GRC." },
+    "3.2.2": { "title": "Regulatory Compliance", "siem_evidenced": false, "reason": "Regulatory register — owned by Compliance / GRC." },
+    "3.2.3": { "title": "Compliance with (inter)national standards", "siem_evidenced": false, "reason": "Standards mapping — owned by Compliance / GRC." },
+    "3.2.4": { "title": "Cyber Security Review", "siem_evidenced": false, "reason": "Review reports — owned by Internal Audit / GRC (this evidence pack can be attached as input)." },
+    "3.2.5": { "title": "Cyber Security Audits", "siem_evidenced": false, "reason": "Audit reports — owned by Internal Audit / GRC (this evidence pack can be attached as input)." },
+    "3.3.1": { "title": "Human Resources security", "siem_evidenced": false, "reason": "Screening, joiner/leaver process — owned by HR / GRC." },
+    "3.3.2": { "title": "Physical Security", "siem_evidenced": false, "reason": "Physical access controls — no physical-access logs are onboarded to the SIEM." },
+    "3.3.3": {
+      "title": "Asset Management", "siem_evidenced": true, "max_status": "partial",
+      "scope": "The SIEM evidences which assets send security logs. The asset inventory itself (CMDB, ownership, classification) is GRC/IT evidence.",
+      "checks": [
+        { "id": "c333-hosts", "title": "Hosts reporting security events", "kind": "hosts_reporting", "params": { "min": 1 }, "on_fail": "gap", "action": "Onboard servers and network devices to the SIEM (WEF subscriptions, agents, syslog)." },
+        { "id": "c333-coverage", "title": "Known assets reporting to the SIEM", "kind": "asset_coverage", "params": { "min_pct": 90 }, "on_fail": "partial", "action": "Load the asset inventory (config enrich.assets or settings known_assets / expected_asset_count) and onboard the assets that are not reporting." }
+      ]
+    },
+    "3.3.4": { "title": "Cyber Security Architecture", "siem_evidenced": false, "reason": "Architecture design documents — owned by IT / GRC." },
+    "3.3.5": {
+      "title": "Identity & Access Management", "siem_evidenced": true,
+      "scope": "Monitoring of authentication, privileged access and account lifecycle events; AD identity context; behaviour analytics. Access approval and periodic access reviews are GRC/IAM evidence.",
+      "checks": [
+        { "id": "c335-rules", "title": "Identity and access detections enabled", "kind": "rules_tagged", "params": { "min": 10 }, "on_fail": "gap", "action": "Enable the SENTRA-AUTH / SENTRA-IAM / SENTRA-AD / SENTRA-CRED rule families." },
+        { "id": "c335-ad-rules", "title": "AD identity rules enabled", "kind": "rules_enabled", "params": { "rules": ["SENTRA-AD-001", "SENTRA-AD-002", "SENTRA-AD-003", "SENTRA-AD-004", "SENTRA-AD-005"] }, "on_fail": "partial", "action": "Enable all SENTRA-AD-* rules (they need the AD identity sync)." },
+        { "id": "c335-priv", "title": "Privileged logon and privileged group monitoring", "kind": "rules_enabled", "params": { "rules": ["SENTRA-AUTH-007", "SENTRA-IAM-001", "SENTRA-AD-003", "SENTRA-AD-004", "SENTRA-AD-005", "SENTRA-LNX-002"], "min": 4 }, "on_fail": "partial", "action": "Enable the privileged-access rules (SENTRA-AUTH-007, SENTRA-IAM-001, SENTRA-AD-003/004/005, SENTRA-LNX-002)." },
+        { "id": "c335-dc", "title": "Domain controller security logs collected", "kind": "source_class", "params": { "class": "domain_controllers" }, "on_fail": "partial", "action": "Apply the sentra-dc WEF subscription to every domain controller (agents/wef/subscriptions/sentra-dc.xml)." },
+        { "id": "c335-adsync", "title": "AD identity sync healthy", "kind": "ad_sync", "params": { "max_age_h": 26 }, "on_fail": "partial", "action": "Enable and fix the AD identity sync (sudo sentra-siem-ad status / sync-now; install/AD-IDENTITY.md)." },
+        { "id": "c335-ueba", "title": "User behaviour analytics active", "kind": "ueba", "params": { "max_age_h": 2 }, "on_fail": "partial", "action": "Enable UEBA and check that its detectors run (GET /api/soc/ueba/health)." }
+      ]
+    },
+    "3.3.6": {
+      "title": "Application Security", "siem_evidenced": true, "max_status": "partial",
+      "scope": "The SIEM evidences monitoring of application-layer attacks in web logs only. Secure development, testing and code review are GRC evidence.",
+      "checks": [
+        { "id": "c336-web", "title": "Web / application logs collected", "kind": "source_class", "params": { "class": "web" }, "on_fail": "gap", "action": "Forward web server / reverse proxy access logs (agents/linux/61-sentra-siem-webaccess.conf, IIS via relay)." },
+        { "id": "c336-rules", "title": "Application attack detections enabled", "kind": "rules_tagged", "params": { "min": 3 }, "on_fail": "partial", "action": "Enable the SENTRA-WEB-* rules." }
+      ]
+    },
+    "3.3.7": {
+      "title": "Change Management", "siem_evidenced": true,
+      "scope": "Detection of security-relevant configuration and account changes as an independent control over the change process. Change approval records (CAB) are GRC/ITSM evidence.",
+      "checks": [
+        { "id": "c337-topics", "title": "Detections for security-relevant changes", "kind": "rule_topics", "on_fail": "partial", "action": "Add the missing change detections listed.",
+          "params": { "topics": {
+            "account_changes": { "title": "Account and group changes", "rules": ["SENTRA-IAM-001", "SENTRA-IAM-002", "SENTRA-IAM-003", "SENTRA-IAM-004", "SENTRA-AD-003", "SENTRA-AD-004"], "action": "Enable the SENTRA-IAM-* and SENTRA-AD-003/004 rules." },
+            "service_changes": { "title": "Service installation", "rules": ["SENTRA-SYS-002", "SENTRA-SYS-003"], "action": "Enable SENTRA-SYS-002/003." },
+            "scheduled_tasks": { "title": "Scheduled task creation", "rules": ["SENTRA-SYS-004"], "action": "Enable SENTRA-SYS-004." },
+            "audit_tamper": { "title": "Audit log cleared / auditing disabled", "rules": ["SENTRA-SYS-001", "SENTRA-EXO-017"], "action": "Enable SENTRA-SYS-001 and SENTRA-EXO-017." },
+            "audit_policy": { "title": "Audit policy changes", "rules": ["SENTRA-ADC-006"], "action": "Enable SENTRA-ADC-006 (Windows 4719 auditing removed; 4719 is in the WEF sentra-dc / sentra-servers subscriptions). 4907 (auditing settings on an object changed) has no rule yet." },
+            "gpo_changes": { "title": "Group Policy changes", "rules": ["SENTRA-ADC-002", "SENTRA-ADC-003"], "action": "Enable SENTRA-ADC-002 (GPO linked / unlinked / enforced) and SENTRA-ADC-003 (GPO created / changed / deleted); they need 'Audit Directory Service Changes' on the domain controllers (5136/5137/5141 are in the sentra-dc WEF subscription). Set ad_changes.gpo_server for setting-level GPO change evidence." },
+            "exchange_config": { "title": "Exchange configuration changes", "rules": ["SENTRA-EXO-004", "SENTRA-EXO-006", "SENTRA-EXO-008"], "action": "Enable SENTRA-EXO-004/006/008." }
+          } } },
+        { "id": "c337-dc", "title": "Domain controller change events collected", "kind": "source_class", "params": { "class": "domain_controllers" }, "on_fail": "partial", "action": "Apply the sentra-dc WEF subscription to every domain controller." }
+      ]
+    },
+    "3.3.8": {
+      "title": "Infrastructure Security", "siem_evidenced": true,
+      "scope": "Firewall, network, malware and endpoint telemetry and the detections over it. Hardening baselines and network design are GRC/IT evidence.",
+      "checks": [
+        { "id": "c338-fw", "title": "Firewall / network telemetry collected", "kind": "source_class", "params": { "class": "firewall_network" }, "on_fail": "gap", "action": "Forward FortiGate traffic, UTM and event logs (agents/network/README.md)." },
+        { "id": "c338-defender", "title": "Microsoft Defender telemetry collected", "kind": "source_class", "params": { "class": "defender" }, "on_fail": "partial", "action": "Apply the sentra-defender WEF subscription (agents/wef/subscriptions/sentra-defender.xml) to servers and workstations." },
+        { "id": "c338-topics", "title": "Infrastructure threat detections", "kind": "rule_topics", "on_fail": "partial", "action": "Add the missing infrastructure detections listed.",
+          "params": { "topics": {
+            "ips": { "title": "Intrusion prevention", "rules": ["SENTRA-FGT-001"], "action": "Enable SENTRA-FGT-001." },
+            "malware": { "title": "Malware (gateway AV / known-bad hashes)", "rules": ["SENTRA-FGT-002", "SENTRA-INTEL-003"], "action": "Enable SENTRA-FGT-002 and SENTRA-INTEL-003." },
+            "network_recon": { "title": "Internal scanning / denied connections", "rules": ["SENTRA-FGT-003", "SENTRA-FGT-004"], "action": "Enable SENTRA-FGT-003/004." },
+            "exfiltration": { "title": "Large outbound transfers", "rules": ["SENTRA-EXFIL-001"], "action": "Enable SENTRA-EXFIL-001." },
+            "credential_theft": { "title": "Credential theft on servers", "rules": ["SENTRA-CRED-001", "SENTRA-CRED-002", "SENTRA-CRED-003"], "action": "Enable SENTRA-CRED-001/002/003 (needs Sysmon)." },
+            "endpoint_defender": { "title": "Defender detections", "rules": [], "action": "Add a rule on Defender events 1116 (malware detected) and 5001 (real-time protection disabled), both already in the sentra-defender WEF subscription." }
+          } } }
+      ]
+    },
+    "3.3.9": { "title": "Cryptography", "siem_evidenced": false, "reason": "Key management and crypto standards — owned by IT / GRC." },
+    "3.3.10": { "title": "Bring Your Own Device (BYOD)", "siem_evidenced": false, "reason": "BYOD policy and MDM — no MDM logs are onboarded to the SIEM." },
+    "3.3.11": { "title": "Secure Disposal of Information Assets", "siem_evidenced": false, "reason": "Disposal certificates — owned by IT / GRC." },
+    "3.3.12": { "title": "Payment Systems (premium & claims settlement)", "siem_evidenced": false, "reason": "Payment system logs are not onboarded to the SIEM; evidence owned by Finance / GRC." },
+    "3.3.13": {
+      "title": "Electronic Services (portal & mobile app)", "siem_evidenced": true, "max_status": "partial",
+      "scope": "Monitoring of attacks against the customer portal through its web logs. Service security design and testing are GRC evidence.",
+      "checks": [
+        { "id": "c3313-web", "title": "Portal / web logs collected", "kind": "source_class", "params": { "class": "web" }, "on_fail": "gap", "action": "Forward the portal reverse proxy / web server access logs to the SIEM." },
+        { "id": "c3313-rules", "title": "Web attack detections enabled", "kind": "rules_tagged", "params": { "min": 3 }, "on_fail": "partial", "action": "Enable the SENTRA-WEB-* rules." }
+      ]
+    },
+    "3.3.14": {
+      "title": "Cyber Security Event Management", "siem_evidenced": true,
+      "scope": "Central log collection from the key source classes, retention, real-time detection and monitored alert triage.",
+      "checks": [
+        { "id": "c3314-active", "title": "Active log sources", "kind": "sources_active", "params": { "min": 1 }, "on_fail": "gap", "action": "Onboard log sources (WEF, agents, syslog, Microsoft 365)." },
+        { "id": "c3314-silent", "title": "No silent log sources", "kind": "silent_sources", "params": { "max": 0 }, "on_fail": "partial", "action": "Restore the silent sources listed, or remove decommissioned ones from config.sources." },
+        { "id": "c3314-classes", "title": "Key source classes covered", "kind": "required_source_classes", "on_fail": "partial", "action": "Onboard the missing source classes listed." },
+        { "id": "c3314-retention", "title": "Log retention meets the requirement", "kind": "retention", "on_fail": "gap", "action": "Raise retention_days in /etc/sentra-siem/config.json (then restart to apply the ClickHouse TTL) or keep older data in the Data Optimizer archive tier." },
+        { "id": "c3314-detector", "title": "Real-time detection running", "kind": "detector_running", "on_fail": "gap", "action": "Check the detector (GET /api/soc/detector/stats) and fix rule load errors." },
+        { "id": "c3314-rules", "title": "Event monitoring detections enabled", "kind": "rules_tagged", "params": { "min": 10 }, "on_fail": "partial", "action": "Enable the detection rules tagged 3.3.14." },
+        { "id": "c3314-triage", "title": "Alerts triaged and acknowledged", "kind": "alert_triage", "params": { "min_ack_pct": 90, "max_mtta_h": 24 }, "on_fail": "partial", "action": "Acknowledge and triage open alerts; assign an on-shift analyst to the queue." }
+      ]
+    },
+    "3.3.15": {
+      "title": "Cyber Security Incident Management", "siem_evidenced": true,
+      "scope": "Case handling, response playbooks, SLA and escalation of high-severity alerts. The incident response plan and SAMA notifications are GRC evidence.",
+      "checks": [
+        { "id": "c3315-cases", "title": "Incidents handled as cases", "kind": "cases_handled", "params": { "min_cases": 1 }, "on_fail": "partial", "action": "Open cases for confirmed incidents (or record an incident exercise) so the process is evidenced in the period." },
+        { "id": "c3315-sla", "title": "Case resolution within SLA", "kind": "case_sla", "params": { "min_resolve_pct": 90 }, "on_fail": "partial", "action": "Work the cases breaching their resolve SLA; review the SLA targets with the SOC manager." },
+        { "id": "c3315-playbooks", "title": "Response playbooks available", "kind": "playbooks", "params": { "min": 3 }, "on_fail": "partial", "action": "Add response playbooks for the main incident types." },
+        { "id": "c3315-escalation", "title": "High-severity alerts escalated", "kind": "escalation", "params": { "min_severity": 3, "min_pct": 90 }, "on_fail": "partial", "action": "Escalate open high/critical alerts to cases or close them with a documented reason." }
+      ]
+    },
+    "3.3.16": {
+      "title": "Threat Management", "siem_evidenced": true,
+      "scope": "Threat-intelligence enrichment and IOC matching in the SIEM. Intelligence sourcing and threat assessments are GRC evidence.",
+      "checks": [
+        { "id": "c3316-intel", "title": "Threat-intel indicators loaded", "kind": "intel_feed", "params": { "min_indicators": 1 }, "on_fail": "gap", "action": "Load IOC lists into the intel directory (<data>/intel/*.txt|csv)." },
+        { "id": "c3316-fresh", "title": "Threat-intel lists up to date", "kind": "intel_fresh", "params": { "max_age_days": 7 }, "on_fail": "partial", "action": "Refresh the IOC lists at least weekly (automate the feed download)." },
+        { "id": "c3316-ioc", "title": "IOC matching rules enabled", "kind": "ioc_matching", "params": { "rules": ["SENTRA-INTEL-001", "SENTRA-INTEL-002", "SENTRA-INTEL-003", "SENTRA-INTEL-004"] }, "on_fail": "partial", "action": "Enable the SENTRA-INTEL-* rules." }
+      ]
+    },
+    "3.3.17": {
+      "title": "Vulnerability Management", "siem_evidenced": true, "max_status": "partial",
+      "scope": "The SIEM detects exploitation attempts against known vulnerabilities. Scanning, patching and remediation tracking are not evidenced by the SIEM until scanner results are onboarded.",
+      "checks": [
+        { "id": "c3317-scanner", "title": "Vulnerability scanner results onboarded", "kind": "source_class", "params": { "class": "vulnerability_scanner" }, "on_fail": "gap", "action": "Forward vulnerability scanner findings (e.g. Tenable/Nessus via syslog/CEF or API export) to the SIEM, then add a rule for critical findings on internet-facing hosts and correlate with IPS/web exploit alerts." },
+        { "id": "c3317-exploit", "title": "Exploitation attempts detected", "kind": "rule_topics", "on_fail": "partial", "action": "Enable the exploit detections listed.",
+          "params": { "topics": {
+            "network_exploit": { "title": "IPS exploit signatures", "rules": ["SENTRA-FGT-001"], "action": "Enable SENTRA-FGT-001." },
+            "web_exploit": { "title": "Web exploitation patterns", "rules": ["SENTRA-WEB-002", "SENTRA-WEB-003", "SENTRA-WEB-004"], "action": "Enable SENTRA-WEB-002/003/004." },
+            "exchange_exploit": { "title": "Exchange exploitation (ProxyLogon/ProxyShell, web shells)", "rules": ["SENTRA-EXO-012", "SENTRA-EXO-013", "SENTRA-EXO-014"], "action": "Enable SENTRA-EXO-012/013/014." }
+          } } }
+      ]
+    },
+    "3.4.1": { "title": "Contract & Vendor Management", "siem_evidenced": false, "reason": "Contracts and vendor assessments — owned by Procurement / GRC." },
+    "3.4.2": {
+      "title": "Outsourcing", "siem_evidenced": true, "max_status": "partial",
+      "scope": "Monitoring of third-party / remote access (VPN, external RDP, firewall admin access, cloud sign-ins). Outsourcing agreements and assessments are GRC evidence.",
+      "checks": [
+        { "id": "c342-remote", "title": "Remote and third-party access monitored", "kind": "rule_topics", "on_fail": "partial", "action": "Enable the remote-access detections listed.",
+          "params": { "topics": {
+            "external_rdp": { "title": "RDP from the internet", "rules": ["SENTRA-AUTH-006"], "action": "Enable SENTRA-AUTH-006." },
+            "vpn": { "title": "VPN authentication failures", "rules": ["SENTRA-FGT-005"], "action": "Enable SENTRA-FGT-005." },
+            "admin_access": { "title": "Firewall admin access from new sources", "rules": ["SENTRA-FGT-006"], "action": "Enable SENTRA-FGT-006." },
+            "cloud_signin": { "title": "Risky cloud sign-ins", "rules": ["SENTRA-M365-001"], "action": "Enable SENTRA-M365-001." }
+          } } },
+        { "id": "c342-vendor", "title": "Third-party accounts identified", "kind": "vendor_accounts", "on_fail": "partial", "action": "Set settings vendor_account_patterns (e.g. vnd-*, ext-*) and add a rule for vendor logons outside approved windows." }
+      ]
+    },
+    "3.4.3": {
+      "title": "Cloud Computing", "siem_evidenced": true, "max_status": "partial",
+      "scope": "Monitoring of the Microsoft 365 tenant (audit and sign-in logs). Cloud risk assessments and provider assurance are GRC evidence.",
+      "checks": [
+        { "id": "c343-m365", "title": "Microsoft 365 audit logs collected", "kind": "source_class", "params": { "class": "microsoft_365" }, "on_fail": "gap", "action": "Enable the Microsoft 365 Management Activity collector (config m365.enabled + secrets)." },
+        { "id": "c343-rules", "title": "Cloud detections enabled", "kind": "rules_tagged", "params": { "min": 3 }, "on_fail": "partial", "action": "Enable the SENTRA-M365-* and Exchange Online rules." }
+      ]
+    }
+  }
+}

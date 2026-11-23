@@ -1,0 +1,139 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Database Audit</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.card h3{margin:14px 0 8px;font-size:13px;color:var(--title)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}
+.stmt{font-size:14.5px;line-height:1.6}.stmt p{margin:0 0 8px}.stmt .b{color:var(--title);font-weight:600}
+.chk{list-style:none;margin:0;padding:0}.chk li{padding:3px 0}.chk .y{color:var(--ok);font-weight:700}.chk .n{color:var(--bad);font-weight:700}
+.kv{display:grid;grid-template-columns:170px 1fr;gap:4px 10px;font-size:13px}.kv dt{color:var(--mute)}.kv dd{margin:0;overflow-wrap:anywhere}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+ul.plain{margin:0;padding-left:18px}ul.plain li{margin:3px 0}
+@media print{.top button,.noprint{display:none!important}body{background:#fff;color:#000}.card,.t{border-color:#bbb;background:#fff;break-inside:avoid}.banner{color:#000;background:#f3f6fa}.card h2,.t .v,.stmt .b{color:#000}.muted,.note,th{color:#444}}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--panel);color:var(--mute);border:1px solid var(--edge);border-radius:999px;padding:6px 13px;cursor:pointer}.tabs button.on{background:#e7eaf0;color:#0a0b0f;border-color:#e7eaf0}.tabs button i{font-style:normal;opacity:.7;margin-left:4px}
+select,input.in{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:13px}.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+td.sql{font-family:Consolas,monospace;font-size:11.8px;color:var(--mute);max-width:520px;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Databases · SAMA CSF 3.3.14 Cyber Security Event Management · NCA ECC 2-12</div><h1>Database Audit</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <button type="button" class="btn pri" id="xlsx">⬇ Excel report</button><button type="button" class="btn" id="print">🖨 Print / PDF</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="banner">Who did what in the Oracle databases, from the <b>unified audit trail</b> the platform reads with its read-only account (AUDIT_VIEWER), and how each database is configured to audit. SQL literals are masked before they leave the database. A database that sent no audit record in the period is shown as such - never as "nothing happened". Viewing and exporting this page is itself recorded in the platform's audit log.</div>
+<div class="ctl"><label class="muted" for="view">View</label><select id="view" aria-label="View by"><option value="database" selected>By database (RAC instances together)</option><option value="instance">By instance</option></select><label class="muted" for="inst">Database</label><select id="inst"><option value="">All databases</option></select>
+  <label class="muted" for="hrs">Period</label><select id="hrs"><option value="24">Last 24 hours</option><option value="168" selected>Last 7 days</option><option value="720">Last 30 days</option><option value="2160">Last 90 days</option></select></div>
+<div class="k" id="kk"></div>
+<div class="tabs" id="tabs"></div>
+<div id="body"><div class="card"><div class="empty">Loading…</div></div></div>
+</main>
+<script src="vendor/zyb-xlsx.js"></script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var R=null, ERR='', TAB='overview', ACT=null, AQ={action:'',q:''}, DBS=[], INSTS=[];
+  var ACTN={'logon':'Logon','logon-failed':'Failed logon','logoff':'Logoff','user-created':'User created','user-deleted':'User dropped','user-modified':'User changed','privilege-granted':'Privilege granted','privilege-revoked':'Privilege revoked','role-created':'Role created','role-deleted':'Role dropped','role-modified':'Role changed','audit-disabled':'Auditing disabled','audit-policy-changed':'Audit policy changed','data-access':'Data access','config-change':'Configuration change','schema-change':'Schema change'};
+  function req(m,url){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,url);x.withCredentials=true;x.timeout=120000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function pill(t,c){return '<span class="pill p-'+c+'">'+esc(t)+'</span>';}
+  function sev(s){return pill(s,{critical:'bad',high:'bad',medium:'warn',low:'mut'}[s]||'mut');}
+  function when(s){var t=s?Date.parse(s):NaN;return isFinite(t)?new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function an(a){return ACTN[a]||a;}
+  function byDb(){return $('view').value!=='instance';}
+  function q(){var v=$('inst').value;return 'hours='+encodeURIComponent($('hrs').value)+'&view='+(byDb()?'database':'instance')+(v?(byDb()?'&database=':'&instance=')+encodeURIComponent(v):'');}
+  // the database column: the database, and which RAC instance the record came from when that differs
+  function xd(r){var d=r.database||r.instance;return byDb()&&r.instance&&r.instance!==d?d+' / '+r.instance:(byDb()?d:r.instance);}
+  function dbc(r){var d=r.database||r.instance;return byDb()?esc(d)+(r.instance&&r.instance!==d?'<div class="muted" style="font-size:11px">'+esc(r.instance)+'</div>':''):esc(r.instance);}
+  function per(){return $('hrs').options[$('hrs').selectedIndex].text.toLowerCase();}
+  function tbl(head,rows,empty){return rows.length?'<div class="tw"><table><thead><tr>'+head.map(function(h){return '<th>'+esc(h)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':'<div class="empty">'+esc(empty||'None in this period.')+'</div>';}
+  function evRows(L,withSql){return L.map(function(r){return '<tr><td class="muted">'+esc(when(r.ts))+'</td><td>'+dbc(r)+'</td><td><b>'+esc(r.user)+'</b>'+(r.privilege?' '+pill(r.privilege,'warn'):'')+'</td><td>'+esc(r.action_name||an(r.action))+(r.outcome==='failure'?' '+pill('failed','bad'):'')+'</td><td>'+esc(r.object||r.grant||'')+(r.grantee?' → '+esc(r.grantee):'')+'</td><td class="muted">'+esc([r.userhost,r.program].filter(Boolean).join(' · '))+'</td>'+(withSql?'<td class="sql">'+esc(r.sql)+'</td>':'')+'</tr>';});}
+  var EVH=['Time','Database','User','Action','Object','From'];
+  var TABS=[['overview','Overview'],['failed','Failed logons','failed_logons'],['priv','Privileged','privileged'],['acct','Accounts & grants','accounts'],['changes','Schema & config','schema_changes'],['offhours','Outside working hours','off_hours'],['config','Audit configuration'],['activity','All activity']];
+  function draw(){
+    if(ERR){$('kk').innerHTML='';$('tabs').innerHTML='';$('body').innerHTML='<div class="card"><p class="err">'+esc(ERR)+'</p></div>';return;}
+    if(!R.available){$('kk').innerHTML='';$('tabs').innerHTML='';$('body').innerHTML='<div class="card"><p class="err">'+esc(R.reason||'not available')+'</p></div>';return;}
+    var S=R.summary;
+    $('kk').innerHTML=tile('Audit events',S.events,per()+(R.capped?' · capped':''),'info')+tile('Failed logons',S.failed_logons,'',S.failed_logons?'warn':'ok')+tile('Privileged actions',S.privileged,S.off_hours_privileged+' outside working hours',S.off_hours_privileged?'warn':'')
+      +tile('Account & grant changes',S.account_changes,'')+tile('Schema / config changes',S.schema_changes+S.config_changes,S.schema_changes+' schema · '+S.config_changes+' config')+tile('Audit tampering',S.tamper,'NOAUDIT / policy changes',S.tamper?'bad':'ok')+tile('Findings',S.critical+S.high,S.critical+' critical · '+S.high+' high',S.critical?'bad':S.high?'warn':'ok');
+    $('tabs').innerHTML=TABS.map(function(t){var n=t[2]?(R[t[2]]||[]).length:null;return '<button type="button" data-tab="'+t[0]+'" class="'+(TAB===t[0]?'on':'')+'">'+esc(t[1])+(n!=null?'<i>'+n+'</i>':'')+'</button>';}).join('');
+    var h='';
+    if(TAB==='overview'){
+      h+='<div class="card"><h2>Findings <span class="c">'+R.findings.length+'</span></h2>'+tbl(['Severity','Area','Finding','What to do'],R.findings.map(function(f){return '<tr><td>'+sev(f.severity)+'</td><td class="muted">'+esc(f.area)+'</td><td>'+esc(f.title)+(f.evidence&&f.evidence.length?'<div class="muted mono" style="font-size:11.5px">'+esc(f.evidence.join(' · '))+'</div>':'')+'</td><td class="muted">'+esc(f.recommendation)+'</td></tr>';}),'No findings in this period.')+'</div>';
+      h+='<div class="g2"><div class="card"><h2>Activity by action</h2>'+tbl(['Action','Events','Users','Failed'],R.by_action.map(function(a){return '<tr><td>'+esc(an(a.action))+'</td><td>'+a.count+'</td><td>'+a.users+'</td><td>'+(a.failed?pill(a.failed,'warn'):'0')+'</td></tr>';}),'No audit record in this period.')+'</div>'
+        +'<div class="card"><h2>Most active accounts</h2>'+tbl(['Account','Events','Failed','Privileged','Changes','Last'],R.users.slice(0,15).map(function(u){return '<tr><td><b>'+esc(u.user)+'</b></td><td>'+u.events+'</td><td>'+u.failed+'</td><td>'+u.privileged+'</td><td>'+u.changes+'</td><td class="muted">'+esc(when(u.last))+'</td></tr>';}))+'</div></div>';
+    } else if(TAB==='failed'){
+      h+='<div class="card"><h2>Failed logons <span class="c">grouped by account, client and reason</span></h2>'+tbl(['Database','Account','From host','Program','Reason','Count','First','Last'],R.failed_logons.map(function(f){return '<tr><td>'+dbc(f)+'</td><td><b>'+esc(f.user)+'</b></td><td>'+esc(f.userhost)+'</td><td class="muted">'+esc(f.program)+'</td><td class="muted">'+esc(f.reason)+'</td><td>'+(f.count>=10?pill(f.count,'warn'):f.count)+'</td><td class="muted">'+esc(when(f.first))+'</td><td class="muted">'+esc(when(f.last))+'</td></tr>';}))+'</div>';
+    } else if(TAB==='priv'){
+      h+='<div class="card"><h2>Privileged activity <span class="c">SYS* privileges and DBA accounts</span></h2>'+tbl(EVH.concat(['SQL (literals masked)']),evRows(R.privileged,true))+'</div>';
+    } else if(TAB==='acct'){
+      h+='<div class="card"><h2>Account &amp; privilege changes</h2>'+tbl(EVH.concat(['SQL (literals masked)']),evRows(R.accounts,true))+'</div>';
+      h+='<div class="card"><h2>Audit tampering <span class="c">NOAUDIT, policies changed or dropped</span></h2>'+tbl(EVH.concat(['SQL']),evRows(R.tamper,true))+'</div>';
+    } else if(TAB==='changes'){
+      h+='<div class="card"><h2>Schema changes <span class="c">CREATE / ALTER / DROP / TRUNCATE</span></h2>'+tbl(EVH.concat(['SQL']),evRows(R.schema_changes,true))+'</div>';
+      h+='<div class="card"><h2>Configuration changes <span class="c">ALTER SYSTEM / ALTER DATABASE / profiles / keys</span></h2>'+tbl(EVH.concat(['SQL']),evRows(R.config_changes,true))+'</div>';
+    } else if(TAB==='offhours'){
+      h+='<div class="card"><h2>Privileged activity outside working hours <span class="c">Riyadh, Sun–Thu 07:00–18:00</span></h2>'+tbl(EVH.concat(['SQL']),evRows(R.off_hours,true))+'</div>';
+    } else if(TAB==='config'){
+      h+='<div class="card"><h2>How each database audits</h2>'+tbl(['Database','Read','Unified only','Policies enabled','Cleanup jobs','Last archive','Checks'],R.posture.map(function(p){return '<tr><td><b>'+dbc(p)+'</b></td><td class="muted">'+esc(when(p.at))+'</td><td>'+esc(p.unified_pure||'—')+'</td><td class="mono" style="font-size:11.8px">'+esc(p.policies.join(', ')||'none')+'</td><td>'+esc(p.cleanup_jobs==null?'—':p.cleanup_jobs)+'</td><td>'+esc(p.last_archive||'—')+'</td><td>'+(p.checks.length?p.checks.map(function(c){return sev(c.severity);}).join(' '):pill('OK','ok'))+'</td></tr>';}),'No audit configuration reading yet: it is read once an hour with the AUDIT_VIEWER role (Databases → Add database script).')+'</div>';
+      if(byDb()&&R.coverage_db)h+='<div class="card"><h2>Coverage <span class="c">per database - the unified audit trail belongs to the database, so one RAC instance reading it covers the database</span></h2>'+tbl(['Database','Instances','Audit events','Last record'],R.coverage_db.map(function(c){return '<tr><td><b>'+esc(c.database)+'</b></td><td class="muted">'+esc(c.instances.join(', '))+(c.events&&c.silent.length?'<div style="font-size:11px">read through '+esc(c.instances.filter(function(i){return c.silent.indexOf(i)<0;}).join(', '))+'</div>':'')+'</td><td>'+(c.events?c.events:pill('none received','warn'))+'</td><td class="muted">'+esc(when(c.last))+'</td></tr>';}),'No monitored database.')+'</div>';
+      else h+='<div class="card"><h2>Coverage <span class="c">monitored databases vs audit records received</span></h2>'+tbl(['Database','Audit events','Last record'],R.coverage.map(function(c){return '<tr><td><b>'+esc(c.instance)+'</b></td><td>'+(c.events?c.events:pill('none received','warn'))+'</td><td class="muted">'+esc(when(c.last))+'</td></tr>';}),'No monitored database.')+'</div>';
+    } else if(TAB==='activity'){
+      h+='<div class="card"><h2>All activity <span class="c" id="ac"></span></h2><div class="ctl"><select id="aact"><option value="">Every action</option><option value="failed">Failed only</option><option value="privileged">Privileged only</option>'+Object.keys(ACTN).map(function(k){return '<option value="'+esc(k)+'">'+esc(ACTN[k])+'</option>';}).join('')+'</select><input class="in" id="aq" type="search" placeholder="Search user, object, program, host, SQL" style="min-width:300px"><button type="button" class="btn" id="ago">Search</button></div><div id="alist"><div class="empty">Loading…</div></div></div>';
+    }
+    $('body').innerHTML=h;
+    if(TAB==='activity'){$('aact').value=AQ.action;$('aq').value=AQ.q;loadActivity();}
+  }
+  function loadActivity(){
+    req('GET','/api/soc/db/oracle/audit/events?'+q()+'&limit=500'+(AQ.action?'&action='+encodeURIComponent(AQ.action):'')+(AQ.q?'&q='+encodeURIComponent(AQ.q):'')).then(function(r){ACT=r;var el=$('alist');if(!el)return;
+      $('ac').textContent=r.total+' matching'+(r.total>r.items.length?' (first '+r.items.length+' shown; the Excel report has up to 10 000)':'');
+      el.innerHTML=tbl(EVH.concat(['SQL']),evRows(r.items,true),'Nothing matches.');},function(er){var el=$('alist');if(el)el.innerHTML='<p class="err">'+esc(er.message)+'</p>';});
+  }
+  function load(){
+    $('body').innerHTML='<div class="card"><div class="empty">Loading…</div></div>';
+    req('GET','/api/soc/db/oracle/audit?'+q()).then(function(r){R=r;ERR='';
+      // the list comes from an unscoped read (every database), kept while one database is chosen
+      if(!$('inst').value){DBS=r.databases||[];INSTS=(r.coverage||[]).map(function(c){return c.instance;});}
+      var cur=$('inst').value,opts=byDb()?DBS.map(function(d){return [d.database,d.database+(d.instances.length>1||d.instances[0]!==d.database?' ('+d.instances.join(', ')+')':'')];}):INSTS.map(function(i){return [i,i];});
+      if(cur&&!opts.some(function(o){return o[0]===cur;}))opts.push([cur,cur]);
+      $('inst').innerHTML='<option value="">All databases</option>'+opts.map(function(o){return '<option value="'+esc(o[0])+'"'+(o[0]===cur?' selected':'')+'>'+esc(o[1])+'</option>';}).join('');
+      $('up').textContent='read '+when(r.generated_at);draw();},function(er){R=null;ERR=er.status===403?'Analysts, operators and administrators only (the audit trail names people - PDPL).':er.status===404?'Database Audit is not on the SIEM yet - run the update (update-platform.ps1).':er.message;draw();});
+  }
+  $('tabs').addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(!b)return;TAB=b.getAttribute('data-tab');draw();});
+  $('body').addEventListener('click',function(e){if(e.target.id==='ago'){AQ.action=$('aact').value;AQ.q=$('aq').value.trim();loadActivity();}});
+  $('body').addEventListener('keydown',function(e){if(e.target.id==='aq'&&e.key==='Enter'){AQ.action=$('aact').value;AQ.q=$('aq').value.trim();loadActivity();}});
+  $('inst').addEventListener('change',load);$('view').addEventListener('change',function(){$('inst').value='';load();});$('hrs').addEventListener('change',load);$('refresh').onclick=load;$('print').onclick=function(){window.print();};
+  $('xlsx').onclick=function(){
+    if(!R||!R.available||!window.zybXlsx){toast('Nothing to export yet');return;}
+    var b=this;b.disabled=true;toast('Building the Excel report…');
+    req('GET','/api/soc/db/oracle/audit/events?'+q()+'&limit=10000&export=1').then(function(all){return zybXlsx.who().then(function(by){
+      var E=[{h:'Time (UTC)',w:20},{h:'Database',w:12},{h:'User',w:16},{h:'Action',w:20},{h:'Outcome',w:9},{h:'Privilege',w:12},{h:'Object',w:26},{h:'Grant',w:20},{h:'Grantee',w:16},{h:'From host',w:18},{h:'Program',w:22},{h:'OS user',w:12},{h:'Reason',w:18},{h:'SQL (literals masked)',w:70}];
+      var er=function(L){return L.map(function(r){return [r.ts.replace('T',' ').slice(0,19),xd(r),r.user,r.action_name||an(r.action),r.outcome,r.privilege,r.object,r.grant,r.grantee,r.userhost,r.program,r.os_user,r.reason,r.sql];});};
+      var S=R.summary,filt=($('inst').value||'all databases')+' · '+per();
+      zybXlsx.download('database-audit-'+new Date().toISOString().slice(0,10)+'.xlsx',[
+        {name:'Summary',columns:[{h:'Measure',w:36},{h:'Value',w:16}],rows:[['Scope',filt],['Audit events',S.events],['Databases with audit records',S.databases],['Accounts seen',S.users],['Failed logons',S.failed_logons],['Privileged actions',S.privileged],['Privileged outside working hours',S.off_hours_privileged],['Account & grant changes',S.account_changes],['Schema changes',S.schema_changes],['Configuration changes',S.config_changes],['Audit tampering events',S.tamper],['Critical findings',S.critical],['High findings',S.high],['Row cap reached',R.capped?'YES - narrow the period or database':'no']]},
+        {name:'Findings',columns:[{h:'Severity',w:10},{h:'Area',w:18},{h:'Finding',w:60},{h:'What to do',w:80},{h:'Evidence',w:50}],rows:R.findings.map(function(f){return [f.severity,f.area,f.title,f.recommendation,(f.evidence||[]).join(' | ')];})},
+        {name:'Failed logons',columns:[{h:'Database',w:12},{h:'Account',w:18},{h:'From host',w:18},{h:'Program',w:24},{h:'Reason',w:22},{h:'Count',w:8},{h:'First',w:20},{h:'Last',w:20}],rows:R.failed_logons.map(function(f){return [xd(f),f.user,f.userhost,f.program,f.reason,f.count,f.first,f.last];})},
+        {name:'Privileged',columns:E,rows:er(R.privileged)},{name:'Accounts & grants',columns:E,rows:er(R.accounts)},{name:'Audit tampering',columns:E,rows:er(R.tamper)},
+        {name:'Schema changes',columns:E,rows:er(R.schema_changes)},{name:'Config changes',columns:E,rows:er(R.config_changes)},{name:'Outside working hours',columns:E,rows:er(R.off_hours)},
+        {name:'Audit configuration',columns:[{h:'Database',w:12},{h:'Read',w:20},{h:'Unified only',w:12},{h:'Policies enabled',w:60},{h:'Cleanup jobs',w:12},{h:'Last archive',w:20},{h:'Checks',w:80}],rows:R.posture.map(function(p){return [xd(p),p.at,p.unified_pure||'',p.policies.join(', '),p.cleanup_jobs==null?'':p.cleanup_jobs,p.last_archive||'',p.checks.map(function(c){return c.severity+': '+c.title;}).join(' | ')||'OK'];})},
+        {name:'Coverage',columns:[{h:'Database',w:12},{h:'Audit events',w:12},{h:'Last record',w:20}],rows:byDb()&&R.coverage_db?R.coverage_db.map(function(c){return [c.database+(c.instances.join(',')!==c.database?' ('+c.instances.join(', ')+')':''),c.events,c.last||'none received'];}):R.coverage.map(function(c){return [c.instance,c.events,c.last||'none received'];})},
+        {name:'All activity',columns:E,rows:er(all.items||[])}],{title:'Database Audit',filter:filt+(all.total>(all.items||[]).length?' · activity sheet holds the newest '+all.items.length+' of '+all.total:''),by:by});});})
+      .catch(function(er){toast('Export failed: '+er.message);}).then(function(){b.disabled=false;});
+  };
+  load();
+})();
+</script>
+</body></html>

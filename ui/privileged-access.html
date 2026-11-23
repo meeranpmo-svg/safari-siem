@@ -1,0 +1,67 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privileged Access</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Identity & Microsoft 365 · just-in-time</div><h2 class="page-title">Privileged Access</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn btn-primary" id="new"><i class="ti ti-key me-1"></i>Request access</button><button type="button" class="btn" id="cfg"><i class="ti ti-settings me-1"></i>Eligible groups</button><button type="button" class="btn" id="stand"><i class="ti ti-users-group me-1"></i>Standing members</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Nobody needs to sit in an admin group all the time. Ask for the group for the hours the work needs, with the reason and the ticket; one of the group's approvers (or an administrator) approves - <b>never the person asking</b>. The platform adds your AD account to the group at the start time and <b>removes it automatically when the time is up</b>, checking the directory both times. Domain / Enterprise / Schema Admins and the other tier-0 groups are not requestable here: they stay with the break-glass procedure.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div id="alert"></div>
+<div class="row g-3"><div class="col-lg-6"><section class="card"><div class="card-header"><h3 class="card-title">Waiting for my approval</h3></div><div class="table-responsive" id="appr"><div class="card-body text-secondary">Loading…</div></div></section></div>
+<div class="col-lg-6"><section class="card"><div class="card-header"><h3 class="card-title">My requests</h3></div><div class="table-responsive" id="mine"></div></section></div></div>
+<section class="card mt-3"><div class="card-header"><h3 class="card-title">Active grants</h3></div><div class="table-responsive" id="act"></div></section>
+<section class="card mt-3" id="recentc" hidden><div class="card-header"><h3 class="card-title">All requests (administrators)</h3></div><div class="table-responsive" id="recent"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+  var L=null;
+  var STC={pending:['waiting for approval','orange'],approved:['approved - starts later','blue'],active:['active','green'],expired:['expired - removed','secondary'],ended:['ended early - removed','secondary'],rejected:['rejected','red'],cancelled:['cancelled','secondary'],grant_failed:['grant failed','red'],expire_failed:['REMOVAL FAILED - still a member','red']};
+  function sb(s){var x=STC[s]||[s,'secondary'];return P.badge(x[0],x[1]);}
+  function left(r){if(r.status!=='active')return '';var m=r.minutes_left;return '<div class="mut">'+(m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min')+' left · until '+esc(P.dt(r.expires_at))+'</div>';}
+  var cols=function(withUser,act){return [['Request',function(r){return '<b>'+esc(r.id)+'</b>'+(withUser?'<div class="mut">'+esc(r.requester)+'</div>':'');}],['Group',function(r){return esc(r.group);}],['Time',function(r){return esc(r.hours)+' h<div class="mut">from '+esc(P.dt(r.start_at))+'</div>';}],
+    ['Why',function(r){return esc(r.reason)+(r.ticket?'<div class="mut">'+esc(r.ticket)+'</div>':'');}],['State',function(r){return sb(r.status)+left(r)+(r.error?'<div class="mut text-danger">'+esc(r.error)+'</div>':'');}],['',act]];};
+  function load(){return P.req('GET','/pam').then(function(v){L=v;draw();}).catch(function(e){P.fail($('appr'),e);$('kpis').innerHTML='';});}
+  function draw(){var c=L.counts;
+    $('kpis').innerHTML=P.tile(c.pending,'Waiting for approval',c.pending?'text-orange':'')+P.tile(c.approved,'Approved, starting later')+P.tile(c.active,'Active grants',c.active?'text-green':'')+P.tile(c.expire_failed,'Expired but still a member',c.expire_failed?'text-red':'')+P.tile(c.grant_failed,'Grant failed',c.grant_failed?'text-red':'')+P.tile(L.groups.length,'Eligible groups');
+    $('alert').innerHTML=(!L.directory.connected?'<div class="alert alert-warning">The directory is not connected: an administrator sets it in <a href="hr-onboarding.html">HR Onboarding → Directory settings</a>. The service account needs "write members" on the eligible groups only.</div>':'')
+      +(c.expire_failed?'<div class="alert alert-danger"><b>'+esc(c.expire_failed)+' expired grant(s) could not be removed</b> - the person is still a member of a privileged group. The platform retries every minute; check the service account\'s rights on the group.</div>':'')
+      +(!L.groups.length?'<div class="alert alert-secondary">No group can be requested yet. An administrator lists the eligible groups.</div>':'');
+    $('appr').innerHTML=P.table(cols(true,function(r){return '<button type="button" class="btn btn-sm btn-success" data-dec="approve" data-id="'+esc(r.id)+'">Approve</button> <button type="button" class="btn btn-sm" data-dec="reject" data-id="'+esc(r.id)+'">Reject</button>';}),L.to_approve,null,'Nothing waiting for you.');
+    $('mine').innerHTML=P.table(cols(false,function(r){return r.status==='active'||r.status==='expire_failed'?'<button type="button" class="btn btn-sm" data-end="'+esc(r.id)+'">End now</button>':['pending','approved','grant_failed'].indexOf(r.status)>=0?'<button type="button" class="btn btn-sm" data-cancel="'+esc(r.id)+'">Cancel</button>':'';}),L.mine,null,'You have not requested privileged access.');
+    $('act').innerHTML=P.table(cols(true,function(r){return '<button type="button" class="btn btn-sm" data-end="'+esc(r.id)+'">End now</button>';}),L.active,null,'Nobody holds a just-in-time grant right now.');
+    $('recentc').hidden=!L.recent.length;if(L.recent.length)$('recent').innerHTML=P.table(cols(true,function(){return '';}),L.recent,null,'');}
+  function newForm(){if(!L)return;
+    if(!L.groups.length){P.toast('No group can be requested yet');return;}
+    Z.open('Privileged Access','Request access',P.form('pareq',[['group','sel','Group',1,L.groups.map(function(g){return [g.name,g.name+' (up to '+g.max_hours+' h'+(g.ticket_required?', ticket required':'')+')'];})],['hours','num','Hours',1],['reason','text','Why (the work you will do)',1],['ticket','text','Ticket / change number'],['start_at','dtl','Start (leave empty for as soon as it is approved)']],{hours:2},'Send the request')
+      +'<div class="mut mt-2">Your own AD account (same user name as here) is added to the group. You cannot approve your own request.</div>');}
+  function cfgForm(){if(!L)return;
+    Z.open('Privileged Access','Eligible groups',P.form('pacfg',[['groups','area','One group per line: group name | max hours | approvers (comma separated, optional) | ticket (yes/no)',1]],
+      {groups:L.groups.map(function(g){return g.name+' | '+g.max_hours+' | '+(g.approvers||[]).join(', ')+' | '+(g.ticket_required?'yes':'no');}).join('\n')},'Save')
+      +'<div class="mut mt-2">Administrators. Tier-0 built-in groups are refused. Without approvers, any administrator approves. Give the directory service account "write members" on these groups only.</div>');}
+  function standing(){P.req('GET','/pam/standing').then(function(v){
+    Z.open('Privileged Access','Standing members',v.groups.map(function(g){return Z.sec(g.group,g.error?'<div class="text-danger small">'+esc(g.error)+'</div>':P.table([['Member',function(m){return esc(m.name||m.user)+'<div class="mut">'+esc(m.user)+'</div>';}],['State',function(m){return m.enabled?'enabled':'disabled';}],['Last sign-in',function(m){return esc(m.last_logon?P.dt(m.last_logon):'never');}]],g.standing,null,'No standing member - only just-in-time grants.')
+      +(g.just_in_time.length?'<div class="mut mt-1">Just-in-time now: '+esc(g.just_in_time.map(function(j){return j.user+' ('+j.request+')';}).join(', '))+'</div>':''));}).join('')+'<div class="mut mt-2">'+esc(v.note)+'</div>');
+  }).catch(function(e){P.toast(e.status===403?'Standing members are shown to administrators.':P.why(e));});}
+  var act=function(u,b,ok){return P.req('POST',u,b).then(function(r){P.toast(ok(r));load();}).catch(function(e){P.toast(P.why(e));});};
+  document.addEventListener('click',function(ev){var t=ev.target.closest('[data-dec],[data-end],[data-cancel]');if(!t)return;
+    if(t.hasAttribute('data-dec')){var id=t.getAttribute('data-id'),d=t.getAttribute('data-dec');
+      if(d==='reject'){Z.open('Privileged Access','Reject '+id,P.form('parej',[['note','text','Why',1]],{},'Reject'));$('parej').setAttribute('data-id',id);return;}
+      t.disabled=true;act('/pam/requests/'+encodeURIComponent(id)+'/decide',{decision:'approve'},function(r){return r.status==='active'?'Approved - access granted until '+P.dt(r.expires_at):'Approved - starts '+P.dt(r.start_at);});return;}
+    if(t.hasAttribute('data-end')){var eid=t.getAttribute('data-end');Z.open('Privileged Access','End '+eid,P.form('paend',[['reason','text','Why it ends now',1]],{reason:'work finished'},'End now and remove the membership'));$('paend').setAttribute('data-id',eid);return;}
+    var cid=t.getAttribute('data-cancel');Z.open('Privileged Access','Cancel '+cid,P.form('pacan',[['reason','text','Why',1]],{},'Cancel the request'));$('pacan').setAttribute('data-id',cid);});
+  document.addEventListener('submit',function(ev){var fm=ev.target,b=P.body(fm),id=fm.getAttribute('data-id'),go=function(u,body,ok){ev.preventDefault();P.req('POST',u,body).then(function(r){P.toast(ok(r));Z.close();load();}).catch(function(e){P.msg(fm,P.why(e));});};
+    if(fm.id==='pareq'){if(b.start_at)b.start_at=new Date(b.start_at.replace('Z','')).toISOString();return go('/pam/requests',b,function(r){return r.id+' sent - waiting for approval';});}
+    if(fm.id==='pacfg'){var groups=(b.groups||'').split(/\r?\n/).map(function(l){return l.trim();}).filter(Boolean).map(function(l){var p=l.split('|').map(function(x){return x.trim();});return {name:p[0],max_hours:Number(p[1]||0),approvers:(p[2]||'').split(',').map(function(x){return x.trim();}).filter(Boolean),ticket_required:/^y/i.test(p[3]||'')};});
+      return go('/pam/config',{groups:groups},function(){return 'Eligible groups saved';});}
+    if(fm.id==='parej')return go('/pam/requests/'+encodeURIComponent(id)+'/decide',{decision:'reject',note:b.note},function(){return 'Rejected';});
+    if(fm.id==='paend')return go('/pam/requests/'+encodeURIComponent(id)+'/end',b,function(){return 'Ended - membership removed';});
+    if(fm.id==='pacan')return go('/pam/requests/'+encodeURIComponent(id)+'/cancel',b,function(){return 'Cancelled';});});
+  $('new').addEventListener('click',newForm);$('cfg').addEventListener('click',cfgForm);$('stand').addEventListener('click',standing);$('refresh').addEventListener('click',function(){load();});
+  load();setInterval(function(){var z=document.getElementById('zd');if(!document.hidden&&(!z||z.hidden))load();},60000);   // the time left moves; not while a form is open
+})();
+</script></body></html>

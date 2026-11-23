@@ -1,0 +1,211 @@
+[
+  {
+    "id": "SENTRA-FW-001", "name": "Firewall administrator login failure burst", "enabled": true, "severity": 3,
+    "mitre": ["T1110", "T1078"], "sama": ["3.3.5", "3.3.8"], "tactic": "credential-access", "author":"Sentra SOC", "version": 1,
+    "description": "5 or more failed administrator logins to a firewall / ADC management plane (FortiGate, PAN-OS SYSTEM auth-fail, Cisco ASA 605004/611102, BIG-IP, NetScaler GUI/CLI, Silver Peak / EdgeConnect WAN optimizer web UI / SSH / REST API) from one source IP within 5 minutes.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "authentication" },
+                        { "field": "action", "op": "eq", "value": "logon-failed" },
+                        { "field": "tags", "op": "eq", "value": "admin" },
+                        { "field": "src_type", "op": "in", "value": ["fortigate", "paloalto", "cisco", "cisco-asa", "f5", "netscaler", "cisco-ucs", "cef", "leef", "silverpeak"] } ] },
+    "group_by": ["src_ip"], "window_s": 300, "count": 5, "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "user", "host", "src_type", "fields.reason", "fields.ui"]
+  },
+  {
+    "id": "SENTRA-FW-002", "name": "Firewall configuration change outside the change window", "enabled": true, "severity": 2,
+    "mitre": ["T1686", "T1078"], "sama": ["3.3.7", "3.3.8"], "tactic": "defense-impairment", "author":"Sentra SOC", "version": 1,
+    "description": "A configuration change on a firewall / ADC (FortiGate, PAN-OS CONFIG, Cisco ASA 111008/111010, BIG-IP audit, NetScaler CMD_EXECUTED, Check Point audit) outside the change window (07:00-18:00 Asia/Riyadh, Sunday-Thursday). Tune hour_between / weekday_in to the customer's CAB window.",
+    "type": "single",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "config-change" },
+                        { "field": "src_type", "op": "in", "value": ["fortigate", "paloalto", "cisco", "cisco-asa", "f5", "netscaler", "cef", "leef"] } ],
+               "any": [ { "field": "ts", "op": "hour_between", "value": [18, 7] },
+                        { "field": "ts", "op": "weekday_in", "value": [5, 6] } ] },
+    "group_by": ["host", "user"], "suppress_s": 1800,
+    "fields_in_alert": ["host", "user", "src_ip", "cmdline", "fields.cfgpath", "fields.path", "fields.command", "fields.msg"]
+  },
+  {
+    "id": "SENTRA-FW-003", "name": "Firewall rule allowing any to any created", "enabled": true, "severity": 3,
+    "mitre": ["T1686"], "sama": ["3.3.7", "3.3.8"], "tactic": "defense-impairment", "author":"Sentra SOC", "version": 1,
+    "description": "A security rule with source any, destination any and action allow/permit was created or modified: PAN-OS CONFIG after-change detail (fields.rule_any_any), FortiGate cfgattr srcaddr[all] dstaddr[all] action[accept], Cisco ASA 'access-list … permit ip any any'.",
+    "type": "single",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "config-change" } ],
+               "any": [ { "field": "fields.rule_any_any", "op": "eq", "value": "true" },
+                        { "field": "fields.cfgattr", "op": "re", "value": "srcaddr\\[(?:all|any)\\].*dstaddr\\[(?:all|any)\\].*action\\[accept\\]" },
+                        { "field": "cmdline", "op": "re", "value": "permit\\s+ip\\s+any(?:4|6)?\\s+any" } ] },
+    "group_by": ["host", "user"], "suppress_s": 600,
+    "fields_in_alert": ["host", "user", "src_ip", "cmdline", "fields.path", "fields.cfgpath", "fields.cfgobj", "fields.cfgattr"]
+  },
+  {
+    "id": "SENTRA-VPN-001", "name": "VPN login from a new country", "enabled": true, "severity": 2,
+    "mitre": ["T1078", "T1133"], "sama": ["3.3.5", "3.3.14"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "Successful VPN authentication (GlobalProtect, FortiGate SSL/IPsec, ASA AnyConnect, NetScaler Gateway) from a source country never seen for that user during the 7-day baseline. Country comes from the device (PAN Source Region / srcloc, F5 geo_location) in fields.src_country; the UEBA impossible_travel detector reads the same field — no GeoIP database is consulted.",
+    "type": "new_value",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "authentication" },
+                        { "field": "action", "op": "eq", "value": "logon" },
+                        { "field": "tags", "op": "eq", "value": "vpn" },
+                        { "field": "fields.src_country", "op": "exists", "value": true } ] },
+    "group_by": ["user"], "new_field": "fields.src_country", "learn_s": 604800, "window_s": 86400, "suppress_s": 3600,
+    "fields_in_alert": ["user", "src_ip", "fields.src_country", "host", "src_type"]
+  },
+  {
+    "id": "SENTRA-PAN-001", "name": "PAN-OS THREAT high/critical not blocked", "enabled": true, "severity": 4,
+    "mitre": ["T1190", "T1203"], "sama": ["3.3.8", "3.3.16", "3.3.17"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "Palo Alto THREAT log (vulnerability / spyware / virus / wildfire / scan) rated high or critical whose action let the session through (alert, allow, continue, override). Blocked high/critical threats are already covered by SENTRA-FGT-001 / SENTRA-FGT-002 (normalised ips-detection / av-detection).",
+    "type": "single",
+    "match": { "all": [ { "field": "src_type", "op": "in", "value": ["paloalto", "cef"] },
+                        { "field": "fields.pan_type", "op": "eq", "value": "THREAT" },
+                        { "field": "fields.pan_severity", "op": "in", "value": ["high", "critical"] },
+                        { "field": "outcome", "op": "eq", "value": "success" } ] },
+    "group_by": ["src_ip", "fields.threat_name"], "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "dst_ip", "dst_port", "fields.threat_name", "fields.threat_id", "fields.subtype", "fields.pan_action", "fields.rule", "host"]
+  },
+  {
+    "id": "SENTRA-WAF-001", "name": "Web application firewall attack burst from one client", "enabled": true, "severity": 3,
+    "mitre": ["T1190", "T1595.002"], "sama": ["3.3.6", "3.3.8", "3.3.13"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "20 or more WAF violations (F5 ASM request log, NetScaler APPFW_*) from one client IP within 5 minutes — scanner or targeted attack against a published application.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "waf-detection" } ] },
+    "group_by": ["src_ip"], "window_s": 300, "count": 20, "suppress_s": 1800,
+    "fields_in_alert": ["src_ip", "dst_ip", "url", "fields.attack_type", "fields.violations", "fields.appfw_check", "fields.policy_name", "host"]
+  },
+  {
+    "id": "SENTRA-NSC-001", "name": "NetScaler AAA / Gateway authentication failure burst", "enabled": true, "severity": 3,
+    "mitre": ["T1110", "T1133"], "sama": ["3.3.5", "3.4.2"], "tactic": "credential-access", "author":"Sentra SOC", "version": 1,
+    "description": "10 or more NetScaler AAA / SSLVPN / management LOGIN_FAILED events from one client IP within 5 minutes.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "netscaler" },
+                        { "field": "action", "op": "eq", "value": "logon-failed" } ] },
+    "group_by": ["src_ip"], "window_s": 300, "count": 10, "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "user", "host", "fields.ns_module", "fields.reason"]
+  },
+  {
+    "id": "SENTRA-NSC-002", "name": "NetScaler configuration command by a non-standard admin", "enabled": true, "severity": 2,
+    "mitre": ["T1078", "T1059"], "sama": ["3.3.5", "3.3.7"], "tactic": "persistence", "author":"Sentra SOC", "version": 1,
+    "description": "A configuration-changing command (add/set/rm/bind/unbind/save/enable/disable…) was executed (CMD_EXECUTED) by a user other than the named administrator accounts. Add the customer's admin accounts to the user list to tune.",
+    "type": "single",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "netscaler" },
+                        { "field": "fields.ns_event", "op": "eq", "value": "CMD_EXECUTED" },
+                        { "field": "action", "op": "eq", "value": "config-change" } ],
+               "none": [ { "field": "user", "op": "in", "value": ["nsroot"] } ] },
+    "group_by": ["user", "host"], "suppress_s": 900,
+    "fields_in_alert": ["user", "src_ip", "host", "cmdline", "fields.ns_module", "fields.status"]
+  },
+  {
+    "id": "SENTRA-OPS-001", "name": "F5 BIG-IP pool member or node down", "enabled": true, "severity": 1,
+    "mitre": ["T1499", "T1489"], "sama": ["3.3.8", "3.3.14"], "tactic": "impact", "author":"Sentra SOC", "version": 1,
+    "description": "Operational: a BIG-IP LTM health monitor marked a pool member or node down (mcpd 01070638 / 01070640). Low severity ops alert; a burst across many members usually means an upstream outage.",
+    "type": "single",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "f5" },
+                        { "field": "action", "op": "eq", "value": "service-failed" },
+                        { "field": "tags", "op": "eq", "value": "pool-member-down" } ] },
+    "group_by": ["host", "fields.pool", "fields.member"], "suppress_s": 3600,
+    "fields_in_alert": ["host", "fields.pool", "fields.member", "fields.node", "fields.reason", "fields.previous_duration"]
+  },
+  {
+    "id": "SENTRA-OPS-002", "name": "Cisco UCS critical or major fault", "enabled": true, "severity": 2,
+    "mitre": ["T1499", "T1495"], "sama": ["3.3.8", "3.3.14"], "tactic": "impact", "author":"Sentra SOC", "version": 1,
+    "description": "Operational: UCS Manager raised a fault with severity critical or major (power, thermal, link, equipment inoperable…). Cleared faults are ignored.",
+    "type": "single",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "cisco-ucs" },
+                        { "field": "tags", "op": "eq", "value": "fault" },
+                        { "field": "fields.fault_severity", "op": "in", "value": ["critical", "major"] } ],
+               "none": [ { "field": "fields.fault_state", "op": "eq", "value": "cleared" } ] },
+    "group_by": ["host", "fields.affected_dn", "fields.fault_code"], "suppress_s": 3600,
+    "fields_in_alert": ["host", "fields.fault_code", "fields.fault_severity", "fields.cause", "fields.affected_dn", "message"]
+  },
+  {
+    "id": "SENTRA-OPS-003", "name": "ESXi maintenance mode or VM deletion outside the change window", "enabled": true, "severity": 2,
+    "mitre": ["T1485", "T1489"], "sama": ["3.3.7", "3.3.8", "3.3.14"], "tactic": "impact", "author":"Sentra SOC", "version": 1,
+    "description": "An ESXi host entered maintenance mode or a virtual machine was removed/destroyed outside the change window (07:00-18:00 Asia/Riyadh, Sunday-Thursday).",
+    "type": "single",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "esxi" },
+                        { "any": [ { "all": [ { "field": "action", "op": "eq", "value": "maintenance-mode" }, { "field": "fields.maintenance", "op": "eq", "value": "enter" } ] },
+                                   { "field": "action", "op": "eq", "value": "vm-deleted" } ] },
+                        { "any": [ { "field": "ts", "op": "hour_between", "value": [18, 7] },
+                                   { "field": "ts", "op": "weekday_in", "value": [5, 6] } ] } ] },
+    "group_by": ["host", "fields.vm"], "suppress_s": 1800,
+    "fields_in_alert": ["host", "user", "fields.vm", "fields.esx_host", "fields.esx_event", "message"]
+  },
+  {
+    "id": "SENTRA-DLP-001", "name": "DLP incident blocked", "enabled": true, "severity": 2,
+    "mitre": ["T1048", "T1567", "T1052"], "sama": ["3.3.8", "3.3.14"], "tactic": "exfiltration", "author":"Sentra SOC", "version": 1,
+    "description": "A data loss prevention policy (Forcepoint / Symantec / Trend Micro DLP via CEF) blocked or quarantined a transfer.",
+    "type": "single",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "dlp-incident" },
+                        { "field": "fields.dlp_action", "op": "in", "value": ["blocked", "quarantined"] } ] },
+    "group_by": ["user", "fields.dlp_policy"], "suppress_s": 600,
+    "fields_in_alert": ["user", "host", "fields.dlp_policy", "fields.dlp_channel", "fields.dlp_classification", "fields.dlp_destination", "fields.dlp_file", "fields.dlp_incident_id"]
+  },
+  {
+    "id": "SENTRA-DLP-002", "name": "DLP incident permitted with sensitive classification", "enabled": true, "severity": 3,
+    "mitre": ["T1048", "T1567"], "sama": ["3.3.5", "3.3.8", "3.3.14"], "tactic": "exfiltration", "author":"Sentra SOC", "version": 1,
+    "description": "A DLP policy matched sensitive data (PCI / PII / national ID / confidential…) or a high/critical-severity policy but the transfer was permitted (monitor / notify / released).",
+    "type": "single",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "dlp-incident" },
+                        { "field": "fields.dlp_action", "op": "in", "value": ["permitted", "released"] } ],
+               "any": [ { "field": "fields.dlp_classification", "op": "re", "value": "pci|card|credit|iban|national ?id|iqama|passport|confidential|restricted|secret|phi|pii|personal|salary|medical|source ?code" },
+                        { "field": "fields.dlp_policy", "op": "re", "value": "pci|card|credit|iban|national ?id|iqama|passport|confidential|restricted|secret|phi|pii|personal|salary|medical|source ?code" },
+                        { "field": "fields.dlp_severity", "op": "in", "value": ["high", "critical"] } ] },
+    "group_by": ["user", "fields.dlp_policy"], "suppress_s": 600,
+    "fields_in_alert": ["user", "host", "fields.dlp_policy", "fields.dlp_channel", "fields.dlp_classification", "fields.dlp_severity", "fields.dlp_destination", "fields.dlp_file"]
+  },
+  {
+    "id": "SENTRA-DLP-003", "name": "Repeated DLP incidents by one user", "enabled": true, "severity": 3,
+    "mitre": ["T1048", "T1567", "T1030"], "sama": ["3.3.8", "3.3.14", "3.3.15"], "tactic": "exfiltration", "author":"Sentra SOC", "version": 1,
+    "description": "10 or more DLP incidents (any action) attributed to the same user within 24 hours.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "dlp-incident" } ] },
+    "group_by": ["user"], "window_s": 86400, "count": 10, "suppress_s": 43200,
+    "fields_in_alert": ["user", "host", "fields.dlp_policy", "fields.dlp_channel", "fields.dlp_action"]
+  },
+  {
+    "id": "SENTRA-EDR-001", "name": "EDR detection not remediated", "enabled": true, "severity": 3,
+    "mitre": ["T1204", "T1059", "T1105"], "sama": ["3.3.8", "3.3.14", "3.3.16"], "tactic": "execution", "author":"Sentra SOC", "version": 1,
+    "description": "An endpoint detection (CrowdStrike Falcon, SentinelOne, Trend Micro Apex One / Deep Security, Check Point Anti-Malware) in detect-only mode or whose remediation failed (fields.remediated = false): the threat is still live on the host.",
+    "type": "single",
+    "match": { "all": [ { "field": "action", "op": "in", "value": ["edr-detection", "av-detection"] },
+                        { "field": "fields.remediated", "op": "eq", "value": "false" } ] },
+    "group_by": ["host", "fields.threat_name"], "suppress_s": 1800,
+    "fields_in_alert": ["host", "user", "fields.threat_name", "fields.disposition", "fields.edr_vendor", "process", "cmdline", "hash", "fields.console_url"]
+  },
+  {
+    "id": "SENTRA-EDR-002", "name": "EDR agent uninstalled or tampered", "enabled": true, "severity": 3,
+    "mitre": ["T1685"], "sama": ["3.3.8", "3.3.14"], "tactic": "defense-impairment", "author":"Sentra SOC", "version": 1,
+    "description": "The EDR console reported a sensor/agent uninstall, maintenance-token generation, anti-tamper trigger or protection disablement (normalised action agent-tamper).",
+    "type": "single",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "agent-tamper" } ] },
+    "group_by": ["host", "user"], "suppress_s": 3600,
+    "fields_in_alert": ["host", "user", "fields.edr_vendor", "fields.disposition", "fields.operation", "message"]
+  },
+  {
+    "id": "SENTRA-NPS-001", "name": "RADIUS (NPS) authentication failure burst", "enabled": true, "severity": 2,
+    "mitre": ["T1110", "T1133"], "sama": ["3.3.5", "3.3.8"], "tactic": "credential-access", "author":"Sentra SOC", "version": 1,
+    "description": "10 or more Network Policy Server access-denied events (6273) for the same account within 5 minutes (Wi-Fi 802.1X, VPN or switch RADIUS brute force / password spray against one user).",
+    "type": "threshold",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "windows" },
+                        { "field": "event_code", "op": "eq", "value": "6273" } ] },
+    "group_by": ["user"], "window_s": 300, "count": 10, "suppress_s": 3600,
+    "fields_in_alert": ["user", "src_ip", "fields.calling_station", "fields.nas_identifier", "fields.network_policy", "fields.reason", "host"]
+  },
+  {
+    "id": "SENTRA-SQL-001", "name": "SQL Server login failure burst", "enabled": true, "severity": 2,
+    "mitre": ["T1110"], "sama": ["3.3.5", "3.3.8"], "tactic": "credential-access", "author":"Sentra SOC", "version": 1,
+    "description": "10 or more failed SQL Server logins (error-log 18456 or audit action LGIF, event 33205) from one client IP / login within 5 minutes.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "tags", "op": "eq", "value": "mssql" },
+                        { "field": "action", "op": "eq", "value": "logon-failed" } ] },
+    "group_by": ["src_ip", "user"], "window_s": 300, "count": 10, "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "user", "host", "fields.failure_reason", "fields.sql_instance", "fields.client_host"]
+  },
+  {
+    "id": "SENTRA-SQL-002", "name": "SQL Server server-role membership change", "enabled": true, "severity": 3,
+    "mitre": ["T1098", "T1078.003"], "sama": ["3.3.5"], "tactic": "persistence", "author":"Sentra SOC", "version": 1,
+    "description": "A login was added to or removed from a fixed server role (sysadmin, securityadmin…) — SQL Server Audit action APRL / DPRL in Application-log event 33205.",
+    "type": "single",
+    "match": { "all": [ { "field": "tags", "op": "eq", "value": "mssql" },
+                        { "field": "event_code", "op": "eq", "value": "33205" },
+                        { "field": "fields.sql_action_id", "op": "in", "value": ["APRL", "DPRL"] } ] },
+    "group_by": ["host", "target_user"], "suppress_s": 600,
+    "fields_in_alert": ["host", "user", "target_user", "fields.sql_action_id", "fields.object", "fields.sql_instance", "cmdline", "src_ip"]
+  }
+]

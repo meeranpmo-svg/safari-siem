@@ -1,0 +1,101 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Processor Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+pre.letter{white-space:pre-wrap;font:13px/1.55 "Segoe UI",system-ui,sans-serif;background:rgba(255,255,255,.03);padding:12px;border-radius:8px}pre.letter[dir=rtl]{text-align:right}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">Processor Management</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn btn-primary" id="add"><i class="ti ti-plus me-1"></i>Add processor</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Every party that processes personal data for {{org.short}} (TPAs, reinsurers, call centres, cloud and IT services, printing, collection agencies) works only on written instructions and must give sufficient guarantees. The agreement carries the PDPL terms; the processor is assessed periodically (here: every 12 months, due-diligence questionnaire scored in Python); <b>each sub-processor is approved in advance</b> by the DPO or an administrator who did not propose it. A processor that breaks the agreement becomes a controller and is liable itself (PDPL Art. 8; Implementing Regulation Art. 17).</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Processors</h3></div><div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="note"></div></section>
+<section class="card mb-3" id="vrisk"><div class="card-header"><h3 class="card-title"><i class="ti ti-shield-half me-1"></i>Vendor risk</h3><div class="card-actions small text-secondary">tier from the data each vendor handles · questionnaire · four-eyes approval</div></div>
+<div class="card-body" id="vrbody"><div class="text-secondary">Loading…</div></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+
+  var V=null, REC={};
+  var CL=['purpose','duration','breach_notice','subprocessors','foreign_law','audit_right'];
+  function sc(s){return s===null||s===undefined?P.badge('not assessed','orange'):P.badge(s+'%',s>=80?'green':s>=60?'yellow':'red');}
+  function load(){return Promise.all([P.req('GET','/pdpl/processors'),P.req('GET','/pdpl/records?kind=processor')]).then(function(rr){V=rr[0];REC={};rr[1].records.forEach(function(p){REC[p.id]=p;});var p=V.processors;
+    $('kpis').innerHTML=P.tile(p.length,'Processors')+P.tile(p.filter(function(x){return x.score!==null&&x.score<60;}).length,'Due diligence under 60%',p.some(function(x){return x.score!==null&&x.score<60;})?'text-red':'')+P.tile(p.filter(function(x){return x.review_due;}).length,'Review due')+P.tile(p.reduce(function(a,x){return a+x.pending_subprocessors;},0),'Sub-processors to approve');
+    $('list').innerHTML=P.table([['Processor',function(x){return '<b>'+esc(x.name)+'</b>'+(x.role==='joint_controller'?' '+P.badge('joint controller','purple'):'')+'<div class="mut">'+esc(x.id)+' · '+esc(x.service||'')+'</div>';}],['Outside KSA',function(x){return x.outside_ksa?P.badge('yes','orange'):'no';}],
+      ['Agreement',function(x){return x.agreement?esc(x.agreement)+'<div class="mut">'+esc(x.clauses.length)+' / '+CL.length+' PDPL clauses</div>':P.badge('none','red');}],['Due diligence',function(x){return sc(x.score);}],
+      ['Assessed',function(x){return esc(x.assessed||'—')+(x.review_due?' '+P.badge('due','orange'):'');}],['Sub-processors',function(x){return esc(x.subprocessors.length)+(x.pending_subprocessors?' '+P.badge(x.pending_subprocessors+' to approve','yellow'):'');}]],p,function(x){return 'class="rowc" data-id="'+esc(x.id)+'"';},'No processors recorded.');
+    $('note').textContent=V.note;}).catch(function(e){P.fail($('list'),e);});}
+  function open(x){var cur={};x.checks.forEach(function(c){cur[c.key]=c.ok;});cur.evidence=(REC[x.id]||{}).assessment_evidence;
+    var h=Z.kv([['Service',esc(x.service||'—')],['Agreement',esc(x.agreement||'none')],['Clauses',esc(x.clauses.join(', ')||'none')],['Due diligence',sc(x.score)]]);
+    h+=Z.sec('Due-diligence questionnaire',P.form('qform',V.checks.map(function(c){return [c.key,'bool',c.label+' (weight '+c.weight+')'];}).concat([['evidence','text','Evidence (questionnaire, certificate, audit report reference)']]),cur,'Score'));
+    h+=Z.sec('Sub-processors',P.table([['Name',function(s){return esc(s.name)+'<div class="mut">'+esc(s.service||'')+'</div>';}],['Country',function(s){return esc(s.country);}],['Status',function(s){return P.badge(s.status,{pending:'yellow',approved:'green',rejected:'red'}[s.status])+'<div class="mut">'+esc(s.status==='pending'?'proposed by '+s.proposed_by:'by '+(s.decided_by||''))+'</div>';}],
+      ['',function(s){return s.status==='pending'?'<button type="button" class="btn btn-sm btn-success" data-dec="approve" data-n="'+esc(s.n)+'">Approve</button> <button type="button" class="btn btn-sm" data-dec="reject" data-n="'+esc(s.n)+'">Reject</button>':esc(s.note||'');}]],x.subprocessors,null,'None listed.')
+      +'<div class="mt-2">'+P.form('sform',[['name','text','Sub-processor',1],['service','text','What it does'],['country','text','Country',1]],{},'Propose')+'</div><div class="mut">The DPO or an administrator approves; never the person who proposed it.</div>');
+    h+=Z.sec('Edit the processor',P.form('eform',[['name','text','Name'],['service','text','Service'],['agreement','date','Agreement signed'],['clauses','multi','PDPL clauses in the agreement',0,CL],['role','sel','Role',0,[['processor','Processor (acts on our instructions)'],['joint_controller','Joint controller (decides purposes with us)']]],['outside_ksa','bool','Processes outside the Kingdom']],REC[x.id]||{},'Save'));
+    Z.open('Processor',x.id+' · '+x.name,h+'<input type="hidden" id="pid" value="'+esc(x.id)+'">');}
+  function reopen(id){load().then(function(){var x=V.processors.find(function(q){return q.id===id;});if(x)open(x);});}
+  $('add').addEventListener('click',function(){Z.open('Processors','New processor',P.form('nform',[['name','text','Name',1],['service','text','Service'],['agreement','date','Agreement signed'],['clauses','multi','PDPL clauses in the agreement',0,CL],['role','sel','Role',0,[['processor','Processor (acts on our instructions)'],['joint_controller','Joint controller (decides purposes with us)']]],['outside_ksa','bool','Processes outside the Kingdom']],{},'Add'));});
+  $('list').addEventListener('click',function(ev){var tr=ev.target.closest('tr[data-id]');if(!tr||!V)return;open(V.processors.find(function(x){return x.id===tr.getAttribute('data-id');}));});
+  document.addEventListener('click',function(ev){var b=ev.target.closest('[data-dec]');if(!b)return;var id=$('pid').value,d=b.getAttribute('data-dec'),note='';
+    if(d==='reject'){note=window.prompt('Why is this sub-processor rejected?')||'';if(!note)return;}
+    P.req('POST','/pdpl/processors/'+encodeURIComponent(id)+'/subprocessor/'+encodeURIComponent(b.getAttribute('data-n')),{decision:d,note:note}).then(function(){P.toast('Sub-processor '+d+'d');reopen(id);}).catch(function(e){P.toast(P.why(e));});});
+  document.addEventListener('submit',function(ev){var fm=ev.target,id=$('pid')?$('pid').value:'';
+    if(fm.id==='qform'){ev.preventDefault();P.req('POST','/pdpl/processors/'+encodeURIComponent(id)+'/assessment',P.body(fm)).then(function(r){P.toast(r.name+': '+r.score+'%');reopen(id);}).catch(function(e){P.msg(fm,P.why(e));});}
+    if(fm.id==='sform'){ev.preventDefault();P.req('POST','/pdpl/processors/'+encodeURIComponent(id)+'/subprocessor',P.body(fm)).then(function(){P.toast('Proposed - waiting for approval');reopen(id);}).catch(function(e){P.msg(fm,P.why(e));});}
+    if(fm.id==='nform'||fm.id==='eform'){ev.preventDefault();var b=P.body(fm);b.kind='processor';if(fm.id==='eform')b.id=id;
+      P.req('POST','/pdpl/records',b).then(function(r){P.toast('Saved '+r.id);if(Z.close)Z.close();load();}).catch(function(e){P.msg(fm,P.why(e));});}});
+  /* vendor risk (engine/pdpl-vendor.js): tier, questionnaire, review, approval, schedule */
+  var VR=null, TIERC={critical:'red',high:'orange',medium:'yellow',low:'green'}, AST={draft:'secondary',sent:'azure',returned:'yellow',submitted:'purple',approved:'green',cancelled:'secondary'};
+  function tierB(t){return t?P.badge(t,TIERC[t]):P.badge('not rated','secondary');}
+  function drawVR(){var v=VR,m=v.summary,h='<div class="row row-cards mb-3">'+P.tile(m.critical+m.high,'Critical / high-risk vendors',m.critical?'text-red':'')+P.tile(m.due,'Assessment due',m.due?'text-orange':'')+P.tile(m.in_progress,'Assessments in progress')+P.tile(m.high_residual,'High residual risk',m.high_residual?'text-red':'')+'</div>';
+    (v.findings||[]).slice(0,6).forEach(function(f){h+='<div class="alert alert-'+(f.severity==='high'?'danger':'warning')+' py-2 mb-2"><b>'+esc(f.title)+'</b> - '+esc(f.recommendation)+'</div>';});
+    h+=P.table([['Vendor',function(x){return '<b>'+esc(x.name)+'</b><div class="mut">'+esc(x.id)+' · '+esc(x.activities.length)+' activit'+(x.activities.length===1?'y':'ies')+'</div>';}],
+      ['Inherent tier',function(x){return tierB(x.tier)+'<div class="mut" title="'+esc(x.tier_why.join('; '))+'">'+esc(x.tier_why.slice(0,2).join('; '))+(x.tier_why.length>2?' …':'')+'</div>';}],
+      ['Last assessment',function(x){return x.last_approved?esc(P.dt(x.last_approved).slice(0,10))+' · '+esc(x.score)+'%'+'<div>'+P.badge(x.residual+' residual',TIERC[x.residual]||'secondary')+'</div>':'<span class="mut">never</span>';}],
+      ['Next due',function(x){return x.next_due?esc(x.next_due):'—';}],['',function(x){return x.overdue?P.badge('due','orange'):'';}],
+      ['Assessment',function(x){return x.open?'<button type="button" class="btn btn-sm" data-vra="'+esc(x.open.id)+'">'+esc(x.open.id)+' · '+esc(x.open.status)+'</button>':x.tier?'<button type="button" class="btn btn-sm btn-primary" data-vstart="'+esc(x.id)+'">Start assessment</button>':'<span class="mut">link it to its activities first</span>';}]],
+      v.vendors,null,'No processors recorded.');
+    h+='<div class="small text-secondary mt-2"><span>'+esc(v.note)+'</span> <span>Re-assessment: critical and high every 12 months, medium every 24, low every 36.</span></div>';
+    $('vrbody').innerHTML=h;}
+  function loadVR(){return P.req('GET','/pdpl/vendors').then(function(v){VR=v;drawVR();}).catch(function(e){$('vrbody').innerHTML='<div class="text-secondary">'+esc(P.why(e))+'</div>';});}
+  var VA=null;
+  function openVA(id){P.req('GET','/pdpl/vendors/assessments/'+encodeURIComponent(id)).then(function(v){VA=v;drawVA();}).catch(function(e){P.toast(P.why(e));});}
+  function drawVA(){var v=VA,a=v.assessment,st=a.status,edit=st==='sent'||st==='returned'||st==='draft';
+    var h=Z.kv([['Vendor',esc(a.vendor)],['Status',P.badge(st,AST[st])],['Inherent tier',tierB(v.tier)+' <span class="mut">'+esc((a.tier_why||[]).join('; '))+'</span>'],['Return by',esc(a.return_by||'—')],
+      ['Score',v.score===null||v.score===undefined?'—':esc(v.score)+'%'],['Residual risk',v.residual?P.badge(v.residual,TIERC[v.residual]):'—']]);
+    if(v.blockers.length&&st!=='approved'&&st!=='cancelled')h+='<div class="alert alert-warning py-2">'+esc(v.blockers.join('; '))+'</div>';
+    if(a.reject_note&&st==='returned')h+='<div class="alert alert-info py-2">Sent back by '+esc(a.rejected_by)+': '+esc(a.reject_note)+'</div>';
+    if(edit)h+=Z.sec('Questionnaire','<div class="d-flex flex-wrap gap-2 align-items-center"><button type="button" class="btn btn-sm" id="vqdl"><i class="ti ti-download me-1"></i>Download the questionnaire to send</button>'
+      +(st!=='draft'?'<label class="btn btn-sm mb-0"><i class="ti ti-upload me-1"></i>Import the vendor\'s file<input type="file" id="vqup" accept=".csv,text/csv" hidden></label>':'')+'</div><div class="mut mt-1">Send the file to the vendor by the channel in the contract. When it comes back, import it here; every answer is then reviewed by a person.</div><div class="small mt-1" id="vqmsg"></div>');
+    h+=Z.sec('Answers',P.table([['Question',function(q){return '<b>'+esc(q.id)+'</b> <span class="mut">'+esc(q.domain)+' · weight '+esc(q.weight)+'</span><div class="small">'+esc(q.q)+'</div>';}],
+      ['Answer',function(q){return q.answer?P.badge(q.answer,q.answer===q.good?'green':q.answer==='na'?'secondary':q.answer==='partial'?'yellow':'red')+(q.evidence_given?'<div class="mut">'+esc(q.evidence_given)+'</div>':''):'<span class="mut">—</span>';}],
+      ['Review',function(q){var r=q.review;return (r?P.badge(r.verdict,r.verdict==='accepted'?'green':'red')+'<div class="mut">'+esc(r.by)+(r.note?': '+esc(r.note):'')+'</div>':'')
+        +(st==='returned'&&q.answer?'<div class="mt-1"><button type="button" class="btn btn-sm btn-ghost-success" data-vrev="accepted" data-q="'+esc(q.id)+'">Accept</button> <button type="button" class="btn btn-sm btn-ghost-danger" data-vrev="challenged" data-q="'+esc(q.id)+'">Challenge</button></div>':'');}]],v.questions));
+    var btn='';if(v.can_submit)btn+='<button type="button" class="btn btn-primary" id="vsub">Submit for approval</button> ';
+    if(st==='submitted')btn+='<button type="button" class="btn btn-success" data-vdec="approve">Approve</button> <button type="button" class="btn" data-vdec="reject">Send back</button> <span class="mut">The DPO or an administrator who did not submit it.</span> ';
+    if(['draft','sent','returned','submitted'].indexOf(st)>=0)btn+='<button type="button" class="btn btn-ghost-danger" id="vcan">Cancel</button>';
+    if(st==='approved')btn+='<div>Approved by '+esc(a.approved_by)+' '+esc(P.dt(a.approved_at))+(a.grc_actions&&a.grc_actions.length?' · GRC actions: '+a.grc_actions.map(esc).join(', '):'')+'</div>';
+    h+=Z.sec('Decision','<div class="d-flex flex-wrap gap-2 align-items-center">'+btn+'</div>');
+    h+=Z.sec('History','<ul class="small mb-0">'+(a.history||[]).slice().reverse().map(function(x){return '<li>'+esc(P.dt(x.at))+' · '+esc(x.by)+' · '+esc(x.what)+'</li>';}).join('')+'</ul>');
+    Z.open('Vendor assessment',a.id+' · '+a.vendor,h);}
+  function vaAct(p,b,ok){return P.req('POST','/pdpl/vendors/assessments/'+encodeURIComponent(VA.assessment.id)+p,b||{}).then(function(v){VA=v;drawVA();loadVR();if(ok)P.toast(ok);return v;}).catch(function(e){P.toast(P.why(e));});}
+  $('vrbody').addEventListener('click',function(ev){var s0=ev.target.closest('[data-vstart]');if(s0){s0.disabled=true;P.req('POST','/pdpl/vendors/'+encodeURIComponent(s0.getAttribute('data-vstart'))+'/assessments',{}).then(function(v){VA=v;drawVA();loadVR();P.toast('Assessment '+v.assessment.id+' started');}).catch(function(e){s0.disabled=false;P.toast(P.why(e));});return;}
+    var o=ev.target.closest('[data-vra]');if(o)openVA(o.getAttribute('data-vra'));});
+  document.addEventListener('click',function(ev){var t=ev.target;if(!VA||!t.closest)return;
+    if(t.closest('#vqdl')){P.req('GET','/pdpl/vendors/assessments/'+encodeURIComponent(VA.assessment.id)+'/questionnaire').then(function(r){var u=URL.createObjectURL(new Blob([r.csv],{type:'text/csv'})),l=document.createElement('a');l.href=u;l.download=r.filename;document.body.appendChild(l);l.click();l.remove();setTimeout(function(){URL.revokeObjectURL(u);},2000);openVA(VA.assessment.id);loadVR();}).catch(function(e){P.toast(P.why(e));});return;}
+    var rv=t.closest('[data-vrev]');if(rv){var verdict=rv.getAttribute('data-vrev'),note='';if(verdict==='challenged'){note=window.prompt('What is missing or doubtful? (the vendor will be asked)')||'';if(!note)return;}vaAct('/review',{qid:rv.getAttribute('data-q'),verdict:verdict,note:note||undefined});return;}
+    if(t.closest('#vsub')){vaAct('/submit',{},'Submitted for approval');return;}
+    var dc=t.closest('[data-vdec]');if(dc){var d=dc.getAttribute('data-vdec'),n2=d==='reject'?(window.prompt('What must be redone?')||''):'';if(d==='reject'&&!n2)return;vaAct('/decide',{decision:d,note:n2||undefined},d==='approve'?'Approved':'Sent back');return;}
+    if(t.closest('#vcan')){var n3=window.prompt('Why is this assessment cancelled?')||'';if(!n3)return;vaAct('/cancel',{note:n3},'Cancelled');}});
+  document.addEventListener('change',function(ev){if(ev.target.id!=='vqup'||!ev.target.files.length)return;var f=ev.target.files[0];if(f.size>200000){$('vqmsg').textContent='The file is larger than 200 KB.';return;}
+    var rd=new FileReader();rd.onload=function(){vaAct('/answers',{csv:String(rd.result)}).then(function(v){if(v&&v.imported){var im=v.imported;P.toast(im.answered+' of '+im.of+' answers imported');if(im.errors.length&&$('vqmsg'))$('vqmsg').textContent='Refused rows: '+im.errors.join('; ');}});};rd.readAsText(f);});
+  $('refresh').addEventListener('click',function(){load();loadVR();});
+  load();loadVR();
+})();
+</script></body></html>

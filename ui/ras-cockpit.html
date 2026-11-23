@@ -1,0 +1,327 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Risk Appetite Cockpit</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Risk Appetite Cockpit - the RAS run by the platform: where every metric stands on its limits, which register risks a metric watches
+     (machine learning suggests, a person confirms), what each department still owes for the period (one form), and corrected limits
+     proposed for a four-eyes approval. Data: /api/itam/brisk/ras, /ras/coverage, /ras/due, /ras/limits. Nothing invented: a chart
+     with no data says what is missing. -->
+<style>
+:root{--bg:#0b0e14;--pn:#121722;--pn2:#161d2a;--rs:#18202d;--ln:#232c3c;--tx:#e8ecf3;--mu:#8c95a8;--hi:#e5484d;--md:#f59f00;--lo:#2fb344;--ac:#f97316}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1100px 500px at 0 -10%,rgba(47,179,68,.08),transparent 60%),radial-gradient(1000px 500px at 100% 0,rgba(249,115,22,.08),transparent 60%),var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif;min-height:100vh}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 60px}
+.top{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}.top h1{margin:0;font-size:26px}.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:7px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}.btn:hover{border-color:#3a4560}.btn:disabled{opacity:.5;cursor:default}
+.btn.pri{background:linear-gradient(135deg,#f97316,#ea580c);border-color:#f97316;color:#fff}.btn.ok{background:rgba(47,179,68,.18);border-color:rgba(47,179,68,.5);color:#8ee59f}.btn.no{background:rgba(229,72,77,.12);border-color:rgba(229,72,77,.45);color:#ff9b9f}.btn.xs{padding:3px 8px;font-size:12px;border-radius:7px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;border-bottom:1px solid var(--ln)}.tab{font:600 13.5px Inter,"Segoe UI",system-ui,sans-serif;background:none;border:0;border-bottom:2px solid transparent;color:var(--mu);padding:9px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.tab[aria-selected="true"]{color:var(--tx);border-bottom-color:var(--ac)}.tab .n:empty{display:none}.tab .n{background:var(--rs);border:1px solid var(--ln);border-radius:999px;padding:0 7px;font-size:11px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.k{--t:#8c95a8;position:relative;overflow:hidden;background:linear-gradient(160deg,var(--pn2),var(--pn));border:1px solid var(--ln);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center}.k::after{content:"";position:absolute;inset:auto 0 0 0;height:3px;background:var(--t)}
+.k .ic{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-size:19px;color:var(--t);background:color-mix(in srgb,var(--t) 16%,transparent)}.k .v{font-size:22px;font-weight:800;line-height:1.1}.k .l{font-size:12px;color:var(--mu)}
+.k.r{--t:#ff6b70}.k.a{--t:#ffb020}.k.g{--t:#3fcf5a}.k.i{--t:#818cf8}.k.o{--t:#fb923c}
+.card{background:linear-gradient(180deg,var(--pn2),var(--pn) 120px);border:1px solid var(--ln);border-radius:16px;padding:14px 16px;min-width:0;margin-bottom:14px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .ti{font-size:18px;color:#fb923c}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.g2 .card{margin-bottom:0}
+.empty{color:var(--mu);padding:16px;text-align:center;border:1px dashed var(--ln);border-radius:12px}
+.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:10px;margin-bottom:10px;font-size:13px}
+.note{font-size:12.5px;color:var(--mu);border-left:3px solid var(--ac);padding:7px 11px;background:rgba(249,115,22,.07);border-radius:0 8px 8px 0;margin:0 0 12px}html.zyb-rtl .note{border-left:0;border-right:3px solid var(--ac);border-radius:8px 0 0 8px}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.z0{background:rgba(47,179,68,.16);color:#6ee787}.z1{background:rgba(245,159,0,.16);color:#ffc14d}.z2{background:rgba(242,104,60,.18);color:#ff9a6b}.z3{background:rgba(229,72,77,.2);color:#ff7b80}.zn{background:#222b3b;color:var(--mu)}
+.s-covered{background:rgba(47,179,68,.16);color:#6ee787}.s-strong{background:rgba(99,102,241,.2);color:#a5b4fc}.s-possible{background:rgba(245,159,0,.16);color:#ffc14d}.s-uncovered{background:rgba(229,72,77,.18);color:#ff7b80}
+.inp{font:13px Inter,"Segoe UI",system-ui,sans-serif;background:#0f141d;color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:6px 9px;min-width:0}
+.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.tile{--c:#3a4458;text-align:start;font:inherit;color:inherit;cursor:pointer;background:linear-gradient(160deg,color-mix(in srgb,var(--c) 14%,var(--pn2)),var(--pn));border:1px solid color-mix(in srgb,var(--c) 45%,var(--ln));border-radius:14px;padding:11px 12px;display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;transition:transform .15s}.tile:hover{transform:translateY(-2px)}.tile[aria-pressed="true"]{outline:2px solid var(--c)}
+.tile b{display:block;font-size:12.5px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.tile .sm{margin-top:3px}
+.ring{width:44px;height:44px}
+/* ladder: a metric's value on its six limits */
+.wl{list-style:none;margin:0;padding:0;display:grid;gap:8px}.wl li{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(160px,1.4fr) auto;gap:14px;align-items:center;background:var(--rs);border-radius:12px;padding:9px 12px}
+.ld{position:relative;height:30px;direction:ltr}.ld .bar{position:absolute;inset:10px 0 10px 0;display:flex;border-radius:999px;overflow:hidden}.ld .bar i{display:block;height:100%}
+.ld .val{position:absolute;top:2px;width:14px;height:26px;margin-left:-7px;border-radius:5px;background:#fff;border:3px solid #0b0e14;box-shadow:0 0 0 2px var(--c,#fff)}.ld .fc{position:absolute;top:6px;width:10px;height:18px;margin-left:-5px;border-radius:4px;border:2px dashed #e8ecf3;opacity:.75}
+.ld .tk{position:absolute;bottom:-12px;font-size:9.5px;color:var(--mu);transform:translateX(-50%);white-space:nowrap}
+.ew{color:#ffc14d;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hmg{display:grid;gap:4px;font-size:11px;align-items:stretch}.hmg .nm{color:#c7cedb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;align-self:center;font-size:11.5px}.hmg .hd{color:var(--mu);text-align:center;font-size:10.5px;direction:ltr}
+.hmg .c{all:unset;box-sizing:border-box;border-radius:6px;min-height:26px;display:grid;place-items:center;font-weight:800;font-size:11px;color:#0b0e14;cursor:pointer}.hmg .c:hover{filter:brightness(1.2)}.hmg .c.z{color:#5b6478;cursor:default}.hmg .c.on{outline:2px solid #fff;outline-offset:1px}
+.eg{display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr) 62px;gap:10px;align-items:center;margin:5px 0;font-size:12px}.eg .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.eg .ax{position:relative;height:14px;direction:ltr}.eg .ax::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:#5b6478}.eg .ax i{position:absolute;top:2px;height:10px;border-radius:3px}.eg b{text-align:end;font-variant-numeric:tabular-nums;direction:ltr}
+.cmp{display:grid;grid-template-columns:70px minmax(0,1fr);gap:4px 10px;align-items:center;margin:8px 0 4px;font-size:11.5px;color:var(--mu)}
+.chg{list-style:none;margin:0;padding:0;display:grid;gap:6px}.chg li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;background:var(--rs);border-radius:10px;padding:7px 10px}
+/* coverage */
+.cov{display:grid;grid-template-columns:170px minmax(0,1fr);gap:18px;align-items:center}.donut{width:100%;max-width:160px;display:block;margin:0 auto}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--mu);margin-top:6px}.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:-1px}.lg b{color:var(--tx);margin-inline-start:4px}
+.ar{display:grid;grid-template-columns:minmax(0,34%) minmax(0,1fr) 70px;gap:10px;align-items:center;margin:7px 0;font-size:12.5px}.stk{display:flex;height:12px;border-radius:999px;overflow:hidden;background:#1b2332}.stk i{display:block;height:100%}
+.rl{list-style:none;margin:0;padding:0;display:grid;gap:8px}.rl>li{background:var(--rs);border:1px solid transparent;border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px}.rl>li.sel{border-color:#6366f1}
+.sg{display:grid;gap:6px;margin-top:8px}.sg>div{display:grid;grid-template-columns:minmax(0,1fr) 120px auto;gap:10px;align-items:center;background:#121925;border-radius:10px;padding:7px 9px;font-size:12.5px}
+.ev{display:inline-flex;gap:4px;flex-wrap:wrap;margin-top:3px}.ev span{font-size:10.5px;padding:1px 6px;border-radius:6px;background:#1f2838;color:#b6bfd0}
+.sc{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:6px;align-items:center;font-weight:800;font-size:12px}.trk{height:8px;border-radius:999px;background:#1b2332;overflow:hidden}.trk i{display:block;height:100%;border-radius:999px}
+.bulk{position:sticky;bottom:10px;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(18,23,34,.96);border:1px solid #34405a;border-radius:12px;padding:9px 12px;margin-top:10px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+/* reporting */
+.dp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;cursor:pointer;font:inherit;color:inherit;background:none;border:1px solid transparent;width:100%;text-align:start}.dp:hover,.dp[aria-pressed="true"]{background:var(--rs);border-color:#34405a}
+.fr{display:grid;grid-template-columns:minmax(0,1.3fr) 150px 170px minmax(0,1fr) 120px;gap:10px;align-items:center;padding:9px 10px;border-bottom:1px solid #1a2130;font-size:12.5px}.fr .inp{width:100%}
+/* limits */
+.lt{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0}.lt th{color:var(--mu);font-weight:600;font-size:11.5px;text-align:center;padding:4px;border-bottom:1px solid var(--ln)}.lt td{text-align:center;padding:5px;border-bottom:1px solid #1a2130}.lt td.chg{background:rgba(47,179,68,.14);color:#8ee59f;font-weight:700}.lt td:first-child{text-align:start;color:var(--mu)}
+.why{margin:6px 0;padding-inline-start:18px;font-size:12.5px;color:#c7cedb}
+.toast{position:fixed;bottom:18px;inset-inline-end:18px;background:#1f2838;border:1px solid #34405a;border-radius:10px;padding:10px 14px;z-index:50;max-width:420px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+@media (max-width:1000px){.g2{grid-template-columns:1fr}.wl li{grid-template-columns:1fr}.fr{grid-template-columns:1fr 1fr}.fr>:first-child{grid-column:1/-1}}
+@media (max-width:640px){.cov{grid-template-columns:1fr}.sg>div{grid-template-columns:1fr}.ar{grid-template-columns:1fr 60px}.ar .stk{grid-column:1/-1;grid-row:2}.dp{grid-template-columns:1fr auto}.dp .stk{grid-column:1/-1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.pos{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,1fr);gap:14px;margin:0 0 14px}@media(max-width:1100px){.pos{grid-template-columns:1fr 1fr}}@media(max-width:700px){.pos{grid-template-columns:1fr}}.pos .card{margin:0}
+.gauge{display:flex;flex-direction:column;align-items:center}.gauge svg{width:100%;max-width:260px;height:auto;display:block}.gauge .gs{font-size:12px;color:var(--mu);text-align:center;margin-top:2px}
+.pz{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.pz .donut{width:130px;height:130px;flex:none}
+.rp2{display:flex;gap:14px;align-items:center}.rp2 svg{width:110px;height:110px;flex:none}.rp2 .lst{font-size:12px;display:grid;gap:3px;min-width:0}.rp2 .lst span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.spk{display:block;text-decoration:none;color:var(--tx);background:#0f141e;border:1px solid var(--ln);border-inline-start:3px solid var(--zc,#3a4458);border-radius:10px;padding:8px 10px}.spk:hover{border-color:#3a4560}
+.spk .hd{display:flex;gap:8px;align-items:baseline;justify-content:space-between;font-size:12px}.spk .hd .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.spk .hd .v{font-weight:800;font-size:14px;white-space:nowrap}
+.spk svg{width:100%;height:64px;display:block;direction:ltr;margin-top:4px}.spk .ft{display:flex;justify-content:space-between;font-size:10.5px;color:var(--mu);direction:ltr}
+</style></head><body><main>
+<div class="top"><div><h1><i class="ti ti-gauge" style="color:#fb923c"></i> <span>Risk Appetite Cockpit</span></h1><div class="mu sm"><span>Where every metric stands, which risks it watches, what is due, and the limits to fix</span></div></div><span class="sp"></span>
+ <a class="btn" href="risk-appetite.html"><i class="ti ti-table"></i><span>Risk Appetite (RAS)</span></a><a class="btn" href="enterprise-risk.html"><i class="ti ti-shield-chevron"></i><span>Enterprise Risk Dashboard</span></a><button type="button" class="btn" id="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button></div>
+<div id="err"></div>
+<div class="tabs" role="tablist"><button type="button" class="tab" role="tab" data-tab="ov" aria-selected="true"><i class="ti ti-layout-dashboard"></i><span>Overview</span></button><button type="button" class="tab" role="tab" data-tab="cov"><i class="ti ti-link"></i><span>Risk coverage</span><span class="n" id="n-cov"></span></button><button type="button" class="tab" role="tab" data-tab="rep"><i class="ti ti-clipboard-check"></i><span>Reporting</span><span class="n" id="n-rep"></span></button><button type="button" class="tab" role="tab" data-tab="lim"><i class="ti ti-adjustments"></i><span>Limit fixes</span><span class="n" id="n-lim"></span></button></div>
+
+<section id="p-ov" role="tabpanel">
+ <div class="kpis" id="kpis"></div>
+ <div class="pos" id="pos"></div>
+ <div class="card"><h2><i class="ti ti-layout-grid"></i><span>Sections</span><span class="sm mu" id="tilehint"></span></h2><div id="tiles"></div></div>
+ <div class="card"><h2><i class="ti ti-chart-line"></i><span>Metric trends</span><span class="sm mu" style="font-weight:400" id="trhint"></span></h2><div id="trends"></div></div>
+ <div class="g2"><div class="card"><h2><i class="ti ti-calendar-stats"></i><span>Section by period</span><span class="sm mu" style="font-weight:400">worst zone · values reported</span></h2><div id="hm"></div></div>
+  <div class="card"><h2><i class="ti ti-arrows-horizontal"></i><span>Closest to the edge</span><span class="sm mu" style="font-weight:400">headroom to the nearest appetite limit</span></h2><div id="edge"></div></div></div>
+ <div class="g2"><div class="card"><h2><i class="ti ti-alert-triangle"></i><span>Watch list</span></h2><div id="watch"></div></div><div class="card"><h2><i class="ti ti-arrows-exchange"></i><span>What changed</span></h2><div id="changes"></div></div></div>
+</section>
+<section id="p-cov" role="tabpanel" hidden>
+ <div class="card"><h2><i class="ti ti-chart-donut"></i><span>Which open risks a metric watches</span></h2><div id="covsum"></div></div>
+ <div class="card"><h2><i class="ti ti-list-check"></i><span>Risks and suggested metrics</span></h2>
+  <div class="flt"><input class="inp" id="cq" type="search" placeholder="Search risks" aria-label="Search risks"><select class="inp" id="cst" aria-label="Coverage"><option value="todo">Needs a link</option><option value="strong">Strong suggestion</option><option value="possible">Possible suggestion</option><option value="uncovered">Nothing watches it</option><option value="covered">Covered</option><option value="">All</option></select><select class="inp" id="car" aria-label="Risk area"><option value="">All areas</option></select><label class="sm mu"><input type="checkbox" id="csolved"> <span>include solved risks</span></label></div>
+  <div id="covlist"></div><div class="bulk" id="bulk" hidden><span id="bulkn" class="sm"></span><span class="sp"></span><button type="button" class="btn" id="selstrong"><i class="ti ti-checks"></i><span>Select every strong suggestion</span></button><button type="button" class="btn pri" id="linksel" disabled><i class="ti ti-link"></i><span>Link selected</span></button></div></div>
+ <div class="card"><h2><i class="ti ti-unlink"></i><span>Metrics that watch no risk</span></h2><div id="orph"></div></div>
+</section>
+<section id="p-rep" role="tabpanel" hidden>
+ <div class="g2"><div class="card"><h2><i class="ti ti-building"></i><span>Departments</span></h2><div id="depts"></div></div>
+ <div class="card"><h2><i class="ti ti-forms"></i><span id="ftitle">Report the period</span></h2><div id="form"><div class="empty">Choose a department.</div></div></div></div>
+</section>
+<section id="p-lim" role="tabpanel" hidden>
+ <div class="card"><h2><i class="ti ti-hourglass"></i><span>Waiting for approval</span></h2><div id="pend"></div></div>
+ <div class="card"><h2><i class="ti ti-wand"></i><span>Proposed corrections</span></h2><div id="props"></div></div>
+ <div class="card"><h2><i class="ti ti-circle-check"></i><span>Approved changes</span></h2><div id="appr"></div></div>
+</section>
+<div class="note" id="how"></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);},T=function(s){return window.zybT?window.zybT(s):s;};
+  if(window.zybLang)window.zybLang.extend({terms:{'Risk Appetite Cockpit':'لوحة قيادة الرغبة في المخاطر','Where every metric stands, which risks it watches, what is due, and the limits to fix':'موقع كل مؤشر، والمخاطر التي يراقبها، وما هو مستحق، والحدود الواجب تصحيحها',
+    'Overview':'نظرة عامة','Risk coverage':'تغطية المخاطر','Reporting':'الإبلاغ','Limit fixes':'تصحيح الحدود','Sections':'الأقسام','Watch list':'قائمة المتابعة','What changed':'ما الذي تغيّر','metrics':'المؤشرات','reported this period':'مُبلّغ عنها لهذه الفترة',
+    'within appetite':'ضمن الرغبة في المخاطر','outside appetite':'خارج الرغبة في المخاطر','outside tolerance':'خارج حد التحمل','capacity breached':'تجاوز القدرة','early warnings':'إنذارات مبكرة','open risks watched':'مخاطر مفتوحة مُراقَبة','limit fixes':'تصحيحات الحدود','not reported':'غير مُبلّغ عنها',
+    'Which open risks a metric watches':'المخاطر المفتوحة التي يراقبها مؤشر','Risks and suggested metrics':'المخاطر والمؤشرات المقترحة','Metrics that watch no risk':'مؤشرات لا تراقب أي خطر','covered':'مُغطّاة','strong suggestion':'اقتراح قوي','possible suggestion':'اقتراح محتمل','nothing watches it':'لا شيء يراقبه',
+    'Needs a link':'يحتاج إلى ربط','Strong suggestion':'اقتراح قوي','Possible suggestion':'اقتراح محتمل','Nothing watches it':'لا شيء يراقبه','Covered':'مُغطّاة','All':'الكل','All areas':'كل المجالات','include solved risks':'تضمين المخاطر المُعالجة','Search risks':'ابحث في المخاطر',
+    'Link':'ربط','Not this':'ليس هذا','Link selected':'ربط المحدد','Select every strong suggestion':'تحديد كل الاقتراحات القوية','same department':'القسم نفسه','same family of risk':'فئة المخاطر نفسها','Class III / IV not watched':'الفئة الثالثة / الرابعة غير مراقبة',
+    'Departments':'الأقسام','Report the period':'الإبلاغ عن الفترة','Choose a department.':'اختر قسمًا.','due':'مستحقة','Save the values':'حفظ القيم','Email reminder':'تذكير بالبريد','Nothing due for this department.':'لا شيء مستحق لهذا القسم.','note needed':'يلزم توضيح','Explain the value':'وضّح القيمة',
+    'Waiting for approval':'بانتظار الموافقة','Proposed corrections':'التصحيحات المقترحة','Approved changes':'التغييرات المعتمدة','Request this change':'طلب هذا التغيير','Approve':'موافقة','Reject':'رفض','Why this change':'سبب هذا التغيير','current':'الحالي','proposed':'المقترح','workbook':'ملف العمل',
+    'capacity floor':'حد القدرة الأدنى','tolerance floor':'حد التحمل الأدنى','appetite floor':'حد الرغبة الأدنى','appetite ceiling':'حد الرغبة الأعلى','tolerance ceiling':'حد التحمل الأعلى','capacity ceiling':'حد القدرة الأعلى','Correction':'تصحيح','From its values':'من قيمه','Like a similar metric':'مثل مؤشر مشابه',
+    'Nothing outside appetite and no early warning.':'لا شيء خارج الرغبة ولا إنذار مبكر.','No zone has changed since the period before.':'لم تتغير أي منطقة منذ الفترة السابقة.','No Risk Appetite Statement yet.':'لا يوجد بيان للرغبة في المخاطر بعد.','Import the RAS workbook on the Risk Appetite (RAS) page.':'استورد ملف بيان الرغبة من صفحة الرغبة في المخاطر.',
+    'No register risk yet - import the risk register to see coverage.':'لا توجد مخاطر في السجل بعد - استورد سجل المخاطر لرؤية التغطية.','Nothing waits for approval.':'لا شيء بانتظار الموافقة.','No correction to propose.':'لا يوجد تصحيح لاقتراحه.','No limit has been changed in the platform.':'لم يُغيَّر أي حد في المنصة.','Every metric watches at least one risk.':'كل مؤشر يراقب خطرًا واحدًا على الأقل.',
+    'No risk matches.':'لا يوجد خطر مطابق.','next period (forecast)':'الفترة التالية (تنبؤ)','requested by':'طلبه','approved by':'اعتمده','you requested it - another administrator approves':'أنت من طلبه - يعتمده مسؤول آخر','limits a person sets':'حدود يحددها شخص','Section by period':'الأقسام حسب الفترة','worst zone · values reported':'أسوأ منطقة · القيم المُبلّغ عنها','Closest to the edge':'الأقرب إلى الحد','headroom to the nearest appetite limit':'الهامش حتى أقرب حد للرغبة','No value reported yet.':'لم تُبلّغ أي قيمة بعد.','breached':'مُتجاوز','not reported yet':'لم يُبلّغ عنه بعد','appetite':'الرغبة','watched':'مُراقَبة','Enter at least one value':'أدخل قيمة واحدة على الأقل','Your role cannot open this page.':'لا يسمح دورك بفتح هذه الصفحة.','Business risk not installed':'مخاطر الأعمال غير مثبتة',
+    'The platform suggests and computes; people confirm links, report values and approve limits. A value outside tolerance raises a GRC action at once. Suggestions show their evidence; a rejected one is not offered again.':'تقترح المنصة وتحسب، ويؤكد الأشخاص الروابط ويبلّغون عن القيم ويعتمدون الحدود. القيمة الخارجة عن حد التحمل ترفع إجراءً في الحوكمة فورًا. تعرض الاقتراحات أدلتها، والاقتراح المرفوض لا يُعرض مجددًا.'}});
+
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',ME='',D={ras:null,cov:null,due:null,lim:null},SEL={},SEC=null,DEP=null;
+  var ZC=['#2fb344','#f59f00','#f2683c','#e5484d'],ZN=['within appetite','outside appetite','outside tolerance','capacity breached'],ZK=['within_appetite','outside_appetite','outside_tolerance','capacity_breach'];
+  var KEYS=['cap_floor','tol_floor','app_floor','app_ceil','tol_ceil','cap_ceil'],KL={cap_floor:'capacity floor',tol_floor:'tolerance floor',app_floor:'appetite floor',app_ceil:'appetite ceiling',tol_ceil:'tolerance ceiling',cap_ceil:'capacity ceiling'};
+  var can=function(r){return RANK[ROLE]>=RANK[r];},num=function(v){return typeof v==='number'&&isFinite(v);};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var settle=function(p){return p.then(function(v){return {ok:true,v:v};},function(e){return {ok:false,e:e};});};
+  function fmt(m,v,text){if(text)return text;if(!num(v))return '—';if(m.unit==='ratio')return (Math.round(v*1000)/10)+' %';if(m.unit==='hours')return v<1?Math.round(v*60)+' min':(Math.round(v*10)/10)+' h';if(m.unit==='SAR million')return v+' MN';return String(Math.round(v*1000)/1000);}
+  // the server's zone rule, for the page's live preview only - the server decides
+  function zoneOf(m,v){var L=m.limits||{},z=0,up=function(l,k){if(l!=null&&v>l&&k>z)z=k;},dn=function(l,k){if(l!=null&&v<l&&k>z)z=k;};if(m.kind==='ceiling'||m.kind==='band'){up(L.app_ceil,1);up(L.tol_ceil,2);up(L.cap_ceil,3);}if(m.kind==='floor'||m.kind==='band'){dn(L.app_floor,1);dn(L.tol_floor,2);dn(L.cap_floor,3);}return z;}
+  function parse(m,s){s=String(s||'').trim().replace(/,/g,'');if(!s)return null;if(m.unit==='hours'){var d=/^(\d+(?:\.\d+)?)\s*(days?|d|hours?|h|min(?:ute)?s?|m)?$/i.exec(s);if(!d)return null;var u=(d[2]||'h').toLowerCase(),n=Number(d[1]);return /^d/.test(u)?n*24:/^m/.test(u)?n/60:n;}
+    var x=/^(-?\d+(?:\.\d+)?)\s*(%?)$/.exec(s);if(!x)return null;var v=Number(x[1]);if(x[2])v/=100;if(m.unit==='ratio'&&!x[2]&&Math.abs(v)>3)return null;return v;}
+  var zpill=function(l){return l==null||l<0?'<span class="pill zn">'+esc(T('not reported'))+'</span>':'<span class="pill z'+l+'">'+esc(T(ZN[l]))+'</span>';};
+  function ring(done,total,c){var r=17,C=2*Math.PI*r,p=total?done/total:0;return '<svg class="ring" viewBox="0 0 44 44" role="img" aria-label="'+esc(done+' / '+total+' '+T('reported this period'))+'"><circle cx="22" cy="22" r="'+r+'" fill="none" stroke="#1f2838" stroke-width="5"/><circle cx="22" cy="22" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="5" stroke-linecap="round" stroke-dasharray="'+(C*p).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" font-size="11" font-weight="800" fill="#e8ecf3">'+Math.round(p*100)+'%</text></svg>';}
+  function donut(segs,centre,sub){var r=46,C=2*Math.PI*r,tot=segs.reduce(function(t,s){return t+(s.v||0);},0),off=0,out='';segs.forEach(function(s){if(!s.v)return;var l=s.v/tot*C;out+='<circle cx="60" cy="60" r="'+r+'" fill="none" stroke="'+s.c+'" stroke-width="16" stroke-dasharray="'+Math.max(0,l-1.5).toFixed(2)+' '+(C-l+1.5).toFixed(2)+'" stroke-dashoffset="'+(-off).toFixed(2)+'" transform="rotate(-90 60 60)"><title>'+esc(T(s.label)+': '+s.v)+'</title></circle>';off+=l;});
+    return '<svg class="donut" viewBox="0 0 120 120" role="img" aria-label="'+esc(segs.map(function(s){return T(s.label)+' '+(s.v||0);}).join(', '))+'"><circle cx="60" cy="60" r="'+r+'" fill="none" stroke="#1f2838" stroke-width="16"/>'+out+'<text x="60" y="62" text-anchor="middle" font-size="24" font-weight="800" fill="#e8ecf3">'+esc(String(centre))+'</text><text x="60" y="78" text-anchor="middle" font-size="9.5" fill="#8c95a8">'+esc(T(sub))+'</text></svg>';}
+  var legend=function(segs){return '<div class="lg">'+segs.map(function(s){return '<span><i style="background:'+s.c+'"></i>'+esc(T(s.label))+'<b>'+(s.v||0)+'</b></span>';}).join('')+'</div>';};
+  var stack=function(segs){var t=segs.reduce(function(a,s){return a+(s.v||0);},0);return '<div class="stk" role="img" aria-label="'+esc(segs.map(function(s){return T(s.label)+' '+(s.v||0);}).join(', '))+'">'+(t?segs.filter(function(s){return s.v;}).map(function(s){return '<i style="flex:'+s.v+' 1 0;background:'+s.c+'" title="'+esc(T(s.label)+': '+s.v)+'"></i>';}).join(''):'')+'</div>';};
+  // the ladder: the six limits as coloured zones, the latest value and the next forecast on it
+  function ladder(m){var L=m.limits||{};if(['ceiling','floor','band'].indexOf(m.kind)<0)return '<span class="sm mu">'+esc(T('limits a person sets'))+'</span>';
+    var pts=KEYS.filter(function(k){return num(L[k]);}).map(function(k){return L[k];}),v=m.latest&&num(m.latest.value)?m.latest.value:null,f=m.forecast&&m.forecast.points&&m.forecast.points[0]?m.forecast.points[0].value:null;
+    var all=pts.concat(v!=null?[v]:[]).concat(num(f)?[f]:[]);if(!all.length)return '';var lo=Math.min.apply(null,all),hi=Math.max.apply(null,all),pad=(hi-lo||Math.abs(hi)||1)*0.15;lo-=pad;hi+=pad;
+    var X=function(a){return (a-lo)/(hi-lo)*100;},cuts=[lo].concat(pts.slice().sort(function(a,b){return a-b;})).concat([hi]),bar='';
+    for(var i=0;i<cuts.length-1;i++){var w=X(cuts[i+1])-X(cuts[i]);if(w<=0)continue;bar+='<i style="width:'+w.toFixed(2)+'%;background:'+ZC[zoneOf(m,(cuts[i]+cuts[i+1])/2)]+';opacity:.75"></i>';}
+    var tk=KEYS.filter(function(k){return k.indexOf('app')===0&&num(L[k]);}).map(function(k){return '<span class="tk" style="left:'+X(L[k]).toFixed(1)+'%">'+esc(fmt(m,L[k]))+'</span>';}).join('');
+    var lz=v!=null?zoneOf(m,v):0;
+    return '<div class="ld" role="img" aria-label="'+esc(m.id+': '+(v!=null?fmt(m,v,m.latest.text):T('not reported yet'))+(num(f)?', '+T('next period (forecast)')+' '+fmt(m,f):''))+'"><div class="bar">'+bar+'</div>'+tk
+      +(num(f)?'<span class="fc" style="left:'+X(f).toFixed(1)+'%" title="'+esc(T('next period (forecast)')+': '+fmt(m,f))+'"></span>':'')+(v!=null?'<span class="val" style="left:'+X(v).toFixed(1)+'%;--c:'+ZC[lz]+'" title="'+esc(m.latest.period+': '+fmt(m,v,m.latest.text))+'"></span>':'')+'</div>';}
+
+  /* ---------- overview */
+  // a quarter is placed on its last month, so monthly and quarterly metrics share the columns
+  var pkey=function(p){var q=/^(\d{4})-Q([1-4])$/.exec(p);return q?q[1]+'-'+String(q[2]*3).padStart(2,'0'):p;};
+  // section x the last six periods: the worst zone a value reached there, and how many values were reported
+  function heatmap(M){var keys={};M.forEach(function(m){(m.series||[]).forEach(function(p){keys[pkey(p.period)]=1;});});var K=Object.keys(keys).sort().slice(-6);
+    if(!K.length){$('hm').innerHTML='<div class="empty">'+esc(T('No value reported yet.'))+'</div>';return;}
+    var S={},ord=[];M.forEach(function(m){if(!S[m.section]){S[m.section]={id:m.section,title:m.section_title,cells:{}};ord.push(m.section);}var s=S[m.section];(m.series||[]).forEach(function(p){var k=pkey(p.period);if(K.indexOf(k)<0)return;var c=s.cells[k]||(s.cells[k]={n:0,w:-1});c.n++;if(p.level!=null&&p.level>c.w)c.w=p.level;});});
+    var h='<div class="hmg" role="group" aria-label="'+esc(T('Section by period'))+'" style="grid-template-columns:minmax(90px,1.4fr) repeat('+K.length+',minmax(0,1fr))"><span></span>'+K.map(function(k){return '<span class="hd">'+esc(k)+'</span>';}).join('');
+    ord.forEach(function(id){var s=S[id];h+='<span class="nm" title="'+esc(s.title)+'">'+esc(s.title)+'</span>'+K.map(function(k){var c=s.cells[k];if(!c)return '<span class="c z" style="background:#151b26">·</span>';var col=c.w<0?'#3a4458':ZC[c.w];
+      return '<button type="button" class="c'+(SEC===s.id?' on':'')+'" data-sec="'+esc(String(s.id))+'" style="background:'+col+'" title="'+esc(s.title+' · '+k+': '+c.n+' · '+T(c.w<0?'not reported':ZN[c.w]))+'">'+c.n+'</button>';}).join('');});
+    $('hm').innerHTML=h+'</div><div class="lg">'+ZN.map(function(z,i){return '<span><i style="background:'+ZC[i]+'"></i>'+esc(T(z))+'</span>';}).join('')+'</div>';}
+  // headroom: how far the latest value is from the nearest appetite limit, as a share of that limit; below zero = outside the appetite
+  function headroom(m){var L=m.limits||{},v=m.latest&&num(m.latest.value)?m.latest.value:null;if(v==null||['ceiling','floor','band'].indexOf(m.kind)<0)return null;var h=[];
+    var fl=num(L.app_floor)?L.app_floor:num(L.tol_floor)?L.tol_floor:null,ce=num(L.app_ceil)?L.app_ceil:num(L.tol_ceil)?L.tol_ceil:null;
+    if(m.kind!=='ceiling'&&fl!=null&&fl!==0)h.push((v-fl)/Math.abs(fl));if(m.kind!=='floor'&&ce!=null&&ce!==0)h.push((ce-v)/Math.abs(ce));return h.length?Math.min.apply(null,h):null;}
+  function edge(M){var E=M.filter(function(m){return SEC==null||m.section===SEC;}).map(function(m){return {m:m,h:headroom(m)};}).filter(function(x){return x.h!=null;}).sort(function(a,b){return a.h-b.h;}).slice(0,12);
+    if(!E.length){$('edge').innerHTML='<div class="empty">'+esc(T('No value reported yet.'))+'</div>';return;}
+    var mx=Math.max.apply(null,E.map(function(x){return Math.abs(x.h);}))||1;
+    $('edge').innerHTML=E.map(function(x){var w=Math.abs(x.h)/mx*50,col=ZC[Math.max(0,x.m.latest.level||0)],pc=Math.round(x.h*1000)/10;
+      return '<div class="eg"><div class="nm" title="'+esc(x.m.id+' '+x.m.component)+'"><b style="direction:ltr">'+esc(x.m.id)+'</b> '+esc(x.m.component)+'</div><div class="ax" role="img" aria-label="'+esc(x.m.id+': '+pc+' %')+'"><i style="'+(x.h<0?'right:50%':'left:50%')+';width:'+w.toFixed(1)+'%;background:'+col+'"></i></div><b style="color:'+(x.h<0?'#ff7b80':'#c7cedb')+'">'+(pc>0?'+':'')+pc+' %</b></div>';}).join('')
+      +'<div class="sm mu" style="display:flex;justify-content:space-between;direction:ltr;margin-top:4px"><span>← '+esc(T('breached'))+'</span><span>'+esc(T('within appetite'))+' →</span></div>';}
+  /* ---------- position: the gauge, the zones, reporting; trends: one small chart per metric */
+  if(window.zybLang)window.zybLang.extend({terms:{'Appetite position':'موقف الرغبة في المخاطر','of reported metrics within appetite':'من المؤشرات المبلغة ضمن الرغبة','Where the metrics stand':'أين تقف المؤشرات','Reporting this period':'الإبلاغ لهذه الفترة','reported':'مبلغة','due':'مستحقة','Metric trends':'اتجاهات المؤشرات','reported values · shaded: within appetite · dashed: tolerance and capacity · dotted: forecast':'القيم المبلغة · المظلل: ضمن الرغبة · المتقطع: التحمل والقدرة · المنقط: التنبؤ','no value yet':'لا قيمة بعد','metrics with limits':'مؤشرات بحدود','still due':'ما زالت مستحقة','every metric with limits is reported':'كل المؤشرات ذات الحدود مبلغة','No metric with numeric limits in this selection.':'لا مؤشر بحدود رقمية في هذا الاختيار.'}});
+  function gauge(p,n){var a=Math.PI*(1-p),R=80,cx=100,cy=95,x=cx+R*Math.cos(a),y=cy-R*Math.sin(a),col=p>=0.9?'#2fb344':p>=0.7?'#f59f00':'#e5484d';
+    var arc=function(f,t,c,w){var x1=cx+R*Math.cos(Math.PI*(1-f)),y1=cy-R*Math.sin(Math.PI*(1-f)),x2=cx+R*Math.cos(Math.PI*(1-t)),y2=cy-R*Math.sin(Math.PI*(1-t));return '<path d="M'+x1.toFixed(1)+' '+y1.toFixed(1)+' A'+R+' '+R+' 0 0 1 '+x2.toFixed(1)+' '+y2.toFixed(1)+'" fill="none" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round"/>';};
+    return '<svg viewBox="0 0 200 120" role="img" aria-label="'+esc(Math.round(p*100)+' % '+T('of reported metrics within appetite'))+'">'+arc(0,1,'#1f2838',16)+(n&&p>0?arc(0,Math.max(p,0.001),col,16):'')+(n?'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="7" fill="#fff" stroke="'+col+'" stroke-width="3"/>':'')
+      +'<text x="100" y="88" text-anchor="middle" font-size="30" font-weight="800" fill="#e8ecf3">'+(n?Math.round(p*100)+'%':'—')+'</text><text x="20" y="114" font-size="10" fill="#8c95a8">0</text><text x="180" y="114" text-anchor="end" font-size="10" fill="#8c95a8">100</text></svg>';}
+  function position(M){var lv=function(m){return m.latest?m.latest.level:-1;},lim=M.filter(function(m){return m.reporting!=='no_limits';}),rep=lim.filter(function(m){return m.reporting==='reported';}),zon=rep.filter(function(m){return lv(m)>=0;}),inn=zon.filter(function(m){return lv(m)===0;}).length;
+    var segs=ZN.map(function(n,i){return {label:n,c:ZC[i],v:M.filter(function(m){return lv(m)===i;}).length};}).concat([{label:'not reported',c:'#3a4458',v:M.filter(function(m){return lv(m)<0;}).length}]);
+    var due={};lim.filter(function(m){return m.reporting==='due';}).forEach(function(m){var k=m.responsibility||'(none)';due[k]=(due[k]||0)+1;});var dk=Object.keys(due).sort(function(a,b){return due[b]-due[a];});
+    var R=44,C=2*Math.PI*R,pr=lim.length?rep.length/lim.length:0;
+    $('pos').innerHTML='<div class="card"><h2><i class="ti ti-gauge"></i><span>'+esc(T('Appetite position'))+'</span></h2><div class="gauge">'+gauge(zon.length?inn/zon.length:0,zon.length)+'<div class="gs">'+esc(inn+' / '+zon.length)+' '+esc(T('of reported metrics within appetite'))+'</div></div></div>'
+      +'<div class="card"><h2><i class="ti ti-chart-donut"></i><span>'+esc(T('Where the metrics stand'))+'</span></h2><div class="pz">'+donut(segs,M.length,'metrics')+legend(segs)+'</div></div>'
+      +'<div class="card"><h2><i class="ti ti-clipboard-check"></i><span>'+esc(T('Reporting this period'))+'</span></h2><div class="rp2"><svg viewBox="0 0 110 110" role="img" aria-label="'+esc(rep.length+' / '+lim.length)+'"><circle cx="55" cy="55" r="'+R+'" fill="none" stroke="#1f2838" stroke-width="12"/>'+(pr>0?'<circle cx="55" cy="55" r="'+R+'" fill="none" stroke="'+(pr===1?'#2fb344':'#f59f00')+'" stroke-width="12" stroke-linecap="round" stroke-dasharray="'+(C*pr).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(-90 55 55)"/>':'')+'<text x="55" y="58" text-anchor="middle" font-size="20" font-weight="800" fill="#e8ecf3">'+rep.length+'/'+lim.length+'</text><text x="55" y="74" text-anchor="middle" font-size="9.5" fill="#8c95a8">'+esc(T('reported'))+'</text></svg>'
+        +'<div class="lst">'+(dk.length?'<b class="sm">'+esc(T('still due'))+'</b>'+dk.slice(0,6).map(function(k){return '<span title="'+esc(k)+'"><b style="color:#f59f00">'+due[k]+'</b> '+esc(k)+'</span>';}).join(''):'<span class="mu">'+esc(T('every metric with limits is reported'))+'</span>')+'</div></div></div>';}
+  function spark(m){var S=(m.series||[]).filter(function(p){return num(p.value);}),L=m.limits||{},F=m.forecast&&m.forecast.points?m.forecast.points:[];
+    if(!S.length)return '<div class="sm mu" style="padding:18px 0;text-align:center">'+esc(T('no value yet'))+'</div>';
+    var ys=S.map(function(p){return p.value;});['app_floor','app_ceil','tol_floor','tol_ceil'].forEach(function(k){if(num(L[k]))ys.push(L[k]);});F.forEach(function(f){if(num(f.value))ys.push(f.value);});
+    var lo=Math.min.apply(null,ys),hi=Math.max.apply(null,ys),pd=(hi-lo||Math.abs(hi)||1)*0.12;lo-=pd;hi+=pd;var N=S.length+F.length,W=240,H=64,X=function(i){return 4+(N>1?i/(N-1):0.5)*(W-8);},Y=function(v){return H-4-(v-lo)/(hi-lo)*(H-8);},cl=function(v){return Math.max(0,Math.min(H,v));};
+    var g='';
+    // the appetite band
+    var top=m.kind==='floor'?0:num(L.app_ceil)?Y(L.app_ceil):0,bot=m.kind==='ceiling'?H:num(L.app_floor)?Y(L.app_floor):H;if(m.kind==='floor'&&num(L.app_floor))top=0;
+    if(['ceiling','floor','band'].indexOf(m.kind)>=0)g+='<rect x="0" y="'+cl(Math.min(top,bot)).toFixed(1)+'" width="'+W+'" height="'+Math.abs(cl(bot)-cl(top)).toFixed(1)+'" fill="#2fb344" opacity=".12"/>';
+    [['tol_floor','#f2683c'],['tol_ceil','#f2683c'],['cap_floor','#e5484d'],['cap_ceil','#e5484d']].forEach(function(t){if(num(L[t[0]])){var y=Y(L[t[0]]);if(y>=0&&y<=H)g+='<line x1="0" x2="'+W+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+t[1]+'" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>';}});
+    if(F.length){var last=S.length-1,fp=[[X(last),Y(S[last].value)]].concat(F.map(function(f,i){return [X(S.length+i),Y(f.value)];}));
+      var band=F.filter(function(f){return num(f.lo)&&num(f.hi);});if(band.length===F.length)g+='<path d="M'+X(last).toFixed(1)+' '+Y(S[last].value).toFixed(1)+' '+F.map(function(f,i){return 'L'+X(S.length+i).toFixed(1)+' '+cl(Y(f.hi)).toFixed(1);}).join(' ')+' '+F.slice().reverse().map(function(f,j){return 'L'+X(S.length+F.length-1-j).toFixed(1)+' '+cl(Y(f.lo)).toFixed(1);}).join(' ')+' Z" fill="#a78bfa" opacity=".14"/>';
+      g+='<polyline points="'+fp.map(function(p){return p[0].toFixed(1)+','+cl(p[1]).toFixed(1);}).join(' ')+'" fill="none" stroke="#a78bfa" stroke-width="1.6" stroke-dasharray="2 3"/>';}
+    g+='<polyline points="'+S.map(function(p,i){return X(i).toFixed(1)+','+Y(p.value).toFixed(1);}).join(' ')+'" fill="none" stroke="#c7cedb" stroke-width="1.8"/>';
+    g+=S.map(function(p,i){var z=p.level==null||p.level<0?'#8c95a8':ZC[p.level];return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.value).toFixed(1)+'" r="'+(i===S.length-1?4:2.2)+'" fill="'+z+'"><title>'+esc(p.period+': '+fmt(m,p.value))+'</title></circle>';}).join('');
+    return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="'+esc(m.id+' '+S.map(function(p){return p.period+' '+fmt(m,p.value);}).join(', '))+'">'+g+'</svg><div class="ft"><span>'+esc(S[0].period)+'</span><span>'+esc(S[S.length-1].period)+(F.length?' → +'+F.length:'')+'</span></div>';}
+  function trends(M){var I=M.filter(function(m){return (SEC==null||m.section===SEC)&&['ceiling','floor','band'].indexOf(m.kind)>=0;});
+    $('trhint').textContent=T('reported values · shaded: within appetite · dashed: tolerance and capacity · dotted: forecast');
+    $('trends').innerHTML=I.length?'<div class="sm-grid">'+I.map(function(m){var l=m.latest?m.latest.level:-1;return '<a class="spk" href="risk-appetite.html#'+encodeURIComponent(m.id)+'" style="--zc:'+(l>=0?ZC[l]:'#3a4458')+'"><div class="hd"><span class="nm" title="'+esc(m.component)+'"><b>'+esc(m.id)+'</b> '+esc(m.component)+'</span><span class="v" style="color:'+(l>=0?ZC[l]:'#8c95a8')+'">'+esc(m.latest?fmt(m,m.latest.value,m.latest.text):'—')+'</span></div>'+spark(m)+'</a>';}).join('')+'</div>':'<div class="empty">'+esc(T('No metric with numeric limits in this selection.'))+'</div>';}
+  function overview(){var M=D.ras?D.ras.metrics:[];
+    if(!M.length){$('kpis').innerHTML='';$('tiles').innerHTML='<div class="empty">'+esc(T('No Risk Appetite Statement yet.'))+' <a href="risk-appetite.html" style="color:var(--tx)">'+esc(T('Import the RAS workbook on the Risk Appetite (RAS) page.'))+'</a></div>';$('watch').innerHTML='';$('changes').innerHTML='';$('hm').innerHTML='';$('edge').innerHTML='';return;}
+    var lim=M.filter(function(m){return m.reporting!=='no_limits';}),c=function(f){return M.filter(f).length;},lv=function(m){return m.latest?m.latest.level:-1;},cs=D.cov?D.cov.summary:null,L=D.lim;
+    var rep=c(function(m){return m.reporting==='reported';}),o1=c(function(m){return lv(m)===1;}),o2=c(function(m){return lv(m)>=2;}),ew=c(function(m){return !!m.early_warning;}),fixes=L?L.pending.length+L.proposals.length:null;
+    $('kpis').innerHTML=[[M.length,'metrics','i','ti-list-details'],[rep+' / '+lim.length,'reported this period',rep<lim.length?'a':'g','ti-clipboard-check'],[c(function(m){return lv(m)===0;}),'within appetite','g','ti-circle-check'],[o1,'outside appetite',o1?'a':'g','ti-alert-circle'],[o2,'outside tolerance',o2?'r':'g','ti-alert-octagon'],[ew,'early warnings',ew?'a':'g','ti-bell-ringing'],
+      [cs?cs.covered+' / '+cs.open:'—','open risks watched',cs&&cs.covered<cs.open?'o':'g','ti-link'],[fixes==null?'—':fixes,'limit fixes',fixes?'o':'g','ti-adjustments']]
+      .map(function(x){return '<div class="k '+x[2]+'"><div class="ic"><i class="ti '+x[3]+'"></i></div><div><div class="v"><bdi dir="ltr">'+esc(String(x[0]))+'</bdi></div><div class="l">'+esc(T(x[1]))+'</div></div></div>';}).join('');
+    var S={};M.forEach(function(m){var s=S[m.section]||(S[m.section]={id:m.section,title:m.section_title,n:0,rep:0,worst:-1,out:0,ew:0,lim:0});s.n++;if(m.reporting!=='no_limits')s.lim++;if(m.reporting==='reported')s.rep++;if(lv(m)>s.worst)s.worst=lv(m);if(lv(m)>=1)s.out++;if(m.early_warning)s.ew++;});
+    $('tilehint').textContent='';
+    $('tiles').innerHTML='<div class="tiles">'+Object.keys(S).map(function(k){var s=S[k],col=s.worst<0?'#3a4458':ZC[s.worst];return '<button type="button" class="tile" data-sec="'+esc(String(s.id))+'" aria-pressed="'+(SEC===s.id)+'" style="--c:'+col+'">'+ring(s.rep,s.lim,col)+'<div><b>'+esc(s.title)+'</b><div class="sm mu">'+s.n+' '+esc(T('metrics'))+(s.out?' · <span class="pill z'+Math.max(1,s.worst)+'">'+s.out+'</span>':'')+(s.ew?' · <i class="ti ti-bell-ringing" style="color:#ffc14d"></i> '+s.ew:'')+'</div></div></button>';}).join('')+'</div>';
+    var W=M.filter(function(m){return (SEC==null||m.section===SEC)&&(lv(m)>=1||m.early_warning);}).sort(function(a,b){return lv(b)-lv(a)||((b.early_warning||{}).p||0)-((a.early_warning||{}).p||0);});
+    $('watch').innerHTML=W.length?'<ul class="wl">'+W.slice(0,30).map(function(m){return '<li><div style="min-width:0"><b>'+esc(m.id)+'</b> '+esc(m.component)+'<div class="sm mu">'+esc(m.responsibility||'')+' · '+esc(m.latest?m.latest.period:'')+'</div>'+(m.early_warning?'<div class="sm ew" title="'+esc(m.early_warning.why)+'"><i class="ti ti-bell-ringing"></i> '+esc(m.early_warning.why)+'</div>':'')+'</div>'+ladder(m)+'<div style="text-align:end"><b><bdi dir="ltr">'+esc(m.latest?fmt(m,m.latest.value,m.latest.text):'—')+'</bdi></b><div>'+zpill(lv(m))+'</div></div></li>';}).join('')+'</ul>':'<div class="empty">'+esc(T('Nothing outside appetite and no early warning.'))+'</div>';
+    var C=[];M.forEach(function(m){var s=m.series||[];if(s.length<2)return;var a=s[s.length-2],b=s[s.length-1];if(a.level!==b.level&&a.level!=null&&b.level!=null&&a.level>=0&&b.level>=0)C.push({m:m,a:a,b:b});});
+    C.sort(function(x,y){return (y.b.level-y.a.level)-(x.b.level-x.a.level);});
+    heatmap(M);edge(M);position(M);trends(M);
+    $('changes').innerHTML=C.length?'<ul class="chg">'+C.slice(0,25).map(function(x){var up=x.b.level>x.a.level;return '<li><i class="ti ti-trending-'+(up?'up':'down')+'" style="color:'+(up?'#ff7b80':'#56d364')+'"></i><b>'+esc(x.m.id)+'</b> '+esc(x.m.component)+' <span class="sp"></span>'+zpill(x.a.level)+' → '+zpill(x.b.level)+' <span class="sm mu">'+esc(x.a.period+' → '+x.b.period)+'</span></li>';}).join('')+'</ul>':'<div class="empty">'+esc(T('No zone has changed since the period before.'))+'</div>';}
+
+  /* ---------- coverage */
+  var SC={covered:'#2fb344',strong:'#818cf8',possible:'#f59f00',uncovered:'#e5484d'},SN={covered:'covered',strong:'strong suggestion',possible:'possible suggestion',uncovered:'nothing watches it'};
+  function coverage(){var C=D.cov;$('n-cov').textContent=C&&C.summary.open?String(C.summary.open-C.summary.covered):'';
+    if(!C||!C.risks.length){$('covsum').innerHTML='<div class="empty">'+esc(T('No register risk yet - import the risk register to see coverage.'))+'</div>';$('covlist').innerHTML='';$('orph').innerHTML='';$('bulk').hidden=true;return;}
+    var s=C.summary,segs=['covered','strong','possible','uncovered'].map(function(k){return {label:SN[k],c:SC[k],v:s[k]};});
+    $('covsum').innerHTML='<div class="cov"><div>'+donut(segs,s.covered+'/'+s.open,'watched')+'</div><div>'+legend(segs)+(s.serious_uncovered?'<div style="margin-top:8px"><span class="pill z3">'+s.serious_uncovered+'</span> <span class="sm">'+esc(T('Class III / IV not watched'))+'</span></div>':'')
+      +'<div style="margin-top:10px">'+C.by_area.map(function(a){return '<div class="ar"><div title="'+esc(a.area)+'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.area.replace(/_/g,' '))+'</div>'+stack(['covered','strong','possible','uncovered'].map(function(k){return {label:SN[k],c:SC[k],v:a[k]};}))+'<div class="sm mu" style="text-align:end"><bdi dir="ltr">'+a.covered+' / '+a.risks+'</bdi></div></div>';}).join('')+'</div></div></div><p class="sm mu" style="margin:8px 0 0">'+esc(C.method)+'</p>';
+    var ar=$('car'),cur=ar.value;ar.innerHTML='<option value="">'+esc(T('All areas'))+'</option>'+Array.from(new Set(C.risks.map(function(r){return r.area;}))).sort().map(function(a){return '<option value="'+esc(a)+'"'+(a===cur?' selected':'')+'>'+esc(a.replace(/_/g,' '))+'</option>';}).join('');
+    covList();
+    var O=C.metrics.filter(function(m){return m.state==='orphan';});
+    $('orph').innerHTML=O.length?'<div class="sm mu" style="margin-bottom:6px">'+O.length+' / '+C.summary.metrics+'</div><div class="lg" style="display:grid;gap:4px">'+O.slice(0,60).map(function(m){return '<span><b>'+esc(m.id)+'</b>&nbsp;'+esc(m.component)+' <span class="mu">· '+esc(m.responsibility||'')+'</span></span>';}).join('')+'</div>':'<div class="empty">'+esc(T('Every metric watches at least one risk.'))+'</div>';}
+  function covList(){var C=D.cov,q=$('cq').value.trim().toLowerCase(),st=$('cst').value,ar=$('car').value,sol=$('csolved').checked,op=can('operator');
+    var I=C.risks.filter(function(r){if(!sol&&r.status==='solved')return false;if(ar&&r.area!==ar)return false;if(st==='todo'&&r.state==='covered')return false;if(st&&st!=='todo'&&r.state!==st)return false;return !q||[r.code,r.title,r.department,r.owner].join(' ').toLowerCase().indexOf(q)>=0;})
+      .sort(function(a,b){return (b.residual||0)-(a.residual||0)||((b.suggestions[0]||{}).score||0)-((a.suggestions[0]||{}).score||0);});
+    $('covlist').innerHTML=I.length?'<ul class="rl">'+I.slice(0,150).map(function(r){var top=r.suggestions[0],ck=op&&top&&r.state!=='covered';
+      return '<li class="'+(SEL[r.id]?'sel':'')+'"><span>'+(ck?'<input type="checkbox" class="pick" data-risk="'+esc(r.id)+'" aria-label="'+esc(r.code)+'"'+(SEL[r.id]?' checked':'')+'>':'')+'</span><div style="min-width:0"><div><b>'+esc(r.code||r.id)+'</b> '+esc(r.title)+' <span class="pill s-'+r.state+'">'+esc(T(SN[r.state]))+'</span>'+(r.class?' <span class="pill '+(r.residual>=3?'z3':'zn')+'">'+esc(r.class)+'</span>':'')+'</div>'
+        +'<div class="sm mu">'+esc(r.department||'')+' · '+esc((r.area||'').replace(/_/g,' '))+(r.linked.length?' · '+esc(r.linked.join(', ')):'')+'</div>'
+        +(r.suggestions.length?'<div class="sg">'+r.suggestions.map(function(s){return '<div><div style="min-width:0"><b>'+esc(s.metric)+'</b> '+esc(s.component)+'<div class="ev">'+(s.words.length?'<span>'+esc(s.words.join(', '))+'</span>':'')+(s.dept?'<span>'+esc(T('same department'))+'</span>':'')+(s.family?'<span>'+esc(T('same family of risk'))+'</span>':'')+(s.learned?'<span>≈ '+esc(s.learned.risk)+'</span>':'')+'</div></div>'
+          +'<div class="sc" title="'+esc(String(s.score))+'"><div class="trk"><i style="width:'+Math.round(s.score*100)+'%;background:'+(s.score>=0.45?'#818cf8':'#f59f00')+'"></i></div><span>'+Math.round(s.score*100)+'</span></div>'
+          +(op?'<div style="display:flex;gap:6px"><button type="button" class="btn xs ok" data-link="'+esc(s.metric)+'" data-risk="'+esc(r.id)+'">'+esc(T('Link'))+'</button><button type="button" class="btn xs no" data-reject="'+esc(s.metric)+'" data-risk="'+esc(r.id)+'">'+esc(T('Not this'))+'</button></div>':'<span></span>')+'</div>';}).join('')+'</div>':'')+'</div></li>';}).join('')+'</ul>'+(I.length>150?'<div class="sm mu" style="margin-top:6px">150 / '+I.length+'</div>':''):'<div class="empty">'+esc(T('No risk matches.'))+'</div>';
+    $('bulk').hidden=!op;bulkCount();}
+  function bulkCount(){var n=Object.keys(SEL).length;$('bulkn').textContent=n+' / '+T('Link selected');$('linksel').disabled=!n;}
+
+  /* ---------- reporting */
+  function reporting(){var R=D.due?D.due.departments:[];$('n-rep').textContent=R.length?String(R.reduce(function(t,d){return t+d.due.length;},0)):'';
+    if(!R.length){$('depts').innerHTML='<div class="empty">'+esc(T('No Risk Appetite Statement yet.'))+'</div>';return;}
+    $('depts').innerHTML=R.map(function(d){return '<button type="button" class="dp" data-dept="'+esc(d.department)+'" aria-pressed="'+(DEP===d.department)+'"><div style="min-width:0"><b>'+esc(d.department)+'</b><div class="sm mu">'+(d.due.length?d.due.length+' '+esc(T('due')):'✓')+(d.outside?' · <span class="pill z1">'+d.outside+'</span>':'')+'</div></div>'+stack([{label:'reported this period',c:'#2fb344',v:d.reported},{label:'due',c:'#3a4458',v:d.due.length}])+'<span class="sm"><bdi dir="ltr">'+d.reported+' / '+d.total+'</bdi></span></button>';}).join('');
+    form();}
+  function form(){var R=D.due?D.due.departments:[],d=R.filter(function(x){return x.department===DEP;})[0];
+    if(!d){$('form').innerHTML='<div class="empty">'+esc(T('Choose a department.'))+'</div>';$('ftitle').textContent=T('Report the period');return;}
+    $('ftitle').textContent=d.department;
+    if(!d.due.length){$('form').innerHTML='<div class="empty">'+esc(T('Nothing due for this department.'))+'</div>';return;}
+    var op=can('operator'),M={};(D.ras?D.ras.metrics:[]).forEach(function(m){M[m.id]=m;});
+    $('form').innerHTML=d.due.map(function(x){var m=M[x.id]||x,ap=[x.raw&&x.raw.app_floor,x.raw&&x.raw.app_ceil].filter(Boolean).join(' – ');
+      var inp=m.kind==='boolean'?'<select class="inp fv" data-id="'+esc(x.id)+'" aria-label="'+esc(x.id)+'"'+(op?'':' disabled')+'><option value=""></option><option value="yes">yes</option><option value="no">no</option></select>'
+        :m.kind==='manual'?'<select class="inp fz" data-id="'+esc(x.id)+'" aria-label="'+esc(x.id)+' zone"'+(op?'':' disabled')+'><option value=""></option>'+ZK.map(function(z,i){return '<option value="'+z+'">'+esc(T(ZN[i]))+'</option>';}).join('')+'</select>'
+        :'<input class="inp fv" data-id="'+esc(x.id)+'" aria-label="'+esc(x.id)+'" placeholder="'+esc(m.unit==='ratio'?'82%':m.unit==='hours'?'4 hours':'')+'"'+(op?'':' disabled')+'>';
+      return '<div class="fr" data-row="'+esc(x.id)+'"><div style="min-width:0"><b>'+esc(x.id)+'</b> '+esc(x.component)+'<div class="sm mu">'+esc(x.due_period)+(ap?' · '+esc(T('appetite'))+' '+esc(ap):'')+(x.last?' · '+esc(x.last.period)+': '+esc(fmt(m,x.last.value,x.last.text)):'')+'</div></div><div>'+inp+'</div><div class="pv" data-pv="'+esc(x.id)+'"></div>'
+        +'<div><input class="inp fn" data-id="'+esc(x.id)+'" aria-label="'+esc(x.id)+' note" placeholder="'+esc(T('Explain the value'))+'"'+(op?'':' disabled')+'></div><div class="sm mu">'+esc(x.frequency||'monthly')+'</div></div>';}).join('')
+      +'<div class="flt" style="margin-top:12px">'+(op?'<button type="button" class="btn pri" id="save"><i class="ti ti-device-floppy"></i><span>'+esc(T('Save the values'))+'</span></button>':'')+'<a class="btn" id="mail" href="'+esc(mailto(d))+'"><i class="ti ti-mail"></i><span>'+esc(T('Email reminder'))+'</span></a><span id="fres" class="sm"></span></div>';}
+  function mailto(d){var b='Risk Appetite Statement - values due for '+(d.due[0]?d.due[0].due_period:'')+'\n\n'+d.due.map(function(x){return x.id+'  '+x.component;}).join('\n')+'\n\nPlease report them in the Risk Appetite Cockpit (Reporting).';
+    return 'mailto:?subject='+encodeURIComponent('RAS reporting due - '+d.department)+'&body='+encodeURIComponent(b);}
+  function preview(id){var m=(D.ras?D.ras.metrics:[]).filter(function(x){return x.id===id;})[0],el=document.querySelector('[data-pv="'+id+'"]');if(!m||!el)return;
+    var fv=document.querySelector('.fv[data-id="'+id+'"]'),fz=document.querySelector('.fz[data-id="'+id+'"]'),l=null;
+    if(fz&&fz.value)l=ZK.indexOf(fz.value);else if(fv&&fv.value){if(m.kind==='boolean')l=fv.value==='no'?1:0;else{var v=parse(m,fv.value);l=v==null?-2:zoneOf(m,v);}}
+    el.innerHTML=l===-2?'<span class="pill z3">?</span>':l==null?'':zpill(l)+(l>=1?' <span class="sm" style="color:#ffc14d">'+esc(T('note needed'))+'</span>':'');}
+  function save(){var rows=[];[].forEach.call(document.querySelectorAll('#form .fr'),function(r){var id=r.getAttribute('data-row'),fv=r.querySelector('.fv'),fz=r.querySelector('.fz'),fn=r.querySelector('.fn'),x=(D.due.departments.filter(function(d){return d.department===DEP;})[0].due.filter(function(y){return y.id===id;})[0]);
+      if((fv&&fv.value.trim())||(fz&&fz.value)){var o={metric:id,period:x.due_period};if(fv&&fv.value.trim())o.value=fv.value.trim();if(fz&&fz.value){o.zone=fz.value;o.value=o.value||fz.options[fz.selectedIndex].text;}if(fn.value.trim())o.note=fn.value.trim();rows.push(o);}});
+    if(!rows.length){toast(T('Enter at least one value'));return;}
+    $('save').disabled=true;$('fres').textContent='…';
+    req('POST','/brisk/ras/actuals',{rows:rows}).then(function(j){toast(j.recorded+' recorded'+(j.outside_appetite.length?', '+j.outside_appetite.length+' outside appetite':'')+(j.auto_actions&&j.auto_actions.length?', '+j.auto_actions.length+' GRC action(s) raised':''));load();},function(e){$('fres').innerHTML='<span style="color:#ff9b9f">'+esc(e.message)+'</span>';$('save').disabled=false;});}
+
+  /* ---------- limit fixes */
+  var BN={correction:'Correction',history:'From its values',similar:'Like a similar metric',manual:'manual'};
+  function ltable(cur,pro){return '<table class="lt"><thead><tr><th></th>'+KEYS.map(function(k){return '<th>'+esc(T(KL[k]))+'</th>';}).join('')+'</tr></thead><tbody><tr><td>'+esc(T('current'))+'</td>'+KEYS.map(function(k){return '<td>'+esc((cur||{})[k]||'—')+'</td>';}).join('')+'</tr>'
+    +'<tr><td>'+esc(T('proposed'))+'</td>'+KEYS.map(function(k){var a=(cur||{})[k]||'',b=(pro||{})[k]||'';return '<td class="'+(a!==b?'chg':'')+'">'+esc(b||'—')+'</td>';}).join('')+'</tr></tbody></table>';}
+  // the change at a glance: the current limits and the proposed ones as ladders, with the latest value on both
+  function compare(p){var m=(D.ras?D.ras.metrics:[]).filter(function(x){return x.id===p.id;})[0];if(!m||['ceiling','floor','band'].indexOf(p.kind)<0)return '';
+    var cur={id:m.id,kind:m.kind,unit:m.unit,limits:m.limits||{},latest:m.latest},pro={id:m.id,kind:p.kind,unit:p.unit,limits:p.limits||{},latest:m.latest};
+    var lc=['ceiling','floor','band'].indexOf(m.kind)>=0&&Object.keys(m.limits||{}).length?ladder(cur):'<span class="sm mu">—</span>';
+    return '<div class="cmp"><span>'+esc(T('current'))+'</span>'+lc+'<span>'+esc(T('proposed'))+'</span>'+ladder(pro)+'</div>';}
+  function limits(){var L=D.lim;$('n-lim').textContent=L?String(L.pending.length+L.proposals.length||''):'';
+    if(!L){$('pend').innerHTML=$('props').innerHTML=$('appr').innerHTML='<div class="empty">'+esc(T('No Risk Appetite Statement yet.'))+'</div>';return;}
+    $('pend').innerHTML=L.pending.length?L.pending.map(function(p){var mine=String(p.change.by).toLowerCase()===ME.toLowerCase(),adm=can('admin');
+      return '<div class="card" style="background:var(--rs);margin-bottom:10px"><b>'+esc(p.id)+'</b> '+esc(p.component)+' <span class="pill zn">'+esc(T(BN[p.change.basis]||p.change.basis))+'</span><div class="sm mu">'+esc(T('requested by'))+' '+esc(p.change.by)+' · '+esc(String(p.change.at).slice(0,16).replace('T',' '))+' — '+esc(p.change.note)+'</div>'+ltable(p.current,p.change.raw)
+        +(adm&&!mine?'<div class="flt"><input class="inp" id="rn-'+esc(p.id)+'" placeholder="'+esc(T('Why this change'))+'" aria-label="note"><button type="button" class="btn ok" data-approve="'+esc(p.id)+'"><i class="ti ti-check"></i>'+esc(T('Approve'))+'</button><button type="button" class="btn no" data-rejectl="'+esc(p.id)+'"><i class="ti ti-x"></i>'+esc(T('Reject'))+'</button></div>':mine?'<div class="sm mu">'+esc(T('you requested it - another administrator approves'))+'</div>':'')+'</div>';}).join(''):'<div class="empty">'+esc(T('Nothing waits for approval.'))+'</div>';
+    $('props').innerHTML=(L.proposals.length?L.proposals.map(function(p){return '<div class="card" style="background:var(--rs);margin-bottom:10px"><b>'+esc(p.id)+'</b> '+esc(p.component)+' <span class="pill '+(p.basis==='correction'?'z0':'zn')+'">'+esc(T(BN[p.basis]))+(p.from?' '+esc(p.from):'')+'</span><ul class="why">'+p.why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>'+compare(p)+ltable(p.current,p.proposed)
+      +(can('operator')?'<div class="flt"><input class="inp" id="pn-'+esc(p.id)+'" placeholder="'+esc(T('Why this change'))+'" aria-label="note" style="flex:1"><button type="button" class="btn pri" data-request="'+esc(p.id)+'"><i class="ti ti-send"></i>'+esc(T('Request this change'))+'</button></div>':'')+'</div>';}).join(''):'<div class="empty">'+esc(T('No correction to propose.'))+'</div>')
+      +(L.without.length?'<div class="sm mu" style="margin-top:8px">'+L.without.map(function(w){return esc(w.id)+': '+esc(w.issues.join('; '));}).join('<br>')+'</div>':'');
+    $('appr').innerHTML=L.approved.length?'<ul class="chg">'+L.approved.map(function(a){return '<li><b>'+esc(a.id)+'</b> '+esc(a.component)+'<span class="sp"></span><span class="sm mu">'+esc(T('requested by'))+' '+esc(a.override.requested_by)+' · '+esc(T('approved by'))+' '+esc(a.override.approved_by)+' · '+esc(String(a.override.at).slice(0,10))+'</span></li>';}).join('')+'</ul>':'<div class="empty">'+esc(T('No limit has been changed in the platform.'))+'</div>';}
+
+  /* ---------- load, tabs, clicks */
+  function render(){overview();coverage();reporting();limits();}
+  function load(){Promise.all([settle(req('GET','/brisk/ras')),settle(req('GET','/brisk/ras/coverage')),settle(req('GET','/brisk/ras/due')),settle(req('GET','/brisk/ras/limits'))]).then(function(a){
+    var bad=a.filter(function(x){return !x.ok;});if(bad.length&&bad[0].e.status===403){$('err').innerHTML='<div class="err">'+esc(T('Your role cannot open this page.'))+'</div>';return;}
+    $('err').innerHTML=bad.length?'<div class="err">'+esc(bad[0].e.status===404?T('Business risk not installed'):bad[0].e.message)+'</div>':'';
+    D.ras=a[0].ok?a[0].v:null;D.cov=a[1].ok?a[1].v:null;D.due=a[2].ok?a[2].v:null;D.lim=a[3].ok?a[3].v:null;SEL={};render();});}
+  function tab(t){[].forEach.call(document.querySelectorAll('.tab'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});['ov','cov','rep','lim'].forEach(function(k){$('p-'+k).hidden=k!==t;});try{history.replaceState(null,'','#'+t);}catch(e){/* file: or sandboxed: the tab still works */}}
+  function act(p,msg){return p.then(function(){toast(msg);load();},function(e){toast(e.message);});}
+  document.addEventListener('click',function(e){var t=e.target.closest?e.target.closest('button,[data-sec]'):null;if(!t)return;
+    if(t.classList.contains('tab')){tab(t.getAttribute('data-tab'));return;}
+    if(t.id==='refresh'){load();return;}
+    if(t.hasAttribute('data-sec')){var s=Number(t.getAttribute('data-sec'));SEC=SEC===s?null:s;overview();return;}
+    if(t.hasAttribute('data-link'))return act(req('POST','/brisk/ras/links/bulk',{pairs:[{metric:t.getAttribute('data-link'),risk:t.getAttribute('data-risk')}]}),T('Link')+' ✓');
+    if(t.hasAttribute('data-reject'))return act(req('POST','/brisk/ras/'+encodeURIComponent(t.getAttribute('data-reject'))+'/links',{risk:t.getAttribute('data-risk'),op:'reject'}),T('Not this')+' ✓');
+    if(t.id==='selstrong'){D.cov.risks.forEach(function(r){if(r.state==='strong'&&(r.status!=='solved'||$('csolved').checked))SEL[r.id]=1;});covList();return;}
+    if(t.id==='linksel'){var pairs=Object.keys(SEL).map(function(id){var r=D.cov.risks.filter(function(x){return x.id===id;})[0];return r&&r.suggestions[0]?{metric:r.suggestions[0].metric,risk:id}:null;}).filter(Boolean);
+      if(!pairs.length||!window.confirm(pairs.length+' — '+T('Link selected')+'?'))return;return act(req('POST','/brisk/ras/links/bulk',{pairs:pairs}),pairs.length+' '+T('Link')+' ✓');}
+    if(t.hasAttribute('data-dept')){DEP=t.getAttribute('data-dept');reporting();return;}
+    if(t.id==='save'){save();return;}
+    if(t.hasAttribute('data-request')){var id=t.getAttribute('data-request'),p=D.lim.proposals.filter(function(x){return x.id===id;})[0],n=$('pn-'+id).value.trim();if(n.length<5){toast(T('Why this change'));$('pn-'+id).focus();return;}
+      return act(req('POST','/brisk/ras/'+encodeURIComponent(id)+'/limits',{raw:p.proposed,note:n,basis:p.basis}),T('Request this change')+' ✓');}
+    if(t.hasAttribute('data-approve')){var a=t.getAttribute('data-approve');return act(req('POST','/brisk/ras/'+encodeURIComponent(a)+'/limits/decision',{decision:'approve',note:$('rn-'+a).value.trim()}),T('Approve')+' ✓');}
+    if(t.hasAttribute('data-rejectl')){var b=t.getAttribute('data-rejectl'),nb=$('rn-'+b).value.trim();if(!nb){toast(T('Why this change'));$('rn-'+b).focus();return;}return act(req('POST','/brisk/ras/'+encodeURIComponent(b)+'/limits/decision',{decision:'reject',note:nb}),T('Reject')+' ✓');}
+  });
+  document.addEventListener('change',function(e){var t=e.target;if(t.classList.contains('pick')){if(t.checked)SEL[t.getAttribute('data-risk')]=1;else delete SEL[t.getAttribute('data-risk')];t.closest('li').classList.toggle('sel',t.checked);bulkCount();return;}
+    if(t.id==='cst'||t.id==='car'||t.id==='csolved'){covList();return;}if(t.classList.contains('fz')||t.classList.contains('fv'))preview(t.getAttribute('data-id'));});
+  document.addEventListener('input',function(e){var t=e.target;if(t.id==='cq')covList();else if(t.classList.contains('fv'))preview(t.getAttribute('data-id'));});
+  $('how').textContent=T('The platform suggests and computes; people confirm links, report values and approve limits. A value outside tolerance raises a GRC action at once. Suggestions show their evidence; a rejected one is not offered again.');
+  var h=(location.hash||'').slice(1);if(['ov','cov','rep','lim'].indexOf(h)>=0)tab(h);
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText);ROLE=j.role||'viewer';ME=j.user||'';}catch(e){ROLE='viewer';/* unknown identity: least privilege */}load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

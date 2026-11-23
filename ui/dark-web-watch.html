@@ -1,0 +1,85 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dark Web Watch</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def;--ok:#56d364;--warn:#f5b544;--bad:#ff8a8e}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1600px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}.mono{font-family:Consolas,ui-monospace,monospace;font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:14px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;min-width:0;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.l-high{background:rgba(229,72,77,.22);color:var(--bad)}.l-medium{background:rgba(245,159,0,.18);color:var(--warn)}.l-low{background:rgba(139,147,164,.16);color:#aab2c2}.ok{background:rgba(47,179,68,.15);color:var(--ok)}.k-stealer{background:rgba(229,72,77,.22);color:var(--bad)}.k-other{background:rgba(91,141,239,.18);color:#8db0ff}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px;border-bottom:1px solid var(--d-line)}td{padding:7px 6px;border-bottom:1px solid #1b2030;vertical-align:top}td.n{text-align:right}
+.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--d-mute)}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.tw{overflow-x:auto}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1100px){.g2{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){main{padding:12px 12px 40px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}table{display:block;overflow-x:auto}.top h1{font-size:20px}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Threat intelligence · SAMA CSF 3.3.6 · NCA ECC 2-13 · PDPL</div><h1>Dark Web Watch</h1><div class="sm mute">Staff accounts on {{org.short}}'s e-mail domains found in data breaches, stealer-malware logs, pastes and underground mentions - from legitimate providers only (Have I Been Pwned and your threat-intelligence provider). Each one is matched to Active Directory: is the account enabled, privileged, and was the password changed after the leak? Passwords are never stored.</div></div><div class="sp"></div>
+ <a class="btn" href="brand-protection.html"><i class="ti ti-world-search"></i>Look-alike domains</a><a class="btn" href="identity-signin.html"><i class="ti ti-key"></i>Identity &amp; Sign-in</a></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <div class="kpis" id="kpis"></div>
+ <section class="card" id="excard"><h2><i class="ti ti-alert-octagon"></i>Exposures <span class="c">highest risk first · hover the risk for every point · a finding says an account was exposed, not that it was misused</span></h2>
+  <div class="row" style="margin-bottom:10px"><select class="inp" id="fs" aria-label="Status"><option value="">Every status</option><option value="new">new</option><option value="notified">notified</option><option value="reset">reset</option><option value="closed">closed</option><option value="false_positive">false positive</option></select><select class="inp" id="fk" aria-label="Kind"><option value="">Every kind</option><option value="stealer">stealer log</option><option value="breach">breach</option><option value="credential">credential listing</option><option value="paste">paste</option><option value="mention">mention</option></select><input class="inp" id="q" type="search" placeholder="Account or source" aria-label="Search" style="flex:1;min-width:160px"></div>
+  <div class="tw" id="ex"></div></section>
+ <div class="g2">
+  <section class="card"><h2><i class="ti ti-database-import"></i>Sources <span class="c" id="ls"></span></h2><div id="src"></div><div id="sync"></div><div id="imp"></div></section>
+  <section class="card"><h2><i class="ti ti-settings"></i>Settings <span class="c">company e-mail domains and the Have I Been Pwned key (administrators)</span></h2><div id="set"></div></section>
+ </div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var ROLE='viewer',RANK={viewer:0,analyst:1,operator:2,admin:3},can=function(r){return (RANK[ROLE]||0)>=RANK[r];};
+  var V=null,X=null,F={s:'',k:'',q:''},NEXT={new:['notified','reset','false_positive'],notified:['reset','false_positive'],reset:['closed','notified'],closed:['notified'],false_positive:['new']};
+  var KL={stealer:'stealer log',breach:'breach',credential:'credential listing',paste:'paste',mention:'mention'},SL={new:'new',notified:'notified',reset:'reset',closed:'closed',false_positive:'false positive'};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,/^\/dashboards\//.test(u)?u:'/api/soc'+u);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('The SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function d10(t){return t?new Date(t).toISOString().slice(0,10):'—';}
+  function drawKpis(){var s=V.summary;function k(n,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    $('kpis').innerHTML=k(s.accounts,'accounts exposed (open)')+k(s.high,'high risk',s.high?'var(--bad)':'')+k(s.stealer,'stealer logs',s.stealer?'var(--bad)':'')+k(s.privileged,'privileged accounts',s.privileged?'var(--bad)':'')+k(s.not_changed,'password not changed since',s.not_changed?'var(--warn)':'')+k(s.new_30d,'found in 30 days');}
+  function drawEx(){if(!can('analyst')){$('ex').innerHTML=note('Account names are personal data (PDPL) - analysts and above see the list. '+V.summary.open+' open exposure(s) across '+V.summary.accounts+' account(s).');return;}
+    if(!X){$('ex').innerHTML=note('Reading exposures…');return;}var q=F.q.toLowerCase(),L=X.items.filter(function(x){return (!F.s||x.status===F.s)&&(!F.k||x.kind===F.k)&&(!q||(x.account+' '+x.source).toLowerCase().indexOf(q)>=0);});
+    $('ex').innerHTML=L.length?'<table><thead><tr><th class="n">Risk</th><th>Account</th><th>Where</th><th>Directory</th><th>Status</th><th></th></tr></thead><tbody>'+L.slice(0,300).map(function(x){var d=x.directory,why=x.risk_why.map(function(p){return (p.points>0?'+':'')+p.points+' '+p.why;}).join('\n');
+      var dir=d.matched?(d.disabled?'<span class="pill ok">disabled</span>':'<span class="pill l-medium">enabled</span>')+(d.privileged?' <span class="pill l-high">privileged</span>':'')+'<div class="sm mute">'+(x.includes_password?(d.changed_since_leak?'password changed after the leak':'<b style="color:var(--warn)">password not changed since the leak</b>'):'no password in the leak')+'</div>':'<span class="sm mute">not in the directory - former staff, alias or shared mailbox?</span>';
+      var acts=can('operator')?(NEXT[x.status]||[]).map(function(s){return '<button class="btn sm" type="button" data-st="'+esc(s)+'" data-id="'+esc(x.id)+'">'+esc(SL[s])+'</button>';}).join(' '):'';
+      return '<tr><td class="n" title="'+esc(why)+'"><span class="pill l-'+esc(x.level)+'">'+esc(x.risk)+'</span></td><td><b>'+esc(x.account)+'</b><div class="sm mute">'+esc(x.id)+'</div></td><td><span class="pill '+(x.kind==='stealer'?'k-stealer':'k-other')+'">'+esc(KL[x.kind]||x.kind)+'</span> '+esc(x.source)+'<div class="sm mute">'+esc(x.breach_date?'leaked '+d10(x.breach_date)+' · ':'')+'found '+esc(d10(x.first_seen))+' · '+esc(x.provider)+(x.data_classes.length?' · '+esc(x.data_classes.slice(0,4).join(', ')):'')+'</div></td><td>'+dir+'</td>'
+        +'<td><b>'+esc(SL[x.status])+'</b>'+(x.reset_evidence?'<div class="sm '+(x.reset_evidence==='verified'?'':'mute')+'">'+(x.reset_evidence==='verified'?'verified in the directory':'attested by a person, not verified')+'</div>':'')+'</td><td class="row">'+acts+'</td></tr>';}).join('')+'</tbody></table>'
+      :note(X.items.length?'No exposure matches the filter.':V.settings.domains.length?'No exposure found yet. Sync Have I Been Pwned or import your provider\'s findings.':'Set the company e-mail domains in Settings first.');}
+  function drawSrc(){var ls=V.last_sync;$('ls').textContent=ls?'last Have I Been Pwned read '+new Date(ls.at).toLocaleString():'Have I Been Pwned not read yet';
+    $('src').innerHTML=(V.sources.length?'<table><tbody>'+V.sources.map(function(s){return '<tr><td>'+esc(s.source)+'</td><td class="n">'+esc(s.exposures)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="sm mute">No source yet.</div>')
+      +(ls&&ls.result?'<div class="sm mute" style="margin-top:6px">Last read: '+esc(ls.result.domains)+' domain(s), '+esc(ls.result.found)+' finding(s), '+esc(ls.result.created)+' new · stealer logs '+esc(ls.result.stealer)+(ls.result.errors.length?' · <span style="color:var(--warn)">'+ls.result.errors.map(esc).join(' · ')+'</span>':'')+'</div>':'');
+    $('sync').innerHTML=can('operator')?'<div class="row" style="margin-top:10px"><button class="btn pri sm" type="button" id="dosync"'+(V.settings.key_set&&V.settings.domains.length?'':' disabled')+'>Read Have I Been Pwned now</button>'+(V.settings.key_set?'':'<span class="sm mute">needs the API key in Settings</span>')+'</div>':'';
+    $('imp').innerHTML=can('operator')?'<h3 class="sm" style="margin:14px 0 6px">Import your provider\'s findings</h3><div class="row"><input class="inp" id="prov" placeholder="Provider (e.g. Cyble)" style="width:170px" aria-label="Provider"><input type="file" id="file" accept=".json,.csv,application/json,text/csv" aria-label="File"><button class="btn sm" type="button" id="doimp">Import</button></div><div class="sm mute" style="margin-top:4px">JSON array or CSV with email / account, source, kind or type, date, data_classes. Password, hash, cookie and token columns are dropped before anything is saved.</div>':'';}
+  function drawSet(){var s=V.settings;
+    $('set').innerHTML=can('admin')?'<label class="f">Company e-mail domains (one per line)<textarea class="inp mono" id="doms" rows="3">'+esc(s.domains.join('\n'))+'</textarea></label><div class="row" style="margin-top:8px"><label class="f">Read every (hours)<input class="inp" id="poll" type="number" min="6" max="168" value="'+esc(s.poll_h)+'" style="width:110px"></label><label class="f" style="flex:1">Have I Been Pwned API key '+(s.key_set?'(set - leave empty to keep)':'(not set)')+'<input class="inp mono" id="hkey" type="password" autocomplete="off" placeholder="'+(s.key_set?'••••••••':'domain search key')+'"></label></div><div class="row" style="margin-top:8px"><button class="btn pri sm" type="button" id="saveset">Save</button><span class="sm mute">Each domain must be verified at haveibeenpwned.com for the key. The key is stored sealed and never shown again.</span></div>'
+      :'<div class="sm">Domains: <b>'+esc(s.domains.join(', ')||'not set')+'</b> · key '+(s.key_set?'set':'not set')+' · read every '+esc(s.poll_h)+' h</div><div class="sm mute">Administrators change these.</div>';
+    $('set').insertAdjacentHTML('beforeend','<div class="sm mute" style="margin-top:10px">'+esc(V.note)+(V.directory?'':' Active Directory is not connected, so accounts cannot be matched yet.')+'</div>');}
+  function draw(){drawKpis();drawEx();drawSrc();drawSet();}
+  function load(){$('err').hidden=true;return req('GET','/soc/darkweb').then(function(v){V=v;$('main').hidden=false;draw();if(can('analyst'))return req('GET','/soc/darkweb/exposures').then(function(x){X=x;drawEx();},function(e){$('ex').innerHTML=note(e.message);});})
+    .catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML=note(e.status===404?'Dark Web Watch arrives with the SIEM update - run update-platform.ps1.':e.message);});}
+  document.addEventListener('click',function(ev){var el=ev.target.closest('button');if(!el)return;
+    if(el.dataset.st){var st=el.dataset.st,need=st==='closed'||st==='false_positive'||st==='reset',n=need?prompt(st==='reset'?'Who reset the password and when? (not needed if Active Directory already shows the change)':'Why?'):'';if(n===null)return;
+      req('POST','/soc/darkweb/exposures/'+encodeURIComponent(el.dataset.id),{status:st,note:n||undefined}).then(function(r){toast(r.id+' → '+SL[r.status]+(r.reset_evidence?' ('+r.reset_evidence+')':''));return load();}).catch(function(e){toast(e.message);});return;}
+    if(el.id==='dosync'){el.disabled=true;el.textContent='Reading…';req('POST','/soc/darkweb/sync',{}).then(function(r){toast(r.created+' new exposure(s) from '+r.found+' finding(s)'+(r.errors.length?' - '+r.errors.length+' problem(s)':''));return load();}).catch(function(e){el.disabled=false;el.textContent='Read Have I Been Pwned now';toast(e.message);});return;}
+    if(el.id==='doimp'){var f=$('file').files[0],p=$('prov').value.trim();if(!f||!p)return toast('Choose the provider and a file');if(f.size>5*1024*1024)return toast('At most 5 MB per import');var rd=new FileReader();rd.onload=function(){el.disabled=true;req('POST','/soc/darkweb/import',{provider:p,format:/\.csv$/i.test(f.name)?'csv':'json',content:String(rd.result)}).then(function(r){toast('Kept '+r.kept+' (new '+r.created+') · other domains '+r.other_domain+' · invalid '+r.invalid+' · '+r.passwords_dropped+' password value(s) dropped, not stored');return load();}).catch(function(e){el.disabled=false;toast(e.message);});};rd.readAsText(f);return;}
+    if(el.id==='saveset'){var b={domains:$('doms').value.split(/\s+/).map(function(s){return s.trim();}).filter(Boolean),poll_h:Number($('poll').value)};if($('hkey').value.trim())b.hibp_key=$('hkey').value.trim();el.disabled=true;req('POST','/soc/darkweb/settings',b).then(function(){toast('Settings saved');return load();}).catch(function(e){el.disabled=false;toast(e.message);});}});
+  $('fs').addEventListener('change',function(){F.s=this.value;drawEx();});$('fk').addEventListener('change',function(){F.k=this.value;drawEx();});
+  var tq=null;$('q').addEventListener('input',function(){var v=this.value;clearTimeout(tq);tq=setTimeout(function(){F.q=v;drawEx();},200);});
+  req('GET','/dashboards/whoami.json').then(function(w){ROLE=(w&&w.role)||'viewer';}).catch(function(){ROLE='viewer';/* no identity: least privilege */}).then(load);
+})();
+</script></body></html>

@@ -1,0 +1,122 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Live Status</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+[hidden]{display:none!important}
+.hero{display:grid;grid-template-columns:minmax(220px,250px) 1fr;gap:14px;margin:12px 0}@media(max-width:900px){.hero{grid-template-columns:1fr}}
+.ring{background:var(--card,#12151c);border:1px solid var(--edge);border-radius:14px;padding:14px;text-align:center}.ring svg{width:170px;height:170px;display:block;margin:0 auto}
+.hero .k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}@media(max-width:700px){.hero .k{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.col{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--mute)}.dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.chips button[aria-pressed="true"]{border-color:#2f81f7;color:#fff;background:rgba(47,129,247,.2)}
+.feeds{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.fd{background:var(--card,#12151c);border:1px solid var(--edge);border-left:4px solid #6e7681;border-radius:12px;padding:11px 12px;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.fd:hover{border-color:#3a4258}.fd .ft{display:flex;justify-content:space-between;gap:8px}.fd .m{font-size:12px;color:var(--mute)}
+.fd svg{width:100%;height:28px;display:block;margin-top:6px}.hb{height:5px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:6px}.hb i{display:block;height:100%}
+.s-live{border-left-color:#3fb950}.s-late{border-left-color:#d29922}.s-silent{border-left-color:#f85149}.s-waiting{border-left-color:#a371f7}.s-paused{border-left-color:#30363d;opacity:.7}
+.ans{white-space:pre-wrap;border:1px solid var(--edge);border-radius:10px;padding:12px;margin-top:10px}
+.hero{background:radial-gradient(1200px 260px at 0% 0%,rgba(63,185,80,.14),transparent 60%),radial-gradient(900px 260px at 100% 0%,rgba(47,129,247,.16),transparent 60%),radial-gradient(700px 240px at 50% 120%,rgba(163,113,247,.14),transparent 60%);border:1px solid var(--edge);border-radius:16px;padding:14px}
+.ring{background:rgba(10,12,18,.55);backdrop-filter:none}
+.st-t{border-radius:12px;padding:11px 12px;border:1px solid rgba(255,255,255,.08);color:#fff;text-align:left;font:inherit;cursor:pointer;min-width:0}.st-t .v{font-size:28px;font-weight:800;line-height:1.05}.st-t .l{font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.9}.st-t .n{font-size:11.5px;opacity:.8}
+.st-t[aria-pressed="true"]{outline:2px solid #fff;outline-offset:1px}
+.viz{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin:0 0 12px}@media(max-width:1100px){.viz{grid-template-columns:1fr}}.viz .card{margin:0}.viz svg{display:block;width:100%;height:auto}
+.kb{display:grid;grid-template-columns:minmax(80px,1fr) 2fr 30px;gap:8px;align-items:center;font-size:12.5px;margin:6px 0}.kb .b{display:flex;height:12px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.06)}.kb .b i{display:block;height:100%}
+.ar{display:grid;grid-template-columns:1fr 70px;gap:6px;align-items:center;font-size:12.5px;padding:5px 0;border-top:1px solid var(--edge)}.ar:first-child{border-top:0}.ar .t{height:8px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;grid-column:1/-1}.ar .t i{display:block;height:100%;background:linear-gradient(90deg,#3fb950,#d29922,#f85149)}
+.strip{display:grid;grid-template-columns:repeat(96,1fr);gap:1px;height:9px;margin-top:6px;border-radius:3px;overflow:hidden}.strip i{display:block}
+.fd{background:linear-gradient(180deg,rgba(255,255,255,.035),transparent 40%),var(--card,#12151c)}
+.lgd{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--mute);margin-top:6px}.lgd i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:95;overflow:auto}#dlg>div{background:var(--card,#12151c);border:1px solid var(--edge);border-radius:14px;max-width:640px;width:100%;padding:16px}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Command center · data feeds</div><h1>Live Status</h1><div class="muted small">Is every data feed alive right now? Every SIEM source with its last event, volume and health. Machine learning learns each feed's own rhythm and its usual volume for each hour of the day, so a feed that goes quiet or drops is flagged before its SLA turns it silent. Refreshes every 30 seconds.</div></div>
+<div class="sp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="muted small" id="up"></span><button type="button" id="pause">Pause</button><button type="button" id="sample" hidden>Record sample</button><button type="button" id="xls">Excel</button><button type="button" id="refresh">Refresh</button></div></div>
+<div class="banner" id="nc" hidden></div>
+<div id="body" hidden>
+<div class="hero"><div class="ring" id="ring"></div><div><div class="k" id="kk"></div><div class="col" id="col"></div></div></div>
+<div class="viz"><div class="card"><h2>Pulse — 7 days <span class="c">share of feeds sending in each 15-minute slot</span></h2><div id="pulse"></div></div>
+<div class="card"><h2>By type</h2><div id="kinds"></div></div>
+<div class="card"><h2>About to go late <span class="c">quiet for most of their usual allowance</span></h2><div id="risk"></div></div></div>
+<div class="card"><h2>Needs attention <span class="c">most severe first</span></h2><div id="findings"></div></div>
+<div class="card"><h2>Feeds <span class="c" id="fc"></span></h2><div class="chips" id="chips"></div><input id="q" type="search" placeholder="Filter by name, type or site" style="width:100%;max-width:380px;margin-bottom:10px"><div class="feeds" id="feeds"></div></div>
+<div class="card"><h2>AI live-status analyst <span class="c">reads the feeds and findings; changes nothing</span></h2><div id="ai"></div></div>
+<p class="note" id="learn"></p>
+</div>
+<div id="dlg" hidden></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc,esc=Z.esc,$=function(i){return document.getElementById(i);};
+  var V=null,FIL='',Q='',ANS=null,PAUSED=false,TM=null;
+  var ST={live:['live','ok','#3fb950'],late:['late','warn','#d29922'],silent:['silent','bad','#f85149'],waiting:['waiting for first event','','#a371f7'],paused:['paused','','#6e7681']};
+  var SEV={critical:'bad',high:'bad',medium:'warn',low:''};
+  function why(e){return e.status===404?'Live Status is not installed on the SIEM yet - run the update.':e.message;}
+  function hcol(h){return h==null?'#30363d':h>=85?'#3fb950':h>=60?'#d29922':'#f85149';}
+  function ring(p){var r=70,c=2*Math.PI*r,v=p==null?0:p;
+    return '<svg viewBox="0 0 170 170" role="img" aria-label="Feeds live '+(p==null?'not measured':p+'%')+'"><defs><linearGradient id="lsg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3fb950"/><stop offset=".55" stop-color="#2f81f7"/><stop offset="1" stop-color="#a371f7"/></linearGradient></defs>'
+      +'<circle cx="85" cy="85" r="'+r+'" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="14"/><circle cx="85" cy="85" r="'+r+'" fill="none" stroke="'+(p==null?'#6e7681':p>=95?'url(#lsg)':p>=80?'#d29922':'#f85149')+'" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+(c*v/100).toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 85 85)"/>'
+      +'<text x="85" y="88" text-anchor="middle" font-size="36" font-weight="800" fill="#fff">'+(p==null?'—':p+'%')+'</text><text x="85" y="110" text-anchor="middle" font-size="11" fill="#8b949e">feeds live</text></svg>';}
+  var SCOL={live:'#3fb950',late:'#d29922',silent:'#f85149',waiting:'#a371f7',paused:'#6e7681'}, CELL=['rgba(255,255,255,.05)','#f85149','#d29922','#3fb950','#2f81f7'];
+  function tile(k,label,note,c1,c2){return '<button type="button" class="st-t" data-f="'+k+'" aria-pressed="'+(FIL===k&&k!=='')+'" style="background:linear-gradient(135deg,'+c1+','+c2+')"><div class="l">'+esc(label)+'</div><div class="v">'+Z.n(k?V.counts[k]:V.counts.total)+'</div><div class="n">'+esc(note)+'</div></button>';}
+  function strip(a){if(!a||!a.length)return '';return '<div class="strip" role="img" aria-label="last 24 hours, 15-minute slots">'+a.map(function(c){return '<i style="background:'+CELL[c]+'"></i>';}).join('')+'</div>';}
+  function pulse(P){P=(P||[]).filter(function(x){return x.pct!=null;});if(P.length<2)return '<div class="empty">The pulse appears after two samples (every 15 minutes).</div>';
+    var W=560,H=150,T=8,B=20,x=function(i){return 28+i*(W-34)/(P.length-1);},y=function(v){return T+(100-v)*(H-T-B)/100;};
+    var d=P.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(p.pct).toFixed(1);}).join(''),o='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Share of feeds sending over '+P.length+' samples"><defs><linearGradient id="lsp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f81f7" stop-opacity=".55"/><stop offset="1" stop-color="#a371f7" stop-opacity=".02"/></linearGradient><linearGradient id="lsl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a371f7"/><stop offset=".5" stop-color="#2f81f7"/><stop offset="1" stop-color="#3fb950"/></linearGradient></defs>';
+    [0,50,100].forEach(function(v){o+='<line x1="28" x2="'+(W-6)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="rgba(255,255,255,.06)"/><text x="22" y="'+(y(v)+3)+'" text-anchor="end" font-size="10" fill="#8b949e">'+v+'%</text>';});
+    var day=null;P.forEach(function(p,i){var dd=new Date(p.t+3*3600000).toISOString().slice(5,10);if(dd!==day){day=dd;o+='<line x1="'+x(i).toFixed(1)+'" x2="'+x(i).toFixed(1)+'" y1="'+T+'" y2="'+(H-B)+'" stroke="rgba(255,255,255,.04)"/><text x="'+x(i).toFixed(1)+'" y="'+(H-6)+'" font-size="9.5" fill="#8b949e">'+dd+'</text>';}});
+    return o+'<path d="'+d+'L'+x(P.length-1).toFixed(1)+' '+y(0)+'L'+x(0).toFixed(1)+' '+y(0)+'Z" fill="url(#lsp)"/><path d="'+d+'" fill="none" stroke="url(#lsl)" stroke-width="2"/></svg>';}
+  function kinds(K){return (K||[]).length?K.slice(0,8).map(function(k){return '<div class="kb"><span>'+esc(k.kind)+'</span><span class="b" title="'+esc(['live','late','silent','waiting','paused'].map(function(s){return k[s]+' '+s;}).join(' · '))+'">'+['live','late','silent','waiting','paused'].map(function(s){return k[s]?'<i style="flex:'+k[s]+';background:'+SCOL[s]+'"></i>':'';}).join('')+'</span><span class="muted">'+k.total+'</span></div>';}).join('')
+      +'<div class="lgd">'+['live','late','silent','waiting','paused'].map(function(s){return '<span><i style="background:'+SCOL[s]+'"></i>'+s+'</span>';}).join('')+'</div>':'<div class="empty">No feed.</div>';}
+  function risk(R){return (R||[]).length?R.map(function(r){return '<div class="ar" data-feed="'+esc(r.id)+'" style="cursor:pointer"><b>'+esc(r.label)+'</b><span class="muted" style="text-align:right">late in ~'+r.late_in_min+' min</span><span class="t"><i style="width:'+Math.min(100,r.pct)+'%"></i></span></div>';}).join(''):'<div class="empty">No live feed is close to going late.</div>';}
+  function spark(a,col){if(!a||a.length<2)return '';var mx=Math.max.apply(null,a.concat([0.001])),n=a.length;return '<svg viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points="'+a.map(function(v,i){return (i*100/(n-1)).toFixed(1)+','+(26-v/mx*24).toFixed(1);}).join(' ')+'" fill="none" stroke="'+col+'" stroke-width="1.5"/></svg>';}
+  function draw(v){V=v;$('up').textContent='updated '+new Date().toLocaleTimeString();$('sample').hidden=!Z.can('operator');$('nc').hidden=true;$('body').hidden=false;
+    var C=v.counts;
+    if(!C.total){$('body').hidden=true;$('nc').hidden=false;$('nc').innerHTML='No data feed is enrolled in the SIEM yet, so there is nothing to watch (not an empty "all live"). Connect sources in <a href="log-assurance.html">Log assurance</a> or let Log assurance enrol the asset register.';return;}
+    $('ring').innerHTML=ring(v.live_pct);
+    $('kk').innerHTML=tile('','Feeds','enrolled in the SIEM','#1f6feb','#6e40c9')+tile('live','Live','sending as usual','#238636','#2ea043')+tile('late','Late','quieter than their rhythm','#9e6a03','#d29922')
+      +tile('silent','Silent','past their SLA','#a40e26','#f85149')+tile('waiting','Waiting','no first event yet','#6e40c9','#a371f7')+tile('paused','Paused','not watched','#30363d','#484f58');
+    $('pulse').innerHTML=pulse(v.pulse);$('kinds').innerHTML=kinds(v.by_kind);$('risk').innerHTML=risk(v.at_risk);
+    var cl=v.collector;$('col').innerHTML='<span class="dot" style="background:'+(cl.quiet?'#f85149':'#3fb950')+'"></span>SIEM collectors: '+(cl.quiet?'<b style="color:#f85149">no event for '+esc(cl.last_event?Z.ago(cl.last_event):'ever')+'</b>':'receiving · last event '+esc(cl.last_event?Z.ago(cl.last_event):'never'))+' · '+esc(cl.eps_1h)+' events/s (1 h)'+(v.unknown_senders?' · '+v.unknown_senders+' unknown senders':'')+(v.stats_available?'':' · <b>event counts not available from the store</b>');
+    var F=v.findings;$('findings').innerHTML=F.length?'<div class="tw"><table><thead><tr><th>Severity</th><th>Finding</th><th>Evidence</th><th>What to do</th></tr></thead><tbody>'+F.slice(0,40).map(function(f){return '<tr'+(f.feed?' data-feed="'+esc(f.feed)+'" style="cursor:pointer"':'')+'><td>'+Z.pill(f.severity,SEV[f.severity]||'')+'</td><td><b>'+esc(f.title)+'</b></td><td class="small">'+esc(f.why)+'</td><td class="small"><ol class="steps">'+(f.fix||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol></td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">Every feed is live and behaving as usual.</div>';
+    feeds();ai();
+    var L=v.learning;$('learn').textContent='Learning: '+L.samples+' fifteen-minute samples over '+L.days+' days'+(L.rhythm_ready?' - rhythm and same-hour volume are judged against them.':' - a feed is called late or unusual only after a day of samples; until then its own SLA applies.')+' Health is 100 minus the points listed for each feed.';}
+  function feeds(){var q=Q.toLowerCase(),rows=V.feeds.filter(function(f){return (!FIL||f.state===FIL)&&(!q||[f.label,f.kind,f.site,f.id].join(' ').toLowerCase().indexOf(q)>=0);});
+    $('fc').textContent=rows.length+' of '+V.feeds.length+' · worst first';
+    $('chips').innerHTML=[['','All'],['silent','Silent'],['late','Late'],['waiting','Waiting'],['live','Live'],['paused','Paused']].map(function(c){return '<button type="button" data-f="'+c[0]+'" aria-pressed="'+(FIL===c[0])+'">'+esc(c[1])+(c[0]?' '+V.counts[c[0]]:'')+'</button>';}).join('');
+    $('feeds').innerHTML=rows.length?rows.slice(0,300).map(function(f){var st=ST[f.state]||[f.state,'','#6e7681'];
+      return '<button type="button" class="fd s-'+esc(f.state)+'" data-feed="'+esc(f.id)+'"><div class="ft"><b>'+esc(f.label)+'</b>'+Z.pill(st[0],st[1])+'</div><div class="m">'+esc(f.kind||'')+(f.site?' · '+esc(f.site):'')+'</div>'
+        +'<div class="m">last event '+esc(f.quiet_for)+' ago · '+esc(f.eps_1h==null?'–':f.eps_1h)+' eps'+(f.volume&&f.volume.verdict!=='normal'?' · <b style="color:'+(f.volume.verdict==='dropped'?'#f85149':'#d29922')+'">'+esc(f.volume.verdict)+'</b>':'')+'</div>'
+        +strip(f.strip)+(f.fading?'<div class="m" style="color:#d29922">fading -'+f.fading.pct+'% in '+f.fading.days+' days</div>':'')+(f.at_risk?'<div class="m" style="color:#d29922">may go late in ~'+f.at_risk.late_in_min+' min</div>':'')+spark(f.spark,st[2])+(f.health!=null?'<div class="hb" title="health '+f.health+'"><i style="width:'+f.health+'%;background:'+hcol(f.health)+'"></i></div>':'')+'</button>';}).join(''):'<div class="empty">No feed matches.</div>';}
+  function detail(id){var f=V.feeds.find(function(x){return x.id===id;});if(!f)return;var st=ST[f.state]||[f.state,''];
+    $('dlg').innerHTML='<div role="dialog" aria-modal="true" aria-label="Feed"><div style="display:flex;justify-content:space-between;gap:8px"><h2 style="margin:0">'+esc(f.label)+'</h2><button type="button" id="dlgx">Close</button></div><p>'+Z.pill(st[0],st[1])+' <span class="muted small">'+esc(f.kind||'')+(f.site?' · '+esc(f.site):'')+' · source '+esc(f.id)+'</span></p>'
+      +'<table><tbody><tr><td>Last event</td><td>'+esc(f.last_seen?new Date(f.last_seen).toLocaleString():'never')+' ('+esc(f.quiet_for)+' ago)</td></tr><tr><td>Events / s (1 h)</td><td>'+esc(f.eps_1h)+'</td></tr><tr><td>Events (24 h)</td><td>'+Z.n(f.events_24h||0)+'</td></tr><tr><td>SLA</td><td>'+esc(f.sla_min)+' min</td></tr>'
+      +'<tr><td>Usual rhythm</td><td>'+(f.rhythm?'sends in '+f.rhythm.share+'% of 15-minute slots'+(f.rhythm.share>=90?' (always on)':' (about every '+f.rhythm.usual_gap_min+' min)'):'still learning')+'</td></tr>'
+      +'<tr><td>Volume vs this hour</td><td>'+(f.volume?esc(f.volume.now)+' eps against a usual '+esc(f.volume.usual)+' ('+esc(f.volume.verdict)+', z '+esc(f.volume.z)+', '+f.volume.days+' days)':'needs 5 days at this hour')+'</td></tr>'
+      +'<tr><td>Ingest lag p95</td><td>'+(f.lag_p95_s==null?'–':esc(f.lag_p95_s)+' s')+'</td></tr><tr><td>Not parsed (1 h)</td><td>'+(f.parse_error_rate_1h==null?'–':Math.round(100*f.parse_error_rate_1h)+'%')+'</td></tr></tbody></table>'
+      +'<h3>Last 24 hours</h3>'+strip(f.strip)+'<div class="lgd"><span><i style="background:#3fb950"></i>normal</span><span><i style="background:#d29922"></i>under half its usual</span><span><i style="background:#f85149"></i>quiet</span><span><i style="background:#2f81f7"></i>over 4x</span><span><i style="background:rgba(255,255,255,.12)"></i>no sample</span></div>'
+      +(f.why.length?'<h3>Health '+f.health+' - why</h3><ul>'+f.why.map(function(w){return '<li>-'+w.pts+' '+esc(w.txt)+'</li>';}).join('')+'</ul>':'')
+      +'<p class="note">Fix a feed on the device itself; <a href="device-config.html">Device Configuration</a> has the setup for each type.</p></div>';$('dlg').hidden=false;}
+  function ai(){var a=V.ai||{};
+    if(!a.enabled){$('ai').innerHTML='<div class="empty">The AI live-status analyst is off: '+esc(a.reason||'not configured')+'.</div>';return;}
+    if(!Z.can('operator')){$('ai').innerHTML='<div class="empty">The AI analyst is for operators and administrators.</div>';return;}
+    if(document.activeElement&&document.activeElement.id==='aq')return;   // do not wipe a question being typed on the 30-second refresh
+    $('ai').innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="aq" style="flex:1;min-width:280px" placeholder="e.g. What is not reaching the SIEM and what can we not see because of it?"><button type="button" id="ask">Ask</button></div>'+(ANS?'<div class="ans">'+esc(ANS.answer)+'</div>':'');}
+  function load(){return Z.req('GET','/collection/live').then(draw,function(e){$('body').hidden=true;$('nc').hidden=false;$('nc').textContent=why(e);});}
+  function tick(){clearTimeout(TM);TM=setTimeout(function(){if(!PAUSED&&$('dlg').hidden)load().then(tick,tick);else tick();},30000);}
+  $('q').addEventListener('input',function(){Q=this.value;feeds();});
+  document.addEventListener('keydown',function(ev){if(ev.key==='Escape')$('dlg').hidden=true;});
+  document.addEventListener('click',function(ev){var t=ev.target.closest('[data-f],[data-feed],button[id],#dlg');if(!t)return;
+    if(t.id==='dlg'){if(ev.target===t)t.hidden=true;return;}
+    if(t.id==='dlgx'){$('dlg').hidden=true;return;}
+    if(t.dataset.f!=null){FIL=t.dataset.f;return feeds();}
+    if(t.dataset.feed)return detail(t.dataset.feed);
+    if(t.id==='refresh')return load();
+    if(t.id==='pause'){PAUSED=!PAUSED;t.textContent=PAUSED?'Resume':'Pause';return;}
+    if(t.id==='sample'){t.disabled=true;return Z.req('POST','/collection/live/sample').then(function(r){Z.toast('Recorded '+r.sources+' feeds');t.disabled=false;},function(e){t.disabled=false;Z.toast(why(e));});}
+    if(t.id==='ask'){var q=$('aq').value.trim();if(q.length<5)return Z.toast('Ask a full question');t.disabled=true;t.textContent='Thinking…';return Z.req('POST','/collection/live/ask',{question:q}).then(function(r){ANS=r;$('aq').blur();ai();},function(e){t.disabled=false;t.textContent='Ask';Z.toast(why(e));});}
+    if(t.id==='xls'&&V){return window.zybXlsx.download('live-status-'+new Date().toISOString().slice(0,10)+'.xlsx',[
+      {name:'Feeds',columns:[{h:'Feed',w:28},{h:'Type',w:14},{h:'Site',w:14},{h:'State',w:12},{h:'Last event',w:20},{h:'Events/s 1h',t:'n'},{h:'Events 24h',t:'n'},{h:'Health',t:'n'},{h:'Usual rhythm %',t:'n'},{h:'Volume vs hour',w:14},{h:'Why',w:70}],
+        rows:V.feeds.map(function(f){return [f.label,f.kind,f.site,f.state,f.last_seen?new Date(f.last_seen).toISOString().slice(0,16):'never',f.eps_1h,f.events_24h,f.health==null?'':f.health,f.rhythm?f.rhythm.share:'',f.volume?f.volume.verdict:'',f.why.map(function(w){return '-'+w.pts+' '+w.txt;}).join('; ')];})},
+      {name:'Findings',columns:[{h:'Severity',w:10},{h:'Finding',w:50},{h:'Evidence',w:50},{h:'What to do',w:80}],rows:V.findings.map(function(f){return [f.severity,f.title,f.why,(f.fix||[]).join(' | ')];})}],
+      {title:('Live Status - ' + ZYB_ORG.short),filter:'every enrolled feed',by:Z.user()||Z.role()});}
+  });
+  Z.ready(function(){load().then(tick,tick);});
+})();
+</script></body></html>

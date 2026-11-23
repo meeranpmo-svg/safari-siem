@@ -1,0 +1,84 @@
+[
+  {
+    "id": "SENTRA-FGT-001", "name": "IPS detection — critical/high severity", "enabled": true, "severity": 4,
+    "mitre": ["T1190"], "sama": ["3.3.8", "3.3.17"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "FortiGate (or other IPS) signature hit rated critical or high.",
+    "type": "single",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "ips-detection" } ],
+               "any": [ { "field": "fields.severity", "op": "in", "value": ["critical", "high"] },
+                        { "field": "fields.crlevel", "op": "in", "value": ["critical", "high"] },
+                        { "field": "severity", "op": "gte", "value": 3 } ] },
+    "group_by": ["src_ip", "fields.attack"], "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "dst_ip", "dst_port", "fields.attack", "fields.severity", "fields.action", "host"]
+  },
+  {
+    "id": "SENTRA-FGT-002", "name": "Antivirus / malware detection", "enabled": true, "severity": 3,
+    "mitre": ["T1204.002", "T1105"], "sama": ["3.3.8"], "tactic": "execution", "author":"Sentra SOC", "version": 1,
+    "description": "Malware detected by the FortiGate AV profile or an endpoint antivirus (normalised av-detection).",
+    "type": "single",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "av-detection" } ] },
+    "group_by": ["host", "src_ip", "hash"], "suppress_s": 3600,
+    "fields_in_alert": ["host", "src_ip", "dst_ip", "user", "url", "hash", "fields.virus", "fields.ThreatName", "fields.action"]
+  },
+  {
+    "id": "SENTRA-FGT-003", "name": "Internal host with many denied connections", "enabled": true, "severity": 3,
+    "mitre": ["T1046", "T1210"], "sama": ["3.3.8"], "tactic": "discovery", "author":"Sentra SOC", "version": 1,
+    "description": "An internal (RFC1918) host had 200 or more connections denied by the FortiGate within 5 minutes — possible scanning or worm.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "blocked" },
+                        { "field": "src_type", "op": "eq", "value": "fortigate" },
+                        { "field": "src_ip", "op": "cidr", "value": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"] } ] },
+    "group_by": ["src_ip"], "window_s": 300, "count": 200, "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "dst_ip", "dst_port", "host", "fields.policyid"]
+  },
+  {
+    "id": "SENTRA-FGT-004", "name": "Internal host denied towards many destinations (horizontal scan)", "enabled": true, "severity": 3,
+    "mitre": ["T1046"], "sama": ["3.3.8"], "tactic": "discovery", "author":"Sentra SOC", "version": 1,
+    "description": "An internal host was denied towards 50 or more distinct destination IPs within 5 minutes.",
+    "type": "distinct",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "blocked" },
+                        { "field": "src_type", "op": "eq", "value": "fortigate" },
+                        { "field": "src_ip", "op": "cidr", "value": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"] } ] },
+    "group_by": ["src_ip"], "distinct_field": "dst_ip", "distinct_count": 50, "window_s": 300, "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "dst_port", "host"]
+  },
+  {
+    "id": "SENTRA-FGT-005", "name": "VPN login failure burst", "enabled": true, "severity": 3,
+    "mitre": ["T1110", "T1133"], "sama": ["3.3.5", "3.4.2"], "tactic": "credential-access", "author":"Sentra SOC", "version": 1,
+    "description": "10 or more FortiGate SSL/IPsec VPN authentication failures from one source IP within 5 minutes.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "fortigate" } ],
+               "any": [ { "field": "fields.action", "op": "in", "value": ["ssl-login-fail", "tunnel-auth-fail", "negotiate-error-auth"] },
+                        { "field": "event_code", "op": "in", "value": ["0101039426", "39426"] },
+                        { "all": [ { "field": "action", "op": "eq", "value": "logon-failed" }, { "field": "fields.subtype", "op": "eq", "value": "vpn" } ] },
+                        { "field": "fields.logdesc", "op": "re", "value": "vpn.*(login|logon|auth).*fail" } ] },
+    "group_by": ["src_ip"], "window_s": 300, "count": 10, "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "user", "host", "fields.tunneltype", "fields.reason"]
+  },
+  {
+    "id": "SENTRA-FGT-006", "name": "FortiGate admin login from a new source address", "enabled": true, "severity": 3,
+    "mitre": ["T1078"], "sama": ["3.3.5", "3.3.8", "3.4.2"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "Successful FortiGate administrator login from a source IP not seen for that admin during the 7-day learning baseline.",
+    "type": "new_value",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "fortigate" } ],
+               "any": [ { "field": "event_code", "op": "in", "value": ["0100032001", "32001"] },
+                        { "all": [ { "field": "fields.subtype", "op": "eq", "value": "system" },
+                                   { "field": "fields.action", "op": "eq", "value": "login" },
+                                   { "field": "fields.status", "op": "eq", "value": "success" } ] } ] },
+    "group_by": ["user"], "new_field": "src_ip", "learn_s": 604800, "window_s": 86400, "suppress_s": 3600,
+    "fields_in_alert": ["user", "src_ip", "host", "fields.ui", "fields.method"]
+  },
+  {
+    "id": "SENTRA-EXFIL-001", "name": "Large outbound transfer from one host to one external IP", "enabled": true, "severity": 3,
+    "mitre": ["T1048", "T1041"], "sama": ["3.3.8", "3.3.14"], "tactic": "exfiltration", "author":"Sentra SOC", "version": 1,
+    "description": "More than 1 GiB sent (FortiGate sentbyte) from one internal host to one external IP within 1 hour.",
+    "type": "threshold",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "network" },
+                        { "field": "src_ip", "op": "cidr", "value": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"] },
+                        { "field": "dst_ip", "op": "exists", "value": true },
+                        { "field": "fields.sentbyte", "op": "gt", "value": 0 } ],
+               "none": [ { "field": "dst_ip", "op": "cidr", "value": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8", "169.254.0.0/16", "100.64.0.0/10", "224.0.0.0/4", "fc00::/7", "fe80::/10", "ff00::/8"] } ] },
+    "group_by": ["src_ip", "dst_ip"], "window_s": 3600, "sum_field": "fields.sentbyte", "sum_gt": 1073741824, "suppress_s": 21600,
+    "fields_in_alert": ["src_ip", "dst_ip", "dst_port", "user", "host", "fields.app"]
+  }
+]

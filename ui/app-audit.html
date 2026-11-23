@@ -1,0 +1,113 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Application Audit</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.card h3{margin:14px 0 8px;font-size:13px;color:var(--title)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}
+.stmt{font-size:14.5px;line-height:1.6}.stmt p{margin:0 0 8px}.stmt .b{color:var(--title);font-weight:600}
+.chk{list-style:none;margin:0;padding:0}.chk li{padding:3px 0}.chk .y{color:var(--ok);font-weight:700}.chk .n{color:var(--bad);font-weight:700}
+.kv{display:grid;grid-template-columns:170px 1fr;gap:4px 10px;font-size:13px}.kv dt{color:var(--mute)}.kv dd{margin:0;overflow-wrap:anywhere}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+ul.plain{margin:0;padding-left:18px}ul.plain li{margin:3px 0}
+@media print{.top button,.noprint{display:none!important}body{background:#fff;color:#000}.card,.t{border-color:#bbb;background:#fff;break-inside:avoid}.banner{color:#000;background:#f3f6fa}.card h2,.t .v,.stmt .b{color:#000}.muted,.note,th{color:#444}}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--panel);color:var(--mute);border:1px solid var(--edge);border-radius:999px;padding:6px 13px;cursor:pointer}.tabs button.on{background:#e7eaf0;color:#0a0b0f;border-color:#e7eaf0}.tabs button i{font-style:normal;opacity:.7;margin-left:4px}
+select,input.in{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:13px}.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+td.sql{font-family:Consolas,monospace;font-size:11.8px;color:var(--mute);max-width:520px;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Applications · SAMA CSF 3.3.6 application security · 3.3.7 change management · 3.3.14 event management · 3.2.5 audits</div><h1>Application Audit</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <button type="button" class="btn pri" id="xlsx">⬇ Excel report</button><button type="button" class="btn" id="print">🖨 Print / PDF</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="banner">One audit report per application (the servers grouped as one business service in <b>All Applications</b>): availability and resilience, every change made to its servers with <b>who proposed, approved and applied it</b>, logon and account activity on its servers from the SIEM, and whether each server is sending logs at all - a server that sent nothing is a finding, never "nothing happened". Its database activity is in Databases → Database Audit.</div>
+<div class="ctl"><label class="muted" for="app">Application</label><select id="app"><option value="">Loading…</option></select>
+  <label class="muted" for="hrs">Period</label><select id="hrs"><option value="24">Last 24 hours</option><option value="168" selected>Last 7 days</option><option value="720">Last 30 days</option><option value="2160">Last 90 days</option></select></div>
+<div class="k" id="kk"></div>
+<div class="tabs" id="tabs"></div>
+<div id="body"><div class="card"><div class="empty">Loading…</div></div></div>
+</main>
+<script src="vendor/zyb-xlsx.js"></script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var R=null, ERR='', TAB='findings', APPS=[];
+  function req(url){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET',url);x.withCredentials=true;x.timeout=120000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function pill(t,c){return '<span class="pill p-'+c+'">'+esc(t)+'</span>';}
+  function sev(s){return pill(s,{critical:'bad',high:'bad',medium:'warn',low:'mut'}[s]||'mut');}
+  function when(s){var t=s?Date.parse(s):NaN;return isFinite(t)?new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function tbl(head,rows,empty){return rows.length?'<div class="tw"><table><thead><tr>'+head.map(function(h){return '<th>'+esc(h)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':'<div class="empty">'+esc(empty||'None in this period.')+'</div>';}
+  function per(){return $('hrs').options[$('hrs').selectedIndex].text.toLowerCase();}
+  function av(a,k){return a&&a[k]!=null?a[k]+'%':'—';}
+  var CST={proposed:'mut',approved:'info',rejected:'mut',applied:'warn',validated:'ok','failed-validation':'bad','execution-failed':'bad',executing:'info'};
+  var TABS=[['findings','Findings','findings'],['servers','Servers & availability','servers'],['changes','Changes','changes'],['security','Security activity']];
+  function evRows(L){return L.map(function(e){return '<tr><td class="muted">'+esc(when(e.ts))+'</td><td>'+esc(e.host)+'</td><td><b>'+esc(e.user||'')+'</b></td><td>'+esc(e.action)+(e.outcome==='failure'?' '+pill('failed','bad'):'')+'</td><td class="mono" style="font-size:11.8px">'+esc(e.event_code||'')+'</td><td class="muted">'+esc(e.message)+'</td></tr>';});}
+  function draw(){
+    if(ERR){$('kk').innerHTML='';$('tabs').innerHTML='';$('body').innerHTML='<div class="card"><p class="err">'+esc(ERR)+'</p></div>';return;}
+    if(!R){$('kk').innerHTML='';$('tabs').innerHTML='';$('body').innerHTML='<div class="card"><div class="empty">'+(APPS.length?'Choose an application.':'No application yet: group servers into applications in Applications → All Applications.')+'</div></div>';return;}
+    var S=R.summary,A=R.application;
+    $('kk').innerHTML=tile('Servers',S.online+' / '+S.servers,'online now',S.online<S.servers?'warn':'ok')+tile('Outages',S.outages,per(),S.outages?'warn':'ok')+tile('Changes',S.changes,S.changes_self_approved?S.changes_self_approved+' self-approved':'four eyes kept',S.changes_self_approved?'bad':'')
+      +tile('Failed logons',S.failed_logons,'on its servers',S.failed_logons>=20?'warn':'')+tile('Servers without logs',S.servers_without_logs,'in the period',S.servers_without_logs?'warn':'ok')+tile('Findings',S.critical+S.high,S.critical+' critical · '+S.high+' high',S.critical?'bad':S.high?'warn':'ok');
+    $('tabs').innerHTML=TABS.map(function(t){var n=t[2]?(R[t[2]]||[]).length:null;return '<button type="button" data-tab="'+t[0]+'" class="'+(TAB===t[0]?'on':'')+'">'+esc(t[1])+(n!=null?'<i>'+n+'</i>':'')+'</button>';}).join('');
+    var h='<div class="card"><h2>'+esc(A.name)+' '+(A.critical?pill('critical service','bad'):'')+(A.inferred?pill('grouped by name - confirm in All Applications','warn'):'')+' <span class="c">'+esc((A.issues||[]).join(' · ')||'no resilience issue')+'</span></h2></div>';
+    if(TAB==='findings')h+='<div class="card"><h2>Findings <span class="c">'+R.findings.length+'</span></h2>'+tbl(['Severity','Area','Finding','What to do'],R.findings.map(function(f){return '<tr><td>'+sev(f.severity)+'</td><td class="muted">'+esc(f.area)+'</td><td>'+esc(f.title)+(f.evidence&&f.evidence.length?'<div class="muted mono" style="font-size:11.5px">'+esc(f.evidence.join(' · '))+'</div>':'')+'</td><td class="muted">'+esc(f.recommendation)+'</td></tr>';}),'No findings in this period.')+'</div>';
+    else if(TAB==='servers'){
+      h+='<div class="card"><h2>Servers</h2>'+tbl(['Server','IP','Role','Status','24 h','7 d','30 d','Days since restart','Unexpected shutdowns (30 d)','Logs received','Last log'],R.servers.map(function(s){return '<tr><td><b>'+esc(s.name)+'</b>'+(s.dr_site?' '+pill('DR site','info'):'')+'</td><td class="mono">'+esc(s.ip)+'</td><td>'+esc(s.role||'—')+'</td><td>'+pill(s.status,s.status==='online'?'ok':s.status==='offline'?'bad':'mut')+'</td><td>'+esc(av(s.availability,'d1'))+'</td><td>'+esc(av(s.availability,'d7'))+'</td><td>'+esc(av(s.availability,'d30'))+'</td><td>'+esc(s.days_since_boot==null?'—':s.days_since_boot)+'</td><td>'+esc(s.unexpected_shutdowns_30d)+'</td><td>'+(s.logs.events?esc(s.logs.events):pill('none','warn'))+'</td><td class="muted">'+esc(when(s.logs.last))+'</td></tr>';}))+'</div>';
+      h+='<div class="card"><h2>Outages <span class="c">state changes in the period</span></h2>'+tbl(['When','Server','From','To'],R.outages.map(function(o){return '<tr><td class="muted">'+esc(when(o.at))+'</td><td>'+esc(o.server)+'</td><td>'+esc(o.from||'—')+'</td><td>'+esc(o.to||'—')+'</td></tr>';}))+'</div>';
+    } else if(TAB==='changes'){
+      h+='<div class="card"><h2>Changes on its servers <span class="c">server (SCHG) and network (NCHG) change plans proposed, decided or applied in the period</span></h2>'+tbl(['Change','Server','Title','Status','Proposed by','Approved / rejected by','Applied by','When applied'],R.changes.map(function(c){var self=c.proposed_by&&c.decided_by&&c.proposed_by.toLowerCase()===c.decided_by.toLowerCase()&&c.source==='user';return '<tr><td class="mono">'+esc(c.id)+'</td><td>'+esc(c.device)+'</td><td>'+esc(c.title)+'</td><td>'+pill(c.status,CST[c.status]||'mut')+'</td><td>'+esc(c.proposed_by||'—')+(c.source==='ai'?' '+pill('AI','info'):'')+'</td><td>'+esc(c.decided_by||'—')+(self?' '+pill('own change','bad'):'')+'</td><td>'+esc(c.applied_by||'—')+'</td><td class="muted">'+esc(when(c.applied_at))+'</td></tr>';}),'No change in this period.')+'</div>';
+    } else if(TAB==='security'){
+      h+='<div class="card"><h2>Failed logons <span class="c">by account and source</span></h2>'+tbl(['Server','Account','Source','Count','Last'],R.failed_logons.map(function(f){return '<tr><td>'+esc(f.host)+'</td><td><b>'+esc(f.user||'')+'</b></td><td class="mono">'+esc(f.src_ip||'')+'</td><td>'+(f.count>=20?pill(f.count,'warn'):f.count)+'</td><td class="muted">'+esc(when(f.last))+'</td></tr>';}))+'</div>';
+      h+='<div class="card"><h2>Account &amp; group changes</h2>'+tbl(['Time','Server','By','Action','Code','Detail'],evRows(R.account_changes))+'</div>';
+      h+='<div class="card"><h2>Audit-policy events</h2>'+tbl(['Time','Server','By','Action','Code','Detail'],evRows(R.audit_policy))+'</div>';
+      h+='<div class="card"><h2>High-severity events</h2>'+tbl(['Time','Server','By','Action','Code','Detail'],evRows(R.high_severity))+'</div>';
+    }
+    $('body').innerHTML=h;
+  }
+  function load(){
+    var app=$('app').value; if(!app){R=null;draw();return;}
+    $('body').innerHTML='<div class="card"><div class="empty">Loading…</div></div>';
+    req('/api/soc/netops/apps/audit?app='+encodeURIComponent(app)+'&hours='+encodeURIComponent($('hrs').value)).then(function(r){R=r;ERR='';$('up').textContent='read '+when(r.generated_at);draw();},function(er){R=null;ERR=er.status===403?'Analysts, operators and administrators only.':er.message;draw();});
+  }
+  function init(){
+    req('/api/soc/netops/apps/audit').then(function(r){APPS=r.applications||[];var want=(location.hash.match(/app=([^&]+)/)||[])[1];want=want?decodeURIComponent(want):'';
+      $('app').innerHTML=APPS.length?APPS.map(function(a){return '<option value="'+esc(a.key)+'">'+esc(a.name)+' ('+a.online+'/'+a.servers+')'+(a.issues.length?' · '+esc(a.issues.join(', ')):'')+'</option>';}).join(''):'<option value="">No application</option>';
+      if(want&&APPS.some(function(a){return a.key===want;}))$('app').value=want;load();},
+      function(er){ERR=er.status===403?'Analysts, operators and administrators only.':er.status===404?'Application Audit is not on the SIEM yet - run the update (update-platform.ps1).':er.message;$('app').innerHTML='<option value="">—</option>';draw();});
+  }
+  $('tabs').addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(!b)return;TAB=b.getAttribute('data-tab');draw();});
+  $('app').addEventListener('change',function(){try{history.replaceState(null,'','#app='+encodeURIComponent($('app').value));}catch(e){ /* address bar not updated (sandboxed frame): the page works without it */ }load();});$('hrs').addEventListener('change',load);$('refresh').onclick=load;$('print').onclick=function(){window.print();};
+  $('xlsx').onclick=function(){
+    if(!R||!window.zybXlsx){toast('Nothing to export yet');return;}
+    var b=this;b.disabled=true;
+    req('/api/soc/netops/apps/audit?app='+encodeURIComponent($('app').value)+'&hours='+encodeURIComponent($('hrs').value)+'&export=1').then(function(r){return zybXlsx.who().then(function(by){
+      var S=r.summary,A=r.application,filt=A.name+' · '+per(),ev=[{h:'Time (UTC)',w:20},{h:'Server',w:18},{h:'By',w:16},{h:'Action',w:22},{h:'Outcome',w:9},{h:'Code',w:8},{h:'Detail',w:70}];
+      var er=function(L){return L.map(function(e){return [e.ts.replace('T',' ').slice(0,19),e.host,e.user||'',e.action,e.outcome,e.event_code||'',e.message];});};
+      zybXlsx.download('application-audit-'+A.name.replace(/[^A-Za-z0-9_-]+/g,'-')+'-'+new Date().toISOString().slice(0,10)+'.xlsx',[
+        {name:'Summary',columns:[{h:'Measure',w:34},{h:'Value',w:40}],rows:[['Application',A.name],['Period',per()],['Critical service',A.critical?'yes':'no'],['Resilience issues',(A.issues||[]).join(', ')||'none'],['Servers (online / total)',S.online+' / '+S.servers],['Outages',S.outages],['Changes',S.changes],['Self-approved changes',S.changes_self_approved],['Failed logons',S.failed_logons],['Account / group changes',S.account_changes],['High-severity events',S.high_severity],['Servers without logs',S.servers_without_logs],['Critical findings',S.critical],['High findings',S.high],['Event row cap reached',r.capped?'YES - narrow the period':'no']]},
+        {name:'Findings',columns:[{h:'Severity',w:10},{h:'Area',w:16},{h:'Finding',w:60},{h:'What to do',w:80},{h:'Evidence',w:50}],rows:r.findings.map(function(f){return [f.severity,f.area,f.title,f.recommendation,(f.evidence||[]).join(' | ')];})},
+        {name:'Servers',columns:[{h:'Server',w:20},{h:'IP',w:15},{h:'Role',w:10},{h:'Status',w:9},{h:'Availability 24 h %',w:10},{h:'7 d %',w:8},{h:'30 d %',w:8},{h:'Days since restart',w:10},{h:'Unexpected shutdowns 30 d',w:10},{h:'Logs received',w:10},{h:'Last log',w:20}],rows:r.servers.map(function(s){var a=s.availability||{};return [s.name,s.ip,s.role,s.status,a.d1==null?'':a.d1,a.d7==null?'':a.d7,a.d30==null?'':a.d30,s.days_since_boot==null?'':s.days_since_boot,s.unexpected_shutdowns_30d,s.logs.events,s.logs.last||'none'];})},
+        {name:'Outages',columns:[{h:'When',w:20},{h:'Server',w:20},{h:'From',w:10},{h:'To',w:10}],rows:r.outages.map(function(o){return [o.at,o.server,o.from,o.to];})},
+        {name:'Changes',columns:[{h:'Change',w:13},{h:'Kind',w:8},{h:'Server',w:16},{h:'Title',w:40},{h:'Status',w:12},{h:'Source',w:7},{h:'Proposed by',w:14},{h:'Proposed at',w:20},{h:'Approved / rejected by',w:16},{h:'Decided at',w:20},{h:'Applied by',w:14},{h:'Applied at',w:20},{h:'Comment',w:40}],rows:r.changes.map(function(c){return [c.id,c.kind,c.device,c.title,c.status,c.source,c.proposed_by,c.proposed_at||'',c.decided_by,c.decided_at||'',c.applied_by,c.applied_at||'',c.comment];})},
+        {name:'Failed logons',columns:[{h:'Server',w:18},{h:'Account',w:18},{h:'Source',w:16},{h:'Count',w:8},{h:'Last',w:20}],rows:r.failed_logons.map(function(f){return [f.host,f.user,f.src_ip,f.count,f.last];})},
+        {name:'Account changes',columns:ev,rows:er(r.account_changes)},{name:'Audit-policy events',columns:ev,rows:er(r.audit_policy)},{name:'High-severity events',columns:ev,rows:er(r.high_severity)}],{title:'Application Audit',filter:filt,by:by});});})
+      .catch(function(er){toast('Export failed: '+er.message);}).then(function(){b.disabled=false;});
+  };
+  init();
+})();
+</script>
+</body></html>

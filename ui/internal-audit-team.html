@@ -1,0 +1,34 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Internal Audit Team</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.tabs-zyb .btn{margin-right:6px;margin-bottom:6px}.bi{border-left:4px solid #6b7280;padding:6px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,.02)}
+.bi.s-high{border-left-color:#d03b3b}.bi.s-medium{border-left-color:#fab219}.bi.s-low{border-left-color:#3987e5}
+.answer{white-space:pre-wrap;font-size:13px}.why li{font-size:12px}
+</style></head><body data-zyb-tabler data-audit="iad"><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Audit · Internal audit</div><h2 class="page-title">Internal Audit Team <span class="mut">with the AI Internal Auditor</span></h2></div>
+ <div class="col-auto ms-auto"><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>The AI Internal Auditor works as a member of the internal audit team, on its own plan and records (separate from the IT and Cyber Security Audit Teams): it proposes a risk-based plan over the business - underwriting, claims, reinsurance, actuarial reserves, finance, investments, procurement, HR and payroll, sales and brokers, complaints and conduct, AML / CTF, fraud, regulatory compliance, PDPL, governance and continuity, with IT and cyber security coordinated with their own teams (every score is itemised with its source), draws samples from the platform's real records (data subject requests, personal data breaches, vendor contracts, joiners, leavers, risks and actions) with a recorded seed so anyone can re-perform the draw, suggests the result of each attribute test, keeps the morning brief and answers questions from the audit records. <b>People decide</b>: auditors conclude every sample item and workpaper, the lead reviews and signs, the Head of Internal Audit approves the plan, the final report and any risk acceptance - never the person who prepared it, never an AI identity. Audit records name people and weaknesses, so they are for operators and administrators only.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div class="tabs-zyb mb-2" id="tabs"><button type="button" class="btn btn-primary" data-tab="brief">Morning brief</button><button type="button" class="btn" data-tab="plan">Annual plan</button><button type="button" class="btn" data-tab="eng">Engagements</button><button type="button" class="btn" data-tab="find">Findings</button><button type="button" class="btn" data-tab="ask">Ask the auditor</button><button type="button" class="btn" data-tab="profile">Profile</button></div>
+<section class="card mb-3" data-pane="brief"><div class="card-header"><h3 class="card-title">Morning brief</h3></div><div class="card-body" id="brief"><span class="text-secondary">Loading…</span></div></section>
+<section class="card mb-3" data-pane="plan" hidden><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">Annual audit plan</h3>
+ <label class="mut" for="pyear">Year</label><input type="number" class="form-control form-control-sm w-auto" id="pyear" min="2024" max="2100"><button type="button" class="btn btn-sm btn-primary" id="propose"><i class="ti ti-sparkles me-1"></i>Propose the plan</button></div>
+ <div id="plan"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="pnote"></div></section>
+<section class="card mb-3" data-pane="eng" hidden><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">Engagements</h3><button type="button" class="btn btn-sm btn-primary" id="newEng"><i class="ti ti-plus me-1"></i>New engagement</button></div>
+ <div class="table-responsive" id="engs"><div class="card-body text-secondary">Loading…</div></div></section>
+<section class="card mb-3" data-pane="find" hidden><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">Audit findings</h3>
+ <select class="form-select form-select-sm w-auto" id="fstate" aria-label="State"><option value="">All states</option><option value="draft">Draft</option><option value="issued">Issued - waiting for response</option><option value="responded">Responded</option><option value="implemented">Implemented - to re-test</option><option value="closed">Closed</option><option value="risk_accepted">Risk accepted</option></select>
+ <label class="form-check m-0"><input type="checkbox" class="form-check-input" id="fover"><span class="form-check-label small">Overdue only</span></label></div>
+ <div class="table-responsive" id="finds"><div class="card-body text-secondary">Loading…</div></div></section>
+<section class="card mb-3" data-pane="ask" hidden><div class="card-header"><h3 class="card-title">Ask the auditor</h3></div><div class="card-body">
+ <div class="mut mb-2" id="aistat"></div>
+ <form id="askf"><label class="form-label" for="askq">Question</label><textarea class="form-control mb-2" id="askq" rows="3" maxlength="4000" placeholder="Which high findings are overdue and who owns them?"></textarea><button type="submit" class="btn btn-primary">Ask</button> <span class="mut" id="askmsg"></span></form>
+ <div class="answer mt-3" id="answer"></div></div></section>
+<section class="card mb-3" data-pane="profile" hidden><div class="card-header"><h3 class="card-title">Audit team profile (administrator)</h3></div><div class="card-body" id="prof"></div></section>
+</div></main>
+<script src="vendor/zyb-auditteam.js"></script></body></html>

@@ -1,0 +1,141 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reporting Center</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def;--d-ai:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.ai{background:linear-gradient(135deg,#7c4dff,#5b8def);border:0;color:#fff}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px}
+.cat .rp{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer;width:100%;text-align:left;color:inherit;font:inherit;display:block}
+.cat .rp:hover{border-color:#3a4258}.cat .rp.sel{box-shadow:0 0 0 2px var(--d-acc)}.cat .rp b{display:block}.cat .rp .sm{color:var(--d-mute)}.cat .rp.locked{opacity:.55}
+.hero{display:grid;grid-template-columns:170px minmax(0,1fr);gap:18px;align-items:center}
+.ring{position:relative;width:150px;height:150px;margin:auto}.ring svg{transform:rotate(-90deg)}.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.ring .v b{font-size:32px}.ring .v span{font-size:11px;color:var(--d-mute);max-width:115px}
+.chg{border-left:3px solid var(--d-warn);background:rgba(245,159,0,.06);border-radius:8px;padding:7px 10px;margin:5px 0;font-size:13px}.chg.bad{border-color:var(--d-bad);background:rgba(229,72,77,.07)}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;min-width:0}
+.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11.5px;color:var(--d-mute)}.kpi .vd{font-size:11.5px;margin-top:4px}
+.kpi svg{width:100%;height:34px;display:block;margin-top:6px}
+.v-improving{color:#56d364}.v-worsening{color:#ff7b80}.v-steady{color:#aab2c2}.v-nm{color:#8b93a4}
+.sec-h{display:flex;gap:8px;align-items:center;margin:16px 0 8px;font-weight:700}.sec-h .sm{font-weight:400}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.s-ok{background:rgba(47,179,68,.15);color:#56d364}.s-failed{background:rgba(229,72,77,.16);color:#ff7b80}.s-running,.s-restricted,.s-not_connected,.s-not_installed{background:rgba(245,159,0,.16);color:#f5b544}.s-error{background:rgba(229,72,77,.16);color:#ff7b80}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--d-line)}td{padding:6px 8px;border-bottom:1px solid #1b2030;vertical-align:top}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.inp,select.inp,textarea.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ask{display:flex;gap:8px;flex-wrap:wrap}.ask textarea{flex:1;min-width:240px;min-height:60px}
+.ans{white-space:pre-wrap;background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-top:10px;font-size:13px}.steps{font-size:12px;color:var(--d-mute);margin-top:6px}
+.sched{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px}.sched label{font-size:11.5px;color:var(--d-mute);display:flex;flex-direction:column;gap:3px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+iframe.pv{width:100%;height:560px;border:1px solid var(--d-line);border-radius:12px;background:#fff}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}.hero{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Command &amp; Leadership</div><h1>Reporting Center</h1><div class="sm mute">Every report is built at the moment you open it from what the platform's modules read. A module that is not connected says so - nothing is a sample.</div></div><div class="sp"></div>
+ <button class="btn" id="snap" type="button" hidden><i class="ti ti-camera"></i>Record today's figures</button>
+ <button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div class="layout" id="main" hidden>
+ <aside><section class="card cat"><h2><i class="ti ti-files"></i>Reports</h2><div id="cat"></div><div class="sm mute" id="hist"></div></section>
+  <section class="card"><h2><i class="ti ti-calendar-time"></i>Scheduled e-mail</h2><div id="sched"></div></section></aside>
+ <div>
+  <section class="card"><div class="row"><div><div class="eb" id="aud"></div><h2 style="margin:4px 0 0;font-size:19px" id="title"></h2><div class="sm mute" id="about"></div></div><div class="sp"></div>
+    <button class="btn" id="xhtml" type="button"><i class="ti ti-file-text"></i>HTML / PDF</button><button class="btn" id="xcsv" type="button"><i class="ti ti-file-spreadsheet"></i>Excel (CSV)</button><button class="btn" id="pv" type="button"><i class="ti ti-eye"></i>Preview</button></div>
+   <div class="hero" style="margin-top:14px"><div class="ring" id="ring"></div><div><div style="font-weight:700;margin-bottom:4px"><i class="ti ti-sparkles"></i> What changed <span class="sm mute" id="mlnote"></span></div><div id="changes"></div></div></div></section>
+  <div id="pvbox" class="card" hidden><h2><i class="ti ti-eye"></i>Preview <span class="c">exactly what is e-mailed or saved</span></h2><iframe class="pv" id="pvf" sandbox="" title="report preview"></iframe></div>
+  <section class="card" id="secs"></section>
+  <section class="card" id="aibox"><h2><i class="ti ti-robot"></i>AI reporting analyst <span class="c">reads the reports and their history only - it cannot change or send anything</span></h2>
+   <div class="row"><button class="btn ai" id="summ" type="button"><i class="ti ti-wand"></i>Write the executive summary</button><span class="sm mute" id="aist"></span></div>
+   <div class="ask" style="margin-top:8px"><textarea class="inp" id="q" aria-label="Question about the reports" maxlength="4000" placeholder="Ask about the reports - e.g. what got worse this month and why, which compliance gap matters most"></textarea><button class="btn pri" id="go" type="button">Ask</button></div>
+   <div id="out"></div></section>
+ </div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', H=null, REP=null, INS=null, SEL='executive', EDIT=null;
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function fmt(k){if(k.value==null)return 'not measured';var v=Math.abs(k.value)>=1000?Math.round(k.value).toLocaleString():(Math.round(k.value*10)/10);return v+(k.unit==='%'?'%':k.unit?' '+k.unit:'');}
+  function ring(p,c){var s=150,st=13,r=(s-st)/2,ci=2*Math.PI*r,off=ci*(1-(p||0)/100);return '<svg width="'+s+'" height="'+s+'"><circle cx="75" cy="75" r="'+r+'" fill="none" stroke="#232837" stroke-width="'+st+'"/><circle cx="75" cy="75" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="'+st+'" stroke-linecap="round" stroke-dasharray="'+ci.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';}
+  function spark(series,col){if(!series||series.length<2)return '';var w=200,h=34,v=series.map(function(p){return p.v;}),mn=Math.min.apply(null,v),mx=Math.max.apply(null,v),rg=(mx-mn)||1;
+    var pts=series.map(function(p,i){return (i/(series.length-1)*w).toFixed(1)+','+(h-3-(p.v-mn)/rg*(h-8)).toFixed(1);}).join(' ');
+    return '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" aria-label="last '+series.length+' days"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.6"/></svg>';}
+  function insOf(key){return INS&&INS.ok?INS.kpis.find(function(k){return k.key===key;}):null;}
+  function drawCat(){$('cat').innerHTML=H.reports.map(function(r){return '<button type="button" class="rp'+(r.id===SEL?' sel':'')+(r.allowed?'':' locked')+'" data-rep="'+esc(r.id)+'"><b>'+esc(r.title)+'</b><span class="sm">'+esc(r.audience)+(r.allowed?'':' · needs the '+esc(r.role)+' role')+'</span></button>';}).join('');
+    $('hist').textContent=H.history.days?('Daily figures recorded: '+H.history.days+' day(s), last '+H.history.last+'. Trends need 5 days, unusual moves 8.'):'No daily figures recorded yet - the first are recorded this morning; trends appear after 5 days.';}
+  function drawSched(){var S=H.schedules||[],o='';
+    o+=S.length?'<table><tr><th>Schedule</th><th>Next</th><th>Last</th></tr>'+S.map(function(s){return '<tr><td><b>'+esc(s.name)+'</b><div class="sm mute">'+esc(s.report)+' · '+esc(s.period)+' '+esc(s.at)+' · '+esc(s.recipients_count)+' recipient(s)'+(s.enabled?'':' · paused')+'</div>'+(H.can_schedule?'<button class="btn" type="button" data-edit="'+esc(s.id)+'" style="margin-top:4px">Edit</button> <button class="btn" type="button" data-send="'+esc(s.id)+'" style="margin-top:4px">Send now</button>':'')+'</td><td class="sm">'+(s.next_at?esc(new Date(s.next_at).toLocaleString()):'—')+'</td><td>'+(s.last?'<span class="pill s-'+esc(s.last.status)+'">'+esc(s.last.status)+'</span>'+(s.last.error?'<div class="sm mute">'+esc(s.last.error)+'</div>':''):'<span class="sm mute">not run yet</span>')+'</td></tr>';}).join('')+'</table>':'<div class="note">No report is e-mailed on a schedule yet.'+(H.can_schedule?'':' An administrator sets schedules.')+'</div>';
+    if(H.can_schedule){var e=EDIT||{name:'',report:SEL,period:'weekly',weekday:0,day_of_month:1,at:'08:00',recipients:[],format:'html+csv',enabled:true};
+      o+='<div style="margin-top:10px;font-weight:700">'+(EDIT&&EDIT.id?'Edit schedule':'New schedule')+'</div><div class="sched">'
+        +'<label>Name<input class="inp" id="s-name" value="'+esc(e.name)+'" maxlength="120"></label>'
+        +'<label>Report<select class="inp" id="s-report">'+H.reports.map(function(r){return '<option value="'+esc(r.id)+'"'+(r.id===e.report?' selected':'')+'>'+esc(r.title)+'</option>';}).join('')+'</select></label>'
+        +'<label>Every<select class="inp" id="s-period">'+['daily','weekly','monthly'].map(function(p){return '<option'+(p===e.period?' selected':'')+'>'+p+'</option>';}).join('')+'</select></label>'
+        +'<label>Day (weekly)<select class="inp" id="s-wd">'+['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(function(d,i){return '<option value="'+i+'"'+(i===e.weekday?' selected':'')+'>'+d+'</option>';}).join('')+'</select></label>'
+        +'<label>Day of month<input class="inp" id="s-dom" type="number" min="1" max="28" value="'+esc(e.day_of_month)+'"></label>'
+        +'<label>At (Riyadh)<input class="inp" id="s-at" value="'+esc(e.at)+'" maxlength="5"></label>'
+        +'<label style="grid-column:1/-1">Recipients (comma separated)<input class="inp" id="s-to" value="'+esc((e.recipients||[]).join(', '))+'"></label>'
+        +'<label>Attach<select class="inp" id="s-fmt"><option value="html+csv"'+(e.format==='html+csv'?' selected':'')+'>HTML + CSV</option><option value="html"'+(e.format==='html'?' selected':'')+'>HTML</option></select></label>'
+        +'<label>Enabled<select class="inp" id="s-en"><option value="1"'+(e.enabled?' selected':'')+'>yes</option><option value="0"'+(e.enabled?'':' selected')+'>paused</option></select></label></div>'
+        +'<div class="row" style="margin-top:8px"><button class="btn pri" type="button" id="s-save">Save schedule</button>'+(EDIT&&EDIT.id?'<button class="btn" type="button" id="s-del">Delete</button><button class="btn" type="button" id="s-new">New</button>':'')+'<span class="sm mute">Sent through the SIEM\'s Reports e-mail relay. Recipients are shown to administrators only.</span></div>';}
+    if((H.runs||[]).length)o+='<div style="margin-top:10px;font-weight:700">Recent deliveries</div><table><tr><th>When</th><th>Report</th><th>Result</th></tr>'+H.runs.slice(0,8).map(function(r){return '<tr><td class="sm">'+esc(new Date(r.at).toLocaleString())+'<div class="mute">'+esc(r.reason)+'</div></td><td class="sm">'+esc(r.name)+'</td><td><span class="pill s-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.error?'<div class="sm mute">'+esc(r.error)+'</div>':'')+'</td></tr>';}).join('')+'</table>';
+    $('sched').innerHTML=o;}
+  function drawReport(){var r=REP;$('aud').textContent=r.audience;$('title').textContent=r.title;$('about').textContent=r.about;
+    var hp=INS&&INS.ok&&INS.health?INS.health.pct:null;
+    $('ring').innerHTML=ring(hp||0,hp==null?'#8b93a4':hp>=75?'#2fb344':hp>=50?'#f59f00':'#e5484d')+'<div class="v"><b>'+(hp==null?'—':esc(hp)+'%')+'</b><span>'+(hp==null?'figures steady or improving - needs 5 days of history':'of measured figures steady or improving')+'</span></div>';
+    $('mlnote').textContent=INS&&INS.ok?'(machine learning over '+INS.days+' day(s) of the platform\'s own figures)':'';
+    var N=INS&&INS.ok?INS.notable:[];
+    $('changes').innerHTML=!INS||!INS.ok?'<div class="note">'+esc(INS&&INS.error?INS.error:'No history yet.')+'</div>':N.length?N.slice(0,6).map(function(n){return '<div class="chg'+(/wrong|worse/.test(n.why)?' bad':'')+'"><b>'+esc(n.label)+'</b> - '+esc(n.why)+(n.text?' <span class="mute">('+esc(n.text)+')</span>':'')+'</div>';}).join(''):'<div class="note">Nothing moved the wrong way'+(INS.days<8?' - though with '+esc(INS.days)+' day(s) of history only large moves can show':'')+'.</div>';
+    $('secs').innerHTML=r.sections.map(function(s){
+      var h='<div class="sec-h"><i class="ti ti-folder"></i>'+esc(s.title)+' <span class="pill s-'+esc(s.state)+'"'+(s.state==='ok'?' hidden':'')+'>'+esc(s.state.replace('_',' '))+'</span><span class="sm mute">'+esc(s.modules)+'</span></div>';
+      if(s.state!=='ok')return h+'<div class="note">'+esc(s.note)+'</div>';
+      h+='<div class="kgrid">'+s.kpis.map(function(k){var i=insOf(k.key),vd=i?i.verdict:'',col=vd==='improving'?'#56d364':vd==='worsening'?'#ff7b80':'#5b8def';
+        return '<div class="kpi" data-k="'+esc(k.key)+'"><div class="n">'+esc(fmt(k))+'</div><div class="l">'+esc(k.label)+'</div>'+(i?spark(i.series,col)+'<div class="vd v-'+(vd==='not enough history'||vd==='not measured'?'nm':esc(vd))+'">'+esc(vd)+(i.change?' · '+esc((i.change.delta>0?'+':'')+i.change.delta)+' since '+esc(i.change.since):'')+(i.trend?' · ~'+esc(i.trend.in_30_days)+' in 30 d':'')+(i.unusual&&i.unusual.flag?' · <b>unusual today</b>':'')+'</div>':'')+'</div>';}).join('')+'</div>';
+      if(s.note)h+='<div class="sm mute" style="margin-top:6px">'+esc(s.note)+'</div>';
+      if(s.rows&&s.rows.rows.length)h+='<table><tr>'+s.rows.cols.map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+'</tr>'+s.rows.rows.map(function(x){return '<tr>'+x.map(function(c){return '<td>'+esc(c)+'</td>';}).join('')+'</tr>';}).join('')+'</table>';
+      return h;}).join('');
+  }
+  function loadReport(){$('secs').innerHTML='<div class="note">Reading the modules…</div>';$('pvbox').hidden=true;
+    return Promise.all([req('GET','/report-center/reports/'+encodeURIComponent(SEL)),req('GET','/report-center/insights?report='+encodeURIComponent(SEL)).catch(function(e){return {ok:false,error:e.message};})])
+      .then(function(a){REP=a[0];INS=a[1];drawReport();},function(e){$('secs').innerHTML='<div class="note">'+esc(e.message)+'</div>';});}
+  function load(){return req('GET','/report-center').then(function(h){H=h;$('err').hidden=true;$('main').hidden=false;$('snap').hidden=!can('admin');
+    if(!H.reports.some(function(r){return r.id===SEL&&r.allowed;}))SEL='executive';drawCat();drawSched();
+    $('aist').textContent=H.ai.enabled?('model '+H.ai.model):H.ai.reason;$('summ').disabled=$('go').disabled=!(H.ai.enabled&&can('operator'));if(!can('operator'))$('aist').textContent='The AI analyst works for operators and administrators.';
+    return loadReport();},function(e){$('main').hidden=true;var m=$('err');m.hidden=false;
+    m.innerHTML=e.status===404?'<h2><i class="ti ti-plug-off"></i>The Reporting Center is not installed on the server yet</h2><div class="sm">Run the update: <code>git pull origin main</code>, then <code>update-platform.ps1</code>.</div>':'<h2><i class="ti ti-alert-triangle"></i>Could not load the Reporting Center</h2><div class="sm">'+esc(e.message)+'</div>';});}
+  function save(name,data,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);}
+  function ask(q){var o=$('out');o.innerHTML='<div class="ans mute">The analyst is reading the reports…</div>';$('go').disabled=$('summ').disabled=true;
+    return req('POST','/report-center/ai/ask',{question:q,report:SEL}).then(function(r){o.innerHTML='<div class="ans">'+esc(r.answer)+'</div><div class="steps">'+esc(r.model)+' · '+r.steps.length+' step(s): '+esc(r.steps.map(function(s){return s.tool+(s.ok?'':' (refused)');}).join(', '))+(r.injection_signals.length?' · ⚠ text in the data looked like instructions - treated as data':'')+'</div>';},
+      function(e){o.innerHTML='<div class="ans">'+esc(e.message)+'</div>';}).then(function(){$('go').disabled=$('summ').disabled=!(H.ai.enabled&&can('operator'));});}
+  function schedFromForm(){var to=$('s-to').value.split(/[,;\s]+/).filter(Boolean);
+    return {id:EDIT&&EDIT.id||undefined,name:$('s-name').value.trim(),report:$('s-report').value,period:$('s-period').value,weekday:Number($('s-wd').value),day_of_month:Number($('s-dom').value),at:$('s-at').value.trim(),recipients:to,format:$('s-fmt').value,enabled:$('s-en').value==='1'};}
+  function putSchedules(list){return req('POST','/report-center/schedules',{schedules:list}).then(function(){EDIT=null;toast('Schedules saved');return load();},function(e){toast(e.message);});}
+  function adminList(){return (H.schedules||[]).map(function(s){return {id:s.id,name:s.name,report:s.report,period:s.period,weekday:s.weekday,day_of_month:s.day_of_month,at:s.at,recipients:s.recipients||[],format:s.format,enabled:s.enabled};});}
+  $('cat').addEventListener('click',function(ev){var b=ev.target.closest('[data-rep]');if(!b)return;var id=b.getAttribute('data-rep'),r=H.reports.find(function(x){return x.id===id;});if(!r.allowed){toast('This report needs the '+r.role+' role.');return;}SEL=id;try{history.replaceState(null,'','#report='+id);}catch(e){/* file:// preview */}drawCat();loadReport();});
+  $('sched').addEventListener('click',function(ev){var t=ev.target;
+    if(t.closest('[data-edit]')){var id=t.closest('[data-edit]').getAttribute('data-edit');EDIT=adminList().find(function(s){return s.id===id;});drawSched();return;}
+    if(t.closest('[data-send]')){var sid=t.closest('[data-send]').getAttribute('data-send');t.disabled=true;req('POST','/report-center/schedules/'+encodeURIComponent(sid)+'/send-now',{}).then(function(r){toast(r.status==='ok'?'Sent':'Not sent: '+(r.error||r.status));load();},function(e){toast(e.message);t.disabled=false;});return;}
+    if(t.id==='s-new'){EDIT=null;drawSched();return;}
+    if(t.id==='s-del'){putSchedules(adminList().filter(function(s){return s.id!==EDIT.id;}));return;}
+    if(t.id==='s-save'){var s=schedFromForm(),L=adminList().filter(function(x){return !s.id||x.id!==s.id;});L.push(s);putSchedules(L);}});
+  $('xhtml').addEventListener('click',function(){req('GET','/report-center/reports/'+encodeURIComponent(SEL)+'/export?format=html').then(function(r){save(r.filename,r.html,'text/html');},function(e){toast(e.message);});});
+  $('xcsv').addEventListener('click',function(){req('GET','/report-center/reports/'+encodeURIComponent(SEL)+'/export?format=csv').then(function(r){save(r.filename,'﻿'+r.csv,'text/csv');},function(e){toast(e.message);});});
+  $('pv').addEventListener('click',function(){req('GET','/report-center/reports/'+encodeURIComponent(SEL)+'/export?format=html').then(function(r){$('pvf').srcdoc=r.html;$('pvbox').hidden=false;},function(e){toast(e.message);});});
+  $('snap').addEventListener('click',function(){var b=this;b.disabled=true;req('POST','/report-center/snapshot',{}).then(function(r){toast(r.kpis+' figures recorded for '+r.day);load();},function(e){toast(e.message);}).then(function(){b.disabled=false;});});
+  $('refresh').addEventListener('click',load);
+  $('summ').addEventListener('click',function(){ask('Write the executive summary of this report.');});
+  $('go').addEventListener('click',function(){var q=$('q').value.trim();if(q.length<3){$('out').innerHTML='<div class="ans">Type a question first.</div>';return;}ask(q);});
+  var m=/report=([a-z0-9-]+)/.exec(location.hash);if(m)SEL=m[1];
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden&&!document.activeElement.matches('textarea,input,select'))loadReport();},300000);
+})();
+</script></body></html>

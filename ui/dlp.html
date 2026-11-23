@@ -1,0 +1,84 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Data Loss Prevention</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px}.g2>.card{margin:0}
+.bars{display:flex;align-items:flex-end;gap:2px;height:110px;padding:4px 0;border-bottom:1px solid var(--edge)}.bars i{flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-width:2px;height:100%}.bars b{display:block;background:#2f81f7;border-radius:2px 2px 0 0}.bars b.lf{background:var(--bad);border-radius:0}
+.lg{display:flex;gap:14px;font-size:12px;color:var(--mute);margin-top:6px}.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:#2f81f7}.lg span.lf:before{background:var(--bad)}
+.rk{display:inline-block;min-width:34px;text-align:center;border-radius:6px;padding:1px 6px;font-weight:700}.rk.h{background:rgba(255,123,114,.18);color:var(--bad)}.rk.m{background:rgba(210,153,34,.18);color:#d29922}.rk.l{background:rgba(127,127,127,.15)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">SOC · endpoint, web and email</div><h1>Data Loss Prevention</h1></div><span class="sp"></span>
+ <select id="per"><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d" selected>Last 30 days</option></select>
+ <span id="dl"></span><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<div id="state"></div>
+<div class="k" id="kpi"><div class="empty">Loading…</div></div>
+<div class="g2">
+ <div class="card"><h2>Incidents over time</h2><div id="trend"></div><div class="lg"><span>all incidents</span><span class="lf">let through</span></div></div>
+ <div class="card"><h2>By channel</h2><div class="tw" id="chan"></div></div>
+</div>
+<div class="g2">
+ <div class="card"><h2>By policy</h2><div class="tw" id="pol"></div></div>
+ <div class="card"><h2>By data class</h2><div class="tw" id="cls"></div></div>
+</div>
+<div class="card"><h2>People to review <span class="c" id="uc"></span></h2><div class="tw" id="users"></div>
+ <p class="note">Risk is a simple weighted sum, every point shown under <b>Why</b>: data let through (5 each, max 30), sensitive data classes (10 each, max 20), high / critical incidents (3 each, max 15), 3+ channels (+10), mostly outside working hours (+10), large match volume (+5 / +10), DLP agent disabled (+20). <b>These are behavioural indicators, not proof of wrongdoing</b> - review proportionately and record the outcome in a case (PDPL).</p></div>
+<div class="g2">
+ <div class="card"><h2>Devices</h2><div class="tw" id="hosts"></div></div>
+ <div class="card"><h2>Where data was let through to</h2><div class="tw" id="dest"></div></div>
+</div>
+<div class="card"><h2>DLP agent or protection disabled</h2><div class="tw" id="tamper"></div></div>
+<div class="card"><h2>Sources reporting</h2><div class="tw" id="src"></div>
+ <p class="note">Incidents come from the DLP products that send to the SIEM: Somansa Privacy-i / Mail-i / Server-i (SIEM / syslog export, source type <code>somansa</code>) and Forcepoint, Symantec or Trend Micro DLP over CEF. Add a source under <b>SOC → Log Sources</b>. A product that is installed but not listed here is not sending.</p></div>
+<div class="card" id="schedCard" hidden><h2>Scheduled report <span class="c" id="sc"></span></h2><div id="sched"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,Z=window.zybDetail,esc=S.esc,$=function(i){return document.getElementById(i);},D=null;
+  var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  function tbl(cols,rows,empty){return rows.length?'<table><thead><tr>'+cols.map(function(c){return '<th'+(/^#|^Incidents|^Let|^Blocked|^People|^Risk/.test(c)?' class="num"':'')+'>'+esc(c)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+(typeof c==='number'?' class="num"':'')+'>'+(typeof c==='number'?S.n(c):c)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>':'<div class="empty">'+esc(empty||'None in this period.')+'</div>';}
+  function nulled(id,what){$(id).innerHTML='<p class="err">'+esc(what)+' could not be read from the SIEM.</p>';}
+  function rk(n){return '<span class="rk '+(n>=60?'h':n>=30?'m':'l')+'">'+n+'</span>';}
+  function q(){return 'period='+encodeURIComponent($('per').value);}
+  function load(){
+    return S.req('GET','/dlp/summary?'+q()).then(function(d){D=d;var T=d.totals,op=d.names;
+      $('up').textContent='updated '+S.ago(d.generated_at);
+      $('dl').innerHTML=op?'<a class="btn" href="/api/soc/dlp/report.html?'+q()+'&download=1">⬇ Report</a> <a class="btn" href="/api/soc/dlp/events.csv?'+q()+'">⬇ CSV</a>':'';
+      $('state').innerHTML=!d.clickhouse.ok?'<div class="card"><p class="err">Some panels could not be read ('+esc(d.clickhouse.errors.map(function(e){return e.panel;}).join(', '))+') - they are left empty, not shown as zero.</p></div>':
+        !d.available?'<div class="card"><p><b>No DLP incident reached the SIEM in this period.</b> If Somansa (or another DLP product) is installed, its SIEM / syslog export is not reaching this server yet - see <b>Sources reporting</b> below.</p></div>':'';
+      $('kpi').innerHTML=T?S.tile('Incidents',S.n(T.incidents),S.n(T.people)+' people · '+S.n(T.hosts)+' devices','')+S.tile('Let through',S.n(T.left),T.incidents?Math.round(T.left/T.incidents*100)+'% - data left':'',T.left?'bad':'ok')+
+        S.tile('Blocked / quarantined',S.n(T.blocked),T.encrypted?S.n(T.encrypted)+' encrypted':'','ok')+S.tile('High / critical',S.n(T.high),'',T.high?'warn':'')+
+        S.tile('Outside working hours',S.n(T.after_hours),'',T.after_hours?'warn':'')+S.tile('Agent disabled',S.n(T.tamper),'DLP agent / protection off',T.tamper?'bad':'ok')+(T.not_reported?S.tile('Action not reported',S.n(T.not_reported),'the product did not say',''):''):'<div class="card" style="grid-column:1/-1"><p class="err">Totals could not be read.</p></div>';
+      if(d.trend){var mx=Math.max.apply(null,d.trend.map(function(x){return x.n;}).concat([1]));$('trend').innerHTML='<div class="bars">'+d.trend.map(function(x){return '<i title="'+esc(S.dt(x.t))+': '+x.n+' incident(s), '+x.n_left+' let through"><b style="height:'+((x.n-x.n_left)/mx*100)+'%"></b><b class="lf" style="height:'+(x.n_left/mx*100)+'%"></b></i>';}).join('')+'</div>';}else nulled('trend','The trend');
+      d.channels?$('chan').innerHTML=tbl(['Channel','Incidents','Let through','Blocked'],d.channels.map(function(c){return [esc(c.channel),c.incidents,c.left,c.blocked];})):nulled('chan','Channels');
+      d.policies?$('pol').innerHTML=tbl(['Policy','Incidents','Let through','Blocked','People'],d.policies.slice(0,25).map(function(c){return [esc(c.policy),c.incidents,c.left,c.blocked,c.people];})):nulled('pol','Policies');
+      d.classes?$('cls').innerHTML=tbl(['Data class','Incidents','Let through',''],d.classes.slice(0,25).map(function(c){return [esc(c.class),c.incidents,c.left,c.sensitive?S.pill(c.sensitive,'warn'):''];})):nulled('cls','Data classes');
+      if(!op){['users','hosts','dest','tamper'].forEach(function(i){$(i).innerHTML='<p class="muted">Names, devices and destinations are personal data (PDPL): operators and administrators see them.</p>';});$('uc').textContent='';}
+      else{
+        var U=(d.users||[]);$('uc').textContent=d.users?U.length+' people':'';
+        d.users?$('users').innerHTML=tbl(['Person','Risk','Incidents','Let through','Blocked','Channels','Data classes','Last','Why',''],U.slice(0,100).map(function(u,i){return ['<b>'+esc(u.user)+'</b>'+(u.tamper?' '+S.pill('agent disabled','bad'):''),rk(u.risk),u.incidents,u.left,u.blocked,esc(u.channels.join(', ')),esc(u.classes.slice(0,4).join(', ')),esc(S.ago(u.last_ms)),'<button type="button" class="sm" data-why="'+i+'">Why</button>','<button type="button" class="sm" data-ev="user" data-v="'+esc(u.user)+'">Incidents</button>'];}),'Nobody had a DLP incident in this period.'):nulled('users','People');
+        d.hosts?$('hosts').innerHTML=tbl(['Device','Incidents','Let through','People','Last',''],d.hosts.slice(0,50).map(function(h){return ['<span class="mono">'+esc(h.host)+'</span>',h.incidents,h.left,h.people,esc(S.ago(h.last_ms)),'<button type="button" class="sm" data-ev="host" data-v="'+esc(h.host)+'">Incidents</button>'];})):nulled('hosts','Devices');
+        d.destinations?$('dest').innerHTML=tbl(['Destination','Incidents','People'],d.destinations.map(function(x){return ['<span class="mono small">'+esc(x.destination)+'</span>',x.incidents,x.people];}),'Nothing was let through in this period.'):nulled('dest','Destinations');
+        d.tamper_events?$('tamper').innerHTML=tbl(['Time','User','Device','Product','What'],d.tamper_events.slice(0,50).map(function(e){return [esc(S.dt(e.ts)),esc(e.user||'–'),'<span class="mono">'+esc(e.host||'–')+'</span>',esc(e.product),'<span class="small">'+esc(e.message)+'</span>'];}),'No DLP agent was disabled in this period.'):nulled('tamper','Agent events');
+      }
+      d.sources?$('src').innerHTML=tbl(['Vendor','Product','Source','Incidents','Last seen'],d.sources.map(function(x){return [esc(x.vendor||'–'),esc(x.product||'–'),'<span class="mono">'+esc(x.src_id)+'</span>',x.incidents,esc(S.ago(x.last_ms))];}),'No DLP source has sent an incident in this period.'):nulled('src','Sources');
+      if(S.can('admin'))loadSched();
+    }).catch(function(e){$('kpi').innerHTML='<div class="card" style="grid-column:1/-1">'+S.errHtml(e,'DLP analysis')+'</div>';});
+  }
+  function loadSched(){$('schedCard').hidden=false;return S.req('GET','/dlp/schedule').then(function(j){var s=j.schedule||{enabled:false,period:'monthly',at:'07:30',weekday:0,day_of_month:1,recipients:[]},l=j.last;
+    $('sc').innerHTML=(j.next_at?'next '+esc(S.dt(j.next_at)):'off')+(l?' · last '+(l.status==='ok'?S.pill('sent','ok'):S.pill('failed','bad'))+' '+esc(S.ago(l.at)):'');
+    $('sched').innerHTML=(j.mail.ok?'':'<p class="err">E-mail not ready: '+esc(j.mail.problems.join('; '))+' (Reports → Attack Summary schedules).</p>')+(l&&l.status!=='ok'?'<p class="err small">'+esc(l.error)+'</p>':'')+
+      '<div class="form"><label><input type="checkbox" id="s-en"'+(s.enabled?' checked':'')+'> E-mail the DLP report</label><label>Every<select id="s-p"><option value="weekly"'+(s.period==='weekly'?' selected':'')+'>week</option><option value="monthly"'+(s.period==='monthly'?' selected':'')+'>month (previous calendar month)</option></select></label>'+
+      '<label>Day (weekly)<select id="s-w">'+DAYS.map(function(d,i){return '<option value="'+i+'"'+(i===s.weekday?' selected':'')+'>'+d+'</option>';}).join('')+'</select></label><label>Day of month<input id="s-d" type="number" min="1" max="31" value="'+(s.day_of_month||1)+'"></label>'+
+      '<label>At (Riyadh)<input id="s-at" value="'+esc(s.at||'07:30')+'"></label><label>To<input id="s-to" value="'+esc((s.recipients||[]).join(', '))+'" placeholder="ciso@…, dpo@…"></label></div>'+
+      '<p><button type="button" id="s-save">Save schedule</button> <button type="button" id="s-now">Send the last 30 days now</button></p><p class="note">The report names people: send it only to the CISO, the DPO and those who review DLP cases.</p>';
+  }).catch(function(e){$('sched').innerHTML=S.errHtml(e,'DLP report schedule');});}
+  function events(kind,v){var url='/dlp/events?'+q()+'&'+kind+'='+encodeURIComponent(v)+'&limit=500';
+    S.req('GET',url).then(function(j){var L=j.items||[];Z.open('DLP incidents',v,(L.length?'<p class="small"><a href="/api/soc/dlp/events.csv?'+q()+'&'+kind+'='+encodeURIComponent(v)+'">⬇ Export these to CSV</a></p>'+Z.tbl(['Time','Product','Policy','Channel','Data class','Action','File','Destination','Matches'],L.map(function(e){return [esc(S.dt(e.ts))+(e.after_hours?' 🌙':''),esc(e.product||e.vendor),esc(e.policy),esc(e.channel_raw||e.channel),esc(e.class),esc(e.action),esc(e.file),esc(e.destination),esc(e.matches)];})):'<p class="muted">No incidents.</p>')+'<p class="note">Opening this list is recorded in the audit log.</p>');}).catch(function(e){S.toast(e.message);});}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-why]'))){var u=D.users[+x.getAttribute('data-why')];Z.open('Why '+u.risk,u.user,Z.tbl(['Points','Reason'],u.why.map(function(w){return ['+'+w.points,esc(w.reason)];}))+'<p class="note">Indicators, not proof. Devices: '+esc(u.hosts.join(', ')||'–')+'.</p>');return;}
+    if((x=t.closest('[data-ev]'))){events(x.getAttribute('data-ev'),x.getAttribute('data-v'));return;}
+    if(t.id==='s-save'){t.disabled=true;S.req('POST','/dlp/schedule',{enabled:$('s-en').checked,period:$('s-p').value,weekday:+$('s-w').value,day_of_month:+$('s-d').value,at:$('s-at').value.trim(),recipients:$('s-to').value.split(/[\s,;]+/).filter(Boolean)}).then(function(){S.toast('Schedule saved - recorded in the audit log');loadSched();}).catch(function(e){t.disabled=false;S.toast(e.message);});return;}
+    if(t.id==='s-now'){if(!confirm('E-mail the DLP report for the last 30 days to the recipients now?'))return;t.disabled=true;S.req('POST','/dlp/send-now',{period:'30d'}).then(function(){S.toast('Report sent');loadSched();}).catch(function(e){t.disabled=false;S.toast(e.message);loadSched();});return;}
+  });
+  $('per').onchange=load;$('refresh').onclick=load;S.ready(load);
+})();
+</script></body></html>

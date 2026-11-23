@@ -1,0 +1,227 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.sts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 12px}.sts>div{border:1px solid var(--edge);border-radius:12px;padding:12px 14px;background:rgba(255,255,255,.02)}
+.sts .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute)}.sts .v{font-size:24px;font-weight:800;line-height:1.15;margin-top:2px}.sts .s{font-size:12px;color:var(--mute);margin-top:2px}
+.up{color:#3fb950}.dn{color:#ff2d55}.wa{color:#d29922}.mu{color:var(--mute)}
+.mapw{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(260px,1fr);gap:12px}@media(max-width:980px){.mapw{grid-template-columns:1fr}}
+#map{width:100%;height:420px;display:block;background:rgba(47,129,247,.03);border-radius:10px}#map path.c{stroke:#30363d;stroke-width:.5}#map path.c:hover{stroke:#e6edf3;stroke-width:1.2}
+.tip{position:fixed;pointer-events:none;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:6px 9px;font-size:12px;color:#e6edf3;z-index:50}
+.seg{display:inline-flex;border:1px solid var(--edge);border-radius:8px;overflow:hidden}.seg button{border:0;border-radius:0;background:transparent;padding:5px 10px}.seg button.on{background:#1f6feb;color:#fff}
+.lgd{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--mute);margin-top:6px}.lgd i{display:inline-block;width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,#0d2a4a,#1f6feb,#79c0ff)}
+.svc{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}.svc>div{border:1px solid var(--edge);border-radius:12px;padding:12px;border-left-width:4px}
+.svc h3{font-size:14px;margin:0 0 4px;display:flex;justify-content:space-between;gap:8px;align-items:center}.svc .m{font-size:12.5px;color:var(--mute);margin:2px 0}.svc .iss{font-size:12.5px;margin-top:6px}.svc a{color:var(--info);text-decoration:none;font-size:12px;font-weight:600}
+.bars{display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid var(--edge)}.bars i{flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-width:2px;height:100%}.bars b{display:block;border-radius:2px 2px 0 0}
+ol.steps{margin:4px 0 0 18px;padding:0;font-size:12.5px}
+.rpt{background:#fff;color:#111;border-radius:10px;padding:24px 28px;font:13.5px/1.55 "Segoe UI",system-ui,sans-serif}.rpt h1{font-size:19px;margin:0 0 4px;color:#111}.rpt h2{font-size:15px;margin:18px 0 6px;color:#111;border-bottom:2px solid #1f6feb;padding-bottom:3px}
+.rpt table{width:100%;border-collapse:collapse;font-size:12.5px;margin:4px 0}.rpt th,.rpt td{border:1px solid #d0d5dd;padding:5px 7px;text-align:left;vertical-align:top}.rpt th{background:#f2f4f7;width:32%}.rpt .mut{color:#555;font-size:12px}.rpt .miss{border:2px solid #b54708;color:#b54708;border-radius:8px;padding:8px 12px;margin:8px 0}
+.rform{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}.rform label{font-size:12px;color:var(--mute);display:block}.rform input,.rform select,.rform textarea{width:100%}
+@media print{body.printing main>*:not(#rptwrap){display:none!important}body.printing #rptwrap>*:not(#rptdoc){display:none!important}body.printing #zyb-side,body.printing #zyb-bar,body.printing .zyb-footer{display:none!important}body.printing .rpt{padding:0}}
+.mv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:4px 0 10px}.mv>div{border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.mv .v{font-size:24px;font-weight:800}.mv .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute)}.mv .s{font-size:12px;color:var(--mute)}
+.sbar{display:flex;align-items:flex-end;gap:3px;height:130px;border-bottom:1px solid var(--edge)}.sbar i{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;min-width:3px}.sbar b{display:block}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">SOC · email</div><h1>Email Dashboard</h1><div class="muted small">The mail service at a glance: availability against its target, where mail comes from and goes on a world map, and every service on the route in detail - with what is wrong and how to fix it</div></div>
+<div class="sp"><select id="per" aria-label="Period"><option value="24h">Last 24 hours</option><option value="7d" selected>Last 7 days</option><option value="30d">Last 30 days</option></select>
+<span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button><a href="email-security.html" style="color:var(--info);text-decoration:none;font-weight:600">Email Security →</a></div></div>
+<div class="sts" id="sts"><div><div class="l">Mail service</div><div class="v mu">…</div></div></div>
+<div class="k" id="kk"></div>
+<div class="card" id="mvol"><h2>Mail volume <span class="c" id="mvc">messages sent, received and internal, and spam</span></h2>
+<div class="mv" id="mvt"><div class="empty">Loading…</div></div>
+<div class="sbar" id="mvs"></div><div class="lgd" id="mvl"><span style="color:#3fb950">■ received from the Internet</span><span style="color:#1f6feb">■ sent to the Internet</span><span style="color:#a371f7">■ internal</span></div>
+<div class="g2" style="margin-top:10px"><div><h2 style="font-size:14px">Most mail received from <span class="c">external domains</span></h2><div class="tw" id="mvr"></div></div><div><h2 style="font-size:14px">Most mail sent to <span class="c">external domains</span></h2><div class="tw" id="mvx"></div></div></div>
+<p class="note" id="mvn"></p></div>
+<div class="card"><h2>Where mail comes from and goes <span class="c" id="mapc">SMTP sessions (TCP 25 / 465 / 587) through the firewalls, by country</span></h2>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><span class="seg" role="group" aria-label="Direction"><button type="button" data-dir="in" class="on">Inbound (senders)</button><button type="button" data-dir="out">Outbound (recipients)</button></span><span class="muted small" id="mapn"></span></div>
+<div class="mapw"><div><svg id="map" role="img" aria-label="World map of mail sessions"></svg><div class="lgd"><span>fewer</span><i></i><span>more sessions</span><span>· red outline = most sessions blocked</span></div><div class="muted small" id="mapnote"></div></div>
+<div><div class="tw" id="ctry"><div class="empty">Loading…</div></div><h2 style="font-size:14px;margin-top:10px">Top sending IPs <span class="c">inbound, analysts</span></h2><div class="tw" id="srcs"></div></div></div></div>
+<div class="card"><h2>Services in detail <span class="c">each service on the receiving and sending route - state, numbers, the top issue and its fix</span></h2><div class="svc" id="svc"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Mail volume <span class="c" id="volc"></span></h2><div class="bars" id="vol"></div><div class="lgd"><span style="color:#1f6feb">■ all mail through the gateway</span><span style="color:#f85149">■ phishing / malware</span></div></div>
+<div class="card" id="rptwrap"><h2>Regulator reports <span class="c">an e-mail outage or attack written up for SAMA or the Insurance Authority from what the platform recorded - the CISO completes, approves and submits it</span></h2>
+<details id="rptnew"><summary style="cursor:pointer;font-weight:600">Prepare a report</summary>
+<form id="rptform" class="rform" style="margin-top:8px">
+<div><label for="rg">Regulator</label><select id="rg" name="regulator"><option value="sama">SAMA</option><option value="ia">Insurance Authority</option></select></div>
+<div><label for="rk">Type</label><select id="rk" name="kind"><option value="downtime">Outage</option><option value="attack">Attack</option><option value="both">Outage and attack</option></select></div>
+<div><label for="rf">From</label><input id="rf" name="from" type="datetime-local" required></div><div><label for="rt">To</label><input id="rt" name="to" type="datetime-local" required></div>
+<div style="grid-column:1/-1"><label for="ri">Business and customer impact</label><textarea id="ri" name="impact" rows="2" maxlength="2000"></textarea></div>
+<div><label for="rp">Personal data affected?</label><input id="rp" name="personal_data" maxlength="500" placeholder="No / Yes - what"></div>
+<div style="grid-column:1/-1"><label for="ra">Containment and recovery actions (what, who, when)</label><textarea id="ra" name="actions" rows="2" maxlength="3000"></textarea></div>
+<div style="grid-column:1/-1"><label for="rc">Root cause (if known)</label><textarea id="rc" name="cause" rows="2" maxlength="2000"></textarea></div>
+<div style="grid-column:1/-1"><button type="submit">Prepare the draft</button> <span class="muted small" id="rptmsg">Times are local; the report states Riyadh time. Missing items are listed in the draft.</span></div></form></details>
+<div class="tw" id="rptlist" style="margin-top:8px"></div><div id="rptdoc" style="margin-top:10px"></div></div>
+<p class="note">Availability, reputation and the route checks come from IT Asset Management (rules in Python); mail counts and the map from the SIEM (gateway syslog, Exchange message tracking, firewall traffic logs). Nothing here is estimated: a service with no data says it is not connected.</p>
+</main>
+<div class="tip" id="tip" hidden></div>
+<script src="vendor/d3.min.js"></script><script src="vendor/topojson-client.min.js"></script><script src="vendor/zyb-world.js"></script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var G='fields.vendor_class:email_gateway', TH=G+' AND fields.email_verdict:(phishing OR malware)', EXQ='src_type:exchange AND category:email';
+  var DIR='in', GEO=null;
+  function itam(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status below */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var opt=function(p){return p.then(function(x){return x;},function(){return null;/* that source is not available: its part says not connected */});};
+  var per=function(){return $('per').value;};
+  var top=function(q,field,from,limit){return opt(Z.req('POST','/top',{q:q,from:from,to:'now',field:field,limit:limit||20}));};
+  var map=function(r){if(!r||!r.values)return null;var o={};r.values.forEach(function(x){o[String(x.v)]=x.n;});return o;};
+  var sum=function(o){if(!o)return 0;var t=0;for(var k in o)t+=o[k];return t;};
+  function siem(){var P='now-'+per();
+    return Promise.all([top(G+' AND fields.email_direction:inbound','fields.email_action',P),top(G+' AND fields.email_direction:outbound','fields.email_action',P),top(EXQ,'action',P),
+      top(EXQ+' AND action:(fail OR defer)','fields.recipient_status',P,10),top(G,'fields.email_direction','now-1h'),top(EXQ,'action','now-1h'),top(TH,'fields.email_action',P)]).then(function(a){
+      var gi=map(a[0]),go=map(a[1]),ex=map(a[2]),rs=a[3]&&a[3].values,gr=map(a[4]),er=map(a[5]),th=map(a[6]);
+      var pick=function(o,keys){if(!o||!sum(o))return undefined;var r={};keys.forEach(function(k){if(o[k]!=null)r[k]=Math.max(0,Math.round(o[k]));});return r;};
+      var GK=['delivered','quarantined','blocked','rejected','email-event'],EK=['receive','send','deliver','fail','defer','dsn','submit','drop','expand','redirect','resolve','transfer','transport'];
+      var s=(gi||go||ex)?{gateway_in:pick(gi,GK),gateway_out:pick(go,GK),exchange:pick(ex,EK),exchange_reasons:(rs||[]).slice(0,15).map(function(x){return {value:String(x.v).slice(0,300),n:Math.max(0,Math.round(x.n))};}),recent:{}}:null;
+      if(s&&gr){s.recent.gateway_in=Math.round(gr.inbound||0);s.recent.gateway_out=Math.round(gr.outbound||0);}
+      if(s&&er){s.recent.exchange_receive=Math.round(er.receive||0);s.recent.exchange_send=Math.round(er.send||0);s.recent.exchange_deliver=Math.round(er.deliver||0);}
+      return {siem:s,threats:th,gi:gi,go:go,ex:ex};});}
+  var ST={ok:['working','up'],warn:['warning','wa'],bad:['failing','dn'],down:['DOWN','dn'],not_connected:['not connected','mu'],not_checked:['not checked','mu'],info:['','mu']};
+  var COL={ok:'#3fb950',warn:'#d29922',bad:'#f85149',down:'#ff2d55',not_connected:'#6e7681',not_checked:'#6e7681'};
+  var n=function(v){return v==null?'–':Z.n(v);};
+  function status(av,route){
+    var c=(av&&av.current)||{},w=av&&av.windows&&av.windows[0],h=[];
+    h.push('<div><div class="l">Mail service</div><div class="v '+(c.up===false?'dn':c.up?'up':'mu')+'">'+(c.up===false?'● DOWN':c.up?'● Up':'● Not measured')+'</div><div class="s">'+(c.up===false?'since '+esc(Z.dt(c.down_since))+' - no MX host answers':c.last_at?'last probe '+esc(Z.dt(c.last_at)):'the availability probe has not run yet')+'</div></div>');
+    h.push('<div><div class="l">Availability · 30 days (target '+esc(av?av.target:99.99)+'%)</div><div class="v '+(!w||w.availability==null?'mu':w.state==='breached'?'dn':w.state==='at_risk'?'wa':'up')+'">'+(w&&w.availability!=null?esc(w.availability.toFixed(3))+'%':'–')+'</div><div class="s">'+(w&&w.down_minutes!=null?'down '+esc(w.down_minutes)+' of '+esc(w.allowed_minutes)+' min allowed':w&&w.state==='not_measurable'?'not measurable from the platform':'no data yet')+'</div></div>');
+    ['inbound','outbound'].forEach(function(k){var b=route&&route.blocked&&route.blocked[k];
+      h.push('<div><div class="l">'+(k==='inbound'?'Receiving':'Sending')+' route</div><div class="v '+(!route||!route.lanes?'mu':b?'dn':'up')+'">'+(!route||!route.lanes?'not checked':b?(b.state==='down'?'Stopped':'Failing'):'Flowing')+'</div><div class="s">'+(b?'at '+esc(b.label)+' - '+esc(b.reason):route&&route.lanes?'no hop failing':'run Check now on Email Security')+'</div></div>');});
+    $('sts').innerHTML=h.join('');}
+  function kpis(S,rep,route){var gi=S.gi,go=S.go,th=S.threats,ex=S.ex||{};
+    var thStopped=th?sum(th)-(th.delivered||0):null,thDel=th?(th.delivered||0):null,lst=rep&&rep.last?rep.last.counts.listed:null;
+    var t=[['Inbound mail',gi?sum(gi):null,''],['Outbound mail',go?sum(go):null,''],['Threats stopped',thStopped,''],['Threats delivered',thDel,thDel?'bad':''],['Exchange failures',S.ex?(ex.fail||0)+(ex.defer||0):null,(ex.fail||0)?'warn':''],['Spamhaus listings',lst,lst?'bad':''],['Route issues',route&&route.issues?route.issues.length:null,route&&route.issues&&route.issues.length?'warn':'']];
+    $('kk').innerHTML=t.map(function(x){return Z.tile(x[0],n(x[1]),x[1]==null?'not connected':per(),x[1]==null?'na':x[2]);}).join('');}
+  function services(route,av,rep){
+    if(!route||!route.lanes){$('svc').innerHTML='<div class="empty">'+esc((route&&route.note)||'The route has not been checked yet: open Email Security and use Check now.')+'</div>';return;}
+    var cards=[];
+    var issuesOf=function(id){return route.issues.filter(function(i){return i.hop===id||(i.hop==='exchange'&&(id==='exchange_in'||id==='exchange_out'));});};
+    var add=function(title,state,metrics,iss,link){var c=COL[state]||'#6e7681',s=ST[state]||[state,'mu'];
+      cards.push('<div style="border-left-color:'+c+'"><h3><span>'+esc(title)+'</span><span class="'+s[1]+'" style="font-size:12px;font-weight:800">'+esc(s[0])+'</span></h3>'+metrics.map(function(m){return '<div class="m">'+m+'</div>';}).join('')
+        +(iss.length?'<div class="iss"><b>'+esc(iss[0].title)+'</b>'+(iss[0].fix&&iss[0].fix.length?'<ol class="steps">'+iss[0].fix.slice(0,2).map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol>':'')+(iss.length>1?'<div class="m">+'+(iss.length-1)+' more</div>':'')+'</div>':(state==='not_connected'?'<div class="iss mu">No data: connect this service\'s logs to the SIEM.</div>':''))
+        +'<a href="'+link+'">details →</a></div>');};
+    var cnt=function(o){return o&&Object.keys(o).length?Object.keys(o).map(function(k){return esc(k)+' <b>'+n(o[k])+'</b>';}).join(' · '):'';};
+    var w=av&&av.windows&&av.windows[0],c=(av&&av.current)||{};
+    add('Availability',c.up===false?'down':!w||w.availability==null?'not_checked':w.state==='breached'?'bad':w.state==='at_risk'?'warn':'ok',
+      ['30 days <b>'+(w&&w.availability!=null?esc(w.availability.toFixed(3))+'%':'–')+'</b> · target '+esc(av?av.target:'–')+'%','budget left <b>'+(w&&w.budget_left_minutes!=null?esc(Math.max(0,w.budget_left_minutes))+' min':'–')+'</b>'],
+      (av&&av.gaps||[]).filter(function(g){return g.severity!=='info';}).map(function(g){return {title:g.title,fix:g.fix};}),'email-security.html#avail');
+    route.lanes.inbound.concat(route.lanes.outbound).forEach(function(h){if(h.state==='info')return;add(h.label,h.state,[h.detail?esc(h.detail):'',cnt(h.counts)].filter(Boolean),issuesOf(h.id),'email-route-map.html');});
+    var L=rep&&rep.last;add('Spamhaus reputation',!L?'not_checked':L.counts.listed?'bad':L.counts.not_checked&&!L.counts.clean?'warn':'ok',
+      L?['listed <b>'+n(L.counts.listed)+'</b> · clean <b>'+n(L.counts.clean)+'</b> · not checked <b>'+n(L.counts.not_checked)+'</b>',rep.dqs_configured?'Spamhaus DQS':'public Spamhaus zones']:['not checked yet'],
+      L?(L.findings||[]).map(function(f){return {title:f.title,fix:[f.recommendation]};}):[],'email-security.html#rep');
+    $('svc').innerHTML=cards.join('');}
+  // ---- world map
+  var tip=$('tip');
+  function drawMap(){
+    var svg=d3.select('#map'),el=svg.node(),w=el.getBoundingClientRect().width||900,h=420;svg.attr('viewBox','0 0 '+w+' '+h).selectAll('*').remove();
+    var W=window.zybWorld,feats=W.features(),proj=d3.geoNaturalEarth1().fitExtent([[6,6],[w-6,h-6]],{type:'FeatureCollection',features:feats}),path=d3.geoPath(proj);
+    var side=GEO?(DIR==='in'?GEO.inbound:GEO.outbound):null,by={},off=[];
+    (side?side.countries:[]).forEach(function(c){var m=W.mapName(c.name);if(m){var x=by[m]||{allow:0,deny:0,raw:c.name};x.allow+=c.allow;x.deny+=c.deny;by[m]=x;}else off.push(c);});
+    var max=Math.max(1,d3.max(Object.keys(by).map(function(k){return by[k].allow+by[k].deny;}))||1),sc=d3.scaleSequentialLog([1,max],d3.interpolateRgb('#0d2a4a','#79c0ff'));
+    svg.append('g').selectAll('path').data(feats).enter().append('path').attr('class','c').attr('d',path)
+      .attr('fill',function(f){var x=by[f.properties.name];return x?sc(Math.max(1,x.allow+x.deny)):'#161b22';})
+      .attr('stroke',function(f){var x=by[f.properties.name];return x&&x.deny>x.allow?'#f85149':null;})
+      .on('mousemove',function(ev,f){var x=by[f.properties.name];tip.hidden=false;tip.style.left=(ev.clientX+12)+'px';tip.style.top=(ev.clientY+12)+'px';
+        tip.innerHTML='<b>'+esc(f.properties.name)+'</b><br>'+(x?Z.n(x.allow+x.deny)+' sessions · '+Z.n(x.deny)+' blocked':'no mail sessions');})
+      .on('mouseleave',function(){tip.hidden=true;});
+    var sa=proj([46.68,24.71]);if(sa)svg.append('circle').attr('cx',sa[0]).attr('cy',sa[1]).attr('r',5).attr('fill','#3fb950').attr('stroke','#fff').append('title').text((ZYB_ORG.short + ' · Riyadh'));
+    $('mapnote').textContent=GEO?(GEO.note+(off.length?' Not on the map (small or unnamed): '+off.map(function(c){return W.label(c.name)+' '+(c.allow+c.deny);}).join(', ')+'.':'')):'';
+  }
+  function geoTables(){
+    if(!GEO){$('ctry').innerHTML='<div class="empty">The SIEM flow data is not available.</div>';$('srcs').innerHTML='';return;}
+    if(!GEO.connected){$('ctry').innerHTML='<div class="empty">No firewall traffic log in the SIEM yet - connect the firewalls (Palo Alto / FortiGate) to see where mail comes from.</div>';$('srcs').innerHTML='';return;}
+    var side=DIR==='in'?GEO.inbound:GEO.outbound,W=window.zybWorld;
+    $('mapn').textContent=Z.n(side.total)+' sessions · '+Z.n(side.denied)+' blocked';
+    $('ctry').innerHTML=side.countries.length?'<table><thead><tr><th>Country</th><th class="num">Sessions</th><th class="num">Blocked</th></tr></thead><tbody>'+side.countries.slice(0,15).map(function(c){return '<tr><td>'+esc(W.label(c.name))+'</td><td class="num">'+Z.n(c.allow+c.deny)+'</td><td class="num">'+(c.deny?Z.pill(Z.n(c.deny),c.deny>c.allow?'bad':'warn'):'0')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No SMTP sessions in this period.</div>';
+    $('srcs').innerHTML=GEO.top_sources===null?'<div class="empty">Sending addresses are shown to analysts.</div>':GEO.top_sources.length?'<table><tbody>'+GEO.top_sources.slice(0,10).map(function(s){return '<tr><td class="mono small">'+esc(s.src)+'</td><td class="small">'+esc(W.label(s.country))+'</td><td class="num">'+Z.n(s.n)+(s.deny?' '+Z.pill('blocked '+Z.n(s.deny),'bad'):'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">None.</div>';}
+  function volume(){var P='now-'+per();
+    Promise.all([opt(Z.req('POST','/histogram',{q:G,from:P,to:'now',buckets:56})),opt(Z.req('POST','/histogram',{q:TH,from:P,to:'now',buckets:56}))]).then(function(a){
+      var A=(a[0]&&a[0].buckets)||[],T=(a[1]&&a[1].buckets)||[];if(!A.length){$('vol').innerHTML='<div class="empty" style="width:100%">No gateway mail in the SIEM for this period.</div>';$('volc').textContent='';return;}
+      var mx=Math.max(1,d3.max(A,function(b){return b.n||0;}));$('volc').textContent=Z.n(d3.sum(A,function(b){return b.n||0;}))+' messages'+(a[0].step_ms?' · '+Math.round(a[0].step_ms/3600000*10)/10+' h per bar':'');
+      $('vol').innerHTML=A.map(function(b,i){var v=b.n||0,t=(T[i]&&T[i].n)||0;return '<i title="'+esc(Z.dt(b.t)+': '+v+' mail, '+t+' threats')+'"><b style="height:'+Math.round(t/mx*100)+'%;background:#f85149"></b><b style="height:'+Math.round(Math.max(0,v-t)/mx*100)+'%;background:#1f6feb"></b></i>';}).join('');});}
+  function load(){
+    $('up').textContent='updating…';
+    var range=per()==='24h'?1440:10080;
+    var geoP=opt(Z.req('GET','/flows/mail?range='+range)).then(function(g){GEO=g;geoTables();drawMap();$('mapc').textContent='SMTP sessions (TCP 25 / 465 / 587) through the firewalls, by country · last '+(range===1440?'24 hours':'7 days');});
+    var avP=opt(itam('GET','/mail-availability')),repP=opt(itam('GET','/mail-reputation'));
+    var sP=siem();
+    var routeP=sP.then(function(S){return opt(itam('POST','/mail-route',{siem:S.siem}));});
+    Promise.all([sP,avP,repP,routeP]).then(function(r){status(r[1],r[3]);kpis(r[0],r[2],r[3]);services(r[3],r[1],r[2]);$('up').textContent='updated '+new Date().toLocaleTimeString();});
+    volume();return geoP;}
+  document.querySelector('.seg').addEventListener('click',function(ev){var b=ev.target.closest('[data-dir]');if(!b)return;DIR=b.getAttribute('data-dir');[].forEach.call(document.querySelectorAll('.seg button'),function(x){x.classList.toggle('on',x===b);});geoTables();drawMap();});
+  $('per').addEventListener('change',load);$('refresh').addEventListener('click',load);
+  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(drawMap,200);});
+  load();var t=setInterval(load,120000);window.addEventListener('pagehide',function(){clearInterval(t);});
+})();
+</script><script>
+// Regulator reports (IT Asset Management /mail-report; text written in Python; the CISO approves, four-eyes, on the digest)
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var G='fields.vendor_class:email_gateway', TH=G+' AND fields.email_verdict:(phishing OR malware)', CUR=null;
+  function itam(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status below */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var opt=function(p){return p.then(function(x){return x;},function(){return null;/* SIEM part not available: the report says so */});};
+  var loc=function(ms){var d=new Date(ms),z=function(n){return (n<10?'0':'')+n;};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+'T'+z(d.getHours())+':'+z(d.getMinutes());};
+  var iso=function(v){return new Date(v).toISOString().slice(0,16)+'Z';};
+  var REG={sama:'SAMA',ia:'Insurance Authority'};
+  function list(){return itam('GET','/mail-report').then(function(r){var R=r.reports;
+    $('rptlist').innerHTML=R.length?'<table><thead><tr><th>Report</th><th>Regulator</th><th>Window</th><th>State</th><th></th></tr></thead><tbody>'+R.map(function(x){return '<tr><td class="mono">'+esc(x.id)+'<div class="muted small">'+esc(x.kind)+' · by '+esc(x.prepared_by)+'</div></td><td>'+esc(REG[x.regulator]||x.regulator)+'</td><td class="small">'+esc(Z.dt(x.from))+' → '+esc(Z.dt(x.to))+'</td><td>'+Z.pill(x.state==='approved'?'approved by '+x.approved_by:'draft'+(x.missing?' · '+x.missing+' to complete':''),x.state==='approved'?'ok':'warn')+'</td><td><button type="button" data-open="'+esc(x.id)+'">Open</button></td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No regulator report prepared yet.</div>';})
+    .catch(function(e){$('rptlist').innerHTML='<div class="empty">'+esc(e.status===403?'Regulator reports are for operators and the CISO.':e.status===404?'Regulator reports are not installed on the server yet - run the update.':e.message)+'</div>';});}
+  function show(r){CUR=r;var d=r.doc;
+    var h='<div class="d-print-none" style="display:flex;gap:8px;margin-bottom:8px"><button type="button" id="rptprint">🖨 Print / save as PDF</button>'+(r.state!=='approved'?'<button type="button" id="rptappr">Approve as CISO</button>':'')+'<span class="muted small" id="rptamsg"></span></div>';
+    h+='<div class="rpt"><h1>'+esc(d.title)+'</h1><div class="mut">'+esc(r.id)+' · '+esc(d.kind)+' · '+(r.state==='approved'?'approved by '+esc(r.approved_by)+' on '+esc(Z.dt(r.approved_at)):'DRAFT - not approved')+' · '+esc(r.digest)+'</div>';
+    if(d.missing&&d.missing.length)h+='<div class="miss"><b>To be completed by the CISO before submission:</b><ul>'+d.missing.map(function(m){return '<li>'+esc(m)+'</li>';}).join('')+'</ul></div>';
+    d.sections.forEach(function(s){h+='<h2>'+esc(s.heading)+'</h2>';(s.paragraphs||[]).forEach(function(p){h+='<p>'+esc(p)+'</p>';});
+      if(s.rows)h+='<table><tbody>'+s.rows.map(function(x){return '<tr><th>'+esc(x[0])+'</th><td>'+esc(x[1])+'</td></tr>';}).join('')+'</tbody></table>';
+      if(s.table)h+='<table><thead><tr>'+s.table.columns.map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+'</tr></thead><tbody>'+s.table.rows.map(function(x){return '<tr>'+x.map(function(c){return '<td>'+esc(c)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';
+      if(s.list&&s.list.length)h+=(s.list_title?'<div class="mut">'+esc(s.list_title)+'</div>':'')+'<ul>'+s.list.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';});
+    h+='<p class="mut">'+esc(d.statement)+'</p><table><tbody><tr><th>Prepared by</th><td>'+esc(r.prepared_by)+' · '+esc(Z.dt(r.prepared_at))+'</td></tr><tr><th>Approved by (CISO)</th><td>'+(r.approved_by?esc(r.approved_by)+' · '+esc(Z.dt(r.approved_at)):'&nbsp;')+'</td></tr></tbody></table></div>';
+    $('rptdoc').innerHTML=h;$('rptdoc').scrollIntoView({behavior:'smooth',block:'start'});}
+  function siemFor(f,t){return Promise.all([opt(Z.req('POST','/top',{q:TH,from:f,to:t,field:'fields.email_action',limit:10})),opt(Z.req('POST','/top',{q:G,from:f,to:t,field:'fields.email_action',limit:10})),opt(Z.req('POST','/top',{q:TH,from:f,to:t,field:'fields.threat_name',limit:8}))]).then(function(a){
+    var m=function(r){if(!r||!r.values||!r.values.length)return undefined;var o={};r.values.forEach(function(x){var k=String(x.v).toLowerCase().replace(/[^a-z_-]/g,'_').slice(0,30);if(k)o[k]=(o[k]||0)+Math.max(0,Math.round(x.n));});return o;};
+    var th=m(a[0]),gw=m(a[1]);if(!th&&!gw)return null;
+    return {threats:th,gateway:gw,top_threats:a[2]&&a[2].values?a[2].values.slice(0,8).map(function(x){return {v:String(x.v).slice(0,200),n:Math.max(0,Math.round(x.n))};}):undefined};});}
+  $('rptnew').addEventListener('toggle',function(){if(!$('rptnew').open||$('rf').value)return;
+    itam('GET','/mail-availability').then(function(a){var o=a.outages&&a.outages[0];var f=o?o.start-15*60000:Date.now()-86400000,t=o&&o.end?o.end+15*60000:Date.now();$('rf').value=loc(f);$('rt').value=loc(t);},function(){$('rf').value=loc(Date.now()-86400000);$('rt').value=loc(Date.now());});});
+  $('rptform').addEventListener('submit',function(ev){ev.preventDefault();var f=ev.target,from=iso(f.from.value),to=iso(f.to.value);$('rptmsg').textContent='Preparing…';
+    siemFor(from,to).then(function(sm){var notes={};['impact','personal_data','actions','cause'].forEach(function(k){if(f[k].value.trim())notes[k]=f[k].value.trim();});
+      return itam('POST','/mail-report',{regulator:f.regulator.value,kind:f.kind.value,from:from,to:to,notes:notes,siem:sm});})
+      .then(function(r){$('rptmsg').textContent='Draft '+r.id+' prepared.';show(r);list();}).catch(function(e){$('rptmsg').textContent=e.status===403?'Preparing a report needs the operator role.':e.message;});});
+  document.addEventListener('click',function(ev){var o=ev.target.closest('[data-open]');if(o){itam('GET','/mail-report/'+encodeURIComponent(o.getAttribute('data-open'))).then(show).catch(function(e){Z.toast(e.message);});return;}
+    if(ev.target.closest('#rptprint')){document.body.classList.add('printing');window.print();setTimeout(function(){document.body.classList.remove('printing');},500);return;}
+    if(ev.target.closest('#rptappr')&&CUR){itam('POST','/mail-report/'+encodeURIComponent(CUR.id)+'/approve',{digest:CUR.digest}).then(function(r){show(r);list();}).catch(function(e){$('rptamsg').textContent=e.status===403?(/four-eyes/.test(e.message)?e.message:'Only the CISO (an administrator) approves a regulator report.'):e.message;});}});
+  list();
+})();
+</script><script>
+// Mail volume (SIEM /mail/stats): sent / received / internal from Exchange message tracking, spam from the gateway
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var DOMS=null;
+  function domains(){if(DOMS)return Promise.resolve(DOMS);return new Promise(function(ok){var x=new XMLHttpRequest();x.open('GET','/api/itam/domains');x.withCredentials=true;x.timeout=30000;x.zybQuiet=true;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: no domains */}DOMS=(j&&j.domains||[]).filter(function(d){return d.status!=='retired'&&d.name;}).map(function(d){return String(d.name).toLowerCase();}).slice(0,20);ok(DOMS);};
+    x.onerror=x.ontimeout=function(){DOMS=[];ok(DOMS);};x.send();});}
+  var n=function(v){return v==null?'–':Z.n(v);};
+  var range=function(){var p=$('per').value;return p==='24h'?1:p==='30d'?30:7;};
+  function tile(l,v,s,c){return '<div><div class="l">'+esc(l)+'</div><div class="v"'+(c?' style="color:'+c+'"':'')+'>'+esc(v)+'</div><div class="s">'+s+'</div></div>';}
+  function draw(r){var T=r.totals,sp=r.spam,acts=function(o){return Object.keys(o||{}).map(function(k){return esc(k)+' '+Z.n(o[k]);}).join(' · ');};
+    $('mvc').textContent=(r.source==='exchange'?'Exchange message tracking - each message counted once':r.source==='gateway'?'email gateway events':'not connected')+' · last '+(r.range_days===1?'24 hours':r.range_days+' days');
+    $('mvt').innerHTML=tile('Received from the Internet',n(T.received_external),'messages delivered to mailboxes','#3fb950')+tile('Sent to the Internet',n(T.sent_external),'by internal senders','#1f6feb')
+      +tile('Internal',n(T.internal),T.internal==null?(r.source==='gateway'?'needs Exchange message tracking':'not available'):'sent and received inside','#a371f7')
+      +tile('Spam',r.gateway?n(sp.total):'–',r.gateway?(sp.share_of_inbound_pct!=null?esc(sp.share_of_inbound_pct)+'% of inbound · ':'')+acts(sp.by_action):'gateway not connected',sp.total?'#d29922':'')
+      +tile('Phishing / malware',r.gateway?n(r.phishing.total+r.malware.total):'–',r.gateway?acts(r.phishing.by_action)+(r.malware.total?' · malware '+Z.n(r.malware.total):''):'gateway not connected',(r.phishing.total+r.malware.total)?'#f85149':'');
+    var S=r.series||[];
+    if(!S.length){$('mvs').innerHTML='<div class="empty" style="width:100%">'+esc(r.source==='exchange'?'No messages in this period.':'The daily split needs Exchange message tracking and your mail domains.')+'</div>';}
+    else{var mx=Math.max(1,Math.max.apply(null,S.map(function(x){return x.received+x.sent+x.internal;})));
+      $('mvs').innerHTML=S.map(function(x){var lab=r.range_days===1?new Date(x.t).toLocaleTimeString([], {hour:'2-digit'}):new Date(x.t).toLocaleDateString([], {day:'2-digit',month:'short'});
+        return '<i title="'+esc(lab+': received '+x.received+', sent '+x.sent+', internal '+x.internal)+'"><b style="height:'+(x.internal/mx*100)+'%;background:#a371f7"></b><b style="height:'+(x.sent/mx*100)+'%;background:#1f6feb"></b><b style="height:'+(x.received/mx*100)+'%;background:#3fb950"></b></i>';}).join('');}
+    var tb=function(L){return L&&L.length?'<table><tbody>'+L.map(function(x){return '<tr><td class="mono small">'+esc(x.domain)+'</td><td class="num">'+Z.n(x.n)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(r.source==='exchange'?'None in this period.':'Needs Exchange message tracking.')+'</div>';};
+    $('mvr').innerHTML=tb(r.top_received_domains);$('mvx').innerHTML=tb(r.top_sent_domains);
+    $('mvn').textContent=r.note+(r.domains_used&&r.domains_used.length?' Our domains: '+r.domains_used.join(', ')+'.':' No mail domain in Domains & Hosting yet.');}
+  function load(){return domains().then(function(d){return Z.req('GET','/mail/stats?range='+range()+(d.length?'&domains='+encodeURIComponent(d.join(',')):''));}).then(draw)
+    .catch(function(e){$('mvt').innerHTML='<div class="empty">'+esc(e&&e.status===404?'Mail volume is not installed on the SIEM yet - run the update.':'The SIEM did not answer: '+((e&&e.message)||'error'))+'</div>';$('mvs').innerHTML='';});}
+  $('per').addEventListener('change',load);$('refresh').addEventListener('click',load);
+  load();
+})();
+</script></body></html>

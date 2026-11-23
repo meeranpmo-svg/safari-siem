@@ -1,0 +1,94 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SQL Server Audit</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:var(--text);margin:0 0 12px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{margin-left:auto;font-weight:400;color:var(--mute);font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:22px;font-weight:700;margin-top:2px}.t .s{font-size:11.5px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}
+select,input{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+tbody tr[tabindex]{cursor:pointer}tbody tr[tabindex]:hover td{background:rgba(255,255,255,.035)}.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}
+td.sql{font-family:Consolas,monospace;font-size:11.8px;color:var(--mute);max-width:520px;overflow-wrap:anywhere}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.sev{font-weight:700}.sev.critical,.sev.high{color:var(--bad)}.sev.medium{color:var(--warn)}.sev.low{color:var(--info)}
+.form{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:0 0 10px}.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;border-bottom:1px solid var(--edge)}.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 14px;font-size:14px;color:var(--mute)}.tabs button.on{color:var(--title);border-bottom-color:#3fb950}
+.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;color:#ECEEF2;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+[hidden]{display:none!important}
+@media print{.top button,.tabs,.form,select{display:none!important}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Databases · SAMA CSF 3.3.14 · NCA ECC 2-12</div><h1>SQL Server Audit</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <select id="inst" aria-label="Instance"><option value="">All instances</option></select><select id="per" aria-label="Period"><option value="24">Last 24 hours</option><option value="168" selected>Last 7 days</option><option value="720">Last 30 days</option><option value="2160">Last 90 days</option></select>
+  <button type="button" id="print">🖨 Report</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="banner">Who did what in the SQL Server instances, from the <b>SQL Server Audit</b> records the instances write to the Windows Application log (event 33205) and the SQL Server login events (18456), collected by the SIEM. Password literals in statements are masked. A server that sends logins but no audit record is shown as such — never as "nothing happened". Viewing and exporting this page is recorded in the platform's audit log.</div>
+<div class="k" id="kpi"></div>
+<div class="card"><h2>Findings <span class="c" id="fc"></span></h2><div class="tw" id="find"><div class="empty">Loading…</div></div></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="failed" class="on">Failed logins</button><button type="button" role="tab" data-tab="permissions">Permissions</button><button type="button" role="tab" data-tab="accounts">Accounts</button><button type="button" role="tab" data-tab="schema">Schema changes</button><button type="button" role="tab" data-tab="audit">Audit changes</button><button type="button" role="tab" data-tab="config">Configuration</button><button type="button" role="tab" data-tab="offhours">After hours</button><button type="button" role="tab" data-tab="coverage">Coverage</button><button type="button" role="tab" data-tab="activity">Activity</button></div>
+<div class="card"><h2 id="st">Failed logins <span class="c" id="sc"></span></h2><div class="tw" id="sec"><div class="empty">Loading…</div></div>
+  <div id="act" hidden><div class="form"><label>Category<select id="cat"><option value="">Everything</option><option value="failed">Failed</option><option value="admin">Administrative</option><option value="off-hours">Administrative, after hours</option><option value="permission">Permissions</option><option value="account">Accounts</option><option value="schema">Schema</option><option value="audit">Audit</option><option value="config">Configuration</option><option value="data">Data access</option></select></label>
+    <label>Login<input id="usr" type="search" placeholder="Login name"></label><label>Search<input id="q" type="search" placeholder="Object, database, statement…"></label><button type="button" class="pri" id="go">Search</button><button type="button" id="exp">⬇ CSV</button></div><div class="tw" id="actt"></div></div>
+  <p class="note" id="sn"></p></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var R=null, TAB='failed', ROWS=[], ACT=[];
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p);x.zybQuiet=true;x.withCredentials=true;x.timeout=60000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4000);}
+  function ts(t){return String(t||'').replace('T',' ').slice(0,19);}
+  function qs(o){return Object.keys(o).filter(function(k){return o[k]!==''&&o[k]!=null;}).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(o[k]);}).join('&');}
+  function failMsg(e){return e.status===403?'SQL Server Audit names people: it needs the analyst role or above.':e.status===404?'The SIEM on the server does not have this yet — run the update (update-platform.ps1).':e.status===0?'The SIEM is not reachable.':e.message;}
+  function csv(name,head,rows){var q=function(v){v=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return /[",\n']/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};var t=[head].concat(rows).map(function(r){return r.map(q).join(',');}).join('\r\n');var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+t],{type:'text/csv'}));a.download=name+'-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);}
+  function tile(l,v,cls,tab){return '<button type="button" class="t '+(cls||'')+'"'+(tab?' data-go="'+esc(tab)+'"':'')+'><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v==null?0:v))+'</div></button>';}
+  var TITLE={failed:'Failed logins',permissions:'Permission changes',accounts:'Account changes',schema:'Schema changes',audit:'Audit changes',config:'Configuration changes',offhours:'Administrative work after hours',coverage:'Coverage per server',activity:'Activity'};
+  var KEY={permissions:'permissions',accounts:'accounts',schema:'schema_changes',audit:'audit_changes',config:'config_changes',offhours:'off_hours'};
+  var NOTE={failed:'Grouped by login, client, application and reason.',offhours:'Riyadh working hours: Sunday to Thursday 07:00-18:00. Confirm each against an approved change or on-call ticket.',coverage:'A server that sends SQL Server login events but no SQL Server Audit record has no server audit writing to the Application log.',activity:'Every record in the period that matches the filters (newest first, up to 2,000).'};
+  function rowTable(L){ROWS=L;return L.length?'<table><thead><tr><th>Time</th><th>Instance</th><th>Database</th><th>Login</th><th>Action</th><th>Object</th><th>Target</th><th>Client</th><th>Statement</th></tr></thead><tbody>'+L.map(function(r,i){return '<tr data-r="'+i+'" tabindex="0"><td class="mono">'+esc(ts(r.ts))+'</td><td>'+esc(r.instance)+'</td><td>'+esc(r.database||'–')+'</td><td><b>'+esc(r.user||'?')+'</b></td><td>'+esc(r.action_name)+(r.outcome==='failure'?' <span class="pill bad">failed</span>':'')+'</td><td class="mono">'+esc(r.object||'–')+'</td><td>'+esc(r.target||'–')+'</td><td class="mono">'+esc(r.client_ip||r.client_host||'–')+'</td><td class="sql">'+esc(String(r.statement||'').slice(0,200))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">Nothing in this period.</div>';}
+  function draw(){
+    [].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===TAB);});
+    $('st').firstChild.nodeValue=TITLE[TAB]+' ';$('sn').textContent=NOTE[TAB]||'';$('act').hidden=TAB!=='activity';$('sec').hidden=TAB==='activity';
+    if(TAB==='activity'){$('sc').textContent='';if(!ACT.length)search();return;}
+    if(!R){$('sec').innerHTML='';return;}
+    if(TAB==='failed'){var F=R.failed_logins||[];$('sc').textContent=F.length+' groups';$('sec').innerHTML=F.length?'<table><thead><tr><th>Login</th><th>Instance</th><th>Client</th><th>Application</th><th>Reason</th><th>Count</th><th>First</th><th>Last</th></tr></thead><tbody>'+F.map(function(f){return '<tr><td><b>'+esc(f.user||'?')+'</b></td><td>'+esc(f.instance)+'</td><td class="mono">'+esc(f.client||'–')+'</td><td>'+esc(f.application||'–')+'</td><td>'+esc(f.reason||'–')+'</td><td class="mono">'+f.count+'</td><td class="mono">'+esc(ts(f.first))+'</td><td class="mono">'+esc(ts(f.last))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No failed login in this period.</div>';return;}
+    if(TAB==='coverage'){var C=R.coverage||[];$('sc').textContent=C.length+' servers';$('sec').innerHTML=C.length?'<table><thead><tr><th>Server</th><th>Instances</th><th>Audit records</th><th>Login events</th><th>Last record</th><th>Status</th></tr></thead><tbody>'+C.map(function(c){return '<tr><td><b>'+esc(c.host)+'</b></td><td>'+esc(c.instances.join(', '))+'</td><td class="mono">'+c.audit_records+'</td><td class="mono">'+c.login_events+'</td><td class="mono">'+esc(ts(c.last))+'</td><td>'+(c.audit_records?'<span class="pill ok">auditing</span>':'<span class="pill warn">no audit record</span>')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No SQL Server sent anything in this period.</div>';return;}
+    var L=R[KEY[TAB]]||[];$('sc').textContent=L.length+' records';$('sec').innerHTML=rowTable(L);
+  }
+  function load(){
+    $('up').textContent='';$('find').innerHTML='<div class="empty">Loading…</div>';ACT=[];
+    return req('GET','/api/soc/db/mssql/audit?'+qs({hours:$('per').value,instance:$('inst').value})).then(function(r){
+      if(!r||r.available===false){R=null;$('kpi').innerHTML='';$('find').innerHTML='<p class="err">'+esc((r&&r.reason)||'No data')+'</p>';draw();return;}
+      R=r;var s=r.summary||{};$('up').textContent='updated '+ts(r.generated_at)+(r.capped?' · newest 50,000 records only':'');
+      var cur=$('inst').value,seen={};$('inst').innerHTML='<option value="">All instances</option>'+(r.coverage||[]).reduce(function(a,c){return a.concat(c.instances);},[]).filter(function(i){if(seen[i])return false;seen[i]=1;return true;}).concat(cur&&!seen[cur]?[cur]:[]).map(function(i){return '<option value="'+esc(i)+'"'+(i===cur?' selected':'')+'>'+esc(i)+'</option>';}).join('');
+      $('kpi').innerHTML=tile('Audit records',s.audit_records,'','activity')+tile('Servers',(r.coverage||[]).length,'','coverage')+tile('Failed logins',s.failed_logins,s.failed_logins?'warn':'ok','failed')+tile('Permission changes',s.permission_changes,s.permission_changes?'warn':'ok','permissions')+tile('Account changes',s.account_changes,'','accounts')+tile('Schema changes',s.schema_changes,'','schema')+tile('Audit changes',s.audit_changes,s.audit_changes?'bad':'ok','audit')+tile('Configuration changes',s.config_changes,s.config_changes?'warn':'ok','config')+tile('After-hours admin',s.off_hours_admin,s.off_hours_admin?'warn':'ok','offhours');
+      var F=r.findings||[];$('fc').textContent=F.length+' findings';
+      $('find').innerHTML=F.length?'<table><thead><tr><th>Severity</th><th>Area</th><th>Finding</th><th>What to do</th><th>Evidence</th></tr></thead><tbody>'+F.map(function(f){return '<tr><td class="sev '+esc(f.severity)+'">'+esc(String(f.severity).toUpperCase())+'</td><td>'+esc(f.area)+'</td><td><b>'+esc(f.title)+'</b></td><td>'+esc(f.recommendation)+'</td><td class="sql">'+esc((f.evidence||[]).join(' · '))+'</td></tr>';}).join('')+'</tbody></table>':(r.total?'<div class="empty">No findings in this period.</div>':'<div class="empty">No SQL Server audit record or login event in this period. Create a SERVER AUDIT TO APPLICATION_LOG with a server audit specification on each instance and collect the Application log (SENTRA-WEF-SQL subscription).</div>');
+      draw();
+    }).catch(function(e){R=null;$('kpi').innerHTML='';$('find').innerHTML='<p class="err">'+esc(failMsg(e))+'</p>';draw();});
+  }
+  function search(exp){
+    $('actt').innerHTML='<div class="empty">Loading…</div>';
+    return req('GET','/api/soc/db/mssql/audit/events?'+qs({hours:$('per').value,instance:$('inst').value,category:$('cat').value,user:$('usr').value.trim(),q:$('q').value.trim(),limit:exp?10000:2000,export:exp?'1':''})).then(function(r){
+      ACT=(r&&r.items)||[];if(exp){if(!ACT.length){toast('Nothing to export');return;}csv('sql-server-audit',['Time','Instance','Server','Database','Login','Action','Category','Outcome','Object','Target','Client IP','Client host','Application','Statement (masked)'],ACT.map(function(x){return [x.ts,x.instance,x.host,x.database,x.user,x.action_name,x.category,x.outcome,x.object,x.target,x.client_ip,x.client_host,x.application,x.statement];}));return;}
+      $('sc').textContent=(r.total||0)+' records';$('actt').innerHTML=rowTable(ACT);
+    }).catch(function(e){$('actt').innerHTML='<p class="err">'+esc(failMsg(e))+'</p>';});
+  }
+  document.addEventListener('click',function(e){var t=e.target;
+    var tb=t.closest('[data-tab]');if(tb){TAB=tb.getAttribute('data-tab');draw();return;}
+    var g=t.closest('[data-go]');if(g){TAB=g.getAttribute('data-go');draw();return;}
+    var tr=t.closest('tr[data-r]');if(tr){var r=ROWS[+tr.getAttribute('data-r')];if(!r)return;Z.open('SQL Server audit record',r.action_name+' · '+r.instance,Z.kv([['Time',esc(ts(r.ts))],['Instance',esc(r.instance)],['Server',esc(r.host)],['Database',esc(r.database||'–')],['Login',esc(r.user||'?')],['Action',esc(r.action_name+(r.action_id?' ('+r.action_id+(r.class_type?' / '+r.class_type:'')+')':''))],['Category',esc(r.category)],['Outcome',esc(r.outcome)],['Object',esc(r.object||'–')],['Target',esc(r.target||'–')],['Client',esc((r.client_ip||'')+' '+(r.client_host||''))],['Application',esc(r.application||'–')]])+Z.sec('Statement (password literals masked)','<div class="sql" style="white-space:pre-wrap">'+esc(r.statement||'–')+'</div>'));return;}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.matches&&e.target.matches('tr[tabindex]'))e.target.click();});
+  $('go').addEventListener('click',function(){search();});$('exp').addEventListener('click',function(){search(true);});
+  ['usr','q'].forEach(function(id){$(id).addEventListener('keydown',function(e){if(e.key==='Enter')search();});});
+  $('per').addEventListener('change',load);$('inst').addEventListener('change',load);$('refresh').addEventListener('click',load);$('print').addEventListener('click',function(){window.print();});
+  load();
+})();
+</script></body></html>

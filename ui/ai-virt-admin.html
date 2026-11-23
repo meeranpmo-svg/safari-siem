@@ -1,0 +1,113 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Virtualization Administrator</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
+.pill.ok{background:rgba(63,185,80,.15);color:var(--ok)}.pill.warn{background:rgba(227,179,65,.15);color:var(--warn)}.pill.bad{background:rgba(255,123,114,.16);color:var(--bad)}.pill.mut{color:#a3a9b5}.pill.inf{background:rgba(121,184,255,.14);color:var(--info)}
+pre.snip{white-space:pre-wrap;background:#0b0c10;border:1px solid var(--edge);border-radius:8px;padding:10px;font:12px Consolas,monospace;color:#d6dbe4;max-height:300px;overflow:auto}
+.acts{display:flex;gap:6px;flex-wrap:wrap}.acts button{padding:4px 10px;font-size:12px}
+textarea{width:100%;min-height:60px;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font:inherit}
+.aians{white-space:pre-wrap;background:#0b0c10;border:1px solid var(--edge);border-radius:8px;padding:12px;font-size:13.2px;line-height:1.5;margin-top:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.chips button{border-radius:999px;padding:4px 11px;font-size:12px}.chips button.on{background:#1f6feb;border-color:#1f6feb;color:#fff}
+</style></head><body><main>
+<div class="top"><div><div class="eb">AI &amp; Automation · virtualization</div><h1>AI Virtualization Administrator</h1><div class="muted small">VMware vCenter and Nutanix Prism: hosts, clusters, datastores, snapshots and VMs checked every hour; a work item and a change plan for each problem, followed to a verified result</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button><a href="virtualization.html" style="color:var(--info);text-decoration:none;font-weight:600">Virtualization →</a><a href="licence-audit.html" style="color:var(--info);text-decoration:none;font-weight:600">Licence Audit →</a></div>
+<div class="banner">The administrator reads vCenter and Prism with read-only accounts and never changes them. For each problem it writes the change plan (PowerCLI for vSphere, acli for Nutanix, with prechecks and rollback): an administrator who did not ask for it approves it, a person applies it and records it here, and the next collection verifies it. Deleting snapshots or VMs is marked irreversible.</div>
+<section data-zyb-duty="virt" data-api="/api/itam"></section>
+<div class="k" id="kk"></div>
+<div class="card" id="aicard"><h2>Ask the AI Virtualization Administrator <span class="c" id="aist">checking…</span></h2>
+<div id="aibox" hidden><textarea id="aiq" maxlength="8000" placeholder="e.g. Can every cluster survive one host failure? Which VMs should we right-size first? Why is datastore DS-PROD-01 filling up?"></textarea>
+<div class="acts" style="margin-top:8px"><button type="button" id="aigo">Ask</button><span class="muted small" id="aiwait"></span></div><div id="aiout"></div>
+<p class="note">Claude reads only what the read-only collection holds (names and figures of VMs, hosts, clusters, datastores) - no passwords. It cannot change vCenter or Prism; on a work item it can record a change plan, which still needs an administrator's approval.</p></div>
+<p class="note" id="aioff" hidden></p></div>
+<div class="card"><h2>Change plans <span class="c" id="pc"></span></h2><div class="chips" id="pchips"></div><div class="tw" id="plans"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Platforms</h2><div class="tw" id="plats"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Hosts <span class="c">sockets × cores per socket = cores, as read from vCenter / Prism (the core licence audit uses the same counts)</span></h2><div class="tw" id="hosts"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Clusters</h2><div class="tw" id="clusters"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Datastores</h2><div class="tw" id="ds"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var V=null, PF='open';
+  function itam(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var STP={proposed:['awaiting approval','warn'],approved:['approved - to apply','inf'],applied:['applied - verifying','ok'],rejected:['rejected','mut']};
+  function pct(v,lim){return v==null?'<span class="muted">–</span>':Z.pill(v+'%',v>lim?'bad':v>lim*0.85?'warn':'ok');}
+  function paint(){
+    var P=V.platforms,T=V.totals||{},H=V.hosts,open=V.changes.filter(function(c){return c.state==='proposed';}).length;
+    var bad=P.filter(function(p){return p.error;}).length,coresKnown=H.filter(function(h){return h.cores;});
+    var cores=coresKnown.reduce(function(a,h){return a+h.cores;},0);
+    $('kk').innerHTML=Z.tile('Platforms',P.length,bad?bad+' failing':P.length?'collected '+Z.ago(P.map(function(p){return p.at;}).filter(Boolean).sort().pop()):'none connected',P.length?(bad?'bad':'ok'):'na')
+      +Z.tile('Hosts',H.length,H.filter(function(h){return h.state!=='connected'&&!h.maintenance;}).length+' not connected',H.some(function(h){return h.state!=='connected'&&!h.maintenance;})?'bad':'ok')
+      +Z.tile('Physical cores',H.length?cores:'–',coresKnown.length===H.length?'all hosts read':(H.length-coresKnown.length)+' host(s) not readable',coresKnown.length===H.length?'ok':'warn')
+      +Z.tile('VMs on',T.vms_on!=null?T.vms_on:'–',(T.vms||0)-(T.vms_on||0)+' powered off','')
+      +Z.tile('Open problems',V.findings,Object.keys(V.by_kind).length+' kinds',V.findings?'warn':'ok')
+      +Z.tile('Awaiting approval',open,'change plans',open?'warn':'ok');
+    if(!V.installed){['plats','hosts','clusters','ds'].forEach(function(id){$(id).innerHTML='<p class="err">The capacity collection is not installed in IT Asset Management - run the update (add-virt-capacity.sh).</p>';});}
+    else{
+      $('plats').innerHTML=P.length?'<table><thead><tr><th>Platform</th><th>Kind</th><th>Site</th><th>Last collection</th><th>State</th></tr></thead><tbody>'+P.map(function(p){return '<tr><td><b>'+esc(p.label)+'</b></td><td>'+esc(p.kind==='nutanix'?'Nutanix Prism':'VMware vCenter')+'</td><td>'+esc(p.site||'–')+'</td><td>'+esc(p.at?Z.ago(p.at):'never')+'</td><td>'+(!p.credentials_set?Z.pill('no login','warn'):p.error?Z.pill('failing','bad')+' <span class="muted small">'+esc(p.error)+'</span>':p.collected?Z.pill('read','ok'):Z.pill('not collected yet','mut'))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No vCenter or Prism connected yet - add them on the Virtualization page with a read-only account.</div>';
+      $('hosts').innerHTML=H.length?'<table><thead><tr><th>Host</th><th>Platform / cluster</th><th>CPU</th><th class="num">Cores</th><th>CPU used</th><th>Memory used</th><th class="num">VMs on</th><th>State</th></tr></thead><tbody>'+H.map(function(h){var st=h.maintenance?Z.pill('maintenance','mut'):h.state!=='connected'?Z.pill(h.state,'bad'):h.status==='red'?Z.pill('health red','bad'):Z.pill('connected','ok');
+        return '<tr><td><b>'+esc(h.name)+'</b><div class="muted small">'+esc(h.version||'')+'</div></td><td>'+esc(h.platform)+'<div class="muted small">'+esc(h.cluster||'')+'</div></td><td class="small">'+esc(h.cpu_model||'–')+'</td><td class="num mono">'+(h.cores?(h.cores_per_socket?esc(h.sockets)+' × '+esc(h.cores_per_socket)+' = ':'')+'<b>'+esc(h.cores)+'</b>':Z.pill('not readable','warn'))+'</td><td>'+pct(h.cpu_used_pct,V.settings_cpu)+'</td><td>'+pct(h.mem_used_pct,V.settings_mem)+'</td><td class="num">'+esc(h.vms_on)+'</td><td>'+st+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No hosts collected yet.</div>';
+      var C=V.clusters.filter(function(c){return c.name!=='Standalone hosts';});
+      $('clusters').innerHTML=C.length?'<table><thead><tr><th>Cluster</th><th class="num">Hosts up</th><th class="num">Cores</th><th class="num">vCPU / core</th><th>CPU</th><th>Memory</th><th>HA</th><th>DRS</th><th>Room for more VMs</th></tr></thead><tbody>'+C.map(function(c){var yn=function(v){return v==null?'<span class="muted">–</span>':v?Z.pill('on','ok'):Z.pill('off','bad');};
+        return '<tr><td><b>'+esc(c.name)+'</b><div class="muted small">'+esc(c.platform)+'</div></td><td class="num">'+esc(c.hosts_up)+' / '+esc(c.hosts)+'</td><td class="num">'+esc(c.cores)+'</td><td class="num">'+esc(c.vcpu_ratio!=null?c.vcpu_ratio:'–')+'</td><td>'+pct(c.cpu_used_pct,V.settings_cpu)+'</td><td>'+pct(c.mem_used_pct,V.settings_mem)+'</td><td>'+yn(c.ha)+'</td><td>'+yn(c.drs)+'</td><td class="small">'+(c.room?esc(Math.min(c.room.cpu,c.room.mem))+' VMs'+(c.n_plus_1?' (keeping one host spare)':'')+' · limit: '+esc(c.room.limit):'–')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No clusters.</div>';
+      var D=V.datastores;
+      $('ds').innerHTML=D.length?'<table><thead><tr><th>Datastore</th><th>Platform</th><th>Type</th><th class="num">Capacity GB</th><th class="num">Free GB</th><th>Used</th><th>Provisioned</th></tr></thead><tbody>'+D.map(function(d){return '<tr><td><b>'+esc(d.name)+'</b>'+(d.accessible===false?' '+Z.pill('not accessible','bad'):'')+'</td><td>'+esc(d.platform)+'</td><td>'+esc(d.type)+'</td><td class="num">'+Z.n(d.capacity_gb)+'</td><td class="num">'+Z.n(d.free_gb)+'</td><td>'+pct(d.used_pct,V.settings_st)+'</td><td>'+(d.provisioned_pct==null?'–':Z.pill(d.provisioned_pct+'%',d.provisioned_pct>150?'warn':'ok'))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No datastores collected.</div>';
+    }
+    plansPaint();
+    $('up').textContent='updated '+Z.dt(V.generated);
+  }
+  function plansPaint(){
+    var A=V.changes,F={open:function(c){return c.state==='proposed'||c.state==='approved';},proposed:function(c){return c.state==='proposed';},applied:function(c){return c.state==='applied';},all:function(){return true;}};
+    $('pchips').innerHTML=[['open','Open'],['proposed','Awaiting approval'],['applied','Applied'],['all','All']].map(function(x){return '<button type="button" data-f="'+x[0]+'" class="'+(PF===x[0]?'on':'')+'">'+esc(x[1])+' · '+A.filter(F[x[0]]).length+'</button>';}).join('');
+    [].forEach.call($('pchips').querySelectorAll('button'),function(b){b.addEventListener('click',function(){PF=b.getAttribute('data-f');plansPaint();});});
+    var L=A.filter(F[PF]);$('pc').textContent=A.length?A.length+' in total':'';
+    $('plans').innerHTML=L.length?'<table><thead><tr><th>Plan</th><th>Change</th><th>Platform</th><th>Risk</th><th>State</th><th>Asked by</th><th></th></tr></thead><tbody>'+L.map(function(c){var s=STP[c.state]||[c.state,'mut'];
+      return '<tr><td class="mono">'+esc(c.id)+'</td><td><b>'+esc(c.title)+'</b>'+(c.source==='ai'?' '+Z.pill('AI-written','inf'):'')+(c.irreversible?' '+Z.pill('irreversible','bad'):'')+'</td><td>'+esc(c.platform||'–')+'</td><td>'+Z.pill(c.risk,c.risk==='high'?'bad':c.risk==='medium'?'warn':'ok')+'</td><td>'+Z.pill(s[0],s[1])+(c.decided_by?'<div class="muted small">'+esc(c.state==='rejected'?'rejected':'approved')+' by '+esc(c.decided_by)+'</div>':'')+(c.applied_by?'<div class="muted small">applied by '+esc(c.applied_by)+'</div>':'')+'</td><td class="small">'+esc(c.requested_by)+'<div class="muted">'+esc(Z.ago(c.requested_at))+'</div></td><td><button type="button" data-plan="'+esc(c.id)+'">Open</button></td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(PF==='open'?'No change plan waiting.':'Nothing here.')+'</div>';
+    [].forEach.call($('plans').querySelectorAll('[data-plan]'),function(b){b.addEventListener('click',function(){openPlan(b.getAttribute('data-plan'));});});
+  }
+  function openPlan(id){
+    var c=V.changes.filter(function(x){return x.id===id;})[0];if(!c)return;
+    var D=window.zybDetail, li=function(a){return '<ul class="chk">'+(a||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';};
+    var h=D.kv([['State',esc((STP[c.state]||[c.state])[0])],['Platform',esc(c.platform||'–')],['Target',esc(c.target||'–')],['Risk',esc(c.risk)+(c.irreversible?' · <b style="color:var(--bad)">irreversible</b>':'')]].concat(c.source==='ai'?[['Written by','AI (Claude) - check every command before approving'],['Reason',esc(c.reason||'–')]]:[]).concat([['Asked by',esc(c.requested_by)+' · '+esc(Z.dt(c.requested_at))]].concat(c.decided_by?[[c.state==='rejected'?'Rejected by':'Approved by',esc(c.decided_by)+(c.comment?' - '+esc(c.comment):'')]]:[]).concat(c.applied_by?[['Applied by',esc(c.applied_by)+' - '+esc(c.note||'')]]:[])))
+      +D.sec('Prechecks',li(c.prechecks))+D.sec('Steps',li(c.steps))+D.sec('Commands',(c.commands||[]).map(function(k){return '<div class="muted small">'+esc(k.lang)+'</div><pre class="snip">'+esc(k.text)+'</pre>';}).join(''))+D.sec('Rollback','<pre class="snip">'+esc(c.rollback||'–')+'</pre>');
+    var acts='';
+    if(c.state==='proposed'&&(Z.can('admin')||(window.zybApproves&&window.zybApproves('eng:virt'))))acts='<textarea id="pl-t" maxlength="500" placeholder="Comment (required to reject)"></textarea><div class="acts" style="margin-top:8px"><button type="button" id="pl-ok">Approve</button><button type="button" id="pl-no">Reject</button></div><p class="note">You cannot decide a plan you asked for yourself.</p>';
+    else if(c.state==='approved'&&Z.can('operator'))acts='<textarea id="pl-t" maxlength="1000" placeholder="What was done, when, change ticket (required)"></textarea><div class="acts" style="margin-top:8px"><button type="button" id="pl-ap">Record as applied</button></div><p class="note">Record it only after you applied it. The next collection verifies the result.</p>';
+    D.open('Change plan '+c.id,c.title,h+(acts?D.sec('Decision',acts):''));
+    var act=function(path,body,msg){itam('POST','/virt/changes/'+encodeURIComponent(c.id)+'/'+path,body).then(function(){Z.toast(msg);D.close();load();},function(e){Z.toast(e.message);});};
+    var t=function(){var el=$('pl-t');return el?el.value.trim():'';};
+    if($('pl-ok'))$('pl-ok').addEventListener('click',function(){act('approve',{comment:t()},'Approved - a person applies it now');});
+    if($('pl-no'))$('pl-no').addEventListener('click',function(){if(!t()){Z.toast('Say why it is rejected');return;}act('reject',{reason:t()},'Rejected');});
+    if($('pl-ap'))$('pl-ap').addEventListener('click',function(){if(!t()){Z.toast('Say what was done');return;}act('applied',{note:t()},'Recorded - the next collection verifies it');});
+  }
+  function load(){itam('GET','/virt/admin').then(function(j){V=j;var S=j.settings||{};V.settings_cpu=S.cpu_max_pct||80;V.settings_mem=S.mem_max_pct||90;V.settings_st=S.storage_max_pct||80;paint();},function(e){
+    var show=function(t,extra){var h='<p class="err">'+esc(t)+'</p>'+(extra||'');$('plans').innerHTML=h;['plats','hosts','clusters','ds'].forEach(function(id){$(id).innerHTML='<div class="empty">Waiting for IT Asset Management - see Change plans above.</div>';});$('kk').innerHTML='';};
+    if(e.status!==404){show(e.status===403?'Your role cannot see this.':e.message);return;}
+    // 404: tell an engine that was never updated apart from one that has the new files but was not restarted
+    itam('GET','/duty/engineers').then(function(d){
+      var mine=(d.engineers||[]).some(function(x){return x.id==='virt';});
+      if(mine)show('The duty desk knows the AI Virtualization Administrator but this page\'s data route does not answer - re-run the update.');
+      else show('IT Asset Management is running an older engine: the AI Virtualization Administrator is not loaded in it.','<p class="note">If the update already ran, the files are on the server but the service was not restarted. On the server run:</p><pre class="snip">grep -c registerVirtAdminRoutes /opt/sentra-itam/engine/duty.js   # 2 = the new files are installed\nsudo systemctl restart sentra-itam</pre><p class="note">If the first line prints 0, the update did not install it: run update-platform.ps1 again (the installer now checks the running engine and restarts it when needed).</p>');
+    },function(){show('The AI Virtualization Administrator is not installed in IT Asset Management yet - run the update.');});
+  });}
+  function aiInit(){
+    itam('GET','/virt/ai/status').then(function(s){
+      if(s.enabled&&Z.can('operator')){$('aist').textContent='Claude · '+s.model;$('aibox').hidden=false;}
+      else{$('aist').textContent='off';$('aioff').hidden=false;$('aioff').textContent=s.enabled?'Operators and administrators can ask the AI.':'AI analysis is off: '+s.reason;}
+    },function(e){$('aist').textContent='not installed';$('aioff').hidden=false;$('aioff').textContent=e.status===404?'The Claude module is not installed in IT Asset Management yet - run the update.':e.message;});
+    $('aigo').addEventListener('click',function(){
+      var q=$('aiq').value.trim();if(!q){Z.toast('Type a question');return;}
+      $('aigo').disabled=true;$('aiwait').textContent='The AI is investigating - this can take a minute or two…';
+      itam('POST','/virt/ai/ask',{question:q}).then(function(r){
+        $('aiout').innerHTML='<div class="aians">'+esc(r.answer)+'</div><p class="muted small">'+esc((r.steps||[]).length)+' lookup(s): '+esc((r.steps||[]).map(function(x){return x.tool+(x.ok?'':' (failed)');}).join(', ')||'none')+' · '+esc(r.model||'')+'</p>';
+      },function(e){$('aiout').innerHTML='<p class="err">'+esc(e.message)+'</p>';}).then(function(){$('aigo').disabled=false;$('aiwait').textContent='';});
+    });
+  }
+  $('refresh').addEventListener('click',load);
+  Z.ready(aiInit);
+  Z.ready(load);
+  setInterval(function(){if(!document.hidden)load();},120000);
+})();
+</script>
+<script src="vendor/zyb-duty.js" defer></script></body></html>

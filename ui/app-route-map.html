@@ -1,0 +1,151 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Application Route Map</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.map svg{width:100%;max-width:1140px;margin:0 auto;height:auto;display:block}.map g[data-node]{cursor:pointer}.map g[data-node]:focus{outline:none}.map g[data-node]:focus rect,.map g[data-node]:hover rect{stroke-width:2.6}
+.rtb{border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:13px}.rtb.down{background:rgba(255,123,114,.12);border:1px solid #8b2b2b;color:#ffd5d0}.rtb.okb{background:rgba(63,185,80,.08);border:1px solid #2b6b3a;color:#c6f0cf}.rtb.inf{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;color:#bcd6f5}
+.rtl{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin:6px 0}.rtl i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.rtd{border-top:1px solid var(--edge);margin-top:8px;padding-top:8px}.rtd h3{font-size:14px;margin:0 0 6px}
+.pick{display:flex;flex-wrap:wrap;gap:4px 14px;max-height:180px;overflow:auto;border:1px solid var(--edge);border-radius:8px;padding:6px 8px;margin-top:4px;max-width:760px}.pick label{font-size:12.5px;white-space:nowrap}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Databases · applications</div><h1>Application Route Map</h1><div class="muted small">Every business application as one route, from its users to its database: the front end and APIs (Applications Manager monitors), the application servers the database sees, the database service (listener) and the database with its RAC instances. A broken hop and the line into it turn red, with the fix</div></div>
+<div class="sp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="muted" id="up"></span><button type="button" id="add" hidden>+ Add application</button><button type="button" id="refresh">⟳ Refresh</button><a href="db-connections.html" style="color:var(--info);text-decoration:none;font-weight:600">Application Connections →</a></div></div>
+<div id="banner"></div>
+<div class="card map"><h2>Application routes <span class="c">users on the left, the database on the right - click any box for what was checked, its issues, how to fix them and its setup</span></h2>
+<div id="svg"><div class="empty">Loading…</div></div>
+<div class="rtl"><span><i style="background:#3fb950"></i>working</span><span><i style="background:#d29922"></i>warning / degraded</span><span><i style="background:#f85149"></i>failing</span><span><i style="background:#ff2d55"></i>down</span><span><i style="background:#2f81f7"></i>in use (not measured)</span><span><i style="background:#6e7681"></i>not connected / not checked</span></div>
+<div class="rtd" id="detail" hidden></div></div>
+<div class="card" id="disccard"><h2>Discovered - connected to a database, in no application <span class="c">client machines the databases see; an administrator adds them to an application (nothing is added by itself)</span></h2><div class="tw" id="disc"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Issues on the routes <span class="c">most severe first</span></h2><div class="tw" id="issues"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>What the map is built from</h2><div class="muted small" id="facts">Loading…</div></div>
+</main>
+<script>
+// Application Route Map (IT Asset Management /app-route; hop rules in Python, pyengine/app_route.py). The SIEM facts are read here as
+// the signed-in person: Applications Manager monitors, the DBA Alert Center, and (operators) Application Connections per database.
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var R=null, P={version:0,apps:[]}, NODES={}, F=null, MON=[], DBS=[], DISC=[];
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status below */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var opt=function(p){return p.then(function(x){return x;},function(){return null;/* that SIEM part is not available: its hops show "not connected" */});};
+  var COL={ok:'#3fb950',warn:'#d29922',bad:'#f85149',down:'#ff2d55',not_connected:'#6e7681',not_checked:'#6e7681',unused:'#6e7681',info:'#2f81f7'};
+  var LBL={ok:'working',warn:'warning',bad:'failing',down:'DOWN',not_connected:'not connected',not_checked:'not checked',unused:'unused',info:'in use'};
+  var broken=function(s){return s==='bad'||s==='down';};
+  // ---- the facts, read from the SIEM as this person
+  function facts(){
+    return Promise.all([opt(Z.req('GET','/integrations/apm/status')),opt(Z.req('GET','/integrations/apm/monitors')),opt(Z.req('GET','/db/dba/status'))]).then(function(a){
+      var st=a[0],mons=(a[1]&&a[1].items)||[],dba=(a[2]&&a[2].instances)||[];MON=mons;
+      var by={};dba.forEach(function(i){var d=String(i.db_name||i.instance||'').toUpperCase();if(!d)return;(by[d]=by[d]||[]).push({instance:i.instance,host:i.host,level:i.level,status:i.status,role:i.role,crit:(i.open||{}).crit||0,warn:(i.open||{}).warn||0});});
+      DBS=Object.keys(by).sort().map(function(d){return {database:d,instances:by[d]};});
+      var f={apm:{connected:!!(st&&st.configured&&st.enabled!==false&&st.ok!==false)},monitors:mons.map(function(m){return {id:m.id,name:m.name,type:m.type,host:m.host,health:m.health,availability:m.availability,managed:m.managed,message:m.message};}),databases:DBS,sessions:null,listener:{}};
+      if(!Z.can('operator'))return f;
+      // operators: one Application Connections read per database (it reads every RAC instance)
+      f.sessions={};
+      return Promise.all(DBS.map(function(d){var i=(d.instances.filter(function(x){return x.level!=='unknown';})[0]||d.instances[0]||{}).instance;
+        return i?opt(Z.req('GET','/db/oracle/connections?instance='+encodeURIComponent(i))).then(function(v){if(!v)return;
+          f.sessions[d.database]={reported:!!(v.reported&&v.reported.sessions),apps:(v.applications||[]).map(function(x){return {machine:x.machine,program:x.program,service:x.service,sessions:x.sessions,state:x.state};})};
+          f.listener[d.database]=(v.listener||[]).map(function(c){return {client_host:c.client_host,service:c.service,refused:c.refused,reasons:(c.reasons||[]).map(function(r){return {code:r.code,meaning:r.meaning,fix:r.fix,n:r.n};})};});}):null;})).then(function(){return f;});});}
+  // ---- drawing (the Email Route Map's boxes and lines)
+  function box(n){NODES[n.id]=n;var c=COL[n.state]||'#6e7681',its=(n.issues||[]).filter(function(i){return i.severity!=='info';}).length;
+    var t=String(n.title||''),mc=Math.floor(n.w/7.6),t2=t.length>mc?t.slice(0,mc-1)+'…':t;
+    return '<g data-node="'+esc(n.id)+'" tabindex="0" role="button" aria-label="'+esc(t+': '+(LBL[n.state]||n.state))+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="10" fill="'+c+'22" stroke="'+c+'" stroke-width="1.6"'+(n.state==='down'?' stroke-dasharray="6 3"':'')+'/>'
+      +'<text x="'+(n.x+n.w/2)+'" y="'+(n.y+18)+'" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">'+esc(t2)+'</text>'
+      +(n.sub?'<text x="'+(n.x+n.w/2)+'" y="'+(n.y+33)+'" text-anchor="middle" fill="#8b949e" font-size="10.5">'+esc(String(n.sub).slice(0,30))+'</text>':'')
+      +'<text x="'+(n.x+n.w/2)+'" y="'+(n.y+n.h-9)+'" text-anchor="middle" fill="'+c+'" font-size="11" font-weight="700">'+esc(LBL[n.state]||'')+(its?' · '+its+' issue'+(its>1?'s':''):'')+'</text></g>';}
+  function edge(a,b,state){if(!a||!b)return '';var x1=a.x+a.w,y1=a.y+a.h/2,x2=b.x,y2=b.y+b.h/2;
+    var mx=(x1+x2)/2,c=broken(state)?'#ff2d55':state==='not_connected'||state==='not_checked'?'#6e7681':'#8b949e';
+    var h='<path d="M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2+'" fill="none" stroke="'+c+'" stroke-width="'+(broken(state)?2.6:1.8)+'"'+(broken(state)||state==='not_connected'?' stroke-dasharray="5 4"':'')+'/>'
+      +'<path d="M'+(x2-8)+' '+(y2-5)+' L'+x2+' '+y2+' L'+(x2-8)+' '+(y2+5)+' Z" fill="'+c+'"/>';
+    if(broken(state))h+='<text x="'+mx+'" y="'+((y1+y2)/2+6)+'" text-anchor="middle" fill="#ff2d55" font-size="18" font-weight="800">✕</text>';
+    return h;}
+  var C={usr:10,fe:130,api:330,srv:530,svc:730,db:920},W={usr:90,fe:170,api:170,srv:170,svc:160,db:200},H=58,STEP=68;
+  function draw(r){R=r;NODES={};var y=30,h='',e='';
+    if(!r.apps.length){$('svg').innerHTML='<div class="empty">No application recorded yet. '+(Z.can('admin')?'Use <b>+ Add application</b>, or add one from <b>Discovered</b> below.':'An administrator adds the applications (their monitors, servers and database).')+'</div>';}
+    else{
+      h+='<text x="'+C.fe+'" y="18" fill="#8b949e" font-size="11">front end</text><text x="'+C.api+'" y="18" fill="#8b949e" font-size="11">APIs / services</text><text x="'+C.srv+'" y="18" fill="#8b949e" font-size="11">application servers</text><text x="'+C.svc+'" y="18" fill="#8b949e" font-size="11">database service</text><text x="'+C.db+'" y="18" fill="#8b949e" font-size="11">database</text>';
+      r.apps.forEach(function(a,ai){var rows=Math.max(1,a.apis.length,a.servers.length),top=y+22,mid=top+(rows*STEP-10)/2-H/2,k='a'+ai+'-';
+        h+='<text x="'+C.usr+'" y="'+(y+12)+'" fill="#c9d1d9" font-size="13.5" font-weight="700">'+esc(a.name)+'</text><text x="'+(C.usr+Math.min(300,8*String(a.name).length+16))+'" y="'+(y+12)+'" fill="'+(COL[a.state]||'#6e7681')+'" font-size="11.5" font-weight="700">'+esc(LBL[a.state]||a.state)+'</text>';
+        var N={};
+        N.usr={id:k+'usr',app:ai,hop:'users',x:C.usr,y:mid,w:W.usr,h:H,title:'Users',sub:a.url?String(a.url).replace(/^https?:\/\//,''):'',state:'info',issues:[],info:'People using '+a.name+(a.url?' at '+a.url:'')+'.'};
+        N.fe=Object.assign({id:k+'fe',app:ai,hop:'front',x:C.fe,y:mid,w:W.fe,h:H},a.front);
+        N.svc=Object.assign({id:k+'svc',app:ai,hop:'service',x:C.svc,y:mid,w:W.svc,h:H},a.service);
+        N.db=Object.assign({id:k+'db',app:ai,hop:'database',x:C.db,y:mid,w:W.db,h:H},a.db);
+        var apis=a.apis.length?a.apis.map(function(x,i){return Object.assign({id:k+'api'+i,app:ai,hop:'api',idx:i,x:C.api,y:top+i*STEP,w:W.api,h:H},x);}):[{id:k+'api',app:ai,hop:'api',x:C.api,y:mid,w:W.api,h:H,title:'APIs / services',sub:'none linked',state:'not_connected',issues:[]}];
+        var srvs=a.servers.length?a.servers.map(function(x,i){return Object.assign({id:k+'srv'+i,app:ai,hop:'server',idx:i,x:C.srv,y:top+i*STEP,w:W.srv,h:H},x);}):[{id:k+'srv',app:ai,hop:'server',x:C.srv,y:mid,w:W.srv,h:H,title:'Application servers',sub:'none linked',state:'not_connected',issues:[]}];
+        e+=edge(N.usr,N.fe,N.fe.state);
+        apis.forEach(function(x){e+=edge(N.fe,x,x.state);srvs.forEach(function(s){e+=edge(x,s,s.state);});});
+        srvs.forEach(function(s){e+=edge(s,N.svc,N.svc.state);});e+=edge(N.svc,N.db,N.db.state);
+        [N.usr,N.fe].concat(apis,srvs,[N.svc,N.db]).forEach(function(n){h+=box(n);});
+        y=top+rows*STEP+26;});
+      $('svg').innerHTML='<svg viewBox="0 0 1140 '+y+'" role="img" aria-label="Application route map">'+e+h+'</svg>';}
+    var S=r.summary,bad=r.apps.filter(function(a){return broken(a.state);});
+    $('banner').innerHTML=bad.length?'<div class="rtb down">'+bad.map(function(a){var i=a.issues[0];return '<div><b>'+esc(a.name)+' is '+(a.state==='down'?'down':'failing')+'</b>'+(i?' - '+esc(i.title):'')+'</div>';}).join('')+'</div>'
+      :'<div class="rtb okb">No application route is failing.'+(S.sessions_visible?'':' Application servers show "not checked": their sessions are visible to operators.')+(S.apm_connected?'':' Applications Manager is not connected, so front ends and APIs show "not connected".')+'</div>';
+    var SV={critical:'bad',high:'bad',medium:'warn',low:'inf',info:'mut'};
+    $('issues').innerHTML=r.issues.length?'<table><thead><tr><th>Severity</th><th>Application</th><th>Hop</th><th>Issue</th><th>How to fix</th></tr></thead><tbody>'+r.issues.map(function(i){return '<tr><td>'+Z.pill(i.severity,SV[i.severity]||'')+'</td><td>'+esc(i.app)+'</td><td class="small">'+esc(i.hop)+'</td><td>'+esc(i.title)+'<div class="muted small">'+esc((i.evidence||[]).join(' · '))+'</div></td><td class="small"><ol class="steps">'+(i.fix||[]).map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol></td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No issue found on the routes.</div>';
+    DISC=r.discovered||[];
+    $('disc').innerHTML=!S.sessions_visible?'<div class="empty">Client machines connected to the databases are visible to operators and administrators (they name programs and services).</div>':DISC.length?'<table><thead><tr><th>Database</th><th>Client machine</th><th>Programs</th><th>Services</th><th>Sessions</th><th></th></tr></thead><tbody>'+DISC.map(function(d,i){return '<tr><td>'+esc(d.database)+'</td><td><b>'+esc(d.machine)+'</b></td><td class="small">'+esc(d.programs.join(', '))+'</td><td class="small">'+esc(d.services.join(', '))+'</td><td>'+(d.dropped&&!d.sessions?Z.pill('dropped','bad'):esc(d.sessions))+'</td><td>'+(Z.can('admin')?'<button type="button" class="sm" data-adopt="'+i+'">Create application</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">Every client machine the databases see belongs to an application.</div>';
+    $('facts').textContent=(S.apm_connected?MON.length+' Applications Manager monitors':'Applications Manager not connected')+' · '+DBS.length+' databases from the DBA Alert Center ('+DBS.reduce(function(n,d){return n+d.instances.length;},0)+' instances)'+' · sessions: '+(S.sessions_visible?'read per database (Application Connections)':'visible to operators')+' · register version '+r.version+(r.unlinked_monitors.length?' · '+r.unlinked_monitors.length+' monitors not linked to any application':'');
+    $('up').textContent='updated '+new Date().toLocaleTimeString();}
+  // ---- detail + setup per box
+  function detail(id){var n=NODES[id];if(!n)return;var d=$('detail'),its=n.issues||[];d.hidden=false;
+    var info=n.info||'';if(n.monitor&&n.monitor.name)info='Applications Manager: '+n.monitor.name+(n.monitor.type?' ('+n.monitor.type+')':'')+(n.monitor.host?' on '+n.monitor.host:'')+' - availability '+(n.monitor.availability||'?')+', health '+(n.monitor.health||'?')+(n.monitor.message?' · '+n.monitor.message:'');
+    if(n.hop==='server'&&n.programs)info='Programs connected: '+(n.programs.join(', ')||'none')+(n.sessions!=null?' · '+n.sessions+' sessions now':'');
+    if(n.hop==='database'&&n.instances&&n.instances.length)info='Instances: '+n.instances.map(function(i){return i.instance+' on '+(i.host||'?')+' - '+(i.status||'?')+(i.role?' ('+i.role+')':'')+', '+(LBL[i.state]||i.state);}).join(' · ');
+    d.innerHTML='<h3>'+esc(n.title)+' - '+esc(LBL[n.state]||n.state)+'</h3><div class="muted small">'+esc(info)+'</div>'
+      +(its.length?its.map(function(i){return '<div style="margin-top:6px"><b>'+esc(i.title)+'</b>'+(i.evidence&&i.evidence.length?'<div class="muted small">'+esc(i.evidence.join(' · '))+'</div>':'')+'<ol class="steps">'+(i.fix||[]).map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol></div>';}).join(''):'<div class="small" style="margin-top:6px">No issue found here.</div>')
+      +setup(n);d.scrollIntoView({block:'nearest'});}
+  function appOf(n){var a=R&&R.apps[n.app];return a?P.apps.filter(function(x){return x.id===a.id;})[0]:null;}
+  function f(k,label,val,o){o=o||{};return '<label class="small" style="display:block;margin:6px 0 2px">'+esc(label)+'</label><input name="'+k+'" value="'+esc(val==null?'':val)+'"'+(o.ph?' placeholder="'+esc(o.ph)+'"':'')+' maxlength="'+(o.max||200)+'" style="width:100%;max-width:520px"'+(o.req?' required':'')+'>';}
+  function checks(k,label,opts,cur){return '<label class="small" style="display:block;margin:6px 0 2px">'+esc(label)+'</label><div class="pick">'+(opts.length?opts.map(function(o){return '<label><input type="checkbox" name="'+k+'" value="'+esc(o[0])+'"'+(cur.indexOf(String(o[0]))>=0?' checked':'')+'> '+esc(o[1])+'</label>';}).join(''):'<span class="muted small">none available</span>')+'</div>';}
+  function sel(k,label,opts,cur){return '<label class="small" style="display:block;margin:6px 0 2px">'+esc(label)+'</label><select name="'+k+'"><option value="">- none -</option>'+opts.map(function(o){return '<option value="'+esc(o[0])+'"'+(String(o[0])===String(cur||'')?' selected':'')+'>'+esc(o[1])+'</option>';}).join('')+'</select>';}
+  var monOpts=function(){return MON.map(function(m){return [String(m.id),m.name+(m.type?' ('+m.type+')':'')];});};
+  var dbOpts=function(){return DBS.map(function(d){return [d.database,d.database+(d.instances.length>1?' ('+d.instances.map(function(i){return i.instance;}).join(', ')+')':'')];});};
+  function setup(n){var a=appOf(n);if(!a)return '';
+    if(!Z.can('admin'))return '<div class="rtd muted small">The application register is set up by an administrator (your role: '+esc(Z.role()||'viewer')+').</div>';
+    var body='',what='';
+    if(n.hop==='users'||n.hop==='front'){what='front end';body=f('name','Application name',a.name,{max:120,req:1})+f('url','Address users open',a.url,{ph:'https://claims.your-domain',max:300})+sel('front_monitor','Applications Manager monitor that checks the front end (URL / web)',monOpts(),a.front_monitor);}
+    else if(n.hop==='api'){what='APIs and services';body=checks('api_monitors','Applications Manager monitors of its APIs / services',monOpts(),a.api_monitors||[]);}
+    else if(n.hop==='server'){what='application servers';var seen=(R.discovered||[]).filter(function(d){return !a.database||d.database===a.database;}).map(function(d){return [d.machine,d.machine+' ('+d.programs.slice(0,2).join(', ')+')'];});
+      var opts=(a.machines||[]).map(function(m){return [m,m];}).concat(seen.filter(function(x){return (a.machines||[]).indexOf(x[0])<0;}));
+      body=checks('machines','Application servers (client machines the database sees)',opts,a.machines||[])+f('more','Other host names, comma separated',null,{max:400});}
+    else if(n.hop==='service'||n.hop==='database'){what='database and service';body=sel('database','Database (from the DBA Alert Center)',dbOpts(),a.database)+f('services','Database service names it connects to, comma separated',(a.services||[]).join(', '),{ph:'CLAIMS_SVC',max:400});}
+    return '<form class="rtd" data-app="'+esc(a.id)+'" data-hop="'+esc(n.hop)+'"><h3><i class="ti ti-settings"></i> Set up: '+esc(what)+' of '+esc(a.name)+'</h3>'+body
+      +'<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button type="submit">Save</button>'+(n.hop==='users'||n.hop==='front'?'<button type="button" data-del="'+esc(a.id)+'">Remove application</button>':'')+'<span class="muted small" data-msg></span></div></form>';}
+  function say(fm,t){var m=fm.querySelector('[data-msg]');if(m)m.textContent=t;}
+  function refusal(e){return e.status===403?'Only an administrator changes the application register.':e.status===409?e.message:e.status===404?'The Application Route Map is not installed on the server yet - run the update.':e.message;}
+  function list(v){return String(v||'').split(',').map(function(x){return x.trim();}).filter(Boolean);}
+  $('detail').addEventListener('submit',function(ev){var fm=ev.target.closest('form[data-app]');if(!fm)return;ev.preventDefault();
+    var a=P.apps.filter(function(x){return x.id===fm.getAttribute('data-app');})[0];if(!a)return;
+    var b={id:a.id,name:a.name,url:a.url||undefined,front_monitor:a.front_monitor||undefined,api_monitors:a.api_monitors||[],machines:a.machines||[],database:a.database||undefined,services:a.services||[],baseVersion:P.version};
+    var g=function(k){var x=fm.querySelector('[name="'+k+'"]');return x?x.value.trim():null;},all=function(k){return [].map.call(fm.querySelectorAll('[name="'+k+'"]:checked'),function(x){return x.value;});};
+    var hop=fm.getAttribute('data-hop');   // each box changes only its own part of the application
+    if(hop==='users'||hop==='front'){b.name=g('name');b.url=g('url')||undefined;b.front_monitor=g('front_monitor')||undefined;}
+    else if(hop==='api')b.api_monitors=all('api_monitors');
+    else if(hop==='server')b.machines=all('machines').concat(list(g('more'))).filter(function(v,i,s){return s.indexOf(v)===i;});
+    else if(hop==='service'||hop==='database'){b.database=g('database')||undefined;b.services=list(g('services'));}
+    var btn=fm.querySelector('button[type="submit"]');btn.disabled=true;say(fm,'Saving…');
+    req('POST','/app-route/apps',b).then(function(){say(fm,'Saved.');return load();},function(e){say(fm,refusal(e));}).then(function(){btn.disabled=false;});});
+  $('detail').addEventListener('click',function(ev){var b=ev.target.closest('[data-del]');if(!b)return;var fm=b.closest('form');
+    if(b.getAttribute('data-sure')!=='1'){b.setAttribute('data-sure','1');b.textContent='Click again to remove';return;}
+    req('DELETE','/app-route/apps/'+encodeURIComponent(b.getAttribute('data-del'))+'?baseVersion='+P.version).then(function(){$('detail').hidden=true;return load();},function(e){say(fm,refusal(e));});});
+  // add an application (blank, or from a discovered client machine)
+  function addForm(pre){pre=pre||{};var d=$('detail');d.hidden=false;
+    d.innerHTML='<form class="rtd" data-new="1"><h3><i class="ti ti-plus"></i> Add an application</h3>'+f('name','Application name',pre.name,{max:120,req:1,ph:'Claims portal'})+f('url','Address users open',null,{ph:'https://claims.your-domain',max:300})
+      +sel('front_monitor','Applications Manager monitor of the front end',monOpts(),'')+sel('database','Database',dbOpts(),pre.database)+f('services','Database services, comma separated',(pre.services||[]).join(', '),{max:400})+f('machines','Application servers, comma separated',(pre.machines||[]).join(', '),{max:400})
+      +'<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button type="submit">Add</button><span class="muted small" data-msg></span></div></form>';d.scrollIntoView({block:'nearest'});}
+  $('detail').addEventListener('submit',function(ev){var fm=ev.target.closest('form[data-new]');if(!fm)return;ev.preventDefault();var g=function(k){return fm.querySelector('[name="'+k+'"]').value.trim();};
+    var b={name:g('name'),url:g('url')||undefined,front_monitor:g('front_monitor')||undefined,database:g('database')||undefined,services:list(g('services')),machines:list(g('machines')),baseVersion:P.version};
+    req('POST','/app-route/apps',b).then(function(r){say(fm,'Added '+r.app.name+'.');return load();},function(e){say(fm,refusal(e));});});
+  $('add').addEventListener('click',function(){addForm();});
+  $('disc').addEventListener('click',function(ev){var b=ev.target.closest('[data-adopt]');if(!b)return;var d=DISC[+b.getAttribute('data-adopt')];if(!d)return;addForm({name:(d.programs[0]||d.machine).replace(/\.exe$/i,''),database:d.database,services:d.services,machines:[d.machine]});});
+  $('svg').addEventListener('click',function(ev){var g=ev.target.closest('[data-node]');if(g)detail(g.getAttribute('data-node'));});
+  $('svg').addEventListener('keydown',function(ev){if(ev.key!=='Enter'&&ev.key!==' ')return;var g=ev.target.closest('[data-node]');if(g){ev.preventDefault();detail(g.getAttribute('data-node'));}});
+  function why(e){return e.status===404?'The Application Route Map is not installed on the server yet - run the update.':e.message;}
+  function load(){return Promise.all([req('GET','/app-route/profile'),facts()]).then(function(a){P=a[0];F=a[1];return req('POST','/app-route',{facts:F});}).then(draw).catch(function(e){$('svg').innerHTML='<div class="empty">'+esc(why(e))+'</div>';$('banner').innerHTML='';$('issues').innerHTML='';$('disc').innerHTML='';});}
+  $('refresh').addEventListener('click',load);
+  Z.ready(function(){$('add').hidden=!Z.can('admin');load();});
+  var t=setInterval(load,300000);window.addEventListener('pagehide',function(){clearInterval(t);});
+})();
+</script></body></html>

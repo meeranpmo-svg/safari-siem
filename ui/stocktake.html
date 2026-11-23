@@ -1,0 +1,125 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ITAM Stocktake</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- ITAM Stocktake over /api/itam/stocktake-intel (read: progress, missing ranked by likelihood with reasons, unexpected codes matched
+     to the closest tag / serial, misplaced assets, which site to count next) and the existing routes, validated and audited there:
+     POST /stocktake (admin opens), /stocktake/:id/scan (operator; a barcode scanner types the code and Enter), /stocktake/:id/close
+     (admin), /stocktake/:id/resolve (operator, a person), /assets/:id/lost and /assets/:id/move. A likelihood is an indicator - a person
+     confirms before an asset is marked lost. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:5px 11px;cursor:pointer}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn.dng{border-color:var(--bad);color:var(--bad)}.btn:disabled{opacity:.5}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:10px 14px}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:22px;font-weight:800}.t .s{font-size:11px;color:var(--d-mute)}.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-bottom:12px}.card h2{margin:0 0 8px;font-size:14px}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}.tabs button{font:600 13px Inter,system-ui,sans-serif;background:transparent;color:var(--d-mute);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}.tabs button.on{color:var(--d-ink);background:var(--d-raise)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.inp{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:inherit}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--d-line);font-size:12.5px;vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase}.tw{overflow:auto}
+.pill{display:inline-block;padding:0 7px;border-radius:999px;font-size:11px;font-weight:600;background:rgba(141,176,255,.16);color:var(--info);margin-right:3px;white-space:nowrap}.pill.bad{background:rgba(255,123,128,.16);color:var(--bad)}.pill.warn{background:rgba(245,181,68,.16);color:var(--warn)}.pill.ok{background:rgba(95,210,122,.16);color:var(--ok)}
+.empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad);font-size:13px;margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+.g2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px}@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+.prog{height:14px;background:var(--d-raise);border-radius:8px;overflow:hidden}.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--ok))}
+.scan{font-size:20px;padding:12px 14px;width:100%;letter-spacing:.04em}
+.res{margin-top:8px;padding:10px 12px;border-radius:10px;font-weight:600}.res.found{background:rgba(95,210,122,.14);color:var(--ok)}.res.found_out_of_scope{background:rgba(245,181,68,.14);color:var(--warn)}.res.unexpected{background:rgba(255,123,128,.14);color:var(--bad)}
+.hb{display:grid;grid-template-columns:140px 1fr 60px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}.hb .b{height:8px;background:var(--d-raise);border-radius:5px;overflow:hidden}.hb .b i{display:block;height:100%;background:var(--ok)}
+.lk{display:inline-block;width:36px;text-align:center;border-radius:6px;font-weight:800;font-size:12px;padding:1px 0}
+dialog{background:var(--d-panel);color:var(--d-ink);border:1px solid var(--d-line);border-radius:12px;padding:16px;width:min(460px,92vw)}dialog::backdrop{background:rgba(0,0,0,.55)}dialog label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--d-mute);margin-bottom:8px}dialog .inp{width:100%}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT assets · physical count</div><h1>Stocktake</h1></div><span class="sp"></span><select class="inp" id="pick" aria-label="Stocktake"></select><button type="button" class="btn pri" id="b-new">＋ New stocktake</button><button type="button" class="btn" id="rf">⟳</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div id="none" class="card" hidden><div class="empty">No stocktake yet. An administrator opens one for a site (or the whole register); operators then scan asset tags or serials with a barcode scanner or by typing them. The register needs assets first - import them or run Discovery.</div></div>
+<div id="cur" hidden>
+  <div class="g2"><div class="card"><div class="bar"><b id="c-name" style="font-size:16px"></b><span id="c-st"></span><span class="sp"></span><button type="button" class="btn" id="b-csv">Export missing (CSV)</button><button type="button" class="btn dng" id="b-close">Close stocktake</button></div>
+      <div class="prog" role="progressbar" aria-label="Found" id="c-pb"><i id="c-pi" style="width:0"></i></div><div class="sm mut" id="c-pt" style="margin-top:4px"></div>
+      <div id="scanbox" style="margin-top:12px"><input class="inp scan" id="code" placeholder="Scan or type an asset tag / serial, then Enter" aria-label="Asset tag or serial" autocomplete="off"><div id="res"></div></div></div>
+    <div class="card"><h2>Recent scans</h2><div id="recent"></div></div></div>
+  <div class="tabs" id="tabs"><button type="button" data-t="miss" class="on">Missing</button><button type="button" data-t="unx">Unexpected</button><button type="button" data-t="mis">Misplaced</button><button type="button" data-t="brk">By type &amp; department</button><button type="button" data-t="plan">Next count</button></div>
+  <section class="card" id="v-miss"></section><section class="card" id="v-unx" hidden></section><section class="card" id="v-mis" hidden></section><section class="card" id="v-brk" hidden></section></div>
+<section class="card" id="v-plan" hidden></section>
+<dialog id="dlg"><form method="dialog" id="dlg-f"><h3 id="dlg-t" style="margin-top:0"></h3><div id="dlg-b"></div><div class="err" id="dlg-e"></div><div class="bar" style="margin-top:10px;justify-content:flex-end"><button type="button" class="btn" id="dlg-x">Cancel</button><button type="button" class="btn pri" id="dlg-ok">OK</button></div></form></dialog>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, SEL = '', TAB = 'miss', DLG = null;
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON: reported below */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && (j.message || j.error)) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  var why = function (e, who) { return e.status === 403 ? (who || 'Operators scan and resolve; administrators open and close a stocktake.') : e.message; };
+  var lk = function (p) { var c = p >= 70 ? 'var(--bad)' : p >= 40 ? 'var(--warn)' : 'var(--ok)'; return '<span class="lk" style="background:' + c + '22;color:' + c + '">' + esc(p) + '</span>'; };
+  var when = function (s) { return s ? new Date(s).toLocaleString() : '—'; };
+
+  function dialog(title, html, onOk) { $('dlg-t').textContent = title; $('dlg-b').innerHTML = html; $('dlg-e').textContent = ''; DLG = onOk; $('dlg').showModal(); var f = $('dlg-b').querySelector('input,select,textarea'); if (f) f.focus(); }
+  $('dlg-x').addEventListener('click', function () { $('dlg').close(); });
+  $('dlg-ok').addEventListener('click', function () { if (DLG) DLG(function (msg) { $('dlg-e').textContent = msg; }, function () { $('dlg').close(); }); });
+
+  function kpis() { var k = V.kpis, c = V.current;
+    var T = [['Open stocktakes', k.open, '', ''], ['Closed', k.closed, '', ''], ['Last accuracy', k.last_accuracy == null ? '—' : k.last_accuracy + ' %', 'found of expected, last closed', k.last_accuracy == null ? '' : k.last_accuracy >= 95 ? 'ok' : 'warn'],
+      ['Missing twice or more', k.repeat_missing, 'across closed counts', k.repeat_missing ? 'bad' : ''], ['Sites never counted', k.sites_never_counted, '', k.sites_never_counted ? 'warn' : '']];
+    if (c) T.splice(0, 0, ['This count', c.pct == null ? '—' : c.pct + ' %', c.found + ' of ' + c.expected + ' found', c.pct >= 95 ? 'ok' : '']);
+    $('kp').innerHTML = T.map(function (t) { return '<div class="t ' + t[3] + '"><div class="l">' + esc(t[0]) + '</div><div class="v">' + esc(t[1]) + '</div><div class="s">' + esc(t[2]) + '</div></div>'; }).join(''); }
+  function current() { var c = V.current; $('none').hidden = !!c || V.stocktakes.length > 0; $('cur').hidden = !c; if (!c) return;
+    $('pick').innerHTML = V.stocktakes.map(function (s) { return '<option value="' + esc(s.id) + '"' + (s.id === c.id ? ' selected' : '') + '>' + esc(s.name) + ' · ' + esc(s.site || 'all sites') + ' · ' + esc(s.status) + '</option>'; }).join('');
+    $('c-name').textContent = c.name + ' · ' + (c.site || 'all sites'); $('c-st').innerHTML = c.status === 'open' ? '<span class="pill ok">open</span>' : '<span class="pill">closed ' + esc(when(c.closed_at)) + '</span>';
+    $('c-pi').style.width = (c.pct || 0) + '%'; $('c-pb').setAttribute('aria-valuenow', c.pct || 0);
+    $('c-pt').textContent = c.found + ' of ' + c.expected + ' found · ' + c.missing.length + ' missing (' + c.resolved + ' resolved) · ' + c.unexpected.length + ' unexpected' + (c.rate_per_hour ? ' · ' + c.rate_per_hour + ' scans/hour' : '') + (c.eta_minutes != null ? ' · about ' + c.eta_minutes + ' min to go at this pace' : '');
+    $('scanbox').hidden = c.status !== 'open'; $('b-close').hidden = c.status !== 'open';
+    $('recent').innerHTML = c.recent.length ? '<table><tbody>' + c.recent.map(function (r) { return '<tr><td>' + esc(r.name) + '</td><td class="mut">' + esc(r.code) + '</td><td class="mut sm">' + esc(r.by || '') + ' · ' + esc(when(r.at)) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">Nothing scanned yet.</div>';
+    $('v-miss').innerHTML = c.missing.length ? '<p class="sm mut">Ranked by how likely the asset is really gone - an indicator from what the register and network sources know. A person confirms before marking it lost.</p><div class="tw"><table><thead><tr><th>Likely gone</th><th>Asset</th><th>Tag / serial</th><th>Type</th><th>Department / owner</th><th>Why</th><th>Resolution</th></tr></thead><tbody>' + c.missing.map(function (m) {
+      return '<tr><td>' + lk(m.likely_gone) + '</td><td>' + esc(m.name) + (m.critical ? ' <span class="pill bad">critical</span>' : '') + '</td><td class="mut">' + esc(m.asset_tag || '—') + '<br>' + esc(m.serial || '') + '</td><td>' + esc(m.type || '—') + '</td><td>' + esc(m.department || '—') + '<br><span class="mut">' + esc(m.owner || m.custodian || '') + '</span></td><td class="sm">' + m.why.map(esc).join('<br>') + '</td><td>' +
+        (m.resolution ? '<span class="pill ' + (m.resolution.outcome === 'lost' ? 'bad' : 'ok') + '">' + esc(m.resolution.outcome) + '</span> <span class="sm mut">' + esc(m.resolution.by) + '</span>' + (m.resolution.note ? '<div class="sm">' + esc(m.resolution.note) + '</div>' : '') : '<button type="button" class="btn" data-res="found" data-a="' + esc(m.asset_id) + '">Found</button> <button type="button" class="btn" data-res="explained" data-a="' + esc(m.asset_id) + '">Explain</button> <button type="button" class="btn dng" data-res="lost" data-a="' + esc(m.asset_id) + '">Mark lost</button>') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">Nothing missing - every expected asset was scanned.</div>';
+    $('v-unx').innerHTML = c.unexpected.length ? '<p class="sm mut">Codes that match no asset. The closest tag or serial is suggested (O/0, I/1, S/5 and punctuation ignored, up to 2 characters different).</p><table><thead><tr><th>Code scanned</th><th>By</th><th>Closest asset</th><th></th></tr></thead><tbody>' + c.unexpected.map(function (u) { var s = u.suggestion;
+      return '<tr><td><b>' + esc(u.code) + '</b></td><td class="sm mut">' + esc(u.by || '') + ' · ' + esc(when(u.at)) + '</td><td>' + (s ? esc(s.name) + ' <span class="mut">(' + esc(s.field === 'asset_tag' ? 'tag' : 'serial') + ' ' + esc(s.value) + ')</span><div class="sm mut">' + esc(s.why) + '</div>' : '<span class="mut">No close match - not in the register.</span>') + '</td><td>' + (s && c.status === 'open' ? '<button type="button" class="btn" data-rescan="' + esc(s.value) + '">Count as ' + esc(s.value) + '</button>' : '<a class="btn" href="inventory.html">Add to the register</a>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No unexpected codes.</div>';
+    $('v-mis').innerHTML = c.misplaced.length ? '<p class="sm mut">Found in this count but recorded at another site.</p><table><thead><tr><th>Asset</th><th>Recorded site</th><th>Found at</th><th>By</th><th></th></tr></thead><tbody>' + c.misplaced.map(function (m) {
+      return '<tr><td>' + esc(m.name) + '</td><td>' + esc(m.recorded_site || '—') + '</td><td>' + esc(m.found_at) + '</td><td class="sm mut">' + esc(m.by || '') + '</td><td><button type="button" class="btn" data-move="' + esc(m.asset_id) + '" data-site="' + esc(m.found_at) + '">Move record to ' + esc(m.found_at) + '</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">' + (c.site ? 'No asset from another site was found here.' : 'This count covers all sites, so nothing is out of place.') + '</div>';
+    var hb = function (L) { return L.map(function (r) { var p = r.expected ? Math.round(100 * r.found / r.expected) : 0; return '<div class="hb"><span>' + esc(r.value) + '</span><span class="b"><i style="width:' + p + '%"></i></span><span class="sm">' + r.found + '/' + r.expected + '</span></div>'; }).join('') || '<div class="empty">—</div>'; };
+    $('v-brk').innerHTML = '<div class="g2"><div><h2>By type</h2>' + hb(c.by_type) + '</div><div><h2>By department</h2>' + hb(c.by_department) + '</div></div>'; }
+  function plan() { $('v-plan').innerHTML = '<h2>Which site to count next</h2>' + (V.plan.length ? '<table><thead><tr><th>Priority</th><th>Site</th><th>Assets</th><th>Critical</th><th>Last counted</th><th>Last accuracy</th><th>Why</th><th></th></tr></thead><tbody>' + V.plan.map(function (p) {
+      return '<tr><td>' + lk(p.priority) + '</td><td>' + esc(p.site) + '</td><td>' + p.assets + '</td><td>' + p.critical + '</td><td>' + (p.last_counted_days == null ? 'never' : esc(p.last_counted_days) + ' days ago') + '</td><td>' + (p.last_accuracy == null ? '—' : esc(p.last_accuracy) + ' %') + '</td><td class="sm">' + p.why.map(esc).join(' · ') + '</td><td>' + (p.site !== '(no site)' ? '<button type="button" class="btn" data-open="' + esc(p.site) + '">Open a count</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No assets in the register yet.</div>'); }
+  function show() { ['miss', 'unx', 'mis', 'brk', 'plan'].forEach(function (t) { $('v-' + t).hidden = t !== TAB; }); document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-t') === TAB); }); }
+  function load(keepFocus) { req('GET', '/stocktake-intel' + (SEL ? '?id=' + encodeURIComponent(SEL) : '')).then(function (j) { V = j; if (j.current) SEL = j.current.id; kpis(); current(); plan(); show(); if (keepFocus && !$('scanbox').hidden) $('code').focus(); },
+    function (e) { $('kp').innerHTML = '<div class="err">Could not read the stocktakes: ' + esc(e.message) + (e.status === 0 ? ' - the ITAM engine is not reachable.' : '') + '</div>'; }); }
+
+  function scan(code) { code = String(code || '').trim(); if (!code || !V.current) return; $('code').value = '';
+    req('POST', '/stocktake/' + encodeURIComponent(V.current.id) + '/scan', { code: code }).then(function (r) {
+      var msg = r.result === 'found' ? '✓ Found: ' + (r.asset.name || r.asset.id) : r.result === 'found_out_of_scope' ? '⚠ Found, but recorded at ' + (r.asset.site || 'another site') + ': ' + (r.asset.name || r.asset.id) : '✕ Not in the register: ' + code + ' - see Unexpected for the closest match';
+      $('res').innerHTML = '<div class="res ' + esc(r.result) + '" role="status">' + esc(msg) + '</div>'; load(true);
+    }, function (e) { $('res').innerHTML = '<div class="err">' + esc(why(e)) + '</div>'; }); }
+  function newCount(site) { var sites = V.plan.map(function (p) { return p.site; }).filter(function (s) { return s !== '(no site)'; });
+    dialog('New stocktake', '<label>Name<input class="inp" id="n-name" maxlength="200" placeholder="e.g. Q4 count"></label><label>Site<select class="inp" id="n-site"><option value="">All sites</option>' + sites.map(function (s) { return '<option' + (s === site ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('') + '</select></label><p class="sm mut">Every asset in use at that site is expected. Retired and disposed assets are left out.</p>',
+      function (err, done) { var b = { site: $('n-site').value || undefined, name: $('n-name').value.trim() || undefined };
+        req('POST', '/stocktake', b).then(function (r) { done(); SEL = r.id; toast('Stocktake opened: ' + r.expected + ' assets expected'); load(true); }, function (e) { err(why(e, 'Administrators open a stocktake.')); }); }); }
+  function resolve(aid, outcome) { var m = V.current.missing.find(function (x) { return x.asset_id === aid; }) || {}, need = outcome !== 'found';
+    dialog(outcome === 'lost' ? 'Mark ' + (m.name || aid) + ' lost' : outcome === 'found' ? (m.name || aid) + ' was found' : 'Explain ' + (m.name || aid),
+      '<label>' + (need ? 'What happened (required)' : 'Note (optional)') + '<input class="inp" id="r-note" maxlength="500"></label>' + (outcome === 'lost' ? '<p class="sm mut">This also sets the asset\'s status to Lost in the register (audited). It can be set back with "Found" in Inventory.</p>' : outcome === 'found' ? '<p class="sm mut">Use this when it was seen but could not be scanned (e.g. no label). Better: scan it.</p>' : ''),
+      function (err, done) { var note = $('r-note').value.trim(); if (need && !note) return err('Say what happened.');
+        var go = function () { return req('POST', '/stocktake/' + encodeURIComponent(V.current.id) + '/resolve', { asset_id: aid, outcome: outcome, note: note || undefined }); };
+        (outcome === 'lost' ? req('POST', '/assets/' + encodeURIComponent(aid) + '/lost', { reason: 'Stocktake ' + V.current.name + ': ' + note }).then(go) : go())
+          .then(function () { done(); toast('Recorded: ' + outcome); load(); }, function (e) { err(why(e)); }); }); }
+
+  $('code').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); scan($('code').value); } });
+  $('pick').addEventListener('change', function () { SEL = $('pick').value; load(); });
+  $('b-new').addEventListener('click', function () { if (V) newCount(''); });
+  $('rf').addEventListener('click', function () { load(); });
+  $('tabs').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-t]'); if (b) { TAB = b.getAttribute('data-t'); show(); } });
+  document.addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || !V) return;
+    if (b.hasAttribute('data-res')) resolve(b.getAttribute('data-a'), b.getAttribute('data-res'));
+    else if (b.hasAttribute('data-rescan')) scan(b.getAttribute('data-rescan'));
+    else if (b.hasAttribute('data-open')) newCount(b.getAttribute('data-open'));
+    else if (b.hasAttribute('data-move')) { var id = b.getAttribute('data-move'), site = b.getAttribute('data-site'); req('POST', '/assets/' + encodeURIComponent(id) + '/move', { site: site }).then(function () { toast('Record moved to ' + site); load(); }, function (e) { toast(why(e)); }); } });
+  $('b-close').addEventListener('click', function () { var c = V.current; dialog('Close ' + c.name + '?', '<p>' + c.found + ' of ' + c.expected + ' found; ' + c.missing.length + ' missing will be recorded as missing in this count. Scanning stops.</p>',
+    function (err, done) { req('POST', '/stocktake/' + encodeURIComponent(c.id) + '/close', {}).then(function () { done(); toast('Stocktake closed'); load(); }, function (e) { err(why(e, 'Administrators close a stocktake.')); }); }); });
+  $('b-csv').addEventListener('click', function () { var c = V.current, q = function (v) { v = String(v == null ? '' : v); if (/^[=+\-@]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };
+    var rows = [['stocktake', c.name], ['site', c.site || 'all sites'], ['exported', new Date().toISOString()], [], ['likely_gone', 'asset', 'tag', 'serial', 'type', 'department', 'owner', 'critical', 'why', 'resolution', 'note']].concat(c.missing.map(function (m) { return [m.likely_gone, m.name, m.asset_tag, m.serial, m.type, m.department, m.owner, m.critical ? 'yes' : '', m.why.join('; '), m.resolution ? m.resolution.outcome : '', m.resolution ? m.resolution.note : '']; }));
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map(function (r) { return r.map(q).join(','); }).join('\r\n')], { type: 'text/csv' })); a.download = 'stocktake-missing-' + c.id + '.csv'; document.body.appendChild(a); a.click(); a.remove(); });
+  load(true);
+})();
+</script></body></html>

@@ -1,0 +1,122 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cisco Network Inventory</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;cursor:pointer}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:26px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute)}
+.t.on{outline:2px solid var(--info)}.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;margin:0 0 12px;min-width:0}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button:disabled{opacity:.5;cursor:default}
+button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}input,select{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.p{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.ok{background:rgba(63,185,80,.15);color:var(--ok)}.warn{background:rgba(227,179,65,.15);color:var(--warn)}.bad{background:rgba(255,123,114,.16);color:var(--bad)}.mut{background:rgba(140,147,161,.15);color:var(--mute)}.info{background:rgba(121,184,255,.13);color:var(--info)}
+.err{color:var(--bad);font-size:12px}.src{font-size:11px;color:var(--mute)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+@media print{.top button,.bar{display:none}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · Cisco</div><h1>Cisco Network Inventory</h1><div class="muted" style="font-size:13px">Cisco switches, routers and firewalls in the AI Network Engineer: model, serial numbers and IOS / ASA version read from the devices, with their support contract.</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="csv">⬇ Export CSV</button><button type="button" id="pscheck" title="Ask Cisco PSIRT (openVuln) which published advisories affect each software version - only version numbers are sent (operator)">🛡 Check Cisco advisories</button><button type="button" id="readall" class="pri" title="Read model, serial and IOS over SSH from every Cisco device not read yet (operator)">🔎 Read all not read yet</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div id="why"></div>
+<div class="k" id="kk"></div>
+<div class="card"><h2>Devices <span class="c" id="cnt"></span></h2>
+ <div class="bar"><input type="search" id="q" placeholder="Search name, IP, model, serial, version…" style="min-width:260px"><select id="fplat"><option value="">All platforms</option><option value="cisco-ios">Cisco IOS / IOS-XE (switches, routers)</option><option value="cisco-asa">Cisco ASA (firewalls)</option></select><select id="fsite"><option value="">All sites</option></select></div>
+ <div class="tw" id="tbl"><div class="empty">Loading…</div></div>
+ <p class="note">Version, model and serial come from the device itself: <b>CLI</b> = read over SSH (show version / show inventory, read-only, needs the SSH login and the trusted host key on the device in the AI Network Engineer); <b>SNMP</b> = the system description from the regular poll. "Not read" is never guessed.</p></div>
+<div class="g2">
+ <div class="card"><h2>IOS / ASA versions <span class="c">devices per version</span></h2><div id="vers"></div></div>
+ <div class="card"><h2>Models <span class="c">devices per model</span></h2><div id="models"></div></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var DEV=[], COV={}, COVERR='', PS=null, PSERR='', PSBUSY=false, F={q:'',plat:'',site:'',tile:''}, BUSY={};
+  var VEND={'cisco-ios':'IOS / IOS-XE','cisco-asa':'ASA'};
+  function req(api,m,p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,api+p);x.withCredentials=true;x.timeout=m==='POST'?180000:60000;x.zybQuiet=true;if(m==='POST')x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(m==='POST'?'{}':null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  var normSn=function(s){return String(s||'').trim().toUpperCase();};
+  // from SNMP sysDescr: "Cisco IOS Software, C2960X Software (C2960X-UNIVERSALK9-M), Version 15.2(7)E3, RELEASE SOFTWARE (fc3)"
+  function fromDescr(s){s=String(s||'');var v=/Version\s+([0-9][^\s,]*)/i.exec(s),plat=/\(([A-Z0-9_-]+)-[A-Z0-9_]+-M\)/i.exec(s)||/Software \(([^)]+)\)/i.exec(s),ft=/IOS[\s-]?XE/i.test(s)?'IOS-XE':/NX-OS/i.test(s)?'NX-OS':/Adaptive Security Appliance|ASA/i.test(s)?'ASA':/IOS/i.test(s)?'IOS':'';return {version:v?v[1]:'',platform:plat?plat[1]:'',family:ft};}
+  function rowOf(d){var f=d.cli_facts||null,sys=(d.last&&d.last.system)||{},dsc=fromDescr(sys.version);
+    var version=f&&f.version?f.version:dsc.version, vsrc=f&&f.version?'CLI':dsc.version?'SNMP':'';
+    var model=f&&f.model?f.model:(sys.model||dsc.platform||''), msrc=f&&f.model?'CLI':sys.model?'SNMP':dsc.platform?'SNMP (image)':'';
+    var serials=f&&f.serials&&f.serials.length?f.serials:(sys.serial?[sys.serial]:[]);
+    var c=null;serials.forEach(function(sn){if(!c&&COV['sn:'+normSn(sn)])c=COV['sn:'+normSn(sn)];});if(!c&&d.ip&&COV['ip:'+d.ip])c=COV['ip:'+d.ip];
+    var pd=PS&&(PS.devices||[]).filter(function(x){return x.id===d.id;})[0], pv=pd&&pd.key&&(PS.versions||[]).filter(function(x){return x.key===pd.key;})[0];
+    return {psirt:pv||null,pkey:pd?pd.key:null,d:d,id:d.id,name:d.name||d.id,ip:d.ip||'',site:d.site||'',role:d.role||'',vendor:d.vendor,family:dsc.family||VEND[d.vendor]||'',version:version,vsrc:vsrc,model:model,msrc:msrc,serials:serials,stack:f&&f.stack||null,factsAt:f&&f.at||null,
+      up:d.last?d.last.ok!==false:null,polled:d.last?d.last.at:null,cov:c,ssh:!!(d.credentials&&d.credentials.ssh),hostkey:!!d.ssh_hostkey};}
+  function rows(){return DEV.map(rowOf);}
+  var TILES=[['adv','Critical / high advisories',function(r){return r.psirt&&(r.psirt.by_sir.Critical||r.psirt.by_sir.High);},'bad'],['all','Cisco devices',function(){return true;},'info'],['nover','Version not read',function(r){return !r.version;},'warn'],['noser','No serial number',function(r){return !r.serials.length;},'warn'],
+    ['down','Not answering',function(r){return r.up===false;},'bad'],['nocov','Not under support',function(r){return r.cov&&/expired|not-covered/.test(r.cov.status);},'bad']];
+  function draw(){
+    var R=rows();
+    $('kk').innerHTML=TILES.map(function(t){var n=R.filter(t[2]).length;return '<div class="t '+(n&&t[0]!=='all'?t[3]:'')+(F.tile===t[0]?' on':'')+'" data-tile="'+t[0]+'"><div class="l">'+esc(t[1])+'</div><div class="v">'+n+'</div></div>';}).join('');
+    var sites={};R.forEach(function(r){if(r.site)sites[r.site]=1;});var cur=$('fsite').value;$('fsite').innerHTML='<option value="">All sites</option>'+Object.keys(sites).sort().map(function(s){return '<option'+(s===cur?' selected':'')+'>'+esc(s)+'</option>';}).join('');
+    var q=F.q.toLowerCase(), tf=(TILES.filter(function(t){return t[0]===F.tile;})[0]||TILES.filter(function(t){return t[0]==='all';})[0])[2];
+    var L=R.filter(function(r){return (!F.plat||r.vendor===F.plat)&&(!F.site||r.site===F.site)&&tf(r)&&(!q||[r.name,r.ip,r.model,r.serials.join(' '),r.version,r.site,r.role].join(' ').toLowerCase().indexOf(q)>=0);})
+      .sort(function(a,b){return a.name.localeCompare(b.name);});
+    $('cnt').textContent=L.length+' of '+R.length;
+    var psnote=PS&&PSERR==='Cisco API not configured'?'<div class="card" style="border-color:#2b4a6b;background:rgba(121,184,255,.06)"><b>Security advisories need the Cisco API.</b> An administrator enters the Cisco API client ID and secret on <a href="support-contracts.html" style="color:var(--info)">Support Contracts → Cisco API</a> (the same client, with <b>Cisco PSIRT openVuln API</b> ticked in the Cisco API Console). Only software version numbers are sent to Cisco.</div>':'';
+    $('why').innerHTML=psnote+(R.length&&!R.some(function(r){return r.version;})?'<div class="card" style="border-color:#6b5a1e;background:rgba(227,179,65,.06)"><b>No version read from any Cisco device yet.</b> Each device needs its SSH login (read-only) and its host key trusted in the AI Network Engineer, then press <b>Read all not read yet</b>. With SNMP polling on, the IOS version also arrives on the next poll.</div>':'');
+    $('tbl').innerHTML=!R.length?'<div class="empty">No Cisco switch, router or firewall in the AI Network Engineer yet. Add them there (or run device discovery), with their SSH or SNMP read-only login.</div>'
+      :'<table><thead><tr><th>Device</th><th>Site / role</th><th>Model</th><th>Serial number(s)</th><th>Software version</th><th>State</th><th>Security advisories</th><th>Support</th><th></th></tr></thead><tbody>'+L.map(function(r){
+        var cv=r.cov?('<span class="p '+(r.cov.status==='covered'?'ok':r.cov.status==='expiring'?'warn':/expired|not-covered/.test(r.cov.status)?'bad':'mut')+'">'+esc(r.cov.status)+'</span>'+(r.cov.end?'<div class="src">until '+esc(r.cov.end)+'</div>':'')):'<span class="muted">—</span>';
+        var act=BUSY[r.id]?'<span class="muted">reading…</span>':'<button type="button" data-facts="'+esc(r.id)+'" title="show version + show inventory over SSH (read-only)">Read</button>';
+        return '<tr><td><b>'+esc(r.name)+'</b><div class="mono muted">'+esc(r.ip)+'</div></td><td>'+esc(r.site||'—')+'<div class="src">'+esc(r.role)+'</div></td>'
+          +'<td>'+(r.model?esc(r.model)+'<div class="src">'+esc(r.msrc)+'</div>':'<span class="muted">not read</span>')+'</td>'
+          +'<td class="mono">'+(r.serials.length?r.serials.map(esc).join('<br>')+(r.stack?'<div class="src">stack of '+r.stack.length+'</div>':''):'<span class="muted">not read</span>')+'</td>'
+          +'<td>'+(r.version?'<b>'+esc(r.family)+' '+esc(r.version)+'</b><div class="src">'+esc(r.vsrc)+(r.factsAt?' · read '+esc(new Date(r.factsAt).toLocaleDateString('en-GB')):'')+'</div>':'<span class="muted">not read</span>')+'</td>'
+          +'<td>'+(r.up===null?'<span class="p mut">not polled</span>':r.up?'<span class="p ok">answering</span>':'<span class="p bad">not answering</span>')+'</td><td>'+psCell(r)+'</td><td>'+cv+'</td><td>'+act+(r.d.facts_error?'<div class="err">'+esc(r.d.facts_error)+'</div>':'')+'</td></tr>';}).join('')+'</tbody></table>';
+    var count=function(key){var m={};R.forEach(function(r){var k=key(r);if(k)m[k]=(m[k]||0)+1;});return Object.keys(m).sort(function(a,b){return m[b]-m[a];}).map(function(k){return '<tr><td>'+esc(k)+'</td><td style="text-align:right"><b>'+m[k]+'</b></td></tr>';}).join('');};
+    var v=count(function(r){return r.version?(r.family+' '+r.version).trim():'';}),mo=count(function(r){return r.model;});
+    $('vers').innerHTML=v?'<table>'+v+'</table>':'<div class="empty">No version read yet.</div>';$('models').innerHTML=mo?'<table>'+mo+'</table>':'<div class="empty">No model read yet.</div>';
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+(COVERR?' · support: '+COVERR:'');
+  }
+  var SIRC={Critical:'bad',High:'bad',Medium:'warn',Low:'mut',Informational:'mut'};
+  function psCell(r){
+    if(!PS||PSERR)return '<span class="muted">'+esc(PSERR||'—')+'</span>';
+    if(!r.pkey)return '<span class="muted">version not read</span>';
+    if(!r.psirt)return '<span class="muted">not checked yet</span>';
+    if(r.psirt.error)return '<span class="err">'+esc(r.psirt.error)+'</span>';
+    if(!r.psirt.count)return '<span class="p ok">none published</span>';
+    return '<button type="button" data-adv="'+esc(r.pkey)+'" style="padding:3px 8px">'+['Critical','High','Medium','Low'].filter(function(k){return r.psirt.by_sir[k];}).map(function(k){return '<span class="p '+SIRC[k]+'">'+esc(r.psirt.by_sir[k])+' '+esc(k)+'</span>';}).join(' ')+'</button>';
+  }
+  function advDrawer(key){var v=(PS.versions||[]).filter(function(x){return x.key===key;})[0];if(!v)return;
+    var devs=(PS.devices||[]).filter(function(d){return d.key===key;}).map(function(d){return esc(d.name);}).join(', ');
+    Z.open('Cisco PSIRT advisories',v.ostype.toUpperCase()+' '+v.version,'<p class="muted" style="font-size:12.5px">Devices on this version: '+devs+'. Checked '+esc(new Date(v.at).toLocaleString('en-GB'))+'. '+esc(PS.note)+'</p>'
+      +'<table><thead><tr><th>Advisory</th><th>Impact</th><th>CVSS</th><th>CVEs</th><th>First fixed in</th></tr></thead><tbody>'+v.advisories.map(function(a){
+        return '<tr><td><b>'+esc(a.title)+'</b><div class="mono muted">'+esc(a.id)+(a.published?' · '+esc(a.published):'')+'</div>'+(a.url?'<div class="mono" style="font-size:11px">'+esc(a.url)+'</div>':'')+'</td><td><span class="p '+(SIRC[a.sir]||'mut')+'">'+esc(a.sir)+'</span></td><td>'+(a.cvss==null?'—':esc(a.cvss))+'</td><td class="mono" style="font-size:11.5px">'+(a.cves.map(esc).join('<br>')||'—')+'</td><td class="mono">'+(a.first_fixed.map(esc).join(', ')||'see the advisory')+'</td></tr>';}).join('')+'</tbody></table>');}
+  function load(){
+    return Promise.all([req('/api/soc','GET','/netops/devices'),req('/api/itam','GET','/cisco-support/report').catch(function(e){return {error:e};}),req('/api/itam','GET','/cisco-support/psirt').catch(function(e){return {error:e};})]).then(function(R){
+      DEV=(R[0].items||[]).filter(function(d){return d.vendor==='cisco-ios'||d.vendor==='cisco-asa';});
+      PS=null;PSERR='';if(R[2]&&R[2].error)PSERR=R[2].error.status===404?'needs the IT Asset Management update':'not readable';else{PS=R[2];if(!PS.api.enabled||!PS.api.secret_set){PSERR='Cisco API not configured';}}
+      COV={};COVERR='';if(R[1]&&R[1].error)COVERR=R[1].error.status===404?'Cisco Support not installed':'not readable';else (R[1].rows||R[1].devices||R[1].items||[]).forEach(function(c){if(c.serial)COV['sn:'+normSn(c.serial)]=c;if(c.mgmt_ip)COV['ip:'+c.mgmt_ip]=c;});
+      draw();
+    }).catch(function(e){$('tbl').innerHTML='<div class="err">'+esc(e.status===404?'The AI Network Engineer is not installed on the SIEM - run the update.':e.message)+'</div>';});
+  }
+  function readOne(id){BUSY[id]=1;draw();return req('/api/soc','POST','/netops/devices/'+encodeURIComponent(id)+'/cli/facts').then(function(f){var d=DEV.filter(function(x){return x.id===id;})[0];if(d){d.cli_facts=f;delete d.facts_error;}return true;},
+    function(e){var d=DEV.filter(function(x){return x.id===id;})[0];if(d)d.facts_error=e.status===403?'needs the operator role':e.message;return false;}).then(function(ok){delete BUSY[id];draw();return ok;});}
+  $('pscheck').addEventListener('click',function(){var b=this;if(PSBUSY)return;PSBUSY=true;b.disabled=true;b.textContent='🛡 Asking Cisco…';
+    req('/api/itam','POST','/cisco-support/psirt/check').then(function(r){var c=r.check||{};toast(c.ok?c.advisories+' advisory(ies) for '+c.versions+' software version(s)'+(c.without_version?' · '+c.without_version+' device(s) without a version':''):'Cisco: '+(c.error||'failed'));PS=r.psirt;draw();},
+      function(e){toast(e.status===403?'Checking advisories needs the operator role.':e.message);}).then(function(){PSBUSY=false;b.disabled=false;b.textContent='🛡 Check Cisco advisories';});});
+  document.addEventListener('click',function(e){
+    var av=e.target.closest('[data-adv]');if(av){advDrawer(av.getAttribute('data-adv'));return;}
+    var b=e.target.closest('[data-facts]');if(b){readOne(b.getAttribute('data-facts')).then(function(ok){toast(ok?'Model, serial and version read.':'Could not read the device - the reason is shown in its row.');});return;}
+    var t=e.target.closest('[data-tile]');if(t){F.tile=F.tile===t.getAttribute('data-tile')?'':t.getAttribute('data-tile');draw();}
+  });
+  $('readall').addEventListener('click',async function(){var b=this,L=rows().filter(function(r){return !r.version||!r.serials.length;});if(!L.length){toast('Every Cisco device has its model, serial and version.');return;}
+    b.disabled=true;var ok=0;for(var i=0;i<L.length;i++){b.textContent='🔎 Reading '+(i+1)+' of '+L.length+'…';if(await readOne(L[i].id))ok++;}
+    b.disabled=false;b.textContent='🔎 Read all not read yet';toast(ok+' of '+L.length+' device(s) read; the others show why in their row.');});
+  $('q').addEventListener('input',function(){F.q=this.value;draw();});$('fplat').addEventListener('change',function(){F.plat=this.value;draw();});$('fsite').addEventListener('change',function(){F.site=this.value;draw();});
+  $('refresh').addEventListener('click',load);
+  $('csv').addEventListener('click',function(){var q=function(v){var x=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
+    var lines=[['Device','IP','Site','Role','Platform','Model','Serial numbers','Version','Version source','State','Support','Support until']].concat(rows().map(function(r){return [r.name,r.ip,r.site,r.role,r.family,r.model,r.serials.join(' '),r.version,r.vsrc,r.up===null?'not polled':r.up?'answering':'not answering',r.cov?r.cov.status:'',r.cov&&r.cov.end||''];}));
+    var u=URL.createObjectURL(new Blob(['﻿'+lines.map(function(l){return l.map(q).join(',');}).join('\r\n')],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download='cisco-network-inventory-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(u);a.remove();},500);});
+  load();setInterval(function(){if(!document.hidden&&!Object.keys(BUSY).length)load();},120000);
+})();
+</script></body></html>

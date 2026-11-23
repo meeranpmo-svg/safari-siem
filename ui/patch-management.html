@@ -1,0 +1,109 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unified Patch Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def;--ok:#56d364;--warn:#f5b544;--bad:#ff8a8e;--eol:#d2a8ff}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1680px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn.bad{border-color:#5a2a2d;color:var(--bad)}.btn:disabled{opacity:.5}
+.kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:14px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;cursor:pointer;text-align:left;color:inherit;font:inherit}.kpi.on{border-color:var(--d-acc)}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;min-width:0;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.st-current{background:rgba(47,179,68,.15);color:var(--ok)}.st-behind{background:rgba(245,159,0,.18);color:var(--warn)}.st-overdue{background:rgba(229,72,77,.22);color:var(--bad)}.st-eol{background:rgba(163,113,247,.2);color:var(--eol)}.st-not_measured{background:rgba(139,147,164,.16);color:#aab2c2}.st-exc{background:rgba(91,141,239,.18);color:#8db0ff}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px;border-bottom:1px solid var(--d-line)}td{padding:7px 6px;border-bottom:1px solid #1b2030;vertical-align:top}td.n{text-align:right;font-variant-numeric:tabular-nums}
+.inp,select.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sig{font-size:11.5px;color:var(--d-mute)}.sig b{color:var(--d-ink);font-weight:600}
+.bar{height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden;min-width:70px;display:flex}.bar i{display:block;height:100%}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.tw{overflow-x:auto}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+dialog{background:var(--d-panel);color:var(--d-ink);border:1px solid var(--d-line);border-radius:14px;max-width:560px;width:calc(100vw - 32px)}dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog label{display:block;font-size:12px;color:var(--d-mute);margin:10px 0 4px}dialog textarea,dialog input{width:100%}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:640px){main{padding:12px 12px 40px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.top h1{font-size:20px}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT Operations · SAMA CSF 3.3.13 · NCA ECC 2-3 · ISO 27001 A.8.8</div><h1>Unified Patch Management</h1><div class="sm mute">Servers, desktops and laptops, switches and routers, firewalls and databases in one view - from what the platform already reads. An asset no source measures is "not measured", never patched. Patching itself is done on each class's own page, under its own change and approval.</div></div><div class="sp"></div>
+ <button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <div class="kpis" id="kpis"></div>
+ <section class="card"><h2><i class="ti ti-stack-2"></i>By asset class <span class="c">coverage = assets a source measures; patched = current among the measured</span></h2><div class="tw" id="classes"></div><div id="notes"></div></section>
+ <section class="card"><h2><i class="ti ti-list-check"></i>Assets <span class="c" id="cnt"></span></h2>
+  <div class="row" style="margin-bottom:10px"><select class="inp" id="fc" aria-label="Class"><option value="">Every class</option></select><select class="inp" id="fs" aria-label="Status"><option value="">Every status</option><option value="overdue">overdue</option><option value="eol">end of life</option><option value="behind">behind</option><option value="not_measured">not measured</option><option value="current">current</option><option value="exc">excepted</option></select><input class="inp" id="q" type="search" placeholder="Name, IP, platform or version" aria-label="Search" style="flex:1;min-width:180px"></div>
+  <div class="tw" id="items"></div></section>
+ <section class="card"><h2><i class="ti ti-shield-half"></i>Exceptions <span class="c">a patch that cannot be installed yet: reason, compensating control, end date (at most 180 days), approved by a different person</span></h2><div class="tw" id="exc"></div></section>
+ <section class="card"><h2><i class="ti ti-adjustments"></i>Policy <span class="c">SLA for scanner findings with a vendor fix, and the baseline release per platform for what has no vendor feed here</span></h2><div id="pol"></div></section>
+</div>
+<dialog id="dlg"><form method="dialog" id="dform"><h3 id="dtitle" style="margin:0 0 4px;font-size:16px"></h3><div class="sm mute" id="dsub"></div><div id="dbody"></div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" value="cancel" type="submit" formnovalidate>Cancel</button><button class="btn pri" value="ok" type="submit" id="dok">Send</button></div></form></dialog>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var ROLE='viewer',USER='',V=null,F={c:'',s:'',q:''},DLG=null;
+  var ST={current:'current',behind:'behind',overdue:'overdue',eol:'end of life',not_measured:'not measured'};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,/^\/dashboards\//.test(u)?u:'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function pill(i){return i.exception?'<span class="pill st-exc">excepted</span> ':'';}
+  function drawKpis(){var s=V.summary;function k(f,n,l,c){return '<button type="button" class="kpi'+(F.s===f?' on':'')+'" data-kf="'+esc(f)+'"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n==null?'—':n)+'</div><div class="l">'+esc(l)+'</div></button>';}
+    $('kpis').innerHTML=k('',s.pct==null?'—':s.pct+'%','patched (of measured)')+k('',s.coverage==null?'—':s.coverage+'%','coverage')+k('overdue',s.overdue,'overdue','var(--bad)')+k('eol',s.eol,'end of life','var(--eol)')+k('behind',s.behind,'behind','var(--warn)')+k('not_measured',s.not_measured,'not measured')+k('exc',s.excepted,'excepted');}
+  function drawClasses(){
+    $('classes').innerHTML='<table><thead><tr><th>Class</th><th class="n">Assets</th><th>Coverage</th><th class="n">Patched</th><th class="n">Overdue</th><th class="n">End of life</th><th class="n">Behind</th><th class="n">Not measured</th><th>Patched on</th></tr></thead><tbody>'+V.classes.map(function(c){
+      var w=function(n,col){return c.total?'<i style="width:'+(n/c.total*100).toFixed(1)+'%;background:'+col+'"></i>':'';};
+      return '<tr><td><b>'+esc(c.label)+'</b>'+(c.not_measured?'<div class="sm mute" style="max-width:420px">To measure the rest: '+esc(c.connect)+'</div>':'')+'</td><td class="n">'+esc(c.total)+'</td><td><div class="bar" title="'+esc(c.coverage==null?'no asset':c.coverage+'% measured')+'">'+w(c.current,'#2fb344')+w(c.behind,'#f59f00')+w(c.overdue,'#e5484d')+w(c.eol,'#a371f7')+'</div><div class="sm mute">'+esc(c.coverage==null?'no asset of this class':c.coverage+'% measured')+'</div></td><td class="n">'+esc(c.pct==null?'—':c.pct+'%')+'</td><td class="n">'+esc(c.overdue)+'</td><td class="n">'+esc(c.eol)+'</td><td class="n">'+esc(c.behind)+'</td><td class="n">'+esc(c.not_measured)+'</td><td><a class="btn sm" href="'+esc(c.page)+'">Open →</a></td></tr>';}).join('')+'</tbody></table>';
+    var n=Object.keys(V.notes||{});$('notes').innerHTML=n.length?'<div class="sm mute" style="margin-top:8px">'+n.map(function(k){return esc(V.notes[k]);}).join(' · ')+'</div>':'';
+    var o=$('fc');if(o.options.length===1)V.classes.forEach(function(c){var x=document.createElement('option');x.value=c.class;x.textContent=c.label;o.appendChild(x);});}
+  function drawItems(){var q=F.q.toLowerCase(),L=V.items.filter(function(i){return (!F.c||i.class===F.c)&&(!F.s||(F.s==='exc'?!!i.exception:i.status===F.s))&&(!q||(i.name+' '+i.ip+' '+i.platform+' '+i.version).toLowerCase().indexOf(q)>=0);});
+    $('cnt').textContent=L.length+' of '+V.items.length+(L.length>300?' · first 300 shown':'');
+    $('items').innerHTML=L.length?'<table><thead><tr><th class="n">Priority</th><th>Asset</th><th>Status</th><th>Platform / version</th><th>What the sources say</th><th></th></tr></thead><tbody>'+L.slice(0,300).map(function(i){
+      var sig=(i.signals||[]).map(function(s){return '<div><b>'+esc(s.source)+'</b>: '+esc(s.text)+'</div>';}).join('')||(i.reason?'<div>Not measured - '+esc(i.reason)+'</div>':'');
+      var why=(i.points||[]).map(function(p){return '+'+p.points+' '+p.text;}).join('\n');
+      return '<tr><td class="n" title="'+esc(why)+'"><b>'+esc(i.priority)+'</b></td><td><b>'+esc(i.name)+'</b><div class="sm mute">'+esc([V.classes.filter(function(c){return c.class===i.class;})[0].label,i.ip,i.site,i.criticality&&('criticality '+i.criticality),i.prod?'production':''].filter(Boolean).join(' · '))+'</div></td>'
+        +'<td>'+pill(i)+'<span class="pill st-'+esc(i.status)+'">'+esc(ST[i.status]||i.status)+'</span>'+(i.exception?'<div class="sm mute">until '+esc(String(i.exception.until).slice(0,10))+'</div>':'')+(i.plan?'<div class="sm mute">plan '+esc(i.plan.name)+' ('+esc(i.plan.status)+')</div>':'')+'</td>'
+        +'<td class="sm">'+esc(i.platform)+'<div class="mute">'+esc(i.version||'version not recorded')+'</div></td><td class="sig">'+sig+'</td>'
+        +'<td>'+(V.can_act&&!i.exception&&i.status!=='current'?'<button class="btn sm" type="button" data-exc="'+esc(i.key)+'">Exception…</button>':'')+' <a class="btn sm" href="'+esc(i.page)+'">Patch →</a></td></tr>';}).join('')+'</tbody></table>':note(V.items.length?'No asset matches the filter.':'No server, desktop, network device, firewall or database is in the asset register yet. Add them in IT Asset Management or run Asset Discovery.');}
+  function drawExc(){var L=V.exceptions||[];
+    $('exc').innerHTML=L.length?'<table><thead><tr><th>Exception</th><th>Asset</th><th>Why / compensating control</th><th>State</th><th></th></tr></thead><tbody>'+L.map(function(x){
+      var st=x.state==='approved'?(x.active?'active until '+String(x.until).slice(0,10):'ended '+String(x.until).slice(0,10)):x.state;
+      var can=V.can_admin&&x.state==='pending'&&String(x.requested_by).toLowerCase()!==USER.toLowerCase();
+      return '<tr><td class="sm"><b>'+esc(x.id)+'</b><div class="mute">'+esc(x.requested_by)+' · '+esc(String(x.requested_at).slice(0,10))+'</div></td><td>'+esc(x.name)+'</td><td class="sm">'+esc(x.reason)+'<div class="mute">Meanwhile: '+esc(x.compensating)+'</div></td><td class="sm"><span class="pill '+(x.active?'st-exc':x.state==='pending'?'st-behind':'st-not_measured')+'">'+esc(st)+'</span>'+(x.decided_by?'<div class="mute">'+esc(x.decided_by)+'</div>':'')+'</td><td>'
+        +(can?'<button class="btn sm pri" type="button" data-dec="approved" data-id="'+esc(x.id)+'">Approve</button> <button class="btn sm bad" type="button" data-dec="rejected" data-id="'+esc(x.id)+'">Reject</button> ':'')
+        +(x.state==='pending'&&V.can_admin&&!can?'<span class="sm mute">another person decides</span> ':'')
+        +(V.can_admin&&(x.state==='pending'||x.active)?'<button class="btn sm" type="button" data-rev="'+esc(x.id)+'">Revoke</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':note('No exception. When a patch cannot be installed yet (a vendor has not certified it, a change freeze), an operator requests one from the asset row.');}
+  function drawPol(){var P=V.policy,pl=V.platforms||[];
+    var sla='<div class="row sm">SLA (days, from the scanner\'s first sighting): '+['critical','high','medium','low'].map(function(k){return '<label>'+esc(k)+' <input class="inp" style="width:70px" type="number" min="1" max="365" data-sla="'+k+'" value="'+esc(P.sla[k])+'"'+(V.can_admin?'':' disabled')+'></label>';}).join(' ')+'</div>';
+    var rows=pl.filter(function(p){return ['firewall','network','database'].indexOf(p.class)>=0&&!/^cisco /.test(p.platform);});
+    var b=(P.baselines||[]).slice();rows.forEach(function(p){if(!b.some(function(x){return x.class===p.class&&x.platform===p.platform;}))b.push({class:p.class,platform:p.platform,target:'',minimum:''});});
+    var seen=function(x){var p=pl.filter(function(y){return y.class===x.class&&y.platform===x.platform;})[0];return p?Object.keys(p.versions).map(function(v){return v+' ×'+p.versions[v];}).join(', ')||'no version recorded':'no asset';};
+    $('pol').innerHTML=sla+'<table style="margin-top:12px"><thead><tr><th>Class</th><th>Platform</th><th>Versions running</th><th>Baseline (target)</th><th>Minimum</th></tr></thead><tbody id="bl">'+(b.length?b.map(function(x,i){return '<tr data-bl="'+i+'"><td>'+esc(x.class)+'<input type="hidden" data-f="class" value="'+esc(x.class)+'"></td><td>'+esc(x.platform)+'<input type="hidden" data-f="platform" value="'+esc(x.platform)+'"></td><td class="sm mute">'+esc(seen(x))+'</td><td><input class="inp" data-f="target" style="width:130px" value="'+esc(x.target||'')+'" placeholder="e.g. 7.4.5"'+(V.can_admin?'':' disabled')+' aria-label="Baseline for '+esc(x.platform)+'"></td><td><input class="inp" data-f="minimum" style="width:130px" value="'+esc(x.minimum||'')+'" placeholder="optional"'+(V.can_admin?'':' disabled')+' aria-label="Minimum for '+esc(x.platform)+'"></td></tr>';}).join(''):'<tr><td colspan="5" class="mute">No firewall, non-Cisco network device or database in the register yet.</td></tr>')+'</tbody></table>'
+      +(V.can_admin?'<div class="row" style="margin-top:10px"><button class="btn pri" type="button" id="psave">Save policy</button><span class="sm mute">Cisco devices take their target on the Cisco Update Manager page; servers and desktops are measured by Endpoint Central and the agent.</span></div>':'<div class="sm mute" style="margin-top:8px">Administrators set the policy.</div>');}
+  function draw(){drawKpis();drawClasses();drawItems();drawExc();drawPol();}
+  function load(){$('err').hidden=true;return req('GET','/patching').then(function(v){V=v;$('main').hidden=false;draw();}).catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML=note(e.status===404?'Unified Patch Management is not installed yet - run the update (update-platform.ps1).':e.message);});}
+  function ask(title,sub,html,ok){$('dtitle').textContent=title;$('dsub').textContent=sub;$('dbody').innerHTML=html;DLG=ok;$('dlg').showModal();}
+  $('dform').addEventListener('submit',function(ev){if(ev.submitter&&ev.submitter.value==='ok'&&DLG){ev.preventDefault();var f=DLG;f().then(function(){$('dlg').close();DLG=null;}).catch(function(e){toast(e.message);});}});
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-kf],[data-exc],[data-dec],[data-rev],#refresh,#psave');if(!el)return;
+    if(el.id==='refresh'){load();return;}
+    if(el.dataset.kf!==undefined){F.s=F.s===el.dataset.kf?'':el.dataset.kf;$('fs').value=F.s;drawKpis();drawItems();return;}
+    if(el.dataset.exc){var it=V.items.filter(function(i){return i.key===el.dataset.exc;})[0],d=new Date(Date.now()+30*864e5).toISOString().slice(0,10);
+      ask('Patch exception: '+it.name,'Currently '+(ST[it.status]||it.status)+'. A different person approves it; it ends on its date.','<label for="xr">Why the patch cannot be installed yet</label><textarea class="inp" id="xr" rows="3" maxlength="1000"></textarea><label for="xc">Compensating control meanwhile</label><textarea class="inp" id="xc" rows="2" maxlength="1000"></textarea><label for="xu">Until (at most 180 days)</label><input class="inp" id="xu" type="date" value="'+d+'">',
+        function(){return req('POST','/patching/exceptions',{key:it.key,reason:$('xr').value.trim(),compensating:$('xc').value.trim(),until:$('xu').value}).then(function(x){toast(x.id+' requested - waiting for approval');return load();});});return;}
+    if(el.dataset.dec){var dec=el.dataset.dec,id=el.dataset.id;ask((dec==='approved'?'Approve ':'Reject ')+id,'Recorded with your name.','<label for="xm">Comment'+(dec==='rejected'?' (why)':'')+'</label><textarea class="inp" id="xm" rows="2" maxlength="1000"></textarea>',
+        function(){return req('POST','/patching/exceptions/'+encodeURIComponent(id)+'/decide',{decision:dec,comment:$('xm').value.trim()}).then(function(){toast(id+' '+dec);return load();});});return;}
+    if(el.dataset.rev){var rid=el.dataset.rev;ask('Revoke '+rid,'The asset counts again at once.','<label for="xv">Reason</label><textarea class="inp" id="xv" rows="2" maxlength="1000"></textarea>',
+        function(){return req('POST','/patching/exceptions/'+encodeURIComponent(rid)+'/revoke',{reason:$('xv').value.trim()}).then(function(){toast(rid+' revoked');return load();});});return;}
+    if(el.id==='psave'){var sla={};document.querySelectorAll('[data-sla]').forEach(function(i){sla[i.dataset.sla]=Number(i.value);});
+      var bl=[];document.querySelectorAll('#bl tr[data-bl]').forEach(function(tr){var g=function(f){return tr.querySelector('[data-f="'+f+'"]').value.trim();};if(g('target'))bl.push({class:g('class'),platform:g('platform'),target:g('target'),minimum:g('minimum')||undefined});});
+      el.disabled=true;req('POST','/patching/policy',{sla:sla,baselines:bl}).then(function(){toast('Policy saved');return load();}).catch(function(e){el.disabled=false;toast(e.message);});}});
+  $('fc').addEventListener('change',function(){F.c=this.value;drawItems();});
+  $('fs').addEventListener('change',function(){F.s=this.value;drawKpis();drawItems();});
+  var tq=null;$('q').addEventListener('input',function(){var v=this.value;clearTimeout(tq);tq=setTimeout(function(){F.q=v;drawItems();},200);});
+  req('GET','/dashboards/whoami.json').then(function(w){ROLE=(w&&w.role)||'viewer';USER=(w&&w.user)||'';}).catch(function(){ROLE='viewer';/* no identity: read-only */}).then(load);
+})();
+</script></body></html>

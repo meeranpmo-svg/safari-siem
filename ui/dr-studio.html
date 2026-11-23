@@ -1,0 +1,138 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DR Studio</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def;--d-ai:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.ai{background:linear-gradient(135deg,#7c4dff,#5b8def);border:0;color:#fff}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:200px 1fr 300px;gap:18px;align-items:center}
+.state b{display:block;font-size:30px;font-weight:900;letter-spacing:.04em}.state span{color:var(--d-mute);font-size:12.5px}
+.ring{position:relative;width:170px;height:170px;margin:auto}.ring svg{transform:rotate(-90deg)}.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.ring .v b{font-size:38px}.ring .v span{font-size:11.5px;color:var(--d-mute);max-width:120px}
+.ring circle.fg{transition:stroke-dashoffset 1.2s cubic-bezier(.2,.7,.2,1)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:9px 12px}.kpi .n{font-size:22px;font-weight:800}.kpi .l{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--d-mute)}
+#topo{width:100%;height:auto}#topo text{font:12px Inter,"Segoe UI",system-ui,sans-serif;fill:#c9d1dc}#topo .site{fill:#161b26;stroke:#2e3747}#topo .flow{fill:none;stroke-width:3;stroke-linecap:round}
+#topo .dash{fill:none;stroke-width:3;stroke-dasharray:6 12;animation:mv 1.2s linear infinite}#topo .dash.slow{animation-duration:3s}@keyframes mv{to{stroke-dashoffset:-18}}
+#topo g.st{cursor:pointer}#topo g.st:hover .flow{stroke-width:5}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--d-mute);margin-top:6px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.st-card{background:var(--d-raise);border:1px solid var(--d-line);border-radius:14px;padding:12px;cursor:pointer}.st-card:hover{border-color:#3a4258}.st-card.sel{box-shadow:0 0 0 2px var(--d-acc)}
+.st-card .hd{display:flex;gap:8px;align-items:center}.st-card .hd b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.s-ok{background:rgba(47,179,68,.15);color:#56d364}.s-late,.s-unknown,.s-no-schedule{background:rgba(245,159,0,.16);color:#f5b544}.s-critical,.s-breached,.s-no-remote{background:rgba(229,72,77,.16);color:#ff7b80}.s-standby{background:rgba(139,147,164,.16);color:#aab2c2}
+.spark{width:100%;height:56px;display:block;margin:8px 0 4px}
+.rd{display:flex;align-items:center;gap:6px;font-size:12px}.rd .b{flex:1;height:6px;border-radius:4px;background:#232837;overflow:hidden}.rd .b i{display:block;height:100%}
+.fc{font-size:12px;margin-top:4px}.fc.warn{color:#f5b544}.an{font-size:12px;color:#ff9ea1;margin-top:2px}
+table.heat{border-collapse:separate;border-spacing:2px;font-size:11.5px;width:100%}table.heat td.c{height:18px;border-radius:3px;min-width:14px}table.heat td.n{white-space:nowrap;padding-right:8px;color:#c9d1dc;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
+.det .kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin:8px 0}.det .kv span:nth-child(odd){color:var(--d-mute)}
+.wf .r{display:flex;align-items:center;gap:8px;font-size:12.5px;margin:3px 0}.wf .r .b{height:10px;border-radius:3px;background:var(--d-bad)}
+.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cf{border-left:3px solid var(--d-bad);background:rgba(229,72,77,.07);padding:7px 10px;border-radius:6px;font-size:12.8px;margin:6px 0}
+.src{font-size:12.5px;margin:4px 0}.src i{margin-right:6px}
+.ask{display:flex;gap:8px;flex-wrap:wrap}.ask textarea{flex:1;min-width:240px;min-height:64px}
+.ans{white-space:pre-wrap;background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-top:10px;font-size:13px}.steps{font-size:12px;color:var(--d-mute);margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.empty{color:var(--d-mute);padding:8px 0;font-size:13px}
+@media (max-width:1150px){.hero,.cols{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){#topo .dash{animation:none}.ring circle.fg{transition:none}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Storage, Backup &amp; DR · disaster recovery · SAMA BCM</div><h1>DR Studio — Main Site ⇄ DR Site</h1><div class="mute">Can we fail over now without losing more data than agreed? Every replication stream the platform reads - Nutanix protection domains and Oracle Data Guard standbys - with its lag against the RPO, sampled every 15 minutes, forecast, unusual-lag detection and DR-test readiness. Nothing on this page is a sample.</div></div>
+ <span class="sp"></span><a class="btn" href="dr-replication.html"><i class="ti ti-list-details"></i>Nutanix detail</a><a class="btn" href="dr-drills.html"><i class="ti ti-checklist"></i>DR drills</a><span class="mute sm" id="up"></span><button type="button" class="btn" id="sample" hidden><i class="ti ti-camera"></i>Sample now</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+<section class="card hero"><div class="ring" id="ring"></div><div><div class="state" id="state"></div><svg id="topo" viewBox="0 0 760 230" role="img" aria-label="Main site to DR site replication"></svg><div class="legend"><span><i style="background:#2fb344"></i>within RPO</span><span><i style="background:#f59f00"></i>late / forecast to breach</span><span><i style="background:#e5484d"></i>past RPO / not protected</span><span><i style="background:#8b93a4"></i>standby / no data</span></div></div><div class="kpis" id="kpis"></div></section>
+<div class="cols">
+ <section class="card"><h2><i class="ti ti-activity"></i>Streams <span class="c">lag against the RPO over 7 days · the dashed line is the RPO · click a stream</span></h2><div class="grid" id="streams"></div></section>
+ <div>
+  <section class="card det" id="det"><h2><i class="ti ti-info-circle"></i>Stream</h2><div class="empty">Choose a stream.</div></section>
+  <section class="card"><h2><i class="ti ti-plug-connected"></i>Sources</h2><div id="sources"></div><div id="conflicts"></div></section>
+ </div>
+</div>
+<section class="card"><h2><i class="ti ti-grid-dots"></i>Last 24 hours <span class="c">worst lag each hour as a share of the RPO · grey = no sample</span></h2><div style="overflow:auto"><table class="heat" id="heat"></table></div></section>
+<section class="card"><h2><i class="ti ti-sparkles"></i>AI DR analyst <span class="c" id="ais"></span></h2>
+ <div class="ask"><textarea class="inp" id="q" maxlength="4000" placeholder="e.g. Can we fail over to Jeddah now? Which streams will breach their RPO tonight?" aria-label="Question"></textarea><button type="button" class="btn ai" id="go" disabled><i class="ti ti-send"></i>Ask</button></div>
+ <div class="sm mute" style="margin-top:6px">Read-only: the analyst explains from the streams above. It cannot fail over, change replication or record anything.</div>
+ <div id="out"></div></section>
+</div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, SEL='';
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function colOf(s){if(s.status==='standby'||s.ratio==null&&s.status==='unknown')return '#8b93a4';if(['critical','breached','no-remote'].indexOf(s.status)>=0||(s.ratio!=null&&s.ratio>1))return '#e5484d';if(['late','no-schedule','unknown'].indexOf(s.status)>=0||s.forecast&&s.forecast.breach_h!=null)return '#f59f00';return '#2fb344';}
+  function dur(sec){if(sec==null)return '—';if(sec<90)return Math.round(sec)+' s';if(sec<5400)return Math.round(sec/60)+' min';return (sec/3600).toFixed(1)+' h';}
+  function ringSvg(p,size,st,c){var r=(size-st)/2,ci=2*Math.PI*r,off=ci*(1-(p||0)/100);return '<svg width="'+size+'" height="'+size+'"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="#232837" stroke-width="'+st+'"/><circle class="fg" cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="'+st+'" stroke-linecap="round" stroke-dasharray="'+ci.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';}
+  function spark(pts,c){if(!pts||pts.length<2)return '<div class="sm mute" style="height:56px;display:flex;align-items:center">collecting samples - every 15 min</div>';
+    var w=320,h=56,t0=pts[0].t,t1=pts[pts.length-1].t,max=Math.max(1.2,Math.max.apply(null,pts.map(function(p){return p.r;}))),X=function(t){return (t-t0)/((t1-t0)||1)*w;},Y=function(r){return h-3-r/max*(h-8);};
+    var line=pts.map(function(p){return X(p.t).toFixed(1)+','+Y(p.r).toFixed(1);}).join(' ');
+    return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" aria-label="lag against the RPO"><polygon points="0,'+h+' '+line+' '+w+','+h+'" fill="'+c+'" opacity=".14"/><polyline points="'+line+'" fill="none" stroke="'+c+'" stroke-width="1.8"/><line x1="0" x2="'+w+'" y1="'+Y(1).toFixed(1)+'" y2="'+Y(1).toFixed(1)+'" stroke="#e5484d" stroke-dasharray="4 3" opacity=".8"/></svg>';}
+  function drawTop(){var o=V.overall,s=V.summary,oc={'PROTECTED':'#2fb344','DEGRADED':'#f59f00','AT RISK':'#e5484d'}[o.state]||'#8b93a4';
+    $('ring').innerHTML=ringSvg(s.readiness||0,170,14,s.readiness==null?'#8b93a4':s.readiness>=80?'#2fb344':s.readiness>=55?'#f59f00':'#e5484d')+'<div class="v"><b>'+(s.readiness==null?'—':esc(s.readiness))+'</b><span>average DR readiness</span></div>';
+    $('state').innerHTML='<b style="color:'+oc+'">'+esc(o.state)+'</b><span>'+esc(o.text)+'</span>';
+    function k(n,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    $('kpis').innerHTML=k(s.streams,'streams')+k(s.past_rpo,'past the RPO',s.past_rpo?'#ff7b80':'')+k(s.forecast_breaches,'forecast to breach',s.forecast_breaches?'#f5b544':'')+k(s.compliance_7d==null?'—':s.compliance_7d+'%','within RPO, 7 days')
+      +k(s.never_tested,'never DR-tested',s.never_tested?'#f5b544':'')+k(V.conflicts.length,'cross-site conflicts',V.conflicts.length?'#ff7b80':'');
+    // site picture: main on the left, DR on the right, one curved line per stream (the first 9)
+    var L=V.streams.slice(0,9),W=760,mid=115,out='<rect class="site" x="10" y="20" width="150" height="190" rx="16"/><text x="85" y="48" text-anchor="middle" style="font-weight:700">Main site</text><rect class="site" x="600" y="20" width="150" height="190" rx="16"/><text x="675" y="48" text-anchor="middle" style="font-weight:700">DR site</text>';
+    var ok=V.streams.filter(function(x){return colOf(x)==='#2fb344';}).length;
+    out+='<text x="85" y="185" text-anchor="middle" style="font-size:22px;font-weight:800">'+esc(V.streams.length)+'</text><text x="85" y="202" text-anchor="middle" style="font-size:10.5px;fill:#8b93a4">stream(s) out</text>'
+      +'<text x="675" y="185" text-anchor="middle" style="font-size:22px;font-weight:800;fill:'+(ok===V.streams.length?'#56d364':'#f5b544')+'">'+esc(ok)+'</text><text x="675" y="202" text-anchor="middle" style="font-size:10.5px;fill:#8b93a4">within RPO</text>';
+    if(!L.length)out+='<text x="380" y="'+mid+'" text-anchor="middle" style="fill:#8b93a4">no replication stream reported yet</text>';
+    L.forEach(function(s,i){var y=62+i*(140/Math.max(1,L.length-1||1)),c=colOf(s),slow=s.ratio!=null&&s.ratio>0.8;
+      out+='<g class="st" data-key="'+esc(s.key)+'" tabindex="0" role="button" aria-label="'+esc(s.system)+'"><title>'+esc(s.system+' · '+s.tech+' · lag '+dur(s.lag_s)+' / RPO '+dur(s.rpo_s))+'</title><path class="flow" d="M160 '+y+' C 330 '+(y-18)+', 430 '+(y+18)+', 600 '+y+'" stroke="'+c+'" opacity=".28"/>'
+        +(s.status==='standby'||s.status==='no-remote'?'':'<path class="dash'+(slow?' slow':'')+'" d="M160 '+y+' C 330 '+(y-18)+', 430 '+(y+18)+', 600 '+y+'" stroke="'+c+'"/>')+'<text x="168" y="'+(y-5)+'" style="font-size:10.5px">'+esc(String(s.system).slice(0,30))+'</text><text x="592" y="'+(y-5)+'" text-anchor="end" style="font-size:10.5px;fill:'+c+'">'+esc(s.ratio==null?'—':Math.round(s.ratio*100)+'%')+'</text></g>';});
+    $('topo').innerHTML=out;
+  }
+  function drawStreams(){$('streams').innerHTML=V.streams.length?V.streams.map(function(s){var c=colOf(s);
+    return '<div class="st-card'+(SEL===s.key?' sel':'')+'" data-key="'+esc(s.key)+'" tabindex="0"><div class="hd"><span class="pill s-'+esc(s.status)+'">'+esc(s.status)+'</span><b title="'+esc(s.system)+'">'+esc(s.system)+'</b><span class="sm mute">'+esc(s.tech)+'</span></div>'
+      +'<div class="sm mute">'+esc(s.dir)+' · lag '+esc(dur(s.lag_s))+' / RPO '+esc(dur(s.rpo_s))+'</div>'+spark(s.spark,c)
+      +'<div class="rd"><span>readiness</span><span class="b"><i style="width:'+s.readiness+'%;background:'+(s.readiness>=80?'#2fb344':s.readiness>=55?'#f59f00':'#e5484d')+'"></i></span><b>'+esc(s.readiness)+'</b>'+(s.compliance!=null?'<span class="mute">· '+esc(s.compliance)+'% in RPO</span>':'')+'</div>'
+      +'<div class="fc'+(s.forecast.breach_h!=null?' warn':'')+'">'+esc(s.forecast.text)+'</div>'+(s.anomaly?'<div class="an">⚠ '+esc(s.anomaly.text)+'</div>':'')+'</div>';}).join('')
+    :'<div class="empty">No replication stream reported. Connect a Nutanix cluster in Virtualization (its protection domains appear here), or the Oracle collector on a Data Guard standby (via the SIEM).</div>';}
+  function drawDet(){var s=V.streams.find(function(x){return x.key===SEL;}),d=$('det');if(!s){d.innerHTML='<h2><i class="ti ti-info-circle"></i>Stream</h2><div class="empty">Choose a stream.</div>';return;}
+    d.innerHTML='<h2><i class="ti ti-info-circle"></i>'+esc(s.system)+' <span class="pill s-'+esc(s.status)+'">'+esc(s.status)+'</span></h2><div class="sm">'+esc(s.why||'')+'</div>'
+      +'<div class="kv"><span>Technology</span><span>'+esc(s.tech)+(s.mode?' · '+esc(s.mode):'')+'</span><span>Source</span><span>'+esc(s.source)+'</span><span>Direction</span><span>'+esc(s.dir)+'</span><span>Lag / RPO</span><span>'+esc(dur(s.lag_s))+' / '+esc(dur(s.rpo_s))+(s.ratio!=null?' ('+Math.round(s.ratio*100)+'%)':'')+'</span>'
+      +'<span>Flapping</span><span>'+esc(s.flaps)+' status change(s) in 24 h</span><span>Last DR test</span><span>'+esc(s.last_test?s.last_test.date+' · '+s.last_test.result+(s.last_test.note?' · '+s.last_test.note:'')+' ('+s.last_test.by+')':'none recorded')+'</span></div>'
+      +'<div style="font-weight:700">Readiness '+esc(s.readiness)+' / 100</div><div class="wf">'+(s.why_score.length?s.why_score.map(function(w){return '<div class="r"><span class="b" style="width:'+Math.abs(w.points)*2+'px"></span><b>'+esc(w.points)+'</b><span>'+esc(w.text)+'</span></div>';}).join(''):'<div class="sm mute">Nothing taken off.</div>')+'</div>'
+      +'<div class="sm" style="margin-top:8px">DR tests are recorded, evidenced and signed off in <a href="dr-drills.html" style="color:#7aa7ff">DR &amp; BCM Drills</a>'+(s.drill_system?' (drill system <b>'+esc(s.drill_system)+'</b>)':' - no drill system matches this stream yet')+'.</div>'
+      +(can('admin')?'<div style="font-weight:700;margin-top:10px">Settings <span class="sm mute">(administrator, audited)</span></div><div class="row" style="margin-top:6px"><input class="inp" type="number" min="0" max="10080" id="rpo" aria-label="RPO in minutes" value="'+Math.round((s.rpo_s||0)/60)+'" style="width:100px"><span class="sm mute">min RPO</span><input class="inp" id="dsys" aria-label="Drill system" placeholder="drill system in DR & BCM Drills" value="'+esc(s.drill_system||'')+'" style="flex:1;min-width:150px"><button type="button" class="btn" id="rsave">Save</button></div>':'');}
+  function drawSide(){var S=V.sources||{};function src(n,x,ok){return '<div class="src"><i class="ti ti-'+(x&&x.ok?'circle-check" style="color:#56d364':'circle-x" style="color:#ff7b80')+'"></i><b>'+esc(n)+'</b> · '+esc(x&&x.ok?ok(x):(x&&x.error)||'not read')+'</div>';}
+    $('sources').innerHTML=src('Nutanix protection domains',S.nutanix,function(x){return x.sites+' cluster(s) read';})+src('Oracle Data Guard (SIEM)',S.dataguard,function(x){return x.standbys+' standby(s)';})+src('DR & BCM Drills',S.drills,function(x){return x.linked+' stream(s) matched to '+x.systems+' drill system(s)';})+'<div class="sm mute" style="margin-top:6px">'+esc(V.learned.note)+' Data Guard RPO default '+esc(V.dataguard_rpo_min)+' min until an administrator sets the agreed one.</div>';
+    $('conflicts').innerHTML=V.conflicts.map(function(c){return '<div class="cf"><b>'+esc(c.name)+'</b> · '+esc(c.why)+'</div>';}).join('');}
+  function drawHeat(){$('heat').innerHTML=V.heat.length?'<tr><td></td>'+Array.apply(null,Array(24)).map(function(_,i){return '<td class="sm mute" style="text-align:center">'+(i%6===0?esc('-'+(24-i)+'h'):'')+'</td>';}).join('')+'</tr>'+V.heat.map(function(h){return '<tr><td class="n">'+esc(h.name)+'</td>'+h.cells.map(function(v){var c=v==null?'#1b2030':v>1?'#e5484d':v>0.8?'#f59f00':v>0.5?'#9bd36b':'#2fb344';return '<td class="c" style="background:'+c+'" title="'+esc(v==null?'no sample':Math.round(v*100)+'% of the RPO')+'"></td>';}).join('')+'</tr>';}).join(''):'<tr><td class="empty">No samples yet.</td></tr>';}
+  function draw(){drawTop();drawStreams();drawDet();drawSide();drawHeat();}
+  function load(){
+    req('GET','/dr-studio').then(function(v){V=v;$('main').hidden=false;$('err').innerHTML='';draw();$('sample').hidden=!can('admin');
+      $('ais').textContent=v.ai.enabled?'Claude '+v.ai.model:v.ai.reason;$('go').disabled=!(v.ai.enabled&&can('operator'));
+      $('up').textContent='updated '+new Date(v.generated_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});},
+      function(e){$('main').hidden=true;$('err').innerHTML='<div class="card"><p>'+esc(e.status===404?'DR Studio is not installed yet - run the platform update (update-platform.ps1).':e.status===409?'DR Studio runs in Python and Python did not answer - run the update.':e.message)+'</p></div>';});
+  }
+  function pick(k){SEL=k;drawStreams();drawDet();var d=$('det');if(d.scrollIntoView)d.scrollIntoView({behavior:'smooth',block:'nearest'});}
+  document.addEventListener('click',function(ev){
+    var t=ev.target.closest('[data-key],#rsave');if(!t)return;
+    if(t.id==='rsave'){var cur=V.streams.find(function(x){return x.key===SEL;})||{},b={key:SEL,rpo_min:Number($('rpo').value)},d=$('dsys').value.trim();if(d)b.drill_system=d;else if(cur.drill_system)b.unlink_drill=true;
+      req('POST','/dr-studio/settings',b).then(function(){toast('Saved (audited)');load();},function(e){toast(e.message);});return;}
+    pick(t.getAttribute('data-key'));
+  });
+  document.addEventListener('keydown',function(ev){var k=ev.target.closest&&ev.target.closest('[data-key]');if(k&&ev.key==='Enter')pick(k.getAttribute('data-key'));});
+  $('refresh').addEventListener('click',load);
+  $('sample').addEventListener('click',function(){req('POST','/dr-studio/sample',{}).then(function(r){toast(r.sampled+' stream(s) sampled');load();},function(e){toast(e.message);});});
+  $('go').addEventListener('click',function(){var q=$('q').value.trim(),b=this;if(q.length<3){$('out').innerHTML='<div class="ans">Type a question first.</div>';return;}
+    b.disabled=true;$('out').innerHTML='<div class="ans mute">The analyst is reading the streams…</div>';
+    req('POST','/dr-studio/ai/ask',{question:q}).then(function(r){$('out').innerHTML='<div class="ans">'+esc(r.answer)+'</div><div class="steps">'+esc(r.model)+' · '+r.steps.length+' step(s): '+esc(r.steps.map(function(s){return s.tool+(s.ok?'':' (refused)');}).join(', '))+(r.injection_signals.length?' · ⚠ text in the data looked like instructions - treated as data':'')+'</div>';},
+      function(e){$('out').innerHTML='<div class="ans">'+esc(e.message)+'</div>';}).then(function(){b.disabled=!(V&&V.ai&&V.ai.enabled&&can('operator'));});});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden&&!document.activeElement.matches('textarea,input,select'))load();},120000);
+})();
+</script></body></html>

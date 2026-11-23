@@ -1,0 +1,80 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SAMA IT Audit</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:180px minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:center}
+.ring{position:relative;width:160px;height:160px;margin:auto}.ring svg{transform:rotate(-90deg)}.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.ring .v b{font-size:36px}.ring .v span{font-size:11px;color:var(--d-mute);max-width:120px}
+.flow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px}.flow span{background:var(--d-raise);border:1px solid var(--d-line);border-radius:999px;padding:4px 10px}.flow i.arr{color:var(--d-mute)}
+.areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px}
+.area{background:var(--d-raise);border:1px solid var(--d-line);border-radius:14px;padding:12px}
+.area .hd{display:flex;align-items:center;gap:8px}.area .hd b{flex:1}.bar{height:8px;border-radius:4px;background:#232837;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%}
+.chk{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;padding:6px 0;border-top:1px solid #1f2533;font-size:12.8px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;text-align:center}
+.s-met{background:rgba(47,179,68,.15);color:#56d364}.s-partial{background:rgba(245,159,0,.16);color:#f5b544}.s-gap{background:rgba(229,72,77,.16);color:#ff7b80}.s-not_measured{background:rgba(139,147,164,.16);color:#aab2c2}
+.r-high{background:rgba(229,72,77,.18);color:#ff8a8e}.r-medium{background:rgba(245,159,0,.16);color:#f5b544}.r-low{background:rgba(139,147,164,.16);color:#aab2c2}
+.fx{color:#f5b544;font-size:12px;margin-top:2px}
+.fd{border-left:3px solid var(--d-bad);background:rgba(229,72,77,.05);border-radius:8px;padding:10px 12px;margin:8px 0;font-size:12.8px}.fd b.k{display:inline-block;min-width:110px;color:var(--d-mute);font-weight:600}
+.inp,select.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:5px 8px;font:12.5px Inter,"Segoe UI",system-ui,sans-serif}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.spark{width:100%;height:60px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1100px){.hero{grid-template-columns:1fr}.areas{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Audit</div><h1>SAMA IT Audit</h1><div class="sm mute">Ready for a SAMA IT audit? Each area SAMA expects - governance, cyber risk, data protection, incident response, BC/DR and the audit process itself - checked against what the platform already records. A check with no evidence says "not measured"; it is never counted as met.</div></div><div class="sp"></div>
+ <button class="btn" id="pack-html" type="button"><i class="ti ti-file-text"></i>Regulator pack (HTML / PDF)</button><button class="btn" id="pack-csv" type="button"><i class="ti ti-file-spreadsheet"></i>Excel</button><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <section class="card hero"><div class="ring" id="ring"></div><div><div style="font-weight:700;font-size:16px" id="rtext"></div><div class="sm mute" id="rtrend" style="margin:4px 0 10px"></div>
+   <div class="flow"><span><i class="ti ti-target"></i> Plan &amp; scope</span><i class="ti ti-arrow-right arr"></i><span><i class="ti ti-checklist"></i> Test controls</span><i class="ti ti-arrow-right arr"></i><span><i class="ti ti-file-certificate"></i> Report &amp; document</span><i class="ti ti-arrow-right arr"></i><span><i class="ti ti-activity"></i> Monitor continuously</span></div></div>
+  <div><div class="sm mute">Readiness, last 60 days</div><svg class="spark" id="spark" viewBox="0 0 300 60" preserveAspectRatio="none" aria-label="readiness history"></svg><div class="sm mute" id="weak"></div></div></section>
+ <section class="card"><h2><i class="ti ti-layout-grid"></i>Areas <span class="c">weighted: a check that matters more counts more; partly met counts half</span></h2><div class="areas" id="areas"></div></section>
+ <section class="card"><h2><i class="ti ti-file-alert"></i>Draft audit findings <span class="c">written from each gap (condition, criteria, cause, effect, recommendation) - a person sends one into an IT Audit engagement, where its review and owner response apply</span></h2><div id="finds"></div></section>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null;
+  var ICON={governance:'ti-building-bank',cyber_risk:'ti-shield-half',data:'ti-lock',incident:'ti-urgent',bcdr:'ti-refresh-alert',process:'ti-clipboard-check'};
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function col(p){return p==null?'#8b93a4':p>=80?'#2fb344':p>=55?'#f59f00':'#e5484d';}
+  function ring(p){var s=160,st=14,r=(s-st)/2,ci=2*Math.PI*r,off=ci*(1-(p||0)/100);return '<svg width="'+s+'" height="'+s+'"><circle cx="80" cy="80" r="'+r+'" fill="none" stroke="#232837" stroke-width="'+st+'"/><circle cx="80" cy="80" r="'+r+'" fill="none" stroke="'+col(p)+'" stroke-width="'+st+'" stroke-linecap="round" stroke-dasharray="'+ci.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';}
+  function draw(){var R=V.readiness;
+    $('ring').innerHTML=ring(R.score)+'<div class="v"><b>'+(R.score==null?'—':esc(R.score)+'%')+'</b><span>SAMA IT audit readiness</span></div>';
+    $('rtext').textContent=R.text;$('rtrend').textContent=R.trend?('Trend: '+R.trend.text+' (over '+R.trend.days+' days)'):'The trend appears after 5 days of history.';
+    $('weak').textContent=R.weakest?'Weakest area: '+R.weakest:'';
+    var H=V.history||[];if(H.length>1){var pts=H.map(function(h,i){return (i/(H.length-1)*300).toFixed(1)+','+(57-h.score/100*54).toFixed(1);}).join(' ');$('spark').innerHTML='<polyline points="'+pts+'" fill="none" stroke="#5b8def" stroke-width="2"/>';}else $('spark').innerHTML='<text x="4" y="34" fill="#8b93a4" font-size="11">recorded daily - a line appears from the second day</text>';
+    $('areas').innerHTML=V.areas.map(function(a){var L=V.checks.filter(function(c){return c.area===a.id;});
+      return '<div class="area" data-area="'+esc(a.id)+'"><div class="hd"><i class="ti '+(ICON[a.id]||'ti-point')+'"></i><b>'+esc(a.name)+'</b><span style="font-weight:800;color:'+col(a.score)+'">'+(a.score==null?'not measured':esc(a.score)+'%')+'</span></div>'
+        +'<div class="bar"><i style="width:'+(a.score||0)+'%;background:'+col(a.score)+'"></i></div><div class="sm mute">'+esc(a.met)+' met · '+esc(a.partial)+' partly · '+esc(a.gap)+' gap · '+esc(a.not_measured)+' not measured</div>'
+        +L.map(function(c){return '<div class="chk" data-check="'+esc(c.id)+'"><span class="pill s-'+esc(c.state)+'">'+esc(c.state.replace('_',' '))+'</span><div><b>'+esc(c.title)+'</b> <span class="sm mute">'+esc(c.ref)+'</span><div class="sm">'+esc(c.evidence)+'</div>'+(c.fix?'<div class="fx"><i class="ti ti-arrow-right"></i> '+esc(c.fix)+'</div>':'')+'</div></div>';}).join('')+'</div>';}).join('');
+    var E=V.engagements||[];
+    $('finds').innerHTML=V.findings.length?V.findings.map(function(f){return '<div class="fd" data-f="'+esc(f.check)+'"><div style="font-weight:700;margin-bottom:4px"><span class="pill r-'+esc(f.rating)+'">'+esc(f.rating)+'</span> '+esc(f.title)+'</div>'
+      +'<div><b class="k">Condition</b>'+esc(f.condition)+'</div><div><b class="k">Criteria</b>'+esc(f.criteria)+'</div><div><b class="k">Cause</b>'+esc(f.cause)+'</div><div><b class="k">Effect</b>'+esc(f.effect)+'</div><div><b class="k">Recommendation</b>'+esc(f.recommendation)+'</div>'
+      +(can('operator')?(E.length?'<div class="row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><select class="inp" data-eng aria-label="Engagement">'+E.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.id+' · '+x.title)+'</option>';}).join('')+'</select><input class="inp" data-owner placeholder="Owner (auditee person)" aria-label="Owner" value="'+esc(E[0].auditee_owner||'')+'"><button class="btn sm pri" type="button" data-send="'+esc(f.check)+'"><i class="ti ti-send"></i>Send to engagement</button></div>'
+        :'<div class="sm mute" style="margin-top:6px">'+(V.audit_installed?'No IT Audit engagement in fieldwork - open one (IT Audit -> Engagements) to raise this finding.':'The IT Audit team is not installed.')+'</div>'):'')+'</div>';}).join(''):'<div class="note">No gap among the checks that have evidence.</div>';}
+  function save(name,data,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);}
+  function load(){return req('GET','/sama-itaudit').then(function(v){V=v;$('err').hidden=true;if(!V.ok){$('err').hidden=false;$('err').innerHTML='<div class="note">'+esc(V.error)+'</div>';return;}$('main').hidden=false;draw();},function(e){$('main').hidden=true;var m=$('err');m.hidden=false;
+    m.innerHTML=e.status===403?'<h2><i class="ti ti-lock"></i>Operators and administrators</h2><div class="sm mute">Audit gaps name weaknesses of the institution.</div>':e.status===404?'<h2><i class="ti ti-plug-off"></i>SAMA IT Audit is not installed on the server yet</h2><div class="sm">Run the update: <code>git pull origin main</code>, then <code>update-platform.ps1</code>.</div>':'<h2><i class="ti ti-alert-triangle"></i>Could not load</h2><div class="sm">'+esc(e.message)+'</div>';});}
+  $('finds').addEventListener('click',function(ev){var b=ev.target.closest('[data-send]');if(!b)return;var box=b.closest('.fd'),eng=box.querySelector('[data-eng]').value,owner=box.querySelector('[data-owner]').value.trim();
+    if(!owner){toast('Name the owner: the auditee person who will respond');return;}b.disabled=true;
+    req('POST','/sama-itaudit/findings/send',{check:b.getAttribute('data-send'),engagement:eng,owner:owner}).then(function(r){toast('Raised as '+(r.finding&&r.finding.id||'a finding')+' in '+eng);},function(x){toast(x.message);b.disabled=false;});});
+  function pack(f){req('GET','/sama-itaudit/pack?format='+f).then(function(r){save(r.filename,f==='csv'?'﻿'+r.csv:r.html,f==='csv'?'text/csv':'text/html');},function(x){toast(x.message);});}
+  $('pack-html').addEventListener('click',function(){pack('html');});$('pack-csv').addEventListener('click',function(){pack('csv');});
+  $('refresh').addEventListener('click',load);
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+})();
+</script></body></html>

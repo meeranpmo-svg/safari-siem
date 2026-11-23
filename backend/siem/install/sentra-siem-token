@@ -1,0 +1,116 @@
+#!/bin/bash
+# sentra-siem-token - manage per-source ingest tokens in /etc/sentra-siem/secrets.json (installed to /usr/local/sbin).
+#
+#   sentra-siem-token list                       source ids that have a token (never prints tokens)
+#   sentra-siem-token show <src>                 print the token of <src> - the only output is the token itself
+#   sentra-siem-token add <src> [--type TYPE]    create a token; also adds {"id":<src>,"type":TYPE} to config.json
+#                                             "sources" if missing (TYPE default: windows)
+#   sentra-siem-token rotate <src>               replace the token (redeploy it to the agents of that source)
+#   sentra-siem-token revoke <src>               delete the token (the source can no longer POST)
+#
+# Needs read/write access to /etc/sentra-siem (root). Tokens take effect after `systemctl restart sentra-siem`.
+# SENTRA_SIEM_ETC overrides the directory (tests).
+set -euo pipefail
+
+ETC="${SENTRA_SIEM_ETC:-/etc/sentra-siem}"
+if [ -z "${NODE_BIN:-}" ] && [ -r /etc/default/sentra-siem ]; then
+  NODE_BIN="$(sed -n 's/^NODE_BIN=//p' /etc/default/sentra-siem | tail -n 1)"
+fi
+NODE_BIN="${NODE_BIN:-$(command -v node || true)}"
+
+usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+die() { echo "sentra-siem-token: $*" >&2; exit 1; }
+# Running as root, only execute a Node.js binary that no other account can replace: the binary and every
+# directory above it must be owned by root and not group/world-writable (the default runtime lives in another
+# product's tree, /opt/sentra-ai, whose service account must not be able to gain root through us).
+trusted_bin() {
+  local p
+  p="$(readlink -f "$1" 2>/dev/null)" || return 1
+  [ -x "$p" ] || return 1
+  while [ -n "$p" ] && [ "$p" != "/" ]; do
+    [ "$(stat -c %u "$p")" = 0 ] || return 1
+    case "$(stat -c %A "$p")" in ?????w????|????????w?) return 1 ;; esac
+    p="$(dirname "$p")"
+  done
+  return 0
+}
+if [ "$(id -u)" = 0 ] && [ -z "${SENTRA_SIEM_ETC:-}" ] && [ -n "$NODE_BIN" ] && ! trusted_bin "$NODE_BIN"; then
+  die "refusing to run $NODE_BIN as root: it or a parent directory is not root-owned or is group/world-writable"
+fi
+
+[ $# -ge 1 ] || usage
+CMD="$1"; shift
+SRC=""; TYPE="windows"
+case "$CMD" in
+  list) ;;
+  show|add|rotate|revoke) [ $# -ge 1 ] || usage; SRC="$1"; shift ;;
+  -h|--help|help) usage ;;
+  *) usage ;;
+esac
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --type) TYPE="${2:-}"; shift 2 ;;
+    *) usage ;;
+  esac
+done
+if [ -n "$SRC" ] && ! [[ "$SRC" =~ ^[A-Za-z0-9_.-]{1,64}$ ]]; then die "invalid source id '$SRC' (letters, digits, _ . - ; max 64)"; fi
+[[ "$TYPE" =~ ^[a-z0-9_-]{1,32}$ ]] || die "invalid --type '$TYPE'"
+[ -n "$NODE_BIN" ] && [ -x "$NODE_BIN" ] || die "node not found (set NODE_BIN in /etc/default/sentra-siem)"
+[ -r "$ETC/secrets.json" ] || die "cannot read $ETC/secrets.json (run as root; is sentra-siem installed?)"
+if [ "$CMD" != list ] && [ "$CMD" != show ]; then [ -w "$ETC/secrets.json" ] || die "cannot write $ETC/secrets.json (run as root)"; fi
+
+SENTRA_ETC="$ETC" SENTRA_CMD="$CMD" SENTRA_SRC="$SRC" SENTRA_TYPE="$TYPE" "$NODE_BIN" -e '
+"use strict";
+const fs = require("fs"), path = require("path"), crypto = require("crypto");
+const etc = process.env.SENTRA_ETC, cmd = process.env.SENTRA_CMD, src = process.env.SENTRA_SRC, type = process.env.SENTRA_TYPE;
+const secPath = path.join(etc, "secrets.json"), cfgPath = path.join(etc, "config.json");
+// secrets.json is sealed at rest (engine/secretfile.js): read and write it through that module
+let SF = null; for (const c of ["/opt/sentra-siem/engine/secretfile.js"]) { try { SF = require(c); break; } catch (e) { /* not installed yet */ } }
+const readJson = (p) => (SF && SF.isSecretsPath(p) ? SF.read(p) : JSON.parse(fs.readFileSync(p, "utf8")));
+function writeJson(p, obj) {                       // atomic, mode 600, keeps the owner of the original file
+  if (SF && SF.isSecretsPath(p)) { SF.write(p, obj); return; }
+  const st = fs.statSync(p), tmp = p + ".tmp-" + process.pid;
+  fs.writeFileSync(tmp, JSON.stringify(obj, null, 2) + "\n", { mode: 0o600 });
+  try { if (process.getuid && process.getuid() === 0) fs.chownSync(tmp, st.uid, st.gid); } catch (e) { /* not root */ }
+  fs.renameSync(tmp, p);
+}
+const s = readJson(secPath);
+s.ingest_tokens = s.ingest_tokens && typeof s.ingest_tokens === "object" ? s.ingest_tokens : {};
+const t = s.ingest_tokens;
+const fail = (m) => { process.stderr.write("sentra-siem-token: " + m + "\n"); process.exit(1); };
+const newToken = () => crypto.randomBytes(32).toString("hex");
+switch (cmd) {
+  case "list":
+    for (const id of Object.keys(t).sort()) process.stdout.write(id + "\n");
+    break;
+  case "show":
+    if (!t[src]) fail("no token for source \"" + src + "\" (sentra-siem-token add " + src + ")");
+    process.stdout.write(t[src] + "\n");
+    break;
+  case "add": {
+    if (t[src]) fail("source \"" + src + "\" already has a token (use rotate to replace it)");
+    t[src] = newToken();
+    writeJson(secPath, s);
+    let note = "";
+    if (fs.existsSync(cfgPath)) {
+      const c = readJson(cfgPath);
+      c.sources = Array.isArray(c.sources) ? c.sources : [];
+      if (!c.sources.some((x) => x && x.id === src)) { c.sources.push({ id: src, type }); writeJson(cfgPath, c); note = " and source {id:" + src + ", type:" + type + "} added to config.json"; }
+    }
+    process.stderr.write("token created for \"" + src + "\"" + note + ". Show it with: sentra-siem-token show " + src + "; apply with: systemctl restart sentra-siem\n");
+    break;
+  }
+  case "rotate":
+    if (!t[src]) fail("no token for source \"" + src + "\"");
+    t[src] = newToken();
+    writeJson(secPath, s);
+    process.stderr.write("token rotated for \"" + src + "\" - redeploy it (sentra-siem-token show " + src + "), then: systemctl restart sentra-siem\n");
+    break;
+  case "revoke":
+    if (!t[src]) fail("no token for source \"" + src + "\"");
+    delete t[src];
+    writeJson(secPath, s);
+    process.stderr.write("token revoked for \"" + src + "\"; apply with: systemctl restart sentra-siem\n");
+    break;
+}
+'

@@ -1,0 +1,134 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Scanned Assets</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--bg:#0b0e14;--pn:#121722;--rs:#18202d;--ln:#232c3c;--tx:#e8ecf3;--mu:#8c95a8;--cr:#c92a44;--hi:#ef5b6b;--me:#f59f00;--lo:#3ccf91;--ac:#3b82f6}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 60px}
+.hero{text-align:center;padding:18px 10px 6px}.hero h1{margin:0;font-size:34px;font-weight:600}.hero p{max-width:900px;margin:8px auto 0;color:var(--mu);font-size:15px}
+.bar1{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace}
+.chip{display:inline-flex;gap:5px;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;border:1px solid var(--ln);background:var(--rs)}.chip i.d{width:7px;height:7px;border-radius:50%;display:inline-block}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:7px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.btn:hover{border-color:#3a4560}
+.tabs{display:flex;gap:6px;margin:4px 0 14px;border-bottom:1px solid var(--ln)}.tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--mu);font:600 14px Inter,"Segoe UI",system-ui,sans-serif;padding:8px 12px;cursor:pointer}.tab[aria-selected="true"]{color:var(--tx);border-bottom-color:var(--ac)}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:14px}.k{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:12px 16px;min-width:0}.k .v{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}.k .l{font-size:12px;color:var(--mu)}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:16px 18px;min-width:0;margin-bottom:14px}.card .t{font-size:11px;color:var(--mu)}.card h2{margin:0 0 10px;font-size:17px}
+.stk{display:flex;flex-direction:column;gap:7px}.stk .r{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr) 64px;gap:10px;align-items:center;cursor:pointer}.stk .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.stk .b{display:flex;height:16px;border-radius:4px;overflow:hidden;background:var(--rs)}.stk .b i{display:block;height:100%}.stk .c{font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.lgd{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px}.lgd span{display:inline-flex;gap:5px;align-items:center}.lgd i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.flt{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.inp{background:var(--bg);color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:7px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px;min-width:980px}th{text-align:left;color:var(--mu);font-weight:600;font-size:12px;padding:8px;border-bottom:1px solid var(--ln);white-space:nowrap}th[data-sort]{cursor:pointer}th[data-sort]:hover{color:var(--tx)}td{padding:9px 8px;border-bottom:1px solid #1a2130;vertical-align:middle}
+#tbl tbody tr{cursor:pointer}#tbl tbody tr:hover{background:#151c29}
+.sv{display:inline-flex;gap:3px}.sv b{display:inline-block;min-width:24px;text-align:center;padding:1px 5px;border-radius:4px;font-size:11px;font-weight:700;color:#fff}
+.pill{display:inline-block;min-width:70px;text-align:center;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700;letter-spacing:.3px;color:#fff}
+.s-critical{background:var(--cr)}.s-high{background:#c2414f}.s-medium{background:#a36800}.s-low{background:#1f7a55}.s-info{background:#3a4560}.s-zero{background:transparent!important;color:var(--mu)!important;border:1px solid var(--ln)}
+.tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--ln);background:var(--rs);white-space:nowrap}.tag.warn{border-color:rgba(239,91,107,.5)}
+.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:12px;margin-bottom:12px}
+.note{background:var(--rs);border:1px solid var(--ln);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.empty{color:var(--mu);padding:24px;text-align:center}
+.dr{position:fixed;top:0;right:0;bottom:0;width:min(640px,100vw);background:var(--pn);border-left:1px solid var(--ln);padding:18px;overflow:auto;z-index:50;box-shadow:-10px 0 30px rgba(0,0,0,.4)}
+.dr table{min-width:0}.dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}.dl div{min-width:0}.dl .sm{display:block}
+a{color:#7fb0ff}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:640px){.kpis{grid-template-columns:1fr 1fr}.hero h1{font-size:26px}.stk .r{grid-template-columns:minmax(0,110px) minmax(0,1fr) 48px}.dl{grid-template-columns:1fr 1fr}}
+</style></head><body><main>
+<div class="hero"><h1>Scanned Assets</h1><p>Every host the vulnerability scanners have examined, matched to the asset register: open findings by severity after deduplication, an explained risk score, age, remediation SLA and which scanners saw it - and the assets in the approved scan scope that were never or not recently scanned.</p></div>
+<div id="err"></div>
+<div class="bar1"><span id="srcs"></span><span class="sp"></span><span class="sm mu" id="gen"></span><button type="button" class="btn" id="exp" hidden><i class="ti ti-file-spreadsheet"></i>Export to Excel</button><button type="button" class="btn" id="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button></div>
+<div id="body" hidden>
+<div class="tabs" role="tablist"><button type="button" class="tab" role="tab" id="tab-assets" data-tab="assets" aria-selected="true">Scanned assets</button><button type="button" class="tab" role="tab" id="tab-cov" data-tab="cov" aria-selected="false">Coverage</button></div>
+<div id="empty"></div>
+<section id="p-assets">
+ <div class="kpis" id="kpis"></div>
+ <div class="card"><div class="t">Risk</div><h2>Riskiest assets by open severity</h2><div id="chart"></div></div>
+ <div class="card"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h2 style="margin:0">Scanned assets</h2><span class="sm mu" id="cnt"></span></div>
+  <div class="flt"><input class="inp" id="q" placeholder="Search host, IP, owner, CVE" aria-label="Search" style="min-width:220px;flex:1">
+   <select class="inp" id="sev" aria-label="Severity"><option value="">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+   <select class="inp" id="scanner" aria-label="Scanner"><option value="">All scanners</option><option value="greenbone">Greenbone</option><option value="tenable">Tenable</option><option value="firecompass">FireCompass</option><option value="pentest">Pentest engineer</option></select>
+   <select class="inp" id="site" aria-label="Site"><option value="">All sites</option></select>
+   <select class="inp" id="crit" aria-label="Criticality"><option value="">All criticality</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="unrated">Unrated</option></select>
+   <select class="inp" id="owner" aria-label="Owner"><option value="">All owners</option></select></div>
+  <div id="tbl"></div>
+  <div class="sm mu" id="rule" style="margin-top:10px"></div></div>
+</section>
+<section id="p-cov" hidden>
+ <div id="covnote"></div>
+ <div class="card" id="setcard" hidden><h2>Scan freshness</h2><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label for="stale" class="sm mu">An asset counts as not recently scanned after</label><input class="inp" id="stale" type="number" min="1" max="365" style="width:90px"><span class="sm mu">days</span><button type="button" class="btn" id="savestale">Save</button></div></div>
+ <div class="card"><h2>In the scan scope, never scanned <span class="sm mu" id="nn"></span></h2><div id="never"></div></div>
+ <div class="card"><h2>In the scan scope, not scanned recently <span class="sm mu" id="ns"></span></h2><div id="stalel"></div></div>
+ <div class="card"><h2>Scanned hosts not in the asset register <span class="sm mu" id="nu"></span></h2><div id="unknown"></div></div>
+</section>
+</div>
+<div class="dr" id="dr" hidden role="dialog" aria-label="Scanned asset detail"></div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',V=null,T=null,SORT={k:'risk',d:-1},TAB='assets';
+  var COL={critical:'#c92a44',high:'#ef5b6b',medium:'#f59f00',low:'#3ccf91'},SEVS=['critical','high','medium','low'],SEVL={critical:'Critical',high:'High',medium:'Medium',low:'Low'};
+  var REG='asset-studio.html',VULN='vuln-inventory.html';
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function d10(v){return v?String(v).slice(0,10):'';}
+  function num(v){return v==null?'<span class="mu">-</span>':esc(String(v));}
+  function sevs(o){return '<span class="sv">'+SEVS.map(function(k){var n=(o&&o[k])||0;return '<b class="s-'+k+(n?'':' s-zero')+'" title="'+esc(SEVL[k])+'">'+n+'</b>';}).join('')+'</span>';}
+  function critTag(c){return '<span class="tag'+(c==='critical'?' warn':'')+'">'+esc(c||'unrated')+'</span>';}
+  function qs(){var p={q:$('q').value.trim(),sev:$('sev').value,scanner:$('scanner').value,site:$('site').value,criticality:$('crit').value,owner:$('owner').value},a=[];Object.keys(p).forEach(function(k){if(p[k])a.push(k+'='+encodeURIComponent(p[k]));});return a.length?'?'+a.join('&'):'';}
+  function opts(sel,list,all){var cur=sel.value;sel.innerHTML='<option value="">'+esc(all)+'</option>'+list.map(function(x){return '<option value="'+esc(x)+'">'+esc(x)+'</option>';}).join('');if(list.indexOf(cur)>=0)sel.value=cur;}
+  function kpis(t){var tiles=[[t.scanned,'scanned assets'],[t.with_open,'with open findings'],[t.open.critical+t.open.high,'critical + high open'],[t.overdue==null?'not judged':t.overdue,'open findings past SLA'],[t.fixed_30d,'fixed in the last 30 days'],[t.unknown,'not in the asset register']];
+    $('kpis').innerHTML=tiles.map(function(x){return '<div class="k"><div class="v">'+esc(String(x[0]))+'</div><div class="l">'+esc(x[1])+'</div></div>';}).join('');}
+  function chart(list){if(!list.length){$('chart').innerHTML='<div class="empty sm">No scanned asset has an open finding.</div>';return;}
+    var max=list.reduce(function(m,r){return Math.max(m,SEVS.reduce(function(a,k){return a+r.open[k];},0));},1);
+    $('chart').innerHTML='<div class="stk">'+list.map(function(r){var tot=SEVS.reduce(function(a,k){return a+r.open[k];},0);return '<div class="r" data-id="'+esc(r.id)+'" role="button" tabindex="0" title="'+esc(r.host+' - '+tot+' open')+'"><div class="n">'+esc(r.host)+'</div><div class="b" aria-hidden="true">'+SEVS.map(function(k){return r.open[k]?'<i style="width:'+(100*r.open[k]/max).toFixed(2)+'%;background:'+COL[k]+'"></i>':'';}).join('')+'</div><div class="c">risk '+esc(String(r.risk))+'</div></div>';}).join('')+'</div>'
+      +'<div class="lgd">'+SEVS.map(function(k){return '<span><i style="background:'+COL[k]+'"></i>'+esc(SEVL[k])+'</span>';}).join('')+'</div>';}
+  var COLS=[['host','Asset'],['ip','IP'],['owner','Owner'],['site','Site'],['criticality','Criticality'],['open','Open (C / H / M / L)'],['risk','Risk'],['oldest_open_days','Oldest open (days)'],['overdue','Past SLA'],['last_scan','Last scan'],['scanners','Scanners'],['fixed_30d','Fixed 30d']];
+  function val(r,k){if(k==='owner')return r.asset?r.asset.owner||'':'';if(k==='site')return r.asset?r.asset.site||'':'';if(k==='open')return SEVS.reduce(function(a,s,i){return a+r.open[s]*Math.pow(1000,3-i);},0);if(k==='scanners')return r.scanners.join(',');var v=r[k];return v==null?-1:v;}
+  function table(){var R=V.assets.slice();R.sort(function(a,b){var x=val(a,SORT.k),y=val(b,SORT.k);return (typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y)))*SORT.d;});
+    $('cnt').textContent=R.length+' shown'+(V.truncated?' (first 2000)':'');
+    if(!R.length){$('tbl').innerHTML='<div class="empty">No scanned asset matches the filters.</div>';return;}
+    $('tbl').innerHTML='<div class="tw"><table><thead><tr>'+COLS.map(function(c){return '<th data-sort="'+c[0]+'" aria-sort="'+(SORT.k===c[0]?(SORT.d>0?'ascending':'descending'):'none')+'">'+esc(c[1])+(SORT.k===c[0]?(SORT.d>0?' ▲':' ▼'):'')+'</th>';}).join('')+'</tr></thead><tbody>'+R.map(function(r){
+      return '<tr data-id="'+esc(r.id)+'" tabindex="0"><td><b>'+esc(r.host)+'</b>'+(r.registered?' <span class="sm mu">by '+esc(r.match.by)+'</span>':' <span class="tag warn">not in register</span>')+'</td><td class="mono">'+esc(r.ip||'')+'</td><td>'+esc(r.asset?r.asset.owner||'':'')+'</td><td>'+esc(r.asset?r.asset.site||'':'')+'</td><td>'+critTag(r.criticality)+'</td><td>'+sevs(r.open)+'</td><td><b>'+esc(String(r.risk))+'</b></td><td>'+num(r.oldest_open_days)+'</td><td>'+(r.overdue==null?'<span class="mu">not judged</span>':esc(String(r.overdue)))+'</td><td>'+esc(d10(r.last_scan))+'</td><td class="sm">'+esc(r.scanners.join(', '))+'</td><td>'+esc(String(r.fixed_30d))+'</td></tr>';}).join('')+'</tbody></table></div>';}
+  function covList(L,kind){if(!L.length)return '<div class="empty sm">'+esc(kind==='unknown'?'Every scanned host is in the asset register.':'None.')+'</div>';
+    if(kind==='unknown')return '<div class="tw"><table style="min-width:640px"><thead><tr><th>Host</th><th>IP</th><th>Scanners</th><th>Last scan</th><th>Open (C / H / M / L)</th><th></th></tr></thead><tbody>'+L.map(function(u){return '<tr><td>'+esc(u.host)+'</td><td class="mono">'+esc(u.ip||'')+'</td><td class="sm">'+esc(u.scanners.join(', '))+'</td><td>'+esc(d10(u.last_scan))+'</td><td>'+sevs(u.open)+'</td><td><a href="'+REG+'" target="_top">Add to the asset register</a></td></tr>';}).join('')+'</tbody></table></div>';
+    return '<div class="tw"><table style="min-width:640px"><thead><tr><th>Asset</th><th>IP in scope</th><th>Owner</th><th>Site</th><th>Criticality</th><th>Last scan</th><th></th></tr></thead><tbody>'+L.map(function(a){return '<tr><td>'+esc(a.name)+'</td><td class="mono">'+esc(a.ip)+'</td><td>'+esc(a.owner||'')+'</td><td>'+esc(a.site||'')+'</td><td>'+critTag(a.criticality)+'</td><td>'+(a.last_scan?esc(d10(a.last_scan))+' <span class="sm mu">'+esc(String(a.days))+' days, '+esc(a.last_scan_tool||'')+'</span>':'<span class="mu">never</span>')+'</td><td><a href="'+REG+'" target="_top">Open the asset register</a></td></tr>';}).join('')+'</tbody></table></div>';}
+  function coverage(){var c=V.coverage;
+    $('covnote').innerHTML=(c.note?'<div class="note">'+esc(c.note)+'</div>':'')+(c.scope.allowed.length?'<div class="sm mu" style="margin-bottom:10px">Approved scan scope (Vulnerability Scans): '+esc(c.scope.allowed.join(', '))+(c.scope.exclude.length?' - excluded '+esc(c.scope.exclude.join(', ')):'')+'. Not scanned recently = no scan for more than '+esc(String(c.stale_days))+' days.</div>':'');
+    $('nn').textContent='('+c.never.length+')';$('ns').textContent='('+c.stale.length+')';$('nu').textContent='('+c.unknown.length+')';
+    $('never').innerHTML=covList(c.never,'never');$('stalel').innerHTML=covList(c.stale,'stale');$('unknown').innerHTML=covList(c.unknown,'unknown');
+    $('setcard').hidden=!V.can_edit;if(V.can_edit&&document.activeElement!==$('stale'))$('stale').value=V.settings.stale_days;}
+  function draw(){var v=V;$('body').hidden=false;
+    var st=v.sources||{};$('srcs').innerHTML=Object.keys(st).map(function(k){var o=st[k];return '<span class="chip"><i class="d" style="background:'+(o.ok?'#3ccf91':'#ef5b6b')+'"></i>'+esc(k)+(o.ok?'':' - '+esc(o.error||'not available'))+'</span> ';}).join('');
+    $('gen').textContent='Updated '+String(v.generated_at||'').replace('T',' ').slice(0,16)+' UTC';
+    $('exp').hidden=!v.assets.length;
+    $('empty').innerHTML=v.empty?'<div class="note">'+esc(v.empty)+'</div>':'';
+    opts($('site'),v.facets.sites,'All sites');opts($('owner'),v.facets.owners,'All owners');
+    kpis(v.totals);chart(v.riskiest);table();coverage();
+    $('rule').innerHTML='<b>Risk rule:</b> '+esc(v.risk_rule)+'<br><b>Matching:</b> '+esc(v.match_rule)+'.<br><b>Past SLA:</b> '+(v.sla.days?esc(v.sla.from)+': '+SEVS.map(function(k){return esc(SEVL[k])+' '+esc(String(v.sla.days[k]))+' days';}).join(', ')+'.':esc(v.sla.note||'not judged'));}
+  var SEQ=0;function load(){var my=++SEQ;return req('GET','/scanned-assets'+qs()).then(function(v){if(my!==SEQ)return;/* a newer filter is already loading */$('err').innerHTML='';V=v;draw();},function(e){if(my!==SEQ)return;/* superseded by a newer load */$('body').hidden=true;$('exp').hidden=true;
+    $('err').innerHTML=e.status===403?'<div class="note"><b>Scanned Assets names hosts and their owners, so it is shown to operators and administrators.</b> The Vulnerability Dashboard shows the counts for everyone.</div>'
+      :'<div class="err"><b>Scanned Assets could not load.</b> '+esc(e.message)+(e.status===404?' - update IT Asset Management (engine/scanned-assets.js).':'')+'</div>';});}
+  function open(id){$('dr').hidden=false;$('dr').innerHTML='<div class="mu">Loading…</div>';req('GET','/scanned-assets/'+encodeURIComponent(id)).then(function(r){var a=r.asset;
+    $('dr').innerHTML='<div style="display:flex;gap:8px;align-items:center"><b style="font-size:18px">'+esc(r.host)+'</b>'+(r.registered?'':' <span class="tag warn">not in register</span>')+'<span class="sp"></span><button type="button" class="btn" id="drx" aria-label="Close"><i class="ti ti-x"></i></button></div>'
+      +'<div class="sm mu" style="margin-top:4px">'+esc(r.ips.join(', '))+(r.names.length?' · '+esc(r.names.join(', ')):'')+'</div>'
+      +'<div class="dl"><div><span class="sm mu">Register match</span>'+(r.match?esc(r.match.by)+' <span class="sm mu">('+esc(r.match.on)+')</span>':'<a href="'+REG+'" target="_top">not matched - add it</a>')+'</div><div><span class="sm mu">Owner</span>'+esc(a&&a.owner||'-')+'</div><div><span class="sm mu">Department</span>'+esc(a&&a.department||'-')+'</div>'
+      +'<div><span class="sm mu">Criticality</span>'+critTag(r.criticality)+'</div><div><span class="sm mu">Type</span>'+esc(a&&a.type||'-')+'</div><div><span class="sm mu">Site</span>'+esc(a&&a.site||'-')+'</div>'
+      +'<div><span class="sm mu">Risk</span><b>'+esc(String(r.risk))+'</b> <span class="sm mu">'+esc(String(r.risk_base))+' x '+esc(String(r.risk_multiplier))+'</span></div><div><span class="sm mu">Last scan</span>'+esc(d10(r.last_scan)||'-')+(r.last_scan_tool?' <span class="sm mu">'+esc(r.last_scan_tool)+'</span>':'')+'</div><div><span class="sm mu">Scanners</span>'+esc(r.scanners.join(', '))+'</div></div>'
+      +'<h3 style="margin:14px 0 6px;font-size:15px">Findings</h3>'+(r.findings.length?'<div class="tw"><table><thead><tr><th>Severity</th><th>Finding</th><th>CVSS</th><th>Scanners</th><th>Status</th><th>Age</th><th>SLA</th><th>Points</th></tr></thead><tbody>'+r.findings.map(function(f){
+        return '<tr><td><span class="pill s-'+esc(f.severity)+'">'+esc(f.severity.toUpperCase())+'</span></td><td><a href="'+VULN+'#'+(f.status==='open'?'key='+encodeURIComponent(f.key):'q='+encodeURIComponent(f.cves[0]||f.title))+'" target="_top" title="Open in Vulnerabilities">'+esc(f.title)+'</a>'+(f.cves.length?' <span class="sm mu mono">'+esc(f.cves.join(' '))+'</span>':'')+(f.known_exploited?' <span class="tag warn">exploit named</span>':'')+(f.internet_facing?' <span class="tag warn">internet-facing</span>':'')+'</td><td>'+num(f.cvss)+'</td><td class="sm">'+esc(f.scanners.join(', '))+'</td><td>'+esc(f.status)+(f.fixed_at?' <span class="sm mu">'+esc(d10(f.fixed_at))+'</span>':'')+'</td><td>'+num(f.age_days)+'</td><td>'+esc(f.sla_state||'')+'</td><td>'+esc(String(f.points))+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty sm">No findings - the scanners examined this host and reported nothing.</div>')
+      +'<div class="sm mu" style="margin-top:10px">'+esc(r.risk_rule)+'</div>';},function(e){$('dr').innerHTML='<div class="err">'+esc(e.message)+'</div><button type="button" class="btn" id="drx">Close</button>';});}
+  function exportXlsx(){req('GET','/scanned-assets/export'+qs()).then(function(r){
+    window.zybXlsx.download(r.filename,[{name:'Scanned assets',columns:[{h:'Asset',w:26},{h:'IPs',w:18},{h:'In register'},{h:'Matched by'},{h:'Owner',w:18},{h:'Department',w:18},{h:'Criticality'},{h:'Type'},{h:'Site'},{h:'Critical',t:'n'},{h:'High',t:'n'},{h:'Medium',t:'n'},{h:'Low',t:'n'},{h:'Risk',t:'n'},{h:'Oldest open (days)',t:'n'},{h:'Last scan',t:'d'},{h:'Scanners',w:22},{h:'Fixed 30d',t:'n'},{h:'Past SLA',t:'n'}],rows:r.assets},
+      {name:'Open findings',columns:[{h:'Asset',w:26},{h:'IP',w:16},{h:'Finding',w:50},{h:'CVEs',w:22},{h:'Severity'},{h:'CVSS',t:'n'},{h:'Scanners',w:22},{h:'First seen',t:'d'},{h:'Age (days)',t:'n'},{h:'SLA'}],rows:r.findings}],{title:'Scanned Assets',filter:r.filter});
+    toast('Exported '+r.filename);},function(e){toast(e.message);});}
+  function tab(t){TAB=t;['assets','cov'].forEach(function(k){$('tab-'+k).setAttribute('aria-selected',String(k===t));$('p-'+k).hidden=k!==t;});}
+  document.addEventListener('click',function(ev){var t=ev.target;var th=t.closest('th[data-sort]');if(th){var k=th.getAttribute('data-sort');SORT=SORT.k===k?{k:k,d:-SORT.d}:{k:k,d:k==='host'||k==='ip'||k==='owner'||k==='site'?1:-1};table();return;}
+    var row=t.closest('[data-id]');if(row){open(row.getAttribute('data-id'));return;}
+    var tb=t.closest('[data-tab]');if(tb){tab(tb.getAttribute('data-tab'));return;}
+    var b=t.closest('button');if(!b)return;
+    if(b.id==='refresh'){load();return;}if(b.id==='drx'){$('dr').hidden=true;return;}if(b.id==='exp'){exportXlsx();return;}
+    if(b.id==='savestale'){var n=Number($('stale').value);req('POST','/scanned-assets/settings',{stale_days:n}).then(function(){toast('Saved');load();},function(e){toast(e.message);});}});
+  document.addEventListener('keydown',function(ev){var row=ev.target.closest&&ev.target.closest('[data-id]');if(row&&ev.key==='Enter')open(row.getAttribute('data-id'));if(ev.key==='Escape')$('dr').hidden=true;});
+  $('q').addEventListener('input',function(){clearTimeout(T);T=setTimeout(load,350);});['sev','scanner','site','crit','owner'].forEach(function(id){$(id).addEventListener('change',load);});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(e){/* not signed in: the engine decides */}load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

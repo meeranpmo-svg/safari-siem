@@ -1,0 +1,115 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Staff Handover</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
+.pill.ok{background:rgba(63,185,80,.15);color:var(--ok)}.pill.warn{background:rgba(227,179,65,.15);color:var(--warn)}.pill.bad{background:rgba(255,123,114,.16);color:var(--bad)}.pill.mut{color:#a3a9b5}.pill.inf{background:rgba(121,184,255,.14);color:var(--info)}
+.acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.acts button{padding:4px 10px;font-size:12px}
+textarea,input[type=text],input[type=date],select{width:100%;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font:inherit}
+textarea{min-height:70px}
+label.f{display:block;font-size:12px;color:var(--mute);margin:10px 0 4px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px}@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+.blk{background:rgba(255,123,114,.08);border:1px solid rgba(255,123,114,.35);border-radius:8px;padding:8px 10px;font-size:12.8px;margin:8px 0}
+.done{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.35);border-radius:8px;padding:8px 10px;font-size:12.8px;margin:8px 0}
+.notes p{white-space:pre-wrap;margin:2px 0 10px}
+.print-only{display:none}
+@media print{.noprint,.top button,.top a,#list-card,#new-card,.acts,textarea,input,select,label.f{display:none!important}.print-only{display:block}body{background:#fff;color:#000}.card{border-color:#bbb;background:#fff;break-inside:avoid}.muted,th{color:#444}.banner{display:none}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Governance · people</div><h1>Staff Handover</h1><div class="muted small">When an IT or cyber security employee leaves: everything they are responsible for, who takes it over, the access to remove, and their knowledge notes - signed off by their manager</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="banner noprint">Open a handover for the person leaving. The platform lists what is named after them (assets they own or hold, business services, risks, actions, support contracts, domains, their job role, plans they asked for, credentials they saved). Name a successor for each item - the successor accepts it themselves. Someone other than the leaver closes each access item with evidence. The leaver writes the notes (where secrets are kept - never the secrets). The manager signs off when everything is closed; only then do the owner fields move to the successors. The platform never disables an account or changes a password itself.</div>
+<div class="card" id="list-card"><h2>Handovers <span class="c" id="lc"></span></h2><div class="acts noprint" style="margin-bottom:10px"><button type="button" id="new">+ New handover</button></div><div class="tw" id="list"><div class="empty">Loading…</div></div></div>
+<div class="card" id="new-card" hidden><h2>New handover</h2>
+<div class="grid2">
+<div><label class="f" for="n-l">Person leaving (user name)</label><input type="text" id="n-l" list="people" maxlength="120"></div>
+<div><label class="f" for="n-ln">Full name (optional)</label><input type="text" id="n-ln" maxlength="120"></div>
+<div><label class="f" for="n-t">Team</label><select id="n-t"></select></div>
+<div><label class="f" for="n-d">Last working day</label><input type="date" id="n-d"></div>
+<div><label class="f" for="n-m">Manager who signs off (user name)</label><input type="text" id="n-m" list="people" maxlength="120"></div>
+<div><label class="f" for="n-r">Reason (optional)</label><input type="text" id="n-r" maxlength="500"></div>
+</div><datalist id="people"></datalist>
+<div class="acts" style="margin-top:10px"><button type="button" id="n-go">Open the handover</button><button type="button" id="n-x">Cancel</button></div></div>
+<div id="detail"></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var L=null, H=null, TEAMS=[], SEL={};
+  function itam(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){/* not JSON: the status below says what failed */}if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management did not answer'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  var IST={pending:['no successor yet','warn'],assigned:['waiting for the successor','inf'],accepted:['accepted','ok'],declined:['declined','bad'],na:['nothing to hand over','mut']};
+  var AST={open:['open','warn'],done:['done','ok'],na:['not applicable','mut']};
+  var HST={open:['open','inf'],'signed-off':['signed off','ok'],cancelled:['cancelled','mut']};
+  var me=function(){return String(Z.user()||'').trim().toLowerCase();}, is=function(u){return !!u&&String(u).trim().toLowerCase()===me();};
+  function role(h){return {leaver:is(h.leaver)||is(h.leaver_name),manager:is(h.manager),admin:Z.can('admin')};}
+  function list(){
+    $('lc').textContent=L.length?L.length+' in total':'';
+    $('list').innerHTML=L.length?'<table><thead><tr><th>Handover</th><th>Leaving</th><th>Team</th><th>Last day</th><th>Manager</th><th>Items</th><th>Access</th><th>State</th><th></th></tr></thead><tbody>'+L.map(function(h){var s=HST[h.state]||[h.state,'mut'],p=h.progress;
+      return '<tr><td class="mono">'+esc(h.id)+'</td><td><b>'+esc(h.leaver_name||h.leaver)+'</b><div class="muted small">'+esc(h.leaver)+'</div></td><td>'+esc(h.team)+'</td><td>'+esc(h.last_day)+'</td><td>'+esc(h.manager)+'</td><td>'+esc(p.done)+' / '+esc(p.items)+'</td><td>'+esc(p.access_done)+' / '+esc(p.access)+'</td><td>'+Z.pill(s[0],s[1])+'</td><td><button type="button" data-open="'+esc(h.id)+'">Open</button></td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No handovers yet. Open one when an IT or cyber security employee resigns or moves on.</div>';
+  }
+  function detail(){
+    if(!H){$('detail').innerHTML='';return;}
+    var h=H,r=role(h),open=h.state==='open',canAssign=open&&(r.leaver||r.manager||r.admin),s=HST[h.state]||[h.state,'mut'];
+    var head='<div class="card"><h2>'+esc(h.id)+' · '+esc(h.leaver_name||h.leaver)+' '+Z.pill(s[0],s[1])+'</h2>'
+      +'<p class="muted">'+esc(h.team)+' · last working day '+esc(h.last_day)+' · manager '+esc(h.manager)+' · opened by '+esc(h.created_by)+' '+esc(Z.dt(h.created_at))+(h.reason?' · '+esc(h.reason):'')+'</p>'
+      +(h.state==='signed-off'?'<div class="done">Signed off by '+esc(h.signoff.by)+' on '+esc(Z.dt(h.signoff.at))+(h.signoff.comment?' - '+esc(h.signoff.comment):'')+'.</div>':'')
+      +(open&&h.blockers.length?'<div class="blk"><b>Before sign-off:</b> '+h.blockers.map(esc).join(' · ')+'</div>':'')
+      +'<div class="acts noprint">'+(open?'<button type="button" id="d-scan">Find what they own again</button>':'')+'<button type="button" id="d-print">Print / save as PDF</button>'+(open&&(r.manager||r.admin||is(h.created_by))?'<button type="button" id="d-cx">Cancel handover</button>':'')+'</div></div>';
+    var items='<div class="card"><h2>What they are responsible for <span class="c">'+esc(h.progress.done)+' of '+esc(h.progress.items)+' handed over</span></h2>'
+      +(canAssign?'<div class="acts" style="margin-bottom:8px"><input type="text" id="d-succ" list="people" placeholder="Successor (user name)" style="max-width:260px"><button type="button" id="d-asel">Assign the ticked items</button><button type="button" id="d-aall">Assign everything not taken</button></div>':'')
+      +(h.items.length?'<div class="tw"><table><thead><tr>'+(canAssign?'<th class="noprint"></th>':'')+'<th>Kind</th><th>Item</th><th>Successor</th><th>State</th><th class="noprint"></th></tr></thead><tbody>'+h.items.map(function(i){var st=IST[i.state]||[i.state,'mut'],acts='';
+        if(open&&i.state==='assigned'&&is(i.successor))acts='<button type="button" data-acc="'+esc(i.key)+'">Accept</button><button type="button" data-dec="'+esc(i.key)+'">Reject</button>';
+        if(open&&(r.manager||r.admin)&&!r.leaver&&i.state!=='accepted'&&i.state!=='na')acts+='<button type="button" data-na="'+esc(i.key)+'">Nothing to hand over</button>';
+        var extra=(i.kind==='follow-up'?' <span class="muted small">(responsibility - nothing moves automatically)</span>':'')+(i.applied===true?' '+Z.pill('moved','ok'):i.applied?' '+Z.pill(i.applied,'warn'):'')+(i.gone?' '+Z.pill('no longer found','mut'):'');
+        return '<tr>'+(canAssign?'<td class="noprint">'+(i.state==='accepted'||i.state==='na'?'':'<input type="checkbox" data-sel="'+esc(i.key)+'"'+(SEL[i.key]?' checked':'')+'>')+'</td>':'')+'<td>'+esc(i.source)+'</td><td><b>'+esc(i.label)+'</b><div class="muted small">'+esc(i.detail||'')+extra+'</div></td>'
+          +'<td>'+esc(i.successor||'–')+(i.note?'<div class="muted small">'+esc(i.note)+'</div>':'')+(i.decline_reason?'<div class="muted small">declined: '+esc(i.decline_reason)+'</div>':'')+(i.na_reason?'<div class="muted small">'+esc(i.na_reason)+'</div>':'')+'</td><td>'+Z.pill(st[0],st[1])+'</td><td class="noprint"><div class="acts">'+acts+'</div></td></tr>';}).join('')+'</tbody></table></div>'
+        :'<div class="empty">Nothing in the platform is named after this person. Use the notes for what they did outside it.</div>')+'</div>';
+    var acc='<div class="card"><h2>Access to remove <span class="c">'+esc(h.progress.access_done)+' of '+esc(h.progress.access)+' closed</span></h2>'+(open&&r.leaver?'<p class="note">Someone other than you confirms these (separation of duties).</p>':'')
+      +'<div class="tw"><table><thead><tr><th>Access</th><th>How</th><th>State</th><th>Evidence</th><th class="noprint"></th></tr></thead><tbody>'+h.access.map(function(a){var st=AST[a.state]||[a.state,'mut'];
+        return '<tr><td><b>'+esc(a.name)+'</b></td><td class="small">'+esc(a.how)+'</td><td>'+Z.pill(st[0],st[1])+'</td><td class="small">'+esc(a.evidence||'')+(a.by?'<div class="muted">'+esc(a.by)+' · '+esc(Z.dt(a.at))+'</div>':'')+'</td>'
+          +'<td class="noprint">'+(open&&!r.leaver&&Z.can('operator')?'<div class="acts"><input type="text" data-ev="'+esc(a.id)+'" placeholder="ticket / how" style="max-width:170px"><button type="button" data-ad="'+esc(a.id)+'">Done</button><button type="button" data-ana="'+esc(a.id)+'">N/A</button></div>':'')+'</td></tr>';}).join('')+'</tbody></table></div></div>';
+    var N=h.notes||{},F=[['systems','Systems and duties'],['runbooks','Runbooks and documentation (where)'],['issues','Open issues and risks'],['vendors','Vendor and support contacts'],['secrets_location','Where passwords and keys are kept (never the values)'],['other','Anything else']];
+    var canNote=open&&(r.leaver||r.manager||r.admin);
+    var notes='<div class="card notes"><h2>Knowledge handover notes'+(h.notes_by?' <span class="c">by '+esc(h.notes_by)+' · '+esc(Z.dt(h.notes_at))+'</span>':'')+'</h2>'
+      +(canNote?F.map(function(f){return '<label class="f" for="nt-'+f[0]+'">'+esc(f[1])+'</label><textarea id="nt-'+f[0]+'" maxlength="8000">'+esc(N[f[0]]||'')+'</textarea>';}).join('')+'<div class="acts" style="margin-top:10px"><button type="button" id="nt-save">Save notes</button></div><div class="print-only">'+F.map(function(f){return N[f[0]]?'<b>'+esc(f[1])+'</b><p>'+esc(N[f[0]])+'</p>':'';}).join('')+'</div>'
+        :F.map(function(f){return N[f[0]]?'<b>'+esc(f[1])+'</b><p>'+esc(N[f[0]])+'</p>':'';}).join('')||'<div class="empty">No notes yet.</div>')+'</div>';
+    var so=open&&(r.manager||r.admin)&&!r.leaver?'<div class="card noprint"><h2>Sign-off</h2><p class="muted">Signing off moves the owner fields of the accepted items to their successors and closes the handover.</p><textarea id="so-c" maxlength="1000" placeholder="Comment (optional)"></textarea><div class="acts" style="margin-top:8px"><button type="button" id="so-go"'+(h.blockers.length?' disabled':'')+'>Sign off</button>'+(h.blockers.length?'<span class="muted small">not ready - see the list above</span>':'')+'</div></div>':'';
+    $('detail').innerHTML=head+items+acc+notes+so;
+  }
+  function act(m,p,b,msg){return itam(m,'/handover/'+encodeURIComponent(H.id)+p,b).then(function(j){H=j;Z.toast(msg);detail();refreshList();},function(e){Z.toast(e.message);});}
+  function enc(k){return encodeURIComponent(k);}
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('button');if(!b)return;var v=function(id){var x=$(id);return x?x.value.trim():'';};
+    if(b.hasAttribute('data-open'))return openH(b.getAttribute('data-open'));
+    if(b.id==='new'){$('new-card').hidden=false;$('n-l').focus();return;}
+    if(b.id==='n-x'){$('new-card').hidden=true;return;}
+    if(b.id==='n-go'){itam('POST','/handover',{leaver:v('n-l'),leaver_name:v('n-ln'),team:$('n-t').value,last_day:$('n-d').value,manager:v('n-m'),reason:v('n-r')}).then(function(j){$('new-card').hidden=true;H=j;SEL={};Z.toast('Handover '+j.id+' opened - '+j.items.length+' item(s) found');detail();refreshList();},function(er){Z.toast(er.message);});return;}
+    if(!H)return;
+    if(b.id==='d-scan')return act('POST','/scan',{},'Looked again');
+    if(b.id==='d-print')return window.print();
+    if(b.id==='d-cx'){var why=window.prompt('Why is this handover cancelled?');if(why&&why.trim())act('POST','/cancel',{reason:why.trim()},'Cancelled');return;}
+    if(b.id==='d-asel'||b.id==='d-aall'){var s=v('d-succ');if(!s){Z.toast('Name the successor');return;}var keys=Object.keys(SEL).filter(function(k){return SEL[k];});if(b.id==='d-asel'&&!keys.length){Z.toast('Tick the items first');return;}
+      return act('POST','/assign',b.id==='d-aall'?{all:true,successor:s}:{keys:keys,successor:s},'Assigned to '+s+' - they accept it themselves').then(function(){SEL={};});}
+    if(b.hasAttribute('data-acc'))return act('POST','/items/'+enc(b.getAttribute('data-acc'))+'/accept',{},'Accepted');
+    if(b.hasAttribute('data-dec')){var rs=window.prompt('Why do you reject it?');if(rs&&rs.trim())act('POST','/items/'+enc(b.getAttribute('data-dec'))+'/decline',{reason:rs.trim()},'Declined');return;}
+    if(b.hasAttribute('data-na')){var rn=window.prompt('Why is there nothing to hand over?');if(rn&&rn.trim())act('POST','/items/'+enc(b.getAttribute('data-na'))+'/na',{reason:rn.trim()},'Marked');return;}
+    if(b.hasAttribute('data-ad')||b.hasAttribute('data-ana')){var id=b.getAttribute('data-ad')||b.getAttribute('data-ana'),ev=document.querySelector('[data-ev="'+id+'"]');var t=ev?ev.value.trim():'';if(!t){Z.toast('Write the evidence (ticket, how it was done, or why it does not apply)');return;}
+      return act('POST','/access/'+enc(id),{state:b.hasAttribute('data-ad')?'done':'na',evidence:t},'Recorded');}
+    if(b.id==='nt-save'){var bd={};['systems','runbooks','issues','vendors','secrets_location','other'].forEach(function(k){bd[k]=v('nt-'+k);});return act('PUT','/notes',bd,'Notes saved');}
+    if(b.id==='so-go')return act('POST','/signoff',{comment:v('so-c')},'Signed off - owner fields moved to the successors');
+  });
+  document.addEventListener('change',function(e){var c=e.target;if(c.hasAttribute&&c.hasAttribute('data-sel'))SEL[c.getAttribute('data-sel')]=c.checked;});
+  function openH(id){return itam('GET','/handover/'+encodeURIComponent(id)).then(function(j){H=j;SEL={};detail();var d=$('detail');if(d.scrollIntoView)d.scrollIntoView();},function(e){Z.toast(e.message);});}
+  function refreshList(){return itam('GET','/handover').then(function(j){L=j.handovers;TEAMS=j.teams;list();$('up').textContent='updated '+Z.dt(Date.now());});}
+  function load(){
+    refreshList().then(function(){
+      $('n-t').innerHTML=TEAMS.map(function(t){return '<option>'+esc(t)+'</option>';}).join('');
+      itam('GET','/handover/people').then(function(p){$('people').innerHTML=p.people.map(function(u){return '<option value="'+esc(u)+'">';}).join('');},function(){/* the pickers stay free text: names are typed */});
+      if(H)openH(H.id);
+    },function(e){$('list').innerHTML='<p class="err">'+esc(e.status===404?'Staff handover is not installed in IT Asset Management yet - run the update (add-handover.sh).':e.status===403?'Handovers hold personal data: operators and administrators only.':'Could not load: '+e.message)+'</p>';});
+  }
+  $('refresh').addEventListener('click',load);
+  Z.ready(load);
+})();
+</script></body></html>

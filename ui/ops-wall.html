@@ -1,0 +1,241 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Operations Wall</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+/* Layout: a 12-column big-screen grid - hero figures with their 24 h trace, then the views; every chart drawn from the wall's own data */
+:root{--bg:#05070c;--pn:#0c111a;--pn2:#101724;--rs:#141b29;--ln:#1e2738;--ln2:#2a3448;--tx:#eef2f8;--mu:#8a94a8;--ok:#2fb344;--wa:#f59f00;--bd:#e5484d;--ac:#4f8cff;--ac2:#22c3c9;--nc:#4a5163;
+  --f:Inter,"Segoe UI",system-ui,sans-serif;--fd:"Space Grotesk",Inter,"Segoe UI",system-ui,sans-serif}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1400px 700px at 0% -20%,rgba(79,140,255,.13),transparent 60%),radial-gradient(1000px 600px at 100% 0%,rgba(34,195,201,.07),transparent 60%),var(--bg);color:var(--tx);font:15px/1.4 var(--f);min-height:100vh}
+main{padding:14px 20px 28px;max-width:2560px;margin:0 auto}
+/* header */
+.hd{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:linear-gradient(90deg,rgba(255,255,255,.035),rgba(255,255,255,.01));border:1px solid var(--ln);border-radius:18px}
+.orb{width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 5px rgba(255,255,255,.04),0 0 18px currentColor;animation:pulse 2s infinite;flex:none}@keyframes pulse{50%{opacity:.45}}
+.ttl{font:700 clamp(18px,1.7vw,32px)/1 var(--fd);letter-spacing:-.01em}.sub{color:var(--mu);font-size:clamp(11px,.8vw,14px);margin-top:4px}
+.sp{flex:1}.clock{font:700 clamp(26px,2.8vw,54px)/1 var(--fd);font-variant-numeric:tabular-nums;text-align:right;letter-spacing:.01em}
+.btn{font:600 13px var(--f);background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:10px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}.btn:hover{border-color:var(--ln2)}.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}.btn:disabled{opacity:.5}
+.views{display:flex;gap:4px;flex-wrap:wrap;background:var(--pn);border:1px solid var(--ln);border-radius:12px;padding:3px}.views button{background:transparent;border:0;color:var(--mu);border-radius:9px;padding:6px 12px;font:600 13px var(--f);cursor:pointer;display:inline-flex;gap:6px;align-items:center}.views button[aria-selected="true"]{color:#fff;background:linear-gradient(180deg,rgba(79,140,255,.35),rgba(79,140,255,.18));box-shadow:inset 0 0 0 1px rgba(79,140,255,.6)}
+.views button:focus-visible,.btn:focus-visible,.stat:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.prog{height:3px;background:var(--ln);border-radius:2px;overflow:hidden;margin:-4px 4px 12px}.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));width:0;transition:width 1s linear}
+.thr{font:700 clamp(12px,.95vw,17px) var(--fd);letter-spacing:.1em;padding:8px 14px;border-radius:12px;border:1px solid var(--ln);display:inline-flex;gap:8px;align-items:center}.thr::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+.thr.t-critical{background:rgba(229,72,77,.2);color:#ff8a8e;border-color:#6a2a2e}.thr.t-elevated{background:rgba(245,159,0,.16);color:#f5b544;border-color:#5a4416}.thr.t-normal{background:rgba(47,179,68,.14);color:#56d364;border-color:#1f4d2a}.thr.t-unknown{color:var(--mu)}
+.banner{border:1px solid rgba(229,72,77,.45);background:linear-gradient(90deg,rgba(229,72,77,.16),rgba(229,72,77,.04));border-radius:16px;padding:10px 14px;margin-bottom:12px;display:flex;gap:12px;align-items:flex-start;font-size:clamp(13px,.95vw,17px)}
+/* hero figures */
+.big{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.stat{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 60%),var(--pn);border:1px solid var(--ln);border-radius:18px;padding:14px 16px 0;text-align:left;position:relative;overflow:hidden;cursor:pointer;color:inherit;font:inherit;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto 1fr;min-height:150px}
+.stat:hover{border-color:var(--ln2)}
+.stat .l{grid-column:1/-1;font-size:clamp(10px,.72vw,13px);color:var(--mu);text-transform:uppercase;letter-spacing:.1em;font-weight:700;display:flex;gap:6px;align-items:center}
+.stat .n{font:700 clamp(34px,3.4vw,64px)/1.05 var(--fd);font-variant-numeric:tabular-nums;margin-top:6px}
+.stat .d{font-size:12px;color:var(--mu);margin-top:2px;grid-column:1}
+.stat .g{grid-column:2;grid-row:2/4;align-self:center}
+.stat .sk{grid-column:1/-1;align-self:end;margin:6px -16px 0;height:42px}
+.stat .dl{font-size:12px;font-weight:700;margin-left:auto}.up{color:#ff8a8e}.dn{color:#56d364}.flat{color:var(--mu)}
+/* grid of panels */
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}
+.s3{grid-column:span 3}.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s12{grid-column:span 12}
+@media(max-width:1500px){.s3{grid-column:span 6}.s4,.s5{grid-column:span 6}.s7,.s8{grid-column:span 12}.big{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:820px){.grid>*{grid-column:span 12!important}.big{grid-template-columns:repeat(2,minmax(0,1fr))}.stat .g{display:none}}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,0) 40%),var(--pn);border:1px solid var(--ln);border-radius:18px;padding:14px 16px;min-width:0;position:relative}
+.card::before{content:"";position:absolute;left:16px;right:16px;top:0;height:2px;border-radius:2px;background:var(--cc,var(--nc));opacity:.9}
+.card h2{margin:0 0 12px;font:600 clamp(13px,.95vw,17px) var(--f);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .ti{color:var(--cc,var(--mu))}.card h2 a{margin-left:auto;font-size:12px;color:var(--mu);text-decoration:none}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--ln);font-size:clamp(12px,.9vw,16px)}.kv:last-child{border-bottom:0}.kv span{color:var(--mu)}.kv b{font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.v-ok{background:rgba(47,179,68,.15);color:#56d364}.v-bad{background:rgba(229,72,77,.2);color:#ff8a8e}.v-warn{background:rgba(245,159,0,.18);color:#f5b544}.v-mute{background:rgba(139,147,164,.16);color:#aab2c2}
+.note{color:var(--mu);font-size:13px;padding:12px;border:1px dashed var(--ln2);border-radius:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.mu{color:var(--mu)}.sm{font-size:12px}
+.split{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+@media(max-width:600px){.split{grid-template-columns:1fr}}
+.lgd{display:grid;gap:6px;font-size:clamp(12px,.85vw,15px)}.lgd div{display:flex;gap:8px;align-items:center}.lgd i{width:10px;height:10px;border-radius:3px;flex:none}.lgd b{margin-left:auto;font-variant-numeric:tabular-nums}
+.tier{display:grid;grid-template-columns:minmax(110px,170px) 1fr 44px;gap:10px;align-items:center;padding:6px 0;font-size:clamp(12px,.9vw,15px)}.bar{height:12px;border-radius:6px;background:#1a2131;overflow:hidden;position:relative}.bar i{display:block;height:100%;border-radius:6px}
+.al{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:10px;font-size:clamp(12px,.9vw,16px);color:inherit;text-decoration:none;border:1px solid transparent;margin-bottom:4px;background:rgba(255,255,255,.015)}.al:hover{border-color:var(--ln2)}.al.new{animation:flash 2s 2}@keyframes flash{50%{background:rgba(79,140,255,.22)}}
+.sev{min-width:66px;text-align:center}.s4c,.s3c{background:rgba(229,72,77,.2);color:#ff8a8e}.s2c{background:rgba(245,159,0,.18);color:#f5b544}.s1c,.s0c{background:rgba(139,147,164,.16);color:#aab2c2}
+.feed{max-height:420px;overflow:auto}
+.ans{white-space:pre-wrap;background:#080b12;border:1px solid var(--ln);border-radius:12px;padding:12px;margin-top:10px;max-height:60vh;overflow:auto}
+.inp{background:#080b12;color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:8px 10px;font:14px var(--f);width:100%}
+.err{max-width:900px;margin:40px auto}
+.sites{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}.site{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:14px 16px;display:grid;grid-template-columns:64px minmax(0,1fr);gap:4px 14px;position:relative;overflow:hidden}
+.site::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--sc,#4a5163)}
+.site h3{margin:0;font-size:clamp(14px,1vw,18px);display:flex;gap:8px;align-items:center;grid-column:2}.site .ring{grid-row:1/4;align-self:center}.site .chips,.site .down{grid-column:2}
+.mini{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.mini a{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--rs);border:1px solid var(--ln);color:inherit;text-decoration:none;font-size:13px;min-width:0}.mini a span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dot{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{display:inline-flex;gap:5px;align-items:center;border:1px solid var(--ln);border-radius:9px;padding:3px 8px;font:700 12px var(--f);background:rgba(255,255,255,.02)}.chip i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.down{font-size:12px;color:#ff8a8e;margin-top:6px}
+.secs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.secs a{background:var(--rs);border:1px solid var(--ln);border-radius:14px;padding:12px;text-decoration:none;color:inherit;display:grid;gap:4px}.secs b{font:700 clamp(22px,1.9vw,34px)/1 var(--fd)}.secs span{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.05em}
+@media(max-width:700px){.secs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}.tc{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:12px 14px}.tc .h{display:flex;gap:8px;align-items:baseline}.tc .h b{margin-left:auto;font:700 24px var(--fd);font-variant-numeric:tabular-nums}.tc .h span{font-size:13px;color:var(--mu)}.tc .mm{display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-top:2px}
+.gauges{display:flex;gap:18px;flex-wrap:wrap;justify-content:space-around}.gauges figure{margin:0;text-align:center;font-size:12px;color:var(--mu)}
+svg text{font-family:var(--f)}
+body.kiosk .chrome{display:none!important}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body><main>
+<div class="hd"><span class="orb" id="orb"></span><div><div class="ttl">{{org.short}} Operations Wall</div><div class="sub" id="sub"></div></div><div class="sp"></div>
+ <div class="views chrome" id="views" role="tablist"></div>
+ <button class="btn chrome" id="rot" type="button" title="Rotate the views"><i class="ti ti-player-play"></i><span>Rotate</span></button>
+ <button class="btn chrome" id="fs" type="button" title="Full screen (F)"><i class="ti ti-maximize"></i></button>
+ <span class="thr t-unknown" id="thr" title="">THREAT …</span><div><div class="clock" id="clock"></div><div class="sub" id="state" style="text-align:right"></div></div></div>
+<div class="prog" id="prog" hidden><i id="progi"></i></div>
+<div id="err" class="card err" hidden></div>
+<div id="main" hidden>
+ <div id="banner"></div>
+ <div class="big" id="big"></div>
+ <div id="view"></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var Q=new URLSearchParams(location.search), KIOSK=Q.has('kiosk'), ROT=Math.max(15,+(Q.get('rotate')||30)||30);
+  var V=null, VIEW=Q.get('view')||'command', ROTATE=Q.has('rotate')||KIOSK, RT=0, ANS=null, ROLE='viewer', ALERTS=null, ALERR=null, SEEN=null, FRESH={}, FAILS=0;
+  var VIEWS=[['command','layout-dashboard','Command'],['sites','building-broadcast-tower','Sites'],['soc','shield-half','SOC'],['infra','server','Infrastructure'],['incidents','bell-ringing','Incidents & on-call'],['trends','chart-line','Trends'],['handover','robot','Shift handover']];
+  var SEVN=['info','low','medium','high','critical'], SEVC=['#5c6577','#8a94a8','#f59f00','#ff7a45','#e5484d'];
+  if(KIOSK)document.body.classList.add('kiosk');
+  function col(st){return st==='ok'?'#2fb344':st==='warn'?'#f59f00':st==='bad'?'#e5484d':'#4a5163';}
+  function stLabel(st){return st==='ok'?'normal':st==='warn'?'attention':st==='bad'?'action needed':'not connected';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function stPill(st){return pill(stLabel(st),st==='ok'?'v-ok':st==='warn'?'v-warn':st==='bad'?'v-bad':'v-mute');}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,/^\/(dashboards|api)\//.test(u)?u:'/api/itam'+u);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function riyadh(d,o){try{return d.toLocaleString('en-GB',Object.assign({timeZone:'Asia/Riyadh'},o));}catch(e){return d.toISOString();}}
+  function tickClock(){var d=new Date();$('clock').textContent=riyadh(d,{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});$('sub').textContent=riyadh(d,{weekday:'long',day:'2-digit',month:'long',year:'numeric'})+' · Riyadh'+(V?' · updated '+riyadh(new Date(V.at),{hour:'2-digit',minute:'2-digit',hour12:false}):'');}
+  function fmtS(s){if(s==null)return '—';s=+s;return s<120?Math.round(s)+' s':s<7200?Math.round(s/60)+' min':(s/3600).toFixed(1)+' h';}
+  function f(v,suf){return v==null?'—':esc(v)+(suf||'');}
+  function load(){return req('GET','/ops-wall').then(function(v){V=v;$('err').hidden=true;$('main').hidden=false;draw();},function(e){if(V){$('state').textContent='wall not refreshing: '+e.message;return;}$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>Operations Wall is not available</h2>'+note(e.status===404?'Not installed on the server - run the update (update-platform.ps1).':e.message);});}
+  // ---------- drawing helpers (SVG, from the wall's own numbers; nothing is drawn for a value that was not reported)
+  var UID=0; /* gradient ids stay unique across redraws: two charts never share one fill */
+  function series(id){return (V&&V.trend||[]).map(function(s){return s.m[id];});}
+  function area(vals,W,H,c,o){o=o||{};var real=vals.filter(function(v){return v!=null;});if(real.length<2)return '';var mx=o.max!=null?o.max:Math.max.apply(null,real),mn=o.min!=null?o.min:Math.min.apply(null,real.concat([0]));if(mx===mn)mx=mn+1;
+    var n=vals.length,X=function(k){return n<2?0:k*(W/(n-1));},Y=function(v){return H-3-(v-mn)/(mx-mn)*(H-8);},pts=[];vals.forEach(function(v,k){if(v!=null)pts.push([X(k),Y(v)]);});
+    var id='g'+(++UID),line=pts.map(function(p,k){return (k?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' ');
+    return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" width="100%" height="'+H+'" role="img" aria-label="'+esc(o.aria||'trend')+'"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+c+'" stop-opacity=".45"/><stop offset="1" stop-color="'+c+'" stop-opacity="0"/></linearGradient></defs>'
+      +'<path d="'+line+' L'+pts[pts.length-1][0].toFixed(1)+' '+H+' L'+pts[0][0].toFixed(1)+' '+H+' Z" fill="url(#'+id+')"/><path d="'+line+'" fill="none" stroke="'+c+'" stroke-width="2" vector-effect="non-scaling-stroke"/>'
+      +'<circle cx="'+pts[pts.length-1][0].toFixed(1)+'" cy="'+pts[pts.length-1][1].toFixed(1)+'" r="3" fill="'+c+'"/></svg>';}
+  function ring(v,c,size,label){var R=size/2-7,C=2*Math.PI*R,p=v==null?0:Math.max(0,Math.min(100,v))/100;
+    return '<svg class="ring" viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'" role="img" aria-label="'+esc((label||'')+' '+(v==null?'not measured':v))+'"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+R+'" fill="none" stroke="#1d2536" stroke-width="7"/>'
+      +(v==null?'':'<circle cx="'+size/2+'" cy="'+size/2+'" r="'+R+'" fill="none" stroke="'+c+'" stroke-width="7" stroke-linecap="round" stroke-dasharray="'+(C*p).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(-90 '+size/2+' '+size/2+')" style="filter:drop-shadow(0 0 4px '+c+')"/>')+'</svg>';}
+  function donut(segs,size,center,sub){var tot=segs.reduce(function(a,s){return a+(s.v||0);},0),R=size/2-12,C=2*Math.PI*R,o='',acc=0;
+    segs.forEach(function(s){if(!s.v)return;var len=C*s.v/tot;o+='<circle cx="'+size/2+'" cy="'+size/2+'" r="'+R+'" fill="none" stroke="'+s.c+'" stroke-width="16" stroke-dasharray="'+Math.max(0,len-2).toFixed(1)+' '+C.toFixed(1)+'" stroke-dashoffset="'+(-acc).toFixed(1)+'" transform="rotate(-90 '+size/2+' '+size/2+')"><title>'+esc(s.l+': '+s.v)+'</title></circle>';acc+=len;});
+    return '<svg viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'" role="img" aria-label="'+esc(segs.map(function(s){return s.l+' '+s.v;}).join(', '))+'"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+R+'" fill="none" stroke="#1d2536" stroke-width="16"/>'+o
+      +'<text x="50%" y="48%" text-anchor="middle" fill="#eef2f8" font-size="'+(size*0.2)+'" font-weight="700" dominant-baseline="middle">'+esc(center)+'</text><text x="50%" y="66%" text-anchor="middle" fill="#8a94a8" font-size="'+(size*0.075)+'">'+esc(sub)+'</text></svg>';}
+  function delta(id){var sh=V.shift;if(!sh||!sh.changes)return '';var c=sh.changes.find(function(x){return x.metric===id||x.label===V.labels[id];});if(!c)return '<span class="dl flat" title="unchanged since the shift started">± 0</span>';
+    var d=(+c.to)-(+c.from);return '<span class="dl '+(c.worse?'up':'dn')+'" title="since the shift started: '+esc(c.from)+' → '+esc(c.to)+'">'+(d>0?'▲ ':'▼ ')+esc(Math.abs(Math.round(d*10)/10))+'</span>';}
+  function bigStat(n,l,c,go,d,o){o=o||{};return '<button type="button" class="stat" data-view="'+go+'"><div class="l"><i class="ti ti-'+(o.icon||'point')+'"></i>'+esc(l)+(o.metric?delta(o.metric):'')+'</div><div class="n" style="color:'+c+'">'+n+'</div>'
+    +(d?'<div class="d">'+esc(d)+'</div>':'<div class="d">&nbsp;</div>')+(o.ring!==undefined?'<div class="g">'+ring(o.ring,c,74,l)+'</div>':'')+'<div class="sk">'+(o.metric?area(series(o.metric),300,42,c,{aria:l+' over 24 hours',max:o.max,min:o.min}):'')+'</div></button>';}
+  function cnt(v,badIf){return v==null?'#4a5163':v>0&&badIf?'#e5484d':v>0?'#f59f00':'#2fb344';}
+  function draw(){var P=V.panels,s=P.soc.figures,p=P.platform.figures,n=P.notify.figures;
+    $('orb').style.background=col(V.overall);$('orb').style.color=col(V.overall);$('state').innerHTML='<span style="color:'+col(V.overall)+';font-weight:800">'+esc(stLabel(V.overall))+'</span> · '+V.connected+' of '+V.of+' sources';
+    $('views').innerHTML=VIEWS.map(function(x,k){return '<button type="button" role="tab" data-view="'+x[0]+'" aria-selected="'+(VIEW===x[0])+'" title="'+(k+1)+'"><i class="ti ti-'+x[1]+'"></i>'+esc(x[2])+'</button>';}).join('');
+    $('rot').querySelector('span').textContent=ROTATE?'Rotating · '+ROT+' s':'Rotate';$('rot').querySelector('i').className='ti ti-'+(ROTATE?'player-pause':'player-play');$('prog').hidden=!ROTATE;
+    $('banner').innerHTML=V.anomalies.length?'<div class="banner"><i class="ti ti-activity-heartbeat" style="font-size:24px;color:#ff8a8e"></i><div><b>Unusual for this time of day</b><div>'+V.anomalies.slice(0,4).map(function(a){return esc(a.why);}).join('<br>')+'</div></div></div>':'';
+    var postC=s.posture==null?'#4a5163':s.posture>=85?'#2fb344':s.posture>=70?'#f59f00':'#e5484d',platC=p&&p.score!=null?(p.score>=85?'#2fb344':p.score>=60?'#f59f00':'#e5484d'):'#4a5163';
+    $('big').innerHTML=bigStat(f(s.critical),'critical alerts',cnt(s.critical,true),'soc','',{icon:'urgent',metric:'soc_critical'})+bigStat(f(s.high),'high alerts',cnt(s.high),'soc',s.open!=null?s.open+' open in total':'',{icon:'alert-triangle',metric:'soc_high'})
+      +bigStat(f(s.posture),'security posture',postC,'soc',s.grade||'',{icon:'shield-check',metric:'posture',ring:s.posture,max:100})
+      +bigStat(p?f(p.score):'—','platform health',platC,'infra',p?p.connected+' of '+p.tiers+' tiers':'',{icon:'server',metric:'platform',ring:p?p.score:null,max:100})
+      +bigStat(n?f(n.open+n.acked):'—','open incidents',n?(n.critical?'#e5484d':cnt(n.open+n.acked)):'#4a5163','incidents',n&&n.critical?n.critical+' critical':'',{icon:'bell-ringing',metric:'notify_open'})
+      +bigStat(f(V.metrics.decisions),'decisions waiting',cnt(V.metrics.decisions),'soc','for a named person',{icon:'gavel',metric:'decisions'});
+    threat();$('view').innerHTML=VIEW==='command'?command():VIEW==='sites'?sites():VIEW==='soc'?soc():VIEW==='infra'?infra():VIEW==='incidents'?incidents():VIEW==='trends'?trends():handover();}
+  function card(pn,title,icon,body,span){return '<section class="card '+(span||'s4')+'" style="--cc:'+col(pn.state)+'"><h2><i class="ti ti-'+icon+'"></i>'+esc(title)+' '+stPill(pn.state)+'<a href="'+esc(pn.link)+'" class="chrome">open ›</a></h2>'+(pn.state==='not_connected'?note((pn.why||'not connected')+' - nothing is shown rather than a zero.'):body)+'</section>';}
+  function kv(k,v,c){return '<div class="kv"><span>'+esc(k)+'</span><b style="color:'+(c||'inherit')+'">'+v+'</b></div>';}
+  function shiftCard(span){var sh=V.shift;return '<section class="card '+(span||'s4')+'" style="--cc:#4f8cff"><h2><i class="ti ti-clock-hour-7"></i>This shift <span class="mu sm">since '+esc(riyadh(new Date(sh.started),{hour:'2-digit',minute:'2-digit',hour12:false}))+'</span></h2>'
+      +(!sh.baseline?note('No sample yet from the start of this shift - the wall records one every 10 minutes.'):!sh.changes.length?note('Nothing has moved since the shift started.'):sh.changes.slice(0,8).map(function(c){return kv(c.label,esc(c.from)+' → '+esc(c.to)+' '+(c.worse?'<i class="ti ti-trending-up" style="color:#ff8a8e"></i>':'<i class="ti ti-trending-down" style="color:#56d364"></i>'),c.worse?'#ff8a8e':'#56d364');}).join(''))+'</section>';}
+  function sevDonut(s){var b=s.by_severity,segs;
+    if(b)segs=[4,3,2,1,0].map(function(k){return {l:SEVN[k],v:+b[k]||0,c:SEVC[k]};});
+    else if(s.open!=null)segs=[{l:'critical',v:s.critical||0,c:SEVC[4]},{l:'high',v:s.high||0,c:SEVC[3]},{l:'medium and below',v:Math.max(0,s.open-(s.critical||0)-(s.high||0)),c:SEVC[1]}];
+    else return '';var tot=segs.reduce(function(a,x){return a+x.v;},0);
+    return '<div class="split">'+donut(segs,170,tot,'open alerts')+'<div class="lgd">'+segs.map(function(x){return '<div><i style="background:'+x.c+'"></i>'+esc(x.l)+'<b>'+x.v+'</b></div>';}).join('')+'</div></div>';}
+  function socCard(span){var pn=V.panels.soc,s=pn.figures;return card(pn,'Security operations','shield-half',sevDonut(s)+'<div style="margin-top:10px">'+kv('Breaching SLA now',f(s.sla_breaching),s.sla_breaching?'#ff8a8e':'')+kv('Mean time to detect',fmtS(s.mttd_s))+kv('Mean time to respond',fmtS(s.mttr_s))+kv('Posture',s.posture==null?'—':esc(s.posture)+' / 100')+'</div>',span);}
+  function tierBars(pn){return (pn.tiers||[]).map(function(t){var c=col(t.state);return '<div class="tier"><span>'+esc(t.label)+'</span><div class="bar"><i style="width:'+(t.score||0)+'%;background:linear-gradient(90deg,'+c+'88,'+c+')"></i></div><b style="text-align:right;color:'+c+'">'+(t.score==null?'—':t.score)+'</b></div>';}).join('');}
+  function platCard(span){var pn=V.panels.platform;return card(pn,'Servers, cloud & applications','server',tierBars(pn),span);}
+  function notifyCard(span){var pn=V.panels.notify,n=pn.figures;return card(pn,'Incidents & on-call','bell-ringing',(n?'<div class="secs" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:8px"><a href="notifications.html"><b style="color:'+(n.open?'#f5b544':'#56d364')+'">'+n.open+'</b><span>open</span></a><a href="notifications.html"><b>'+n.acked+'</b><span>acknowledged</span></a><a href="notifications.html"><b style="color:'+(n.escalating?'#f5b544':'inherit')+'">'+n.escalating+'</b><span>escalating</span></a></div>'+kv('Failed notifications',n.failed_deliveries,n.failed_deliveries?'#ff8a8e':''):'')
+      +(pn.oncall||[]).map(function(o){return kv('On call · '+o.team,o.now?'<i class="ti ti-user-check" style="color:#56d364"></i> '+esc(o.now):'<span class="mu">nobody in the rota</span>');}).join(''),span);}
+  function invCard(span){var pn=V.panels.inventory,x=pn.figures;return card(pn,'Infrastructure coverage','topology-star-3',x?'<div class="split">'+ring(x.coverage,x.coverage>=90?'#2fb344':x.coverage>=70?'#f59f00':'#e5484d',110,'coverage')+'<div>'+kv('Coverage',f(x.coverage,'%'))+kv('Assets',x.assets)+kv('Not sending logs',x.no_logs,x.no_logs?'#f5b544':'')+kv('Coverage gaps',x.gaps)+kv('Not seen 30 days',x.stale,x.stale?'#f5b544':'')+'</div></div>':'',span);}
+  function healthCard(span){var pn=V.panels.health,x=pn.figures;return card(pn,'Platform pages','heart-rate-monitor',x?'<div class="split">'+ring(x.pages?Math.round(100*x.working/x.pages):null,x.not_working?'#f59f00':'#2fb344',110,'pages working')+'<div>'+kv('Working',x.working+' of '+x.pages,x.not_working?'#f5b544':'#56d364')+kv('Last update',x.last_update?esc(riyadh(new Date(x.last_update),{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false})):'—')+'</div></div>':'',span);}
+  function decCard(span){var d=V.panels.soc.decisions||[];return '<section class="card '+(span||'s4')+'" style="--cc:#f59f00"><h2><i class="ti ti-gavel"></i>Waiting for a person'+(d.length?' <span class="pill v-warn">'+d.length+'</span>':'')+'</h2>'+(V.panels.soc.state==='not_connected'?note('The AI CISO overview is not connected.'):d.length?d.map(function(x){return '<div class="al">'+pill(x.severity,x.severity==='high'||x.severity==='critical'?'v-bad':'v-warn')+'<span><b>'+esc(x.title)+'</b><div class="sm mu">'+esc(x.who||'')+'</div></span></div>';}).join(''):note('No decision is waiting.'))+'</section>';}
+  function alertCard(span){var b='';if(ALERR)b=note(ALERR);else if(ALERTS===null)b=note('Reading the SOC alert queue…');else if(!ALERTS.length)b=note('No open high or critical alert.');
+    else b='<div class="feed">'+ALERTS.slice(0,14).map(function(a){var sv=Math.max(0,Math.min(4,+a.severity||0));return '<a class="al'+(FRESH[a.id]?' new':'')+'" href="soc-alerts.html?id='+encodeURIComponent(a.id)+'" style="border-left:3px solid '+SEVC[sv]+'"><span class="pill sev s'+sv+'c">'+esc(SEVN[sv])+'</span><span><b>'+esc(a.rule_name||a.title||a.rule_id||'alert')+'</b><div class="sm mu">'+esc([a.host,a.user,a.src_ip].filter(Boolean).join(' · '))+'</div></span></a>';}).join('')+'</div>';
+    return '<section class="card '+(span||'s4')+'" style="--cc:#e5484d"><h2><i class="ti ti-urgent"></i>Live alerts <span class="mu sm">high and critical, open</span>'+(ALERTS&&ALERTS.length?' <span class="pill v-bad">'+ALERTS.length+'</span>':'')+'</h2>'+b+'</section>';}
+  function sitesMini(span){var b;if(NOCERR)b=note(NOCERR);else if(!NOC)b=note('Reading the sites…');else if(!NOC.length)b=note('No network device or monitored server yet.');
+    else b='<div class="mini">'+NOC.map(function(x){return '<a href="?view=sites" data-view="sites"><i class="dot" style="background:'+STC[x.state]+';color:'+STC[x.state]+'"></i><span>'+esc(x.site)+'</span></a>';}).join('')+'</div>';
+    var bad=NOC?NOC.filter(function(x){return x.state==='critical';}).length:0;
+    return '<section class="card '+(span||'s4')+'" style="--cc:'+(bad?'#e5484d':'#2fb344')+'"><h2><i class="ti ti-building-broadcast-tower"></i>Sites'+(NOC&&NOC.length?' <span class="mu sm">'+(NOC.length-bad)+' of '+NOC.length+' up</span>':'')+'</h2>'+b+'</section>';}
+  function timeline(span){var ids=[['soc_open','#4f8cff','open alerts'],['soc_high','#ff7a45','high'],['soc_critical','#e5484d','critical'],['notify_open','#22c3c9','incidents']],any=ids.some(function(x){return series(x[0]).filter(function(v){return v!=null;}).length>1;});
+    var body=!any?note('The 24-hour trace needs two samples - the wall records one every 10 minutes.'):'<div style="display:grid;gap:10px">'+ids.map(function(x){var v=series(x[0]),last=v.filter(function(y){return y!=null;}).pop();return '<div style="display:grid;grid-template-columns:110px 1fr 46px;gap:10px;align-items:center"><span class="sm"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+x[1]+';margin-right:6px"></i>'+esc(x[2])+'</span>'+area(v,600,46,x[1],{aria:x[2]+' over 24 hours'})+'<b style="text-align:right">'+f(last)+'</b></div>';}).join('')+'</div>';
+    var t=V.trend||[];return '<section class="card '+(span||'s8')+'" style="--cc:#4f8cff"><h2><i class="ti ti-timeline"></i>Last 24 hours <span class="mu sm">'+(t.length?esc(riyadh(new Date(t[0].t),{hour:'2-digit',minute:'2-digit',hour12:false}))+' → now · one sample every 10 minutes':'')+'</span></h2>'+body+'</section>';}
+  function command(){return '<div class="grid">'+socCard('s4')+alertCard('s5')+sitesMini('s3')+platCard('s4')+notifyCard('s4')+decCard('s4')+timeline('s8')+shiftCard('s4')+'</div>';}
+  function dayBars(ad){var vals=ad.map(function(x){return x.total||0;}),labels=ad.map(function(x){return x.day;}),W=900,H=200,mx=Math.max.apply(null,vals.concat([1])),bw=W/vals.length,avg=[];
+    vals.forEach(function(v,k){var w=vals.slice(Math.max(0,k-6),k+1);avg.push(w.reduce(function(a,b){return a+b;},0)/w.length);});
+    var Y=function(v){return H-v/mx*(H-10);},line=avg.map(function(v,k){return (k?'L':'M')+(k*bw+bw/2).toFixed(1)+' '+Y(v).toFixed(1);}).join(' ');
+    return '<svg viewBox="0 0 '+W+' '+(H+18)+'" width="100%" role="img" aria-label="alerts per day"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f8cff"/><stop offset="1" stop-color="#4f8cff" stop-opacity=".25"/></linearGradient></defs>'
+      +[0.5,1].map(function(r){return '<line x1="0" x2="'+W+'" y1="'+Y(mx*r).toFixed(1)+'" y2="'+Y(mx*r).toFixed(1)+'" stroke="#1e2738"/><text x="'+W+'" y="'+(Y(mx*r)-3).toFixed(1)+'" fill="#8a94a8" font-size="11" text-anchor="end">'+Math.round(mx*r)+'</text>';}).join('')
+      +vals.map(function(v,k){var h=v/mx*(H-10);return '<rect x="'+(k*bw+2).toFixed(1)+'" y="'+(H-h).toFixed(1)+'" width="'+Math.max(1,bw-4).toFixed(1)+'" height="'+h.toFixed(1)+'" rx="3" fill="url(#bg1)"><title>'+esc(labels[k]+': '+v)+'</title></rect>';}).join('')
+      +'<path d="'+line+'" fill="none" stroke="#f5b544" stroke-width="2.5"/><text x="0" y="'+(H+15)+'" fill="#8a94a8" font-size="11">'+esc(labels[0]||'')+'</text><text x="'+W+'" y="'+(H+15)+'" fill="#8a94a8" font-size="11" text-anchor="end">'+esc(labels[labels.length-1]||'')+'</text></svg>'
+      +'<div class="row sm mu" style="margin-top:4px"><span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#4f8cff;margin-right:5px"></i>alerts per day</span><span><i style="display:inline-block;width:14px;height:3px;background:#f5b544;margin-right:5px;vertical-align:middle"></i>7-day average</span></div>';}
+  function respGauges(s){var g=function(v,lim,l){var pct=v==null?null:Math.max(3,Math.min(100,100-100*v/lim));return '<figure>'+ring(pct,v==null?'#4a5163':v<=lim/2?'#2fb344':v<=lim?'#f59f00':'#e5484d',96,l)+'<figcaption><b style="display:block;font-size:18px;color:#eef2f8">'+fmtS(v)+'</b>'+esc(l)+'</figcaption></figure>';};
+    return '<div class="gauges">'+g(s.mttd_s,3600,'mean time to detect')+g(s.mttr_s,4*3600,'mean time to respond')+'</div><div class="sm mu" style="text-align:center;margin-top:6px">fuller ring = faster (against 1 h to detect, 4 h to respond)</div>';}
+  function soc(){var ad=V.panels.soc.alerts_by_day||[],s=V.panels.soc.figures;return secStrip()+'<div class="grid">'+socCard('s4')+alertCard('s5')+'<section class="card s3" style="--cc:#22c3c9"><h2><i class="ti ti-stopwatch"></i>Response</h2>'+(V.panels.soc.state==='not_connected'?note('The SOC figures are not connected.'):respGauges(s))+'</section>'
+      +'<section class="card s8" style="--cc:#4f8cff"><h2><i class="ti ti-chart-bar"></i>Alerts per day, 30 days</h2>'+(ad.length?dayBars(ad):note('The SIEM SOC metrics did not answer.'))+'</section>'+decCard('s4')+'</div>';}
+  function infra(){var tp=V.panels.platform.top||[],pt=V.panels.platform.tiers||[];
+    var gauges=pt.length&&V.panels.platform.state!=='not_connected'?'<section class="card s12" style="--cc:'+col(V.panels.platform.state)+'"><h2><i class="ti ti-gauge"></i>Platform tiers</h2><div class="gauges">'+pt.map(function(t){return '<figure>'+ring(t.score,col(t.state),104,t.label)+'<figcaption><b style="display:block;font-size:18px;color:'+col(t.state)+'">'+(t.score==null?'—':t.score)+'</b>'+esc(t.label)+'</figcaption></figure>';}).join('')+'</div></section>':'';
+    return '<div class="grid">'+gauges+platCard('s4')+invCard('s4')+healthCard('s4')+'<section class="card s12" style="--cc:#f59f00"><h2><i class="ti ti-list-check"></i>Top platform issues</h2>'+(tp.length?tp.map(function(x){return '<a class="al" href="'+esc(x.link)+'">'+pill(x.severity,x.severity==='high'||x.severity==='critical'?'v-bad':'v-warn')+'<b>'+esc(x.title)+'</b></a>';}).join(''):note(V.panels.platform.state==='not_connected'?'Servers, Cloud & Applications is not connected.':'No open platform issue.'))+'</section></div>';}
+  function incidents(){var L=V.panels.notify.incidents||[],mx=Math.max.apply(null,[60].concat(L.map(function(x){return +x.minutes_open||0;})));
+    return '<div class="grid">'+notifyCard('s4')+'<section class="card s8" style="--cc:#e5484d"><h2><i class="ti ti-list"></i>Open incidents <span class="mu sm">bar = time open</span></h2>'+(V.panels.notify.state==='not_connected'?note('Notification & Escalation is not connected.'):L.length?L.map(function(x){var c=/crit/.test(x.severity)?'#e5484d':/high/.test(x.severity)?'#ff7a45':'#f59f00';return '<div class="al" style="border-left:3px solid '+c+';display:grid;grid-template-columns:auto minmax(0,1fr) 160px;align-items:center">'+pill(x.severity,/crit|high/.test(x.severity)?'v-bad':'v-warn')+'<span><b>'+esc(x.title)+'</b><div class="sm mu">'+esc(x.status)+' · '+esc(x.minutes_open)+' min</div></span><div class="bar"><i style="width:'+Math.max(4,100*(+x.minutes_open||0)/mx)+'%;background:'+c+'"></i></div></div>';}).join(''):note('No open incident.'))+'</section>'+shiftCard('s12')+'</div>';}
+  function trends(){var ids=Object.keys(V.labels);return '<section class="card" style="--cc:#4f8cff;margin-bottom:12px"><h2><i class="ti ti-chart-line"></i>Last 24 hours <span class="mu sm">'+V.samples+' samples kept · one every 10 minutes · unusual = against the same time of day over 7 days</span></h2><div class="tcards">'
+      +ids.map(function(id){var a=V.anomalies.find(function(x){return x.metric===id;}),v=series(id),real=v.filter(function(x){return x!=null;}),c=a?'#e5484d':'#4f8cff';
+        return '<div class="tc" data-metric="'+id+'"'+(a?' style="border-color:#6a2a2e"':'')+'><div class="h"><span>'+esc(V.labels[id])+'</span>'+(a?pill('unusual','v-bad'):'')+'<b>'+f(V.metrics[id])+'</b></div>'+(real.length>1?area(v,300,54,c,{aria:V.labels[id]+' over 24 hours'})+'<div class="mm"><span>min '+Math.min.apply(null,real)+'</span><span>max '+Math.max.apply(null,real)+'</span></div>':'<svg viewBox="0 0 300 54" width="100%" height="54" role="img" aria-label="needs 2 samples"><text x="150" y="32" text-anchor="middle" fill="#8a94a8" font-size="12">needs 2 samples</text></svg>')+'</div>';}).join('')+'</div></section>';}
+  function handover(){var a=V.ai||{};if(!a.enabled)return note('The AI shift analyst is off: '+(a.reason||'not configured')+'. The wall works without it.');if(!V.can_act)return note('The AI shift analyst is for operators and administrators.');
+    return '<section class="card" style="--cc:#22c3c9"><h2><i class="ti ti-robot"></i>Shift handover <span class="mu sm">reads the wall; changes nothing</span></h2><div class="row"><input class="inp" id="aq" style="max-width:760px" value="Write the shift handover"><button class="btn pri" type="button" id="ask">Ask</button></div>'
+      +(ANS?'<div class="ans">'+esc(ANS.answer)+'</div>'+(ANS.injection_signals&&ANS.injection_signals.length?'<div class="note" style="margin-top:8px">Some system text looked like instructions to the AI and was treated as data: '+esc(ANS.injection_signals.join(', '))+'.</div>':''):'')+'</section>';}
+  // live alerts from the SIEM: every 15 s while visible, backing off when it does not answer
+  function poll(){if(document.hidden)return setTimeout(poll,15000);
+    req('GET','/api/soc/alerts?status=open&min_severity=3&limit=40').then(function(r){var L=r.items||r.alerts||r;if(!Array.isArray(L))L=[];var first=SEEN===null;if(first)SEEN={};FRESH={};
+        L.forEach(function(a){var k=a.id+'|'+(a.ts_last||a.count||'');if(!first&&!SEEN[k])FRESH[a.id]=1;SEEN[k]=1;});ALERTS=L;ALERR=null;FAILS=0;if(V&&(VIEW==='command'||VIEW==='soc'))draw();setTimeout(poll,15000);},
+      function(e){FAILS++;ALERR=e.status===403?'Your role cannot read the alert queue.':e.status===404?'The SIEM alert API is not installed - run the update.':'The SOC is not answering - retrying.';if(V&&(VIEW==='command'||VIEW==='soc'))draw();setTimeout(poll,Math.min(120000,15000*Math.pow(2,FAILS-1)));});}
+  // ---------- NOC sites + security strip + threat level (read straight from the SIEM; each source on its own)
+  var NOC=null,NOCERR=null,SEC={};
+  var ROLEK={firewall:'FW','wan-edge':'FW',router:'RTR','branch-router':'RTR','sdwan-appliance':'SD-WAN','sdwan-orchestrator':'SD-WAN',core:'SW',distribution:'SW',access:'SW',nac:'NAC',wlc:'WLC',ups:'UPS',compute:'HOST',fc_switch:'SAN'};
+  var STC={up:'#2fb344',online:'#2fb344',warning:'#f59f00',critical:'#e5484d',offline:'#e5484d',unknown:'#4a5163',unpolled:'#4a5163'};
+  function pollNoc(){Promise.all([req('GET','/api/soc/netops/npm').catch(function(e){return {err:e};}),req('GET','/api/soc/netops/avail').catch(function(e){return {err:e};})]).then(function(r){
+      var npm=r[0],av=r[1];if(npm.err&&av.err){NOC=null;NOCERR=npm.err.status===404?'The SIEM network engineer is not installed - run the update.':'The SIEM network view is not answering.';}
+      else{var by={},add=function(site){site=site||'No site set';return by[site]||(by[site]={site:site,devices:[],servers:{total:0,online:0,offline:[]}});};
+        if(!npm.err)(npm.vendors||[]).forEach(function(v){v.nodes.forEach(function(nd){add(nd.site).devices.push(nd);});});
+        if(!av.err)(av.items||[]).forEach(function(h){var S=add(h.site).servers;S.total++;if(h.status==='online')S.online++;else if(h.status==='offline')S.offline.push(h.name||h.ip);});
+        NOC=Object.keys(by).map(function(k){var x=by[k],bad=x.devices.filter(function(d){return d.state==='critical';}).length+x.servers.offline.length,warn=x.devices.filter(function(d){return d.state==='warning';}).length;x.state=bad?'critical':warn?'warning':x.devices.length||x.servers.total?'up':'unknown';return x;})
+          .sort(function(a,b){var o={critical:0,warning:1,up:2,unknown:3};return o[a.state]-o[b.state]||a.site.localeCompare(b.site);});NOCERR=null;NOC.partial=npm.err?'devices':av.err?'servers':'';}
+      if(V&&(VIEW==='sites'||VIEW==='command'))draw();else if(V)threat();});
+    Promise.all([req('GET','/api/soc/m365/security').then(function(m){SEC.m365=m;},function(){SEC.m365=null;/* not connected or refused: shown as not read */}),
+      req('GET','/api/soc/netops/rogue').then(function(r){SEC.rogue=r.kpis;},function(){SEC.rogue=null;/* rogue detection absent: not read */}),
+      req('GET','/api/soc/ksc/overview').then(function(k){var t={hosts:0,unprotected:0,infected:0},n=0;(k.servers||[]).forEach(function(s){var u=s.last&&s.last.summary;if(u){n++;t.hosts+=u.hosts||0;t.unprotected+=u.unprotected||0;t.infected+=u.infected||0;}});SEC.ep=n?t:null;},function(){SEC.ep=null;/* endpoint protection not connected */})])
+      .then(function(){if(V&&VIEW==='soc')draw();else if(V)threat();});}
+  function sites(){if(NOCERR)return note(NOCERR);if(!NOC)return note('Reading the sites…');if(!NOC.length)return note('No network device or monitored server yet - add them on the AI Network Engineer and Server Availability pages; each gets a site there.');
+    var up=NOC.filter(function(x){return x.state==='up';}).length,bad=NOC.filter(function(x){return x.state==='critical';}).length;
+    return '<div class="sm mu" style="margin-bottom:10px">'+NOC.length+' sites · '+up+' all up · '+bad+' with something down'+(NOC.partial?' · '+(NOC.partial==='devices'?'network devices':'servers')+' not read':'')+'</div><div class="sites">'+NOC.map(function(x){
+      var grp={};x.devices.forEach(function(d){var k=ROLEK[d.role]||'DEV';(grp[k]=grp[k]||[]).push(d);});
+      var chips=Object.keys(grp).sort().map(function(k){var L=grp[k],w=L.some(function(d){return d.state==='critical';})?'critical':L.some(function(d){return d.state==='warning';})?'warning':L.every(function(d){return d.state==='up';})?'up':'unknown';return '<span class="chip" title="'+esc(L.map(function(d){return d.name+': '+d.state+(d.reason?' - '+d.reason:'');}).join('\n'))+'"><i style="background:'+STC[w]+'"></i>'+esc(k)+(L.length>1?' '+L.length:'')+'</span>';}).join('');
+      if(x.servers.total)chips+='<span class="chip" title="'+esc(x.servers.online+' of '+x.servers.total+' servers online')+'"><i style="background:'+(x.servers.offline.length?'#e5484d':'#2fb344')+'"></i>SRV '+x.servers.online+'/'+x.servers.total+'</span>';
+      var downs=x.devices.filter(function(d){return d.state==='critical';}).map(function(d){return d.name+(d.reason?' - '+d.reason:'');}).concat(x.servers.offline.map(function(n){return n+' - server offline';}));
+      var tot=x.devices.length+x.servers.total,ok=x.devices.filter(function(d){return d.state==='up';}).length+x.servers.online;
+      return '<div class="site" style="--sc:'+STC[x.state]+'">'+ring(tot?Math.round(100*ok/tot):null,STC[x.state],60,'up')+'<h3><i class="ti ti-building" style="color:'+STC[x.state]+'"></i>'+esc(x.site)+'<span class="mu sm" style="margin-left:auto">'+ok+'/'+tot+' up</span></h3><div class="chips">'+(chips||'<span class="mu sm">nothing monitored</span>')+'</div>'+(downs.length?'<div class="down">'+downs.slice(0,4).map(esc).join('<br>')+(downs.length>4?'<br>+'+(downs.length-4)+' more':'')+'</div>':'')+'</div>';}).join('')+'</div>';}
+  function secStrip(){var m=SEC.m365,r=SEC.rogue,e=SEC.ep;function c(v,l,h,col,ic){return '<a href="'+h+'"><i class="ti ti-'+ic+'" style="color:'+(col||'#8a94a8')+'"></i><b style="color:'+(col||'inherit')+'">'+esc(v==null?'—':v)+'</b><span>'+esc(l)+'</span></a>';}
+    return '<section class="card" style="--cc:#22c3c9;margin-bottom:12px"><h2><i class="ti ti-shield-check"></i>Security posture <span class="mu sm">a dash means the source is not connected</span><a href="security-center.html" class="chrome">Security Center ›</a></h2><div class="secs">'
+      +c(m&&m.score?m.score.pct+'%':null,'Secure Score','m365-security.html','','brand-windows')+c(m&&m.mfa?m.mfa.not_registered:null,'users without MFA','m365-security.html',m&&m.mfa&&m.mfa.not_registered?'#f5b544':'','lock-open')
+      +c(r?r.rogue:null,'rogue devices','rogue-detection.html',r&&r.rogue?'#ff8a8e':'','router')+c(e?e.unprotected+(e.infected?' · '+e.infected+' infected':''):null,'endpoints unprotected','ai-ksc-engineer.html',e&&(e.unprotected||e.infected)?'#ff8a8e':'','virus')+'</div></section>';}
+  function threat(){var el=$('thr');if(!el||!V)return;var s=V.panels.soc.figures||{},why=[],lvl='normal';
+    if(V.panels.soc.state==='not_connected'){lvl='unknown';why.push('the SOC figures are not connected');}
+    else{if(s.critical){lvl='critical';why.push(s.critical+' critical alert(s)');}if(s.high){if(lvl!=='critical')lvl='elevated';why.push(s.high+' high alert(s)');}}
+    if(SEC.ep&&SEC.ep.infected){if(lvl!=='critical')lvl='elevated';why.push(SEC.ep.infected+' infected endpoint(s)');}
+    if(SEC.rogue&&SEC.rogue.rogue){if(lvl==='normal')lvl='elevated';why.push(SEC.rogue.rogue+' rogue device(s)');}
+    if(NOC&&NOC.some(function(x){return x.state==='critical';})){if(lvl==='normal')lvl='elevated';why.push(NOC.filter(function(x){return x.state==='critical';}).length+' site(s) with something down');}
+    el.className='thr t-'+lvl;el.textContent='THREAT '+lvl.toUpperCase();el.title=why.join(' · ')||'no critical or high alert, no infection, no rogue device, every site up';}
+  function rotateTick(){if(!ROTATE||!V)return;RT+=1;$('progi').style.width=(RT/ROT*100)+'%';if(RT>=ROT){RT=0;var order=VIEWS.map(function(x){return x[0];}).filter(function(x){return x!=='handover';});VIEW=order[(order.indexOf(VIEW)+1)%order.length];draw();}}
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-view],button[id]');if(!el)return;
+    if(el.dataset.view){ev.preventDefault();VIEW=el.dataset.view;RT=0;if(el.classList.contains('stat'))ROTATE=false;return draw();}
+    if(el.id==='rot'){ROTATE=!ROTATE;RT=0;return draw();}
+    if(el.id==='fs'){return toggleFs();}
+    if(el.id==='ask'){var q=$('aq').value.trim();if(q.length<3)return;el.disabled=true;el.textContent='Thinking…';ROTATE=false;return req('POST','/ops-wall/ai/ask',{question:q}).then(function(r){ANS=r;draw();}).catch(function(e){el.disabled=false;el.textContent='Ask';ANS={answer:e.message,injection_signals:[]};draw();});}
+  });
+  function toggleFs(){try{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen();}catch(e){/* full screen not allowed here (e.g. inside a frame) */}}
+  document.addEventListener('keydown',function(e){if(/input|textarea|select/i.test(e.target.tagName))return;if(e.key==='f'||e.key==='F')toggleFs();if(e.key===' '){ROTATE=!ROTATE;RT=0;if(V)draw();e.preventDefault();}if(/^[1-7]$/.test(e.key)){VIEW=VIEWS[+e.key-1][0];if(V)draw();}});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)load();});
+  setInterval(tickClock,1000);setInterval(rotateTick,1000);setInterval(function(){if(!document.hidden)load();},30000);tickClock();
+  req('GET','/dashboards/whoami.json').then(function(w){ROLE=(w&&w.role)||'viewer';}).catch(function(){ROLE='viewer';/* no identity: read-only */}).then(function(){load();poll();pollNoc();setInterval(function(){if(!document.hidden)pollNoc();},60000);});
+})();
+</script></body></html>

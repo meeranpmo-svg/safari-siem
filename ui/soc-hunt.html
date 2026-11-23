@@ -1,0 +1,177 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Threat Hunting &amp; Search</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-secops.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-copilot.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+</head><body><main class="so">
+<div class="so-head"><div><div class="eb">Security Operations · Threat Hunting</div><h1>Threat Hunting &amp; Search</h1></div><span class="sp"></span><span id="srcs"></span></div>
+<div id="err"></div>
+<section class="so-p w12" style="margin-bottom:12px">
+ <form id="qf" class="so-qbar" autocomplete="off">
+  <textarea id="q" aria-label="Query" placeholder='user:alice AND outcome:failure    ·    process:*certutil.exe    ·    ip:10.20.0.0/16 AND dst_port:445    ·    "powershell -enc"'></textarea>
+  <div style="display:flex;flex-direction:column;gap:6px"><select id="rng" aria-label="Time range"><option value="1">Last hour</option><option value="24" selected>Last 24 hours</option><option value="168">Last 7 days</option><option value="720">Last 30 days</option></select>
+  <button type="submit" class="so-btn pri">Search</button><button type="button" class="so-btn" id="save">Save hunt</button></div>
+ </form>
+ <form id="savef" class="so-form" hidden><div class="so-fil" style="margin:0"><label>Name<input name="name" maxlength="120" required></label><label style="flex:1">What it looks for<input name="description" maxlength="1000"></label>
+  <label><span><input type="checkbox" name="shared"> share with the SOC team</span></label><button type="submit" class="so-btn pri">Save</button><button type="button" class="so-btn" id="savex">Cancel</button></div><span class="so-err" data-msg></span></form>
+ <p class="so-note">Field search <span class="so-q">field:value</span>, wildcards <span class="so-q">field:val*</span>, ranges <span class="so-q">severity:&gt;=3</span>, CIDR <span class="so-q">ip:10.0.0.0/8</span>, <span class="so-q">AND OR NOT ( )</span>, free text. Raw events are personal data (PDPL): every search is written to the audit trail.</p>
+</section>
+<div class="so-tabs" role="tablist">
+ <button type="button" role="tab" data-tab="search" aria-selected="true">Search results</button><button type="button" role="tab" data-tab="ai">✦ AI hunt assistant</button><button type="button" role="tab" data-tab="rare">Rare &amp; first-seen (statistics)</button>
+ <button type="button" role="tab" data-tab="lib">Hunt library</button><button type="button" role="tab" data-tab="saved">Saved hunts</button><button type="button" role="tab" data-tab="beacons">Beaconing</button><button type="button" role="tab" data-tab="entity">Entity timeline</button><button type="button" role="tab" data-tab="leads">Leads</button><button type="button" role="tab" data-tab="ml">✦ ML hunts</button>
+</div>
+<div id="tab-search">
+ <div class="so-grid"><section class="so-p w8"><h2>Events over time <span class="c" id="hc"></span></h2><div class="so-ch short"><canvas id="c-hist"></canvas></div></section>
+  <section class="so-p"><h2>Top values <select id="fac" aria-label="Facet field" style="margin-left:auto;background:var(--so-panel2);color:var(--so-ink);border:1px solid var(--so-line);border-radius:6px;font-size:11.5px"><option>user</option><option>host</option><option>src_ip</option><option>dst_ip</option><option>action</option><option>category</option><option>process</option><option>src_type</option></select></h2><ul class="so-list" id="facl"><li class="so-empty">Run a search.</li></ul></section></div>
+ <div class="so-tw" id="res"><div class="so-empty">Write a query and press Search - or ask the AI hunt assistant, or start from the hunt library.</div></div>
+</div>
+<div id="tab-ai" hidden><section class="so-p w12">
+ <h2>Ask a hunting question <span class="c">the AI proposes queries from counts and top values only - it never reads raw events; you run them</span></h2>
+ <form id="af" class="so-qbar"><textarea id="aq" maxlength="2000" placeholder="e.g. Which hosts ran encoded PowerShell this week?  ·  Find admin logons outside working hours  ·  New outbound domains contacted by servers"></textarea><button type="submit" class="so-btn pri" id="ask">Ask</button></form>
+ <div id="aout"></div></section></div>
+<div id="tab-rare" hidden><section class="so-p w12">
+ <h2>Long-tail and first-seen <span class="c">the least frequent values, or values never seen in the baseline before the window</span></h2>
+ <form id="rf" class="so-fil"><select id="rmode" aria-label="Mode"><option value="rare">Rare values (least frequent)</option><option value="new">First seen (not in the baseline)</option></select><select id="rfield" aria-label="Field"></select>
+  <select id="rh" aria-label="Window"><option value="24">Last 24 hours</option><option value="168">Last 7 days</option><option value="720">Last 30 days</option></select>
+  <select id="rb" aria-label="Baseline"><option value="7">Baseline 7 days</option><option value="14" selected>Baseline 14 days</option><option value="30">Baseline 30 days</option></select>
+  <input id="rq" placeholder="optional filter, e.g. src_type:windows" style="min-width:260px"><button type="submit" class="so-btn pri">Run</button></form>
+ <div id="rout"><div class="so-empty">A process that ran on one host, a domain one user resolved, an admin account that appeared this week - the long tail is where hunts start.</div></div></section></div>
+<div id="tab-lib" hidden><section class="so-p w12"><h2>Hunt library <span class="c">curated queries mapped to ATT&amp;CK</span></h2><div id="lib"></div></section></div>
+<div id="tab-saved" hidden><section class="so-p w12"><h2>Saved hunts <span class="c">yours and the team's shared ones</span></h2><div id="saved"></div></section></div>
+<div id="tab-beacons" hidden><section class="so-p w12"><h2>Beaconing <span class="c">internal hosts calling one external address at near-constant intervals (statistics over firewall logs)</span></h2><div id="bea"></div></section></div>
+<div id="tab-entity" hidden><section class="so-p w12">
+ <h2>Entity timeline <span class="c">one user, host or IP address and everything the platform holds about it - events, alerts, cases, behaviour (UEBA), threat intelligence, the network device and its changes - in one timeline</span></h2>
+ <form id="ef" class="so-fil"><input id="eq" maxlength="200" placeholder="e.g. dave.syn, pc-9, 10.0.0.9" style="min-width:280px" aria-label="User, host or IP"><select id="eh" aria-label="Window"><option value="24">Last 24 hours</option><option value="168" selected>Last 7 days</option><option value="720">Last 30 days</option></select><button type="submit" class="so-btn pri">Build timeline</button></form>
+ <div id="eout"><div class="so-empty">Enter a user name, a host or an IP address. Each source is read on its own: one that is missing or failing is named, the others still answer.</div></div></section></div>
+<div id="tab-ml" hidden><section class="so-p w12"><h2>Machine-learning hunts <span class="c">unsupervised statistics over 24 h of events · every lead with its features and its query</span><button type="button" class="so-btn" id="mlrun" style="margin-left:auto">⟳ Run again</button></h2>
+ <div class="so-grid" style="margin:0">
+  <section class="so-p w12"><h2>Machine-generated domains (DGA-like) <span class="c">entropy, length, digits, consonant runs, rarity</span></h2><div id="ml-dga"></div></section>
+  <section class="so-p w6"><h2>Unusual process lineage <span class="c">parent → child, against 7 days across every host</span></h2><div id="ml-lin"></div></section>
+  <section class="so-p w6"><h2>Logon fan-out <span class="c">one account, many hosts in an hour, against its own week</span></h2><div id="ml-fan"></div></section>
+ </div><p class="so-note">Leads to check, not detections: nothing is raised, blocked or changed from here. “Hunt this” puts the lead's query in the search box and runs it.</p></section></div>
+<div id="tab-leads" hidden><section class="so-p w12"><h2>Leads the alert queue would miss <span class="c">UEBA findings with no alert, low-severity chains across domains</span></h2><div id="leads"></div></section></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc, C=window.zybCharts, Z=window.zybDetail, esc=S.esc, $=function(i){return document.getElementById(i);};
+  var ST=null, LAST=null, ROWS=[];
+  var COLS=['ts','src_type','host','user','src_ip','dst_ip','dst_port','action','outcome','category','process','message'];
+  function rng(){var h=+$('rng').value;return {from:'now-'+h+'h',to:'now'};}
+  function chip(on,l,t){return '<span class="so-chip '+(on?'on':'off')+'" title="'+esc(t||'')+'"><i></i>'+esc(l)+'</span> ';}
+  function status(){return S.req('GET','/soc/hunt/status').then(function(s){ST=s;$('srcs').innerHTML=chip(s.search,'Event store')+chip(s.ai.enabled,'AI hunt assistant',s.ai.enabled?s.ai.model:s.ai.reason);
+    $('rfield').innerHTML=s.rare_fields.map(function(f){return '<option>'+esc(f)+'</option>';}).join('');$('rfield').value='process';drawLib();}).catch(function(e){$('err').innerHTML=S.errHtml(e,'Threat Hunting');});}
+
+  // ---- machine-learning hunts (POST /soc/hunt/ml)
+  var ML=null;
+  function why(w){return w.map(function(x){return '<span class="so-tag" title="'+esc(x.reason)+'">+'+esc(x.points)+' '+esc(x.factor)+'</span>';}).join('')+'<div class="so-why" style="white-space:normal">'+w.map(function(x){return esc(x.reason);}).join(' · ')+'</div>';}
+  function sc(v){return '<span class="so-score '+(v>=80?'act-now':v>=60?'investigate':'review')+'">'+esc(v)+'</span>';}
+  function hb(q){return '<button type="button" class="so-btn" data-huntq="'+esc(q)+'">Hunt this</button>';}
+  function part(x,empty,fn){if(!x)return '<p class="so-empty">Not run.</p>';if(x.error)return '<p class="so-err">'+esc(x.error)+'</p>';
+    return (x.items.length?'<table class="so-t"><tbody>'+x.items.map(fn).join('')+'</tbody></table>':'<p class="so-empty">'+esc(empty)+'</p>')+'<p class="so-note">'+esc(x.note||'')+(x.scanned!=null?' · '+S.n(x.scanned)+' read':'')+(x.truncated?' · capped: narrow the time range to see everything':'')+'</p>';}
+  function drawMl(){var r=ML;
+    $('ml-dga').innerHTML=part(r.dga,'No domain asked in 24 hours looks machine-generated.',function(x){return '<tr><td>'+sc(x.score)+'</td><td><b class="mono">'+esc(x.domain)+'</b><div class="so-why">'+esc(x.queries)+' queries · '+esc(x.hosts)+' host(s)</div></td><td>'+why(x.why)+'</td><td>'+hb(x.q)+'</td></tr>';});
+    $('ml-lin').innerHTML=part(r.lineage,'No unusual parent → child launch in 24 hours.',function(x){return '<tr><td>'+sc(x.score)+'</td><td><b class="mono">'+esc(x.parent)+' → '+esc(x.child)+'</b><div class="so-why">'+esc(x.launches)+' launch(es) on '+x.hosts.map(esc).join(', ')+(x.users.length?' · '+x.users.map(esc).join(', '):'')+'</div>'+why(x.why)+'</td><td>'+hb(x.q)+'</td></tr>';});
+    $('ml-fan').innerHTML=part(r.fanout,'No account reached unusually many hosts in an hour.',function(x){return '<tr><td>'+sc(x.score)+'</td><td><b>'+esc(x.user)+'</b> · '+esc(x.hosts)+' hosts at '+esc(S.dt(x.hour))+'<div class="so-why" style="white-space:normal">'+esc(x.why)+'</div><div>'+x.sample_hosts.map(function(h){return '<span class="so-tag ent">'+esc(h)+'</span>';}).join('')+'</div></td><td>'+hb(x.q)+'</td></tr>';});}
+  function loadMl(){['ml-dga','ml-lin','ml-fan'].forEach(function(i){$(i).innerHTML='<p class="so-empty">Running…</p>';});
+    return S.req('POST','/soc/hunt/ml',{}).then(function(r){ML=r;drawMl();},function(e){$('ml-dga').innerHTML=S.errHtml(e,'the machine-learning hunts');$('ml-lin').innerHTML='';$('ml-fan').innerHTML='';});}
+  function run(q){
+    if(q!==undefined)$('q').value=q; q=$('q').value.trim(); if(window.zybCopilot)window.zybCopilot.context({kind:'query',id:q}); var r=rng(); LAST={q:q,r:r,h:+$('rng').value}; show('search');
+    $('res').innerHTML='<div class="so-empty">Searching…</div>';
+    var p1=S.req('POST','/search',{q:q,from:r.from,to:r.to,limit:200,fields:COLS}),p2=S.req('POST','/histogram',{q:q,from:r.from,to:r.to,buckets:48});
+    p2.then(function(hh){var b=hh.buckets||[],tot=b.reduce(function(s,x){return s+x.n;},0);$('hc').textContent=S.n(tot)+' events';
+      C.bars($('c-hist'),b.map(function(x){var d=new Date(x.t);return LAST.h>48?(d.getMonth()+1)+'-'+d.getDate()+' '+d.getHours()+'h':d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');}),[{label:'Events',data:b.map(function(x){return x.n;}),color:'acc'}],{title:'Matching events over time'});}).catch(function(){ /* the results area reports the error */ });
+    facet();
+    return p1.then(function(r2){ROWS=r2.rows||[];
+      if(!ROWS.length){$('res').innerHTML='<div class="so-empty">No event matches in this time range.</div>';return;}
+      $('res').innerHTML='<table class="so-t"><thead><tr><th>Time</th><th>Source</th><th>Host</th><th>User</th><th>From → to</th><th>Action</th><th>Message</th></tr></thead><tbody>'+ROWS.map(function(e,i){
+        return '<tr class="r so-ev-row" data-ev="'+i+'" tabindex="0"><td>'+esc(S.dt(e.ts))+'</td><td>'+esc(e.src_type)+'</td><td>'+esc(e.host||'')+'</td><td>'+esc(e.user||'')+'</td><td>'+esc((e.src_ip||'')+(e.dst_ip?' → '+e.dst_ip+(e.dst_port?':'+e.dst_port:''):''))+'</td><td>'+esc([e.action,e.outcome].filter(Boolean).join(' / '))+'</td><td class="msg">'+esc(e.message||'')+'</td></tr>';}).join('')+'</tbody></table>'
+        +'<p class="so-note">Showing '+ROWS.length+' of about '+S.n(r2.total_estimate)+' (newest first). Click a row for every field; a value in the detail adds it to the query.</p>';
+    }).catch(function(e){$('res').innerHTML='<div class="so-empty so-err">'+esc(e.message)+'</div>';});
+  }
+  function facet(){if(!LAST)return;var f=$('fac').value;S.req('POST','/top',{q:LAST.q,from:LAST.r.from,to:LAST.r.to,field:f,limit:8}).then(function(t){
+    var mx=Math.max.apply(null,(t.values||[]).map(function(v){return v.n;}).concat([1]));
+    $('facl').innerHTML=(t.values||[]).length?t.values.map(function(v){return '<li class="cl" data-add="'+esc(f+':"'+v.v+'"')+'" tabindex="0"><span class="grow">'+esc(v.v)+'<div class="so-bar"><span style="width:'+(v.n/mx*100).toFixed(1)+'%;background:var(--so-acc)"></span></div></span><span class="n">'+S.n(v.n)+'</span></li>';}).join(''):'<li class="so-empty">No value for '+esc(f)+'.</li>';}).catch(function(e){$('facl').innerHTML='<li class="so-err">'+esc(e.message)+'</li>';});}
+  function openEv(i){var e=ROWS[i];if(!e)return;var keys=Object.keys(e).filter(function(k){return e[k]!==''&&e[k]!=null&&k!=='fields';});
+    var h=Z.tbl(['Field','Value'],keys.map(function(k){var v=typeof e[k]==='object'?JSON.stringify(e[k]):String(e[k]);return [esc(k),'<span class="so-q zd-click" data-add="'+esc(k+':"'+v+'"')+'">'+esc(v)+'</span>'];}));
+    if(S.can('operator'))h+=Z.sec('Add to a case as evidence','<form class="so-form" id="evf" data-i="'+i+'"><div class="so-fil" style="margin:0"><label>Case id<input name="case" placeholder="CASE-000123" maxlength="40"></label><button type="submit" class="so-btn">Add</button></div><span class="so-err" data-msg></span></form>');
+    Z.open('Event '+(e.id||''),(e.src_type||'')+' · '+S.dt(e.ts),h);}
+  function addTerm(t){var q=$('q').value.trim();$('q').value=q?q+' AND '+t:t;Z.close&&Z.close();run();}
+  // ---- AI hunt assistant
+  function ask(){var q=$('aq').value.trim();if(!q){S.toast('Write a hunting question first');return;}var b=$('ask');b.disabled=true;b.textContent='Thinking… (up to a minute)';
+    S.req('POST','/soc/hunt/assist',{question:q}).then(function(r){
+      $('aout').innerHTML='<div class="so-ai"><p>'+esc(r.explanation)+'</p>'+r.queries.map(function(x,i){return '<div style="margin:8px 0;padding:8px;border:1px solid var(--so-line);border-radius:8px"><div><span class="so-q">'+esc(x.q)+'</span></div><div class="so-why" style="margin:4px 0">'+esc(x.purpose)+(x.mitre.length?' · '+x.mitre.map(esc).join(', '):'')+' · last '+esc(x.hours)+' h</div><button type="button" class="so-btn pri" data-runq="'+i+'">Run this query</button></div>';}).join('')
+        +(r.dropped.length?'<p class="so-err">'+r.dropped.length+' proposed query(ies) did not compile and were dropped: '+r.dropped.map(function(d){return esc(d.reason);}).join('; ')+'</p>':'')
+        +((r.injection_signals||[]).length?'<p class="so-err">Text that looks like instructions to the AI was seen in the data - review the queries with care.</p>':'')
+        +'<p class="so-note">'+esc(r.model)+' · '+r.steps.length+' step(s). The AI saw counts and top values only. Nothing ran until you press Run.</p></div>';
+      $('aout').__q=r.queries;
+    }).catch(function(e){$('aout').innerHTML='<p class="so-err">'+esc(e.message)+'</p>';}).then(function(){b.disabled=false;b.textContent='Ask';});}
+  // ---- rare / first-seen
+  function rare(){var mode=$('rmode').value,b={field:$('rfield').value,hours:+$('rh').value};if($('rq').value.trim())b.q=$('rq').value.trim();if(mode==='new')b.baseline_days=+$('rb').value;
+    $('rout').innerHTML='<div class="so-empty">Computing…</div>';
+    S.req('POST','/soc/hunt/'+(mode==='new'?'new':'rare'),b).then(function(r){var V=r.values||[];
+      $('rout').innerHTML=V.length?'<table class="so-t"><thead><tr><th>'+esc(b.field)+'</th><th>Events</th><th>Hosts</th><th>First seen</th><th>Last seen</th></tr></thead><tbody>'+V.map(function(v){return '<tr class="r" data-add="'+esc(b.field+':"'+v.v+'"')+'" tabindex="0"><td><span class="so-q">'+esc(v.v)+'</span></td><td>'+S.n(v.n)+'</td><td>'+S.n(v.hosts)+'</td><td class="so-why">'+esc(S.dt(v.first))+'</td><td class="so-why">'+esc(S.dt(v.last))+'</td></tr>';}).join('')+'</tbody></table><p class="so-note">'+(mode==='new'?'Values in the window that never appeared in the '+esc(r.baseline_days)+' days before it.':'Least frequent first.')+' Click a value to search its events.</p>'
+        :'<div class="so-empty">'+(mode==='new'?'Nothing new: every value in the window was already seen in the baseline.':'No value found.')+'</div>';
+    }).catch(function(e){$('rout').innerHTML='<p class="so-err">'+esc(e.message)+'</p>';});}
+  // ---- library, saved, beacons, leads
+  function drawLib(){var L=ST&&ST.library?ST.library.items:[];
+    $('lib').innerHTML=L.length?'<table class="so-t"><thead><tr><th>Hunt</th><th>ATT&amp;CK</th><th>Query</th><th></th></tr></thead><tbody>'+L.map(function(h,i){return '<tr><td><b>'+esc(h.name)+'</b><div class="so-why">'+esc(h.why||'')+'</div></td><td>'+(h.mitre||[]).map(function(m){return '<span class="so-tag">'+esc(m)+'</span>';}).join('')+'<div class="so-why">'+esc(h.tactic||'')+'</div></td><td><span class="so-q">'+esc(h.q)+'</span></td><td><button type="button" class="so-btn pri" data-lib="'+i+'">Search 7 days</button></td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">The hunt library comes with XDR, which is not running on this SIEM.</div>';}
+  function loadSaved(){S.req('GET','/soc/hunt/saved').then(function(r){var L=r.items||[];$('saved').__l=L;
+    $('saved').innerHTML=L.length?'<table class="so-t"><thead><tr><th>Hunt</th><th>Query</th><th>Owner</th><th></th></tr></thead><tbody>'+L.map(function(s,i){return '<tr><td><b>'+esc(s.name)+'</b>'+(s.shared?' <span class="so-tag ok">shared</span>':'')+'<div class="so-why">'+esc(s.description||'')+'</div></td><td><span class="so-q">'+esc(s.q)+'</span><div class="so-why">'+esc(s.hours)+' h</div></td><td class="so-why">'+esc(s.owner)+'</td><td><button type="button" class="so-btn pri" data-sv="'+i+'">Run</button> '+(s.mine||S.can('admin')?'<button type="button" class="so-btn bad" data-sdel="'+esc(s.id)+'">Delete</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No saved hunt yet. Write a query and press Save hunt.</div>';
+  }).catch(function(e){$('saved').innerHTML='<p class="so-err">'+esc(e.message)+'</p>';});}
+  function loadBeacons(){S.req('GET','/xdr/beacons?hours=24').then(function(r){var L=r.items||[];
+    $('bea').innerHTML=!r.available?'<div class="so-empty">'+esc(r.note||'not available')+'</div>':L.length?'<table class="so-t"><thead><tr><th>Internal host</th><th>External address</th><th>Port</th><th>Connections</th><th>Interval</th><th>Jitter</th></tr></thead><tbody>'+L.map(function(b){return '<tr class="r" data-add="'+esc('src_ip:'+b.src_ip+' AND dst_ip:'+b.dst_ip)+'" tabindex="0"><td>'+esc(b.src_ip)+'</td><td>'+esc(b.dst_ip)+'</td><td>'+esc(b.dst_port)+'</td><td>'+S.n(b.connections)+'</td><td>'+esc(b.interval_s)+' s</td><td>'+esc(b.jitter)+'</td></tr>';}).join('')+'</tbody></table><p class="so-note">Scanned '+S.n(r.scanned)+' host pairs in '+esc(r.hours)+' h. Low jitter = machine-like regularity. Updaters and monitoring also beacon - check the destination.</p>':'<div class="so-empty">No regular outbound connection pattern in the last '+esc(r.hours)+' hours.</div>';
+  }).catch(function(e){$('bea').innerHTML='<p class="so-err">'+esc(e.message)+'</p>';});}
+  function loadLeads(){S.req('GET','/xdr/leads').then(function(r){var U=r.ueba||[],Lc=r.low_chains||[];
+    $('leads').innerHTML=(U.length?'<div class="so-why">UEBA findings without an alert</div><ul class="so-list">'+U.map(function(f){return '<li><span class="so-tag">'+esc(f.detector)+'</span><span class="grow">'+esc(f.entity)+' <span class="so-why">'+esc(f.explanation||'')+'</span></span><span class="n">'+esc(f.severity)+'</span></li>';}).join('')+'</ul>':'')
+      +(Lc.length?'<div class="so-why" style="margin-top:10px">Low-severity chains across domains</div><ul class="so-list">'+Lc.map(function(i){return '<li><span class="so-score review">'+esc(i.score)+'</span><span class="grow">'+esc(i.title)+'</span><span class="n">'+esc(i.alerts)+' alerts</span></li>';}).join('')+'</ul>':'')
+      ||'<div class="so-empty">No lead right now.</div>';}).catch(function(e){$('leads').innerHTML='<p class="so-err">'+esc(e.message)+'</p>';});}
+  function show(t){[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});['search','ai','rare','lib','saved','beacons','leads','entity','ml'].forEach(function(k){$('tab-'+k).hidden=k!==t;});
+    if(t==='saved')loadSaved();if(t==='beacons')loadBeacons();if(t==='leads')loadLeads();if(t==='ml'&&!ML)loadMl();}
+  // ---------- entity timeline (POST /soc/hunt/entity)
+  var ESRC={event:['Event','#5b8def'],alert:['Alert','#e5484d'],case:['Case','#b39bff'],ueba:['Behaviour','#f59f00'],change:['Change','#22b8cf']},EF='';
+  function entity(v,h){if(!v)return;$('eout').innerHTML='<div class="so-empty">Reading every source…</div>';S.req('POST','/soc/hunt/entity',{entity:v,hours:h}).then(function(r){$('eout').__r=r;EF='';drawEntity();}).catch(function(e){$('eout').innerHTML='<p class="so-err">'+esc(e.message)+'</p>';});}
+  function drawEntity(){var r=$('eout').__r;if(!r)return;var SEVN=['info','low','medium','high','critical'];
+    var src=Object.keys(r.sources).map(function(k){var v=String(r.sources[k]),bad=/^failed/.test(v),na=/not available/.test(v);return '<span class="so-chip" title="'+esc(v)+'" style="'+(bad?'border-color:#5a2a2d;color:#ff8a8e':na?'opacity:.6':'')+'">'+esc(k)+': '+esc(v)+'</span>';}).join(' ');
+    var h='<div style="margin:8px 0">'+src+'</div><div class="so-grid" style="margin-bottom:10px">'
+      +'<div class="so-p" style="padding:10px"><b>'+esc(r.entity)+'</b> <span class="so-muted">'+esc(r.kind==='ip'?'IP address':r.kind==='user'?'user':'user or host')+' · worst '+esc(r.worst)+'</span><div class="so-muted" style="font-size:12px">'+esc(r.events.total)+' events in the window'+(r.events.top_sources&&r.events.top_sources.length?' · '+esc(r.events.top_sources.map(function(x){return x.v+' '+x.n;}).join(', ')):'')+'</div></div>'
+      +(r.ueba?'<div class="so-p" style="padding:10px"><b>Behaviour risk '+esc(r.ueba.risk==null?'—':r.ueba.risk)+'</b> <span class="so-muted">'+esc((r.ueba.tier||'')+(r.ueba.peer_group?' · peer group '+r.ueba.peer_group:''))+'</span></div>':'')
+      +(r.intel&&r.intel.length?'<div class="so-p" style="padding:10px;border-color:#5a2a2d"><b style="color:#ff8a8e">On threat-intelligence lists</b><div style="font-size:12px">'+esc(r.intel.map(function(i){return (i.list||'')+(i.description?' - '+i.description:'');}).join(' · '))+'</div></div>':'')
+      +(r.device?'<div class="so-p" style="padding:10px"><b>Network device '+esc(r.device.name)+'</b> <span class="so-muted">'+esc(r.device.role+' · '+r.device.site+' · '+r.device.state)+'</span></div>':'')+'</div>';
+    h+='<div class="so-fil" style="margin-bottom:6px">'+['','event','alert','case','ueba','change'].map(function(k){var n=k?(r.counts[k]||0):r.items.length;return '<button type="button" class="so-btn'+(EF===k?' pri':'')+'" data-ef="'+k+'">'+esc(k?ESRC[k][0]+'s':'All')+' ('+n+')</button>';}).join('')
+      +'<button type="button" class="so-btn" data-esearch="1">Search these events</button></div>';
+    var L=r.items.filter(function(i){return !EF||i.source===EF;});
+    h+=L.length?'<div class="so-tw"><table class="so-t"><thead><tr><th>When</th><th>Source</th><th>Severity</th><th>What</th><th>Detail</th></tr></thead><tbody>'+L.map(function(i){var c=ESRC[i.source]||['',''];return '<tr><td style="white-space:nowrap">'+esc(S.dt(i.t))+'</td><td><span class="so-chip" style="border-color:'+c[1]+';color:'+c[1]+'">'+esc(c[0])+'</span></td><td>'+esc(SEVN[i.severity]||i.severity)+'</td><td><b>'+esc(i.title)+'</b>'+(i.ref?'<div class="so-muted" style="font-size:11px">'+esc(i.ref)+(i.case_id?' · case '+i.case_id:'')+'</div>':'')+'</td><td style="font-size:12px">'+esc(i.detail||'')+(i.host||i.src_ip?'<div class="so-muted">'+esc([i.host,i.user,i.src_ip,i.dst_ip].filter(Boolean).join(' · '))+'</div>':'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="so-empty">Nothing from this source in the window.</div>';
+    if(r.note)h+='<p class="so-muted">'+esc(r.note)+'</p>';
+    $('eout').innerHTML=h;}
+  $('ef').addEventListener('submit',function(ev){ev.preventDefault();entity($('eq').value.trim(),+$('eh').value);});
+  document.addEventListener('click',function(ev){var x=ev.target.closest&&ev.target.closest('[data-ef],[data-esearch]');if(!x)return;var r=$('eout').__r;if(!r)return;
+    if(x.hasAttribute('data-ef')){EF=x.getAttribute('data-ef');drawEntity();return;}
+    $('rng').value=r.hours>168?'720':r.hours>24?'168':'24';show('search');run(r.query);});
+  (function(){var u=new URLSearchParams(location.search);if(u.get('entity')){$('eq').value=u.get('entity');show('entity');entity(u.get('entity'),+$('eh').value);}})();
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-huntq]'))){run(x.getAttribute('data-huntq'));window.scrollTo(0,0);return;}
+    if(t.id==='mlrun'){ML=null;loadMl();return;}
+    if((x=t.closest('[data-tab]'))){show(x.getAttribute('data-tab'));return;}
+    if((x=t.closest('[data-add]'))){addTerm(x.getAttribute('data-add'));return;}
+    if((x=t.closest('tr[data-ev]'))){openEv(+x.getAttribute('data-ev'));return;}
+    if((x=t.closest('[data-runq]'))){var q=$('aout').__q[+x.getAttribute('data-runq')];$('rng').value=q.hours>168?'720':q.hours>24?'168':q.hours>1?'24':'1';run(q.q);return;}
+    if((x=t.closest('[data-lib]'))){$('rng').value='168';run(ST.library.items[+x.getAttribute('data-lib')].q);return;}
+    if((x=t.closest('[data-sv]'))){var s=$('saved').__l[+x.getAttribute('data-sv')];$('rng').value=s.hours>168?'720':s.hours>24?'168':s.hours>1?'24':'1';run(s.q);return;}
+    if((x=t.closest('[data-sdel]'))){S.req('DELETE','/soc/hunt/saved/'+encodeURIComponent(x.getAttribute('data-sdel'))).then(function(){S.toast('Deleted');loadSaved();}).catch(function(e){S.toast(e.message);});return;}
+    if(t.id==='save'){if(!$('q').value.trim()){S.toast('Write a query to save');return;}$('savef').hidden=false;$('savef').elements.name.focus();return;}
+    if(t.id==='savex'){$('savef').hidden=true;return;}
+  });
+  document.addEventListener('submit',function(ev){var fm=ev.target;
+    if(fm.id==='qf'){ev.preventDefault();run();}
+    if(fm.id==='savef'){ev.preventDefault();var sf=fm.elements,sb={name:sf.name.value.trim(),q:$('q').value.trim(),hours:+$('rng').value,shared:sf.shared.checked};if(sf.description.value.trim())sb.description=sf.description.value.trim();
+      S.req('POST','/soc/hunt/saved',sb).then(function(){S.toast('Saved'+(sb.shared?' and shared with the team':''));fm.reset();fm.hidden=true;}).catch(function(e){fm.querySelector('[data-msg]').textContent=e.message;});}
+    if(fm.id==='af'){ev.preventDefault();ask();}
+    if(fm.id==='rf'){ev.preventDefault();rare();}
+    if(fm.id==='evf'){ev.preventDefault();var e=ROWS[+fm.getAttribute('data-i')],cid=fm.elements['case'].value.trim();
+      S.req('POST','/cases/'+encodeURIComponent(cid)+'/evidence',{name:'Event '+(e.id||'')+' ('+(e.src_type||'')+', '+S.dt(e.ts)+')',ref:'event '+(e.id||'')+' · query: '+(LAST?LAST.q:''),kind:'search'})
+        .then(function(){S.toast('Added to '+cid);Z.close&&Z.close();}).catch(function(e2){var m=fm.querySelector('[data-msg]');if(m)m.textContent=e2.message;});}
+  });
+  document.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&ev.target.matches){if(ev.target.matches('tr[data-ev]'))openEv(+ev.target.getAttribute('data-ev'));else if(ev.target.matches('[data-add]'))addTerm(ev.target.getAttribute('data-add'));}
+    if(ev.key==='Enter'&&(ev.ctrlKey||ev.metaKey)&&ev.target.id==='q'){ev.preventDefault();run();}});
+  $('fac').addEventListener('change',facet);
+  var u=new URLSearchParams(location.search);if(u.get('q'))$('q').value=u.get('q');
+  S.ready(function(){status();if(u.get('q'))run();});
+})();
+</script></body></html>

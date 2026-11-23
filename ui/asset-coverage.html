@@ -1,0 +1,204 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coverage & Query</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--bg:#0b0d12;--pn:#12151c;--rs:#181c25;--ln:#232837;--tx:#e7eaf0;--mu:#8b93a4;--ok:#2fb344;--wa:#f59f00;--ba:#e5484d;--ac:#5b8def;--ai:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--mu);text-transform:uppercase}
+.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}.btn.ok{background:rgba(47,179,68,.18);border-color:rgba(47,179,68,.5);color:#7ee28f}.btn.no{background:rgba(229,72,77,.14);border-color:rgba(229,72,77,.45);color:#ff9a9e}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mu);font-weight:400;font-size:12px}
+.tabbar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}.tabbar button{background:transparent;border:1px solid var(--ln);color:var(--mu);border-radius:999px;padding:7px 15px;font:600 13px Inter,"Segoe UI",system-ui,sans-serif;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.tabbar button[aria-selected="true"]{background:#1a1f2e;color:var(--tx);border-color:var(--ac)}.tabbar .n{background:#2a2f3f;border-radius:999px;padding:0 7px;font-size:11px}
+.hero{display:grid;grid-template-columns:200px 1fr;gap:18px;align-items:center;background:radial-gradient(circle at 12% 40%,rgba(91,141,239,.16),transparent 55%),var(--pn)}
+.ring{position:relative;width:180px;height:180px;margin:auto}.ring svg{transform:rotate(-90deg)}.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.ring .v b{font-size:40px;line-height:1}.ring .v span{font-size:12px;color:var(--mu);max-width:120px}
+.ctls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.ctl{background:var(--rs);border:1px solid var(--ln);border-radius:12px;padding:12px;cursor:pointer;text-align:left;color:inherit;font:inherit}.ctl:hover{border-color:#3a4258}.ctl .t{font-weight:700;font-size:13px}.ctl .pc{font-size:26px;font-weight:800}
+.stack{display:flex;height:8px;border-radius:5px;overflow:hidden;background:#232837;margin:8px 0 6px}.stack i{display:block;height:100%}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--mu)}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.s-present{background:var(--ok)}.s-weak{background:var(--wa)}.s-missing{background:var(--ba)}.s-not_checked{background:#4b5263}.s-exempt{background:var(--ai)}.s-na{background:transparent;border:1px dashed #3a4258}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+table.t{width:100%;border-collapse:collapse;font-size:12.8px}table.t th{text-align:left;color:var(--mu);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--ln)}table.t td{padding:7px 8px;border-bottom:1px solid #1b2030;vertical-align:top}
+.heat{border-collapse:separate;border-spacing:4px;width:100%}.heat td,.heat th{padding:4px 8px;font-size:12px}.heat td{text-align:center;font-weight:700;border-radius:6px;cursor:pointer}.heat td:first-child{text-align:left;font-weight:600;cursor:default}
+.inp{background:#0b0d12;color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:7px 10px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.qbar{display:flex;gap:8px;flex-wrap:wrap}.qbar .inp{flex:1;min-width:260px;font-family:ui-monospace,Consolas,monospace}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chip{font:12px ui-monospace,Consolas,monospace;background:var(--rs);border:1px solid var(--ln);border-radius:999px;color:var(--tx);padding:3px 10px;cursor:pointer}.chip:hover{border-color:var(--ac)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-ok{background:rgba(47,179,68,.15);color:#56d364}.p-warn{background:rgba(245,159,0,.16);color:#f5b544}.p-bad{background:rgba(229,72,77,.16);color:#ff7b80}.p-mute{background:rgba(139,147,164,.16);color:#aab2c2}.p-acc{background:rgba(91,141,239,.18);color:#9dbbff}.p-ai{background:rgba(163,113,247,.18);color:#c6a6ff}
+.lnk{background:none;border:0;color:#9dbbff;cursor:pointer;font:inherit;padding:0;text-align:left}.lnk:hover{text-decoration:underline}
+.cdots{display:flex;gap:5px}.cdots .dot{width:11px;height:11px;margin:0}
+.box{border:1px solid var(--ln);border-radius:12px;padding:12px;background:var(--rs);margin-bottom:8px}.box .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:8px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mu)}
+.empty{color:var(--mu);padding:8px 0;font-size:13px}.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:12px;margin-bottom:12px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.warnsrc{font-size:12.5px;border-left:3px solid var(--wa);padding:4px 10px;margin:4px 0;color:#f5d48c}
+@media (max-width:1100px){.cols,.hero{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT Asset Management · Register &amp; CMDB</div><h1>Coverage &amp; Query</h1><div class="mu">Every asset, joined with what the security tools report about it. Each control says present, weak or missing - and which source said so. Gaps are ranked by business criticality; query the estate, save the question for your team, schedule it, and act on the result with a second person's approval.</div></div>
+ <span class="sp"></span><span class="mu sm" id="up"></span><button type="button" class="btn" id="xls"><i class="ti ti-file-spreadsheet"></i>Excel</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+<div class="tabbar" id="tabbar" role="tablist"></div>
+
+<section class="panel" data-panel="overview">
+ <div class="card hero"><div class="ring" id="ring"></div><div><div class="ctls" id="ctls"></div><div class="legend" style="margin-top:10px"><span><i class="dot s-present"></i>present</span><span><i class="dot s-weak"></i>weak (installed but silent, stale or out of date)</span><span><i class="dot s-missing"></i>missing</span><span><i class="dot s-not_checked"></i>not checked (source not connected)</span><span><i class="dot s-exempt"></i>exempt</span></div><div id="srcwarn" style="margin-top:8px"></div></div></div>
+ <div class="cols"><div class="card"><h2><i class="ti ti-building"></i>Coverage by site <span class="c">% present of what was measured · click a cell to list the gaps</span></h2><div id="bysite"></div></div>
+  <div class="card"><h2><i class="ti ti-category"></i>Coverage by type</h2><div id="bytype"></div></div></div>
+ <div class="card"><h2><i class="ti ti-flame"></i>Fix first <span class="c" id="prule"></span></h2><div id="top"></div></div>
+ <div class="card"><h2><i class="ti ti-shield-off"></i>Exemptions <span class="c">a control that does not apply to one asset - with a reason and an end date</span></h2><div id="exl"></div>
+  <div id="exform" hidden><div class="frm"><label class="f">Asset<select class="inp" id="exa"></select></label><label class="f">Control<select class="inp" id="exc"></select></label><label class="f">Until<input class="inp" type="date" id="exu"></label><label class="f">Reason<input class="inp" id="exr" maxlength="300" placeholder="why this control does not apply"></label></div><div class="row" style="margin-top:8px"><button type="button" class="btn" id="exgo"><i class="ti ti-plus"></i>Add exemption</button></div></div></div>
+</section>
+
+<section class="panel" data-panel="query" hidden>
+ <div class="card"><h2><i class="ti ti-search"></i>Query the estate</h2>
+  <div class="qbar"><input class="inp" id="q" maxlength="500" placeholder="type:server,vm edr:missing gaps>0" aria-label="Query"><button type="button" class="btn pri" id="run"><i class="ti ti-player-play"></i>Run</button><input class="inp" id="qname" maxlength="120" placeholder="name to save it under" style="flex:0 1 220px;min-width:160px;font-family:inherit" aria-label="Saved query name"><button type="button" class="btn" id="saveq" hidden><i class="ti ti-device-floppy"></i>Save for my team</button><button type="button" class="btn" id="actq" hidden><i class="ti ti-bolt"></i>Act on the result</button></div>
+  <div class="chips" id="ex"></div><div class="sm mu" style="margin-top:8px" id="help"></div></div>
+ <div class="card"><h2><i class="ti ti-list"></i>Result <span class="c" id="qmeta"></span></h2><div id="qres"><div class="empty">Run a query, or click one of the examples.</div></div></div>
+</section>
+
+<section class="panel" data-panel="saved" hidden>
+ <div class="card"><h2><i class="ti ti-bookmarks"></i>Saved queries <span class="c">shared with every team · an administrator schedules one to e-mail its result (CSV) through the platform relay</span></h2><div id="saved"></div></div>
+ <div class="card"><h2><i class="ti ti-history"></i>Recent runs</h2><div id="runs"></div></div>
+</section>
+
+<section class="panel" data-panel="actions" hidden>
+ <div class="card" id="newact" hidden><h2><i class="ti ti-bolt"></i>Request an action <span class="c">it runs only after a different named person approves it</span></h2>
+  <div class="frm"><label class="f">Action<select class="inp" id="ak"></select></label><label class="f">On the assets of the query<input class="inp" id="aq" maxlength="500" style="font-family:ui-monospace,Consolas,monospace"></label>
+   <label class="f" data-for="set_owner">Owner<input class="inp" id="ao" maxlength="120"></label><label class="f" data-for="set_owner">Department<input class="inp" id="ad" maxlength="120"></label><label class="f" data-for="add_tag" hidden>Tag<input class="inp" id="at" maxlength="40"></label>
+   <label class="f" style="grid-column:1/-1">Reason (goes in the audit trail)<input class="inp" id="ar" maxlength="500" placeholder="why these assets need this"></label></div>
+  <div class="row" style="margin-top:8px"><button type="button" class="btn pri" id="ago"><i class="ti ti-send"></i>Request</button><span class="sm mu">At most 200 assets per request; a request not decided in 7 days expires.</span></div></div>
+ <div class="card"><h2><i class="ti ti-checklist"></i>Requests</h2><div id="acts"></div></div>
+</section>
+</div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',USER='',V=null,Q=null,SV=null,AC=null,PANEL='overview',LASTQ='';
+  var CK=['edr','patch','backup','vuln_scan','siem_logs','monitoring'],SHORT={edr:'EDR',patch:'Patch',backup:'Backup',vuln_scan:'Scan',siem_logs:'SIEM',monitoring:'Monitor'};
+  var SL={present:'present',weak:'weak',missing:'missing',not_checked:'not checked',exempt:'exempt',na:'n/a'};
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function pill(t,k){return '<span class="pill p-'+esc(k)+'">'+esc(t)+'</span>';}
+  function empty(t){return '<div class="empty">'+esc(t)+'</div>';}
+  function col(p){return p==null?'#2a2f3f':p>=90?'rgba(47,179,68,.55)':p>=70?'rgba(47,179,68,.3)':p>=50?'rgba(245,159,0,.4)':'rgba(229,72,77,.45)';}
+  function critPill(c){return pill(c,c==='critical'||c==='high'?'bad':c==='unrated'?'warn':'mute');}
+  function dots(r){return '<span class="cdots">'+CK.map(function(k){var c=r.controls[k];return '<i class="dot s-'+esc(c.state)+'" title="'+esc(SHORT[k]+': '+SL[c.state]+' - '+c.why)+'"></i>';}).join('')+'</span>';}
+  function aBtn(r){return '<button type="button" class="lnk" data-asset="'+esc(r.id)+'">'+esc(r.name)+'</button>';}
+  function ring(p){var size=180,st=16,r=(size-st)/2,c=2*Math.PI*r,off=c*(1-(p||0)/100),cl=p==null?'#4b5263':p>=80?'#2fb344':p>=55?'#f59f00':'#e5484d';
+    return '<svg width="'+size+'" height="'+size+'"><circle cx="90" cy="90" r="'+r+'" fill="none" stroke="#232837" stroke-width="'+st+'"/><circle cx="90" cy="90" r="'+r+'" fill="none" stroke="'+cl+'" stroke-width="'+st+'" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';}
+  // ---------- tabs
+  function tabs(){var pend=AC?AC.actions.filter(function(a){return a.status==='pending';}).length:0;
+    var T=[['overview','gauge','Coverage',V?V.summary.with_gaps:''],['query','search','Query',''],['saved','bookmarks','Saved & scheduled',SV?SV.queries.length:''],['actions','bolt','Action Center',pend||'']];
+    $('tabbar').innerHTML=T.map(function(t){return '<button type="button" role="tab" data-go="'+t[0]+'" aria-selected="'+(PANEL===t[0])+'"><i class="ti ti-'+t[1]+'"></i>'+esc(t[2])+(t[3]!==''?' <span class="n">'+esc(t[3])+'</span>':'')+'</button>';}).join('');}
+  function go(p){PANEL=p;document.querySelectorAll('.panel').forEach(function(s){s.hidden=s.getAttribute('data-panel')!==p;});tabs();}
+  // ---------- overview
+  function drawOverview(){
+    var S=V.summary,per=S.per_control,meas=0,pres=0;CK.forEach(function(k){meas+=per[k].present+per[k].weak+per[k].missing;pres+=per[k].present;});
+    var pct=meas?Math.round(100*pres/meas):null;
+    $('ring').innerHTML=ring(pct)+'<div class="v"><b>'+(pct==null?'—':pct+'%')+'</b><span>'+(pct==null?'nothing measured yet - connect the sources':'of measured controls present · '+S.with_gaps+' asset(s) with gaps')+'</span></div>';
+    $('ctls').innerHTML=CK.map(function(k){var c=per[k],m=c.present+c.weak+c.missing,w=function(n){return m?(100*n/m).toFixed(1):0;};
+      return '<button type="button" class="ctl" data-q="'+esc(k+':gap')+'"><div class="t">'+esc(c.label)+'</div><div class="pc">'+(c.coverage_pct==null?'<span class="mu" style="font-size:16px">not measured</span>':c.coverage_pct+'%')+'</div>'
+        +'<div class="stack"><i class="s-present" style="width:'+w(c.present)+'%"></i><i class="s-weak" style="width:'+w(c.weak)+'%"></i><i class="s-missing" style="width:'+w(c.missing)+'%"></i></div>'
+        +'<div class="sm mu">'+c.present+' present · '+c.weak+' weak · '+c.missing+' missing'+(c.not_checked?' · '+c.not_checked+' not checked':'')+(c.exempt?' · '+c.exempt+' exempt':'')+'</div><div class="sm mu">Source: '+esc(c.source)+'</div></button>';}).join('');
+    $('srcwarn').innerHTML=CK.filter(function(k){return V.sources[k]&&!V.sources[k].ok;}).map(function(k){return '<div class="warnsrc"><b>'+esc(SHORT[k])+'</b> not checked: '+esc(V.sources[k].error)+'</div>';}).join('');
+    function heat(rows,label,field){if(!rows.length)return empty('No assets yet - add them in the Asset register or run Asset Discovery.');
+      return '<table class="heat"><thead><tr><th class="sm mu" style="text-align:left">'+esc(label)+'</th><th class="sm mu">Assets</th>'+CK.map(function(k){return '<th class="sm mu">'+esc(SHORT[k])+'</th>';}).join('')+'</tr></thead><tbody>'+rows.slice(0,14).map(function(r){
+        return '<tr><td>'+esc(r.key)+'</td><td>'+r.assets+'</td>'+CK.map(function(k){return '<td style="background:'+col(r[k])+'" data-q="'+esc((r.key==='Unassigned'?'':field+':"'+r.key+'" ')+k+':gap')+'" title="'+esc(r[k]==null?'not measured':r[k]+'% '+SHORT[k]+' present')+'">'+(r[k]==null?'—':r[k]+'%')+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';}
+    $('bysite').innerHTML=heat(S.by_site,'Site','site');$('bytype').innerHTML=heat(S.by_type,'Type','type');
+    $('prule').textContent=V.priority_rule;
+    var top=V.assets.filter(function(r){return r.gaps>0;}).slice(0,25);
+    $('top').innerHTML=top.length?'<table class="t"><thead><tr><th>Asset</th><th>Criticality</th><th>Controls</th><th>Gaps</th><th>Priority</th><th>Worst gap</th></tr></thead><tbody>'+top.map(function(r){var w=CK.map(function(k){return r.controls[k];}).find(function(c){return c.state==='missing';})||CK.map(function(k){return r.controls[k];}).find(function(c){return c.state==='weak';});
+      return '<tr><td>'+aBtn(r)+'<div class="sm mu">'+esc(r.type+(r.site?' · '+r.site:'')+(r.ips[0]?' · '+r.ips[0]:''))+'</div></td><td>'+critPill(r.criticality)+'</td><td>'+dots(r)+'</td><td>'+r.gaps+'</td><td><b>'+r.priority+'</b></td><td class="sm">'+esc(w?w.why:'')+'</td></tr>';}).join('')+'</tbody></table>'
+      +(S.unrated_with_gaps?'<div class="sm mu" style="margin-top:8px">'+S.unrated_with_gaps+' asset(s) with gaps have no criticality - they are ranked as medium. Rate them in Asset Studio so the order is right.</div>':''):empty(V.assets.length?'No gaps among the controls that were measured.':'No assets yet.');
+    var ex=V.exemptions;
+    $('exl').innerHTML=ex.length?'<table class="t"><thead><tr><th>Asset</th><th>Control</th><th>Until</th><th>Reason</th><th>By</th><th></th></tr></thead><tbody>'+ex.map(function(e){var a=V.assets.find(function(x){return x.id===e.asset_id;});
+      return '<tr><td>'+esc(a?a.name:e.asset_id)+'</td><td>'+esc(SHORT[e.control]||e.control)+'</td><td>'+esc(e.until)+(e.active?'':' '+pill('ended','mute'))+'</td><td class="sm">'+esc(e.reason)+'</td><td class="sm">'+esc(e.by)+'</td><td>'+(can('admin')?'<button type="button" class="btn" data-unex="'+esc(e.asset_id+'|'+e.control)+'">Remove</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':empty('No exemptions.');
+    $('exform').hidden=!can('admin');
+    if(can('admin')){$('exa').innerHTML=V.assets.filter(function(r){return r.gaps>0;}).slice(0,500).map(function(r){return '<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>';}).join('');$('exc').innerHTML=CK.map(function(k){return '<option value="'+k+'">'+esc(V.controls[k].label)+'</option>';}).join('');}
+  }
+  // ---------- query
+  function runQ(q){LASTQ=q;$('q').value=q;$('qres').innerHTML=empty('Running…');
+    return req('GET','/asset-coverage/query?q='+encodeURIComponent(q)+'&limit=500').then(function(r){Q=r;drawQ();},function(e){Q=null;$('qmeta').textContent='';$('qres').innerHTML='<div class="err">'+esc(e.message)+'</div>';$('actq').hidden=$('saveq').hidden=true;});}
+  function drawQ(){var r=Q;$('qmeta').textContent=r.total+' asset(s)'+(r.truncated?' - first 500 shown':'');
+    $('saveq').hidden=!can('operator');$('actq').hidden=!can('operator')||!r.total;
+    $('qres').innerHTML=r.rows.length?'<table class="t"><thead><tr><th>Asset</th><th>Type</th><th>Site</th><th>Criticality</th><th>Owner</th>'+CK.map(function(k){return '<th>'+esc(SHORT[k])+'</th>';}).join('')+'<th>Seen by</th></tr></thead><tbody>'+r.rows.map(function(a){
+      return '<tr><td>'+aBtn(a)+'<div class="sm mu">'+esc(a.ips.join(', '))+'</div></td><td>'+esc(a.type)+'</td><td>'+esc(a.site)+'</td><td>'+critPill(a.criticality)+'</td><td class="sm">'+esc(a.owner||'—')+'</td>'+CK.map(function(k){var c=a.controls[k];return '<td title="'+esc(c.why)+'"><i class="dot s-'+esc(c.state)+'"></i><span class="sm">'+esc(SL[c.state])+'</span></td>';}).join('')+'<td class="sm mu">'+esc(a.sources.join(', ')||'—')+'</td></tr>';}).join('')+'</tbody></table>':empty('No asset matches.');}
+  function help(){req('GET','/asset-coverage/fields').then(function(f){
+    $('ex').innerHTML=f.examples.map(function(x){return '<button type="button" class="chip" data-q="'+esc(x)+'">'+esc(x)+'</button>';}).join('');
+    $('help').innerHTML='<b>field:value</b> equals (comma = any of, * wildcard) · <b>field~text</b> contains · <b>-field:value</b> not · <b>gaps&gt;0</b> numbers · a bare word matches name or address. Fields: '+esc(f.text.concat(f.numbers).join(', '))+'. Controls '+esc(f.controls.join(', '))+' take '+esc(f.control_values.join(' / '))+'.';},function(){/* the examples are a convenience: the query still runs without them */});}
+  // ---------- saved
+  function drawSaved(){var s=SV;
+    $('saved').innerHTML=s.queries.length?s.queries.map(function(x){var sc=x.schedule||{},mine=x.created_by===USER||can('admin');
+      return '<div class="box" data-qid="'+esc(x.id)+'"><div class="hd"><b>'+esc(x.name)+'</b>'+(x.team?pill(x.team,'acc'):'')+(sc.enabled?pill(sc.period+' '+sc.at+' · '+(sc.mode==='on_change'?'on change':'always'),'ok'):pill('not scheduled','mute'))
+        +(x.last_run?' <span class="sm mu">last run '+esc(new Date(x.last_run.at).toISOString().slice(0,16).replace('T',' '))+' · '+esc(x.last_run.status)+(x.last_run.total!=null?' · '+x.last_run.total+' asset(s)':'')+'</span>':'')+'<span class="sp"></span>'
+        +'<button type="button" class="btn" data-q="'+esc(x.q)+'"><i class="ti ti-player-play"></i>Run</button>'+(can('admin')?'<button type="button" class="btn" data-sched="'+esc(x.id)+'"><i class="ti ti-calendar"></i>Schedule</button>'+(sc.recipients&&sc.recipients.length?'<button type="button" class="btn" data-runnow="'+esc(x.id)+'"><i class="ti ti-send"></i>Send now</button>':''):'')+(mine?'<button type="button" class="btn no" data-delq="'+esc(x.id)+'">Delete</button>':'')+'</div>'
+        +'<div class="sm mu" style="font-family:ui-monospace,Consolas,monospace;margin-top:4px">'+esc(x.q)+'</div><div class="sm mu">by '+esc(x.created_by)+(sc.recipients?' · to '+esc(sc.recipients.join(', ')):sc.recipient_count?' · '+sc.recipient_count+' recipient(s)':'')+'</div>'
+        +(can('admin')?'<div class="frm" data-schedform hidden><label class="f">Enabled<select class="inp" data-f="enabled"><option value="true"'+(sc.enabled!==false?' selected':'')+'>yes</option><option value="false"'+(sc.enabled===false?' selected':'')+'>no</option></select></label><label class="f">Period<select class="inp" data-f="period"><option'+(sc.period!=='weekly'?' selected':'')+'>daily</option><option'+(sc.period==='weekly'?' selected':'')+'>weekly</option></select></label><label class="f">Weekday (weekly)<select class="inp" data-f="weekday">'+['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(function(d,i){return '<option value="'+i+'"'+(sc.weekday===i?' selected':'')+'>'+d+'</option>';}).join('')+'</select></label><label class="f">At (Riyadh)<input class="inp" data-f="at" value="'+esc(sc.at||'07:30')+'"></label><label class="f">Send<select class="inp" data-f="mode"><option value="on_change"'+(sc.mode!=='always'?' selected':'')+'>only when the result changes</option><option value="always"'+(sc.mode==='always'?' selected':'')+'>every time</option></select></label><label class="f" style="grid-column:1/-1">Recipients (comma separated)<input class="inp" data-f="recipients" value="'+esc((sc.recipients||[]).join(', '))+'"></label><div><button type="button" class="btn pri" data-savesched="'+esc(x.id)+'">Save schedule</button></div></div>':'')+'</div>';}).join(''):empty('No saved queries yet. Run a query and press "Save for my team".');
+    $('runs').innerHTML=s.runs.length?'<table class="t"><thead><tr><th>When</th><th>Query</th><th>Why</th><th>Result</th><th>Status</th></tr></thead><tbody>'+s.runs.map(function(r){return '<tr><td class="sm">'+esc(new Date(r.at).toISOString().slice(0,16).replace('T',' '))+'</td><td>'+esc(r.name)+'</td><td class="sm">'+esc(r.reason)+'</td><td class="sm">'+(r.total!=null?r.total+' · +'+r.added+' / -'+r.removed:'')+'</td><td>'+pill(r.status,r.status==='sent'?'ok':r.status==='failed'?'bad':'mute')+(r.error?'<div class="sm mu">'+esc(r.error)+'</div>':'')+'</td></tr>';}).join('')+'</tbody></table>':empty('No run yet.');}
+  // ---------- actions
+  function drawActs(){var a=AC;$('newact').hidden=!can('operator');
+    if(!$('ak').options.length)$('ak').innerHTML=Object.keys(a.kinds).map(function(k){return '<option value="'+k+'">'+esc(a.kinds[k])+'</option>';}).join('');
+    $('acts').innerHTML=a.actions.length?a.actions.map(function(x){var st=x.status,mine=x.requested_by===USER;
+      return '<div class="box"><div class="hd"><b>'+esc(x.label)+'</b>'+pill(st,st==='done'?'ok':st==='pending'?'warn':st==='failed'||st==='rejected'?'bad':st==='partial'?'warn':'mute')+'<span class="sm mu">'+x.asset_ids.length+' asset(s) · requested by '+esc(x.requested_by)+' · '+esc(String(x.requested_at).slice(0,16).replace('T',' '))+'</span><span class="sp"></span>'
+        +(st==='pending'&&can('operator')&&!mine?'<button type="button" class="btn ok" data-approve="'+esc(x.id)+'"><i class="ti ti-check"></i>Approve &amp; run</button><button type="button" class="btn no" data-reject="'+esc(x.id)+'">Reject</button>':'')
+        +(st==='pending'&&(mine||can('admin'))?'<button type="button" class="btn" data-cancel="'+esc(x.id)+'">Cancel</button>':'')+(st==='pending'&&mine?'<span class="sm mu">waiting for a different person</span>':'')+'</div>'
+        +'<div class="sm" style="margin-top:4px">'+esc(x.reason)+'</div>'+(x.q?'<div class="sm mu" style="font-family:ui-monospace,Consolas,monospace">'+esc(x.q)+'</div>':'')
+        +'<div class="sm mu">'+esc(Object.keys(x.params).filter(function(k){return x.params[k];}).map(function(k){return k+' = '+x.params[k];}).join(' · '))+'</div>'
+        +'<div class="sm mu">'+esc(x.assets.slice(0,12).map(function(y){return y.name;}).join(', ')+(x.assets.length>12?' …':''))+'</div>'
+        +(x.approved_by?'<div class="sm">Approved by <b>'+esc(x.approved_by)+'</b></div>':'')+(x.decided_by&&!x.approved_by?'<div class="sm">'+esc(st)+' by '+esc(x.decided_by)+(x.decision_reason?': '+esc(x.decision_reason):'')+'</div>':'')
+        +(x.results?'<table class="t" style="margin-top:6px"><tbody>'+x.results.map(function(r){var as=x.assets.find(function(y){return y.id===r.id;});return '<tr><td>'+esc(as?as.name:r.id)+'</td><td>'+pill(r.ok?'ok':'failed',r.ok?'ok':'bad')+'</td><td class="sm">'+esc(r.detail)+'</td></tr>';}).join('')+'</tbody></table>':'')
+        +(st==='pending'&&can('operator')&&!mine?'<input class="inp" data-rr="'+esc(x.id)+'" placeholder="reason to reject" style="margin-top:6px;width:100%">':'')+'</div>';}).join(''):empty('No requests yet.');}
+  function kindFields(){var k=$('ak').value;document.querySelectorAll('#newact [data-for]').forEach(function(l){l.hidden=l.getAttribute('data-for')!==k;});}
+  // ---------- load
+  function load(){
+    $('err').innerHTML='';
+    Promise.all([req('GET','/asset-coverage'),req('GET','/asset-coverage/queries'),req('GET','/asset-coverage/actions')]).then(function(r){V=r[0];SV=r[1];AC=r[2];
+      $('main').hidden=false;$('up').textContent='Updated '+String(V.generated_at).slice(11,16)+' UTC';tabs();drawOverview();drawSaved();drawActs();kindFields();
+    },function(e){$('err').innerHTML='<div class="err"><b>Coverage &amp; Query could not load.</b> '+esc(e.message)+(e.status===404?' - update IT Asset Management (engine/asset-coverage.js).':'')+'</div>';});}
+  function xls(){if(!V)return;var rows=(Q?Q.rows:V.assets);
+    window.zybXlsx.download('asset-coverage-'+String(V.generated_at).slice(0,10)+'.xlsx',[{name:'Coverage',columns:[{h:'Asset',w:28},{h:'Type',w:10},{h:'Site',w:12},{h:'Criticality',w:11},{h:'Owner',w:20},{h:'IP',w:16}].concat(CK.map(function(k){return {h:SHORT[k],w:12};}),[{h:'Gaps',w:7},{h:'Priority',w:9}]),
+      rows:rows.map(function(r){return [r.name,r.type,r.site,r.criticality,r.owner,r.ips.join(' ')].concat(CK.map(function(k){return SL[r.controls[k].state];}),[r.gaps,r.priority]);})},
+      {name:'Why',columns:[{h:'Asset',w:28},{h:'Control',w:12},{h:'State',w:12},{h:'Why',w:80},{h:'Source',w:40}],rows:[].concat.apply([],rows.map(function(r){return CK.map(function(k){var c=r.controls[k];return [r.name,SHORT[k],SL[c.state],c.why,c.source];});}))}],
+      {title:('Coverage & Query - ' + ZYB_ORG.short),filter:Q?'query: '+LASTQ:'all active assets',by:USER||ROLE});}
+  function detail(id){req('GET','/asset-coverage/asset/'+encodeURIComponent(id)).then(function(r){var a=r.asset;
+    window.zybDetail.open('Coverage',a.name,'<div class="sm mu">'+esc([a.type,a.site,a.ips.join(', '),'criticality '+a.criticality,a.owner?'owner '+a.owner:'no owner'].filter(Boolean).join(' · '))+'</div>'
+      +'<table class="t" style="margin-top:10px"><tbody>'+CK.map(function(k){var c=a.controls[k];return '<tr><td><b>'+esc(V.controls[k].label)+'</b></td><td><i class="dot s-'+esc(c.state)+'"></i>'+esc(SL[c.state])+'</td><td class="sm">'+esc(c.why)+'<div class="mu">'+esc(c.source)+'</div></td></tr>';}).join('')+'</tbody></table>'
+      +'<div class="sm mu" style="margin-top:8px">Seen by: '+esc(a.sources.join(', ')||'no source')+(a.seen_days!=null?' · last seen '+a.seen_days+' day(s) ago':'')+' · priority '+a.priority+'</div>');},function(e){toast(e.message);});}
+  document.addEventListener('change',function(ev){if(ev.target.id==='ak')kindFields();});
+  document.addEventListener('keydown',function(ev){if(ev.target.id==='q'&&ev.key==='Enter'){ev.preventDefault();$('run').click();}});
+  document.addEventListener('click',function(ev){
+    var b=ev.target.closest('button,td[data-q]');if(!b)return;var id=b.id,g=function(a){return b.getAttribute(a);};
+    if(g('data-go')){go(g('data-go'));return;}
+    if(g('data-q')!=null&&!g('data-sched')){go('query');runQ(g('data-q'));return;}
+    if(g('data-asset')){detail(g('data-asset'));return;}
+    if(id==='refresh'){load();if(LASTQ)runQ(LASTQ);return;}
+    if(id==='xls'){xls();return;}
+    if(id==='run'){var q=$('q').value.trim();runQ(q);return;}
+    if(id==='saveq'){var name=($('qname').value.trim()||LASTQ||'query').slice(0,120);req('POST','/asset-coverage/queries',{name:name,q:LASTQ}).then(function(){toast('Saved - every team sees it under Saved & scheduled');return req('GET','/asset-coverage/queries').then(function(s){SV=s;drawSaved();tabs();});},function(e){toast(e.message);});return;}
+    if(id==='actq'){go('actions');$('aq').value=LASTQ;$('ar').focus();return;}
+    if(id==='ago'){var k=$('ak').value,body={kind:k,q:$('aq').value.trim(),reason:$('ar').value.trim()};if(k==='set_owner'){if($('ao').value.trim())body.owner=$('ao').value.trim();if($('ad').value.trim())body.department=$('ad').value.trim();}if(k==='add_tag')body.tag=$('at').value.trim();
+      b.disabled=true;req('POST','/asset-coverage/actions',body).then(function(r){toast('Requested for '+r.action.asset_ids.length+' asset(s) - a different person approves it');$('ar').value='';return req('GET','/asset-coverage/actions').then(function(a){AC=a;drawActs();tabs();});},function(e){toast(e.message);}).then(function(){b.disabled=false;});return;}
+    if(g('data-approve')){b.disabled=true;req('POST','/asset-coverage/actions/'+encodeURIComponent(g('data-approve'))+'/approve').then(function(r){toast('Approved - '+r.action.status);load();},function(e){b.disabled=false;toast(e.message);});return;}
+    if(g('data-reject')){var inp=document.querySelector('[data-rr="'+g('data-reject')+'"]'),why=inp?inp.value.trim():'';if(why.length<5){if(inp)inp.focus();toast('Say why (5 characters or more) - the requester sees it');return;}
+      req('POST','/asset-coverage/actions/'+encodeURIComponent(g('data-reject'))+'/reject',{reason:why}).then(function(){toast('Rejected');load();},function(e){toast(e.message);});return;}
+    if(g('data-cancel')){req('POST','/asset-coverage/actions/'+encodeURIComponent(g('data-cancel'))+'/cancel').then(function(){toast('Cancelled');load();},function(e){toast(e.message);});return;}
+    if(g('data-sched')){var f=b.closest('.box').querySelector('[data-schedform]');if(f)f.hidden=!f.hidden;return;}
+    if(g('data-savesched')){var bx=b.closest('.box'),v=function(n){return bx.querySelector('[data-f="'+n+'"]').value;};
+      req('POST','/asset-coverage/queries/'+encodeURIComponent(g('data-savesched'))+'/schedule',{enabled:v('enabled')==='true',period:v('period'),weekday:Number(v('weekday')),at:v('at').trim(),mode:v('mode'),recipients:v('recipients').split(/[,;\s]+/).filter(Boolean)}).then(function(){toast('Schedule saved');load();},function(e){toast(e.message);});return;}
+    if(g('data-runnow')){b.disabled=true;req('POST','/asset-coverage/queries/'+encodeURIComponent(g('data-runnow'))+'/run-now').then(function(r){toast('Run: '+r.status+(r.error?' - '+r.error:''));load();},function(e){toast(e.message);}).then(function(){b.disabled=false;});return;}
+    if(g('data-delq')){req('POST','/asset-coverage/queries/'+encodeURIComponent(g('data-delq'))+'/delete').then(function(){toast('Deleted');load();},function(e){toast(e.message);});return;}
+    if(g('data-unex')){var p=g('data-unex').split('|');req('POST','/asset-coverage/exempt',{asset_id:p[0],control:p[1],remove:true}).then(function(){toast('Exemption removed');load();},function(e){toast(e.message);});return;}
+    if(id==='exgo'){req('POST','/asset-coverage/exempt',{asset_id:$('exa').value,control:$('exc').value,until:$('exu').value,reason:$('exr').value.trim()}).then(function(){toast('Exemption added');$('exr').value='';load();},function(e){toast(e.message);});return;}
+  });
+  help();
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;USER=j.user||'';}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+})();
+</script></body></html>

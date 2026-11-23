@@ -1,0 +1,152 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Asset Purchasing</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Asset Purchasing over /api/itam/purchasing: every IT purchase from request to go-live - PO, vendor, product lines, dates, cost -
+     with four-eyes approval, items received straight into the asset register, and utilisation of the IT budget (committed vs spent,
+     remaining, year-end forecast). Machine learning from these orders only: vendor lead time (late), go-live lag (stuck), price above
+     the usual. Operators and above (costs). -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn:disabled{opacity:.5;cursor:default}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}.tabs button{font:600 13px Inter,system-ui,sans-serif;background:transparent;color:var(--d-mute);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}.tabs button[aria-selected=true]{color:var(--d-ink);background:var(--d-raise)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px 14px}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:24px;font-weight:800}.t .s{font-size:11.5px;color:var(--d-mute)}.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:14px;margin-bottom:12px}.card h2{margin:0 0 10px;font-size:15px}
+.pipe{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin-bottom:12px}@media(max-width:1100px){.pipe{grid-template-columns:repeat(4,1fr)}}
+.st{background:var(--d-raise);border:1px solid var(--d-line);border-radius:10px;padding:8px;text-align:center;cursor:pointer;color:inherit;font:inherit}.st.on{outline:2px solid var(--acc)}.st b{display:block;font-size:20px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);font-size:13px;vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:11.5px;text-transform:uppercase}
+tr.rw{cursor:pointer}tr.rw:hover{background:rgba(255,255,255,.03)}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:rgba(141,176,255,.16);color:var(--info)}.pill.bad{background:rgba(255,123,128,.16);color:var(--bad)}.pill.warn{background:rgba(245,181,68,.16);color:var(--warn)}.pill.ok{background:rgba(95,210,122,.16);color:var(--ok)}
+.bar{height:10px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden;position:relative}.bar i{position:absolute;top:0;bottom:0;left:0;background:#2fb344}.bar b{position:absolute;top:0;bottom:0;background:#f59f00}
+.inp{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:inherit;width:100%}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.f label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--d-mute)}
+.empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad);font-size:13px;margin-top:8px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+.drw{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--d-panel);border-left:1px solid var(--d-line);padding:18px;overflow:auto;z-index:50;box-shadow:-10px 0 30px rgba(0,0,0,.4)}
+.tl{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.tl span{font-size:11.5px;padding:4px 8px;border-radius:8px;border:1px solid var(--d-line);color:var(--d-mute)}.tl span.done{color:var(--ok);border-color:rgba(95,210,122,.4)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT assets · purchase orders · IT budget</div><h1>Asset Purchasing</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn pri" id="b-new">＋ New purchase</button><button type="button" class="btn" id="rf">⟳</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="or" aria-selected="true">Orders</button><button type="button" role="tab" data-tab="bu" aria-selected="false">Budget utilisation</button><button type="button" role="tab" data-tab="ve" aria-selected="false">Vendors</button><button type="button" role="tab" data-tab="nw" aria-selected="false">New purchase</button></div>
+<section id="or"><div class="pipe" id="pipe"></div><div class="card"><div style="display:flex;gap:8px;margin-bottom:8px"><input class="inp" id="q" placeholder="Search title, PO, vendor, product…" aria-label="Search" style="max-width:360px"><label class="sm mut" style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="fl"> only with alerts</label></div><div id="list"></div></div></section>
+<section id="bu" hidden><div id="env"></div><div class="card"><h2>Budget lines</h2><div id="bl"></div></div></section>
+<section id="ve" hidden><div class="card"><h2>Vendor scorecard</h2><div id="vend"></div></div><div class="card"><h2>What was learned</h2><div id="lrn"></div></div></section>
+<section id="nw" hidden><div class="card"><h2>New purchase request</h2>
+  <div class="f"><label>Title<input class="inp" id="n-title" placeholder="e.g. Laptops for Finance"></label><label>PO number (when known)<input class="inp" id="n-po"></label>
+    <label>Department<input class="inp" id="n-dep"></label><label>Budget line<select class="inp" id="n-bl"><option value="">— not linked —</option></select></label>
+    <label>Type of spend<select class="inp" id="n-kind"><option value="capex">CAPEX</option><option value="opex">OPEX</option></select></label><label>Expected delivery<input class="inp" type="date" id="n-exp"></label>
+    <label>Planned go-live<input class="inp" type="date" id="n-gl"></label></div>
+  <h3 style="font-size:13px;margin:14px 0 6px">Vendor</h3>
+  <div class="f"><label>Name<input class="inp" id="v-name"></label><label>Contact person<input class="inp" id="v-contact"></label><label>E-mail<input class="inp" id="v-email"></label><label>Phone<input class="inp" id="v-phone"></label></div>
+  <h3 style="font-size:13px;margin:14px 0 6px">Products</h3>
+  <table><thead><tr><th>Product</th><th>Model</th><th>Part no.</th><th>Asset type</th><th>Qty</th><th>Unit cost</th><th>Warranty (months)</th><th></th></tr></thead><tbody id="n-lines"></tbody></table>
+  <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button type="button" class="btn" id="n-add">＋ Product line</button><span class="sp"></span><b id="n-total"></b><button type="button" class="btn pri" id="n-save">Submit for approval</button></div>
+  <div class="err" id="n-err"></div></div></section>
+<aside class="drw" id="drw" hidden></aside>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, ST = '', CUR = 'SAR';
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var money = function (n) { return n == null ? '–' : Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
+  var TYPES = ['laptop', 'workstation', 'server', 'network', 'storage', 'printer', 'phone', 'ups', 'mobile', 'peripheral', 'software', 'licence', 'other'];
+  var STEPS = ['requested', 'approved', 'ordered', 'delivered', 'installed', 'live', 'invoiced', 'paid'];
+  var NEXT = { approved: ['ordered'], ordered: ['delivered', 'invoiced'], delivered: ['installed', 'live', 'invoiced'], installed: ['live', 'invoiced'], live: ['invoiced'], invoiced: ['paid'], paid: ['closed'] };
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  var why = function (e) { return e.status === 403 ? (/four eyes|service/.test(e.message) ? e.message : 'Your role cannot do this (operators and above).') : e.message; };
+  var FL = { late: ['bad', 'late'], stuck: ['warn', 'not live'], price: ['warn', 'price'], invoice: ['warn', 'invoice'], budget: ['bad', 'over budget'] };
+  function load() { return req('GET', '/purchasing').then(function (v) { V = v; CUR = v.currency || 'SAR'; draw(); }).catch(function (e) { $('kp').innerHTML = '<div class="card" style="grid-column:1/-1"><div class="empty">' + esc(e.status === 403 ? 'Purchasing shows costs: operators and administrators.' : e.status === 404 ? 'Asset Purchasing is not on this platform yet - run the update.' : 'Not reachable: ' + e.message) + '</div></div>'; $('list').innerHTML = ''; }); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s) + '</div></div>'; }
+  function draw() {
+    var K = V.kpis; $('up').textContent = 'read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    $('kp').innerHTML = tile('Open orders', K.open, K.orders + ' in total') + tile('Awaiting approval', K.awaiting_approval, 'a different person approves', K.awaiting_approval ? 'warn' : '') + tile('On order', K.on_order, K.late + ' late', K.late ? 'bad' : '')
+      + tile('Delivered, not live', K.delivered_not_live, 'waiting for go-live', '') + tile('Committed', CUR + ' ' + money(K.committed), 'approved, not invoiced') + tile('Spent', CUR + ' ' + money(K.spent), 'invoiced');
+    var cnt = {}; V.orders.forEach(function (o) { cnt[o.status] = (cnt[o.status] || 0) + 1; });
+    $('pipe').innerHTML = STEPS.map(function (s) { return '<button type="button" class="st' + (ST === s ? ' on' : '') + '" data-st="' + s + '"><b>' + (cnt[s] || 0) + '</b><span class="sm mut">' + s + '</span></button>'; }).join('');
+    drawList(); drawBudget(); drawVendors();
+    $('n-bl').innerHTML = '<option value="">— not linked —</option>' + V.budget_lines.map(function (l) { return '<option value="' + esc(l.id) + '">' + esc(l.title) + ' (' + esc(l.envelope === 'cyber' ? 'Cyber Security' : 'IT Operations') + ', ' + esc(l.status) + ')</option>'; }).join('');
+  }
+  function drawList() {
+    var q = $('q').value.trim().toLowerCase(), fl = $('fl').checked;
+    var L = V.orders.filter(function (o) { return (!ST || o.status === ST) && (!fl || o.flags.length) && (!q || [o.title, o.po_number, o.vendor && o.vendor.name].concat((o.lines || []).map(function (l) { return l.product + ' ' + (l.model || ''); })).join(' ').toLowerCase().indexOf(q) >= 0); });
+    $('list').innerHTML = L.length ? '<table><thead><tr><th>Order</th><th>Vendor</th><th>Status</th><th>Dates</th><th style="text-align:right">Total</th><th>Alerts</th></tr></thead><tbody>' + L.map(function (o) {
+      return '<tr class="rw" data-id="' + esc(o.id) + '"><td><b>' + esc(o.title) + '</b><div class="sm mut">' + esc(o.po_number || o.id) + ' · ' + esc((o.lines || []).length) + ' line(s)' + (o.department ? ' · ' + esc(o.department) : '') + '</div></td><td>' + esc(o.vendor.name) + '</td><td><span class="pill' + (o.status === 'cancelled' ? ' bad' : o.status === 'paid' || o.status === 'closed' ? ' ok' : '') + '">' + esc(o.status) + '</span></td>'
+        + '<td class="sm">PO ' + esc(o.dates.ordered || '–') + '<br>delivered ' + esc(o.dates.delivered || (o.expected ? 'expected ' + o.expected.date : '–')) + '<br>live ' + esc(o.dates.live || (o.planned_go_live ? 'planned ' + o.planned_go_live : '–')) + '</td><td style="text-align:right">' + esc(o.currency) + ' ' + money(o.total) + '</td>'
+        + '<td>' + o.flags.map(function (f) { var c = FL[f.kind] || ['', f.kind]; return '<span class="pill ' + c[0] + '" title="' + esc(f.why) + '">' + esc(c[1]) + '</span> '; }).join('') + '</td></tr>'; }).join('') + '</tbody></table>'
+      : '<div class="empty">' + (V.orders.length ? 'Nothing matches.' : 'No purchase recorded yet - "New purchase" raises the first request.') + '</div>';
+  }
+  function bar(b, c, s) { if (!b) return ''; var pc = Math.min(100, s / b * 100), pcc = Math.min(100 - pc, c / b * 100); return '<div class="bar" title="spent ' + money(s) + ' · committed ' + money(c) + '"><i style="width:' + pc + '%"></i><b style="left:' + pc + '%;width:' + pcc + '%"></b></div>'; }
+  function drawBudget() {
+    if (!V.budget.connected) { $('env').innerHTML = '<div class="card"><div class="empty">The IT budget is not set up yet (IT Budget page).</div></div>'; $('bl').innerHTML = ''; return; }
+    $('env').innerHTML = '<div class="k">' + V.budget.envelopes.map(function (e) { var used = e.committed + e.spent;
+      return '<div class="t' + (e.remaining < 0 ? ' bad' : '') + '"><div class="l">' + esc(e.name) + '</div><div class="v">' + (e.utilisation_pct == null ? '–' : e.utilisation_pct + ' %') + '</div><div class="s">' + esc(CUR) + ' ' + money(used) + ' of ' + money(e.envelope) + ' · remaining ' + money(e.remaining) + '</div>' + bar(e.envelope, e.committed, e.spent) + '<div class="s" style="margin-top:6px">Year-end forecast: ' + (e.forecast_year == null ? esc(e.forecast_note) : esc(CUR) + ' ' + money(e.forecast_year) + ' (' + esc(e.forecast_note) + ')') + '</div></div>'; }).join('') + '</div><div class="sm mut" style="margin-bottom:10px">Green = spent (invoiced), amber = committed (approved, not invoiced).</div>';
+    $('bl').innerHTML = V.budget.lines.length ? '<table><thead><tr><th>Line</th><th>Status</th><th style="text-align:right">Budget</th><th style="text-align:right">Committed</th><th style="text-align:right">Spent</th><th style="text-align:right">Remaining</th><th style="width:22%">Utilisation</th></tr></thead><tbody>' + V.budget.lines.map(function (l) {
+      return '<tr><td><b>' + esc(l.title) + '</b><div class="sm mut">' + esc(l.envelope === 'cyber' ? 'Cyber Security' : 'IT Operations') + ' · ' + esc(l.kind) + ' · ' + l.orders + ' order(s)</div></td><td>' + esc(l.status) + '</td><td style="text-align:right">' + money(l.budget) + '</td><td style="text-align:right">' + money(l.committed) + '</td><td style="text-align:right">' + money(l.spent) + '</td><td style="text-align:right' + (l.remaining < 0 ? ';color:var(--bad)' : '') + '">' + money(l.remaining) + '</td><td>' + (l.budget ? bar(l.budget, l.committed, l.spent) + '<span class="sm mut">' + l.utilisation_pct + ' %</span>' : '<span class="sm mut">not approved / not priced</span>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No order is linked to a budget line yet.</div>';
+  }
+  function drawVendors() {
+    $('vend').innerHTML = V.vendors.length ? '<table><thead><tr><th>Vendor</th><th>Orders</th><th style="text-align:right">Spend + committed</th><th>Delivered</th><th>On time</th><th>Median lead time</th></tr></thead><tbody>' + V.vendors.map(function (v) { return '<tr><td><b>' + esc(v.vendor) + '</b></td><td>' + v.orders + '</td><td style="text-align:right">' + money(v.spend) + '</td><td>' + v.delivered + '</td><td>' + (v.on_time_pct == null ? '–' : v.on_time_pct + ' %') + '</td><td>' + (v.lead_days == null ? '<span class="mut sm">needs 3 deliveries</span>' : v.lead_days + ' days') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No vendor yet.</div>';
+    $('lrn').innerHTML = '<div class="sm">Lead time per vendor: ' + (V.learned.lead_time.filter(function (x) { return x.days != null; }).map(function (x) { return esc(x.vendor) + ' ' + x.days + ' d (' + x.n + ')'; }).join(' · ') || '<span class="mut">not enough deliveries yet</span>') + '</div><div class="sm" style="margin-top:6px">Delivery → go-live per asset type: ' + (V.learned.go_live.filter(function (x) { return x.days != null; }).map(function (x) { return esc(x.type) + ' ' + x.days + ' d (' + x.n + ')'; }).join(' · ') || '<span class="mut">not enough go-lives yet</span>') + '</div><div class="sm mut" style="margin-top:6px">' + esc(V.note) + '</div>';
+  }
+  function openDrawer(id) {
+    var o = V.orders.filter(function (x) { return x.id === id; })[0]; if (!o) return;
+    var done = function (s) { return s === 'approved' ? !!o.approved : !!o.dates[s]; };
+    var nx = o.status === 'cancelled' || o.status === 'closed' ? [] : o.status === 'requested' ? [] : (NEXT[o.status] || []);
+    var h = '<div style="display:flex;align-items:center;gap:8px"><h2 style="margin:0;flex:1">' + esc(o.title) + '</h2><button type="button" class="btn" id="d-x" aria-label="Close">✕</button></div><div class="sm mut">' + esc(o.po_number || 'no PO number yet') + ' · ' + esc(o.id) + ' · requested by ' + esc(o.requester) + (o.approved ? ' · approved by ' + esc(o.approved.by) : '') + '</div>'
+      + '<div class="tl">' + STEPS.map(function (s) { return '<span class="' + (done(s) ? 'done' : '') + '">' + (done(s) ? '✓ ' : '') + esc(s) + (o.dates[s] ? ' ' + esc(o.dates[s]) : '') + '</span>'; }).join('') + '</div>'
+      + (o.flags.length ? '<div class="card" style="border-color:rgba(245,181,68,.4)">' + o.flags.map(function (f) { return '<div class="sm"><b>' + esc((FL[f.kind] || [, f.kind])[1]) + '</b>: ' + esc(f.why) + '</div>'; }).join('') + '</div>' : '')
+      + '<div class="card"><h2>Vendor</h2><div class="sm">' + esc(o.vendor.name) + (o.vendor.contact ? ' · ' + esc(o.vendor.contact) : '') + (o.vendor.email ? ' · ' + esc(o.vendor.email) : '') + (o.vendor.phone ? ' · ' + esc(o.vendor.phone) : '') + '</div></div>'
+      + '<div class="card"><h2>Products</h2><table><thead><tr><th>Product</th><th>Qty</th><th>Received</th><th style="text-align:right">Unit</th><th style="text-align:right">Total</th></tr></thead><tbody>' + o.lines.map(function (l) { return '<tr><td>' + esc(l.product) + '<div class="sm mut">' + esc([l.model, l.part_no, l.type, l.warranty_months ? l.warranty_months + ' m warranty' : ''].filter(Boolean).join(' · ')) + '</div></td><td>' + l.qty + '</td><td>' + l.received + '</td><td style="text-align:right">' + money(l.unit_cost) + '</td><td style="text-align:right">' + money(l.qty * l.unit_cost) + '</td></tr>'; }).join('') + '<tr><td colspan="4"><b>Total</b>' + (o.invoice ? ' <span class="sm mut">invoiced ' + money(o.invoice.amount) + (o.invoice.invoice_no ? ' (' + esc(o.invoice.invoice_no) + ')' : '') + '</span>' : '') + '</td><td style="text-align:right"><b>' + esc(o.currency) + ' ' + money(o.total) + '</b></td></tr></tbody></table>' + (o.assets.length ? '<div class="sm mut" style="margin-top:6px">' + o.assets.length + ' asset(s) created in the register on receipt.</div>' : '') + '</div>'
+      + '<div class="card"><h2>Next step</h2>' + (o.status === 'requested' ? '<button type="button" class="btn pri" id="d-appr">Approve</button> <span class="sm mut">(not the requester)</span><label class="sm mut" style="display:block;margin-top:8px"><input type="checkbox" id="d-ovr"> approve over the budget line</label><input class="inp" id="d-note" placeholder="Note (required for an override)" style="margin-top:6px">' : '')
+      + (nx.length ? '<div class="f"><label>Step<select class="inp" id="d-step">' + nx.map(function (s) { return '<option>' + s + '</option>'; }).join('') + '</select></label><label>Date<input class="inp" type="date" id="d-date" value="' + new Date().toISOString().slice(0, 10) + '"></label>'
+        + (o.status === 'approved' ? '<label>PO number<input class="inp" id="d-po" value="' + esc(o.po_number || '') + '"></label>' : '') + '<label>Invoice amount (for "invoiced")<input class="inp" id="d-amt" type="number"></label><label>Invoice no.<input class="inp" id="d-inv"></label></div><button type="button" class="btn pri" id="d-go" style="margin-top:8px">Record step</button>' : '')
+      + (o.dates.ordered && !o.fully_received ? '<h3 style="font-size:13px;margin:14px 0 6px">Receive items into the asset register</h3>' + o.lines.filter(function (l) { return l.received < l.qty; }).map(function (l) { return '<div class="f" style="margin-bottom:6px"><label>' + esc(l.product) + ' - qty (' + (l.qty - l.received) + ' to come)<input class="inp" type="number" min="0" max="' + (l.qty - l.received) + '" data-rq="' + l.line + '" value="' + (l.qty - l.received) + '"></label><label>Serial numbers (one per line, optional)<textarea class="inp" rows="2" data-rs="' + l.line + '"></textarea></label></div>'; }).join('') + '<button type="button" class="btn" id="d-rcv">Receive</button>' : '')
+      + (o.status !== 'cancelled' && o.status !== 'closed' && !o.dates.invoiced ? '<div style="margin-top:12px"><button type="button" class="btn" id="d-can">Cancel order…</button></div>' : '') + '<div class="err" id="d-err"></div></div>'
+      + '<div class="card"><h2>History</h2>' + o.history.slice().reverse().map(function (x) { return '<div class="sm"><b>' + esc(x.step) + '</b> ' + esc(x.date || String(x.at).slice(0, 10)) + ' · ' + esc(x.by) + (x.note ? ' · ' + esc(x.note) : '') + '</div>'; }).join('') + '</div>';
+    var d = $('drw'); d.innerHTML = h; d.hidden = false; d.dataset.id = id;
+  }
+  function act(p, b) { $('d-err').textContent = ''; return req('POST', '/purchasing/orders/' + encodeURIComponent($('drw').dataset.id) + p, b).then(function () { toast('Saved'); return load().then(function () { openDrawer($('drw').dataset.id); }); }, function (e) { $('d-err').textContent = why(e); }); }
+  $('drw').addEventListener('click', function (e) {
+    var t = e.target;
+    if (t.id === 'd-x') { $('drw').hidden = true; return; }
+    if (t.id === 'd-appr') act('/approve', Object.assign({ override_budget: $('d-ovr').checked }, $('d-note').value.trim() ? { note: $('d-note').value.trim() } : {}));
+    if (t.id === 'd-go') { var b = { step: $('d-step').value, date: $('d-date').value }; if ($('d-po') && $('d-po').value.trim()) b.po_number = $('d-po').value.trim(); if ($('d-amt').value) b.amount = Number($('d-amt').value); if ($('d-inv').value.trim()) b.invoice_no = $('d-inv').value.trim(); act('/step', b); }
+    if (t.id === 'd-rcv') { var items = Array.prototype.map.call(document.querySelectorAll('[data-rq]'), function (i) { var q = Number(i.value), s = document.querySelector('[data-rs="' + i.dataset.rq + '"]').value.split(/\n/).map(function (x) { return x.trim(); }).filter(Boolean); var it = { line: Number(i.dataset.rq), qty: q }; if (s.length) it.serials = s; return it; }).filter(function (x) { return x.qty > 0; });
+      if (!items.length) { $('d-err').textContent = 'Nothing to receive.'; return; } act('/receive', { items: items }); }
+    if (t.id === 'd-can') { $('d-err').innerHTML = '<input class="inp" id="d-cr" placeholder="Why is it cancelled? (required)"> <button type="button" class="btn" id="d-cok" style="margin-top:6px">Cancel the order</button>'; }
+    if (t.id === 'd-cok') { var why0 = $('d-cr').value.trim(); if (!why0) { $('d-cr').focus(); return; } act('/step', { step: 'cancelled', note: why0 }); }
+  });
+  function lineRow(l) { l = l || {}; return '<tr><td><input class="inp" data-k="product" value="' + esc(l.product || '') + '"></td><td><input class="inp" data-k="model"></td><td><input class="inp" data-k="part_no"></td><td><select class="inp" data-k="type">' + TYPES.map(function (t) { return '<option>' + t + '</option>'; }).join('') + '</select></td><td><input class="inp" type="number" min="1" data-k="qty" value="1" style="width:70px"></td><td><input class="inp" type="number" min="0" data-k="unit_cost" style="width:110px"></td><td><input class="inp" type="number" min="0" max="120" data-k="warranty_months" style="width:80px"></td><td><button type="button" class="btn" data-rm aria-label="Remove line">✕</button></td></tr>'; }
+  function newTotal() { var t = 0; Array.prototype.forEach.call($('n-lines').rows, function (r) { t += (Number(r.querySelector('[data-k=qty]').value) || 0) * (Number(r.querySelector('[data-k=unit_cost]').value) || 0); }); $('n-total').textContent = 'Total ' + CUR + ' ' + money(t); }
+  $('n-add').addEventListener('click', function () { $('n-lines').insertAdjacentHTML('beforeend', lineRow()); newTotal(); });
+  $('n-lines').addEventListener('click', function (e) { if (e.target.closest('[data-rm]')) { e.target.closest('tr').remove(); newTotal(); } });
+  $('n-lines').addEventListener('input', newTotal);
+  $('n-save').addEventListener('click', function () {
+    $('n-err').textContent = '';
+    var lines = Array.prototype.map.call($('n-lines').rows, function (r) { var o = {}; Array.prototype.forEach.call(r.querySelectorAll('[data-k]'), function (i) { var v = i.value.trim(); if (v === '') return; o[i.dataset.k] = ['qty', 'unit_cost', 'warranty_months'].indexOf(i.dataset.k) >= 0 ? Number(v) : v; }); return o; });
+    if (!$('n-title').value.trim()) { $('n-err').textContent = 'Title is required.'; return; }
+    if (!$('v-name').value.trim()) { $('n-err').textContent = 'Vendor name is required.'; return; }
+    if (!lines.length || lines.some(function (l) { return !l.product || !(l.qty >= 1) || l.unit_cost == null; })) { $('n-err').textContent = 'Each product line needs a product, a quantity and a unit cost.'; return; }
+    var v = { name: $('v-name').value.trim() }; ['contact', 'email', 'phone'].forEach(function (k) { var x = $('v-' + k).value.trim(); if (x) v[k] = x; });
+    var b = { title: $('n-title').value.trim(), kind: $('n-kind').value, vendor: v, lines: lines };
+    [['n-po', 'po_number'], ['n-dep', 'department'], ['n-bl', 'budget_line'], ['n-exp', 'expected_delivery'], ['n-gl', 'planned_go_live']].forEach(function (p) { var x = $(p[0]).value.trim(); if (x) b[p[1]] = x; });
+    req('POST', '/purchasing/orders', b).then(function (o) { toast('Request ' + o.id + ' submitted for approval'); $('n-lines').innerHTML = lineRow(); ['n-title', 'n-po', 'n-dep', 'n-exp', 'n-gl', 'v-name', 'v-contact', 'v-email', 'v-phone'].forEach(function (i) { $(i).value = ''; }); tab('or'); return load(); }, function (e) { $('n-err').textContent = why(e); });
+  });
+  function tab(t) { ['or', 'bu', 've', 'nw'].forEach(function (x) { $(x).hidden = x !== t; document.querySelector('[data-tab="' + x + '"]').setAttribute('aria-selected', String(x === t)); }); }
+  document.querySelector('.tabs').addEventListener('click', function (e) { var b = e.target.closest('[data-tab]'); if (b) tab(b.dataset.tab); });
+  $('b-new').addEventListener('click', function () { tab('nw'); $('n-title').focus(); });
+  $('pipe').addEventListener('click', function (e) { var b = e.target.closest('[data-st]'); if (!b) return; ST = ST === b.dataset.st ? '' : b.dataset.st; draw(); });
+  $('list').addEventListener('click', function (e) { var r = e.target.closest('[data-id]'); if (r) openDrawer(r.dataset.id); });
+  $('q').addEventListener('input', drawList); $('fl').addEventListener('change', drawList);
+  $('rf').addEventListener('click', load);
+  $('n-lines').innerHTML = lineRow();
+  load();
+})();
+</script></body></html>

@@ -1,0 +1,46 @@
+--- a/engine/http.js
++++ b/engine/http.js
+@@ -37,6 +37,10 @@ function createServer({ host = '127.0.0.1', port = 9150, prefix = '/api/itam', a
+   const secretDigest = typeof proxySecret === 'string' && proxySecret.length >= 16 ? digest(proxySecret) : null;
+   if (!secretDigest && log) log.error('http: no usable proxy_secret (>= 16 chars) in secrets.json — every request will be refused');
+   const routes = [], upgrades = [];
++  // access gates (roles.js: engineer job roles may call only their own routes) - each gate(ctx) throws {status} to refuse;
++  // they run on every portal route and WebSocket after the identity is known and before any body is read
++  const gates = [];
++  const runGates = (ctx) => { for (const g of gates) g(ctx); };
+   const inflight = new Map();   // duplicate-submission guard (see the handler)
+   const IDEM_TTL_MS = 600000, IDEM_MAX_BYTES = 256 * 1024, INFLIGHT_MAX = 5000;
+   // expired keyed answers go by age; over the cap the oldest FINISHED entries go - a running request is never evicted
+@@ -87,7 +91,7 @@ function createServer({ host = '127.0.0.1', port = 9150, prefix = '/api/itam', a
+     const ctx = { method: 'GET', path: p, params, query: Object.fromEntries(url.searchParams), user, role, ip: xr ? String(xr).slice(0, 64) : String(socket.remoteAddress || ''),
+       who: { user, role, ip: xr ? String(xr).slice(0, 64) : '' }, headers: req.headers,
+       need(min) { if (rankOf(role) < (rankOf(min) || 99)) throw Object.assign(new Error(`requires role ${min}`), { status: 403 }); } };
+-    try { await hit.r.handler(ctx, req, socket, head); } catch (e) {
++    try { runGates(ctx); await hit.r.handler(ctx, req, socket, head); } catch (e) {
+       const status = e && Number.isInteger(e.status) && e.status >= 400 && e.status < 600 ? e.status : 500;
+       if (status >= 500 && log) log.error('http: WebSocket handler error', { path: p, err: e && e.message });
+       if (!socket.destroyed) refuseUpgrade(socket, status, status >= 500 ? 'Internal Error' : 'Refused');
+@@ -161,6 +165,7 @@ function createServer({ host = '127.0.0.1', port = 9150, prefix = '/api/itam', a
+       },
+     };
+     try {
++      if (!hit.r.opts.agent && !isHealth) runGates(ctx);
+       const ctype = req.headers['content-type'];
+       // any declared body type other than JSON is refused (also for an empty form POST); see the CSRF note at the top
+       if (method !== 'GET' && ctype !== undefined && mediaType(ctype) !== 'application/json') { req.resume(); throw Object.assign(new Error('Content-Type must be application/json'), { status: 415 }); }
+@@ -214,6 +219,7 @@ function createServer({ host = '127.0.0.1', port = 9150, prefix = '/api/itam', a
+ 
+   return {
+     route, upgrade,
++    gate(fn) { if (typeof fn !== 'function') throw new TypeError('gate must be a function'); gates.push(fn); },
+     // every registered route, read-only (the contract test checks that each one declares who may call it)
+     list: () => routes.concat(upgrades).map((r) => ({ method: r.method, path: r.path, handler: r.handler, opts: r.opts })),
+     start() {
+@@ -233,6 +239,7 @@ function createServer({ host = '127.0.0.1', port = 9150, prefix = '/api/itam', a
+       });
+     },
+     address: () => (server ? server.address() : null),
++    prefix,
+   };
+ }
+ 

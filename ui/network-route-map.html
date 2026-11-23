@@ -1,0 +1,280 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WAN &amp; LAN Route Map</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1680px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.ai{background:linear-gradient(135deg,#7c4dff,#5b8def);border:0;color:#fff}.btn.bad{border-color:#5a2a2d;color:#ff8a8e}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:26px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px}
+#map{width:100%;overflow:auto;background:radial-gradient(#1a1f2b 1px,transparent 1px) 0 0/18px 18px;border-radius:12px;border:1px solid var(--d-line)}
+#map svg{display:block;min-width:900px;max-width:1500px;margin:0 auto}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--d-mute);margin-top:8px}.legend i{display:inline-block;width:22px;height:4px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.li{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-bottom:1px solid #1b2030;cursor:pointer;border-radius:8px}.li:hover{background:#151924}.li.sel{background:#172036}.li .b{flex:1;min-width:0}.li .t{font-weight:600;overflow-wrap:anywhere}.li .s{font-size:12px;color:var(--d-mute);overflow-wrap:anywhere}.li.cov{opacity:.6}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.v-critical,.s-down{background:rgba(229,72,77,.22);color:#ff8a8e}.v-high,.s-critical{background:rgba(245,99,0,.2);color:#ff9b5c}.v-medium,.s-degraded{background:rgba(245,159,0,.18);color:#f5b544}.v-low,.s-unmeasured,.s-unknown,.s-unmonitored,.s-virtual{background:rgba(139,147,164,.16);color:#aab2c2}.s-up{background:rgba(47,179,68,.15);color:#56d364}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.inp,select.inp,textarea.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:5px 8px;font:12.5px Inter,"Segoe UI",system-ui,sans-serif;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kv{display:grid;grid-template-columns:170px minmax(0,1fr);gap:4px 12px;font-size:13px}.kv div:nth-child(odd){color:var(--d-mute)}
+ol.fix{margin:6px 0 0;padding-left:20px}ol.fix li{margin:4px 0}
+pre.cmd{background:#0b0d12;border:1px solid var(--d-line);border-radius:10px;padding:10px;font:12px ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
+.ans{white-space:pre-wrap;background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-top:10px;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 6px;border-bottom:1px solid var(--d-line)}td{padding:5px 6px;border-bottom:1px solid #1b2030;vertical-align:top}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.tabs button{background:transparent;border:1px solid var(--d-line);color:var(--d-mute);border-radius:999px;padding:5px 12px;font:600 12.5px Inter,"Segoe UI",system-ui,sans-serif;cursor:pointer}.tabs button[aria-selected="true"]{color:#fff;border-color:var(--d-acc);background:rgba(91,141,239,.2)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.mvb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:12.5px}.mvb select{max-width:260px}
+.hop{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:10px 0}.hop .hn{border:2px solid var(--c);border-radius:12px;padding:7px 10px;background:#151a24;min-width:120px}.hop .hn b{display:block;font-size:13px}.hop .hl{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:110px;padding:0 6px;font-size:11px;color:var(--d-mute)}.hop .hl i{display:block;height:4px;width:100%;border-radius:2px;background:var(--c);margin:3px 0}.hop .weak{outline:2px dashed #ff8a8e;outline-offset:3px}
+.verdict{padding:10px 12px;border-radius:10px;font-weight:600;margin:6px 0}
+svg .nd{cursor:pointer}svg .lk{cursor:pointer}svg text{font-family:Inter,"Segoe UI",system-ui,sans-serif}
+@media(max-width:1100px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network</div><h1>WAN &amp; LAN Route Map</h1><div class="sm mute">Internet → Palo Alto edge → data centre → Silver Peak SD-WAN → branches and their FortiGates, measured live from the AI Network Engineer's polling. A failure shows once, at its root cause.</div></div><div class="sp"></div>
+ <span class="sm mute" id="up"></span><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <section class="card"><div class="kpis" id="kpis"></div></section>
+ <section class="card"><h2><i class="ti ti-topology-star-3"></i>Map <span class="c" id="mapc"></span></h2><div class="tabs" id="mvt" role="tablist"></div><div id="mvbar"></div><div id="map"></div>
+  <div class="legend"><span><i style="background:#2fb344"></i>up</span><span><i style="background:#f59f00"></i>degraded</span><span><i style="background:#ff7a3d"></i>critical (bandwidth / quality)</span><span><i style="background:#e5484d"></i>down</span><span><i style="background:#5b6474"></i>not measured</span><span>line width = utilisation · click a device or a link</span></div></section>
+ <div class="cols">
+  <section class="card"><h2><i class="ti ti-urgent"></i>Incidents <span class="c">root causes first; what they cut off is covered</span></h2><div id="incs"></div><div id="clr"></div></section>
+  <section class="card" id="det"><h2><i class="ti ti-file-description"></i>Details</h2><div class="note">Choose an incident, a device or a link.</div></section>
+ </div>
+ <section class="card" id="cfg"><h2><i class="ti ti-settings"></i>Map setup <span class="c" id="cfgc"></span></h2><div id="cbody"></div></section>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, CFG=null, DRAFT=null, PROP=null, SEL=null, CT='nodes', ANS={};
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: the status says enough */}if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function api(m,p,b){return req(m,'/api/soc/netops'+p,b);}
+  function when(t){return t?new Date(t).toLocaleString():'—';}
+  function mbps(b){return b==null?'—':b>=1e9?(b/1e9).toFixed(2)+' Gb/s':(b/1e6).toFixed(1)+' Mb/s';}
+  function gb(b){return b==null?'—':b>=1e9?(b/1e9).toFixed(1)+' GB':(b/1e6).toFixed(1)+' MB';}
+  function pill(s,cls){return '<span class="pill '+cls+'">'+esc(s)+'</span>';}
+  var COL={up:'#2fb344',degraded:'#f59f00',critical:'#ff7a3d',down:'#e5484d',unmeasured:'#5b6474',unknown:'#5b6474',unmonitored:'#3a4256',virtual:'#5b8def'};
+  var ICON={internet:'world',isp:'antenna','edge-firewall':'shield-lock',firewall:'shield-half',core:'server-2',distribution:'hierarchy-2',access:'switch-horizontal',sdwan:'route',router:'router','wan-cloud':'cloud',servers:'database',nac:'fingerprint',compute:'server-bolt'};
+  function nodeOf(id){return V&&V.nodes.find(function(n){return n.id===id;});}
+  function linkOf(id){return V&&V.links.find(function(l){return l.id===id;});}
+  // ---------- layout: the internet on top, data centre / HQ sites next, branches in a grid below; tiers inside a site
+  var TIER=['edge-firewall','firewall','sdwan','router','core','distribution','servers','compute','nac','access'];
+  function layout(){
+    var P={}, W=1200, boxes=[], nodes=V.nodes, top=nodes.filter(function(n){return !n.site;});
+    top.forEach(function(n,i){P[n.id]={x:W/2+(i-(top.length-1)/2)*170,y:44};});
+    var sites=V.sites.slice().sort(function(a,b){var r=function(s){return s.kind==='dc'||s.kind==='hq'?0:s.kind==='dr'?1:2;};return r(a)-r(b)||a.name.localeCompare(b.name);});
+    var main=sites.filter(function(s){return s.kind!=='branch'&&s.kind!=='cloud';}), br=sites.filter(function(s){return s.kind==='branch'||s.kind==='cloud';});
+    function box(s,x,y,w){var ns=nodes.filter(function(n){return n.site===s.id;}), rows=[];TIER.forEach(function(k){var r=ns.filter(function(n){return n.kind===k;});if(r.length)rows.push(r);});var other=ns.filter(function(n){return TIER.indexOf(n.kind)<0;});if(other.length)rows.push(other);
+      rows.forEach(function(r,ri){r.forEach(function(n,i){P[n.id]={x:x+w*(i+1)/(r.length+1),y:y+44+ri*70};});});var h=Math.max(90,34+rows.length*70);boxes.push({s:s,x:x,y:y,w:w,h:h});return h;}
+    var y=100, mw=main.length?Math.min(560,(W-40)/main.length-20):0, mh=0;
+    main.forEach(function(s,i){mh=Math.max(mh,box(s,20+i*(mw+20)+(W-40-main.length*(mw+20))/2,y,mw));});
+    y+=mh+50; var per=Math.max(1,Math.floor((W-20)/250)), bw=(W-20)/per-20, rowH=0;
+    br.forEach(function(s,i){if(i&&i%per===0){y+=rowH+30;rowH=0;}rowH=Math.max(rowH,box(s,20+(i%per)*(bw+20),y,bw));});
+    y+=rowH+30;
+    nodes.forEach(function(n,i){if(!P[n.id])P[n.id]={x:60+(i%10)*110,y:y+30};});
+    return {P:P,boxes:boxes,W:W,H:y+(nodes.some(function(n){return !P[n.id];})?80:40)};}
+  function drawAll(){
+    if(!V.nodes.length){$('map').innerHTML='<div class="note" style="margin:14px">No map yet. '+(can('admin')?'Build it from the inventory under Map setup below, then review and save it.':'An administrator builds it under Map setup.')+'</div>';return;}
+    var L=layout(), P=L.P, h='<svg viewBox="0 0 '+L.W+' '+L.H+'" width="100%" role="img" aria-label="Network route map">';
+    L.boxes.forEach(function(b){var c=b.s.state==='down'?'#5a2a2d':b.s.state==='degraded'?'#5a4a1d':'#262c3b';h+='<rect x="'+b.x+'" y="'+b.y+'" width="'+b.w+'" height="'+b.h+'" rx="14" fill="#10131a" stroke="'+c+'"/><text x="'+(b.x+12)+'" y="'+(b.y+18)+'" fill="#8b93a4" font-size="11.5" font-weight="700">'+esc(b.s.name.toUpperCase())+(b.s.users?' · '+esc(b.s.users)+' users':'')+'</text>';});
+    V.links.forEach(function(l){var a=P[l.a],b=P[l.b];if(!a||!b)return;var c=COL[l.state]||'#5b6474',w=2+Math.min(8,(l.util||0)/12),sel=SEL&&SEL.t==='link'&&SEL.id===l.id;
+      var dash=l.state==='unmeasured'||l.state==='unknown'?' stroke-dasharray="4 5"':l.state==='down'?' stroke-dasharray="10 6"':'';
+      var my=(a.y+b.y)/2, d=Math.abs(a.y-b.y)>120?'M'+a.x+','+a.y+' C'+a.x+','+my+' '+b.x+','+my+' '+b.x+','+b.y:'M'+a.x+','+a.y+' L'+b.x+','+b.y;
+      h+='<g class="lk" data-link="'+esc(l.id)+'"><path d="'+d+'" stroke="transparent" stroke-width="14" fill="none"/><path d="'+d+'" stroke="'+c+'" stroke-width="'+(sel?w+3:w)+'" fill="none" stroke-linecap="round"'+dash+' opacity=".9"><title>'+esc(l.kind+' · '+l.state+' · '+l.why)+'</title></path>';
+      if(l.util!=null||l.loss!=null)h+='<text x="'+((a.x+b.x)/2+6)+'" y="'+(my-4)+'" fill="'+c+'" font-size="11" font-weight="700">'+esc(l.util!=null?Math.round(l.util)+'%':'')+(l.loss?' '+esc(l.loss)+'% loss':'')+'</text>';h+='</g>';});
+    V.nodes.forEach(function(n){var p=P[n.id],c=COL[n.state]||'#5b6474',sel=SEL&&SEL.t==='node'&&SEL.id===n.id;
+      h+='<g class="nd" data-node="'+esc(n.id)+'"><circle cx="'+p.x+'" cy="'+p.y+'" r="'+(sel?22:19)+'" fill="#151a24" stroke="'+c+'" stroke-width="'+(sel?4:3)+'"><title>'+esc(n.label+' · '+n.state+' · '+n.why)+'</title></circle><text x="'+p.x+'" y="'+(p.y+4)+'" text-anchor="middle" fill="'+c+'" font-size="10" font-weight="800">'+esc({internet:'NET','edge-firewall':'PA',firewall:'FW',core:'CORE',distribution:'DIST',access:'SW',sdwan:'SP',router:'RTR','wan-cloud':'WAN',servers:'SRV',isp:'ISP'}[n.kind]||'•')+'</text><text x="'+p.x+'" y="'+(p.y+34)+'" text-anchor="middle" fill="#cfd5e1" font-size="11">'+esc(n.label.length>18?n.label.slice(0,17)+'…':n.label)+'</text></g>';});
+    $('map').innerHTML=h+'</svg>';$('mapc').textContent=V.nodes.length+' devices · '+V.links.length+' links · map v'+V.version+(V.updated_by?' by '+V.updated_by:'');}
+  function drawTop(){var s=V.summary;function k(n,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    $('kpis').innerHTML=k(s.incidents,'incidents',s.incidents?'#f5b544':'')+k(s.critical,'critical',s.critical?'#ff7b80':'')+k(s.nodes_down,'devices down',s.nodes_down?'#ff7b80':'')+k(s.links_down,'links down',s.links_down?'#ff7b80':'')+k(s.degraded,'links degraded / congested',s.degraded?'#f5b544':'')+k(s.unmeasured,'links not measured')+k(s.covered,'covered by a root cause');
+    $('up').textContent=V.polled?'Updated '+new Date(V.at).toLocaleTimeString():'No device has been polled yet - add devices and credentials in the AI Network Engineer';}
+  function drawIncs(){var L=V.incidents;$('incs').innerHTML=L.length?L.map(function(x){return '<div class="li'+(x.covered_by?' cov':'')+(SEL&&SEL.t==='inc'&&SEL.id===x.id?' sel':'')+'" data-inc="'+esc(x.id)+'"><div>'+pill(x.severity,'v-'+x.severity)+'</div><div class="b"><div class="t">'+esc(x.title)+'</div><div class="s">'+esc(x.why||'')+(x.covered_by?' · covered by '+esc(x.covered_by.join(', ')):'')+' · since '+esc(when(x.first))+(x.acked_by?' · acknowledged by '+esc(x.acked_by):'')+'</div></div></div>';}).join(''):'<div class="note">'+(V.nodes.length?'No incident - every measured device and link is within its thresholds.':'Nothing to watch until the map exists.')+'</div>';
+    $('clr').innerHTML=V.cleared&&V.cleared.length?'<div class="sm mute" style="margin-top:12px">Cleared in the last 24 h</div>'+V.cleared.map(function(c){return '<div class="li"><div class="b"><div class="s">'+esc(c.title)+' · '+esc(when(c.first))+' → '+esc(when(c.cleared_at))+'</div></div></div>';}).join(''):'';}
+  function drawDet(){var b=$('det');if(!SEL){b.innerHTML='<h2><i class="ti ti-file-description"></i>Details</h2><div class="note">Choose an incident, a device or a link.</div>';return;}
+    if(SEL.t==='inc'){var x=V.incidents.find(function(i){return i.id===SEL.id;});if(!x){SEL=null;return drawDet();}
+      var names=function(L){return (L||[]).map(function(id){var n=nodeOf(id);return n?n.label:id;}).join(', ');};
+      var h='<h2>'+pill(x.severity,'v-'+x.severity)+' '+esc(x.title)+'</h2><div class="kv"><div>Why</div><div>'+esc(x.why||'')+'</div><div>Since</div><div>'+esc(when(x.first))+'</div>'+(x.affects&&x.affects.length?'<div>Cut off behind it</div><div>'+esc(names(x.affects))+'</div>':'')+(x.covered_by?'<div>Root cause</div><div>'+esc(x.covered_by.join(', '))+' - fix that first</div>':'')+(x.acked_by?'<div>Acknowledged</div><div>'+esc(x.acked_by+' · '+when(x.acked_at))+'</div>':'')+'</div>';
+      h+='<h2 style="margin-top:14px"><i class="ti ti-tool"></i>How to fix it</h2><ol class="fix">'+(x.fix||[]).map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol>';
+      if(x.diagnostics&&x.diagnostics.length)h+='<div class="sm mute" style="margin-top:10px">Read-only checks ('+esc(x.vendor||'device')+')</div><pre class="cmd">'+esc(x.diagnostics.join('\n'))+'</pre>';
+      if(x.kind==='congestion')h+='<h2 style="margin-top:14px"><i class="ti ti-users"></i>Who is using it <span class="c">FortiGate signed-in users at this site, by traffic</span></h2>'+(x.users_hidden?'<div class="note">User names are shown to analysts and above (personal data).</div>':x.users&&x.users.length?'<table><thead><tr><th>User</th><th>IP</th><th>Group</th><th>Traffic</th><th>Firewall</th></tr></thead><tbody>'+x.users.map(function(u){return '<tr><td>'+esc(u.user||'—')+'</td><td>'+esc(u.ip)+'</td><td>'+esc(u.group||'')+'</td><td>'+esc(gb(u.bytes))+'</td><td>'+esc(u.firewall)+'</td></tr>';}).join('')+'</tbody></table><div class="sm mute">'+esc(x.users_total)+' signed-in users in total.</div>':'<div class="note">No signed-in users reported by a FortiGate at this site (needs the FortiGate API polled; users authenticate through FSSO / RADIUS).</div>');
+      h+='<div class="row" style="margin-top:12px">'+(can('operator')&&!x.acked_by?'<button class="btn" type="button" data-ack="'+esc(x.id)+'"><i class="ti ti-check"></i>Acknowledge</button>':'')+(can('analyst')?'<button class="btn ai" type="button" data-ask="'+esc(x.id)+'"><i class="ti ti-robot"></i>Ask the AI Network Engineer</button>':'')+(x.link?'<button class="btn" type="button" data-sel="link:'+esc(x.link)+'">The link</button>':'')+(x.node?'<button class="btn" type="button" data-sel="node:'+esc(x.node)+'">The device</button>':'')+'</div><div id="aiout">'+(ANS[x.id]?'<div class="ans">'+esc(ANS[x.id])+'</div>':'')+'</div>';
+      b.innerHTML=h;return;}
+    if(SEL.t==='node'){var n=nodeOf(SEL.id);if(!n){SEL=null;return drawDet();}var ls=V.links.filter(function(l){return l.a===n.id||l.b===n.id;});
+      b.innerHTML='<h2>'+pill(n.state,'s-'+n.state)+' '+esc(n.label)+'</h2><div class="kv"><div>Type</div><div>'+esc(n.kind)+'</div><div>Site</div><div>'+esc(n.site||'—')+'</div><div>Device</div><div>'+esc(n.device||n.appliance||'not mapped')+'</div><div>State</div><div>'+esc(n.why)+'</div>'+(n.cpu!=null?'<div>CPU / memory</div><div>'+esc(Math.round(n.cpu)+'% / '+Math.round(n.mem||0)+'%')+'</div>':'')+(n.rtt_ms!=null?'<div>Ping</div><div>'+esc(Math.round(n.rtt_ms))+' ms</div>':'')+(n.sessions!=null?'<div>Sessions</div><div>'+esc(n.sessions)+'</div>':'')+'<div>Last poll</div><div>'+esc(when(n.at))+'</div></div>'
+        +'<h2 style="margin-top:14px">Links</h2>'+ls.map(function(l){var o=nodeOf(l.a===n.id?l.b:l.a);return '<div class="li" data-sel="link:'+esc(l.id)+'"><div>'+pill(l.state,'s-'+l.state)+'</div><div class="b"><div class="t">'+esc(l.kind)+' → '+esc(o?o.label:'')+'</div><div class="s">'+esc(l.why)+'</div></div></div>';}).join('');return;}
+    var l=linkOf(SEL.id);if(!l){SEL=null;return drawDet();}var a=nodeOf(l.a),z=nodeOf(l.b),ml=l.ml||{},bl=ml.baseline||{};
+    var h2='<h2>'+pill(l.state,'s-'+l.state)+' '+esc((a?a.label:l.a)+' ⇄ '+(z?z.label:l.b))+'</h2><div class="kv"><div>Type</div><div>'+esc(l.kind)+(l.isp?' · '+esc(l.isp):'')+(l.circuit?' · circuit '+esc(l.circuit):'')+'</div><div>State</div><div>'+esc(l.why)+'</div><div>Measured by</div><div>'+esc((l.sources||[]).join('; ')||'nothing')+'</div>'
+      +(l.util!=null?'<div>Utilisation</div><div>'+esc(l.util)+'%'+(l.capacity_basis?' of '+esc(l.capacity_basis):'')+(bl.util?' · usually '+esc(bl.util.mean)+'% at this hour ('+esc(bl.util.n)+' samples)':'')+'</div><div>Rate in / out</div><div>'+esc(mbps(l.in_bps)+' / '+mbps(l.out_bps))+'</div>':'')
+      +(l.lat!=null?'<div>Latency / jitter</div><div>'+esc(l.lat+' ms / '+(l.jitter!=null?l.jitter+' ms':'—'))+(bl.lat?' · usually '+esc(bl.lat.mean)+' ms':'')+'</div>':'')+(l.loss!=null?'<div>Loss</div><div>'+esc(l.loss)+'%</div>':'')+(l.err_per_min?'<div>Errors</div><div>'+esc(Math.round(l.err_per_min))+' / min</div>':'')
+      +(l.tunnel?'<div>Tunnel</div><div>'+esc(l.tunnel)+'</div>':'')+(l.path?'<div>SD-WAN member</div><div>'+esc(l.path)+'</div>':'')
+      +'<div>Forecast</div><div>'+(ml.forecast?(ml.forecast.days_to_full==null?'not growing towards '+esc(ml.forecast.limit)+'% ('+esc(ml.forecast.slope_per_day)+'%/day)':ml.forecast.days_to_full===0?'already at '+esc(ml.forecast.limit)+'% at peak':'reaches '+esc(ml.forecast.limit)+'% at peak in about '+esc(ml.forecast.days_to_full)+' days'):esc(ml.learning||'needs 5 days of peaks'))+'</div></div>';
+    if(ml.anomalies&&ml.anomalies.length)h2+='<div class="note" style="margin-top:10px">'+ml.anomalies.map(function(x){return esc(x.text);}).join('<br>')+'</div>';
+    if(l.state==='unmeasured'&&can('admin'))h2+='<div class="note" style="margin-top:10px">Name the interface on either end, the IPsec tunnel or the SD-WAN member of this link under Map setup → Links to measure it.</div>';
+    b.innerHTML=h2;}
+  // ---------- map setup (administrators edit, analysts read)
+  var FIELDS={sites:[['id','id'],['name','Name'],['kind','Kind',['hq','dc','dr','branch','cloud']],['city','City']],
+    nodes:[['id','id'],['label','Label'],['kind','Kind',['internet','isp','edge-firewall','firewall','core','distribution','access','sdwan','router','wan-cloud','servers','nac','compute']],['site','Site','sites'],['device','Device','devices'],['appliance','Silver Peak appliance']],
+    links:[['id','id'],['a','From','nodes'],['b','To','nodes'],['kind','Kind',['internet','mpls','sdwan','ipsec','lan','ha']],['a_if','Interface (from)'],['b_if','Interface (to)'],['tunnel','IPsec tunnel'],['path','SD-WAN member'],['capacity_mbps','Capacity Mb/s'],['isp','ISP'],['circuit','Circuit id']]};
+  function opts(src,v){var L=src==='sites'?DRAFT.sites.map(function(s){return [s.id,s.name];}):src==='nodes'?DRAFT.nodes.map(function(n){return [n.id,n.label];}):src==='devices'?CFG.devices.map(function(d){return [d.id,d.name+' ('+d.vendor+')'];}):src.map(function(x){return [x,x];});
+    return '<option value=""></option>'+L.map(function(o){return '<option value="'+esc(o[0])+'"'+(String(v||'')===o[0]?' selected':'')+'>'+esc(o[1])+'</option>';}).join('');}
+  function drawCfg(){var box=$('cbody');if(!can('analyst')){$('cfg').hidden=true;return;}if(!CFG){box.innerHTML='<div class="note">Loading…</div>';return;}
+    var ed=can('admin'), h='';$('cfgc').textContent=ed?'administrators · every save audited':'read-only - an administrator changes the map';
+    if(ed)h+='<div class="row" style="margin-bottom:10px"><button class="btn ai" type="button" id="prop"><i class="ti ti-wand"></i>Build from inventory</button><button class="btn pri" type="button" id="save"><i class="ti ti-device-floppy"></i>Save map</button><span class="sm mute">Draft: '+DRAFT.sites.length+' sites, '+DRAFT.nodes.length+' devices, '+DRAFT.links.length+' links</span></div>';
+    if(PROP)h+='<div class="card" style="background:#10131a"><h2><i class="ti ti-wand"></i>Proposal <span class="c">'+esc(PROP.note)+'</span></h2><table><thead><tr><th>Link</th><th>Why</th><th>Confidence</th></tr></thead><tbody>'+PROP.reasons.map(function(r){return '<tr><td>'+esc(r.link)+'</td><td>'+esc(r.why)+'</td><td>'+pill(r.confidence,r.confidence==='high'?'s-up':r.confidence==='medium'?'s-degraded':'s-unknown')+'</td></tr>';}).join('')+'</tbody></table>'+(PROP.unmatched.length?'<div class="sm mute" style="margin-top:6px">Not on the map: '+esc(PROP.unmatched.join(' · '))+'</div>':'')+'<div class="row" style="margin-top:8px"><button class="btn pri" type="button" id="useprop">Put it in the draft</button><button class="btn" type="button" id="dropprop">Discard</button><span class="sm mute">Review it, then Save map.</span></div></div>';
+    h+='<div class="tabs">'+['nodes','links','sites','thresholds'].map(function(k){return '<button type="button" data-ct="'+k+'" aria-selected="'+(CT===k)+'">'+esc({nodes:'Devices',links:'Links',sites:'Sites',thresholds:'Thresholds'}[k])+'</button>';}).join('')+'</div>';
+    if(CT==='thresholds'){var t=DRAFT.thresholds||{};h+='<table><tbody>'+[['util_warn','Utilisation warning %'],['util_crit','Utilisation critical %'],['loss_warn','Loss warning %'],['loss_crit','Loss critical %'],['lat_warn','Latency warning ms'],['lat_crit','Latency critical ms']].map(function(f){return '<tr><td>'+esc(f[1])+'</td><td><input class="inp" type="number" data-th="'+f[0]+'" value="'+esc(t[f[0]])+'"'+(ed?'':' disabled')+'></td></tr>';}).join('')+'</tbody></table>';}
+    else{var F=FIELDS[CT];h+='<div style="overflow:auto"><table><thead><tr>'+F.map(function(f){return '<th>'+esc(f[1])+'</th>';}).join('')+(ed?'<th></th>':'')+'</tr></thead><tbody>'+DRAFT[CT].map(function(r,i){return '<tr>'+F.map(function(f){var v=r[f[0]];return '<td>'+(f[2]?'<select class="inp" data-ed="'+CT+'" data-i="'+i+'" data-k="'+f[0]+'"'+(ed?'':' disabled')+'>'+opts(f[2],v)+'</select>':'<input class="inp" data-ed="'+CT+'" data-i="'+i+'" data-k="'+f[0]+'" value="'+esc(v==null?'':v)+'"'+(ed?'':' disabled')+'>')+'</td>';}).join('')+(ed?'<td><button class="btn sm bad" type="button" data-rm="'+CT+':'+i+'">Remove</button></td>':'')+'</tr>';}).join('')+'</tbody></table></div>'+(ed?'<button class="btn sm" type="button" data-add="'+CT+'" style="margin-top:8px"><i class="ti ti-plus"></i>Add</button>':'');}
+    box.innerHTML=h;}
+  function clean(m){var o=JSON.parse(JSON.stringify(m));['sites','nodes','links'].forEach(function(k){o[k]=o[k].map(function(r){var x={};Object.keys(r).forEach(function(f){if(r[f]!==''&&r[f]!=null)x[f]=f==='capacity_mbps'?Number(r[f]):r[f];});return x;});});return {sites:o.sites,nodes:o.nodes,links:o.links,thresholds:o.thresholds};}
+  // ---------- load and repaint
+
+  // ---------- views: WAN (site to site, scales to every branch), LAN (one site in tiers), route trace (hop by hop), all devices
+  var MV='wan', LSITE='', TRF='', TRT='', ONLYBAD=false;
+  var RANKS={down:5,critical:4,degraded:3,unmeasured:2,unknown:2,unmonitored:1,virtual:0,up:0};
+  function worst(list){var w='up',r=-1;list.forEach(function(x){var k=RANKS[x]==null?2:RANKS[x];if(k>r){r=k;w=x;}});return list.length?w:'unmeasured';}
+  function siteOf(id){var n=nodeOf(id);return n?(n.site||''):'';}
+  function siteState(s){var ns=V.nodes.filter(function(n){return n.site===s.id;});var w=worst(ns.map(function(n){return n.state;}));return s.state==='down'?'down':w;}
+  function wanEdges(){var E={};V.links.forEach(function(l){var a=siteOf(l.a),b=siteOf(l.b);if(a===b)return;var k=[a,b].sort().join('|');(E[k]=E[k]||{a:a<b?a:b,b:a<b?b:a,links:[]}).links.push(l);});
+    return Object.keys(E).map(function(k){var e=E[k],st=e.links.map(function(l){return l.state;}),allDown=st.every(function(x){return x==='down';}),anyBad=st.some(function(x){return x==='down'||x==='degraded'||x==='critical';}),allUnm=st.every(function(x){return x==='unmeasured'||x==='unknown';});
+      e.state=allDown?'down':allUnm?'unmeasured':anyBad?'degraded':'up';e.util=Math.max.apply(null,e.links.map(function(l){return l.util||0;}));return e;});}
+  function drawWan(){
+    var sites=V.sites.slice(),hubs=sites.filter(function(s){return s.kind!=='branch'&&s.kind!=='cloud';}),br=sites.filter(function(s){return s.kind==='branch'||s.kind==='cloud';});
+    if(ONLYBAD)br=br.filter(function(s){return siteState(s)!=='up';});
+    var E0=wanEdges(),hubIx={};hubs.forEach(function(s,i){hubIx[s.id]=i;});
+    var prim=function(s){var c={};E0.forEach(function(e){var o=e.a===s.id?e.b:e.b===s.id?e.a:null;if(o!=null&&hubIx[o]!=null)c[o]=(c[o]||0)+e.links.length;});var best=null;Object.keys(c).forEach(function(k){if(best==null||c[k]>c[best])best=k;});return best==null?hubs.length/2:hubIx[best];};
+    br.forEach(function(s){s._h=prim(s);});br.sort(function(a,b){return a._h-b._h||a.name.localeCompare(b.name);});
+    var W=1200,cx=W/2,R=Math.max(230,Math.min(520,110+br.length*12)),H=2*R+240,cy=150+R,P={};
+    P['']={x:cx,y:54};
+    hubs.forEach(function(s,i){P[s.id]={x:cx+(i-(hubs.length-1)/2)*190,y:cy};});
+    br.forEach(function(s,i){var a=Math.PI/2+Math.PI*2*(i+0.5)/Math.max(1,br.length);P[s.id]={x:cx+Math.min(W/2-110,R*1.5)*Math.cos(a),y:cy+R*Math.sin(a)};});
+    var E=wanEdges(),h='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="WAN map: sites and the links between them">';
+    E.sort(function(x,y){return (RANKS[x.state]||0)-(RANKS[y.state]||0)||x.util-y.util;});
+    E.forEach(function(e){var a=P[e.a],b=P[e.b];if(!a||!b)return;var c=COL[e.state]||'#5b6474',bad=e.state!=='up'||e.util>=70,w=bad?3+Math.min(7,e.util/12):1.4+Math.min(3,e.util/30);
+      var dash=e.state==='unmeasured'?' stroke-dasharray="4 5"':e.state==='down'?' stroke-dasharray="10 6"':'';
+      h+='<g class="lk" data-wane="'+esc(e.a+'|'+e.b)+'"><line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round"'+dash+' opacity="'+(bad?'.95':'.38')+'"><title>'+esc(e.links.map(function(l){return l.kind+' '+l.state+(l.util!=null?' '+Math.round(l.util)+'%':'')+(l.lat!=null?' '+l.lat+' ms':'');}).join(' · '))+'</title></line>';
+      var mx=(a.x+b.x)/2,my=(a.y+b.y)/2;if(!bad){h+='</g>';return;}h+='<text x="'+mx+'" y="'+(my-5)+'" text-anchor="middle" font-size="10.5" fill="'+c+'" font-weight="700">'+esc(e.links.map(function(l){return l.kind;}).filter(function(v,i,A){return A.indexOf(v)===i;}).join('+'))+(e.util?' '+Math.round(e.util)+'%':'')+'</text></g>';});
+    h+='<g class="nd"><circle cx="'+P[''].x+'" cy="'+P[''].y+'" r="24" fill="#151a24" stroke="#5b8def" stroke-width="3"/><text x="'+P[''].x+'" y="'+(P[''].y+4)+'" text-anchor="middle" font-size="10" fill="#9db8ff" font-weight="800">NET</text><text x="'+P[''].x+'" y="'+(P[''].y+40)+'" text-anchor="middle" font-size="11" fill="#c9d1e0">Internet / carriers</text></g>';
+    hubs.concat(br).forEach(function(s){var p=P[s.id];if(!p)return;var st=siteState(s),c=COL[st]||'#5b6474',hub=s.kind!=='branch'&&s.kind!=='cloud',r=hub?34:20,ns=V.nodes.filter(function(n){return n.site===s.id;}),dn=ns.filter(function(n){return n.state==='down';}).length;
+      h+='<g class="nd" data-site="'+esc(s.id)+'"><circle cx="'+p.x+'" cy="'+p.y+'" r="'+r+'" fill="'+(hub?'#18213a':'#151a24')+'" stroke="'+c+'" stroke-width="'+(hub?4:3)+'"><title>'+esc(s.name+' · '+st+' · '+ns.length+' device(s)'+(dn?', '+dn+' down':'')+' · click for its LAN')+'</title></circle><text x="'+p.x+'" y="'+(p.y+4)+'" text-anchor="middle" font-size="'+(hub?11:10)+'" font-weight="800" fill="'+c+'">'+esc(hub?String(s.kind).toUpperCase():String(ns.length))+'</text><text x="'+p.x+'" y="'+(p.y+r+14)+'" text-anchor="middle" font-size="11" fill="#c9d1e0">'+esc(s.name)+'</text>'+(dn?'<text x="'+p.x+'" y="'+(p.y+r+27)+'" text-anchor="middle" font-size="10" fill="#ff8a8e" font-weight="700">'+dn+' down</text>':'')+'</g>';});
+    $('map').innerHTML=h+'</svg>';
+    $('mvbar').innerHTML='<div class="mvb"><label><input type="checkbox" id="onlybad"'+(ONLYBAD?' checked':'')+'> branches with a problem only</label><span class="mute">'+hubs.length+' hub site(s) in the centre, '+br.length+' branch(es) around them · the number in a branch is its devices · faint lines are healthy, bold lines need attention (down, degraded or ≥ 70 % used) · click a site to open its LAN</span></div>';}
+  var LAYERS=[['Internet & carriers',['internet','isp','wan-cloud']],['Edge security',['edge-firewall']],['WAN',['sdwan','router']],['Firewalls',['firewall']],['Core',['core']],['Distribution',['distribution']],['Access & NAC',['access','nac']],['Servers & compute',['servers','compute']]];
+  function drawLan(){
+    if(!LSITE||!V.sites.some(function(s){return s.id===LSITE;}))LSITE=(V.sites.find(function(s){return s.kind==='dc'||s.kind==='hq';})||V.sites[0]||{}).id||'';
+    var site=V.sites.find(function(s){return s.id===LSITE;});
+    $('mvbar').innerHTML='<div class="mvb"><label class="sm mute" for="lsite">Site</label><select class="inp" id="lsite">'+V.sites.map(function(s){return '<option value="'+esc(s.id)+'"'+(s.id===LSITE?' selected':'')+'>'+esc(s.name+' ('+siteState(s)+')')+'</option>';}).join('')+'</select><span class="mute">tiers top to bottom; grey stubs at the top are links leaving the site</span></div>';
+    if(!site){$('map').innerHTML='<div class="note" style="margin:14px">No site in the map yet.</div>';return;}
+    var ns=V.nodes.filter(function(n){return n.site===LSITE;}),ids={};ns.forEach(function(n){ids[n.id]=1;});
+    var G={};V.links.forEach(function(l){var ia=ids[l.a],ib=ids[l.b];if(ia===ib)return;var loc=ia?l.a:l.b,o=ia?l.b:l.a,k=loc+'|'+l.kind;(G[k]=G[k]||{loc:loc,kind:l.kind,ls:[],os:[]}).ls.push(l);G[k].os.push(o);});
+    var ext=Object.keys(G).map(function(k){var g=G[k],st=g.ls.map(function(l){return l.state;}),sites={};g.os.forEach(function(o){var n=nodeOf(o);sites[n&&n.site?n.site:o]=1;});
+      var dn=st.filter(function(x){return x==='down';}).length,dg=st.filter(function(x){return x==='degraded'||x==='critical';}).length,one=g.ls.length===1?nodeOf(g.os[0]):null;
+      var lab=one?g.kind+' → '+one.label+(one.site?' ('+((V.sites.find(function(x){return x.id===one.site;})||{}).name||'')+')':''):g.kind+' → '+Object.keys(sites).length+' sites'+(dn?' · '+dn+' down':'')+(dg?' · '+dg+' degraded':'');
+      return {id:k,loc:g.loc,first:g.ls[0],state:dn===g.ls.length?'down':dn||dg?'degraded':worst(st)==='up'?'up':worst(st),label:lab};});
+    var rows=[];LAYERS.forEach(function(L){var r=ns.filter(function(n){return L[1].indexOf(n.kind)>=0;});if(r.length)rows.push({t:L[0],n:r});});
+    var other=ns.filter(function(n){return !LAYERS.some(function(L){return L[1].indexOf(n.kind)>=0;});});if(other.length)rows.push({t:'Other',n:other});
+    var W=1200,top=ext.length?110:30,rowH=96,H=top+rows.length*rowH+30,P={};
+    ext.forEach(function(e,i){P['x:'+e.id]={x:W*(i+1)/(ext.length+1),y:46};});
+    rows.forEach(function(r,ri){r.n.forEach(function(n,i){P[n.id]={x:230+(W-260)*(i+1)/(r.n.length+1),y:top+ri*rowH+40};});});
+    var h='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="LAN of '+esc(site.name)+'">';
+    rows.forEach(function(r,ri){var y=top+ri*rowH;h+='<rect x="10" y="'+(y+6)+'" width="'+(W-20)+'" height="'+(rowH-12)+'" rx="10" fill="'+(ri%2?'#0f1219':'#11151d')+'"/><text x="22" y="'+(y+44)+'" font-size="11" fill="#8b93a4" font-weight="700">'+esc(r.t.toUpperCase())+'</text>';});
+    function elbow(a,b,my){my=my==null?(a.y+b.y)/2:my;return 'M'+a.x+','+a.y+' L'+a.x+','+my+' L'+b.x+','+my+' L'+b.x+','+b.y;}
+    V.links.forEach(function(l){var a=P[l.a],b=P[l.b];if(!(ids[l.a]&&ids[l.b]))return;var c=COL[l.state]||'#5b6474',w=2+Math.min(7,(l.util||0)/13),dash=l.state==='unmeasured'||l.state==='unknown'?' stroke-dasharray="4 5"':l.state==='down'?' stroke-dasharray="10 6"':'';
+      h+='<g class="lk" data-link="'+esc(l.id)+'"><path d="'+elbow(a,b)+'" stroke="transparent" stroke-width="12" fill="none"/><path d="'+elbow(a,b)+'" stroke="'+c+'" stroke-width="'+w+'" fill="none"'+dash+'><title>'+esc(l.kind+' · '+l.state+(l.util!=null?' · '+Math.round(l.util)+'%':''))+'</title></path></g>';});
+    var bw=Math.min(220,(W-40)/Math.max(1,ext.length)-10);
+    var per={};ext.forEach(function(e){(per[e.loc]=per[e.loc]||[]).push(e.id);});
+    ext.forEach(function(e){var p=P['x:'+e.id],L=per[e.loc],k=L.indexOf(e.id),n0=P[e.loc],n={x:n0.x+(k-(L.length-1)/2)*16,y:n0.y-20},c=COL[e.state]||'#5b6474',t=e.label.length*5.6>bw?e.label.slice(0,Math.max(6,Math.floor(bw/5.6))-1)+'…':e.label;
+      h+='<g class="lk" data-link="'+esc(e.first.id)+'"><path d="'+(n0.y>top+60?'M'+p.x+','+p.y+' L'+p.x+','+(78+k*5)+' L'+(150+k*8)+','+(78+k*5)+' L'+(150+k*8)+','+n0.y+' L'+(n0.x-62)+','+n0.y:elbow(p,n,78+k*5))+'" stroke="'+c+'" stroke-width="2.5" fill="none" stroke-dasharray="2 4"/><rect x="'+(p.x-bw/2)+'" y="'+(p.y-18)+'" width="'+bw+'" height="30" rx="8" fill="#151a24" stroke="'+c+'"><title>'+esc(e.label)+'</title></rect><text x="'+p.x+'" y="'+(p.y+1)+'" text-anchor="middle" font-size="10.5" fill="#c9d1e0">'+esc(t)+'</text></g>';});
+    ns.forEach(function(n){var p=P[n.id],c=COL[n.state]||'#5b6474',sel=SEL&&SEL.t==='node'&&SEL.id===n.id;h+='<g class="nd" data-node="'+esc(n.id)+'"><rect x="'+(p.x-62)+'" y="'+(p.y-20)+'" width="124" height="40" rx="10" fill="#151a24" stroke="'+c+'" stroke-width="'+(sel?4:2.5)+'"><title>'+esc(n.label+' · '+n.state+' · '+(n.why||''))+'</title></rect><text x="'+p.x+'" y="'+(p.y-3)+'" text-anchor="middle" font-size="11" font-weight="700" fill="#e7eaf0">'+esc(n.label.length>18?n.label.slice(0,17)+'…':n.label)+'</text><text x="'+p.x+'" y="'+(p.y+12)+'" text-anchor="middle" font-size="9.5" fill="'+c+'">'+esc(n.kind+' · '+n.state)+'</text></g>';});
+    $('map').innerHTML=h+'</svg>';}
+  var PEN={up:1,degraded:6,critical:8,unmeasured:3,unknown:3,unmonitored:3,virtual:1,down:1000};
+  function route(from,to){var adj={};V.links.forEach(function(l){(adj[l.a]=adj[l.a]||[]).push({n:l.b,l:l});(adj[l.b]=adj[l.b]||[]).push({n:l.a,l:l});});
+    var dist={},prev={},Q=[from];dist[from]=0;var seen={};
+    while(Q.length){Q.sort(function(a,b){return dist[a]-dist[b];});var u=Q.shift();if(seen[u])continue;seen[u]=1;if(u===to)break;
+      (adj[u]||[]).forEach(function(e){var nd=nodeOf(e.n),w=(PEN[e.l.state]||3)+(nd?(PEN[nd.state]||3)-1:0);if(dist[u]+w<(dist[e.n]==null?Infinity:dist[e.n])){dist[e.n]=dist[u]+w;prev[e.n]={u:u,l:e.l};Q.push(e.n);}});}
+    if(dist[to]==null)return null;var path=[],x=to;while(x!==from){path.unshift({node:x,link:prev[x].l});x=prev[x].u;}return {start:from,hops:path};}
+  function drawTrace(){
+    var opt=function(sel){return '<option value="">choose…</option>'+V.sites.concat([{id:'',name:'Outside any site'}]).map(function(s){var ns=V.nodes.filter(function(n){return (n.site||'')===s.id;});return ns.length?'<optgroup label="'+esc(s.name)+'">'+ns.map(function(n){return '<option value="'+esc(n.id)+'"'+(n.id===sel?' selected':'')+'>'+esc(n.label)+'</option>';}).join('')+'</optgroup>':'';}).join('');};
+    $('mvbar').innerHTML='<div class="mvb"><label class="sm mute" for="trf">From</label><select class="inp" id="trf">'+opt(TRF)+'</select><label class="sm mute" for="trt">To</label><select class="inp" id="trt">'+opt(TRT)+'</select><span class="mute">the route the traffic can take now: down links are avoided while another way exists</span></div>';
+    if(!TRF||!TRT){$('map').innerHTML='<div class="note" style="margin:14px">Choose where the traffic starts (for example a branch FortiGate) and where it goes (for example the data centre core or servers).</div>';return;}
+    if(TRF===TRT){$('map').innerHTML='<div class="note" style="margin:14px">Choose two different devices.</div>';return;}
+    var r=route(TRF,TRT);if(!r){$('map').innerHTML='<div class="verdict" style="background:rgba(229,72,77,.15);color:#ff8a8e">No route in the map between these two devices - add the missing link under Map setup.</div>';return;}
+    var steps=r.hops,cand=[{t:'n',i:-1,id:TRF,s:(nodeOf(TRF)||{}).state}];steps.forEach(function(st,i){cand.push({t:'l',i:i,s:st.link.state,id:st.link.id});cand.push({t:'n',i:i,id:st.node,s:(nodeOf(st.node)||{}).state});});
+    var weak=null;cand.forEach(function(c){if(!weak||(RANKS[c.s]||0)>(RANKS[weak.s]||0))weak=c;});
+    var states=steps.map(function(st){return st.link.state;}).concat(steps.map(function(st){return (nodeOf(st.node)||{}).state;})).concat([(nodeOf(TRF)||{}).state]),v=worst(states);
+    var lat=steps.reduce(function(a,st){return a+(st.link.lat||0);},0),hasLat=steps.some(function(st){return st.link.lat!=null;});
+    var vt=v==='down'?['rgba(229,72,77,.15)','#ff8a8e','The route is DOWN at the hop marked below - no other way exists in the map']:v==='up'?['rgba(47,179,68,.13)','#56d364','The route is up end to end']:v==='unmeasured'||v==='unknown'?['rgba(139,147,164,.14)','#aab2c2','Part of the route is not measured - it is not known to be up']:['rgba(245,159,0,.14)','#f5b544','The route works but a hop is '+v];
+    var nodeBox=function(id,isWeak){var n=nodeOf(id)||{label:id,state:'unknown',kind:''},c=COL[n.state]||'#5b6474';return '<div class="hn'+(isWeak?' weak':'')+'" style="--c:'+c+'" data-node="'+esc(id)+'"><b>'+esc(n.label)+'</b><span class="sm mute">'+esc(n.kind+' · '+n.state)+'</span></div>';};
+    var h='<div class="verdict" style="background:'+vt[0]+';color:'+vt[1]+'">'+esc(vt[2])+' · '+steps.length+' hop(s)'+(hasLat?' · about '+Math.round(lat)+' ms measured latency':'')+'</div><div class="hop">'+nodeBox(TRF,v!=='up'&&weak.t==='n'&&weak.i===-1);
+    steps.forEach(function(st,i){var l=st.link,c=COL[l.state]||'#5b6474';h+='<div class="hl'+(v!=='up'&&weak.t==='l'&&weak.i===i?' weak':'')+'" style="--c:'+c+'" data-link="'+esc(l.id)+'"><span>'+esc(l.kind)+'</span><i></i><span>'+esc(l.state+(l.util!=null?' · '+Math.round(l.util)+'%':'')+(l.lat!=null?' · '+l.lat+' ms':'')+(l.loss?' · '+l.loss+'% loss':''))+'</span></div>'+nodeBox(st.node,v!=='up'&&weak.t==='n'&&weak.i===i);});
+    var wn=weak.t==='n'?(nodeOf(weak.id)||{label:weak.id}).label:(function(){var l=linkOf(weak.id)||{},a=nodeOf(l.a),b=nodeOf(l.b);return l.kind+' link '+(a?a.label:l.a)+' ⇄ '+(b?b.label:l.b);})();
+    $('map').innerHTML=h+'</div>'+(v!=='up'?'<div class="note">Weakest hop: '+esc(wn)+' ('+esc(weak.s)+'). Click it for the details and the fix steps.</div>':'')+'<div id="ra"></div>';
+    routeAnalysis();}
+  // ---------- route analysis (server, analysts and above): single points of failure, bottleneck, alternate path, itemised score; the AI explains it
+  var RA={key:'',data:null,err:'',ai:'',busy:false};
+  function routeAnalysis(){var el=$('ra');if(!el)return;
+    if(!can('analyst')){el.innerHTML='<div class="note">The route analysis (single points of failure, bottleneck, alternate path) and the AI Network Engineer are for analysts and above.</div>';return;}
+    var key=TRF+'>'+TRT;if(RA.key!==key){RA={key:key,data:null,err:'',ai:'',busy:false};
+      api('GET','/routemap/route?from='+encodeURIComponent(TRF)+'&to='+encodeURIComponent(TRT)).then(function(r){if(RA.key===key){RA.data=r;paintRA();}},function(e){if(RA.key===key){RA.err=e.message;paintRA();}});}
+    paintRA();}
+  function paintRA(){var el=$('ra');if(!el)return;if(RA.err){el.innerHTML='<div class="note">Route analysis: '+esc(RA.err)+'</div>';return;}
+    var a=RA.data;if(!a){el.innerHTML='<div class="sm mute" style="margin-top:8px">Analysing the route…</div>';return;}
+    var VC={healthy:['#56d364','Healthy'],'partly-measured':['#aab2c2','Partly measured'],degraded:['#f5b544','Degraded'],'at-risk':['#ff9b5c','At risk'],down:['#ff8a8e','Down'],'no-route':['#ff8a8e','No route']}[a.verdict]||['#aab2c2',a.verdict];
+    var sev=function(x){return pill(x,'v-'+x);};
+    var h='<section class="card" style="margin-top:12px;background:var(--d-raise)"><h2><i class="ti ti-route"></i>Route analysis <span class="c">'+esc(a.from_label+' → '+a.to_label)+'</span></h2>'
+      +'<div class="kpis" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="kpi"><div class="n" style="color:'+VC[0]+'">'+esc(a.score)+'</div><div class="l">route health / 100</div></div><div class="kpi"><div class="n" style="color:'+VC[0]+';font-size:18px">'+esc(VC[1])+'</div><div class="l">verdict</div></div>'
+      +'<div class="kpi"><div class="n">'+(a.single_points?a.single_points.length:0)+'</div><div class="l">single points of failure</div></div><div class="kpi"><div class="n">'+(a.latency_ms==null?'—':esc(a.latency_ms)+' ms')+'</div><div class="l">latency ('+esc(a.latency_measured_hops||0)+' hop(s) measured)</div></div>'
+      +'<div class="kpi"><div class="n">'+(a.bottleneck?esc(a.bottleneck.util)+'%':'—')+'</div><div class="l">bottleneck'+(a.bottleneck?' · '+esc(a.bottleneck.label):'')+'</div></div></div>';
+    h+='<div class="cols" style="margin-top:12px"><div><div class="sm mute" style="margin-bottom:6px">Findings</div>'+(a.findings.length?a.findings.map(function(f){return '<div class="li"><div>'+sev(f.severity)+'</div><div class="b"><div class="t">'+esc(f.text)+'</div><div class="s">'+esc(f.fix||'')+'</div></div></div>';}).join(''):'<div class="note">Nothing to flag on this route.</div>')+'</div>'
+      +'<div><div class="sm mute" style="margin-bottom:6px">Resilience</div><div class="kv"><div>Single points of failure</div><div>'+(a.single_points&&a.single_points.length?a.single_points.map(function(x){return esc(x.label);}).join('<br>'):'none - every hop has another way')+'</div>'
+      +'<div>Alternate path</div><div>'+(a.alternate?esc(a.alternate.state)+' · '+esc(a.alternate.hops)+' hop(s) via '+esc(a.alternate.via.slice(0,6).join(' → ')):'none in the map')+'</div>'
+      +'<div>Score breakdown</div><div>'+(a.penalties&&a.penalties.length?a.penalties.map(function(p){return '−'+esc(p.points)+' '+esc(p.why);}).join('<br>'):'no deductions')+'</div></div></div></div>';
+    h+='<div class="row" style="margin-top:12px"><button class="btn ai" type="button" id="raai"'+(RA.busy?' disabled':'')+'><i class="ti ti-sparkles"></i>'+(RA.busy?'The AI Network Engineer is analysing…':'Ask the AI Network Engineer about this route')+'</button><span class="sm mute">it reads the map and the devices, explains the route and proposes - it changes nothing</span></div>'
+      +(RA.ai?'<div class="ans" id="raans">'+esc(RA.ai)+'</div>':'')+'</section>';
+    el.innerHTML=h;}
+  document.addEventListener('click',function(ev){var b=ev.target.closest('#raai');if(!b||RA.busy||!RA.data)return;var key=RA.key;RA.busy=true;paintRA();
+    api('POST','/routemap/route/ai',{from:TRF,to:TRT}).then(function(r){if(RA.key===key){RA.ai=r.answer||'(no answer)';RA.busy=false;paintRA();}},function(e){if(RA.key===key){RA.busy=false;paintRA();toast(e.message);}});});
+  function drawMap(){
+    if(!V.nodes.length){$('mvt').innerHTML='';$('mvbar').innerHTML='';return drawAll();}
+    $('mvt').innerHTML=[['wan','WAN - sites'],['lan','LAN - one site'],['trace','Trace a route'],['all','All devices']].map(function(t){return '<button type="button" data-mv="'+t[0]+'" role="tab" aria-selected="'+(MV===t[0])+'">'+esc(t[1])+'</button>';}).join('');
+    if(MV==='wan')drawWan();else if(MV==='lan')drawLan();else if(MV==='trace')drawTrace();else{$('mvbar').innerHTML='';drawAll();}
+    $('mapc').textContent=V.sites.length+' sites · '+V.nodes.length+' devices · '+V.links.length+' links · map v'+V.version+(V.updated_by?' by '+V.updated_by:'');}
+  document.addEventListener('click',function(ev){var t=ev.target.closest('[data-mv],[data-site],[data-wane]');if(!t||!V)return;
+    if(t.hasAttribute('data-mv')){MV=t.getAttribute('data-mv');drawMap();return;}
+    if(t.hasAttribute('data-site')){LSITE=t.getAttribute('data-site');MV='lan';drawMap();return;}
+    if(t.hasAttribute('data-wane')){var k=t.getAttribute('data-wane').split('|'),l=V.links.find(function(x){var a=siteOf(x.a),b=siteOf(x.b);return (a===k[0]&&b===k[1])||(a===k[1]&&b===k[0]);});if(l){SEL={t:'link',id:l.id};drawDet();}}});
+  document.addEventListener('change',function(ev){var t=ev.target;if(!V)return;if(t.id==='onlybad'){ONLYBAD=t.checked;drawMap();}else if(t.id==='lsite'){LSITE=t.value;drawMap();}else if(t.id==='trf'){TRF=t.value;drawMap();}else if(t.id==='trt'){TRT=t.value;drawMap();}});
+  function paint(){drawTop();drawMap();drawIncs();drawDet();}
+  function load(){$('err').hidden=true;
+    return api('GET','/routemap').then(function(v){V=v;$('main').hidden=false;paint();}).catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>The route map is not available</h2><div class="note">'+esc(e.status===404?'The route map is not installed in the SIEM - run the update (update-platform.ps1).':e.message)+'</div>';});}
+  function loadCfg(){if(!can('analyst')){drawCfg();return Promise.resolve();}return api('GET','/routemap/config').then(function(c){CFG=c;DRAFT=JSON.parse(JSON.stringify({sites:c.map.sites,nodes:c.map.nodes,links:c.map.links,thresholds:c.map.thresholds}));drawCfg();}).catch(function(e){$('cbody').innerHTML='<div class="note">'+esc(e.message)+'</div>';});}
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-node],[data-link],[data-inc],[data-sel],[data-ack],[data-ask],[data-ct],[data-add],[data-rm],button[id]');if(!el)return;
+    if(el.dataset.node){SEL={t:'node',id:el.dataset.node};paint();return;}
+    if(el.dataset.link){SEL={t:'link',id:el.dataset.link};paint();return;}
+    if(el.dataset.inc){SEL={t:'inc',id:el.dataset.inc};paint();return;}
+    if(el.dataset.sel){var p=el.dataset.sel.split(':');SEL={t:p[0],id:p.slice(1).join(':')};paint();return;}
+    if(el.dataset.ack){el.disabled=true;api('POST','/routemap/incidents/'+encodeURIComponent(el.dataset.ack)+'/ack',{}).then(function(){toast('Acknowledged');return load();}).catch(function(e){toast(e.message);el.disabled=false;});return;}
+    if(el.dataset.ask){var x=V.incidents.find(function(i){return i.id===el.dataset.ask;});el.disabled=true;$('aiout').innerHTML='<div class="sm mute">The AI Network Engineer is looking at the map, the devices and the logs…</div>';
+      api('POST','/ask',{question:('Route map incident '+x.id+': '+x.title+'. What is the root cause, what is affected and how do I fix it? Use route_map and the device tools.').slice(0,1000)}).then(function(r){ANS[x.id]=r.answer||'';el.disabled=false;drawDet();}).catch(function(e){$('aiout').innerHTML='<div class="note">'+esc(e.message)+'</div>';el.disabled=false;});return;}
+    if(el.dataset.ct){CT=el.dataset.ct;drawCfg();return;}
+    if(el.dataset.add){var k=el.dataset.add,n=DRAFT[k].length+1;DRAFT[k].push(k==='sites'?{id:'site-'+n,name:'',kind:'branch'}:k==='nodes'?{id:'node-'+n,label:'',kind:'core'}:{id:'link-'+n,a:'',b:'',kind:'lan'});drawCfg();return;}
+    if(el.dataset.rm){var q=el.dataset.rm.split(':');DRAFT[q[0]].splice(+q[1],1);drawCfg();return;}
+    var id=el.id;
+    if(id==='refresh'){load();return;}
+    if(id==='prop'){el.disabled=true;api('GET','/routemap/propose').then(function(p){PROP=p;drawCfg();}).catch(function(e){toast(e.message);el.disabled=false;});return;}
+    if(id==='useprop'){DRAFT=JSON.parse(JSON.stringify(PROP.map));PROP=null;CT='nodes';drawCfg();toast('Proposal in the draft - review it, then Save map');return;}
+    if(id==='dropprop'){PROP=null;drawCfg();return;}
+    if(id==='save'){el.disabled=true;api('POST','/routemap/config',{map:clean(DRAFT),baseVersion:CFG.map.version}).then(function(r){toast('Map saved (version '+r.map.version+')');return Promise.all([load(),loadCfg()]);}).catch(function(e){toast(e.message);el.disabled=false;});return;}
+  });
+  document.addEventListener('change',function(ev){var t=ev.target;if(t.dataset.ed){DRAFT[t.dataset.ed][+t.dataset.i][t.dataset.k]=t.value;if(t.tagName==='SELECT'&&(t.dataset.ed==='sites'||t.dataset.ed==='nodes'))drawCfg();}else if(t.dataset.th){DRAFT.thresholds[t.dataset.th]=Number(t.value);}});
+  req('GET','/dashboards/whoami.json').then(function(w){ROLE=(w&&w.role)||'viewer';}).catch(function(){ROLE='viewer';/* no identity: read-only */}).then(function(){return Promise.all([load(),loadCfg()]);});
+  setInterval(function(){if(!document.hidden&&V)api('GET','/routemap').then(function(v){V=v;paint();}).catch(function(){/* a failed refresh keeps the last map; Refresh shows the error */});},30000);
+})();
+</script></body></html>

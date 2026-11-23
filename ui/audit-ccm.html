@@ -1,0 +1,124 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Control Monitoring</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.ct{display:block;width:100%;text-align:left;border:1px solid var(--tblr-border-color);border-left-width:4px;border-radius:8px;padding:10px 12px;background:transparent;color:inherit;height:100%}
+.ct:hover{background:rgba(255,255,255,.03)}.ct.on{box-shadow:0 0 0 1px #3987e5 inset}
+.ct.s-effective{border-left-color:#0ca30c}.ct.s-exceptions{border-left-color:#d03b3b}.ct.s-not_testable{border-left-color:#6b7280}
+.ch{position:relative;height:190px}.why{overflow-wrap:anywhere;max-width:560px}
+.hs{border-collapse:separate;border-spacing:2px;font-size:11.5px}.hs td{padding:0}.hs td.n{padding-right:8px;white-space:nowrap}.hs td.c{width:14px;height:16px;border-radius:3px}
+.hm{border-collapse:separate;border-spacing:2px;font-size:10px}.hm td{width:13px;height:13px;border-radius:2px;padding:0}.hm th{font-weight:400;color:var(--tblr-secondary);padding:0 3px 0 0;text-align:right}
+.pp{display:grid;grid-template-columns:1fr 1fr 34px;gap:5px 10px;align-items:center;font-size:12.5px}.pp .bx{height:8px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden}.pp .bx span{display:block;height:100%;background:linear-gradient(90deg,#fab219,#d03b3b)}
+.ag{display:flex;gap:8px}.ag div{flex:1;text-align:center;border:1px solid var(--tblr-border-color);border-radius:8px;padding:8px 4px}.ag b{display:block;font-size:22px}
+.ub{display:inline-block;margin-top:4px}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Audit · Continuous assurance</div><h2 class="page-title">Continuous Control Monitoring</h2></div>
+ <div class="col-auto ms-auto d-flex gap-2"><span class="mut align-self-center" id="up"></span><button type="button" class="btn" id="csv"><i class="ti ti-download me-1"></i>Export CSV</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button><button type="button" class="btn btn-primary" id="run"><i class="ti ti-player-play me-1"></i>Run the tests now</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Every record of the platform's hash-chained audit trail for the last 30 days, tested every day against eight controls - the <b>whole population, not a sample</b>. The statistics (hour-of-day rarity, robust z-scores against the person's own history and their peers) flag what is <b>unusual</b>: they are indicators for an auditor to follow up, <b>not proof of wrongdoing</b>. A test with nothing to test reads <b>not testable</b>, never effective. An auditor explains each exception or drafts a finding; a finding exists only when an auditor on the engagement accepts it.</div></div></div>
+<div id="err"></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div class="row row-cards mb-3">
+ <div class="col-lg-8"><div class="card"><div class="card-header"><h3 class="card-title">Exceptions per daily run <span class="mut ms-2">open and total, last 30 runs</span></h3></div><div class="card-body"><div class="ch"><canvas id="c-trend"></canvas></div></div></div></div>
+ <div class="col-lg-4"><div class="card"><div class="card-header"><h3 class="card-title">The population</h3></div><div class="card-body" id="pop"></div></div></div>
+</div>
+<div class="row row-cards mb-3" id="tests"></div>
+<div class="row row-cards mb-3">
+ <div class="col-lg-7"><div class="card h-100"><div class="card-header"><h3 class="card-title">Control heat strip <span class="mut ms-2">exceptions per control per daily run · grey = nothing to test</span></h3></div><div class="card-body" style="overflow-x:auto" id="hs"></div></div></div>
+ <div class="col-lg-5"><div class="card h-100"><div class="card-header"><h3 class="card-title">When exceptions happen <span class="mut ms-2">Riyadh weekday × hour</span></h3></div><div class="card-body" style="overflow-x:auto" id="hm"></div></div></div>
+</div>
+<div class="row row-cards mb-3">
+ <div class="col-lg-7"><div class="card h-100"><div class="card-header"><h3 class="card-title">People in the exceptions <span class="mut ms-2">concentration is a lead, not a conclusion</span></h3></div><div class="card-body" id="pp"></div></div></div>
+ <div class="col-lg-5"><div class="card h-100"><div class="card-header"><h3 class="card-title">Open exceptions by age <span class="mut ms-2">days since a daily run first held it</span></h3></div><div class="card-body" id="ag"></div></div></div>
+</div>
+<div class="card mb-3"><div class="card-header"><h3 class="card-title" id="xh">Exceptions</h3><div class="card-actions" id="xa"></div></div><div id="xl"></div></div>
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Finding drafts</h3><span class="mut ms-2" id="ais"></span></div><div id="dl"></div></div>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, C=window.zybCharts, esc=P.esc, $=P.$;
+  var V=null, SEL='';
+  var ST={effective:['effective','green'],exceptions:['exceptions','red'],not_testable:['not testable','secondary']};
+  var DS={draft:['draft - waiting for an auditor','orange'],accepted:['accepted as a finding','green'],discarded:['discarded','secondary']};
+  var TEAM={it:'IT Audit Team',cyber:'Cyber Security Audit Team',internal:'Internal Audit Team'};
+  function bx(M,k){var x=M[k]||[k,'secondary'];return P.badge(x[0],x[1]);}
+  function dt(s){return s?String(s).slice(0,16).replace('T',' '):'—';}
+  function load(){return P.req('GET','/audit-ccm').then(function(v){V=v;$('err').innerHTML='';draw();}).catch(function(e){P.fail($('err'),e);$('up').textContent='not loaded';});}
+  function draw(){var v=V,s=v.summary;
+    $('up').textContent='run '+v.run+' · '+dt(v.at)+' UTC';
+    $('kpis').innerHTML=P.tile(s.effective+' / 8','Controls effective',s.effective===8?'text-green':'')+P.tile(s.exceptions,'Controls with exceptions',s.exceptions?'text-red':'text-green')
+      +P.tile(s.open,'Exceptions still open',s.open?'text-orange':'text-green')+P.tile(s.not_testable,'Not testable (nothing to test)','');
+    var T=v.trend;if(T.length>1)C.area($('c-trend'),T.map(function(x){return x.day.slice(5);}),[{label:'Open',data:T.map(function(x){return x.open;}),color:'warn'},{label:'All exceptions',data:T.map(function(x){return x.exceptions;}),color:'acc'}],{title:'Exceptions per daily run'});
+    else C.empty($('c-trend'),'The trend appears after the second daily run.');
+    $('pop').innerHTML='<div class="au-num">'+esc(v.records)+'</div><div class="au-lbl">audit records tested</div><div class="mut mt-2">from '+esc(dt(v.window_from))+' UTC to '+esc(dt(v.at))+' UTC'+(v.unreadable?' · <b class="text-red">'+esc(v.unreadable)+' unreadable line(s)</b>':'')+'</div><div class="mut mt-2">Run by '+esc(v.by)+'. The tests run every day by themselves; an auditor can run them at any time.</div>';
+    $('tests').innerHTML=v.tests.map(function(t){var open=t.exceptions.filter(function(e){return !e.disposition;}).length;
+      return '<div class="col-md-6 col-xl-3"><button type="button" class="ct s-'+esc(t.status)+(SEL===t.id?' on':'')+'" data-ct="'+esc(t.id)+'"><div class="d-flex justify-content-between gap-1"><b class="small">'+esc(t.id)+' · '+esc(t.name)+'</b>'+bx(ST,t.status)+'</div>'
+        +'<div class="mut mt-1">'+esc(t.objective)+'</div>'+unusual(t.id)+'<div class="mt-2 small">'+esc(t.population)+' record(s) tested · <b>'+esc(t.exceptions_total)+'</b> exception(s)'+(open?' · <span class="text-orange">'+esc(open)+' open</span>':'')+'</div>'
+        +(t.reason?'<div class="mut mt-1">'+esc(t.reason)+'</div>':'')+(t.note?'<div class="mut mt-1">'+esc(t.note)+'</div>':'')+'<div class="mut mt-1">'+t.maps.map(esc).join(' · ')+'</div></button></div>';}).join('');
+    drawExc();drawDrafts();insight();
+  }
+  function unusual(id){var I=V.insight,c=I&&I.controls.filter(function(x){return x.id===id;})[0];if(!c||!c.unusual.flag)return '';return '<span class="ub" title="'+esc(c.unusual.why)+'">'+P.badge('unusual today','red')+'</span>';}
+  function insight(){var I=V.insight;if(!I)return;var mx=1;I.controls.forEach(function(c){c.strip.forEach(function(v){if(v>mx)mx=v;});});
+    $('hs').innerHTML='<table class="hs"><tbody>'+I.controls.map(function(c){return '<tr><td class="n"><b>'+esc(c.id)+'</b> <span class="mut">'+esc(c.name)+'</span>'+(c.unusual.flag?' '+P.badge('unusual','red'):'')+'</td>'+c.strip.map(function(v,i){var bg=v==null?'rgba(255,255,255,.05)':v===0?'rgba(12,163,12,.45)':'rgba(208,59,59,'+(0.3+0.7*v/mx).toFixed(2)+')';return '<td class="c" style="background:'+bg+'" title="'+esc(I.days[i]+': '+(v==null?'nothing to test':v+' exception(s)'))+'"></td>';}).join('')+'</tr>';}).join('')+'</tbody></table><div class="mut mt-2">'+esc(I.days.length)+' daily run(s) · '+esc(I.controls.filter(function(c){return c.unusual.flag;}).length)+' control(s) unusual today against their own history (robust z ≥ 3.5, or a first failure after 7+ clean runs)</div>';
+    var D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],hm=1;I.clock.forEach(function(r){r.forEach(function(v){if(v>hm)hm=v;});});
+    $('hm').innerHTML='<table class="hm"><tbody>'+I.clock.map(function(r,d){return '<tr><th>'+D[d]+'</th>'+r.map(function(v,h){var work=d<=4&&h>=7&&h<18;return '<td style="background:'+(v?'rgba(208,59,59,'+(0.25+0.75*v/hm).toFixed(2)+')':work?'rgba(57,135,229,.12)':'rgba(255,255,255,.04)')+'" title="'+esc(D[d]+' '+h+':00 - '+v+' exception(s)')+'"></td>';}).join('')+'</tr>';}).join('')+'<tr><th></th>'+[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23].map(function(h){return '<th style="text-align:center">'+(h%6?'':h)+'</th>';}).join('')+'</tr></tbody></table><div class="mut mt-2">Blue tint = working hours (Sun-Thu 07:00-18:00 Riyadh).</div>';
+    var pm=Math.max.apply(null,[1].concat(I.people.map(function(p){return p.count;})));
+    $('pp').innerHTML=I.people.length?'<div class="mut mb-2">'+esc(I.concentration.why)+'</div><div class="pp">'+I.people.map(function(p){return '<div><b>'+esc(p.name)+'</b><div class="mut">'+esc(p.tests.join(', '))+'</div></div><div class="bx"><span style="width:'+(p.count/pm*100)+'%"></span></div><b>'+esc(p.count)+'</b>';}).join('')+'</div>':'<span class="text-secondary">No exception names a person.</span>';
+    var A=I.ageing;$('ag').innerHTML='<div class="ag">'+[['0-1','0-1 day',''],['2-7','2-7 days','text-yellow'],['8-30','8-30 days','text-orange'],['30+','30+ days','text-red']].map(function(x){return '<div><b class="'+(A[x[0]]?x[2]:'')+'">'+esc(A[x[0]])+'</b><span class="mut">'+esc(x[1])+'</span></div>';}).join('')+'</div><div class="mut mt-2">An exception still open after a week is waiting for an auditor to explain it or draft a finding.</div>';}
+  function cur(){return V.tests.filter(function(t){return !SEL||t.id===SEL;});}
+  function drawExc(){var ts=cur(),rows=[];ts.forEach(function(t){t.exceptions.forEach(function(e){rows.push(e);});});
+    $('xh').textContent=SEL?'Exceptions · '+SEL+' '+V.tests.filter(function(t){return t.id===SEL;})[0].name:'Exceptions · every control';
+    var t1=SEL&&V.tests.filter(function(t){return t.id===SEL;})[0];
+    $('xa').innerHTML=t1&&t1.exceptions.some(function(e){return !e.disposition||e.disposition.decision==='finding';})?'<button type="button" class="btn btn-sm" data-draft="'+esc(SEL)+'" data-ai="0"><i class="ti ti-file-text me-1"></i>Draft a finding</button>'+(V.ai.enabled?' <button type="button" class="btn btn-sm" data-draft="'+esc(SEL)+'" data-ai="1"><i class="ti ti-sparkles me-1"></i>Draft with AI</button>':''):(SEL?'':'<span class="mut">pick a control above to draft a finding</span>');
+    $('xl').innerHTML=P.table([['Control',function(e){return '<b>'+esc(e.test)+'</b>';}],['When (UTC)',function(e){return '<span class="mut">'+esc(dt(e.at))+'</span>';}],['Who',function(e){return esc(e.by||'—')+(e.role?' <span class="mut">'+esc(e.role)+'</span>':'');}],
+      ['What',function(e){return '<span class="mut">'+esc(e.action||'')+'</span> '+esc(e.target||'');}],['Why it was raised',function(e){return '<div class="why small">'+esc(e.why)+'</div>';}],['Score',function(e){return esc(e.score);}],
+      ['Decision',function(e){return e.disposition?bx({explained:['explained','green'],finding:['for a finding','orange']},e.disposition.decision)+'<div class="mut">'+esc(e.disposition.by)+'</div>':P.badge('open','red');}]],rows,function(e){return 'class="rowc" data-x="'+esc(e.id)+'"';},SEL?'No exception for this control in the latest run.':'No exception in the latest run.');
+  }
+  function drawDrafts(){$('ais').textContent=V.ai.enabled?'AI drafting available ('+V.ai.model+')':V.ai.reason;
+    $('dl').innerHTML=P.table([['Draft',function(d){return '<b>'+esc(d.id)+'</b><div class="mut">'+esc(d.test)+' · '+(d.source==='ai'?'worded by the AI':'from the rules')+'</div>';}],['Title',function(d){return esc(d.title);}],['Rating',function(d){return esc(d.rating);}],['State',function(d){return bx(DS,d.state)+(d.finding?'<div class="mut">'+esc(d.finding)+' · '+esc(d.accepted_by)+'</div>':'');}],['Prepared',function(d){return '<span class="mut">'+esc(dt(d.at))+' for '+esc(d.drafted_for)+'</span>';}]],V.drafts,function(d){return 'class="rowc" data-d="'+esc(d.id)+'"';},'No draft yet. Pick a control with exceptions and draft a finding from them.');
+  }
+  function openExc(id){var e=null;V.tests.forEach(function(t){t.exceptions.forEach(function(x){if(x.id===id)e=x;});});if(!e)return;
+    var h=Z.kv([['Control',esc(e.test)],['When',esc(dt(e.at))+' UTC'],['Who',esc(e.by||'—')+' '+esc(e.role||'')],['Action',esc(e.action||'—')],['Target',esc(e.target||'—')],['Audit record','#'+esc(e.seq==null?'—':e.seq)],['Why',esc(e.why)],['Score',esc(e.score)]]);
+    if(e.disposition)h+='<div class="alert alert-secondary mt-2 mb-0">'+esc(e.disposition.decision==='explained'?'Explained':'Marked for a finding')+' by <b>'+esc(e.disposition.by)+'</b> on '+esc(dt(e.disposition.at))+':<br>'+esc(e.disposition.note)+'</div>';
+    else h+='<form id="fd" class="mt-3"><label class="form-label" for="fd-n">Your conclusion (what you checked - change ticket, approval, the person\'s explanation)</label><textarea class="form-control" id="fd-n" rows="3" maxlength="2000" required></textarea><div class="mut mt-1">Indicators, not proof: record what the evidence shows. You cannot decide an exception about yourself.</div><div class="text-red small mt-1" data-msg></div>'
+      +'<div class="d-flex gap-2 mt-2"><button type="submit" class="btn btn-success" data-dec="explained">Explained</button><button type="submit" class="btn btn-warning" data-dec="finding">Mark for a finding</button></div></form>';
+    Z.open('Control monitoring · '+e.test,'Exception '+(e.by||''),h);
+    var fm=document.getElementById('fd');if(fm){var dec='explained';fm.addEventListener('click',function(ev){var b=ev.target.closest('[data-dec]');if(b)dec=b.getAttribute('data-dec');});
+      fm.addEventListener('submit',function(ev){ev.preventDefault();P.req('POST','/audit-ccm/exceptions/'+encodeURIComponent(id)+'/disposition',{decision:dec,note:document.getElementById('fd-n').value}).then(function(){Z.close();P.toast(dec==='explained'?'Exception explained':'Marked for a finding');load();}).catch(function(x){P.msg(fm,P.why(x));});});}
+  }
+  function openDraft(id){var d=V.drafts.filter(function(x){return x.id===id;})[0];if(!d)return;
+    var f=['title','condition','criteria','cause','effect','recommendation'];
+    var h='<div class="mut mb-2">'+(d.source==='ai'?'Worded by the AI from the test results - check every sentence against the exceptions; it may not add facts.':'Drafted by the rules from the test results.')+(d.flags&&d.flags.length?' <b class="text-orange">Text in the trail looked like instructions to the AI ('+d.flags.map(esc).join(', ')+') - it was treated as data.</b>':'')+'</div>';
+    if(d.state!=='draft'){h+=Z.kv(f.map(function(k){return [k,esc(d[k])];}).concat([['rating',esc(d.rating)],['state',bx(DS,d.state)]]));Z.open('Finding draft · '+d.test,d.id,h);return;}
+    h+='<form id="fa">'+f.map(function(k){return '<label class="form-label mt-2" for="fa-'+k+'">'+esc(k)+'</label>'+(k==='title'?'<input class="form-control" id="fa-'+k+'" maxlength="200">':'<textarea class="form-control" id="fa-'+k+'" rows="'+(k==='condition'?4:2)+'" maxlength="2000"></textarea>');}).join('')
+      +'<div class="row g-2 mt-1"><div class="col-4"><label class="form-label" for="fa-rating">rating</label><select class="form-select" id="fa-rating"><option>high</option><option>medium</option><option>low</option></select></div>'
+      +'<div class="col-4"><label class="form-label" for="fa-team">audit team</label><select class="form-select" id="fa-team">'+V.teams.map(function(t){return '<option value="'+esc(t)+'">'+esc(TEAM[t]||t)+'</option>';}).join('')+'</select></div>'
+      +'<div class="col-4"><label class="form-label" for="fa-eng">engagement id</label><input class="form-control" id="fa-eng" placeholder="IA-E-0001" maxlength="80"></div></div>'
+      +'<label class="form-label mt-2" for="fa-owner">owner (a named person in the auditee department)</label><input class="form-control" id="fa-owner" maxlength="80">'
+      +'<div class="mut mt-1">Accepting raises a draft finding in that engagement, under your name - you must be an auditor on it, in fieldwork or while the report is drafted.</div><div class="text-red small mt-1" data-msg></div>'
+      +'<div class="d-flex gap-2 mt-2"><button type="submit" class="btn btn-primary">Accept into the engagement</button><button type="button" class="btn" id="fa-x">Discard…</button></div></form>';
+    Z.open('Finding draft · '+d.test+' · '+d.source,d.id,h);
+    f.forEach(function(k){document.getElementById('fa-'+k).value=d[k]||'';});document.getElementById('fa-rating').value=d.rating;
+    var fm=document.getElementById('fa');
+    fm.addEventListener('submit',function(ev){ev.preventDefault();var b={team:document.getElementById('fa-team').value,engagement:document.getElementById('fa-eng').value.trim(),owner:document.getElementById('fa-owner').value.trim(),rating:document.getElementById('fa-rating').value};
+      f.forEach(function(k){b[k]=document.getElementById('fa-'+k).value;});
+      P.req('POST','/audit-ccm/drafts/'+encodeURIComponent(id)+'/accept',b).then(function(r){Z.close();P.toast('Finding '+r.finding.id+' raised in '+b.engagement);load();}).catch(function(x){P.msg(fm,P.why(x));});});
+    document.getElementById('fa-x').addEventListener('click',function(){if(document.getElementById('fa-xn'))return;var w=document.createElement('div');w.innerHTML='<label class="form-label mt-2" for="fa-xn">Why discard it?</label><input class="form-control" id="fa-xn" maxlength="1000"><button type="button" class="btn btn-danger mt-2" id="fa-xg">Discard the draft</button>';fm.appendChild(w);
+      document.getElementById('fa-xg').addEventListener('click',function(){P.req('POST','/audit-ccm/drafts/'+encodeURIComponent(id)+'/discard',{note:document.getElementById('fa-xn').value}).then(function(){Z.close();P.toast('Draft discarded');load();}).catch(function(x){P.msg(fm,P.why(x));});});});
+  }
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-ct]'))){var id=x.getAttribute('data-ct');SEL=SEL===id?'':id;draw();$('xl').scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if((x=t.closest('[data-draft]'))){x.disabled=true;P.req('POST','/audit-ccm/tests/'+encodeURIComponent(x.getAttribute('data-draft'))+'/draft',{use_ai:x.getAttribute('data-ai')==='1'}).then(function(d){P.toast('Draft '+d.id+' prepared');return load().then(function(){openDraft(d.id);});}).catch(function(e){P.toast(P.why(e));x.disabled=false;});return;}
+    if((x=t.closest('tr[data-x]'))){openExc(x.getAttribute('data-x'));return;}
+    if((x=t.closest('tr[data-d]'))){openDraft(x.getAttribute('data-d'));return;}
+    if(t.closest('#run')){var b=$('run');b.disabled=true;P.req('POST','/audit-ccm/run',{}).then(function(r){P.toast('Tested '+r.records+' audit records');return load();}).catch(function(e){P.toast(P.why(e));}).then(function(){b.disabled=false;});return;}
+    if(t.closest('#refresh')){load();return;}
+    if(t.closest('#csv')){P.req('GET','/audit-ccm/export').then(function(r){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+r.csv],{type:'text/csv'}));a.download=r.filename;document.body.appendChild(a);a.click();a.remove();}).catch(function(e){P.toast(P.why(e));});}
+  });
+  load();
+})();
+</script></body></html>

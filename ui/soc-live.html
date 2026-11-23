@@ -1,0 +1,177 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Live SIEM Stream</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+.qbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}.qbar input[type=search]{flex:1 1 320px;font-family:Consolas,monospace}
+.live td{font-size:12px;padding:5px 8px;white-space:nowrap;max-width:420px;overflow:hidden;text-overflow:ellipsis}.live tr.new td{animation:fl 1.2s}@keyframes fl{from{background:rgba(63,185,80,.18)}to{background:transparent}}
+.live tr.x td{white-space:pre-wrap;word-break:break-all;max-width:none;background:rgba(255,255,255,.03)}.live tr.hit td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--mute)}.dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(63,185,80,.2)}.dot.err{background:var(--bad)}.chips button{font-size:12px;padding:4px 10px}
+.ag{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;margin-bottom:12px}.ag>.card{margin:0;min-width:0}.c8{grid-column:span 8}.c4{grid-column:span 4}.c6{grid-column:span 6}.c12{grid-column:span 12}
+@media(max-width:1200px){.c8,.c4,.c6{grid-column:span 12}}
+.ag h3{margin:0 0 8px;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ag h3 .muted{font-weight:400;font-size:12px}
+.kp{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:8px}.kp div{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:8px 10px}.kp b{display:block;font-size:20px;font-variant-numeric:tabular-nums}.kp span{font-size:11px;color:var(--mute)}
+@media(max-width:600px){.kp{grid-template-columns:repeat(2,minmax(0,1fr))}}
+svg.ch{display:block;width:100%;height:auto}svg.ch text{font-size:10px;fill:var(--mute)}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--mute);margin-top:4px}.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.ind{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}.ind:last-child{border-bottom:0}.ind .b{flex:1;min-width:0}.ind .why{color:var(--mute);font-size:12px}
+.ind .acts{display:flex;gap:4px;flex-wrap:wrap}.ind .acts button{font-size:11px;padding:2px 8px}
+.pat{display:grid;grid-template-columns:minmax(0,1fr) 64px 56px auto;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}.pat:last-child{border-bottom:0}
+.pat code{font:11.5px Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}.pat .n{text-align:right;font-variant-numeric:tabular-nums}
+.tb{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}@media(max-width:900px){.tb{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tl h4{margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.tl button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;width:100%;background:none;border:0;color:inherit;font:12px inherit;padding:3px 0;cursor:pointer;text-align:left;position:relative}
+.tl button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative;z-index:1}.tl button b{position:relative;z-index:1;font-variant-numeric:tabular-nums}.tl button i{position:absolute;left:0;top:2px;bottom:2px;border-radius:3px;background:rgba(88,166,255,.16)}.tl button:hover span{text-decoration:underline}
+.srcs{display:grid;grid-template-columns:minmax(0,1fr) 90px 60px 70px;gap:6px 10px;font-size:12px;align-items:center}.srcs .h{color:var(--mute);font-size:11px}
+.ai{white-space:pre-wrap;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;margin-top:8px;max-height:340px;overflow:auto}.ail{display:inline-block;font-size:11px;font-weight:700;color:#a5d6ff;background:rgba(88,166,255,.14);border-radius:6px;padding:1px 6px;margin-bottom:6px}
+.empty{color:var(--mute);font-size:12.5px;padding:10px;border:1px dashed var(--border);border-radius:10px}
+@media (prefers-reduced-motion:reduce){.live tr.new td{animation:none}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">SOC · live</div><h1>Live SIEM Stream</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="ag">
+ <div class="card c8"><h3>Event rate <span class="muted" id="an-rsub">last 5 minutes, per second, by severity · band = learned normal rate (±3σ)</span></h3><div class="kp" id="an-kp"></div><div id="an-rate"></div></div>
+ <div class="card c4"><h3>Live indicators <span class="muted">from the stream in this browser - the SIEM's rules stay authoritative</span></h3><div id="an-ind"></div></div>
+ <div class="card c6"><h3>Log patterns <span class="muted" id="an-psub">messages grouped by shape (numbers, addresses and ids masked)</span></h3><div id="an-pat"></div></div>
+ <div class="card c6"><h3>Sources <span class="muted">events in 5 min, delivery delay, last event</span></h3><div id="an-src"></div></div>
+ <div class="card c12"><h3>Top in the last 5 minutes <span class="muted">click to filter</span></h3><div class="tb" id="an-top"></div><div id="an-ai"></div></div>
+</div>
+<div class="card"><div class="qbar"><span id="st"><span class="dot"></span>not connected</span><span class="sp"></span><span class="muted small" id="rate"></span></div>
+ <div class="qbar"><input type="search" id="q" placeholder='Filter, e.g.  src_id:win-servers   severity:>=3   user:alice   ip:10.1.0.0/16   "failed password"' autocomplete="off">
+ <select id="src"><option value="">All sources</option></select><select id="sev"><option value="">Any severity</option><option value="2">Medium and above</option><option value="3">High and above</option><option value="4">Critical</option></select>
+ <button type="button" class="pri" id="go">▶ Start</button><button type="button" id="pause" disabled>⏸ Pause</button><button type="button" id="clear">Clear</button></div>
+ <div class="qbar chips"><span class="muted small">Quick:</span><button type="button" data-q="">Everything</button><button type="button" data-q="src_type:windows">Windows</button><button type="button" data-q="category:authentication outcome:failure">Failed logons</button><button type="button" data-q="src_type:fortigate">FortiGate</button><button type="button" data-q="severity:>=3">High severity</button><button type="button" data-q="src_type:syslog">Generic syslog (not identified)</button></div>
+ <div class="tw"><table class="live"><thead><tr><th>Time</th><th title="seconds between the event happening and the SIEM receiving it">Delay</th><th>Source</th><th>Host</th><th>User</th><th>From → To</th><th>What</th><th>Sev</th><th>Message</th></tr></thead><tbody id="rows"><tr><td colspan="9" class="muted">Press Start to stream events as the SIEM receives them.</td></tr></tbody></table></div>
+ <p class="note">Events appear here the moment the SIEM receives them - before they are stored - so this is the fastest view of what is happening. The <b>Delay</b> column is how long the event took to reach the SIEM: syslog devices are usually under a second; Windows servers depend on the agent's interval (every minute by default, every few seconds in real-time mode). At most 200 events per second are shown per viewer (the rest are counted as skipped) - narrow the filter for busy sources. Click a row for the full event. The last 1,000 rows are kept on screen. The analysis above runs in this browser over what this stream shows: it starts when you press Start and learns as it runs (a burst needs 2 minutes of history, a new pattern 2 minutes or 500 events); events skipped over 200 per second are not in it.</p></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,esc=S.esc,$=function(i){return document.getElementById(i);},es=null,paused=false,buf=[],shown=0,dropped=0,win=[],first=true,MAX=1000;
+  function q(){var p=[];var t=$('q').value.trim();if(t)p.push(t.indexOf(' OR ')>=0?'('+t+')':t);if($('src').value)p.push('src_id:'+$('src').value);if($('sev').value)p.push('severity:>='+$('sev').value);return p.join(' ');}
+  function status(cls,txt){$('st').innerHTML='<span class="dot '+cls+'"></span>'+esc(txt);}
+  function t2(v){var x=S.ms(v);if(isNaN(x))return '–';var d=new Date(x),p=function(n,l){return ('00'+n).slice(-(l||2));};return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())+'.'+p(d.getMilliseconds(),3);}
+  function delaySec(ev){var a=S.ms(ev.ts),b=S.ms(ev.rts);if(isNaN(a)||isNaN(b))return null;return Math.max(0,(b-a)/1000);}
+  function fmtD(s){return s==null?'':s<60?s.toFixed(s<10?1:0)+' s':s<7200?Math.round(s/60)+' min':(s/3600).toFixed(1)+' h';}
+  function row(ev){var tr=document.createElement('tr');tr.className='new'+(ev._hit?' hit':'');tr._ev=ev;var sv=ev.severity;
+    var from=[ev.src_ip,ev.src_port&&':'+ev.src_port].filter(Boolean).join(''),to=[ev.dst_ip,ev.dst_port&&':'+ev.dst_port].filter(Boolean).join('');
+    tr.innerHTML='<td class="mono">'+esc(t2(ev.ts))+'</td><td class="mono">'+esc(fmtD(delaySec(ev)))+'</td><td>'+esc(ev.src_id||'')+'<div class="muted small">'+esc(ev.src_type||'')+'</div></td><td>'+esc(ev.host||'')+'</td><td>'+esc(ev.user||'')+'</td><td class="mono">'+esc(from+(to?' → '+to:''))+'</td><td>'+esc([ev.category,ev.action,ev.outcome].filter(Boolean).join(' · ')+(ev.event_code?' ('+ev.event_code+')':''))+'</td><td>'+(sv!=null&&sv!==''?S.sev(sv):'')+'</td><td title="'+esc(ev.message||'')+'">'+esc(ev.message||ev.raw||'')+'</td>';
+    return tr;}
+  function add(ev){A.feed(ev);if(paused){buf.push(ev);if(buf.length>MAX)buf.shift();$('pause').textContent='▶ Resume ('+buf.length+' new)';return;}put([ev]);}
+  function put(list){var tb=$('rows');if(first){tb.innerHTML='';first=false;}var frag=document.createDocumentFragment();for(var i=list.length-1;i>=0;i--)frag.appendChild(row(list[i]));tb.insertBefore(frag,tb.firstChild);shown+=list.length;while(tb.rows.length>MAX)tb.deleteRow(tb.rows.length-1);}
+  function tick(){var now=Date.now();win=win.filter(function(t){return now-t<10000;});$('rate').textContent=(win.length/10).toFixed(1)+' events/s · '+S.n(shown)+' shown'+(dropped?' · '+S.n(dropped)+' skipped (over 200/s - narrow the filter)':'');}
+
+  // ======================================================================================================================
+  // Stream analytics - pure, explainable, in this browser only; nothing is sent anywhere except an explicit Copilot question.
+  //   rate     per-second counts by severity (5 min); an EWMA of the rate and its variance learns the normal level; a second
+  //            above mean + 4 sigma (and >= 5 events) after 2 minutes of history is a burst, named with what drove it
+  //   patterns a message's shape: the event's own user / host / addresses, numbers, IPs, e-mails, GUIDs, hex, paths, quoted strings
+  //            and words containing digits masked (a light Drain-style
+  //            template); a shape first seen after the warm-up (2 min or 500 events) is "new"; under 0.1 % of 2,000+ events is "rare"
+  //   auth     failed sign-ins in a sliding 5 min: >= 10 from one address (brute force), >= 5 different accounts from one address
+  //            (password spray), >= 10 against one account from >= 3 addresses (account under attack)
+  //   sources  a source that sent 10+ events and is silent for 5x its usual gap (at least 2 min) is quiet; p95 delivery delay
+  //            over 5 min is slow
+  // Indicators for an analyst to look at - not alerts, and not proof of anything.
+  // ======================================================================================================================
+  var SEVN=['info','low','medium','high','critical'],SEVC=['#6e7681','#8b949e','#d29922','#f0883e','#f85149'],W5=300000;
+  var A=(function(){
+    var t0=0,total=0,secs={},rateMean=null,rateVar=0,bursts=[],pats={},patN=0,auth=[],srcs={},ents={host:{},user:{},src_ip:{},dst_port:{}},lastSec=0;
+    var FAILRX=/\b(fail(ed|ure)?|denied|invalid (user|password)|bad password|authentication failure|logon failure|4625)\b/i;
+    function sev(ev){var s=ev.severity;if(typeof s==='number')return Math.max(0,Math.min(4,Math.round(s)));var i=SEVN.indexOf(String(s||'').toLowerCase());return i<0?0:i;}
+    // the event's own user / host / address are masked first, so one shape covers every account and machine
+    function reEsc(x){return String(x).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+    function shape(m,ev){m=String(m||'').slice(0,400);if(ev){[['user','<user>'],['host','<host>'],['src_ip','<ip>'],['dst_ip','<ip>']].forEach(function(k){var v=ev[k[0]];if(v&&String(v).length>=3)m=m.replace(new RegExp('(^|[^\\w.])'+reEsc(v)+(k[1]==='<ip>'?'(:\\d+)?':'')+'(?![\\w.])','gi'),'$1'+k[1]);});}
+      return m.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,'<guid>').replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g,'<email>')
+      .replace(/\b\d{1,3}(\.\d{1,3}){3}(:\d+)?\b/g,'<ip>').replace(/\b([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}\b/gi,'<ip6>').replace(/\b0x[0-9a-f]+\b|\b[0-9a-f]{12,}\b/gi,'<hex>')
+      .replace(/"[^"]{0,200}"|'[^']{0,200}'/g,'<str>').replace(/([A-Za-z]:)?(\\[^\s\\]+){2,}|(\/[^\s/]+){2,}/g,'<path>').replace(/\b\d+([.,:]\d+)*\b/g,'<n>').replace(/\b(?=[\w.-]*\d)[A-Za-z][\w.-]*\b/g,'<id>').replace(/\s+/g,' ').trim().slice(0,200);}
+    function isFail(ev){return (/auth/i.test(ev.category||'')&&/fail|denied/i.test(ev.outcome||''))||String(ev.event_code)==='4625'||FAILRX.test(ev.message||'');}
+    function feed(ev){var now=Date.now();if(!t0)t0=now;total++;var s=Math.floor(now/1000),sv=sev(ev);
+      var b=secs[s]||(secs[s]={n:0,s:[0,0,0,0,0],src:{},pat:{}});b.n++;b.s[sv]++;
+      var src=ev.src_id||ev.src_type||'unknown';b.src[src]=(b.src[src]||0)+1;
+      var key=(ev.src_type||'')+'|'+shape(ev.message||ev.raw||[ev.category,ev.action,ev.outcome].filter(Boolean).join(' '),ev);
+      var p=pats[key];if(!p){p=pats[key]={key:key,shape:key.split('|').slice(1).join('|')||'(no message)',src:ev.src_type||'',n:0,ts:[],first:now,sev:0,sample:ev,isNew:(now-t0>120000||total>500)};patN++;if(p.isNew)ev._hit=1;}
+      p.n++;p.ts.push(now);if(p.ts.length>400)p.ts.shift();if(sv>p.sev)p.sev=sv;b.pat[key]=(b.pat[key]||0)+1;
+      var so=srcs[src]||(srcs[src]={id:src,n:0,last:0,gap:null,ts:[],delays:[]});if(so.last){var g=now-so.last;so.gap=so.gap==null?g:so.gap*0.9+g*0.1;}so.last=now;so.n++;so.ts.push(now);if(so.ts.length>2000)so.ts.shift();
+      var d=delaySec(ev);if(d!=null){so.delays.push(d);if(so.delays.length>300)so.delays.shift();}
+      ['host','user','src_ip','dst_port'].forEach(function(k){var v=ev[k];if(v==null||v==='')return;v=String(v);var e=ents[k][v]||(ents[k][v]={v:v,ts:[]});e.ts.push(now);if(e.ts.length>3000)e.ts.shift();});
+      if(isFail(ev))auth.push({t:now,ip:ev.src_ip||'',user:String(ev.user||'').toLowerCase()});
+      if(s!==lastSec){roll(s);lastSec=s;}}
+    // learn the normal per-second rate from completed seconds (EWMA mean and variance)
+    function roll(curr){var keys=Object.keys(secs).map(Number);for(var i=0;i<keys.length;i++){var k=keys[i];if(k<curr-W5/1000)delete secs[k];}
+      var prev=curr-1,x=secs[prev]?secs[prev].n:0,warm=Date.now()-t0>120000;
+      if(rateMean==null)rateMean=x;else{var d=x-rateMean;
+        if(warm&&x>=5&&x>rateMean+4*Math.sqrt(rateVar)+0.5&&!bursts.some(function(b){return b.sec===prev;})){var bb=secs[prev],topSrc=top1(bb.src),topPat=top1(bb.pat);bursts.unshift({sec:prev,n:x,usual:Math.round(rateMean*10)/10,src:topSrc,pat:topPat&&pats[topPat]?pats[topPat].shape:''});if(bursts.length>20)bursts.pop();}
+        rateMean+=0.03*d;rateVar=(1-0.03)*(rateVar+0.03*d*d);}}
+    function top1(o){var k=null,n=-1;for(var x in o)if(o[x]>n){n=o[x];k=x;}return k;}
+    function in5(ts,now){var c=0;for(var i=ts.length-1;i>=0;i--){if(now-ts[i]<=W5)c++;else break;}return c;}
+    function view(){var now=Date.now(),cut=now-W5;auth=auth.filter(function(a){return a.t>=cut;});
+      var ind=[];
+      // brute force / spray by address, attack on an account
+      var byIp={},byUser={};auth.forEach(function(a){if(a.ip){var x=byIp[a.ip]||(byIp[a.ip]={n:0,u:{}});x.n++;if(a.user)x.u[a.user]=1;}if(a.user){var y=byUser[a.user]||(byUser[a.user]={n:0,ip:{}});y.n++;if(a.ip)y.ip[a.ip]=1;}});
+      Object.keys(byIp).forEach(function(ip){var x=byIp[ip],nu=Object.keys(x.u).length;if(nu>=5)ind.push({sev:3,kind:'Password spray',why:x.n+' failed sign-ins for '+nu+' different accounts from '+ip+' in 5 minutes',q:'ip:'+ip+' outcome:failure',ent:ip});
+        else if(x.n>=10)ind.push({sev:3,kind:'Brute force',why:x.n+' failed sign-ins from '+ip+' in 5 minutes',q:'ip:'+ip+' outcome:failure',ent:ip});});
+      Object.keys(byUser).forEach(function(u){var y=byUser[u],ni=Object.keys(y.ip).length;if(y.n>=10&&ni>=3)ind.push({sev:3,kind:'Account under attack',why:y.n+' failed sign-ins for '+u+' from '+ni+' addresses in 5 minutes',q:'user:'+u+' outcome:failure',ent:u});});
+      bursts.filter(function(b){return now-b.sec*1000<=W5;}).slice(0,3).forEach(function(b){ind.push({sev:2,kind:'Burst',why:b.n+' events in one second at '+new Date(b.sec*1000).toLocaleTimeString()+' - usually '+b.usual+'/s'+(b.src?'; mostly from '+b.src:'')+(b.pat?'; shape: '+b.pat.slice(0,80):''),q:b.src&&b.src!=='unknown'?'src_id:'+b.src:'',ent:b.src||''});});
+      Object.keys(srcs).forEach(function(k){var so=srcs[k];if(so.n>=10&&so.gap!=null){var quiet=now-so.last,lim=Math.max(120000,5*so.gap);if(quiet>lim)ind.push({sev:2,kind:'Source quiet',why:k+' sent '+so.n+' events, usually one every '+fmtD(so.gap/1000)+', but nothing for '+fmtD(quiet/1000),q:'src_id:'+k,ent:k});}
+        var p95=pct(so.delays,0.95);if(so.delays.length>=20&&p95!=null&&p95>300)ind.push({sev:1,kind:'Slow delivery',why:k+': 95 % of events arrive within '+fmtD(p95)+' of happening',q:'src_id:'+k,ent:k});});
+      var P=Object.keys(pats).map(function(k){var p=pats[k];return {key:k,shape:p.shape,src:p.src,n:p.n,n5:in5(p.ts,now),isNew:p.isNew,rare:total>=2000&&p.n/total<0.001,sev:p.sev,first:p.first};});
+      P.filter(function(p){return p.isNew&&now-p.first<=W5&&p.sev>=2;}).sort(function(a,b){return b.sev-a.sev||b.first-a.first;}).slice(0,4).forEach(function(p){ind.push({sev:p.sev,kind:'New pattern',why:'first seen '+fmtD((now-p.first)/1000)+' ago ('+p.n+'×, '+SEVN[p.sev]+'): '+p.shape.slice(0,100),q:'',ent:'',shape:p.shape});});
+      ind.sort(function(a,b){return b.sev-a.sev;});
+      var series=[];for(var s=Math.floor(now/1000)-299;s<=Math.floor(now/1000);s++){var b=secs[s];series.push(b?b.s.slice():[0,0,0,0,0]);}
+      var tops={};Object.keys(ents).forEach(function(k){tops[k]=Object.keys(ents[k]).map(function(v){return {v:v,n:in5(ents[k][v].ts,now)};}).filter(function(x){return x.n;}).sort(function(a,b){return b.n-a.n;}).slice(0,6);});
+      var src=Object.keys(srcs).map(function(k){var so=srcs[k];return {id:k,n5:in5(so.ts,now),p50:pct(so.delays,0.5),p95:pct(so.delays,0.95),last:so.last};}).sort(function(a,b){return b.n5-a.n5;});
+      return {total:total,since:t0,series:series,mean:rateMean,sd:Math.sqrt(rateVar),warm:t0&&now-t0>120000,ind:ind.slice(0,12),pats:P.sort(function(a,b){return (b.isNew&&now-b.first<=W5?1:0)-(a.isNew&&now-a.first<=W5?1:0)||b.n5-a.n5||b.n-a.n;}).slice(0,12),patN:patN,newN:P.filter(function(p){return p.isNew;}).length,rareN:P.filter(function(p){return p.rare;}).length,tops:tops,src:src};}
+    function pct(a,q){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y;});return b[Math.min(b.length-1,Math.floor(q*b.length))];}
+    function reset(){t0=0;total=0;secs={};rateMean=null;rateVar=0;bursts=[];pats={};patN=0;auth=[];srcs={};ents={host:{},user:{},src_ip:{},dst_port:{}};}
+    return {feed:feed,view:view,reset:reset};})();
+
+  function rateChart(v){var W=760,H=150,l=30,r=8,t=8,b=18,S5=v.series,tot=S5.map(function(x){return x[0]+x[1]+x[2]+x[3]+x[4];}),band=v.mean!=null&&v.warm?v.mean+3*v.sd:null,mx=Math.max(4,Math.max.apply(null,tot),band||0)*1.1,bw=(W-l-r)/S5.length,Y=function(y){return t+(H-t-b)*(1-y/mx);};
+    var o='<line x1="'+l+'" x2="'+(W-r)+'" y1="'+Y(0)+'" y2="'+Y(0)+'" stroke="var(--border)"/><text x="'+(l-4)+'" y="'+(Y(mx/1.1)+4).toFixed(1)+'" text-anchor="end">'+Math.round(mx/1.1)+'</text><text x="'+(l-4)+'" y="'+(Y(0)+3)+'" text-anchor="end">0</text>';
+    if(band!=null)o+='<rect x="'+l+'" y="'+Y(band).toFixed(1)+'" width="'+(W-l-r)+'" height="'+(Y(Math.max(0,v.mean-3*v.sd))-Y(band)).toFixed(1)+'" fill="#58a6ff" fill-opacity=".08"/><line x1="'+l+'" x2="'+(W-r)+'" y1="'+Y(v.mean).toFixed(1)+'" y2="'+Y(v.mean).toFixed(1)+'" stroke="#58a6ff" stroke-dasharray="4 3" stroke-opacity=".7"/>';
+    S5.forEach(function(x,k){var y0=0;for(var sv=0;sv<5;sv++){if(!x[sv])continue;var h=(H-t-b)*x[sv]/mx;o+='<rect x="'+(l+k*bw).toFixed(1)+'" y="'+(Y(y0)-h).toFixed(1)+'" width="'+Math.max(0.8,bw-0.4).toFixed(2)+'" height="'+h.toFixed(1)+'" fill="'+SEVC[sv]+'"/>';y0+=x[sv];}});
+    o+='<text x="'+l+'" y="'+(H-4)+'">5 min ago</text><text x="'+(W-r)+'" y="'+(H-4)+'" text-anchor="end">now</text>';
+    return '<svg class="ch" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="events per second for the last 5 minutes">'+o+'</svg><div class="lg">'+[4,3,2,1,0].map(function(k){return '<span><i style="background:'+SEVC[k]+'"></i>'+SEVN[k]+'</span>';}).join('')+(band!=null?'<span><i style="background:#58a6ff;opacity:.4"></i>normal ('+v.mean.toFixed(1)+'/s ±3σ)</span>':'<span>normal rate: learning (2 min)</span>')+'</div>';}
+  function paint(){var v=A.view();if(!v.total){$('an-kp').innerHTML='';$('an-rate').innerHTML='<div class="empty">Press Start: the rate, patterns and indicators build up from the stream.</div>';$('an-ind').innerHTML='<div class="empty">Nothing yet.</div>';$('an-pat').innerHTML='<div class="empty">No pattern yet.</div>';$('an-src').innerHTML='';$('an-top').innerHTML='';return;}
+    var last60=v.series.slice(-60).reduce(function(a,x){return a+x[0]+x[1]+x[2]+x[3]+x[4];},0),hi=v.series.slice(-60).reduce(function(a,x){return a+x[3]+x[4];},0);
+    $('an-kp').innerHTML='<div><b>'+(last60/60).toFixed(1)+'/s</b><span>last minute</span></div><div><b style="color:'+(hi?'var(--bad)':'inherit')+'">'+hi+'</b><span>high / critical, last minute</span></div><div><b>'+S.n(v.patN)+'</b><span>patterns · '+v.newN+' new · '+v.rareN+' rare</span></div><div><b>'+S.n(v.total)+'</b><span>events analysed</span></div>';
+    $('an-rate').innerHTML=rateChart(v);
+    $('an-ind').innerHTML=v.ind.length?v.ind.map(function(x,i){return '<div class="ind"><span class="pill '+(x.sev>=3?'bad':x.sev>=2?'warn':'')+'">'+esc(x.kind)+'</span><div class="b"><div class="why">'+esc(x.why)+'</div><div class="acts">'+(x.q?'<button type="button" data-filter="'+esc(x.q)+'">Filter</button>':'')+(CAN_AI?'<button type="button" data-ask="'+i+'">Ask the Copilot</button>':'')+'</div></div></div>';}).join(''):'<div class="empty">'+(v.warm?'Nothing unusual in the stream right now.':'Learning the normal pattern - indicators start after 2 minutes.')+'</div>';
+    LASTIND=v.ind;
+    $('an-psub').textContent=v.patN+' shapes seen · new = first seen after the first 2 minutes';
+    $('an-pat').innerHTML=v.pats.length?v.pats.map(function(p,i){return '<div class="pat"><code title="'+esc(p.shape)+'">'+(p.isNew?'<span class="pill warn" style="margin-right:4px">new</span>':'')+(p.rare?'<span class="pill" style="margin-right:4px">rare</span>':'')+esc(p.shape)+'</code><span class="n" title="in the last 5 minutes">'+p.n5+' /5m</span><span class="n muted" title="since Start">'+S.n(p.n)+'</span><span>'+(CAN_AI?'<button type="button" data-askp="'+i+'" style="font-size:11px;padding:2px 7px">Ask</button>':'')+'</span></div>';}).join(''):'<div class="empty">No pattern yet.</div>';
+    LASTPAT=v.pats;
+    var now=Date.now();
+    $('an-src').innerHTML=v.src.length?'<div class="srcs"><span class="h">Source</span><span class="h">5 min</span><span class="h">Delay p95</span><span class="h">Last</span>'+v.src.slice(0,10).map(function(s){var mx=v.src[0].n5||1;return '<button type="button" data-filter="src_id:'+esc(s.id)+'" style="background:none;border:0;color:inherit;text-align:left;padding:0;cursor:pointer;font:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.id)+'</button><span><span style="display:inline-block;height:8px;border-radius:3px;background:#58a6ff;width:'+Math.max(2,60*s.n5/mx)+'px;margin-right:4px;vertical-align:middle"></span>'+s.n5+'</span><span class="mono" style="color:'+(s.p95>300?'var(--warn)':'inherit')+'">'+esc(fmtD(s.p95))+'</span><span class="muted">'+esc(fmtD((now-s.last)/1000))+' ago</span>';}).join('')+'</div>':'';
+    var L={host:'Hosts',user:'Users',src_ip:'Source addresses',dst_port:'Destination ports'},F={host:'host:',user:'user:',src_ip:'ip:',dst_port:'dst_port:'};
+    $('an-top').innerHTML=Object.keys(L).map(function(k){var T=v.tops[k],mx=T.length?T[0].n:1;return '<div class="tl"><h4>'+L[k]+'</h4>'+(T.length?T.map(function(x){return '<button type="button" data-filter="'+esc(F[k]+x.v)+'"><i style="width:'+(100*x.n/mx)+'%"></i><span>'+esc(x.v)+'</span><b>'+x.n+'</b></button>';}).join(''):'<div class="muted small">none</div>')+'</div>';}).join('');}
+  var LASTIND=[],LASTPAT=[],CAN_AI=false;
+  function ask(question,filter){var box=$('an-ai');box.innerHTML='<div class="ai muted">Asking the SOC Copilot…</div>';
+    S.req('POST','/soc/copilot/ask',{question:question,context:{page:'other',kind:'query',id:String(filter||'').slice(0,300)}}).then(function(r){box.innerHTML='<div class="ai"><span class="ail">AI draft - verify before acting</span>\n'+esc(r.answer||'(no answer)')+'</div>';})
+      .catch(function(e){box.innerHTML='<div class="ai">'+esc(e.status===403?'The SOC Copilot is for analysts and above.':e.status===424||e.status===503?'The SOC Copilot is not available: '+(e.message||''):'The SOC Copilot did not answer: '+(e.message||''))+'</div>';});}
+
+  function stop(){if(es){es.close();es=null;}$('go').textContent='▶ Start';$('pause').disabled=true;status('','stopped');}
+  function start(){stop();A.reset();var qq=q();status('','connecting…');
+    // check the filter first: EventSource cannot read an error answer
+    var ac=window.AbortController?new AbortController():null;
+    fetch('/api/soc/tail?q='+encodeURIComponent(qq),{credentials:'same-origin',signal:ac?ac.signal:undefined,zybQuiet:true}).then(function(r){
+      if(!r.ok)return r.json().catch(function(){return {};}).then(function(j){throw Object.assign(new Error(j.error||('HTTP '+r.status)),{status:r.status});});
+      if(ac)ac.abort();
+      es=new EventSource('/api/soc/tail?q='+encodeURIComponent(qq));
+      es.addEventListener('hello',function(){status('on','live'+(qq?' · filter: '+qq:' · all events'));});
+      es.addEventListener('event',function(m){var ev;try{ev=JSON.parse(m.data);}catch(e){return;/* a malformed frame is skipped */}win.push(Date.now());add(ev);});
+      es.addEventListener('stats',function(m){try{dropped+=JSON.parse(m.data).dropped||0;}catch(e){/* a malformed stats frame changes nothing */}});
+      es.onerror=function(){status('err','connection lost - reconnecting…');};
+      $('go').textContent='⟳ Restart';$('pause').disabled=false;
+      try{localStorage.setItem('zyb-live-q',JSON.stringify({q:$('q').value,src:$('src').value,sev:$('sev').value}));}catch(e){/* private window */}
+    }).catch(function(e){if(e.name==='AbortError')return;status('err',e.status===400?'filter not understood: '+e.message:e.status===429||e.status===503?'too many live viewers open - close another Live Logs tab':e.status===404?'the SIEM on the server has no live stream yet - run the update':e.status===403?'your role cannot view logs':e.message);});}
+  $('go').onclick=start;$('clear').onclick=function(){$('rows').innerHTML='';shown=0;dropped=0;buf=[];first=false;A.reset();tick();paint();};
+  $('pause').onclick=function(){paused=!paused;if(!paused){put(buf);buf=[];$('pause').textContent='⏸ Pause';}else $('pause').textContent='▶ Resume';};
+  $('q').onkeydown=function(e){if(e.key==='Enter')start();};$('src').onchange=function(){if(es)start();};$('sev').onchange=function(){if(es)start();};
+  document.addEventListener('click',function(e){var x=e.target.closest('[data-q]');if(x){$('q').value=x.getAttribute('data-q');start();return;}
+    var fb=e.target.closest('[data-filter]');if(fb){$('q').value=fb.getAttribute('data-filter');start();$('q').scrollIntoView({block:'center'});return;}
+    var ab=e.target.closest('[data-ask]');if(ab){var it=LASTIND[+ab.getAttribute('data-ask')];if(it)ask('Live stream indicator "'+it.kind+'": '+it.why+'. Look up the matching events and related alerts, say whether this looks benign or malicious and why, and what I should check next.',it.q);return;}
+    var ap=e.target.closest('[data-askp]');if(ap){var p=LASTPAT[+ap.getAttribute('data-askp')];if(p)ask('Explain this log pattern from the live stream'+(p.src?' (source type '+p.src+')':'')+', seen '+p.n+' times since I started watching, '+p.n5+' in the last 5 minutes'+(p.isNew?' - it is new in this session':'')+': "'+p.shape+'". What produces it, is it a security concern, and what should I check?',p.src?'src_type:'+p.src:'');return;}
+    var tr=e.target.closest('#rows tr');if(tr&&tr._ev){if(tr.nextSibling&&tr.nextSibling.className==='x'){tr.parentNode.removeChild(tr.nextSibling);return;}var x2=document.createElement('tr');x2.className='x';x2.innerHTML='<td colspan="9" class="mono">'+esc(JSON.stringify(tr._ev,null,2))+'</td>';tr.parentNode.insertBefore(x2,tr.nextSibling);}});
+  $('refresh').textContent='⟳ Reconnect';$('refresh').onclick=start;
+  try{var sv=JSON.parse(localStorage.getItem('zyb-live-q')||'{}');if(sv.q)$('q').value=sv.q;if(sv.sev)$('sev').value=sv.sev;var srcPick=sv.src;}catch(e){/* none */}
+  S.ready(function(){CAN_AI=S.can('analyst');S.req('GET','/onboard/sources').then(function(j){(j.sources||[]).forEach(function(s){var o=document.createElement('option');o.value=s.id;o.textContent=(s.label||s.kind||s.id)+(s.match_ip?' ('+s.match_ip+')':'');$('src').appendChild(o);});if(srcPick)$('src').value=srcPick;}).catch(function(){ /* a background refresh: the panel keeps its last state and the next refresh retries */ }).then(start);});
+  setInterval(tick,1000);setInterval(function(){if(!document.hidden)paint();},2000);paint();document.addEventListener('visibilitychange',function(){if(!document.hidden&&!es)start();});
+})();
+</script></body></html>

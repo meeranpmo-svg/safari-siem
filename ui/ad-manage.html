@@ -1,0 +1,175 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AD Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1380px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{font-weight:400;font-size:12px;color:var(--mute)}
+.n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#1f6feb;color:#fff;font-size:12px;font-weight:700}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:18px;font-weight:700;margin:2px 0;color:var(--tx,var(--title))}.t .s{font-size:12px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4b5563}button:disabled{opacity:.5;cursor:default}
+button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button.dang{color:var(--bad)}
+input,select{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid var(--edge);vertical-align:top}
+tr.pick{cursor:pointer}tr.pick:hover td{background:rgba(255,255,255,.03)}
+.tw{overflow-x:auto;max-height:460px;overflow-y:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12.5px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;border:1px solid var(--edge);color:var(--mute);margin:2px 4px 2px 0;white-space:nowrap}
+.p-ok{color:var(--ok);border-color:rgba(63,185,80,.45)}.p-bad{color:var(--bad);border-color:rgba(255,123,114,.45)}.p-warn{color:var(--warn);border-color:rgba(227,179,65,.45)}.p-info{color:var(--info);border-color:rgba(121,184,255,.45)}
+.warn{border:1px solid rgba(227,179,65,.45);background:rgba(227,179,65,.07);border-radius:10px;padding:9px 12px;margin:0 0 8px}.bad{border:1px solid rgba(255,123,114,.45);background:rgba(255,123,114,.07);border-radius:10px;padding:9px 12px;margin:0 0 8px}
+.okb{border:1px solid rgba(63,185,80,.45);background:rgba(63,185,80,.07);border-radius:10px;padding:9px 12px;margin:0 0 8px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:0 0 10px}.fg label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}.fg label.wide{grid-column:1/-1}
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.form{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:12px;margin:8px 0}
+.pw{font:600 20px Consolas,monospace;letter-spacing:.06em;background:#0b0c10;border:1px dashed var(--warn);border-radius:8px;padding:10px 14px;display:inline-block;margin:6px 0}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+ol.steps{margin:6px 0 0;padding-inline-start:20px;line-height:1.75;font-size:13px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Platform administration · identity · Active Directory</div><h1>AD Management</h1></div><span class="sp"></span><span class="muted" id="me"></span><button type="button" id="refreshv">↻ Refresh</button></div>
+<div class="okb" style="font-size:13px">Create, disable, enable, reset passwords, unlock locked-out accounts, move, change groups and delete accounts in <b>your own Active Directory</b>. Every change is a request that <b>a second administrator approves</b> before it is written to AD and read back. Privileged and protected accounts are changed in Active Directory Users and Computers, not here.</div>
+<div class="k" id="status"></div>
+<div id="banner"></div>
+<div class="card"><h2><span class="n">1</span> Find an account <span class="c">from the last directory read · or type the user name</span></h2>
+  <div class="bar"><input type="search" id="q" placeholder="Name, user name or department" style="min-width:260px"><button type="button" id="lookup">🔎 Open this user name</button><span class="muted" id="readinfo"></span></div>
+  <div id="detail"></div>
+  <div id="users"><div class="empty">Loading…</div></div>
+</div>
+<div class="card" id="newcard"><h2><span class="n">2</span> New account <span class="c">created with a temporary password that must be changed at first sign-in</span></h2><div id="newform"></div></div>
+<div class="card"><h2><span class="n">3</span> Waiting for a second administrator <span class="c">the requester cannot approve · requests expire after 7 days</span></h2><div id="open"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Temporary passwords for you <span class="c">shown once to the person who requested them, destroyed after 72 hours</span></h2><div id="pws"></div></div>
+<div class="card"><h2>History</h2><div id="hist"></div></div>
+<div class="card"><h2>Settings <span class="c">administrators</span></h2><div id="settings"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var V=null, ME={}, DIR=null, CUR=null, FORM='', SHOWN=null;
+  var ACT={disable:'Disable',enable:'Enable',reset_password:'Reset password',unlock:'Unlock',move:'Move to another OU',add_group:'Add to a group',remove_group:'Remove from a group',update:'Change details',delete:'Delete'};
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(m==='POST')x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: reported below as the HTTP status */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('The server is not reachable'));};x.send(m==='POST'?JSON.stringify(b||{}):null);});}
+  var itam=function(m,p,b){return req(m,'/api/itam'+p,b);};
+  function why(e,what){return e.status===403?(/four eyes|person|protected|privileged|own account|requester|reach the directory/.test(e.message)?e.message:what+' needs the administrator role.'):e.status===404&&/^HTTP 404$/.test(e.message)?'The server does not have AD Management yet - run the update.':e.message;}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function tile(l,v,s,c){return '<div class="t '+(c||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function tbl(h,rows,empty){return rows.length?'<div class="tw"><table><thead><tr>'+h.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':'<div class="empty">'+esc(empty)+'</div>';}
+  function when(s){return s?new Date(s).toLocaleString('en-GB'):'—';}
+  function isAdmin(){return ME.role==='admin';}
+  function on(){return V&&V.connection&&V.connection.ok&&V.settings.enabled;}
+  function stPill(r){var c={pending:'p-warn',done:'p-ok',failed:'p-bad',rejected:'p-bad',expired:'',cancelled:''}[r.status]||'';return '<span class="pill '+c+'">'+esc(r.status)+'</span>'+(r.review==='pending'?'<span class="pill p-warn">review waiting</span>':'')+(r.emergency?'<span class="pill p-bad">emergency</span>':'');}
+
+  function load(){return Promise.all([req('GET','/auth/whoami').catch(function(){return {};/* no gateway: treated as signed out */}),itam('GET','/ad-manage'),itam('GET','/ad-directory').catch(function(){return null;/* directory list is optional; the user name box still works */})])
+    .then(function(r){ME=r[0]||{};V=r[1];DIR=r[2];draw();})
+    .catch(function(e){$('users').innerHTML='<p class="err">'+esc(e.status===403?'AD Management needs the operator role (names and groups of employees are personal data).':why(e,'Reading AD Management'))+'</p>';$('open').innerHTML='';});}
+  function draw(){
+    $('me').textContent=ME.user?('signed in as '+ME.user+' ('+ME.role+')'):'';
+    var cn=V.connection||{},s=V.settings||{};
+    $('status').innerHTML=tile('Directory',cn.ok?'Connected':'Not connected',cn.ok?cn.base_dn:(cn.why||''),cn.ok?'ok':'bad')
+      +tile('AD management',s.enabled?'On':'Off',s.enabled?'changes need a second administrator':'switched on in Settings below',s.enabled?'ok':'warn')
+      +tile('Delete',s.delete_enabled?'Allowed':'Off',s.delete_enabled?'only disabled '+V.delete_days+'+ days':'accounts are disabled, never deleted','')
+      +tile('Waiting for approval',V.pending,'',V.pending?'warn':'')
+      +tile('Emergency reviews',V.reviews,'emergency disables to look at',V.reviews?'warn':'');
+    $('banner').innerHTML=!cn.ok?'<div class="warn">'+esc(cn.why)+' <a href="hr-onboarding.html" style="color:var(--info)">HR Onboarding → Directory settings</a></div>':!s.enabled?'<div class="warn">AD management is switched off. An administrator switches it on in Settings at the bottom of this page, after giving the bind account the rights listed there.</div>':'';
+    drawUsers();drawDetail();drawNew();drawOpen();drawPws();drawHist();drawSettings();}
+  function drawUsers(){var el=$('users');
+    if(!DIR){el.innerHTML='<div class="empty">The directory list is not available - type a user name above and press Open.</div>';$('readinfo').textContent='';return;}
+    $('readinfo').innerHTML=DIR.last?esc('read '+when(DIR.last.at)+' by '+DIR.last.by+' · '+DIR.last.count+' account(s)')+' · <a href="user-management.html" style="color:var(--info)">read again</a>':'not read yet - <a href="user-management.html" style="color:var(--info)">read the directory</a>';
+    var q=($('q').value||'').trim().toLowerCase(),U=(DIR.users||[]).filter(function(u){return !q||[u.sam,u.display_name,u.department,u.upn].join(' ').toLowerCase().indexOf(q)>=0;}).slice(0,200);
+    el.innerHTML=tbl(['Name','User name','Department','Title','Status','Last sign-in'],U.map(function(u){return '<tr class="pick" data-sam="'+esc(u.sam)+'"><td><b>'+esc(u.display_name||u.sam)+'</b></td><td class="mono">'+esc(u.sam)+'</td><td>'+esc(u.department||'')+'</td><td>'+esc(u.title||'')+'</td><td>'+(u.enabled?'<span class="pill p-ok">enabled</span>':'<span class="pill p-bad">disabled</span>')+(u.admin_count?'<span class="pill p-bad">privileged</span>':'')+'</td><td>'+esc(u.last_logon?when(u.last_logon):'never')+'</td></tr>';}),DIR.last?'No account matches.':'No directory read yet.');}
+  function drawDetail(){var el=$('detail');if(!CUR){el.innerHTML='';return;}if(CUR.error){el.innerHTML='<div class="bad">'+esc(CUR.error)+'</div>';return;}
+    var u=CUR,can=isAdmin()&&on()&&!u.protected;
+    var h='<div class="form"><div class="bar"><b style="font-size:15px">'+esc(u.display_name||u.sam)+'</b><span class="mono">'+esc(u.sam)+'</span>'+(u.enabled?'<span class="pill p-ok">enabled</span>':'<span class="pill p-bad">disabled</span>')+(u.privileged?'<span class="pill p-bad">privileged</span>':'')+(u.locked?'<span class="pill p-warn">locked out</span>':'')+'<span class="sp"></span><button type="button" data-close="1">✕</button></div>'
+      +'<div class="muted mono" style="font-size:12px;overflow-wrap:anywhere">'+esc(u.dn)+'</div>'
+      +'<div style="margin:6px 0">'+esc(u.upn||'')+(u.mail?' · '+esc(u.mail):'')+(u.department?' · '+esc(u.department):'')+(u.title?' · '+esc(u.title):'')+' · last sign-in '+esc(u.last_logon?when(u.last_logon):'never')+' · last changed in AD '+esc(when(u.when_changed))+'</div>'
+      +'<div>'+(u.groups.length?u.groups.map(function(g){return '<span class="pill">'+esc(g)+'</span>';}).join(''):'<span class="muted">no groups</span>')+'</div>'
+      +(u.locked?lockBox(u):'')
+      +(u.protected?'<div class="warn" style="margin-top:8px">Not changed from here: '+esc(u.protected_why)+'.</div>':'');
+    if(can){h+='<div class="acts">'+Object.keys(ACT).filter(function(a){return !(a==='disable'&&!u.enabled)&&!(a==='enable'&&u.enabled)&&!(a==='unlock'&&!u.locked);}).map(function(a){var dis=a==='delete'&&!u.can_delete;
+        return '<button type="button" data-form="'+a+'"'+(a==='delete'||a==='disable'?' class="dang"':'')+(dis?' disabled title="'+esc(u.delete_why)+'"':'')+'>'+esc(ACT[a])+'</button>';}).join('')+'</div>'
+        +(!u.can_delete&&!u.protected?'<div class="note">Delete: '+esc(u.delete_why)+'.</div>':'');
+      if(FORM)h+=actForm(FORM,u);}
+    else if(!u.protected)h+='<p class="note">'+(isAdmin()?'Switch AD management on in Settings to request changes.':'Requesting changes needs the administrator role.')+'</p>';
+    el.innerHTML=h+'</div>';}
+  function actForm(a,u){var f='<div class="form" id="af"><b>'+esc(ACT[a])+' - '+esc(u.sam)+'</b><div class="fg" style="margin-top:8px">';
+    if(a==='move')f+='<label class="wide">Move to OU (distinguished name)<input id="f-ou" dir="ltr" placeholder="OU=Leavers,'+esc(V.connection.base_dn||'DC=company,DC=local')+'"></label>';
+    if(a==='add_group')f+='<label>Group (name or CN=...)<input id="f-group" dir="ltr" placeholder="Claims-Team"></label>';
+    if(a==='remove_group')f+='<label>Group<select id="f-group">'+u.groups.map(function(g){return '<option>'+esc(g)+'</option>';}).join('')+'</select></label>';
+    if(a==='update')f+=[['displayName','Display name',u.display_name],['department','Department',u.department],['title','Title',u.title],['company','Company',''],['physicalDeliveryOfficeName','Office',''],['telephoneNumber','Telephone','']].map(function(x){return '<label>'+esc(x[1])+'<input data-upd="'+x[0]+'" value="'+esc(x[2]||'')+'"></label>';}).join('');
+    f+='<label class="wide">Reason (recorded, shown to the approver)<input id="f-reason" maxlength="500" placeholder="'+esc(a==='disable'?'e.g. left the company - HR ticket 1234':'e.g. ticket number and why')+'"></label></div>';
+    if(a==='disable')f+='<label style="display:flex;gap:6px;align-items:center;margin:0 0 8px"><input type="checkbox" id="f-emerg"> <span><b>Emergency</b> - compromised or hostile account: disable now, a second administrator reviews afterwards</span></label>';
+    if(a==='delete')f+='<div class="bad">Deleting is permanent: the account and its SID are gone (only the AD Recycle Bin can bring it back). Checked again at approval: still disabled and unchanged for '+esc(String(V.delete_days))+' days.</div>';
+    if(a==='unlock')f+='<p class="note">Clears the lockout only - the password is not changed. If a phone, mapped drive or service still has the old password, fix that first or the account locks again.</p>';
+    if(a==='reset_password')f+='<p class="note">A random temporary password is set when it is approved; you see it once here, and the person must change it at first sign-in.</p>';
+    return f+'<div class="bar"><button type="button" class="pri" data-send="'+a+'">Send for approval</button><button type="button" data-form="">Cancel</button></div></div>';}
+  function lockBox(u){var L=u.lockout_source||{},h='<div class="warn" style="margin-top:8px"><b>Locked out</b> since '+esc(when(u.lockout_time))+'. ';
+    if(L.available&&L.sources&&L.sources.length)h+='Bad passwords came from (SIEM, last '+esc(String(L.days))+' days): '+L.sources.map(function(x){return '<span class="pill mono">'+esc(x.computer)+' · '+esc(String(x.lockouts))+'</span>';}).join('');
+    else h+='<span class="muted">Lockout source: '+esc(L.available?(L.note||'not known'):(L.reason||'not known'))+'</span>';
+    return h+'</div>';}
+  function drawNew(){var el=$('newform');
+    if(!isAdmin()){el.innerHTML='<p class="note">Creating accounts needs the administrator role.</p>';return;}
+    if(!on()){el.innerHTML='<p class="note">Available when the directory is connected and AD management is on.</p>';return;}
+    var cn=V.connection;
+    el.innerHTML='<div class="fg"><label>First name<input id="n-given" maxlength="64"></label><label>Last name<input id="n-sur" maxlength="64"></label><label>User name (sAMAccountName, max 20)<input id="n-sam" dir="ltr" maxlength="20" placeholder="first.last"></label>'
+      +'<label>Sign-in name (UPN)<input id="n-upn" dir="ltr" placeholder="'+esc(cn.upn_suffix?'user name@'+cn.upn_suffix:'name@company.com')+'"></label><label>Department<input id="n-dep" maxlength="64"></label><label>Title<input id="n-title" maxlength="64"></label>'
+      +'<label class="wide">OU<input id="n-ou" dir="ltr" value="'+esc(cn.default_ou||'')+'"></label><label class="wide">Groups (comma-separated; never a privileged group)<input id="n-groups" dir="ltr" placeholder="Claims-Team, VPN-Users"></label>'
+      +'<label>Enable straight away<select id="n-enable"><option value="1">Yes - the person signs in and changes the password</option><option value="0">No - stays disabled until enabled</option></select></label><label class="wide">Reason<input id="n-reason" maxlength="500" placeholder="e.g. new joiner - HR ticket 1234"></label></div>'
+      +'<div class="bar"><button type="button" class="pri" id="n-send">Send for approval</button><span class="note">For new joiners with a line manager and a laptop, <a href="hr-onboarding.html" style="color:var(--info)">HR Onboarding</a> creates the account as part of the joiner process.</span></div>';}
+  function drawOpen(){var P=V.requests.filter(function(r){return r.status==='pending'||r.review==='pending';}),el=$('open');
+    el.innerHTML=P.length?P.map(function(r){var mine=r.by===ME.user,rev=r.review==='pending';
+      return '<div class="form"><div class="bar"><b>'+esc(r.summary)+'</b>'+stPill(r)+'<span class="muted">requested by '+esc(r.by)+' '+esc(when(r.at))+'</span></div><div>Reason: '+esc(r.reason)+'</div>'
+        +(r.action==='delete'?'<div class="bad" style="margin-top:6px">Permanent delete.</div>':'')+(rev?'<div class="warn" style="margin-top:6px">Disabled at once as an emergency ('+esc(r.result||r.error||'')+'). Look at the reason and confirm it.</div>':'')
+        +'<div class="bar" style="margin-top:8px">'+(mine?'<span class="muted">You requested this - another administrator '+(rev?'reviews':'approves')+' it.</span>'+(rev?'':'<button type="button" data-cancel="'+esc(r.id)+'">Cancel request</button>')
+          :!isAdmin()?'<span class="muted">An administrator decides.</span>'
+          :rev?'<input data-note="'+esc(r.id)+'" placeholder="Review note (required)" style="flex:1;min-width:220px" maxlength="500"><button type="button" class="pri" data-review="'+esc(r.id)+'">Confirm review</button>'
+          :'<button type="button" class="pri" data-approve="'+esc(r.id)+'">✓ Approve and write to AD</button><input data-why="'+esc(r.id)+'" placeholder="Reason to reject" style="flex:1;min-width:200px" maxlength="500"><button type="button" class="dang" data-reject="'+esc(r.id)+'">Reject</button>')+'</div></div>';}).join(''):'<div class="empty">Nothing waiting.</div>';}
+  function drawPws(){var P=V.requests.filter(function(r){return r.password_ready;}),el=$('pws');
+    el.innerHTML=(SHOWN?'<div class="okb"><div>Temporary password for <b class="mono">'+esc(SHOWN.sam)+'</b> - give it to the person in person or by phone; it is not shown again:</div><div class="pw" dir="ltr">'+esc(SHOWN.password)+'</div><div><button type="button" id="pwcopy">Copy</button> <button type="button" id="pwhide">I have it - hide</button></div></div>':'')
+      +(P.length?P.map(function(r){return '<div class="bar"><span>'+esc(r.summary)+'</span><span class="muted">'+esc(when(r.decided_at))+'</span><button type="button" class="pri" data-reveal="'+esc(r.id)+'">Show the temporary password (once)</button></div>';}).join(''):(SHOWN?'':'<div class="empty">None waiting for you.</div>'));}
+  function drawHist(){$('hist').innerHTML=tbl(['When','Change','Status','Requested by','Decided by','Result'],V.requests.map(function(r){return '<tr><td>'+esc(when(r.at))+'</td><td>'+esc(r.summary)+'<div class="muted" style="font-size:12px">'+esc(r.reason)+'</div></td><td>'+stPill(r)+'</td><td>'+esc(r.by)+'</td><td>'+esc(r.decided_by||'')+(r.reviewed_by?'<div class="muted" style="font-size:12px">reviewed by '+esc(r.reviewed_by)+'</div>':'')+'</td><td>'+esc(r.result||r.error||r.note||'')+'</td></tr>';}),'No requests yet.');}
+  function drawSettings(){var s=V.settings,el=$('settings');
+    el.innerHTML=(isAdmin()?'<div class="fg"><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="s-on"'+(s.enabled?' checked':'')+'> AD management on</label><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="s-del"'+(s.delete_enabled?' checked':'')+'> Allow delete (disabled '+esc(String(V.delete_days))+'+ days, approved)</label>'
+        +'<label class="wide">OU for new accounts (empty = the HR onboarding OU)<input id="s-ou" dir="ltr" value="'+esc(s.create_ou||'')+'"></label><label class="wide">Protected accounts - never changed from here (user names, comma-separated)<input id="s-prot" dir="ltr" value="'+esc((s.protected||[]).join(', '))+'" placeholder="breakglass1, svc-backup"></label></div><div class="bar"><button type="button" class="pri" id="s-save">Save settings</button></div>':'<p class="note">Settings are changed by an administrator.</p>')
+      +'<p class="note" style="margin-top:10px">Give the directory bind account (HR Onboarding → Directory settings) <b>delegated</b> rights on the staff OUs only - never Domain Admin:</p><ol class="steps"><li>Active Directory Users and Computers → the staff OU → <b>Delegate Control</b> → the bind account.</li>'
+      +'<li><b>Create, delete and manage user accounts</b>, <b>Reset user passwords and force password change at next logon</b>, <b>Read all user information</b>.</li><li>On the groups people may join: <b>Modify the membership of a group</b>. To move accounts: <b>Create / Delete User objects</b> on the target OU too.</li>'
+      +'<li>Privileged accounts and groups stay out of reach: adminCount = 1 accounts are protected by AD (AdminSDHolder) and refused here as well.</li></ol>';}
+
+  function send(b,btn){btn.disabled=true;return itam('POST','/ad-manage/requests',b).then(function(r){toast(r.status==='done'?'Done: '+r.result+'. A second administrator reviews it.':'Sent for approval - another administrator approves it.');FORM='';CUR=null;load();})
+    .catch(function(e){btn.disabled=false;toast(why(e,'Requesting a change'));});}
+  function open(sam){if(!sam)return;CUR={sam:sam,loading:true};FORM='';itam('GET','/ad-manage/user/'+encodeURIComponent(sam)).then(function(u){CUR=u;drawDetail();$('detail').scrollIntoView({block:'nearest'});}).catch(function(e){CUR={error:why(e,'Reading the account')};drawDetail();});}
+  document.addEventListener('click',function(e){var t;
+    if((t=e.target.closest('tr.pick'))){open(t.getAttribute('data-sam'));return;}
+    if((t=e.target.closest('[data-close]'))){CUR=null;FORM='';drawDetail();return;}
+    if((t=e.target.closest('[data-form]'))){FORM=t.getAttribute('data-form');drawDetail();var r=$('f-reason');if(r)r.focus();return;}
+    if((t=e.target.closest('[data-send]'))){var a=t.getAttribute('data-send'),b={action:a,sam:CUR.sam,reason:($('f-reason').value||'').trim()};
+      if(b.reason.length<5){toast('Give a reason of at least 5 characters - the approver reads it.');return;}
+      if(a==='move'){b.ou=($('f-ou').value||'').trim();if(!b.ou){toast('Enter the OU to move to.');return;}}
+      if(a==='add_group'||a==='remove_group'){b.group=($('f-group').value||'').trim();if(!b.group){toast('Enter the group.');return;}}
+      if(a==='update'){var n=0;Array.prototype.forEach.call(document.querySelectorAll('[data-upd]'),function(i){var k=i.getAttribute('data-upd'),v=i.value.trim(),was={displayName:CUR.display_name,department:CUR.department,title:CUR.title}[k]||'';if(v!==was){b[k]=v;n++;}});if(!n){toast('Nothing changed.');return;}}
+      if(a==='disable'&&$('f-emerg')&&$('f-emerg').checked)b.emergency=true;
+      send(b,t);return;}
+    if((t=e.target.closest('[data-approve]'))){t.disabled=true;itam('POST','/ad-manage/requests/'+encodeURIComponent(t.getAttribute('data-approve'))+'/approve',{}).then(function(r){toast('Written to AD and read back: '+r.result+'.');load();}).catch(function(x){toast(why(x,'Approving'));load();});return;}
+    if((t=e.target.closest('[data-reject]'))){var id=t.getAttribute('data-reject'),w=document.querySelector('[data-why="'+id+'"]'),rs=w?w.value.trim():'';if(rs.length<3){toast('Say why it is rejected.');return;}
+      itam('POST','/ad-manage/requests/'+encodeURIComponent(id)+'/reject',{reason:rs}).then(function(){toast('Rejected - nothing was written to AD.');load();}).catch(function(x){toast(why(x,'Rejecting'));});return;}
+    if((t=e.target.closest('[data-cancel]'))){itam('POST','/ad-manage/requests/'+encodeURIComponent(t.getAttribute('data-cancel'))+'/cancel',{}).then(function(){toast('Request cancelled.');load();}).catch(function(x){toast(why(x,'Cancelling'));});return;}
+    if((t=e.target.closest('[data-review]'))){var rid=t.getAttribute('data-review'),ni=document.querySelector('[data-note="'+rid+'"]'),nt=ni?ni.value.trim():'';if(nt.length<3){toast('Write a short review note.');return;}
+      itam('POST','/ad-manage/requests/'+encodeURIComponent(rid)+'/review',{note:nt}).then(function(){toast('Review recorded.');load();}).catch(function(x){toast(why(x,'Reviewing'));});return;}
+    if((t=e.target.closest('[data-reveal]'))){t.disabled=true;itam('POST','/ad-manage/requests/'+encodeURIComponent(t.getAttribute('data-reveal'))+'/reveal',{}).then(function(r){SHOWN=r;load();}).catch(function(x){toast(why(x,'Showing the password'));load();});return;}
+    if(e.target.id==='pwcopy'&&SHOWN){try{navigator.clipboard.writeText(SHOWN.password);toast('Copied.');}catch(x){toast('Select the password and copy it.');/* no clipboard API: it is on screen */}return;}
+    if(e.target.id==='pwhide'){SHOWN=null;drawPws();return;}
+    if(e.target.id==='n-send'){var g=function(id){return ($(id).value||'').trim();},nb={action:'create',sam:g('n-sam'),given_name:g('n-given'),surname:g('n-sur'),department:g('n-dep'),title:g('n-title'),ou:g('n-ou'),reason:g('n-reason'),enable:$('n-enable').value==='1',
+        groups:g('n-groups')?g('n-groups').split(',').map(function(x){return x.trim();}).filter(Boolean):[]};if(g('n-upn'))nb.upn=g('n-upn');
+      if(!nb.given_name||!nb.surname||!nb.sam){toast('First name, last name and user name are required.');return;}if(nb.reason.length<5){toast('Give a reason of at least 5 characters.');return;}
+      Object.keys(nb).forEach(function(k){if(nb[k]==='')delete nb[k];});send(nb,e.target);return;}
+    if(e.target.id==='s-save'){var prot=($('s-prot').value||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+      itam('POST','/ad-manage/settings',{enabled:$('s-on').checked,delete_enabled:$('s-del').checked,create_ou:($('s-ou').value||'').trim(),protected:prot}).then(function(r){V=r;draw();toast('Settings saved.');}).catch(function(x){toast(why(x,'Saving the settings'));});return;}
+  });
+  $('q').addEventListener('input',drawUsers);
+  $('q').addEventListener('keydown',function(e){if(e.key==='Enter')open(($('q').value||'').trim());});
+  $('lookup').addEventListener('click',function(){open(($('q').value||'').trim());});
+  $('refreshv').addEventListener('click',load);
+  load();
+})();
+</script></body></html>

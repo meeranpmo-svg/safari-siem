@@ -1,0 +1,200 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network Discovery</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI",system-ui,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:16px;margin:0 0 12px}.card h2{margin:0 0 4px;font-size:16px;color:var(--title)}.sub{color:var(--mute);font-size:12.5px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--mute)}label b{color:var(--text);font-weight:600}
+input,select,textarea{font:14px "Segoe UI",system-ui,sans-serif;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px}textarea{font-family:Consolas,monospace;font-size:12.5px;min-height:110px}
+button{font:600 14px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 16px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}button:disabled{opacity:.5;cursor:default}button.sm{padding:4px 10px;font-size:12.5px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--edge);margin:4px 0 12px;flex-wrap:wrap}.tabs button{background:none;border:1px solid transparent;border-bottom:2px solid transparent;border-radius:0;padding:9px 16px;color:var(--mute)}.tabs button.on{color:var(--title);border-bottom-color:#3fb950}
+.box{border:1px solid var(--edge);border-radius:10px;padding:12px;background:var(--raise)}
+.rng{display:flex;gap:8px;align-items:end;margin-bottom:8px;flex-wrap:wrap}.rng label{flex:1;min-width:150px}
+.creds{border:1px solid var(--border);border-radius:8px;max-height:230px;overflow:auto;background:#0b0c10}.creds label{flex-direction:row;align-items:center;gap:8px;padding:6px 10px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}.creds .k{color:var(--mute);font-size:11px;margin-inline-start:auto}
+.chk{flex-direction:row;align-items:flex-start;gap:8px;color:var(--text);font-size:13px}.chk input{margin-top:3px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}.tw{overflow-x:auto}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.bar{height:6px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:#3fb950;width:0}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.v3 .c2,.v2 .c3,.np .cp{display:none!important}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Asset discovery</div><h1>Network Discovery</h1></div><span class="sp"></span><a href="scope-studio.html" style="color:var(--info);margin-right:14px">✨ Scope Studio (AI) →</a><a href="add-server.html" style="color:var(--info)">Add one server →</a></div>
+<div id="noadmin" class="card" hidden><h2>Administrators only</h2><p class="sub">Discovery stores credentials and scans the network, so it needs the System Admin role.</p></div>
+
+<form id="f" class="card" autocomplete="off">
+  <div class="grid"><label><b>Name *</b><input id="nm" placeholder="HQ core switches"></label><label><b>Site *</b><select id="site"><option value="">Loading…</option></select></label>
+    <label><b>Role of the devices you add</b><select id="role"><option value="">Leave as found</option><option value="firewall">Firewall</option><option value="switch">Switch</option><option value="router">Router</option><option value="wireless">Wireless controller / access point</option><option value="load-balancer">Load balancer</option><option value="network">Other network device</option></select></label></div>
+
+  <div class="tabs" role="tablist" style="margin-top:14px"><button type="button" data-t="ip" class="on">Single IP</button><button type="button" data-t="range">IP Range</button><button type="button" data-t="subnet">Subnets</button><button type="button" data-t="list">Import from CSV / list</button></div>
+  <div class="box">
+    <div data-p="ip"><p class="sub">One device by its management address.</p><div class="grid"><label><b>IP address</b><input id="ip1" placeholder="10.10.1.1" dir="ltr"></label></div></div>
+    <div data-p="range" hidden><p class="sub">Discover several devices at a time using the network's IP range.</p><div id="ranges"></div><button type="button" class="sm" id="addr">+ Add another range</button></div>
+    <div data-p="subnet" hidden><p class="sub">Whole subnets, one per line (network address / mask bits).</p><textarea id="subs" placeholder="10.10.1.0/24&#10;10.20.0.0/26" dir="ltr"></textarea></div>
+    <div data-p="list" hidden><p class="sub">Paste addresses, ranges or subnets (one per line, or the first column of a CSV), or load a .csv / .txt file. Lines starting with # are ignored.</p>
+      <textarea id="list" placeholder="10.10.1.1&#10;10.10.1.20-30&#10;10.10.2.0/28" dir="ltr"></textarea><div class="row" style="margin-top:6px"><input type="file" id="file" accept=".csv,.txt,text/csv,text/plain"><span class="muted" id="fileinfo"></span></div></div>
+    <p class="muted" id="count" style="margin:8px 0 0"></p>
+  </div>
+
+  <div class="grid" style="margin-top:14px;align-items:start">
+    <div><label style="margin-bottom:4px"><b>SNMP credentials</b> (tried in order, up to 8)</label>
+      <input id="cq" type="search" placeholder="Search" style="width:100%;margin-bottom:6px"><div class="creds" id="creds"><div class="muted" style="padding:10px">Loading…</div></div>
+      <div class="row" style="margin-top:6px"><span class="muted" id="csel">0 selected</span><span class="sp"></span><button type="button" class="sm" id="cadd">+ Add credential</button></div>
+      <div class="box v2" id="cform" hidden style="margin-top:8px"><div class="grid">
+        <label><b>Name</b><input id="cn" placeholder="Core switches v3"></label><label><b>Version</b><select id="cv"><option value="v2c">v2c</option><option value="v3" selected>v3</option></select></label>
+        <label class="c2"><b>Community *</b><input id="cc" type="password" autocomplete="new-password"></label>
+        <label class="c3"><b>User *</b><input id="cu"></label><label class="c3"><b>Authentication</b><select id="ca"><option value="sha">SHA</option><option value="sha256">SHA-256</option></select></label>
+        <label class="c3"><b>Auth password * (8+)</b><input id="cap" type="password" autocomplete="new-password"></label><label class="c3"><b>Privacy</b><select id="cp"><option value="aes">AES</option><option value="none">None</option></select></label>
+        <label class="c3 cp"><b>Privacy password * (8+)</b><input id="cpp" type="password" autocomplete="new-password"></label><label><b>Port</b><input id="cpo" type="number" value="161"></label>
+      </div><div class="row"><button type="button" class="pri sm" id="csave">Save credential</button><button type="button" class="sm" id="ccancel">Cancel</button><span class="muted">Stored encrypted; never shown again.</span></div></div>
+    </div>
+    <div><label style="margin-bottom:4px"><b>Also log in to servers found</b> (optional)</label>
+      <select id="ssh" style="width:100%"><option value="">No SSH login</option></select>
+      <p class="sub" style="margin-top:6px">Linux / Solaris / AIX servers in these addresses are logged in to with this SSH credential (after you confirm each server's SSH key). Create SSH credentials on the <a href="add-server.html" style="color:var(--info)">Add a server</a> page or under Asset Discovery → Credentials.</p></div>
+  </div>
+
+  <h2 style="margin-top:16px">Approve the scan</h2><p class="sub">Every scan needs this approval once (the safety gate). It is recorded with your name.</p>
+  <label class="chk"><input type="checkbox" id="fw"> <span>The network allows the platform server ({{org.platform_addr}}) to reach these addresses: ping, SNMP UDP 161, SSH 22, WinRM 5985/5986 where used.</span></label>
+  <div class="grid" style="margin-top:10px"><label><b>Security team / SOC told *</b><input id="soc"></label><label><b>Date told *</b><input id="socd" type="date"></label><label><b>Approved by *</b><input id="appr"></label></div>
+  <div class="row"><button type="button" id="cancel">Cancel</button><button type="submit" class="pri" id="disc">Discover</button><button type="button" id="save">Save</button><span class="muted" id="hint"></span></div>
+</form>
+
+<div class="card" id="prog" hidden><h2 id="pt">Discovery</h2><div class="bar"><i id="pb"></i></div><div id="ps" class="muted"></div><div id="pkeys"></div></div>
+<div class="card" id="res" hidden><h2>Devices found <span class="muted" id="rc" style="font-size:12.5px;font-weight:400"></span></h2>
+  <div class="row" style="margin:0 0 8px"><label class="chk" style="margin:0"><input type="checkbox" id="all"> <span>Select all new</span></label><span class="sp"></span><button type="button" class="pri" id="approve" disabled>Add selected to IT Asset Management</button></div>
+  <div class="tw" id="tbl"></div><p class="muted" style="margin-top:8px">Devices already in IT Asset Management are matched by MAC / serial and not added twice. Nothing is changed on the devices.</p></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);},API='/api/itam/discovery',TAB='ip',CREDS=[],SEL=[],SCOPE=null,ROLE='viewer',USER='',DEV=[];
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p.indexOf('/api/')===0?p:API+p);x.withCredentials=true;x.timeout=60000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j||{});else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the asset discovery service could not be reached'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
+  var IP=/^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+  function ipn(s){var p=s.split('.');return ((+p[0]<<24)>>>0)+(+p[1]<<16)+(+p[2]<<8)+(+p[3]);}
+
+  // ---- addresses: the four tabs produce one target list in the engine's formats (IP, a-b range, CIDR)
+  function rangeRow(a,b){var d=document.createElement('div');d.className='rng';d.innerHTML='<label>Start IP<input class="ra" dir="ltr" placeholder="10.10.1.1" value="'+esc(a||'')+'"></label><label>End IP<input class="rb" dir="ltr" placeholder="10.10.1.254" value="'+esc(b||'')+'"></label><button type="button" class="sm rx">Remove</button>';
+    d.querySelector('.rx').onclick=function(){d.remove();count();};d.querySelectorAll('input').forEach(function(i){i.oninput=count;});$('ranges').appendChild(d);}
+  function targets(){
+    var out=[],bad=[];
+    function add(t){t=String(t||'').trim().replace(/^["']|["']$/g,'');if(!t||t.charAt(0)==='#')return;
+      var m;if(IP.test(t))out.push(t);
+      else if((m=/^([\d.]+)\s*-\s*([\d.]+)$/.exec(t))&&IP.test(m[1])&&(IP.test(m[2])||/^\d{1,3}$/.test(m[2])))out.push(m[1]+'-'+m[2]);
+      else if((m=/^([\d.]+)\/(\d{1,2})$/.exec(t))&&IP.test(m[1])&&+m[2]<=32)out.push(m[1]+'/'+m[2]);
+      else bad.push(t);}
+    if(TAB==='ip')add($('ip1').value);
+    if(TAB==='range')[].forEach.call(document.querySelectorAll('#ranges .rng'),function(r){var a=r.querySelector('.ra').value.trim(),b=r.querySelector('.rb').value.trim();if(!a&&!b)return;if(a&&(!b||b===a))add(a);else add(a+'-'+b);});
+    if(TAB==='subnet')$('subs').value.split(/\r?\n/).forEach(add);
+    if(TAB==='list')$('list').value.split(/\r?\n/).forEach(function(l,i){var c=l.split(/[,;\t]/)[0];if(i===0&&!/\d/.test(c))return;add(c);});   // a CSV header row has no digits
+    var seen={};out=out.filter(function(t){return seen[t]?false:(seen[t]=1);});
+    return {list:out,bad:bad};
+  }
+  function size(t){var m;if(IP.test(t))return 1;if((m=/^([\d.]+)-([\d.]+)$/.exec(t))){var a=ipn(m[1]),b=IP.test(m[2])?ipn(m[2]):((a&0xffffff00)>>>0)+(+m[2]);return Math.max(0,b-a+1);}if((m=/\/(\d+)$/.exec(t)))return Math.pow(2,32-(+m[1]));return 0;}
+  function count(){var t=targets(),n=t.list.reduce(function(s,x){return s+size(x);},0);
+    $('count').innerHTML=(t.list.length?esc(t.list.length)+' entr'+(t.list.length>1?'ies':'y')+', '+n.toLocaleString()+' address'+(n===1?'':'es')+(n>4096?' <span class="err">- more than 4,096: split it into several discoveries</span>':''):'')+(t.bad.length?' <span class="err">Not understood: '+esc(t.bad.slice(0,4).join(', '))+(t.bad.length>4?' …':'')+'</span>':'');}
+
+  // ---- credentials: the saved SNMP credentials, searchable, ticked in the order they are tried
+  function credList(){var q=$('cq').value.toLowerCase();var L=CREDS.filter(function(c){return /^snmp_/.test(c.kind)&&(!q||c.label.toLowerCase().indexOf(q)>=0);});
+    $('creds').innerHTML=L.length?L.map(function(c){return '<label><input type="checkbox" data-c="'+esc(c.id)+'"'+(SEL.indexOf(c.id)>=0?' checked':'')+'> '+esc(c.label)+'<span class="k">'+(c.kind==='snmp_v3'?'SNMP v3':'SNMP v2c')+'</span></label>';}).join(''):'<div class="muted" style="padding:10px">'+(CREDS.length?'No SNMP credential matches.':'No SNMP credentials yet - add one.')+'</div>';
+    $('csel').textContent=SEL.length+' selected'+(SEL.length?' (tried in this order: '+SEL.map(function(id){var c=CREDS.filter(function(x){return x.id===id;})[0];return c?c.label:id;}).join(', ')+')':'');}
+  $('creds').onchange=function(e){var id=e.target.getAttribute('data-c');if(!id)return;var i=SEL.indexOf(id);if(e.target.checked&&i<0){if(SEL.length>=8){e.target.checked=false;toast('At most 8 SNMP credentials per discovery');return;}SEL.push(id);}if(!e.target.checked&&i>=0)SEL.splice(i,1);credList();};
+  $('cq').oninput=credList;
+  function cview(){var f=$('cform');f.classList.toggle('v3',$('cv').value==='v3');f.classList.toggle('v2',$('cv').value!=='v3');f.classList.toggle('np',$('cp').value==='none');}
+  $('cv').onchange=cview;$('cp').onchange=cview;$('cadd').onclick=function(){$('cform').hidden=false;cview();};$('ccancel').onclick=function(){$('cform').hidden=true;};
+  $('csave').onclick=async function(){
+    var v3=$('cv').value==='v3',port=+$('cpo').value||161,name=$('cn').value.trim()||(v3?'SNMP v3 '+$('cu').value.trim():'SNMP v2c'),body;
+    if(v3){if(!$('cu').value.trim()||$('cap').value.length<8||($('cp').value==='aes'&&$('cpp').value.length<8)){toast('v3 needs the user and 8+ character passwords');return;}
+      var sec={user:$('cu').value.trim(),auth_password:$('cap').value};if($('cp').value==='aes')sec.priv_password=$('cpp').value;body={kind:'snmp_v3',label:name,secret:sec,target:{auth_protocol:$('ca').value,priv_protocol:$('cp').value,port:port}};}
+    else{if(!$('cc').value){toast('Enter the community');return;}body={kind:'snmp_v2c',label:name,secret:{community:$('cc').value},target:{port:port}};}
+    this.disabled=true;
+    try{var c=(await req('POST','/credentials',body)).credential;CREDS.push(c);if(SEL.length<8)SEL.push(c.id);['cc','cu','cap','cpp','cn'].forEach(function(i){$(i).value='';});$('cform').hidden=true;credList();toast('Credential saved and selected');}
+    catch(e){toast(e.message);}this.disabled=false;};
+
+  // ---- tabs
+  [].forEach.call(document.querySelectorAll('[data-t]'),function(b){b.onclick=function(){TAB=b.getAttribute('data-t');[].forEach.call(document.querySelectorAll('[data-t]'),function(x){x.classList.toggle('on',x===b);});[].forEach.call(document.querySelectorAll('[data-p]'),function(p){p.hidden=p.getAttribute('data-p')!==TAB;});count();};});
+  ['ip1','subs','list'].forEach(function(i){$(i).oninput=count;});
+  $('addr').onclick=function(){rangeRow();};rangeRow();
+  $('file').onchange=function(){var f=this.files[0];if(!f)return;if(f.size>2e6){toast('File too large (2 MB max)');return;}var r=new FileReader();r.onload=function(){$('list').value=String(r.result).replace(/^﻿/,'');$('fileinfo').textContent=f.name;count();};r.readAsText(f);};
+
+  // ---- save / discover
+  function check(){var t=targets(),miss=[];
+    if(!$('nm').value.trim())miss.push('a name');if(!$('site').value)miss.push('the site');
+    if(!t.list.length)miss.push('the addresses');if(t.bad.length)miss.push('valid addresses (see the line above)');
+    if(t.list.reduce(function(s,x){return s+size(x);},0)>4096)miss.push('at most 4,096 addresses');
+    if(!SEL.length&&!$('ssh').value)miss.push('at least one SNMP credential');
+    if(!$('fw').checked)miss.push('the network confirmation');if(!$('soc').value.trim())miss.push('who in security / SOC was told');if(!$('appr').value.trim())miss.push("the approver's name");
+    return miss;}
+  async function saveScope(){
+    var t=targets().list,name=$('nm').value.trim(),ssh=$('ssh').value;
+    var body={name:name,site:$('site').value,targets:t,infra:true,methods:{sweep:{enabled:true},snmp:{enabled:SEL.length>0,credential_ids:SEL.slice()},unix:ssh?{enabled:true,credential_id:ssh}:{enabled:false}}};
+    var ex=((await req('GET','/scopes')).scopes||[]).filter(function(s){return s.name===name&&s.status!=='archived';})[0];
+    SCOPE=ex?(await req('POST','/scopes/'+ex.id,body)).scope:(await req('POST','/scopes',body)).scope;
+    if(SCOPE.status&&SCOPE.status!=='active')SCOPE=(await req('POST','/scopes/'+SCOPE.id+'/enable',{})).scope||SCOPE;
+    SCOPE=(await req('POST','/scopes/'+SCOPE.id+'/checklist',{firewall:{snmp_161:true,ssh_22:true,winrm_5985_5986:true,icmp:true},soc_notified_name:$('soc').value.trim(),soc_notified_date:$('socd').value,approved_by:$('appr').value.trim(),note:'Network Discovery: '+name})).scope;
+    return SCOPE;
+  }
+  $('save').onclick=async function(){var miss=check();if(miss.length){$('hint').textContent='Still needed: '+miss.join(', ')+'.';return;}$('hint').textContent='';this.disabled=true;
+    try{await saveScope();toast('Saved - run it from here or from Asset Discovery → Scopes ("'+SCOPE.name+'")');}catch(e){toast(e.message);}this.disabled=false;};
+  $('f').onsubmit=async function(ev){ev.preventDefault();var miss=check();if(miss.length){$('hint').textContent='Still needed: '+miss.join(', ')+'.';return;}$('hint').textContent='';
+    $('disc').disabled=true;$('prog').hidden=false;$('pt').textContent='Discovery: '+$('nm').value.trim();$('ps').textContent='Saving…';$('pkeys').innerHTML='';
+    try{await saveScope();await runAndShow();}catch(e){$('ps').innerHTML='<span class="err">'+esc(e.message)+'</span>';}
+    $('disc').disabled=false;};
+  async function runAndShow(){
+    $('ps').textContent='Starting the scan…';
+    var run=(await req('POST','/scopes/'+SCOPE.id+'/run',{})).run,t0=Date.now(),r;
+    for(;;){r=(await req('GET','/runs/'+encodeURIComponent(run.id))).run||{};var pg=r.progress||{},done=pg.hosts_done||0,tot=pg.hosts_total||0;
+      $('pb').style.width=(tot?Math.round(done*100/tot):5)+'%';$('ps').textContent='Scanning '+done+' of '+(tot||'?')+' addresses'+(pg.found!=null?' · '+pg.found+' answered':'');
+      if(r.status&&r.status!=='running'&&r.status!=='queued')break;if(Date.now()-t0>30*60000)throw new Error('still running after 30 minutes - follow it under Asset Discovery → Runs');await sleep(2500);}
+    var bl=(r.methods_blocked||[]).map(function(b){return b.method+': '+b.reason;});
+    $('pb').style.width='100%';$('ps').innerHTML=(r.status==='finished'?'<span class="pill ok">finished</span>':'<span class="pill warn">'+esc(r.status)+'</span>')+(r.error?' <span class="err">'+esc(r.error)+'</span>':'')+(bl.length?' <span class="muted">not run: '+esc(bl.join('; '))+'</span>':'');
+    await keys();await results();
+  }
+  // SSH keys of servers in this discovery wait for confirmation before any SSH login
+  async function keys(){
+    if(!$('ssh').value){$('pkeys').innerHTML='';return;}
+    var items=((await req('GET','/trust')).items||[]).filter(function(k){return k.kind==='ssh'&&k.state!=='trusted'&&DEVIP(k.ip);});
+    if(!items.length){$('pkeys').innerHTML='';return;}
+    $('pkeys').innerHTML='<div class="box" style="margin-top:10px;border-color:var(--warn)"><b>'+items.length+' server SSH key(s) wait for your confirmation</b><p class="muted" style="margin:4px 0">Compare each with the server owner\'s <span class="mono">ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub</span>. Only confirmed servers are logged in to.</p>'
+      +items.map(function(k){return '<label class="chk"><input type="checkbox" class="tk" value="'+esc(k.id)+'"> <span class="mono">'+esc(k.ip)+' · '+esc((k.info&&k.info.type)||'ssh')+' SHA256 '+esc(k.fp)+(k.state==='changed'?' <span class="pill bad">CHANGED</span>':'')+'</span></label>';}).join('')
+      +'<div class="row"><button type="button" class="pri sm" id="trustgo">Trust the ticked keys and scan again</button></div></div>';
+    $('trustgo').onclick=async function(){var ids=[].map.call(document.querySelectorAll('.tk:checked'),function(c){return c.value;});if(!ids.length){toast('Tick the keys you checked');return;}this.disabled=true;try{await req('POST','/trust',{ids:ids,action:'trust'});await runAndShow();}catch(e){this.disabled=false;toast(e.message);}};
+  }
+  var TGT=[];function DEVIP(ip){var n=ipn(ip);return TGT.some(function(r){return n>=r[0]&&n<=r[1];});}
+  async function results(){
+    var j=await req('GET','/results?status=all&limit=1000&scope_id='+encodeURIComponent(SCOPE.id));DEV=j.devices||[];
+    $('res').hidden=false;$('rc').textContent=DEV.length+' device(s), '+DEV.filter(function(d){return d.status==='new';}).length+' new';
+    $('tbl').innerHTML=DEV.length?'<table><thead><tr><th></th><th>IP</th><th>Name</th><th>Type</th><th>Vendor / model</th><th>Serial</th><th>Firmware / OS</th><th>Found by</th><th>Status</th></tr></thead><tbody>'+DEV.map(function(d){
+      var snmp=(d.methods_seen||[]).indexOf('snmp')>=0,st=d.status==='approved'||d.asset_id?'<span class="pill ok">in IT Asset Management</span>':d.status==='ignored'?'<span class="pill">ignored</span>':'<span class="pill info">new</span>';
+      return '<tr><td>'+(d.status==='new'?'<input type="checkbox" class="dv" value="'+esc(d.id)+'">':'')+'</td><td class="mono">'+esc(d.ip)+'</td><td>'+esc(d.hostname||(d.sys&&d.sys.name)||'–')+'</td><td>'+esc(d.type||'–')+'</td><td>'+esc([d.vendor,d.model].filter(Boolean).join(' ')||'–')+'</td><td class="mono">'+esc(d.serial||'–')+'</td><td>'+esc(String(d.os||(d.sys&&d.sys.descr)||'–').slice(0,90))+'</td><td>'+esc((d.methods_seen||[]).join(', '))+(snmp?'':' <span class="pill warn" title="SNMP did not answer with the selected credentials">no SNMP</span>')+'</td><td>'+st+'</td></tr>';}).join('')+'</tbody></table>'
+      :('<p class="muted">Nothing answered in these addresses. Check that the devices are up, and that ping / SNMP (UDP 161) are allowed from ' + ZYB_ORG.platform_addr + '.</p>');
+    sel();
+  }
+  function sel(){var n=document.querySelectorAll('.dv:checked').length;$('approve').disabled=!n;$('approve').textContent=n?'Add '+n+' selected to IT Asset Management':'Add selected to IT Asset Management';}
+  $('tbl').onchange=sel;$('all').onchange=function(){var on=this.checked;[].forEach.call(document.querySelectorAll('.dv'),function(c){c.checked=on;});sel();};
+  $('approve').onclick=async function(){var ids=[].map.call(document.querySelectorAll('.dv:checked'),function(c){return c.value;});if(!ids.length)return;this.disabled=true;
+    try{var r=await req('POST','/results/bulk',{action:'approve',ids:ids});var role=$('role').value,tagged=0;
+      if(role)for(var i=0;i<(r.asset_ids||[]).length;i++){try{var id=r.asset_ids[i],a=await req('GET','/api/itam/assets/'+encodeURIComponent(id)),cur=((a.asset||a).tags)||[];await req('POST','/api/itam/assets/'+encodeURIComponent(id),{type:'network',tags:cur.indexOf(role)>=0?cur:cur.concat([role])});tagged++;}catch(e){ /* malformed value: left as it is */ }}
+      toast(r.approved+' added to IT Asset Management'+(r.skipped?', '+r.skipped+' skipped':'')+(role?', '+tagged+' set as '+role:'')+(r.errors&&r.errors.length?', '+r.errors.length+' error(s)':''));await results();}
+    catch(e){toast(e.message);}this.disabled=false;};
+  $('cancel').onclick=function(){try{if(window.top&&window.top.setView){window.top.setView('discovery');return;}}catch(x){ /* not inside the portal (or another origin): stay on this page */ }history.back();};
+
+  // ---- start
+  $('socd').value=new Date().toISOString().slice(0,10);
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);ROLE=String(j.role||'').toLowerCase();USER=j.user||j.name||'';}catch(e){ /* not JSON: treated as no data */ }start();};w.onerror=start;w.send();
+  function start(){
+    if(ROLE&&ROLE!=='admin'){$('noadmin').hidden=false;$('f').hidden=true;return;}
+    if(USER)$('appr').value=USER;
+    req('GET','/scopes').then(function(j){var s=j.sites||[];$('site').innerHTML=s.length?'<option value="">Choose…</option>'+s.map(function(x){return '<option>'+esc(x)+'</option>';}).join(''):'<option value="">No sites defined</option>';if(s.length===1)$('site').value=s[0];}).catch(function(e){$('site').innerHTML='<option value="">'+esc(e.message)+'</option>';});
+    req('GET','/credentials').then(function(j){CREDS=j.credentials||[];credList();$('ssh').innerHTML='<option value="">No SSH login</option>'+CREDS.filter(function(c){return c.kind==='ssh';}).map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.label)+'</option>';}).join('');}).catch(function(e){$('creds').innerHTML='<div class="err" style="padding:10px">'+esc(e.message)+'</div>';});
+    count();
+  }
+  // keep the target ranges for matching SSH keys to this discovery
+  var _save=saveScope;saveScope=async function(){var s=await _save();TGT=targets().list.map(function(t){var m;if(IP.test(t))return [ipn(t),ipn(t)];if((m=/^([\d.]+)-([\d.]+)$/.exec(t))){var a=ipn(m[1]);return [a,IP.test(m[2])?ipn(m[2]):((a&0xffffff00)>>>0)+(+m[2])];}m=/^([\d.]+)\/(\d+)$/.exec(t);var b=ipn(m[1]);return [b,b+Math.pow(2,32-(+m[2]))-1];});return s;};
+})();
+</script></body></html>

@@ -1,0 +1,560 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Database Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+:root{--c-ok:#73bf69;--c-ok2:#37872d;--c-warn:#ff9830;--c-warn2:#e55400;--c-crit:#f2495c;--c-crit2:#c4162a;--c-na:#8b949e;--c-yel:#fade2a;--c-yel2:#cc9d00}
+.rac{grid-column:span 2}@media(max-width:700px){.rac{grid-column:auto}}.rac .rb{font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 6px;background:rgba(87,148,242,.2);color:#8ab8ff}
+.rac .dbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:8px 0 4px}
+.inodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:4px}
+.inode{border-radius:8px;padding:8px 10px;cursor:pointer;border:1px solid var(--edge);border-top:4px solid var(--c-na);background:linear-gradient(180deg,rgba(139,148,158,.12),rgba(255,255,255,.02) 70%)}
+.inode.ok{border-top-color:var(--c-ok);background:linear-gradient(180deg,color-mix(in srgb,var(--c-ok) 18%,transparent),rgba(255,255,255,.02) 75%)}
+.inode.warn{border-top-color:var(--c-warn);background:linear-gradient(180deg,color-mix(in srgb,var(--c-warn) 20%,transparent),rgba(255,255,255,.02) 75%)}
+.inode.crit{border-top-color:var(--c-crit);background:linear-gradient(180deg,color-mix(in srgb,var(--c-crit) 22%,transparent),rgba(255,255,255,.02) 75%)}
+.inode:hover{outline:2px solid #5794f2}.inode .nn{font-weight:700;display:flex;gap:6px;align-items:center}.inode .nn .dot{width:9px;height:9px;border-radius:50%;background:var(--c-na)}
+.inode.ok .dot{background:var(--c-ok)}.inode.warn .dot{background:var(--c-warn)}.inode.crit .dot{background:var(--c-crit);box-shadow:0 0 6px var(--c-crit)}.inode .ns{font-size:11px;color:var(--mute);margin-top:2px}.inode .np{font-size:11.5px;margin-top:4px}
+.cpal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 12px}.cpal button{text-align:left;padding:8px;border-radius:8px}.cpal .sw{display:flex;gap:3px;margin-top:5px}.cpal .sw i{flex:1;height:12px;border-radius:3px}
+.cpick{display:grid;grid-template-columns:150px 60px 1fr;gap:8px;align-items:center;font-size:13px;margin:4px 0}.cpick input[type=color]{width:52px;height:30px;border:0;background:none;padding:0}
+
+tr.pr{cursor:pointer}tr.pr:hover td,tr.pr:focus td{background:rgba(255,255,255,.04)}tr.pr:focus{outline:2px solid #79b8ff;outline-offset:-2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-bottom:12px}
+.db{border:1px solid var(--edge);border-radius:12px;padding:12px 14px;border-left:5px solid var(--ok);cursor:pointer;background:rgba(255,255,255,.02)}
+.db.crit{border-left-color:var(--bad)}.db.warn{border-left-color:var(--c-warn)}.db.unknown{border-left-color:var(--c-na)}
+.db h3{margin:0;font-size:15px;display:flex;gap:8px;align-items:center}.db h3 span{margin-left:auto}.db .sub{color:var(--mute);font-size:12px;margin:2px 0 8px}
+.mt{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:12.5px}.mt b{font-weight:600}.mt .bad{color:var(--bad)}.mt .warn{color:var(--c-warn)}
+.bar{height:5px;border-radius:3px;background:rgba(127,127,127,.2);margin:1px 0 4px;grid-column:1/-1}.bar i{display:block;height:100%;border-radius:3px;background:var(--ok)}.bar i.warn{background:var(--c-warn)}.bar i.bad{background:var(--bad)}
+.lv{font-weight:700;border-radius:6px;padding:1px 7px;font-size:11.5px}.lv.crit{background:rgba(255,123,114,.18);color:var(--bad)}.lv.warn{background:rgba(210,153,34,.18);color:var(--c-warn)}.lv.info{background:rgba(127,127,127,.15)}
+td input.n{width:72px}textarea.w{width:100%}
+/* Grafana-style overview: gradient stat panels, bar gauges, donut */
+.gk{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:0 0 12px}
+.gp{border-radius:6px;padding:12px 14px 14px;color:#fff;min-height:118px;display:flex;flex-direction:column;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);position:relative;overflow:hidden;border:0;text-align:left;font:inherit}
+.gp:focus-visible{outline:3px solid #fff;outline-offset:2px}.gp .gt{font-size:13px;font-weight:600;opacity:.95;text-align:center;background:none;border:0;padding:0;margin:0}.gp .gv2{font-size:52px;font-weight:700;line-height:1.05;text-align:center;margin:auto 0 0;letter-spacing:-1px;text-shadow:0 1px 2px rgba(0,0,0,.2)}.gp .gv2.long{font-size:34px;letter-spacing:0;white-space:nowrap}.gp .gv2 small{font-size:20px;font-weight:600;margin-left:4px}.gp .gs{font-size:12px;opacity:.9;text-align:center;margin-top:2px}
+.g-purple{background:linear-gradient(135deg,#8f3bb8,#b877d9)}.g-blue{background:linear-gradient(135deg,#1f60c4,#5794f2)}.g-green{background:linear-gradient(135deg,var(--c-ok2),var(--c-ok))}.g-orange{background:linear-gradient(135deg,var(--c-warn2),var(--c-warn))}
+.g-red{background:linear-gradient(135deg,var(--c-crit2),var(--c-crit))}.g-yellow{background:linear-gradient(135deg,var(--c-yel2),var(--c-yel));color:#222}.g-teal{background:linear-gradient(135deg,#0a7d7d,#2dd4bf)}.g-pink{background:linear-gradient(135deg,#a8326e,#ff7383)}.g-grey{background:linear-gradient(135deg,#464c54,#6e7681)}
+.gp[aria-pressed="true"]{box-shadow:0 0 0 3px #fff inset,0 2px 8px rgba(0,0,0,.25)}#apk button.t{cursor:pointer}#apk button.t[aria-pressed="true"]{box-shadow:0 0 0 2px var(--info,#3b82f6) inset}
+.gp{transition:transform .15s,box-shadow .3s}.gp:hover{transform:translateY(-2px)}.gp>*{position:relative;z-index:1}
+.gp.chg::before{content:"";position:absolute;inset:0;background:var(--from);z-index:0;animation:gpfade 1.4s ease-out forwards}
+.gp.chg{animation:gppop .6s ease-out}.gp.hot{animation:gpglow 2.4s ease-in-out infinite}
+@keyframes gpfade{from{opacity:1}to{opacity:0}}@keyframes gppop{0%{transform:scale(1)}40%{transform:scale(1.04)}100%{transform:scale(1)}}
+@keyframes gpglow{0%,100%{box-shadow:0 2px 8px rgba(0,0,0,.25)}50%{box-shadow:0 0 0 3px rgba(242,73,92,.45),0 0 22px rgba(242,73,92,.55)}}
+.bg .tr i{transition:width .8s ease,background .8s ease}
+.heatkey{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--mute);margin:-4px 0 10px;flex-wrap:wrap}.heatkey i{display:inline-block;width:160px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--c-ok2),var(--c-ok) 45%,var(--c-yel) 62%,var(--c-warn) 80%,var(--c-crit))}
+@media(prefers-reduced-motion:reduce){.gp.chg,.gp.hot,.gp.chg::before{animation:none}.gp.chg::before{display:none}}
+.gv{display:grid;grid-template-columns:2fr 1fr 2fr;gap:10px;margin:0 0 12px}@media(max-width:1100px){.gv{grid-template-columns:1fr}}
+.gpanel{background:var(--panel,#181b1f);border:1px solid var(--edge);border-radius:6px;padding:10px 12px}.gpanel h4{margin:0 0 8px;font-size:13px;font-weight:600;text-align:center;color:var(--title)}
+.bg{display:grid;grid-template-columns:minmax(80px,30%) 1fr 56px;gap:6px 10px;align-items:center;font-size:12.5px}.bg .nm{color:#5794f2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.bg .tr{height:18px;border-radius:3px;background:rgba(127,127,127,.18);overflow:hidden}.bg .tr i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--c-ok),var(--c-yel) 70%,var(--c-crit))}.bg .tr i.ok{background:linear-gradient(90deg,var(--c-ok2),var(--c-ok))}.bg .tr i.warn{background:linear-gradient(90deg,var(--c-ok),var(--c-warn))}.bg .tr i.crit{background:linear-gradient(90deg,var(--c-warn),var(--c-crit))}
+.bg .vl{font-size:20px;font-weight:700;text-align:right}.bg .vl.ok{color:var(--c-ok)}.bg .vl.warn{color:var(--c-warn)}.bg .vl.crit{color:var(--c-crit)}.bg .vl.na{color:var(--mute);font-size:12px;font-weight:400}
+.dn{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.dn ul{list-style:none;margin:0;padding:0;font-size:12.5px}.dn li{margin:3px 0;cursor:pointer}.dn li i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.db{border-left-width:6px}.db.ok{background:linear-gradient(90deg,rgba(115,191,105,.10),rgba(255,255,255,.02) 40%)}.db.warn{background:linear-gradient(90deg,rgba(255,152,48,.14),rgba(255,255,255,.02) 40%)}.db.crit{background:linear-gradient(90deg,rgba(242,73,92,.16),rgba(255,255,255,.02) 40%)}
+.db.ok{border-left-color:var(--c-ok)}.db.warn{border-left-color:var(--c-warn)}.db.crit{border-left-color:var(--c-crit)}
+/* host-wise view: each database server with its instances connected under it */
+.hw{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px;margin:0 0 12px}
+.hc{background:var(--panel,#181b1f);border:1px solid var(--edge);border-radius:8px;border-top:4px solid var(--c-na);padding:12px 14px;position:relative}
+.hc.ok{border-top-color:var(--c-ok)}.hc.warn{border-top-color:var(--c-warn)}.hc.crit{border-top-color:var(--c-crit)}
+.hc .hh{display:flex;align-items:center;gap:10px}.hc .hi{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:18px;background:linear-gradient(135deg,#464c54,#6e7681);flex:0 0 auto}
+.hc.ok .hi{background:linear-gradient(135deg,var(--c-ok2),var(--c-ok))}.hc.warn .hi{background:linear-gradient(135deg,var(--c-warn2),var(--c-warn))}.hc.crit .hi{background:linear-gradient(135deg,var(--c-crit2),var(--c-crit))}
+.hc .hn{font-weight:700;font-size:15px;color:var(--title)}.hc .hs{font-size:11.5px;color:var(--mute)}.hc .hh .sp{flex:1}
+.rings{display:flex;justify-content:space-around;margin:10px 0 6px}.ring{text-align:center;font-size:11px;color:var(--mute)}.ring b{display:block;font-size:12px;color:var(--title)}
+.insts{position:relative;margin:6px 0 0 18px;padding-left:16px;border-left:2px dashed rgba(127,127,127,.35)}
+.in{position:relative;margin:8px 0;padding:8px 10px;border-radius:7px;background:rgba(255,255,255,.03);border:1px solid var(--edge);border-left:4px solid var(--c-na);cursor:pointer}
+.in::before{content:"";position:absolute;left:-18px;top:18px;width:16px;border-top:2px dashed rgba(127,127,127,.35)}
+.in.ok{border-left-color:var(--c-ok)}.in.warn{border-left-color:var(--c-warn)}.in.crit{border-left-color:var(--c-crit)}.in:hover{background:rgba(87,148,242,.08)}
+.in .it{display:flex;align-items:center;gap:6px;font-weight:650}.in .it .sp{flex:1}
+.role{font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 6px;background:rgba(115,191,105,.18);color:var(--c-ok)}.role.sb{background:rgba(87,148,242,.18);color:#8ab8ff}
+.in .im{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px;font-size:11px;color:var(--mute)}.in .im b{display:block;font-size:13px;color:var(--title)}.in .im b.bad{color:var(--c-crit)}.in .im b.warn{color:var(--c-warn)}.in .im b.ok{color:var(--c-ok)}
+.drp{display:grid;grid-template-columns:minmax(220px,1fr) 150px minmax(240px,1.3fr);gap:10px;align-items:stretch;margin:10px 0;padding:10px;border:1px solid var(--edge);border-radius:10px;border-left:4px solid var(--c-ok)}.drp.bad{border-left-color:var(--c-crit)}.drp.warn{border-left-color:var(--c-warn)}.drp.none{border-left-color:var(--c-na)}
+.drb{border:1px solid var(--edge);border-radius:8px;padding:8px 10px;background:rgba(255,255,255,.02)}.drb h4{margin:0 0 4px;font-size:13.5px;display:flex;gap:6px;align-items:center}.drb .k2{font-size:11.5px;color:var(--mute);line-height:1.55}.drb .k2 b{color:var(--title);font-weight:600}
+.drl{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:11px;color:var(--mute)}.drl .ar{font-size:22px;line-height:1}.drl.bad .ar{color:var(--c-crit)}.drl.warn .ar{color:var(--c-warn)}.drl.ok .ar{color:var(--c-ok)}
+.nodes{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}.node{font-size:11px;border-radius:5px;padding:2px 7px;border:1px solid var(--edge)}.node.up{background:rgba(115,191,105,.14);color:var(--c-ok)}.node.dn{background:rgba(242,73,92,.16);color:var(--c-crit)}
+.why{margin:4px 0 0 16px;padding:0;font-size:11.5px;color:var(--c-crit)}@media(max-width:820px){.drp{grid-template-columns:1fr}.drl{flex-direction:row;gap:8px}}
+.hwbar{display:block;height:4px;border-radius:2px;background:rgba(127,127,127,.25);margin-top:3px;width:100%}.hwbar i{display:block;height:100%;border-radius:2px}
+.dbai{display:grid;gap:12px;margin:0 0 12px}.dbai .r2{display:grid;grid-template-columns:3fr 2fr;gap:12px}.dbai .r3{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}@media(max-width:1100px){.dbai .r2{grid-template-columns:1fr}}
+.dbai .card{margin:0}.dbai svg{display:block;width:100%;height:auto}.dbai .hb{display:grid;grid-template-columns:minmax(110px,1fr) 2fr 40px;gap:8px;align-items:center;font-size:12.5px;margin:5px 0}.dbai .hb .t{height:12px;border-radius:6px;background:rgba(127,127,127,.18);overflow:hidden}.dbai .hb .t i{display:block;height:100%;border-radius:6px}.dbai .hb .t{background:none!important;overflow:visible}.dbai svg.hbs{display:block;width:100%;height:12px}
+.dbai .wl{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--edge)}.dbai .wl:first-child{border-top:0}.dbai .wl .no{min-width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-weight:800;font-size:12px;color:#111}.dbai .wl b{display:block;font-size:13px}.dbai .wl span{color:var(--mute);font-size:12px}
+.dbai .tag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 6px;margin-right:4px}.dbai .ans{white-space:pre-wrap;border:1px solid var(--edge);border-radius:8px;padding:10px;margin-top:8px}
+.dbai .fg td,.dbai .fg th{padding:4px 6px}.dbai .fc{display:inline-block;min-width:54px;border-radius:5px;padding:3px 6px;font-weight:700;font-size:12px;color:#111}
+.dbai .cal{display:grid;gap:2px;align-items:center;font-size:11px}.dbai .cal i{display:block;height:16px;border-radius:2px}.dbai .cal .cd{font-size:9.5px;color:var(--mute);text-align:center}.dbai .cal .cn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:6px}
+.dbai .rts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.dbai .rt{background:rgba(255,255,255,.03);border:1px solid var(--edge);border-radius:8px;padding:10px}.dbai .rt .v{font-size:24px;font-weight:800}.dbai .rt .u{font-size:12px;font-weight:400;color:var(--mute)}.dbai .rt .l{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
+.dbai .hb2{align-items:start;padding:4px 0;border-top:1px solid rgba(127,127,127,.12)}.dbai .hb2 .t{margin-top:4px}.dbai .kc{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}.dbai .kc em{font-style:normal;font-size:10.5px;border-radius:4px;padding:0 5px}
+.dbai .kc em.c{background:rgba(242,73,92,.18);color:#ff8a98}.dbai .kc em.w{background:rgba(255,152,48,.18);color:#ffb35c}.dbai .kc em.c{background:color-mix(in srgb,var(--c-crit,#f2495c) 22%,transparent);color:color-mix(in srgb,var(--c-crit,#f2495c) 60%,#fff)}.dbai .kc em.w{background:color-mix(in srgb,var(--c-warn,#ff9830) 22%,transparent);color:color-mix(in srgb,var(--c-warn,#ff9830) 60%,#fff)}.dbai .kc em.n{opacity:.65;text-decoration:underline dotted}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Databases · alerts, thresholds and errors</div><h1>Database Dashboard</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="colors" title="Choose the dashboard colours">🎨 Colours</button><button type="button" id="ev">⟳ Check now</button><a href="db-health-statement.html" style="color:var(--info);text-decoration:none;font-weight:600;margin-left:8px">Health statement for a complaint →</a></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="ov" class="on">🗄 Overview</button><button type="button" role="tab" data-tab="er">🧯 Error findings</button><button type="button" role="tab" data-tab="th">🎚 Thresholds</button><button type="button" role="tab" data-tab="nt">🔔 Notifications</button><button type="button" role="tab" data-tab="ap">🔗 Applications Manager</button></div>
+<div id="tab-ov">
+ <div id="dbai"></div>
+ <div id="colwarn"></div>
+ <div class="gk" id="kpi"><div class="empty">Loading…</div></div>
+ <div class="heatkey"><span>Colour follows the value</span><i aria-hidden="true"></i><span>green = room · yellow = warning threshold · orange = close to critical · red = critical (glows) · grey = not reported · a tile that changes colour fades from its old colour</span></div>
+ <div class="gv" id="viz"></div>
+ <div class="card" id="drcard"><h2>Production &amp; DR <span class="c" id="drc"></span></h2><div id="dr"><div class="empty">Loading…</div></div>
+  <p class="note" id="drnote">Each production database with its DR (Data Guard standby): the DR open state as the primary sees it, redo apply, gaps and lag; RAC nodes with their instance and listener. A mounted standby needs no login of its own.</p></div>
+ <div class="card"><h2>Hosts and their instances <span class="c" id="hwc"></span></h2><div class="hw" id="hw"><div class="empty">Loading…</div></div>
+  <p class="note">Each database server with the Oracle instances it runs. Server health (load, memory, fullest file system) comes from the read-only SSH read on Database Servers; instance health from the database readings. Click an instance to see its problems. Grey = not read, never assumed healthy.</p></div>
+ <div class="grid" id="dbs"></div>
+ <div class="card"><h2>Open problems <span class="c" id="pc"></span></h2><div class="fil"><select id="f-st"><option value="open">Open</option><option value="cleared">Cleared (30 days)</option><option value="all">All</option></select><select id="f-in"><option value="">All databases</option></select></div><p class="small" id="pfl" hidden></p><div class="tw" id="probs"></div>
+  <p class="note"><b>Acknowledge</b> = you are on it: no more reminders. <b>Snooze</b> = known and accepted for a while (with a reason). A problem clears by itself when a fresh reading is back within the threshold; a reading that stops arriving keeps it open (marked <i>stale</i>) - it is never cleared silently.</p></div>
+</div>
+<div id="tab-er" hidden>
+ <div class="card"><h2>Alert-log errors, last 24 hours <span class="c" id="ec"></span></h2><div class="tw" id="errs"></div>
+  <p class="note">ORA- lines from each database's alert log: the collector agent's tail, or the platform's hourly read of <code>V$DIAG_ALERT_EXT</code> (needs SELECT on it for the monitoring account). The same line read twice counts once. <b>What to check</b> is guidance for the DBA - nothing is run on the database from here. Codes you consider noise can be ignored on the Thresholds tab.</p></div>
+</div>
+<div id="tab-th" hidden>
+ <div class="card"><h2>Thresholds <span class="c" id="tv"></span></h2><div class="tw" id="thr"></div></div>
+ <div class="card"><h2>Exceptions per database / tablespace</h2><div class="tw" id="ovr"></div><div id="ovf"></div>
+  <p class="note">The most specific rule wins: <code>ORCLPRD/USERS</code> (one tablespace) → <code>*/USERS</code> (that tablespace everywhere) → <code>ORCLPRD</code> (the whole database) → the default above. Changing thresholds needs an administrator or the DBA named in Roles &amp; Functions (AI Oracle DBA approver), and a reason; every change is in the audit log.</p></div>
+ <div class="card"><h2>Alert-log codes</h2><div id="erc"></div></div>
+</div>
+<div id="tab-nt" hidden>
+ <div class="card"><h2>Who is told, and when</h2><div id="nset"></div></div>
+ <div class="card"><h2>Maintenance windows</h2><div class="tw" id="mnt"></div><div id="mntf"></div><p class="note">During a window nobody is e-mailed about that database; its problems are still tracked and shown.</p></div>
+ <div class="card"><h2>Daily digest</h2><div id="dgv"></div></div>
+</div>
+<div id="tab-ap" hidden>
+ <div class="k" id="apk"><div class="empty">Loading…</div></div>
+ <p class="small" id="apfl" hidden></p>
+ <div class="card"><h2>Waiting for approval &amp; history <span class="c" id="apac"></span></h2><div class="tw" id="apact"></div>
+  <p class="note"><b>Poll now</b> runs at once. <b>Maintenance</b> (Unmanage) and <b>Resume</b> (Manage) are requests: a different person - an administrator, or the approver for that area (database monitors: the DBA approver) - decides, then the SIEM sends it to Applications Manager with the stored key. The requester never approves their own request.</p></div>
+ <p class="note">Every monitor type, filters and the connection settings are on the <a href="apm.html">Applications Manager</a> page (Applications menu).</p>
+ <div class="card"><h2>Database monitors in Applications Manager <span class="c" id="apmc"></span></h2><div class="fil"><label><input type="checkbox" id="ap-all"> show all monitor types</label></div><div class="tw" id="apmon"></div></div>
+ <div class="card"><h2>Open alarms in Applications Manager</h2><div class="tw" id="apalm"></div></div>
+ <div class="card"><h2>Coverage: Applications Manager vs this dashboard</h2><div class="tw" id="apcov"></div><p class="note">Matched by database name / host text - a lead to verify, not proof.</p></div>
+ <div class="card" id="apsetc" hidden><h2>Connection (administrator)</h2><div id="apset"></div></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,Z=window.zybDetail,esc=S.esc,$=function(i){return document.getElementById(i);},ST=null,PROBS=[],POL=null,NOT=null,CAT=null;
+  S.tabs(['ov','er','th','nt','ap']);
+  var can=function(){return S.can('operator');};
+  function lv(l){return '<span class="lv '+esc(l)+'">'+(l==='crit'?'CRITICAL':l==='warn'?'warning':esc(l))+'</span>';}
+  function pctRow(lbl,v,w,c,below){if(v===null||v===undefined)return '<span>'+esc(lbl)+'</span><span class="muted">not reported</span>';var cls=below?(v<=c?'bad':v<=w?'warn':''):(v>=c?'bad':v>=w?'warn':'');return '<span>'+esc(lbl)+'</span><b class="'+cls+'">'+(Math.round(v*10)/10)+' %</b><div class="bar"><i class="'+cls+'" style="width:'+Math.max(2,Math.min(100,below?100-v:v))+'%"></i></div>';}
+  /* the colour follows the value: green while there is room, through yellow and orange as it nears the DBA's warning and
+     critical thresholds, red at or past critical - the same scale on the tiles and the bars; grey = not reported */
+  // colours: a palette the viewer chooses (presets or custom), kept in this browser only; every tile, bar, ring and the donut use it
+  var PRESETS={grafana:['Default (Grafana)',{ok:'#73bf69',warn:'#ff9830',crit:'#f2495c',na:'#8b949e',yel:'#fade2a',ok2:'#37872d',warn2:'#e55400',crit2:'#c4162a',yel2:'#cc9d00',mid:'#96cd5f',mid2:'#5aa03c'}],
+    cb:['Colour-blind safe',{ok:'#4c9be8',warn:'#f0b429',crit:'#d55e00',na:'#8b949e',yel:'#e8d44d'}],
+    hc:['High contrast',{ok:'#00e676',warn:'#ffd600',crit:'#ff1744',na:'#b0b8c0',yel:'#ffff00'}],
+    soft:['Soft',{ok:'#5ea86b',warn:'#d9a14b',crit:'#c96a6a',na:'#7d8590',yel:'#d8c25a'}],
+    ocean:['Ocean',{ok:'#2dd4bf',warn:'#f59e0b',crit:'#ef4444',na:'#94a3b8',yel:'#facc15'}],
+    royal:['Royal',{ok:'#22c55e',warn:'#a855f7',crit:'#e11d48',na:'#94a3b8',yel:'#c084fc'}]};
+  var THEME=(function(){try{var t=JSON.parse(localStorage.getItem('zyb-db-colors')||'null');if(t&&/^#[0-9a-f]{6}$/i.test(t.ok)&&/^#[0-9a-f]{6}$/i.test(t.warn)&&/^#[0-9a-f]{6}$/i.test(t.crit))return Object.assign({},PRESETS.grafana[1],t);}catch(e){/* no saved colours (private window / storage off): the default palette */}return Object.assign({},PRESETS.grafana[1]);})();
+  function rgb(h){h=String(h).replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function shade(h,f){return '#'+rgb(h).map(function(n){return ('0'+Math.round(n*f).toString(16)).slice(-2);}).join('');}
+  function mixHex(a,b,t){var p=rgb(a),q=rgb(b);return '#'+p.map(function(n,i){return ('0'+Math.round(n+(q[i]-n)*t).toString(16)).slice(-2);}).join('');}
+  var HS=[];
+  function applyTheme(){var T=THEME,r=document.documentElement.style;
+    // the darker end of each gradient: the preset's own when it has one (the default keeps its exact Grafana shades), else derived
+    var D=function(k,f){return T[k+'2']||shade(T[k],f);},mid=T.mid||mixHex(T.ok,T.yel,.45),mid2=T.mid2||shade(mid,.7);
+    r.setProperty('--c-ok',T.ok);r.setProperty('--c-ok2',D('ok',.55));r.setProperty('--c-warn',T.warn);r.setProperty('--c-warn2',D('warn',.78));r.setProperty('--c-crit',T.crit);r.setProperty('--c-crit2',D('crit',.72));
+    r.setProperty('--c-na',T.na);r.setProperty('--c-yel',T.yel);r.setProperty('--c-yel2',D('yel',.8));
+    try{window.dispatchEvent(new Event('zyb-db-colors'));}catch(e){/* very old browser: the health section repaints on its next refresh */}
+    HS=[[0,rgb(D('ok',.55)),rgb(T.ok)],[.6,rgb(mid2),rgb(mid)],[.85,rgb(D('yel',.8)),rgb(T.yel)],[1,rgb(D('warn',.78)),rgb(T.warn)],[1.2,rgb(D('crit',.72)),rgb(T.crit)]];}
+  applyTheme();
+  function colorPanel(){var cur=THEME;
+    var h='<p class="small muted">Choose how health is coloured on this dashboard. Saved in this browser only - it does not change anyone else\'s view.</p><div class="cpal">'+Object.keys(PRESETS).map(function(k){var P=PRESETS[k][1];
+      return '<button type="button" data-cpre="'+k+'"><b>'+esc(PRESETS[k][0])+'</b><div class="sw"><i style="background:'+P.ok+'"></i><i style="background:'+P.yel+'"></i><i style="background:'+P.warn+'"></i><i style="background:'+P.crit+'"></i><i style="background:'+P.na+'"></i></div></button>';}).join('')+'</div>'
+      +'<h3 style="font-size:13px;margin:6px 0">Custom</h3>'+[['ok','Healthy / room'],['yel','Nearing warning'],['warn','Warning'],['crit','Critical'],['na','No reading']].map(function(x){return '<label class="cpick"><span>'+esc(x[1])+'</span><input type="color" data-cpk="'+x[0]+'" value="'+esc(cur[x[0]])+'"><span class="muted small mono">'+esc(cur[x[0]])+'</span></label>';}).join('')
+      +'<div style="display:flex;gap:8px;margin-top:10px"><button type="button" id="c-save">Apply custom colours</button><button type="button" id="c-reset">Back to default</button></div>';
+    Z.open('Dashboard colours','Colours',h);}
+  function setTheme(t,merge){THEME=merge?Object.assign({},THEME,t):Object.assign({},t);['ok','warn','crit','na','yel'].forEach(function(k){if(!/^#[0-9a-f]{6}$/i.test(THEME[k]||''))THEME[k]=PRESETS.grafana[1][k];});try{localStorage.setItem('zyb-db-colors',JSON.stringify(THEME));}catch(e){/* storage off: the colours apply until the page is reloaded */}applyTheme();if(ST)renderStatus();}
+
+  // x on the scale: 0 = nothing used, .85 = the warning threshold (yellow), 1 = just under critical (orange), 1.2 = critical (red)
+  function hx(x){x=Math.max(0,Math.min(1.2,x));var k=0;while(k<HS.length-2&&x>HS[k+1][0])k++;var a=HS[k],b=HS[k+1],t=Math.max(0,Math.min(1,(x-a[0])/(b[0]-a[0])));
+    var mix=function(p,q){return 'rgb('+p.map(function(n,i){return Math.round(n+(q[i]-n)*t);}).join(',')+')';};return [mix(a[1],b[1]),mix(a[2],b[2]),x>=1.2];}
+  function heat(v,w,c){if(v===null||v===undefined||!isFinite(v))return null;return hx(v>=c?1.2:v<=w?.85*v/Math.max(1e-9,w):.85+.15*(v-w)/Math.max(1e-9,c-w));}
+  // a count of problems: none is green, warnAt is orange, critAt (and above) is red
+  function heatN(n,warnAt,critAt){if(n===null||n===undefined)return null;return hx(n<=0?0:n>=critAt?1.2:n>=warnAt?1+.2*(n-warnAt)/Math.max(1,critAt-warnAt):.85);}
+  var PREV={};
+  function th(id){var m=POL&&POL.metrics.filter(function(x){return x.id===id;})[0];return m||{warn:85,crit:95};}
+  function dur(s){if(s===null||s===undefined)return '–';return s>=3600?Math.round(s/360)/10+' h':s>=120?Math.round(s/60)+' min':Math.round(s)+' s';}
+  function loadStatus(){return Promise.all([S.req('GET','/db/dba/status'),POL?Promise.resolve(POL):S.req('GET','/db/dba/thresholds')]).then(function(r){ST=r[0];POL=r[1];renderStatus();
+  }).catch(function(e){$('kpi').innerHTML='<div class="card" style="grid-column:1/-1">'+S.errHtml(e,'the database dashboard')+'</div>';});}
+  function renderStatus(){var o=ST.open;
+    $('up').textContent=ST.last_eval&&ST.last_eval.at?'checked '+S.ago(ST.last_eval.at)+(ST.last_eval.ok===false?' - failed: '+ST.last_eval.error:''):'not checked yet';
+    var I=ST.instances;
+    // Grafana-style stat panels: the colour carries the meaning (red = act now, orange = watch, green = fine, purple / blue = context)
+    var okN=I.filter(function(i){return i.level==='ok';}).length,nv=function(L,k){return L.map(function(i){return i[k];}).filter(function(v){return v!==null&&v!==undefined;});};
+    var ts=nv(I.map(function(i){return {v:i.max_ts?i.max_ts.value:null};}),'v'),tsMax=ts.length?Math.max.apply(null,ts):null,bk=nv(I,'backup_age_h'),bkLate=bk.filter(function(h){return h>=26;}).length,dg=nv(I,'dg_lag_s'),dgMax=dg.length?Math.max.apply(null,dg):null,dtf=nv(I,'min_days_to_full'),dtfMin=dtf.length?Math.min.apply(null,dtf):null;
+    var gp=function(act,col,title,val,unit,sub){var cls=typeof col==='string'?col:'',bgc=col&&typeof col!=='string'?'linear-gradient(135deg,'+col[0]+','+col[1]+')':'',hot=col&&typeof col!=='string'&&col[2];
+      return '<button type="button" class="gp '+cls+(hot?' hot':'')+'" data-gp="'+act+'"'+(bgc?' style="background:'+bgc+'"':'')+'><div class="gt">'+esc(title)+'</div><div class="gv2'+(String(val).length>4?' long':'')+'">'+esc(val)+(unit?'<small>'+esc(unit)+'</small>':'')+'</div><div class="gs">'+esc(sub||'')+'</div></button>';};
+    var crN=I.filter(function(i){return i.level==='crit';}).length,needN=I.length-okN;
+    var DBG=dbGroups(I),dbN=DBG.length,racN=DBG.filter(function(g){return g.rac;}).length;
+    $('kpi').innerHTML=gp('all',!I.length?'g-grey':hx(crN?1.2:needN?.95:0),'Databases',S.n(dbN),'',(racN?racN+' RAC · ':'')+I.length+' instance(s) · '+okN+' healthy · '+needN+' need a look')
+      +gp('crit',heatN(o.crit,1,1),'Critical problems',S.n(o.crit),'',o.crit?'act now':'none open')
+      +gp('warn',heatN(o.warn,1,10),'Warnings',S.n(o.warn),'',S.n(o.acknowledged)+' acknowledged · '+S.n(o.snoozed)+' snoozed')
+      +gp('ts',tsMax===null?'g-grey':heat(tsMax,th('ts_used_pct').warn,th('ts_used_pct').crit),'Fullest tablespace',tsMax===null?'—':Math.round(tsMax),tsMax===null?'':'%',dtfMin===null?'days to full not reported':'soonest full in '+Math.round(dtfMin)+' days')
+      +gp('bk',!bk.length?'g-grey':heatN(bkLate,1,1),'Backups late (> 26 h)',bk.length?S.n(bkLate):'—','',bk.length?'of '+bk.length+' databases reporting':'not reported')
+      +gp('dg',dgMax===null?'g-grey':heat(dgMax,300,1800),'Data Guard lag',dgMax===null?'—':dur(dgMax),'',dgMax===null?'no standby reporting':'worst standby')
+      +gp('er',heatN(ST.errors,1,10),'Alert-log errors',S.n(ST.errors),'','last 24 h')
+      +gp('nt',hx(ST.mail.ok?0:1.2),'DBA e-mail',ST.mail.ok?'Ready':'Off','',ST.mail.ok?'alerts reach the DBA':ST.mail.problems.join('; '));
+    // a tile whose colour changed since the last check cross-fades from its old colour, so a change is seen, not just shown
+    [].forEach.call($('kpi').querySelectorAll('.gp'),function(b){var k=b.getAttribute('data-gp'),now=b.style.background||getComputedStyle(b).backgroundImage;
+      if(PREV[k]&&PREV[k]!==now){b.style.setProperty('--from',PREV[k]);b.classList.add('chg');}PREV[k]=now;});
+    pfMark();
+    viz(I); hostsLoad(I);
+    var tu=th('ts_used_pct'),fr=th('fra_pct'),tp=th('temp_pct');
+    var one=function(i){return '<div class="db '+esc(i.level)+'" data-db="'+esc(i.instance)+'"><h3>'+esc(i.instance)+(i.maintenance?' '+S.pill('maintenance'):'')+'<span>'+(i.level==='unknown'?S.pill('no reading'):i.level==='ok'?S.pill('ok','ok'):lv(i.level))+'</span></h3>'+
+      '<div class="sub">'+esc(i.host)+' · '+esc(i.status||'status not reported')+(i.role?' · '+esc(i.role):'')+(i.version?' · '+esc(i.version):'')+' · read '+esc(S.ago(i.last_ms))+'</div><div class="mt">'+
+      pctRow('Fullest tablespace'+(i.max_ts?' ('+i.max_ts.key+')':''),i.max_ts?i.max_ts.value:null,tu.warn,tu.crit)+
+      '<span>Days to full (soonest)</span><b class="'+(i.min_days_to_full!==null&&i.min_days_to_full<=7?'bad':i.min_days_to_full!==null&&i.min_days_to_full<=14?'warn':'')+'">'+(i.min_days_to_full===null?'<span class="muted">not reported</span>':Math.round(i.min_days_to_full)+' days')+'</b>'+
+      pctRow('Recovery area',i.fra_pct,fr.warn,fr.crit)+pctRow('TEMP',i.temp_pct,tp.warn,tp.crit)+
+      '<span>Last good backup</span><b class="'+(i.backup_age_h!==null&&i.backup_age_h>=48?'bad':i.backup_age_h!==null&&i.backup_age_h>=26?'warn':'')+'">'+(i.backup_age_h===null?'<span class="muted">not reported</span>':Math.round(i.backup_age_h)+' h ago')+'</b>'+
+      '<span>Data Guard lag</span><b>'+(i.dg_lag_s===null?'<span class="muted">–</span>':esc(dur(i.dg_lag_s)))+'</b>'+
+      '<span>Problems</span><b>'+(i.open.crit?'<span class="bad">'+i.open.crit+' critical</span> ':'')+(i.open.warn?'<span class="warn">'+i.open.warn+' warning</span>':'')+(!i.open.crit&&!i.open.warn?'none':'')+'</b></div></div>';};
+    // a RAC database: FRA, tablespaces, TEMP, backups and Data Guard lag belong to the DATABASE - shown once; each instance is a node
+    var worst=function(L){return L.indexOf('crit')>=0?'crit':L.indexOf('warn')>=0?'warn':L.indexOf('ok')>=0?'ok':'unknown';};
+    var mx=function(L,f){var v=L.map(f).filter(function(x){return x!==null&&x!==undefined;});return v.length?Math.max.apply(null,v):null;};
+    var mn=function(L,f){var v=L.map(f).filter(function(x){return x!==null&&x!==undefined;});return v.length?Math.min.apply(null,v):null;};
+    var racCard=function(g){var L=g.insts,lvl=worst(L.map(function(i){return i.level;})),c=g.cluster;
+      var ts=L.filter(function(i){return i.max_ts;}).sort(function(x,y){return y.max_ts.value-x.max_ts.value;})[0],dtf=mn(L,function(i){return i.min_days_to_full;}),fra=mx(L,function(i){return i.fra_pct;}),tmp=mx(L,function(i){return i.temp_pct;}),bk=mn(L,function(i){return i.backup_age_h;}),dg=mx(L,function(i){return i.dg_lag_s;});
+      var cr=L.reduce(function(n,i){return n+(i.open.crit||0);},0),wr=L.reduce(function(n,i){return n+(i.open.warn||0);},0);
+      var nodes=(c?c.nodes:[]).map(function(n){return {name:String(n.instance||('thread '+n.thread)).toUpperCase(),host:n.host,status:n.status};});
+      L.forEach(function(i){if(!nodes.some(function(n){return n.name===String(i.instance).toUpperCase();}))nodes.push({name:String(i.instance).toUpperCase(),host:i.host,status:i.status});});
+      var tiles=nodes.map(function(n){var i=L.filter(function(x){return String(x.instance).toUpperCase()===n.name;})[0],up=/OPEN/i.test(String(n.status||(i&&i.status)||'')),lv2=!i?(up?'unknown':'crit'):i.level;
+        return '<div class="inode '+esc(lv2)+'" data-db="'+esc(i?i.instance:n.name)+'" tabindex="0" title="Show the problems of '+esc(n.name)+'"><div class="nn"><span class="dot"></span>'+esc(n.name)+'<span style="flex:1"></span>'+(i&&i.level!=='ok'&&i.level!=='unknown'?lv(i.level):'')+'</div>'
+          +'<div class="ns">'+esc(n.host||(i&&i.host)||'host not reported')+'</div><div class="ns">'+esc(up?'open':String(n.status||(i&&i.status)||'status not reported').toLowerCase())+(i?' · read '+esc(S.ago(i.last_ms)):' · no reading from this instance')+'</div>'
+          +'<div class="np">'+(i?(i.open.crit?'<span class="bad">'+i.open.crit+' critical</span> ':'')+(i.open.warn?'<span class="warn">'+i.open.warn+' warning</span>':'')+(!i.open.crit&&!i.open.warn?'<span class="muted">no problem</span>':''):'<span class="muted">not monitored on its own</span>')+'</div></div>';}).join('');
+      return '<div class="db rac '+esc(lvl)+'" data-dbg="'+esc(g.name)+'"><h3>'+esc(g.name)+' <span class="rb">RAC · '+(c?c.up+' of '+c.total+' nodes open':L.length+' instances')+'</span><span>'+(lvl==='unknown'?S.pill('no reading'):lvl==='ok'?S.pill('ok','ok'):lv(lvl))+'</span></h3>'
+        +'<div class="sub">'+esc(L[0].role||'role not reported')+(L[0].version?' · '+esc(L[0].version):'')+' · '+L.length+' instance(s) reporting</div>'
+        +'<div class="dbl">Database (shared by all instances)</div><div class="mt">'+pctRow('Fullest tablespace'+(ts?' ('+ts.max_ts.key+')':''),ts?ts.max_ts.value:null,tu.warn,tu.crit)
+        +'<span>Days to full (soonest)</span><b class="'+(dtf!==null&&dtf<=7?'bad':dtf!==null&&dtf<=14?'warn':'')+'">'+(dtf===null?'<span class="muted">not reported</span>':Math.round(dtf)+' days')+'</b>'
+        +pctRow('Recovery area (FRA)',fra,fr.warn,fr.crit)+pctRow('TEMP',tmp,tp.warn,tp.crit)
+        +'<span>Last good backup</span><b class="'+(bk!==null&&bk>=48?'bad':bk!==null&&bk>=26?'warn':'')+'">'+(bk===null?'<span class="muted">not reported</span>':Math.round(bk)+' h ago')+'</b>'
+        +'<span>Data Guard lag</span><b>'+(dg===null?'<span class="muted">–</span>':esc(dur(dg)))+'</b>'
+        +'<span>Problems (all instances)</span><b>'+(cr?'<span class="bad">'+cr+' critical</span> ':'')+(wr?'<span class="warn">'+wr+' warning</span>':'')+(!cr&&!wr?'none':'')+'</b></div>'
+        +'<div class="dbl">Instances</div><div class="inodes">'+tiles+'</div></div>';};
+    var G=dbGroups(I);
+    $('dbs').innerHTML=I.length?G.map(function(g){return g.rac?racCard(g):one(g.insts[0]);}).join(''):
+      '<div class="card" style="grid-column:1/-1"><div class="empty">No database reading has reached the SIEM yet. Register databases under <b>Connections &amp; Setup → Oracle databases</b> (read-only login) or install the Oracle collector agent; the first reading appears within a few minutes.</div></div>';
+    var keep=$('f-in').value;$('f-in').innerHTML='<option value="">All databases</option>'+I.map(function(i){return '<option>'+esc(i.instance)+'</option>';}).join('');$('f-in').value=keep;
+  }
+  // bar gauges (fullest tablespace, recovery area per database) + health donut - from the readings only, "not reported" when absent
+  // RAC grouping: an instance belongs to a RAC database only when the SIEM's cluster reading lists it (V$THREAD / GV$INSTANCE) -
+  // never by a similar name. Without that reading each instance keeps its own card.
+  function racIndex(){var m={};if(!DR)return m;var add=function(db,c){if(!c||!c.nodes||c.total<2)return;c.nodes.forEach(function(n){if(n.instance)m[String(n.instance).toUpperCase()]={db:String(db).toUpperCase(),cluster:c};});};
+    (DR.pairs||[]).forEach(function(p){add(p.primary.db_unique_name||p.primary.instance,p.primary.cluster);(p.standbys||[]).forEach(function(sb){if(sb.own&&sb.own.cluster)add(sb.name,sb.own.cluster);});});
+    (DR.rac_only||[]).forEach(function(c){add(c.db_unique_name,c);});return m;}
+  // Without the cluster reading: instances that report the SAME database name (V$DATABASE.NAME) and the same role are one RAC
+  // database (IIRISPRD1 + IIRISPRD2 -> IIRISPRD). A primary and its standby share the name, so the role keeps them apart.
+  function dbGroups(I){var R=racIndex(),out=[],by={},sb=function(i){return /STANDBY/i.test(i.role||'')?'S':'P';};
+    var nk=function(i){var d=String(i.db_name||'').toUpperCase();return d&&d!==String(i.instance).toUpperCase()?'N:'+d+'|'+sb(i):'';},cnt={};
+    I.forEach(function(i){var k=nk(i);if(k)cnt[k]=(cnt[k]||0)+1;});
+    I.forEach(function(i){var r=R[String(i.instance).toUpperCase()],k=r?'C:'+r.db:(nk(i)&&cnt[nk(i)]>1?nk(i):'');
+      if(!k){out.push({name:i.instance,rac:false,insts:[i]});return;}var g=by[k];
+      if(!g){g=by[k]={name:r?r.db:String(i.db_name).toUpperCase(),rac:true,cluster:r?r.cluster:null,insts:[]};out.push(g);}g.insts.push(i);});return out;}
+  function viz(I){
+    var tu=th('ts_used_pct'),fr=th('fra_pct');
+    var gauge=function(title,rows,w,c){var R=rows.slice().sort(function(a,b){return (b.v==null?-1:b.v)-(a.v==null?-1:a.v);}).slice(0,10);
+      return '<div class="gpanel"><h4>'+esc(title)+'</h4>'+(R.length?'<div class="bg">'+R.map(function(r){var cls=r.v==null?'na':r.v>=c?'crit':r.v>=w?'warn':'ok';return '<span class="nm" data-db="'+esc(r.db)+'" title="'+esc((r.label||r.db)+(r.k?' · '+r.k:''))+'">'+esc(r.label||r.db)+(r.k?' <span class="muted">'+esc(r.k)+'</span>':'')+'</span><span class="tr">'+(r.v==null?'':(function(){var h=heat(r.v,w,c);return '<i class="'+cls+'" style="width:'+Math.max(2,Math.min(100,r.v))+'%'+(h?';background:linear-gradient(90deg,'+h[0]+','+h[1]+')':'')+'"></i>';})())+'</span><span class="vl '+cls+'">'+(r.v==null?'not reported':Math.round(r.v)+'%')+'</span>';}).join('')+'</div>':'<div class="empty">No database reading yet.</div>')+'</div>';};
+    // the donut counts DATABASES: a RAC database once, at the level of its worst instance
+    var GD=dbGroups(I).map(function(g){var L=g.insts.map(function(i){return i.level;});return L.indexOf('crit')>=0?'crit':L.indexOf('warn')>=0?'warn':L.indexOf('ok')>=0?'ok':'unknown';});
+    var lvN={ok:0,warn:0,crit:0,unknown:0};GD.forEach(function(l){lvN[l in lvN?l:'unknown']++;});
+    var seg=[['ok',THEME.ok,'healthy'],['warn',THEME.warn,'warning'],['crit',THEME.crit,'critical'],['unknown',THEME.na,'no reading']],tot=GD.length||1,a0=0,R=52,C=2*Math.PI*R;
+    var arcs=I.length?seg.map(function(sg){var n=lvN[sg[0]];if(!n)return '';var l=n/tot*C,o='<circle r="'+R+'" cx="70" cy="70" fill="none" stroke="'+sg[1]+'" stroke-width="22" stroke-dasharray="'+l+' '+(C-l)+'" stroke-dashoffset="'+(-a0)+'" transform="rotate(-90 70 70)"/>';a0+=l;return o;}).join(''):'<circle r="'+R+'" cx="70" cy="70" fill="none" stroke="rgba(127,127,127,.25)" stroke-width="22"/>';
+    var donut='<div class="gpanel"><h4>Database health</h4><div class="dn"><svg width="140" height="140" viewBox="0 0 140 140" role="img" aria-label="health">'+arcs+'<text x="70" y="66" text-anchor="middle" font-size="26" font-weight="700" fill="currentColor">'+GD.length+'</text><text x="70" y="86" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">databases</text></svg><ul>'+seg.map(function(sg){return '<li data-lv="'+sg[0]+'"><i style="background:'+sg[1]+'"></i>'+esc(sg[2])+' <b>'+lvN[sg[0]]+'</b></li>';}).join('')+'</ul></div></div>';
+    // one row per DATABASE: a RAC database's tablespaces and FRA are shared by its instances, so it is one bar, not one per node
+    var Gs=dbGroups(I),dup={};Gs.forEach(function(g){dup[g.name]=(dup[g.name]||0)+1;});var lab=function(g){return g.name+(dup[g.name]>1&&!g.rac?' · '+(g.insts[0].host||'?'):'')+(g.rac?' (RAC)':'');};
+    var top=function(g,f){var v=g.insts.map(f).filter(function(x){return x&&x.v!==null&&x.v!==undefined;}).sort(function(a,b){return b.v-a.v;});return v[0]||{v:null};};
+    $('viz').innerHTML=gauge('Tablespace Usage – highest per database',Gs.map(function(g){var t=top(g,function(i){return i.max_ts?{v:i.max_ts.value,k:i.max_ts.key}:null;});return {db:g.rac?g.insts[0].instance:g.name,label:lab(g),k:t.k||'',v:t.v};}),tu.warn,tu.crit)+donut
+      +gauge('FRA Usage – per database',Gs.map(function(g){var t=top(g,function(i){return {v:i.fra_pct};});return {db:g.rac?g.insts[0].instance:g.name,label:lab(g),v:t.v};}),fr.warn,fr.crit);
+  }
+  // ---- host-wise: the server (ITAM Database Servers, read-only SSH) with its instances (SIEM readings) connected under it
+  var SRV=null,SRVT=0;
+  function hostsLoad(I){var now=Date.now();if(SRV&&now-SRVT<120000)return hosts(I);
+    var x=new XMLHttpRequest();x.open('GET','/api/itam/db-servers');x.withCredentials=true;x.timeout=30000;
+    x.onload=function(){try{SRV=x.status===200?JSON.parse(x.responseText):{denied:x.status};}catch(e){SRV={denied:1};}SRVT=Date.now();hosts(I);};x.onerror=x.ontimeout=function(){SRV={denied:1};SRVT=Date.now();hosts(I);};x.send();}
+  var sn=function(h){return String(h||'').toLowerCase().split('.')[0];};
+  function ring(label,pct,w,c){var v=pct==null?null:Math.max(0,Math.min(100,pct)),col=v==null?THEME.na:v>=c?THEME.crit:v>=w?THEME.warn:THEME.ok,R=18,C=2*Math.PI*R;
+    return '<div class="ring"><svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="'+R+'" fill="none" stroke="rgba(127,127,127,.22)" stroke-width="6"/>'+(v==null?'':'<circle cx="26" cy="26" r="'+R+'" fill="none" stroke="'+col+'" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+(v/100*C)+' '+C+'" transform="rotate(-90 26 26)"/>')+'<text x="26" y="30" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">'+(v==null?'—':Math.round(v)+'%')+'</text></svg><b>'+esc(label)+'</b></div>';}
+  function hosts(I){drDraw();
+    var rows=(SRV&&SRV.servers)||[],groups=[],byKey={};
+    var find=function(i){for(var k=0;k<rows.length;k++){var r=rows[k],ins=(r.databases||[]).map(function(d){return String(d.instance||d.service||'').toUpperCase();});
+      if(ins.indexOf(String(i.instance||'').toUpperCase())>=0||(i.host&&(sn(i.host)===sn(r.host)||sn(i.host)===sn(r.server&&r.server.hostname)||i.host===r.ip)))return r;}return null;};
+    I.forEach(function(i){var r=find(i),key=r?'ip:'+r.ip:'h:'+sn(i.host||i.instance);var g=byKey[key];if(!g){g=byKey[key]={name:r?(r.host||r.ip):(i.host||'host not reported'),ip:r?r.ip:'',srv:r,insts:[]};groups.push(g);}g.insts.push(i);});
+    rows.forEach(function(r){if(!byKey['ip:'+r.ip]){var g={name:r.host||r.ip,ip:r.ip,srv:r,insts:[]};byKey['ip:'+r.ip]=g;groups.push(g);}});
+    var lvOf=function(g){var L=g.insts.map(function(i){return i.level;}),v=g.srv&&g.srv.server,sv=g.srv&&g.srv.worst;
+      if(L.indexOf('crit')>=0||sv==='critical'||sv==='high')return 'crit';if(L.indexOf('warn')>=0||sv==='medium')return 'warn';if(!g.insts.length&&!v)return 'unknown';if(L.length&&L.every(function(x){return x==='unknown';})&&!v)return 'unknown';return 'ok';};
+    groups.forEach(function(g){g.lv=lvOf(g);});var rk={crit:0,warn:1,unknown:2,ok:3};groups.sort(function(a,b){return rk[a.lv]-rk[b.lv]||String(a.name).localeCompare(String(b.name));});
+    $('hwc').textContent=groups.length?groups.length+' host(s) · '+I.length+' instance(s)':'';
+    var tu=th('ts_used_pct');
+    $('hw').innerHTML=groups.length?groups.map(function(g){var v=g.srv&&g.srv.server,lab={ok:'healthy',warn:'warning',crit:'critical',unknown:'not read'}[g.lv];
+      var fs=v?(v.filesystems||[]).filter(function(f){return f.used_pct!=null;}).sort(function(a,b){return b.used_pct-a.used_pct;})[0]:null;
+      var mem=v&&v.mem_total_mb&&v.mem_avail_mb!=null?(1-v.mem_avail_mb/v.mem_total_mb)*100:null,load=v&&v.ncpu&&v.load5!=null?v.load5/v.ncpu*100:null;
+      var srvLine=v?esc([v.os||(g.srv&&g.srv.os)||'',v.ncpu?v.ncpu+' CPU':'',v.mem_total_mb?Math.round(v.mem_total_mb/1024)+' GB RAM':''].filter(Boolean).join(' · ')):(SRV&&SRV.denied===403?'server health: operators see it (Database Servers)':SRV&&SRV.denied?'server health not available (Database Servers needs the server update)':g.srv&&g.srv.read_error?'server not read: '+esc(g.srv.read_error):'server not read over SSH');
+      return '<div class="hc '+g.lv+'"><div class="hh"><span class="hi">🖥</span><div><div class="hn">'+esc(g.name)+'</div><div class="hs">'+(g.ip?esc(g.ip)+' · ':'')+srvLine+'</div></div><span class="sp"></span>'+(g.lv==='ok'?S.pill(lab,'ok'):g.lv==='unknown'?S.pill(lab):lv(g.lv==='crit'?'crit':'warn'))+'</div>'
+        +(v?'<div class="rings">'+ring('CPU load',load,70,90)+ring('Memory',mem,85,95)+ring('Fullest FS'+(fs?' '+fs.mount:''),fs?fs.used_pct:null,85,95)+'</div>':'')
+        +'<div class="insts">'+(g.insts.length?g.insts.map(function(i){var sb=/STANDBY/i.test(i.role||''),ts=i.max_ts?i.max_ts.value:null,tsc=ts==null?'':ts>=tu.crit?'bad':ts>=tu.warn?'warn':'ok';
+          return '<div class="in '+esc(i.level)+'" data-db="'+esc(i.instance)+'" tabindex="0" title="Show the problems of '+esc(i.instance)+'"><div class="it">'+esc(i.instance)+(i.role?' <span class="role'+(sb?' sb':'')+'">'+esc(sb?'STANDBY':String(i.role).toUpperCase())+'</span>':'')+'<span class="sp"></span>'+(i.level==='unknown'?S.pill('no reading'):i.level==='ok'?S.pill(i.status||'open','ok'):lv(i.level))+'</div>'
+            +'<div class="im"><span>Fullest TS<b class="'+tsc+'">'+(ts==null?'—':Math.round(ts)+'%')+'</b><span class="hwbar"><i style="width:'+(ts||0)+'%;background:'+(tsc==='bad'?THEME.crit:tsc==='warn'?THEME.warn:THEME.ok)+'"></i></span></span><span>FRA<b class="'+(i.fra_pct==null?'':i.fra_pct>=90?'bad':i.fra_pct>=80?'warn':'ok')+'">'+(i.fra_pct==null?'—':Math.round(i.fra_pct)+'%')+'</b></span><span>Backup<b class="'+(i.backup_age_h==null?'':i.backup_age_h>=48?'bad':i.backup_age_h>=26?'warn':'ok')+'">'+(i.backup_age_h==null?'—':Math.round(i.backup_age_h)+' h')+'</b></span><span>'+(sb?'DG lag':'Problems')+'<b class="'+(sb?(i.dg_lag_s==null?'':i.dg_lag_s>=1800?'bad':i.dg_lag_s>=300?'warn':'ok'):(i.open.crit?'bad':i.open.warn?'warn':'ok'))+'">'+(sb?(i.dg_lag_s==null?'—':dur(i.dg_lag_s)):(i.open.crit+i.open.warn||'none'))+'</b></span></div></div>';}).join(''):'<div class="in unknown"><div class="it">'+esc(((g.srv&&g.srv.databases)||[]).map(function(d){return d.instance||d.service;}).filter(Boolean).join(', ')||'instance')+'<span class="sp"></span>'+S.pill('no reading in the SIEM')+'</div></div>')+'</div></div>';}).join('')
+      :'<div class="empty">No database server known yet - add databases in Databases; their servers appear here.</div>';}
+  // a top tile narrows the problem list to what it counts; one filter at a time, cleared by "Show all problems"
+  var PF='',PFN={crit:'critical problems',warn:'warnings',ts:'tablespace, temp and undo space',bk:'backups',dg:'Data Guard and archive shipping'},
+    PFM={ts:['ts_used_pct','ts_days_to_full','temp_pct','undo_pct'],bk:['backup_age_h','backup_failed'],dg:['dg_lag_s','archive_lag_s','archive_dest','dr_link']};
+  function pfOk(c){return PF==='crit'||PF==='warn'?c.level===PF:(PFM[PF]||[]).indexOf(c.metric)>=0;}
+  function pfMark(){[].forEach.call(document.querySelectorAll('#kpi [data-gp]'),function(b){var k=b.getAttribute('data-gp');b.setAttribute('aria-pressed',String(!!PF&&k===PF));});}
+  function loadProbs(){var q='?status='+$('f-st').value+($('f-in').value?'&instance='+encodeURIComponent($('f-in').value):'');
+    return S.req('GET','/db/dba/conditions'+q).then(function(j){var all=j.items||[];PROBS=PF?all.filter(pfOk):all;$('pc').textContent=PROBS.length+(PF?' of '+all.length:'');
+      $('pfl').hidden=!PF;$('pfl').innerHTML=PF?'Showing only <b>'+esc(PFN[PF])+'</b> ('+PROBS.length+' of '+all.length+'). <a href="#" id="pfall">Show all problems</a>':'';pfMark();
+      $('probs').innerHTML=PROBS.length?'<table><thead><tr><th>Level</th><th>Database</th><th>Problem</th><th>Now</th><th>Threshold</th><th>Since</th><th>State</th><th></th></tr></thead><tbody>'+PROBS.map(function(c,i){
+        var state=c.status==='cleared'?S.pill('cleared '+S.ago(c.cleared),'ok'):c.maintenance?S.pill('maintenance'):c.snoozed?S.pill('snoozed by '+c.snooze.by):c.ack?S.pill('ack '+c.ack.by,'ok'):c.stale?S.pill('stale','warn'):c.notified?S.pill('e-mailed'):S.pill('new','warn');
+        var val=c.metric.indexOf('ora:')===0?c.value+'× in 24 h':c.unit==='%'?Math.round(c.value*10)/10+' %':c.unit==='s'?dur(c.value):c.unit==='min'?Math.round(c.value)+' min':c.unit==='h'?Math.round(c.value)+' h':c.unit==='days'?Math.round(c.value*10)/10+' days':c.unit==='rows'?Number(c.value).toLocaleString('en-US')+' rows':(c.kind==='event'?'happened':c.value>=1&&!c.unit&&c.kind==='state'?'yes':String(c.value));
+        return '<tr class="pr" data-pi="'+i+'" tabindex="0" title="Open: what this means and what to do"><td>'+lv(c.level)+'</td><td><b>'+esc(c.instance)+'</b><div class="muted small">'+esc(c.host)+'</div></td><td>'+esc(c.label)+(c.key?' <span class="mono">'+esc(c.key)+'</span>':'')+(c.detail?'<div class="muted small">'+esc(c.detail)+'</div>':'')+'</td><td>'+esc(val)+'</td><td>'+(c.threshold===null||c.threshold===undefined?'–':esc(c.threshold)+(c.scope&&c.scope!=='global'&&c.scope!=='error'?' <span class="muted small">('+esc(c.scope)+')</span>':''))+'</td><td>'+esc(S.ago(c.since))+'</td><td>'+state+'</td><td>'+
+          (c.status==='open'&&can()&&!c.ack?'<button type="button" class="sm" data-ack="'+i+'">Acknowledge</button> ':'')+(c.status==='open'&&can()?(c.snoozed?'<button type="button" class="sm" data-uns="'+i+'">Unsnooze</button> ':'<button type="button" class="sm" data-snz="'+i+'">Snooze</button> '):'')+'<button type="button" class="sm" data-hist="'+i+'">History</button></td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+($('f-st').value==='open'?'No open problem. Everything is within its thresholds.':'Nothing here.')+'</div>';
+    }).catch(function(e){$('probs').innerHTML=S.errHtml(e,'database problems');});}
+  // what the DBA checks and does for each kind of problem, and where on the platform to look (read-only advice; nothing runs from here)
+  var ADV={
+    instance_down:[['Check the alert log for the last lines before it stopped (ORA-, terminated).','Start it (srvctl start instance / startup) once the cause is known; for a standby, confirm it is MOUNTED and applying.'],[['databases.html','All Databases'],['db-servers.html','Database server (OS)']]],
+    listener_down:[['lsnrctl status on the server; srvctl status listener under Grid Infrastructure.','Start it: lsnrctl start / srvctl start listener. Applications cannot connect while it is down.'],[['db-connections.html#{i}','Application connections']]],
+    collector_silent:[['The platform has not read this database recently: is the server up, is the listener up, did the monitoring account\'s password expire or get locked?','Databases → the database → Test shows the exact reason (DNS, listener, login).'],[['databases.html','All Databases (Test)']]],
+    ts_used_pct:[['Which segments grew (Database Performance → top segments); is autoextend on and up to its maximum?','Add a data file or raise MAXSIZE; purge or archive old data with the application owner.'],[['oracle-tuning.html','Oracle Tuning (space)'],['db-performance.html','Database Performance']]],
+    ts_days_to_full:[['Growth forecast from the last 30 days: confirm it is real growth, not a one-off load.','Plan the extension before the date shown.'],[['oracle-tuning.html','Oracle Tuning (space)']]],
+    temp_pct:[['The sessions and SQL using TEMP (sorts, hash joins) - Sessions page.','Tune the SQL or add a temp file; it frees when the statements end.'],[['db-sessions.html','Sessions']]],
+    undo_pct:[['Long transactions holding undo (Sessions).','Commit / end the long transaction; size UNDO for the longest query (undo_retention).'],[['db-sessions.html','Sessions']]],
+    fra_pct:[['Archive logs not yet backed up or deleted; flashback logs; restore points.','RMAN: backup archivelog all delete input / delete obsolete; raise DB_RECOVERY_FILE_DEST_SIZE if the disk allows. Archiving stops when it is full.'],[['db-replication.html','Replication & Data Guard'],['backup.html','Backup Status']]],
+    asm_used_pct:[['Which databases and files use the disk group (asmcmd lsdg / du); archive logs and old backups in +RECO / +FRA.','Add ASM disks or free space (RMAN delete obsolete, drop unused files). A full disk group stops the databases on it.'],[['db-servers.html','Database servers']]],
+    asm_free_pct:[['Same as ASM used: what fills the disk group.','Add disks or free space.'],[['db-servers.html','Database servers']]],
+    fs_pct:[['The file system on the database server: trace / audit files, archive logs, core dumps.','adrci purge for old traces; move or delete old audit files; extend the volume.'],[['db-servers.html','Database servers (OS)']]],
+    sessions_pct:[['Which program / machine opened the sessions (Application connections).','Fix the connection leak in the application or raise SESSIONS / PROCESSES in a window.'],[['db-connections.html#{i}','Application connections'],['db-sessions.html','Sessions']]],
+    limit_pct:[['Which limit (processes, sessions, transactions) and who uses it.','Find the program holding them; raise the parameter in a maintenance window if the load is real.'],[['db-connections.html#{i}','Application connections']]],
+    blocked_s:[['The blocking session and what it is waiting on (Sessions → blockers).','Ask the owner to commit / roll back; kill the blocker only with the application owner\'s agreement.'],[['db-sessions.html','Sessions (blockers)']]],
+    long_query_s:[['The SQL, its plan and what it waits on (shown in the detail): a changed plan, missing statistics, or waiting on the network (TCP socket) or another node (gc).','Tune the SQL / gather statistics; if it is a scheduler job, check the job is not stuck. Cancel it only with its owner.'],[['db-sessions.html','Sessions'],['db-performance.html','Database Performance (top SQL)']]],
+    job_run_min:[['The job, its session and what it waits on.','Compare with its normal run time; stop it (DBMS_SCHEDULER.STOP_JOB) only with the job owner.'],[['db-sessions.html','Sessions']]],
+    deadlocks:[['The trace file named in the alert log (ORA-00060) shows the two statements and the rows.','The application must lock rows in one order; send the trace to the developers.'],[['#er','Alert-log errors']]],
+    backup_age_h:[['RMAN: list backup summary; the backup job / scheduler on the backup server.','Run the backup now; fix the job (credentials, space, catalog).'],[['backup.html','Backup Status']]],
+    backup_failed:[['RMAN log of the last run (v$rman_status / the backup tool\'s job log).','Fix the cause and run it again; a database with no good backup cannot be restored.'],[['backup.html','Backup Status']]],
+    archive_lag_s:[['Redo is not being archived as fast as it is written: archiver errors, slow or full destination.','Check log_archive_dest_n status and the destination space.'],[['db-replication.html','Replication & Data Guard']]],
+    archive_dest:[['v$archive_dest: which destination is in ERROR and its message (ORA-16xxx / ORA-12xxx network to the standby, or the local disk full).','Fix the network / standby listener or free the destination; then ALTER SYSTEM SET log_archive_dest_state_n=ENABLE. Data Guard falls behind while it fails.'],[['db-replication.html','Replication & Data Guard']]],
+    dg_lag_s:[['Transport vs apply lag on the standby (Data Guard broker: show database).','Network between the sites for transport lag; the standby\'s I/O or MRP stopped for apply lag.'],[['db-replication.html','Replication & Data Guard']]],
+    dr_link:[['Data Guard: redo transport error, gap that cannot be resolved, or redo apply stopped.','Fix the cause shown in the detail; restart apply (ALTER DATABASE RECOVER MANAGED STANDBY DATABASE DISCONNECT).'],[['db-replication.html','Replication & Data Guard']]],
+    rac_node_down:[['crsctl stat res -t / srvctl status database: which instance and why (node eviction, interconnect).','Start the instance once the node is healthy; read the clusterware alert log.'],[['databases.html','All Databases']]],
+    bulk_delete_rows:[['Who ran it, from which program, and whether it was planned (detail: user, program, SQL).','Confirm with the application owner; if it was not intended, recover the rows (flashback query / table, or restore).'],[['db-audit.html','Database Audit']]],
+    table_truncate:[['Who truncated which table and from where.','Confirm it was planned; a TRUNCATE cannot be flashed back by query - recovery needs a backup or flashback database.'],[['db-audit.html','Database Audit']]],
+    code_change:[['Which package / procedure / trigger changed, by whom (not SYS / Oracle accounts).','Match it to an approved change; if none, raise it with the change manager and compare with the previous version.'],[['db-audit.html','Database Audit']]],
+    app_disconnected:[['Which application (program / machine / service) stopped holding sessions, and whether the listener refused it or the network cut it.','Ask the application owner; check the listener log and the firewall idle timeout on that path.'],[['db-connections.html#{i}','Application connections']]],
+    listener_refused:[['The TNS error and what it means (Application connections → listener).','Fix the service name / registration or the client configuration shown there.'],[['db-connections.html#{i}','Application connections']]],
+    invalid_objects:[['Which objects became invalid after a change.','Recompile (utlrp.sql) and fix the ones that stay invalid.'],[['db-audit.html','Database Audit']]]
+  };
+  function probVal(c){return c.metric.indexOf('ora:')===0?c.value+'× in 24 h':c.unit==='%'?Math.round(c.value*10)/10+' %':c.unit==='s'?dur(c.value):c.unit==='min'?Math.round(c.value)+' min':c.unit==='h'?Math.round(c.value)+' h':c.unit==='days'?Math.round(c.value*10)/10+' days':c.unit==='rows'?Number(c.value).toLocaleString('en-US')+' rows':(c.kind==='event'?'happened':c.value>=1&&!c.unit&&c.kind==='state'?'yes':String(c.value));}
+  function openProb(i){var c=PROBS[i];if(!c)return;
+    var m=(POL&&POL.metrics||[]).filter(function(x){return x.id===c.metric;})[0]||{},ora=c.metric.indexOf('ora:')===0,a=ADV[c.metric]||(ora?[['The alert-log lines for this error (Alert-log errors tab, Lines).','See "What to check" on that error.'],[['#er','Alert-log errors']]]:[['Read the detail and the history below.',''],[]]);
+    var st=c.status==='cleared'?'cleared '+S.ago(c.cleared):c.maintenance?'maintenance window':c.snoozed?'snoozed by '+c.snooze.by+(c.snooze.reason?' - '+c.snooze.reason:''):c.ack?'acknowledged by '+c.ack.by+(c.ack.note?' - '+c.ack.note:''):c.notified?'e-mailed to the DBA team':'new';
+    var h=Z.kv([['Level',lv(c.level)],['Database',esc(c.instance)+(c.host?' <span class="muted small">'+esc(c.host)+'</span>':'')],['Problem',esc(c.label)+(c.key?' <span class="mono">'+esc(c.key)+'</span>':'')],['Now',esc(probVal(c))],
+      ['Threshold',c.threshold==null?'–':esc(c.threshold)+(c.scope&&c.scope!=='global'&&c.scope!=='error'?' ('+esc(c.scope)+')':'')],['Since',esc(S.dt(c.since))+' ('+esc(S.ago(c.since))+')'],['State',esc(st)]]);
+    if(c.detail)h+=Z.sec('Detail',(c.detail.split(' · ').map(function(x){return '<div class="small">'+esc(x)+'</div>';}).join('')));
+    if(m.help)h+=Z.sec('What this means',esc(m.help));
+    h+=Z.sec('What to check and do','<ol class="small" style="margin:0;padding-left:18px">'+a[0].filter(Boolean).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>');
+    if(a[1].length)h+=Z.sec('Go to',a[1].map(function(l){return l[0]==='#er'?'<button type="button" class="sm" data-goer="1">'+esc(l[1])+'</button> ':'<a class="sm" href="'+esc(l[0].replace('{i}',encodeURIComponent(c.instance)))+'">'+esc(l[1])+' →</a> ';}).join(''));
+    if(c.status==='open'&&can())h+=Z.sec('Actions',(!c.ack?'<button type="button" class="sm" data-ack="'+i+'">Acknowledge</button> ':'')+(c.snoozed?'<button type="button" class="sm" data-uns="'+i+'">Unsnooze</button>':'<button type="button" class="sm" data-snz="'+i+'">Snooze</button>'));
+    h+=Z.sec('History',(c.history||[]).length?Z.tbl(['When','Who','What'],c.history.map(function(x){return [esc(S.dt(x.at)),esc(x.by),esc(x.what)];})):'<div class="muted small">No history yet.</div>');
+    Z.open(c.instance+' · '+(c.level==='crit'?'critical':c.level==='warn'?'warning':c.level),c.label,h);}
+  document.addEventListener('keydown',function(ev){if(ev.key!=='Enter'&&ev.key!==' ')return;var r=ev.target.closest&&ev.target.closest('tr[data-pi]');if(r&&ev.target===r){ev.preventDefault();openProb(+r.getAttribute('data-pi'));}});
+  function loadErrs(){return S.req('GET','/db/dba/errors').then(function(j){var E=j.items||[];$('ec').textContent=E.length?E.length+' finding(s) · read '+S.ago(j.at):'';
+    $('errs').innerHTML=E.length?'<table><thead><tr><th>Level</th><th>Database</th><th>Error</th><th class="num">Count</th><th>Last seen</th><th>What to check</th><th></th></tr></thead><tbody>'+E.map(function(e,i){return '<tr><td>'+lv(e.level)+'</td><td><b>'+esc(e.instance)+'</b></td><td><span class="mono">'+esc(e.code)+'</span> '+esc(e.title)+'</td><td class="num">'+S.n(e.count)+'</td><td>'+esc(S.ago(e.last_ms))+'</td><td class="small">'+esc(e.what)+'</td><td><button type="button" class="sm" data-elines="'+i+'">Lines</button></td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No ORA- error in the alert logs read in the last 24 hours.</div>';
+    $('errs').__E=E;
+  }).catch(function(e){$('errs').innerHTML=S.errHtml(e,'alert-log errors');});}
+  function loadThr(){return Promise.all([S.req('GET','/db/dba/thresholds'),CAT?Promise.resolve(CAT):S.req('GET','/db/dba/catalog')]).then(function(r){POL=r[0];CAT=r[1];var ed=can();
+    $('tv').textContent='version '+POL.version+(POL.by?' · '+POL.by+' '+S.ago(POL.updated):'');
+    var g='';$('thr').innerHTML='<table><thead><tr><th>On</th><th>What</th><th>Warning at</th><th>Critical at</th><th>Default</th></tr></thead><tbody>'+POL.metrics.map(function(m){var hdr=m.group!==g?(g=m.group,'<tr><td colspan="5"><b>'+esc(m.group)+'</b></td></tr>'):'';var st=m.kind==='state',evk=m.kind==='event';
+      return hdr+'<tr><td><input type="checkbox" data-men="'+esc(m.id)+'"'+(m.enabled?' checked':'')+(ed?'':' disabled')+'></td><td>'+esc(m.label)+(m.mail_warn&&!evk&&!st?' <span class="muted small" title="a warning is e-mailed at once, not held for the digest">· warning e-mailed at once</span>':'')+(m.help?'<div class="muted small">'+esc(m.help)+'</div>':'')+'</td>'+
+        (st?'<td colspan="2" class="muted">always critical</td>':evk?'<td colspan="2" class="muted">warning each time it happens - e-mailed at once</td>':'<td>'+(m.dir==='below'?'≤ ':'≥ ')+'<input class="n" type="number" step="any" data-mw="'+esc(m.id)+'" value="'+esc(m.warn===null?'':m.warn)+'"'+(ed?'':' disabled')+'> '+esc(m.unit)+'</td><td>'+(m.dir==='below'?'≤ ':'≥ ')+'<input class="n" type="number" step="any" data-mc="'+esc(m.id)+'" value="'+esc(m.crit===null?'':m.crit)+'"'+(ed?'':' disabled')+'> '+esc(m.unit)+'</td>')+
+        '<td class="muted small">'+(st?'':esc((m.default.warn===null?'–':m.default.warn)+' / '+(m.default.crit===null?'–':m.default.crit)))+(m.default.enabled?'':' (off)')+'</td></tr>';}).join('')+'</tbody></table>'+
+      (ed?'<div class="form"><label>Why (recorded)<input id="t-why" placeholder="e.g. agreed with the DBA team"></label><button type="button" id="t-save">Save thresholds</button></div>':'');
+    var O=POL.overrides;$('ovr').innerHTML=O.length?'<table><thead><tr><th>Applies to</th><th>What</th><th>Warning</th><th>Critical</th><th>On</th><th>Why</th><th>By</th><th></th></tr></thead><tbody>'+O.map(function(x,i){var m=POL.metrics.filter(function(y){return y.id===x.metric;})[0]||{label:x.metric,unit:''};return '<tr><td class="mono">'+esc(x.scope)+'</td><td>'+esc(m.label)+'</td><td>'+esc(x.warn===undefined?'default':x.warn)+'</td><td>'+esc(x.crit===undefined?'default':x.crit)+'</td><td>'+(x.enabled===false?S.pill('off'):'yes')+'</td><td class="small">'+esc(x.reason||'')+'</td><td class="small">'+esc(x.by||'')+'</td><td>'+(ed?'<button type="button" class="sm" data-odel="'+i+'">Remove</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No exception: every database uses the defaults.</div>';
+    $('ovf').innerHTML=ed?'<div class="form"><label>Database / tablespace<input id="o-sc" placeholder="ORCLPRD/USERS · */USERS · ORCLPRD"></label><label>What<select id="o-m">'+POL.metrics.filter(function(m){return m.kind!=='state';}).map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.label)+'</option>';}).join('')+'</select></label><label>Warning<input id="o-w" type="number" step="any"></label><label>Critical<input id="o-c" type="number" step="any"></label><label><input type="checkbox" id="o-off"> Switch off here</label><label>Why<input id="o-why" placeholder="e.g. pre-allocated, grows by plan"></label><button type="button" id="o-add">Add exception</button></div>':'';
+    $('erc').innerHTML='<p class="small">Ignored codes: '+(POL.errors.ignore.length?POL.errors.ignore.map(function(c){return '<span class="mono">'+esc(c)+'</span>';}).join(', '):'none')+'</p>'+(ed?'<div class="form"><label>Ignore these codes (comma separated)<input id="e-ign" value="'+esc(POL.errors.ignore.join(', '))+'"></label><label>Why<input id="e-why"></label><button type="button" id="e-save">Save</button></div>':'')+
+      '<details><summary class="small">The '+CAT.ora.length+' codes the dashboard knows</summary><div class="tw">'+Z.tbl(['Code','Level','Meaning','What to check'],CAT.ora.map(function(o){return ['<span class="mono">'+esc(o.code)+'</span>',lv(o.level),esc(o.title),'<span class="small">'+esc(o.what)+'</span>'];}))+'</div></details>';
+  }).catch(function(e){$('thr').innerHTML=S.errHtml(e,'thresholds');});}
+  function loadNot(){if(!can()){$('nset').innerHTML='<p class="muted">Operators and administrators see the notification settings.</p>';return Promise.resolve();}
+    return S.req('GET','/db/dba/notify').then(function(n){NOT=n;
+      $('nset').innerHTML='<div class="form"><label>E-mail the DBA team<input id="n-to" value="'+esc(n.recipients.join(', '))+'" placeholder="dba@…, dba-oncall@…"></label>'+
+        '<label>Infrastructure managers (management reports: Oracle licence compliance)<input id="n-mg" value="'+esc((n.managers||[]).join(', '))+'" placeholder="infra.manager@…"></label>'+
+        '<label>Warnings<select id="n-wm"><option value="digest"'+(n.warn_mode==='digest'?' selected':'')+'>in the daily digest only</option><option value="immediate"'+(n.warn_mode==='immediate'?' selected':'')+'>e-mail at once</option><option value="off"'+(n.warn_mode==='off'?' selected':'')+'>never e-mail</option></select></label>'+
+        '<label>Remind about unacknowledged critical every (h, 0 = once)<input id="n-rh" type="number" min="0" max="72" value="'+n.renotify_h+'"></label><label><input type="checkbox" id="n-rec"'+(n.recovery?' checked':'')+'> Tell me when a critical problem clears</label>'+
+        '<label><input type="checkbox" id="n-de"'+(n.digest.enabled?' checked':'')+'> Daily digest</label><label>Digest at (Riyadh, working days)<input id="n-da" value="'+esc(n.digest.at)+'"></label></div>'+
+        '<p><button type="button" id="n-save">Save</button> <button type="button" id="n-test">Send a test e-mail</button></p><p class="note">Critical problems are e-mailed at once - all new ones in one message. Short spikes (sessions, TEMP, lag) must last 10 minutes before they are e-mailed, so one busy minute does not wake anyone.</p>';
+      var M=n.maintenance.filter(function(m){return m.until>Date.now();});
+      $('mnt').innerHTML=M.length?Z.tbl(['Database','Until','Why','By',''],M.map(function(m){return ['<b>'+esc(m.instance)+'</b>',esc(S.dt(m.until)),esc(m.reason),esc(m.by),'<button type="button" class="sm" data-mend="'+esc(m.instance)+'">End now</button>'];})):'<div class="empty">No maintenance window.</div>';
+      $('mntf').innerHTML='<div class="form"><label>Database<input id="m-in" placeholder="ORCLPRD"></label><label>Hours<input id="m-h" type="number" min="1" max="72" value="4"></label><label>Why<input id="m-why" placeholder="patching to 19.22"></label><button type="button" id="m-go">Start window</button></div>';
+      $('dgv').innerHTML='<p><button type="button" id="d-prev">Preview today\'s digest</button> <button type="button" id="d-send">Send it now</button></p><div id="d-out"></div>';
+    }).catch(function(e){$('nset').innerHTML=S.errHtml(e,'notification settings');});}
+  function frame(html){var f=document.createElement('iframe');f.setAttribute('sandbox','');f.setAttribute('title','Digest');f.style.cssText='width:100%;height:560px;border:1px solid rgba(127,127,127,.3);border-radius:8px;background:#fff';f.srcdoc=html||'';$('d-out').innerHTML='';$('d-out').appendChild(f);}
+  function ask(title,fields,cb){Z.open(title,'',fields.map(function(f){return '<label class="small" style="display:block;margin:6px 0">'+esc(f[1])+'<br><input id="'+f[0]+'" '+(f[2]||'')+' style="width:100%"></label>';}).join('')+'<p><button type="button" id="ask-ok">OK</button></p>');setTimeout(function(){var b=$('ask-ok');if(b)b.onclick=function(){var v={};fields.forEach(function(f){v[f[0]]=$(f[0]).value;});cb(v);};},50);}
+  function post(path,b,msg,after){return S.req('POST',path,b).then(function(r){S.toast(msg);(after||load)();return r;}).catch(function(e){S.toast(e.message);});}
+  function colWarn(){var x=new XMLHttpRequest();x.open('GET','/api/itam/db-health/databases');x.withCredentials=true;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }var P=j&&(j.databases||[]).filter(function(d){return d.paused;});
+    $('colwarn').innerHTML=P&&P.length?'<div class="card" style="border-left:4px solid var(--bad)"><b>'+P.length+' database(s) are not being read:</b> '+P.map(function(d){return esc(d.label)+' ('+esc(d.paused.reason)+')';}).join('; ')+'. <a href="db-performance.html#collect">See why and fix it</a> - until then this dashboard has nothing new to show for them.</div>':'';};x.send();}
+  // ---- production / DR pairs (SIEM /db/oracle/dr) with RAC nodes; listener processes from Database Servers (read-only SSH)
+  var DR=null;
+  function lsnOf(host){if(!host)return null;var rows=(SRV&&SRV.servers)||[];for(var k=0;k<rows.length;k++){var r=rows[k];if(sn(host)===sn(r.host)||sn(host)===sn(r.server&&r.server.hostname)||host===r.ip){var o=r.server&&r.server.oracle;return o?{names:o.listeners||[],crs:!!o.clusterware}:{unread:1};}}return null;}
+  function nodesHtml(c){if(!c)return '';return '<div class="k2" style="margin-top:4px">RAC: <b>'+c.up+' of '+c.total+'</b> nodes open</div><div class="nodes">'+c.nodes.map(function(n){var up=String(n.status).toUpperCase()==='OPEN',L=lsnOf(n.host);
+      var ls=!L?'listener: not read':L.unread?'listener: not read':L.names.length?'listener '+L.names.join(', '):'NO LISTENER PROCESS';
+      return '<span class="node '+(up&&(!L||L.unread||L.names.length)?'up':'dn')+'" title="'+esc((n.host||'host not reported')+' · '+ls+(n.startup_time?' · started '+n.startup_time:''))+'">'+esc(n.instance||('thread '+n.thread))+' · '+esc(up?'open':String(n.status||'?').toLowerCase())+(L&&!L.unread&&!L.names.length?' · no listener':'')+'</span>';}).join('')+'</div>';}
+  function hostLsn(h){var L=lsnOf(h);return !L||L.unread?'':'<div class="k2">Listener on '+esc(h)+': <b>'+(L.names.length?esc(L.names.join(', ')):'<span style="color:var(--c-crit)">no tnslsnr process</span>')+'</b>'+(L.crs?' · clusterware running':'')+'</div>';}
+  function drDraw(){if(!DR)return;var P=DR.pairs||[],O=DR.orphans||[],RO=DR.rac_only||[];
+    $('drc').textContent=P.length||O.length||RO.length?P.length+' production database(s)'+(O.length?' · '+O.length+' standby without its primary':''):'';
+    var lag=function(s){return s==null?'—':dur(s);};
+    var h=P.map(function(p){var pr=p.primary,c=pr.cluster;
+      var left='<div class="drb"><h4>🏭 '+esc(pr.db_unique_name||pr.instance)+' <span class="role">PRIMARY</span></h4><div class="k2">'+esc(pr.open_mode||'open mode not reported')+' · '+esc(pr.protection_mode||'protection not reported')+(pr.broker?' · broker '+esc(String(pr.broker).toLowerCase()):'')+'</div>'
+        +(c?nodesHtml(c):'<div class="k2">'+esc(pr.instance)+(pr.host?' on '+esc(pr.host):'')+'</div>'+hostLsn(pr.host))+(c&&c.why.length?'<ul class="why">'+c.why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>':'')+'<div class="k2">read '+esc(S.ago(pr.read_at))+'</div></div>';
+      var right=p.standbys.length?p.standbys.map(function(sb){var v=sb.verdict||{level:'ok',why:[]},o=sb.own;
+        return '<div class="drb" style="margin-bottom:6px"><h4>🛟 '+esc(sb.name)+' <span class="role sb">DR</span><span style="flex:1"></span>'+(v.level==='ok'?S.pill('in sync','ok'):lv(v.level==='bad'?'crit':'warn'))+'</h4>'
+          +'<div class="k2">Open state: <b>'+esc(sb.open_mode_label||'not reported')+'</b>'+(sb.open_mode_from?' <span title="where this was read">('+esc(sb.open_mode_from==='primary'?'seen from the primary':'its own reading')+')</span>':'')+'</div>'
+          +'<div class="k2">Redo apply: <b>'+esc(sb.recovery_mode||'not reported')+'</b> · gap <b>'+esc(sb.gap||'—')+'</b> · apply lag <b>'+esc(lag(v.lag_s))+'</b></div>'
+          +'<div class="k2">Shipped / applied sequence: <b>'+esc((sb.archived_seq==null?'?':sb.archived_seq)+' / '+(sb.applied_seq==null?'?':sb.applied_seq))+'</b>'+(o&&o.mrp!=null?' · MRP '+(o.mrp?'running':'<span style="color:var(--c-crit)">not running</span>'):'')+'</div>'
+          +(o&&o.cluster?nodesHtml(o.cluster):o?'<div class="k2">'+esc(o.instance)+(o.host?' on '+esc(o.host):'')+'</div>'+hostLsn(o.host):'<div class="k2">Not registered on its own - add it in Databases (read-only account) for its own lag, MRP and listener.</div>')
+          +(v.why.length?'<ul class="why">'+v.why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>':'')+'</div>';}).join(''):'<div class="drb"><div class="k2">No standby destination configured - this database has no DR copy through Data Guard.</div></div>';
+      var worst=p.standbys.reduce(function(m,x){return x.verdict&&x.verdict.level==='bad'?'bad':m==='bad'?m:x.verdict&&x.verdict.level==='warn'?'warn':m;},'ok');
+      var tr=p.standbys[0]||{};
+      var link='<div class="drl '+(p.standbys.length?worst:'')+'"><div class="ar">'+(p.standbys.length?(worst==='bad'?'⇢✕':'⇢'):'·')+'</div><div>'+(p.standbys.length?esc((tr.transmit_mode||'redo').toLowerCase())+(tr.affirm==='YES'?' · affirm':'')+'<br>'+esc(tr.status||''):'no DR')+'</div></div>';
+      return '<div class="drp '+esc(p.level)+'">'+left+link+'<div>'+right+'</div></div>';}).join('');
+    if(O.length)h+='<h3 style="font-size:13px;margin:12px 0 4px">Standby databases whose primary is not monitored</h3>'+O.map(function(o){return '<div class="drb" style="margin:6px 0"><h4>🛟 '+esc(o.db_unique_name||o.instance)+' <span class="role sb">'+esc(o.role||'STANDBY')+'</span></h4><div class="k2">'+esc(o.open_mode||'open mode not reported')+' · apply lag <b>'+esc(lag(o.apply_lag_s))+'</b>'+(o.mrp!=null?' · MRP '+(o.mrp?'running':'not running'):'')+'</div>'+(o.cluster?nodesHtml(o.cluster):hostLsn(o.host))+'<div class="k2">Add its primary in Databases to see the pair.</div></div>';}).join('');
+    if(RO.length)h+='<h3 style="font-size:13px;margin:12px 0 4px">RAC databases without Data Guard</h3>'+RO.map(function(c){return '<div class="drb" style="margin:6px 0"><h4>🏭 '+esc(c.db_unique_name)+'</h4>'+nodesHtml(c)+(c.why.length?'<ul class="why">'+c.why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>':'')+'</div>';}).join('');
+    $('dr').innerHTML=h||'<div class="empty">No Data Guard or RAC reading yet. They come with the read-only account (Databases → Add database script, Oracle 12.2+): add the production databases; a mounted DR standby is seen through its primary, an Active Data Guard standby can be added too.</div>';
+    if(DR.note)$('drnote').textContent=DR.note;}
+  function loadDr(){return S.req('GET','/db/oracle/dr').then(function(d){DR=d;drDraw();if(ST)renderStatus();},function(e){$('dr').innerHTML='<div class="empty">'+esc(e.status===404?'Production & DR is not installed on the SIEM yet - run the update.':e.message)+'</div>';});}
+  function load(){colWarn();loadDr();loadStatus().then(loadProbs);loadErrs();loadThr();loadNot();loadAp();}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if(t.id==='colors'){colorPanel();return;}
+    if((x=t.closest('[data-cpre]'))){setTheme(PRESETS[x.getAttribute('data-cpre')][1]);colorPanel();S.toast('Colours: '+PRESETS[x.getAttribute('data-cpre')][0]);return;}
+    if(t.id==='c-save'){var cc={};[].forEach.call(document.querySelectorAll('[data-cpk]'),function(el){if(/^#[0-9a-f]{6}$/i.test(el.value))cc[el.getAttribute('data-cpk')]=el.value;});setTheme(cc);colorPanel();S.toast('Custom colours applied');return;}
+    if(t.id==='c-reset'){try{localStorage.removeItem('zyb-db-colors');}catch(e){/* storage off: nothing saved to remove */}THEME=Object.assign({},PRESETS.grafana[1]);applyTheme();if(ST)renderStatus();colorPanel();return;}
+    if(t.id==='ev'){t.disabled=true;S.req('POST','/db/dba/evaluate',{}).then(function(r){S.toast('Checked '+r.instances+' database(s): '+r.opened+' new, '+r.cleared+' cleared');t.disabled=false;load();}).catch(function(e){t.disabled=false;S.toast(e.message);});return;}
+    if((x=t.closest('[data-gp]'))){var g=x.getAttribute('data-gp'),go=function(){$('probs').scrollIntoView({behavior:'smooth'});};
+      if(g==='er'){document.querySelector('[data-tab="er"]').click();return;}if(g==='nt'){document.querySelector('[data-tab="nt"]').click();return;}
+      if(g==='all'){$('dbs').scrollIntoView({behavior:'smooth'});return;}
+      PF=PF===g?'':g;$('f-in').value='';$('f-st').value='open';loadProbs();go();return;}
+    if(t.id==='pfall'){ev.preventDefault();PF='';loadProbs();return;}
+    if((x=t.closest('[data-lv]'))){var L=x.getAttribute('data-lv');[].forEach.call(document.querySelectorAll('#dbs .db'),function(d){d.hidden=L&&!d.classList.contains(L)&&!(L==='unknown'&&d.classList.contains('unknown'));});$('dbs').scrollIntoView({behavior:'smooth'});return;}
+    if((x=t.closest('[data-db]'))&&!t.closest('button')){$('f-in').value=x.getAttribute('data-db');$('f-st').value='open';loadProbs();$('probs').scrollIntoView({behavior:'smooth'});return;}
+    if((x=t.closest('[data-goer]'))){Z.close&&Z.close();document.querySelector('[data-tab="er"]').click();return;}
+    if((x=t.closest('tr[data-pi]'))&&!t.closest('button,a')){openProb(+x.getAttribute('data-pi'));return;}
+    if((x=t.closest('[data-ack]'))){var c=PROBS[+x.getAttribute('data-ack')];ask('Acknowledge',[['a-note','Note (optional)','placeholder="e.g. adding a data file tonight"']],function(v){post('/db/dba/conditions/ack',{id:c.id,note:v['a-note']},'Acknowledged - no more reminders',function(){Z.close&&Z.close();load();});});return;}
+    if((x=t.closest('[data-snz]'))){var c2=PROBS[+x.getAttribute('data-snz')];ask('Snooze',[['s-h','Hours (1-168)','type="number" min="1" max="168" value="24"'],['s-r','Why (recorded)','']],function(v){post('/db/dba/conditions/snooze',{id:c2.id,hours:+v['s-h'],reason:v['s-r']},'Snoozed',function(){Z.close&&Z.close();load();});});return;}
+    if((x=t.closest('[data-uns]'))){post('/db/dba/conditions/unsnooze',{id:PROBS[+x.getAttribute('data-uns')].id},'Snooze ended');return;}
+    if((x=t.closest('[data-hist]'))){var c3=PROBS[+x.getAttribute('data-hist')];Z.open(c3.label,c3.instance+(c3.key?' · '+c3.key:''),Z.tbl(['When','Who','What'],(c3.history||[]).map(function(h){return [esc(S.dt(h.at)),esc(h.by),esc(h.what)];})));return;}
+    if((x=t.closest('[data-elines]'))){var e=$('errs').__E[+x.getAttribute('data-elines')];Z.open(e.code+' '+e.title,e.instance,'<pre class="small" style="white-space:pre-wrap">'+esc(e.samples.join('\n'))+'</pre><p class="small"><b>What to check:</b> '+esc(e.what)+'</p>');return;}
+    if(t.id==='t-save'){var m={};POL.metrics.forEach(function(mm){var o={enabled:document.querySelector('[data-men="'+mm.id+'"]').checked};var w=document.querySelector('[data-mw="'+mm.id+'"]'),c4=document.querySelector('[data-mc="'+mm.id+'"]');if(w&&w.value!=='')o.warn=+w.value;if(c4&&c4.value!=='')o.crit=+c4.value;m[mm.id]=o;});
+      post('/db/dba/thresholds',{metrics:m,reason:$('t-why').value,base_version:POL.version},'Thresholds saved - recorded in the audit log');return;}
+    if(t.id==='o-add'){var o2={scope:$('o-sc').value.trim().toUpperCase(),metric:$('o-m').value,reason:$('o-why').value.trim()};if($('o-w').value!=='')o2.warn=+$('o-w').value;if($('o-c').value!=='')o2.crit=+$('o-c').value;if($('o-off').checked)o2.enabled=false;
+      post('/db/dba/thresholds',{overrides:POL.overrides.concat([o2]),reason:o2.reason,base_version:POL.version},'Exception added');return;}
+    if((x=t.closest('[data-odel]'))){var why=prompt('Why remove this exception? (recorded)');if(!why)return;var L=POL.overrides.slice();L.splice(+x.getAttribute('data-odel'),1);post('/db/dba/thresholds',{overrides:L,reason:why,base_version:POL.version},'Exception removed');return;}
+    if(t.id==='e-save'){post('/db/dba/thresholds',{errors:{ignore:$('e-ign').value.split(/[\s,;]+/).filter(Boolean).map(function(c){return c.toUpperCase();})},reason:$('e-why').value,base_version:POL.version},'Saved');return;}
+    if(t.id==='n-save'){post('/db/dba/notify',{recipients:$('n-to').value.split(/[\s,;]+/).filter(Boolean),managers:$('n-mg').value.split(/[\s,;]+/).filter(Boolean),warn_mode:$('n-wm').value,renotify_h:+$('n-rh').value,recovery:$('n-rec').checked,digest:{enabled:$('n-de').checked,at:$('n-da').value.trim()}},'Saved - recorded in the audit log');return;}
+    if(t.id==='n-test'){post('/db/dba/test-mail',{},'Test e-mail sent',function(){});return;}
+    if(t.id==='m-go'){post('/db/dba/maintenance',{instance:$('m-in').value.trim(),hours:+$('m-h').value,reason:$('m-why').value.trim()},'Maintenance window started');return;}
+    if((x=t.closest('[data-mend]'))){post('/db/dba/maintenance/end',{instance:x.getAttribute('data-mend')},'Maintenance window ended');return;}
+    if(t.id==='d-prev'){S.req('POST','/db/dba/digest',{}).then(function(d){frame(d.html);}).catch(function(e){S.toast(e.message);});return;}
+    if(t.id==='d-send'){if(!confirm('E-mail today\'s digest to the DBA team now?'))return;S.req('POST','/db/dba/digest',{send:true}).then(function(d){S.toast(d.sent&&d.sent.status==='ok'?'Digest sent':'Not sent: '+((d.sent&&d.sent.error)||''));frame(d.html);}).catch(function(e){S.toast(e.message);});return;}
+  });
+
+  var AP={mons:[],acts:[]};
+  // the Applications Manager tiles narrow the table they count: monitors (down / unmanaged), alarms (by severity), requests (waiting)
+  var AF='',AFN={down:'monitors that are down',unman:'unmanaged monitors (in maintenance)',crit:'critical alarms',warn:'warning alarms',pend:'requests waiting for approval'},
+    AFT={mons:'apmon',down:'apmon',unman:'apmon',crit:'apalm',warn:'apalm',pend:'apact'};
+  function apMark(){[].forEach.call(document.querySelectorAll('#apk [data-act]'),function(b){var a=b.getAttribute('data-act').slice(3);b.setAttribute('aria-pressed',String(!!AF&&a===AF));
+    b.title=a==='read'?(S.can('admin')?'Open the connection settings':'When the SIEM last read Applications Manager'):a==='mons'?'Show every monitor type':'Show only '+AFN[a];});}
+  function loadAp(){return S.req('GET','/integrations/apm/status').then(function(st){
+    $('apk').innerHTML=!st.configured?'<div class="card" style="grid-column:1/-1"><p><b>Applications Manager is not connected.</b> An administrator sets its address and a REST API key below (Applications Manager → Settings → REST API). The key is stored sealed on the SIEM and never shown again.</p></div>':
+      S.tile('Monitors',S.n(st.monitors),S.n(st.db_monitors)+' databases','','ap:mons')+S.tile('Down',S.n(st.down),'',st.down?'bad':'ok','ap:down')+S.tile('Critical alarms',S.n(st.alarms.critical),S.n(st.alarms.db)+' on databases',st.alarms.critical?'bad':'ok','ap:crit')+S.tile('Warnings',S.n(st.alarms.warning),'',st.alarms.warning?'warn':'ok','ap:warn')+
+      S.tile('Unmanaged',S.n(st.unmanaged),'in maintenance','','ap:unman')+S.tile('Waiting for approval',S.n(st.pending_actions),'',st.pending_actions?'warn':'','ap:pend')+S.tile('Last read',st.last_sync?S.ago(st.last_sync):'never',st.ok===false?st.error:'',st.ok===false?'bad':'','ap:read');
+    apMark();
+    if(S.can('admin'))loadApSet();
+    if(!st.configured){['apmon','apalm','apcov','apact'].forEach(function(i){$(i).innerHTML='';});return;}
+    return Promise.all([S.req('GET','/integrations/apm/monitors'+($('ap-all').checked?'':'?db=1')),S.req('GET','/integrations/apm/alarms'),S.req('GET','/integrations/apm/coverage'),can()?S.req('GET','/integrations/apm/actions'):Promise.resolve({items:[]})]).then(function(r){
+      var allM=r[0].items||[];AP.mons=allM.filter(function(m){return AF==='down'?m.availability==='down':AF==='unman'?!m.managed:true;});$('apmc').textContent=AP.mons.length+(AP.mons.length!==allM.length?' of '+allM.length:'');
+      $('apmon').innerHTML=AP.mons.length?'<table><thead><tr><th>Monitor</th><th>Type</th><th>Host</th><th>Health</th><th>Availability</th><th>Managed</th><th></th></tr></thead><tbody>'+AP.mons.map(function(m,i){return '<tr><td><b>'+esc(m.name)+'</b><div class="muted small">id '+esc(m.id)+'</div></td><td>'+esc(m.type)+'</td><td class="mono">'+esc(m.host)+'</td><td>'+(m.health==='critical'?lv('crit'):m.health==='warning'?lv('warn'):S.pill(m.health,m.health==='clear'?'ok':''))+'</td><td>'+(m.availability==='down'?S.pill('down','bad'):S.pill(m.availability,m.availability==='up'?'ok':''))+'</td><td>'+(m.managed?'yes':S.pill('unmanaged'))+'</td><td>'+
+        (can()?'<button type="button" class="sm" data-apd="'+i+'">Details</button> <button type="button" class="sm" data-app="'+i+'">Poll now</button> '+(m.managed?'<button type="button" class="sm" data-apu="'+i+'">Maintenance</button>':'<button type="button" class="sm" data-apm="'+i+'">Resume</button>'):'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No monitor in the last read.</div>';
+      var Al=(r[1].items||[]).filter(function(a){return AF==='crit'||AF==='warn'?a.severity===(AF==='crit'?'critical':'warning'):true;});$('apalm').innerHTML=Al.length?Z.tbl(['Severity','Monitor','Attribute','Message','Time'],Al.map(function(a){return [a.severity==='critical'?lv('crit'):a.severity==='warning'?lv('warn'):esc(a.severity),esc(a.name)+(a.db?' '+S.pill('database'):''),esc(a.attribute),esc(a.message),esc(a.time)];})):'<div class="empty">No open alarm.</div>';
+      var C=r[2];$('apcov').innerHTML='<p class="small"><b>Both:</b> '+(C.both.map(function(x){return esc(x.name);}).join(', ')||'none')+'</p><p class="small"><b>Only in Applications Manager:</b> '+(C.apm_only.map(function(x){return esc(x.name)+' ('+esc(x.type)+')';}).join(', ')||'none')+'</p><p class="small"><b>Only on this dashboard:</b> '+(C.siem_only.map(function(x){return esc(x.instance);}).join(', ')||'none')+'</p>';
+      AP.acts=r[3].items||[];$('apac').textContent=AP.acts.filter(function(a){return a.status==='pending';}).length+' waiting';if(AF==='pend')AP.acts=AP.acts.filter(function(a){return a.status==='pending';});
+      $('apfl').hidden=!AF;$('apfl').innerHTML=AF?'Showing only <b>'+esc(AFN[AF])+'</b>. <a href="#" id="apfall">Show everything</a>':'';
+      $('apact').innerHTML=can()?(AP.acts.length?'<table><thead><tr><th>Request</th><th>Monitor</th><th>What</th><th>Why</th><th>Asked by</th><th>State</th><th></th></tr></thead><tbody>'+AP.acts.map(function(a,i){return '<tr><td class="mono">'+esc(a.id)+'</td><td>'+esc(a.monitor)+'</td><td>'+esc(a.action==='unmanage'?'maintenance '+a.hours+' h ('+(a.suppress==='monitoring'?'stop monitoring':'alerts off')+')':a.action==='manage'?'resume':'poll now')+'</td><td class="small">'+esc(a.reason)+'</td><td>'+esc(a.requested_by)+' · '+esc(S.ago(a.requested_at))+'</td><td>'+(a.status==='pending'?S.pill('waiting','warn'):a.status==='executed'?S.pill('done','ok'):a.status==='failed'?S.pill('failed','bad'):S.pill(a.status))+(a.decided_by?'<div class="small muted">'+esc(a.decided_by)+(a.comment?': '+esc(a.comment):'')+'</div>':'')+(a.result&&a.status==='failed'?'<div class="small err">'+esc(a.result)+'</div>':'')+'</td><td>'+(a.status==='pending'?'<button type="button" class="sm" data-apok="'+i+'">Approve</button> <button type="button" class="sm" data-apno="'+i+'">Reject</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No request yet.</div>'):'<p class="muted">Operators and administrators see requests.</p>';
+    });
+  }).catch(function(e){$('apk').innerHTML='<div class="card" style="grid-column:1/-1">'+S.errHtml(e,'Applications Manager')+'</div>';});}
+  function loadApSet(){$('apsetc').hidden=false;return S.req('GET','/integrations/apm/settings').then(function(j){var s=j.settings,k=j.key;
+    $('apset').innerHTML='<div class="form"><label>Applications Manager address<input id="as-url" value="'+esc(s.base_url)+('" placeholder="https://apm.' + ZYB_ORG.domain + ':8443"></label><label>Read every (min)<input id="as-pm" type="number" min="1" max="60" value="')+s.poll_min+'"></label><label>Certificate SHA-256 (optional pin)<input id="as-fp" value="'+esc(s.fingerprint256)+'"></label><label><input type="checkbox" id="as-en"'+(s.enabled?' checked':'')+'> Read on a schedule</label><button type="button" id="as-save">Save</button></div>'+
+      '<div class="form"><label>REST API key '+(k.api_key_set?S.pill('stored · '+esc(k.key_fingerprint),'ok'):S.pill('not set','warn'))+'<input id="as-key" type="password" autocomplete="off" placeholder="paste to replace"></label><button type="button" id="as-ks">Store key</button>'+(k.api_key_set?' <button type="button" id="as-kd">Remove key</button>':'')+' <button type="button" id="as-test">Test connection</button> <button type="button" id="zs-sync">Read now</button></div>'+
+      '<p class="note">Use the key of an Applications Manager <b>Operator</b> user that sees the database monitors (a key sees only its own user\'s monitors). The SIEM server must reach the address. Only these calls are ever made: ListMonitor, ListAlarms, GetMonitorData, PollNow, UnmanageMonitor, ManageMonitor.</p>';
+  }).catch(function(e){$('apset').innerHTML=S.errHtml(e,'settings');});}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('#apk [data-act]'))){var a0=x.getAttribute('data-act').slice(3);
+      if(a0==='read'){var sc=$('apsetc');if(sc&&!sc.hidden)sc.scrollIntoView({behavior:'smooth'});else S.toast('Last read is when the SIEM last read Applications Manager; an administrator changes the connection.');return;}
+      if(a0==='mons'){AF='';$('ap-all').checked=true;}else{AF=AF===a0?'':a0;if(AF==='down'||AF==='unman')$('ap-all').checked=true;}
+      apMark();loadAp().then(function(){var el=$(AFT[a0]);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});});return;}
+    if(t.id==='apfall'){ev.preventDefault();AF='';loadAp();return;}
+    if((x=t.closest('[data-apd]'))){var m=AP.mons[+x.getAttribute('data-apd')];S.req('GET','/integrations/apm/monitors/'+encodeURIComponent(m.id)).then(function(d){Z.open(m.name,m.type,d.attributes.length?Z.tbl(['Attribute','Value','Status'],d.attributes.map(function(a){return [esc(a.name),esc(a.value+(a.unit?' '+a.unit:'')),a.status==='critical'?lv('crit'):a.status==='warning'?lv('warn'):esc(a.status)];})):'<p class="muted">No attribute in the reply.</p>');}).catch(function(e){S.toast(e.message);});return;}
+    if((x=t.closest('[data-app]'))){var m2=AP.mons[+x.getAttribute('data-app')];post('/integrations/apm/actions',{action:'poll',resource_id:m2.id},'Poll requested from Applications Manager',loadAp);return;}
+    if((x=t.closest('[data-apu]'))){var m3=AP.mons[+x.getAttribute('data-apu')];ask('Maintenance for '+m3.name,[['ap-h','Hours (1-72)','type="number" min="1" max="72" value="4"'],['ap-r','Why (goes to the approver)','']],function(v){post('/integrations/apm/actions',{action:'unmanage',resource_id:m3.id,hours:+v['ap-h'],suppress:'alerts',reason:v['ap-r']},'Request sent for approval',function(){Z.close();loadAp();});});return;}
+    if((x=t.closest('[data-apm]'))){var m4=AP.mons[+x.getAttribute('data-apm')];ask('Resume '+m4.name,[['ap-r2','Why','']],function(v){post('/integrations/apm/actions',{action:'manage',resource_id:m4.id,reason:v['ap-r2']},'Request sent for approval',function(){Z.close();loadAp();});});return;}
+    if((x=t.closest('[data-apok]'))){var a=AP.acts[+x.getAttribute('data-apok')];post('/integrations/apm/actions/'+encodeURIComponent(a.id)+'/decide',{decision:'approve'},'Approved and sent to Applications Manager',loadAp);return;}
+    if((x=t.closest('[data-apno]'))){var a2=AP.acts[+x.getAttribute('data-apno')];ask('Reject '+a2.id,[['ap-c','Why it is rejected','']],function(v){post('/integrations/apm/actions/'+encodeURIComponent(a2.id)+'/decide',{decision:'reject',comment:v['ap-c']},'Rejected',function(){Z.close();loadAp();});});return;}
+    if(t.id==='as-save'){post('/integrations/apm/settings',{base_url:$('as-url').value.trim(),poll_min:+$('as-pm').value,fingerprint256:$('as-fp').value.trim(),enabled:$('as-en').checked},'Saved',loadAp);return;}
+    if(t.id==='as-ks'){var kv=$('as-key').value;$('as-key').value='';post('/integrations/apm/key',{api_key:kv},'Key stored (it will not be shown again)',loadAp);return;}
+    if(t.id==='as-kd'){if(!confirm('Remove the Applications Manager key?'))return;S.req('DELETE','/integrations/apm/key').then(function(){S.toast('Key removed');loadAp();}).catch(function(e){S.toast(e.message);});return;}
+    if(t.id==='as-test'){S.req('POST','/integrations/apm/test',{}).then(function(r){S.toast('Connected: '+r.monitors+' monitor(s) visible to this key');}).catch(function(e){S.toast(e.message);});return;}
+    if(t.id==='zs-sync'){post('/integrations/apm/sync',{},'Read from Applications Manager',loadAp);return;}
+  });
+  $('ap-all').onchange=loadAp;
+  $('f-st').onchange=loadProbs;$('f-in').onchange=loadProbs;
+  S.ready(load);setInterval(function(){if(!document.hidden&&!(document.getElementById('zd')&&!document.getElementById('zd').hidden))loadStatus().then(loadProbs);loadDr();},120000);
+})();
+</script><script>
+/* ✦ AI / ML section of the Overview (SIEM /api/soc/db/dba/intel, viewer; advisor operator, a person). Inline SVG from the
+   SIEM's own readings; names are escaped; model text is escaped and never made into links. */
+(function(){
+  'use strict';
+  var S=window.zybSoc,esc=S.esc,$=function(i){return document.getElementById(i);},V=null,ANS=null;
+  // colours follow the Colours button (the --c-* variables the palette writes); the Grafana shades when none is set
+  var cv=function(k,d){var v='';try{v=getComputedStyle(document.documentElement).getPropertyValue('--c-'+k).trim();}catch(e){v='';/* no computed style: default shade */}return /^#[0-9a-f]{3,8}$|^rgb/i.test(v)?v:d;};
+  var col=function(s){return s==null?cv('na','#6e7681'):s>=85?cv('ok','#73bf69'):s>=70?cv('yel','#fade2a'):s>=50?cv('warn','#ff9830'):cv('crit','#f2495c');};
+  var rank=function(s){return s>=85?cv('crit','#f2495c'):s>=70?cv('warn','#ff9830'):cv('yel','#fade2a');};
+  // a bar as SVG: a page or theme stylesheet cannot collapse it (an <i> bar was drawn empty on the server)
+  var bar=function(v,c){var w=Math.max(3,Math.min(100,v));return '<svg class="hbs" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="12" rx="3" fill="rgba(127,127,127,.18)"/><rect width="'+w+'" height="12" rx="3" fill="'+c+'"/></svg>';};
+  function gauge(v){var r=52,C=Math.PI*r,f=v==null?0:v/100;return '<svg viewBox="0 0 140 84" style="max-width:220px;margin:0 auto" role="img" aria-label="Fleet health '+(v==null?'not measurable':v+' of 100')+'"><defs><linearGradient id="dbg" x1="0" x2="1"><stop offset="0" stop-color="'+cv('crit','#f2495c')+'"/><stop offset=".5" stop-color="'+cv('warn','#ff9830')+'"/><stop offset="1" stop-color="'+cv('ok','#73bf69')+'"/></linearGradient></defs><path d="M18 74 A52 52 0 0 1 122 74" fill="none" stroke="rgba(127,127,127,.18)" stroke-width="12" stroke-linecap="round"/>'+(v==null?'':'<path d="M18 74 A52 52 0 0 1 122 74" fill="none" stroke="url(#dbg)" stroke-width="12" stroke-linecap="round" stroke-dasharray="'+(C*f).toFixed(1)+' '+C.toFixed(1)+'"/>')+'<text x="70" y="68" text-anchor="middle" font-size="28" font-weight="800" fill="'+col(v)+'">'+(v==null?'—':v)+'</text></svg>';}
+  function runway(R){var L=R.filter(function(r){return r.days!=null;}).slice(0,12);if(!L.length)return '<div class="empty">No tablespace is growing towards full (needs the SIEM capacity readings with 30 days of growth).</div>';
+    var mx=Math.max(90,Math.max.apply(null,L.map(function(r){return Math.min(r.days,365);}))),W=560,rh=22,H=L.length*rh+26,lx=170,o='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Days until each tablespace fills">';
+    [0,30,90,mx].filter(function(v,i,a){return a.indexOf(v)===i&&v<=mx;}).forEach(function(v){var x=lx+v/mx*(W-lx-60);o+='<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="4" y2="'+(H-18)+'" stroke="rgba(127,127,127,.25)" stroke-dasharray="3 3"/><text x="'+x.toFixed(1)+'" y="'+(H-5)+'" text-anchor="middle" font-size="10" fill="#8e8e8e">'+v+' d</text>';});
+    L.forEach(function(r,i){var y=6+i*rh,d=Math.min(r.days,mx),w=Math.max(3,d/mx*(W-lx-60)),c=r.days<=7?'#f2495c':r.days<=30?'#ff9830':r.days<=90?'#fade2a':'#73bf69';
+      o+='<text x="'+(lx-8)+'" y="'+(y+13)+'" text-anchor="end" font-size="11" fill="currentColor">'+esc((r.instance+' '+r.name).slice(0,26))+'</text><rect x="'+lx+'" y="'+y+'" width="'+w.toFixed(1)+'" height="'+(rh-7)+'" rx="4" fill="'+c+'"><title>'+esc(r.instance+' '+r.name+': '+r.used_pct+'% used, '+r.growth_mb_day+' MB/day, full around '+r.date)+'</title></rect><text x="'+(lx+w+6).toFixed(1)+'" y="'+(y+12)+'" font-size="10.5" fill="#8e8e8e">'+esc(r.date)+'</text>';});
+    return o+'</svg>';}
+  function trend(T){var P=(T||[]).filter(function(x){return x.fleet!=null;});if(P.length<2)return '<div class="empty">The fleet trend appears after the second daily snapshot ('+P.length+' so far).</div>';
+    var W=420,H=110,x=function(i){return 6+i*(W-12)/(P.length-1);},y=function(v){return 6+(100-v)*(H-20)/100;},d=P.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(p.fleet).toFixed(1);}).join('');
+    return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Fleet health over '+P.length+' days"><path d="'+d+'L'+x(P.length-1).toFixed(1)+' '+y(0)+'L6 '+y(0)+'Z" fill="#5794f2" fill-opacity=".15"/><path d="'+d+'" fill="none" stroke="#5794f2" stroke-width="2.2"/><text x="6" y="'+(H-2)+'" font-size="10" fill="#8e8e8e">'+esc(P[0].day)+'</text><text x="'+(W-6)+'" y="'+(H-2)+'" text-anchor="end" font-size="10" fill="#8e8e8e">'+esc(P[P.length-1].day)+'</text></svg>';}
+  function draw(){var F=V.fleet,H=V.health;
+    var hb=H.map(function(h){var K=(h.kinds||[]).slice(0,4);return '<div class="hb hb2" title="'+esc((h.items||[]).map(function(i){return i.label+' ('+i.points+')';}).join('\n')||h.why)+'"><span style="min-width:0"><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(h.instance)+' <span class="muted">'+esc(h.host)+'</span></span>'
+      +(K.length?'<span class="kc">'+K.map(function(k){return '<em class="'+(k.level==='crit'?'c':'w')+(k.noisy?' n':'')+'">'+esc(k.label)+(k.n>1?' ×'+esc(k.n):'')+'</em>';}).join('')+'</span>':'<span class="muted small" style="display:block">'+esc(h.why)+'</span>')+'</span>'
+      +'<span class="t">'+(h.score!=null?bar(h.score,col(h.score)):'')+'</span><b style="text-align:right;color:'+col(h.score)+'">'+(h.score==null?'—':h.score)+'</b></div>';}).join('');
+    var wl=V.worklist.length?V.worklist.map(function(w,i){return '<div class="wl"><span class="no" style="background:'+rank(w.score)+'">'+(i+1)+'</span><div><b>'+esc(w.title)+'</b><span>'+esc(w.why)+'</span></div></div>';}).join(''):'<div class="empty">Nothing to do first: no critical problem, nothing filling within 30 days, no backup overdue.</div>';
+    var ln=V.learned.filter(function(l){return l.flapping||l.recurring;}).slice(0,8),lh=ln.length?ln.map(function(l){return '<div class="wl"><div><b><span class="tag" style="background:'+(l.flapping?'rgba(255,152,48,.2);color:#ff9830':'rgba(242,73,92,.2);color:#f2495c')+'">'+(l.flapping?'FLAPPING':'RECURRING')+'</span>'+esc(l.instance+': '+l.title)+'</b><span>'+esc(l.why)+(l.median_clear_min!=null?' · usually clears in '+l.median_clear_min+' min':'')+'</span></div></div>';}).join(''):'<div class="empty">No problem keeps coming back or flapping in the last 30 days ('+V.learning.conditions_30d+' problems looked at).</div>';
+    var un=V.unusual.length?V.unusual.map(function(u){return '<div class="wl"><div><b>'+esc(u.instance)+' <span class="muted">'+esc(u.host)+'</span></b><span>'+esc(u.why)+'</span></div></div>';}).join(''):'<div class="empty">No database has more trouble than its own usual today (judged after 7 days of snapshots; '+V.learning.snapshot_days+' so far).</div>';
+    var a=V.ai||{},ask=!a.enabled?'<div class="empty">The AI DBA advisor is off: '+esc(a.reason||'not configured')+'.</div>':!S.can('operator')?'<div class="empty">The AI DBA advisor is for operators and administrators.</div>':'<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="dbq" style="flex:1;min-width:240px" maxlength="2000" aria-label="Question for the DBA advisor" placeholder="e.g. Which database needs attention first, and what fills up this month?"><button type="button" id="dbask">Ask</button></div>'+(ANS?'<div class="ans">'+esc(ANS.answer)+'</div>':'');
+    $('dbai').innerHTML='<div class="dbai"><div class="r2"><div class="card"><h2>✦ Database health <span class="c">every point itemised · hover an instance</span></h2><div style="display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:center"><div style="text-align:center">'+gauge(F.score)+'<div class="muted small">'+esc(F.why)+'</div></div><div>'+(hb||'<div class="empty">No instance.</div>')+'</div></div></div>'
+      +'<div class="card"><h2>Do first <span class="c">ranked</span></h2>'+wl+'</div></div>'
+      +'<div class="r3"><div class="card"><h2>Capacity runway <span class="c">when each tablespace fills, from its own 30 days of growth</span></h2>'+runway(V.runway)+'</div>'
+      +'<div class="card"><h2>Learned from 30 days</h2>'+lh+'</div>'
+      +'<div class="card"><h2>Fleet health over time</h2>'+trend(V.trend)+'<h2 style="margin-top:12px">Unusual today</h2>'+un+'</div></div>'
+      +extra()
+      +'<div class="card"><h2>Ask the AI DBA advisor <span class="c">reads only these figures · proposes, changes nothing</span></h2>'+ask+'</div></div>';}
+  /* fleet grid, 30-day calendar, response times and the noisiest checks */
+  var LC={crit:'#f2495c',warn:'#ff9830',ok:'#73bf69',na:'rgba(127,127,127,.15)'};
+  function grid(G){if(!G||!G.rows.length)return '<div class="empty">No instance.</div>';
+    return '<div class="tw"><table class="fg"><thead><tr><th>Database</th>'+G.columns.map(function(c){return '<th style="text-align:center">'+esc(c.label)+'</th>';}).join('')+'</tr></thead><tbody>'+G.rows.map(function(r){return '<tr><td><b>'+esc(r.instance)+'</b> <span class="muted small">'+esc(r.host)+'</span></td>'+r.cells.map(function(c,i){var col=G.columns[i];
+      return '<td style="text-align:center"><span class="fc" style="background:'+(c.level==='na'?LC.na:LC[c.level])+(c.level==='na'?';color:var(--mute)':'')+'" title="'+esc(col.label+': '+(c.v==null?'not reported':c.v)+(c.warn!=null?' · warning '+c.warn+(c.crit!=null?', critical '+c.crit:''):''))+'">'+(c.v==null?'—':esc(c.v))+'</span></td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div><div class="muted small">Coloured against each database\'s own threshold (exceptions included) · grey = not reported, never counted as fine</div>';}
+  function calendar(Hh){var C=Hh.calendar;if(!C.length)return '<div class="empty">No instance.</div>';
+    var W=Math.max(30,Hh.days.length),o='<div class="cal" style="grid-template-columns:minmax(90px,140px) repeat('+W+',1fr)"><span></span>'+Hh.days.map(function(d,i){return '<span class="cd">'+(i%5===0?esc(d.slice(8)):'')+'</span>';}).join('');
+    C.forEach(function(r){o+='<span class="cn" title="'+esc(r.host)+'">'+esc(r.instance)+'</span>'+r.cells.map(function(c){var bg=c.crit?LC.crit:c.warn?LC.warn:'rgba(115,191,105,.35)';return '<i style="background:'+bg+'" title="'+esc(c.day+': '+c.crit+' critical, '+c.warn+' warning')+'"></i>';}).join('');});
+    return o+'</div><div class="muted small"><span style="color:#f2495c">■</span> a critical problem open that day · <span style="color:#ff9830">■</span> a warning · <span style="color:#73bf69">■</span> none (Riyadh days, last 30)</div>';}
+  function resp(R){var t=function(v,l,n,c){return '<div class="rt" style="border-top:3px solid '+c+'"><div class="v">'+(v==null?'—':esc(v)+'<span class="u"> min</span>')+'</div><div class="l">'+esc(l)+'</div><div class="muted small">'+esc(n)+'</div></div>';};
+    return '<div class="rts">'+t(R.crit.mtta_min,'Critical: acknowledged in',R.crit.acknowledged+' of '+R.crit.opened+' acknowledged'+(R.crit.open_unacked?' · '+R.crit.open_unacked+' open, not acknowledged':''),'#f2495c')+t(R.crit.mttr_min,'Critical: cleared in',R.crit.cleared+' cleared','#f2495c')
+      +t(R.warn.mtta_min,'Warning: acknowledged in',R.warn.acknowledged+' of '+R.warn.opened+' acknowledged','#ff9830')+t(R.warn.mttr_min,'Warning: cleared in',R.warn.cleared+' cleared','#ff9830')+'</div><div class="muted small">'+esc(R.why)+'</div>';}
+  function noisy(N){if(!N.length)return '<div class="empty">No problem opened in 30 days.</div>';var mx=Math.max.apply(null,N.map(function(n){return n.openings;}));
+    return N.map(function(n){return '<div class="hb" title="'+esc(n.why)+'"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(n.title)+'</span><span class="t"><i style="width:'+(100*n.openings/mx).toFixed(0)+'%;background:'+(n.short_pct!=null&&n.short_pct>=70&&n.openings>=5?'#ff9830':'#5794f2')+'"></i></span><b style="text-align:right">'+esc(n.openings)+'</b></div>';}).join('')+'<div class="muted small">orange = most cleared within an hour - a threshold to review on Thresholds</div>';}
+  function extra(){if(!V.history)return '';return '<div class="card"><h2>Fleet at a glance <span class="c">key readings of every database against its thresholds</span></h2>'+grid(V.grid)+'</div>'
+    +'<div class="r2"><div class="card"><h2>Problem calendar <span class="c">30 days</span></h2>'+calendar(V.history)+'</div><div class="card"><h2>Response <span class="c">how fast problems are picked up and fixed</span></h2>'+resp(V.history.response)+'</div></div>'
+    +'<div class="card"><h2>Noisiest checks <span class="c">what opened most in 30 days</span></h2>'+noisy(V.history.noisy)+'</div>';}
+  window.addEventListener('zyb-db-colors',function(){if(V&&!(document.activeElement&&document.activeElement.id==='dbq'))draw();});
+  function load(){return S.req('GET','/db/dba/intel').then(function(v){V=v;if(document.activeElement&&document.activeElement.id==='dbq')return;draw();},function(e){$('dbai').innerHTML='<div class="card" style="margin:0 0 12px"><div class="empty">'+esc(e.status===404?'Database intelligence is not installed on the SIEM yet - run the update.':'Database intelligence: '+e.message)+'</div></div>';});}
+  document.addEventListener('click',function(ev){var b=ev.target.closest('#dbask');if(!b)return;var q=$('dbq').value.trim();if(q.length<5){S.toast('Ask a full question');return;}b.disabled=true;b.textContent='Thinking…';
+    S.req('POST','/db/dba/intel/ask',{question:q}).then(function(r){ANS=r;draw();},function(e){b.disabled=false;b.textContent='Ask';S.toast(e.message);});});
+  S.ready(load);setInterval(function(){if(!document.hidden)load();},300000);
+})();
+</script>
+</body></html>

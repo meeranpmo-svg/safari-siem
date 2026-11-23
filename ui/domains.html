@@ -1,0 +1,153 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Domains &amp; DNS</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.card h3{margin:14px 0 8px;font-size:13px;color:var(--title)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}
+.stmt{font-size:14.5px;line-height:1.6}.stmt p{margin:0 0 8px}.stmt .b{color:var(--title);font-weight:600}
+.chk{list-style:none;margin:0;padding:0}.chk li{padding:3px 0}.chk .y{color:var(--ok);font-weight:700}.chk .n{color:var(--bad);font-weight:700}
+.kv{display:grid;grid-template-columns:170px 1fr;gap:4px 10px;font-size:13px}.kv dt{color:var(--mute)}.kv dd{margin:0;overflow-wrap:anywhere}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+ul.plain{margin:0;padding-left:18px}ul.plain li{margin:3px 0}
+@media print{.top button,.noprint{display:none!important}body{background:#fff;color:#000}.card,.t{border-color:#bbb;background:#fff;break-inside:avoid}.banner{color:#000;background:#f3f6fa}.card h2,.t .v,.stmt .b{color:#000}.muted,.note,th{color:#444}}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--panel);color:var(--mute);border:1px solid var(--edge);border-radius:999px;padding:6px 13px;cursor:pointer}.tabs button.on{background:#e7eaf0;color:#0a0b0f;border-color:#e7eaf0}.tabs button i{font-style:normal;opacity:.7;margin-left:4px}
+select,input.in{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:13px}.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+td.sql{font-family:Consolas,monospace;font-size:11.8px;color:var(--mute);max-width:520px;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+
+.t{text-align:left;cursor:pointer;color:var(--text);font:inherit}.t:hover{border-color:#4a5162}
+tr.rw{cursor:pointer}tr.rw:hover td{background:rgba(255,255,255,.035)}
+.mc{display:inline-block;font:600 10.5px ui-monospace,Consolas,monospace;border-radius:4px;padding:1px 5px;margin:1px 2px 1px 0}
+.mc.ok{background:rgba(63,185,80,.14);color:var(--ok)}.mc.warn{background:rgba(227,179,65,.15);color:var(--warn)}.mc.bad{background:rgba(255,123,114,.15);color:var(--bad)}.mc.mut{background:rgba(140,147,161,.15);color:var(--mute)}
+.fd{border-left:3px solid var(--edge);padding:5px 9px;margin:6px 0}.fd.bad{border-left-color:var(--bad)}.fd.warn{border-left-color:var(--warn)}.fd.info{border-left-color:var(--info)}.fd small{display:block;color:var(--mute);margin-top:2px}
+.rec{font-family:Consolas,monospace;font-size:12px;overflow-wrap:anywhere}
+.fm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.fm label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.fm input,.fm select,.fm textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;font:inherit}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · internet domains, public DNS, e-mail security, certificates and hosting</div><h1>Domains &amp; DNS</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <button type="button" class="btn" id="add-d" hidden>➕ Add domain</button><button type="button" class="btn" id="add-h" hidden>➕ Add hostname</button>
+  <button type="button" class="btn pri" id="check" hidden>⟳ Check now</button><button type="button" class="btn" id="xlsx">⬇ Excel</button></div>
+<div class="banner">Every {{org.short}} internet domain and public hostname, checked from public DNS every 6 hours: renewal dates, nameservers, SPF / DMARC / DKIM (can someone send mail in our name?), CAA, and the TLS certificate on each hostname. A record that changed since the last check is listed, so an unapproved DNS change is visible. Read-only: nothing at a registrar or DNS provider is changed from here. Next phase: reading the zones from Cloudflare, GoDaddy and Azure DNS, and DNS change requests approved by a second person.</div>
+<div class="k" id="kk"></div>
+<div id="brand"></div>
+<div id="ren"></div>
+<div class="tabs" id="tabs"><button type="button" data-tab="d" class="on">Domains</button><button type="button" data-tab="h">Hostnames &amp; hosting</button></div>
+<div id="body"><div class="card"><div class="empty">Loading…</div></div></div>
+</main>
+<script src="vendor/zyb-xlsx.js"></script><script src="vendor/zyb-renewals.js"></script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, ERR='', TAB='d';
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=300000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function dt(t){return t?new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'never';}
+  var LV={bad:['Problem','bad'],warn:['Warning','warn'],info:['Note','info'],ok:['OK','ok']};
+  function st(w){return w?'<span class="pill p-'+(w==='ok'?'ok':w==='bad'?'bad':w==='warn'?'warn':'info')+'">'+LV[w][0]+'</span>':'<span class="pill p-mut">not checked</span>';}
+  function tile(l,v,s,cls,act){return '<button type="button" class="t '+(cls||'')+'"'+(act?' data-act="'+act+'"':'')+'><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function days(n){return n==null?'<span class="muted">not recorded</span>':n<0?'<b style="color:var(--bad)">expired '+(-n)+' d ago</b>':'<span style="color:'+(n<=30?'var(--bad)':n<=90?'var(--warn)':'var(--text)')+'">'+n+' d</span>';}
+  // mail security chips from the last check's records
+  function mail(d){var r=d.check&&d.check.records;if(!r)return '<span class="muted">—</span>';var F=d.check.findings.map(function(f){return f.level+' '+f.text;}).join('\n');
+    var spf=!r.SPF||!r.SPF.length?'bad':/(bad|warn) .*SPF/.test(F)?'warn':'ok', dm=!r.DMARC||!r.DMARC.length?'bad':/p=none/.test(F)?'warn':'ok';
+    var dk=!d.dkim_selectors.length?'mut':Object.keys(r.DKIM||{}).every(function(k){return r.DKIM[k];})?'ok':'warn';
+    return '<span class="mc '+spf+'">SPF</span><span class="mc '+dm+'">DMARC</span><span class="mc '+dk+'">DKIM</span>';}
+  // Brand Protection follows this register: its official domains are ours, and our own domains are marked owned there
+  function drawBrand(){var B=V.brand,h='';
+    if(!B)h='<span class="muted">Not synced yet.</span>';
+    else if(!B.ok)h='<span class="pill p-'+(B.state==='missing'?'mut':'warn')+'">'+(B.state==='missing'?'not installed':'not synced')+'</span> '+esc(B.error||'');
+    else{h='<span class="pill p-ok">in step</span> Watching look-alikes of <b>'+esc((B.official||[]).join(', ')||'—')+'</b>'
+      +(B.marked&&B.marked.length?' · marked ours: '+esc(B.marked.join(', ')):'')
+      +(B.beyond_limit&&B.beyond_limit.length?'<div class="muted" style="margin-top:4px">Brand Protection watches '+V.brand_max+' domains at most; not watched: '+esc(B.beyond_limit.join(', '))+'</div>':'')
+      +(B.not_registered&&B.not_registered.length?('<div style="margin-top:4px;color:var(--warn)">Brand Protection says ' + ZYB_ORG.short + ' owns ')+esc(B.not_registered.join(', '))+' - not in this register. Add them here (with registrar and renewal date) so they are checked and renewed.</div>':'');}
+    $('brand').innerHTML='<div class="card" style="padding:10px 14px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>Brand Protection</b><span style="flex:1;min-width:200px">'+h+'</span>'
+      +(B&&B.at?'<span class="muted">'+esc(dt(B.at))+'</span>':'')+(can('admin')?'<button type="button" class="btn" id="bsync">⇄ Update Brand Protection</button>':'')+'</div></div>';}
+  function draw(){
+    var S=V&&V.summary;
+    $('add-d').hidden=$('add-h').hidden=!can('admin');$('check').hidden=!can('operator');
+    if(ERR){$('kk').innerHTML='';$('body').innerHTML='<div class="card"><p class="err">'+esc(ERR)+'</p></div>';return;}
+    $('up').textContent='Last checked: '+dt(S.last_run);
+    $('kk').innerHTML=tile('Domains',S.domains,S.no_expiry?S.no_expiry+' without a renewal date':'all with a renewal date',S.no_expiry?'warn':'','d')
+      +tile('Expiring in 90 days',S.expiring_90,'registrations to renew',S.expiring_90?'warn':'ok','d')+tile('Expired',S.expired,'domains past their date',S.expired?'bad':'ok','d')
+      +tile('Hostnames',S.hosts,S.outside_ksa+' hosted outside the Kingdom',S.outside_ksa?'warn':'','h')+tile('Certificates ≤ 30 days',S.certs_30,'TLS certificates to renew',S.certs_30?'bad':'ok','h')
+      +tile('Problems',S.bad,S.warn+' warnings',S.bad?'bad':S.warn?'warn':'ok')+(S.unchecked?tile('Not checked yet',S.unchecked,'run Check now','info'):'');
+    drawBrand();
+    [].forEach.call(document.querySelectorAll('#tabs button'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===TAB);});
+    if(TAB==='d'){$('body').innerHTML='<div class="card"><h2>Domains<span class="c">'+V.domains.length+'</span></h2>'+(V.domains.length?'<div class="tw"><table><thead><tr><th>Domain</th><th>Registrar</th><th>DNS</th><th>Renewal</th><th>Left</th><th>Mail security</th><th>Status</th><th>Checked</th></tr></thead><tbody>'
+      +V.domains.map(function(d){return '<tr class="rw" data-d="'+esc(d.id)+'" tabindex="0"><td><b>'+esc(d.name)+'</b>'+(d.owner?'<div class="muted">'+esc(d.owner)+'</div>':'')+'</td><td>'+esc(d.registrar||'—')+'</td><td>'+esc(d.provider_name)+'</td><td>'+esc(d.expires||'—')+(d.auto_renew?' <span class="pill p-info">auto-renew</span>':'')+'</td><td>'+days(d.days_left)+'</td><td>'+mail(d)+'</td><td>'+st(d.worst)+'</td><td class="muted">'+esc(d.check?dt(d.check.at):'never')+'</td></tr>';}).join('')+'</tbody></table></div>'
+      :'<div class="empty">No domain registered yet.'+(can('admin')?' Click <b>➕ Add domain</b>.':' An administrator adds them.')+'</div>')+'</div>';}
+    else {$('body').innerHTML='<div class="card"><h2>Hostnames &amp; hosting<span class="c">'+V.hosts.length+'</span></h2>'+(V.hosts.length?'<div class="tw"><table><thead><tr><th>Hostname</th><th>Purpose</th><th>Hosted at</th><th>Location</th><th>Resolves to</th><th>Certificate</th><th>Asset</th><th>Status</th></tr></thead><tbody>'
+      +V.hosts.map(function(h){var r=h.check&&h.check.records||{},c=h.check&&h.check.cert;return '<tr class="rw" data-h="'+esc(h.id)+'" tabindex="0"><td><b>'+esc(h.fqdn)+'</b></td><td>'+esc(h.purpose||'—')+'</td><td>'+esc(h.hosting||'—')+'</td><td>'+(h.location==='onprem'?'<span class="pill p-ok" title="'+esc(h.location_derived?'on a server in the asset register':'recorded')+('">' + ZYB_ORG.short + ' DC</span>'):h.location==='ksa'?'<span class="pill p-ok">KSA</span>':h.location==='outside'?'<span class="pill p-warn">outside KSA</span>':'<span class="pill p-mut">not recorded</span>')+'</td><td class="mono">'+esc((r.A||[]).concat(r.AAAA||[]).slice(0,3).join(', ')||'—')+'</td><td>'+(c?days(h.cert_days)+' <span class="muted">'+esc(c.issuer)+'</span>':h.tls?'<span class="muted">—</span>':'<span class="muted">not checked (no TLS)</span>')+'</td><td>'+(h.asset?'<a href="index.html" title="'+esc(h.asset.how)+'">'+esc(h.asset.name)+'</a>'+(h.asset.how!=='linked'?' <span class="muted">('+esc(h.asset.how)+')</span>':''):'<span class="muted">not linked</span>')+'</td><td>'+st(h.worst)+'</td></tr>';}).join('')+'</tbody></table></div>'
+      :'<div class="empty">No hostname registered yet.'+(can('admin')?' Click <b>➕ Add hostname</b>.':'')+'</div>')+'</div>';}
+  }
+  function findings(c){return c?(c.findings.length?c.findings.map(function(f){return '<div class="fd '+f.level+'"><b>'+LV[f.level][0]+':</b> '+esc(f.text)+(f.fix?'<small>What to do: '+esc(f.fix)+'</small>':'')+'</div>';}).join(''):'<p>No finding.</p>'):'<p class="zd-dim">Not checked yet.</p>';}
+  function records(r){if(!r)return '';return Z.tbl(['Record','Value'],Object.keys(r).filter(function(k){return k!=='DKIM';}).map(function(k){return [esc(k),'<span class="rec">'+(Array.isArray(r[k])&&r[k].length?r[k].map(esc).join('<br>'):'<span class="zd-dim">none</span>')+'</span>'];}).concat(r.DKIM?Object.keys(r.DKIM).map(function(k){return ['DKIM '+esc(k),r.DKIM[k]?'key published':r.DKIM[k]===false?'<b style="color:var(--bad)">no key</b>':'not read'];}):[]));}
+  function histHtml(key){return req('GET','/domains/history?id='+encodeURIComponent(key)).then(function(r){return Z.sec('DNS changes seen ('+r.items.length+')',r.items.length?r.items.map(function(x){return '<div class="fd info"><b>'+esc(dt(x.at))+'</b><small>'+x.changes.map(esc).join('<br>')+'</small></div>';}).join(''):'<p class="zd-dim">No change seen since it was added.</p>');}).catch(function(){return '';});}
+  function openD(id){var d=V.domains.filter(function(x){return x.id===id;})[0];if(!d)return;
+    var h=Z.kv([['Status',st(d.worst)],['Renewal',esc(d.expires||'not recorded')+(d.auto_renew?' (auto-renew)':'')],['Registrar',esc(d.registrar||'—')],['DNS provider',esc(d.provider_name)],['Owner',esc(d.owner||'—')],['Expected nameservers',esc(d.expected_ns.join(', ')||'not recorded')]].concat(d.cost!=null?[['Cost',esc(d.cost+' '+(d.currency||''))]]:[]))
+      +Z.sec('Findings',findings(d.check))+Z.sec('Public DNS (last check '+esc(d.check?dt(d.check.at):'never')+')',records(d.check&&d.check.records))
+      +(d.notes?Z.sec('Notes','<p>'+esc(d.notes)+'</p>'):'')
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'+(can('operator')?'<button type="button" class="btn" data-chk="d:'+esc(d.id)+'">⟳ Check now</button>':'')+(can('admin')?'<button type="button" class="btn" data-editd="'+esc(d.id)+'">Edit</button><button type="button" class="btn" data-ret="domain:'+esc(d.id)+'">Retire</button>':'')+'</div><div id="hist"></div>';
+    Z.open('Domain',d.name,h);histHtml('d:'+d.id).then(function(x){var e=$('hist');if(e)e.innerHTML=x;});}
+  function openH(id){var x=V.hosts.filter(function(y){return y.id===id;})[0];if(!x)return;var c=x.check&&x.check.cert;
+    var h=Z.kv([['Status',st(x.worst)],['Purpose',esc(x.purpose||'—')],['Hosted at',esc(x.hosting||'—')],['Location',esc(x.location_name)],['Domain',esc(x.domain||'not in the register')],['Asset',x.asset?esc(x.asset.name+' ('+x.asset.how+')'):'not linked']])
+      +Z.sec('Findings',findings(x.check))
+      +(c?Z.sec('Certificate on port '+x.port,Z.kv([['Issued to',esc(c.subject||'—')],['Issuer',esc(c.issuer||'—')],['Valid until',esc(new Date(c.valid_to).toISOString().slice(0,10))+' ('+x.cert_days+' d)'],['Covers this name',c.name_ok?'yes':'<b style="color:var(--bad)">no</b>'],['Trusted chain',c.trusted?'yes':'<b style="color:var(--warn)">no</b> '+esc(c.trust_error)],['Names',esc((c.names||[]).slice(0,8).join(', '))]])):'')
+      +Z.sec('Public DNS',records(x.check&&x.check.records))
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'+(can('operator')?'<button type="button" class="btn" data-chk="h:'+esc(x.id)+'">⟳ Check now</button>':'')+(can('admin')?'<button type="button" class="btn" data-edith="'+esc(x.id)+'">Edit</button><button type="button" class="btn" data-ret="host:'+esc(x.id)+'">Retire</button>':'')+'</div><div id="hist"></div>';
+    Z.open('Hostname',x.fqdn,h);histHtml('h:'+x.id).then(function(y){var e=$('hist');if(e)e.innerHTML=y;});}
+  function I(id,l,v,ph,t){return '<label>'+esc(l)+'<input id="'+id+'" type="'+(t||'text')+'" value="'+esc(v==null?'':v)+'" placeholder="'+esc(ph||'')+'" autocomplete="off"></label>';}
+  function sel(id,l,opts,v){return '<label>'+esc(l)+'<select id="'+id+'">'+Object.keys(opts).map(function(k){return '<option value="'+esc(k)+'"'+(k===v?' selected':'')+'>'+esc(opts[k])+'</option>';}).join('')+'</select></label>';}
+  function formD(d){d=d||{expected_ns:[],dkim_selectors:[]};Z.open(d.id?'Edit domain':'Add domain',d.name||'New domain','<div class="fm">'+I('f-name','Domain',d.name,ZYB_ORG.domain)+I('f-reg','Registrar',d.registrar,'SaudiNIC, GoDaddy…')+I('f-own','Owner',d.owner,'IT Infrastructure')
+      +I('f-exp','Renewal date',d.expires,'','date')+'<label>Auto-renew<select id="f-ar"><option value="0">No</option><option value="1"'+(d.auto_renew?' selected':'')+'>Yes</option></select></label>'+sel('f-prov','DNS provider',V.providers,d.dns_provider||'other')
+      +I('f-ns','Expected nameservers',d.expected_ns.join(', '),'ns1.cloudflare.com, ns2.cloudflare.com')+I('f-dk','DKIM selectors',d.dkim_selectors.join(', '),'selector1, selector2')+I('f-cost','Yearly cost',d.cost,'300')+I('f-cur','Currency',d.currency||'SAR')
+      +'<label style="grid-column:1/-1">Notes<textarea id="f-notes" rows="2">'+esc(d.notes||'')+'</textarea></label></div><p class="note">Nameservers recorded here are compared with public DNS on every check: a difference is flagged as a possible hijack.</p><div style="margin-top:12px"><button type="button" class="btn pri" data-saved="'+esc(d.id||'')+'">Save</button></div>');}
+  function formH(x){x=x||{};Z.open(x.id?'Edit hostname':'Add hostname',x.fqdn||'New hostname','<div class="fm">'+I('f-fqdn','Hostname',x.fqdn,('portal.' + ZYB_ORG.domain))+I('f-pur','Purpose',x.purpose,'Claims portal')+I('f-host','Hosted at (leave empty for our own servers)',x.hosting,(ZYB_ORG.short + ' data centre, or the provider'))
+      +sel('f-loc','Location',V.locations,x.location||(x.id?'unknown':'onprem'))+I('f-asset','Asset id (optional)',x.asset_id,'linked by IP when empty')+I('f-port','TLS port',x.port||443,'443','number')
+      +'<label>Check the TLS certificate<select id="f-tls"><option value="1">Yes</option><option value="0"'+(x.tls===false?' selected':'')+'>No (no web service)</option></select></label>'
+      +'<label style="grid-column:1/-1">Notes<textarea id="f-notes" rows="2">'+esc(x.notes||'')+'</textarea></label></div><div style="margin-top:12px"><button type="button" class="btn pri" data-saveh="'+esc(x.id||'')+'">Save</button></div>');}
+  var g=function(id){var e=$(id);return e?e.value.trim():'';};
+  document.addEventListener('click',function(e){var b;
+    if((b=e.target.closest('[data-saved]'))){var id=b.getAttribute('data-saved');b.disabled=true;req('POST','/domains',{id:id||undefined,name:g('f-name'),registrar:g('f-reg'),owner:g('f-own'),expires:g('f-exp'),auto_renew:g('f-ar')==='1',dns_provider:g('f-prov'),expected_ns:g('f-ns'),dkim_selectors:g('f-dk'),cost:g('f-cost'),currency:g('f-cur'),notes:g('f-notes')})
+      .then(function(r){Z.close();toast('Saved '+r.name+' — checking it now…');return req('POST','/domains/check',{id:'d:'+r.id}).catch(function(e){toast('Saved, but the check did not start: '+e.message+' - it runs again on the next scheduled check');});}).then(function(){load();}).catch(function(x){b.disabled=false;toast(x.message);});return;}
+    if((b=e.target.closest('[data-saveh]'))){var hid=b.getAttribute('data-saveh');b.disabled=true;req('POST','/domains/hosts',{id:hid||undefined,fqdn:g('f-fqdn'),purpose:g('f-pur'),hosting:g('f-host'),location:g('f-loc'),asset_id:g('f-asset'),port:g('f-port'),tls:g('f-tls')==='1',notes:g('f-notes')})
+      .then(function(r){Z.close();toast('Saved '+r.fqdn+' — checking it now…');return req('POST','/domains/check',{id:'h:'+r.id}).catch(function(e){toast('Saved, but the check did not start: '+e.message+' - it runs again on the next scheduled check');});}).then(function(){load();}).catch(function(x){b.disabled=false;toast(x.message);});return;}
+    if((b=e.target.closest('[data-chk]'))){b.disabled=true;b.textContent='Checking…';req('POST','/domains/check',{id:b.getAttribute('data-chk')}).then(function(r){V=r;draw();Z.close();toast('Checked.');}).catch(function(x){b.disabled=false;toast(x.message);});return;}
+    if((b=e.target.closest('[data-editd]'))){formD(V.domains.filter(function(x){return x.id===b.getAttribute('data-editd');})[0]);return;}
+    if((b=e.target.closest('[data-edith]'))){formH(V.hosts.filter(function(x){return x.id===b.getAttribute('data-edith');})[0]);return;}
+    if((b=e.target.closest('[data-ret]'))){var p=b.getAttribute('data-ret').split(':'),why=window.prompt('Why is it retired? (kept in the audit trail)');if(!why)return;req('POST',p[0]==='host'?'/domains/hosts/'+p[1]+'/retire':'/domains/'+p[1]+'/retire',{reason:why}).then(function(){Z.close();toast('Retired.');load();}).catch(function(x){toast(x.message);});return;}
+  });
+  $('body').addEventListener('click',function(e){var r=e.target.closest('tr[data-d],tr[data-h]');if(!r||e.target.closest('a'))return;if(r.hasAttribute('data-d'))openD(r.getAttribute('data-d'));else openH(r.getAttribute('data-h'));});
+  $('body').addEventListener('keydown',function(e){if(e.key!=='Enter')return;var r=e.target.closest('tr[data-d],tr[data-h]');if(r)r.click();});
+  $('tabs').addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(!b)return;TAB=b.getAttribute('data-tab');draw();});
+  $('kk').addEventListener('click',function(e){var b=e.target.closest('[data-act]');if(!b)return;TAB=b.getAttribute('data-act');draw();});
+  $('brand').addEventListener('click',function(e){var b=e.target.closest('#bsync');if(!b)return;b.disabled=true;b.textContent='Updating…';req('POST','/domains/brand-sync',{}).then(function(r){V=r;draw();toast(r.brand&&r.brand.ok?'Brand Protection is in step with the register.':'Not synced: '+((r.brand&&r.brand.error)||'see the panel'));}).catch(function(x){toast(x.message);b.disabled=false;b.textContent='⇄ Update Brand Protection';});});
+  $('add-d').addEventListener('click',function(){formD();});$('add-h').addEventListener('click',function(){formH();});
+  $('check').addEventListener('click',function(){var b=this;b.disabled=true;b.textContent='Checking…';req('POST','/domains/check',{}).then(function(r){V=r;draw();toast('All domains and hostnames checked.');}).catch(function(x){toast(x.message);}).then(function(){b.disabled=false;b.textContent='⟳ Check now';});});
+  $('xlsx').addEventListener('click',function(){if(!V||!window.zybXlsx)return;var F=function(c){return c?c.findings.filter(function(f){return f.level!=='ok';}).map(function(f){return LV[f.level][0]+': '+f.text;}).join(' | '):'not checked';};
+    zybXlsx.download('domains-dns-'+new Date().toISOString().slice(0,10)+'.xlsx',[
+      {name:'Domains',columns:[{h:'Domain',w:30},{h:'Registrar',w:18},{h:'DNS provider',w:14},{h:'Renewal',w:12},{h:'Days left',w:9},{h:'Auto-renew',w:9},{h:'Owner',w:18},{h:'Nameservers',w:40},{h:'SPF',w:50},{h:'DMARC',w:50},{h:'Status',w:10},{h:'Findings',w:120}],
+        rows:V.domains.map(function(d){var r=d.check&&d.check.records||{};return [d.name,d.registrar,d.provider_name,d.expires||'',d.days_left==null?'':d.days_left,d.auto_renew?'yes':'no',d.owner,(r.NS||[]).join(', '),(r.SPF||[]).join(' | '),(r.DMARC||[]).join(' | '),d.worst?LV[d.worst][0]:'not checked',F(d.check)];})},
+      {name:'Hostnames',columns:[{h:'Hostname',w:34},{h:'Purpose',w:22},{h:'Hosted at',w:20},{h:'Location',w:16},{h:'Resolves to',w:30},{h:'Certificate days',w:10},{h:'Issuer',w:20},{h:'Asset',w:22},{h:'Status',w:10},{h:'Findings',w:120}],
+        rows:V.hosts.map(function(h){var r=h.check&&h.check.records||{},c=h.check&&h.check.cert;return [h.fqdn,h.purpose,h.hosting,h.location_name,(r.A||[]).concat(r.AAAA||[]).join(', '),h.cert_days==null?'':h.cert_days,c?c.issuer:'',h.asset?h.asset.name+' ('+h.asset.how+')':'',h.worst?LV[h.worst][0]:'not checked',F(h.check)];})}],
+      {title:'Domains & DNS',filter:'all active domains and hostnames',by:(ZYB_ORG.short + ' — IT Operations and Cyber Security Automation Platform')});});
+  function load(){req('GET','/domains').then(function(r){V=r;ERR='';draw();}).catch(function(e){ERR=e.status===404?'The domains module is not installed in IT Asset Management yet — run the update (add-domains.sh).':e.message;draw();});}
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+})();
+</script>
+</body></html>

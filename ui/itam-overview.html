@@ -1,0 +1,79 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IT Asset Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- IT Asset Management overview over /api/itam/itam/overview (read): one view over the ITAM modules' own views - a health score from
+     the parts that are measured (each itemised; unmeasured parts are left out, and the score is withheld below three), the next things
+     to do across modules ranked with the page that fixes each, tiles that open their module, breakdowns, budget use and a daily trend.
+     Everything links to the module that owns the figure; nothing is changed from this page. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}a{color:var(--info)}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:5px 11px;cursor:pointer;text-decoration:none;display:inline-block}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-bottom:12px}.card h2{margin:0 0 8px;font-size:14px}
+.hero{display:grid;grid-template-columns:220px minmax(0,1fr) minmax(0,1.2fr);gap:12px}@media(max-width:1100px){.hero{grid-template-columns:1fr}}
+.ring{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.comp{display:grid;grid-template-columns:minmax(0,1fr) 110px 48px;gap:8px;align-items:center;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--d-line)}.comp:last-child{border:0}.comp .b{height:8px;background:var(--d-raise);border-radius:5px;overflow:hidden}.comp .b i{display:block;height:100%}
+.act{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--d-line);text-decoration:none;color:inherit}.act:last-child{border:0}.act:hover{background:rgba(255,255,255,.03)}
+.pr{flex:0 0 36px;text-align:center;border-radius:6px;font-weight:800;font-size:12px;padding:1px 0}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:10px 14px;text-decoration:none;color:inherit;display:block}.t:hover{border-color:var(--acc)}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:22px;font-weight:800}.t .s{font-size:11px;color:var(--d-mute)}.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.hb{display:grid;grid-template-columns:130px 1fr 54px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}.hb .b{height:8px;background:var(--d-raise);border-radius:5px;overflow:hidden}.hb .b i{display:block;height:100%;background:var(--acc)}
+.mods{display:flex;gap:6px;flex-wrap:wrap}.chip{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border:1px solid var(--d-line);border-radius:999px;font-size:12.5px;text-decoration:none;color:var(--d-ink)}.chip i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad);font-size:13px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT assets · overview</div><h1>IT Asset Management</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn" id="rf">⟳</button></div>
+<div class="card"><div class="mods" id="mods"><span class="mut">Loading…</span></div><div class="err" id="errs"></div></div>
+<div class="hero"><div class="card ring" id="ring"></div><div class="card"><h2>What the score is made of</h2><div id="comp"></div><div class="sm mut" id="cwhy" style="margin-top:6px"></div></div>
+  <div class="card"><h2>Do next</h2><div id="acts"></div></div></div>
+<div class="k" id="tiles"></div>
+<div class="g3"><div class="card"><h2>Assets by type</h2><div id="b-type"></div></div><div class="card"><h2>Assets by site</h2><div id="b-site"></div></div><div class="card"><h2>Assets by status</h2><div id="b-status"></div></div>
+  <div class="card"><h2>Weakest data fields</h2><div id="b-fields"></div></div><div class="card"><h2>Sites with the weakest records</h2><div id="b-wsites"></div></div><div class="card"><h2>Budget use</h2><div id="b-budget"></div></div></div>
+<div class="card"><h2>Health over time</h2><div id="trend"></div></div>
+<p class="sm mut" id="note"></p>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var colr = function (v) { return v == null ? 'var(--d-mute)' : v >= 80 ? 'var(--ok)' : v >= 60 ? 'var(--warn)' : 'var(--bad)'; };
+  function req(u) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open('GET', '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true;
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON: reported below */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && (j.message || j.error)) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(null); }); }
+  function bars(L, lab, val, max, fmt) { if (!L || !L.length) return '<div class="empty">No data yet.</div>'; var m = max || Math.max.apply(null, L.map(val).concat([1]));
+    return L.map(function (r) { var v = val(r); return '<div class="hb"><span title="' + esc(lab(r)) + '" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(lab(r)) + '</span><span class="b"><i style="width:' + Math.round(100 * v / m) + '%;' + (fmt ? 'background:' + colr(v) : '') + '"></i></span><span class="sm">' + esc(fmt ? fmt(v) : v) + '</span></div>'; }).join(''); }
+  function paint(V) {
+    var H = V.health, s = H.score, C = 2 * Math.PI * 70;
+    $('ring').innerHTML = '<svg width="170" height="170" viewBox="0 0 170 170" role="img" aria-label="ITAM health ' + (s == null ? 'withheld' : s) + '"><circle cx="85" cy="85" r="70" fill="none" stroke="#232837" stroke-width="14"/>' + (s == null ? '' : '<circle cx="85" cy="85" r="70" fill="none" stroke="' + colr(s) + '" stroke-width="14" stroke-linecap="round" stroke-dasharray="' + (C * s / 100).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 85 85)"/>') +
+      '<text x="85" y="92" text-anchor="middle" font-size="' + (s == null ? 18 : 40) + '" font-weight="800" fill="#e7eaf0">' + (s == null ? 'withheld' : s) + '</text></svg><div><b>ITAM health</b></div><div class="sm mut">' + H.measured + ' of ' + H.components.length + ' parts measured</div>';
+    $('comp').innerHTML = H.components.map(function (c) { return '<a class="comp" href="' + esc(c.href) + '" style="text-decoration:none;color:inherit"><span><b>' + esc(c.label) + '</b> <span class="mut sm">weight ' + c.weight + '</span><br><span class="sm mut">' + esc(c.detail) + '</span></span><span class="b">' + (c.measured ? '<i style="width:' + c.value + '%;background:' + colr(c.value) + '"></i>' : '') + '</span><span class="sm" style="text-align:right">' + (c.measured ? c.value + '%' : '<span class="mut">not measured</span>') + '</span></a>'; }).join('');
+    $('cwhy').textContent = 'Score ' + H.why + '.';
+    $('acts').innerHTML = V.actions.length ? V.actions.map(function (a) { var c = colr(100 - a.priority); return '<a class="act" href="' + esc(a.href) + '"><span class="pr" style="background:' + c + '22;color:' + c + '">' + esc(a.priority) + '</span><span><b>' + esc(a.title) + '</b><br><span class="sm mut">' + esc(a.detail) + '</span></span></a>'; }).join('') : '<div class="empty">Nothing waiting. ' + (V.tiles.assets ? 'Every module is clear.' : 'Add assets (import or Discovery) and the modules start raising what needs doing.') + '</div>';
+    var t = V.tiles, n = function (v) { return v == null ? '—' : v; }, T = [
+      ['inventory.html', 'Assets', n(t.assets), 'in the register', ''], ['inventory.html', 'Data quality', t.quality == null ? '—' : t.quality + ' %', 'average completeness', t.quality == null ? '' : t.quality >= 80 ? 'ok' : 'warn'],
+      ['ai-findings.html', 'Open findings', n(t.findings_open), (t.findings_top || 0) + ' priority 70+', t.findings_top ? 'bad' : ''], ['renewals-expiry.html', 'Renewals due', n(t.renewals_due), (t.renew_90 == null ? '—' : t.renew_90) + ' in 90 days', t.renewals_due ? 'bad' : ''],
+      ['software-studio.html', 'Licences over', n(t.licences_over), (t.unlicensed == null ? '—' : t.unlicensed) + ' unlicensed products', t.licences_over ? 'bad' : ''], ['asset-purchasing.html', 'Open orders', n(t.orders_open), t.orders_open == null ? 'operators see purchasing' : (t.orders_late || 0) + ' late', t.orders_late ? 'warn' : ''],
+      ['stocktake.html', 'Last count', t.stocktake_accuracy == null ? '—' : t.stocktake_accuracy + ' %', 'found of expected', t.stocktake_accuracy == null ? '' : t.stocktake_accuracy >= 95 ? 'ok' : 'warn'], ['asset-autofill.html', 'Data proposals', n(t.proposals), 'waiting for a person', '']];
+    $('tiles').innerHTML = T.map(function (x) { return '<a class="t ' + x[4] + '" href="' + x[0] + '"><div class="l">' + esc(x[1]) + '</div><div class="v">' + esc(x[2]) + '</div><div class="s">' + esc(x[3]) + '</div></a>'; }).join('');
+    var B = V.breakdown, cnt = function (r) { return r.count; }, lv = function (r) { return r.value; };
+    $('b-type').innerHTML = bars(B.type, lv, cnt); $('b-site').innerHTML = bars(B.site, lv, cnt); $('b-status').innerHTML = bars(B.status, lv, cnt);
+    $('b-fields').innerHTML = bars(B.weakest_fields, function (r) { return r.field; }, function (r) { return r.pct; }, 100, function (v) { return v + '%'; });
+    $('b-wsites').innerHTML = bars(B.weakest_sites, function (r) { return r.site + ' (' + r.assets + ')'; }, function (r) { return r.avg; }, 100, function (v) { return v + '%'; });
+    $('b-budget').innerHTML = V.budget ? bars(V.budget.envelopes, function (r) { return r.name; }, function (r) { return r.utilisation_pct || 0; }, 100, function (v) { return v + '%'; }) + '<div class="sm mut">FY ' + esc(V.budget.fy) + ' · committed + spent of each envelope · <a href="asset-purchasing.html">Purchasing</a></div>' : '<div class="empty">' + (t.orders_open == null ? 'Operators and administrators see budget use.' : 'No budget connected - set the year\'s envelopes in Budgets.') + '</div>';
+    var tr = V.trend.filter(function (p) { return p.score != null; });
+    $('trend').innerHTML = tr.length >= 2 ? (function () { var w = 900, h = 90, xs = function (i) { return 10 + i * (w - 20) / (tr.length - 1); }, ys = function (v) { return h - 8 - v * (h - 16) / 100; };
+      return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" role="img" aria-label="Health per day"><polyline fill="none" stroke="var(--acc)" stroke-width="2.5" points="' + tr.map(function (p, i) { return xs(i).toFixed(1) + ',' + ys(p.score).toFixed(1); }).join(' ') + '"/>' + tr.map(function (p, i) { return '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(p.score).toFixed(1) + '" r="3" fill="var(--acc)"><title>' + esc(p.day) + ': ' + p.score + '</title></circle>'; }).join('') + '</svg><div class="sm mut">' + esc(tr[0].day) + ' → ' + esc(tr[tr.length - 1].day) + ' · one point per day</div>'; })()
+      : '<div class="empty">' + (tr.length ? 'One day recorded so far (' + tr[0].score + '). ' : '') + 'The score is recorded once a day; the line appears from the second day.</div>';
+    $('mods').innerHTML = V.modules.map(function (m) { var c = m.state === 'ok' || m.state === 'link' ? 'var(--ok)' : m.state === 'error' ? 'var(--bad)' : 'var(--d-mute)'; return '<a class="chip" href="' + esc(m.href) + '"><i style="background:' + c + '"></i>' + esc(m.label) + (m.state === 'error' ? ' · error' : m.state === 'not installed' ? ' · not installed' : m.state === 'operators' ? ' · operators' : '') + '</a>'; }).join('');
+    $('errs').textContent = V.errors.length ? 'Not answering: ' + V.errors.map(function (e) { return e.module + ' (' + e.error + ')'; }).join(', ') : '';
+    $('note').textContent = V.note; $('up').textContent = 'Updated ' + new Date(V.at).toLocaleTimeString();
+  }
+  function load() { req('/itam/overview').then(paint, function (e) { $('mods').innerHTML = '<span class="err">Could not read the overview: ' + esc(e.message) + (e.status === 0 ? ' - the ITAM engine is not reachable.' : '') + '</span>'; }); }
+  $('rf').addEventListener('click', load);
+  load();
+})();
+</script></body></html>

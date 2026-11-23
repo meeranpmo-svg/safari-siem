@@ -1,0 +1,325 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI CISO</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a3e635}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:22px;color:var(--title)}.top .sub{color:var(--mute);font-size:13px}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn:disabled{opacity:.55;cursor:wait}
+.btn.pri{background:#20301a;border-color:#4d7a2a;color:#d4f7a6}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:16px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:300px 1fr;gap:12px;margin:0 0 12px}@media(max-width:980px){.hero{grid-template-columns:1fr}}
+.ring{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center}
+.ring .g{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}.ring .why{font-size:12px;color:var(--mute);max-width:240px}
+.doms{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.dom{background:var(--raise);border:1px solid var(--edge);border-radius:11px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:8px;text-align:left;color:inherit;font:inherit}
+.dom:hover{border-color:#4a5162}.dom .hd{display:flex;align-items:baseline;gap:8px}.dom b{font-size:13.5px;color:var(--title)}.dom .s{margin-left:auto;font-size:22px;font-weight:800}
+.bar{height:6px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}.bar i{display:block;height:100%;border-radius:99px}
+.dom .it{font-size:12px;color:var(--mute);min-height:32px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.kpi{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:12px 14px}.kpi .v{font-size:26px;font-weight:800;line-height:1.1}.kpi .l{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}.kpi .n{font-size:11.5px;color:var(--mute);margin-top:2px}
+.g2{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin:0 0 12px}@media(max-width:1060px){.g2{grid-template-columns:1fr}}
+.p{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.ok{background:rgba(63,185,80,.15);color:var(--ok)}.warn{background:rgba(227,179,65,.15);color:var(--warn)}.bad{background:rgba(255,123,114,.16);color:var(--bad)}.info{background:rgba(121,184,255,.15);color:var(--info)}.acc{background:rgba(163,230,53,.14);color:#c5f27a}.mut{background:rgba(140,147,161,.16);color:#a3a9b5}
+.brief .hl{font-size:17px;font-weight:700;color:var(--title);margin:0 0 6px}.brief .sm{color:#cfd5df;margin:0 0 12px}
+.prio{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--edge)}.prio .no{width:24px;height:24px;border-radius:7px;background:var(--raise);border:1px solid var(--border);display:grid;place-items:center;font-weight:800;font-size:12px;flex:0 0 auto}
+.prio .a{font-weight:600;color:var(--title)}.prio .w{font-size:12.5px;color:var(--mute)}.refs{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px}
+.ref{font:11px Consolas,monospace;color:var(--info);background:rgba(121,184,255,.08);border:1px solid #24405e;border-radius:6px;padding:0 6px;text-decoration:none}
+.bp{margin:10px 0 0;padding-left:18px;color:#cfd5df}.bp li{margin:3px 0}
+.dec{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--edge)}.dec:first-child{border-top:0}.dec .t{flex:1;min-width:0}.dec .t b{display:block;font-size:13px;color:var(--title);font-weight:600}.dec .t span{font-size:12px;color:var(--mute)}.dec a{color:var(--info);text-decoration:none;font-weight:600;font-size:12.5px;white-space:nowrap}
+.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}.flt input,.flt select{background:var(--raise);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font:13px "Segoe UI",system-ui,sans-serif}.flt input{flex:1 1 220px}
+.chip{background:var(--raise);border:1px solid var(--border);color:var(--mute);border-radius:999px;padding:3px 10px;font:600 12px "Segoe UI",system-ui,sans-serif;cursor:pointer}.chip.on{color:var(--title);border-color:#6b8f3a;background:#1d2a14}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.tw{overflow-x:auto}.rowc{cursor:pointer}.rowc:hover td{background:rgba(255,255,255,.035)}.muted{color:var(--mute)}.empty{color:var(--mute);padding:12px 0}
+.g2i{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:700px){.g2i{grid-template-columns:1fr}}.heat{display:flex;flex-direction:column;gap:7px}.hrow{display:grid;grid-template-columns:minmax(90px,1.2fr) 3fr 52px;gap:10px;align-items:center;font-size:12.5px}.hrow .bars{display:flex;height:12px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.05)}.hrow .bars i{display:block;height:100%}
+.team{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.eng{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px;text-decoration:none;color:inherit}.eng:hover{border-color:#4a5162}
+.eng b{font-size:13px;color:var(--title)}.eng .st{font-size:11.5px;color:var(--mute);display:flex;gap:6px;align-items:center}.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.src{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:4px 0}.src span.e{color:var(--mute);font-size:11.5px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.auto{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--mute);margin:-4px 0 12px}.auto b{color:var(--text);font-weight:600}
+.spark{margin-top:4px}
+.viz{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin:0 0 12px}@media(max-width:1060px){.viz{grid-template-columns:1fr}}
+.viz2{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin:0 0 12px}@media(max-width:1060px){.viz2{grid-template-columns:1fr}}
+.svgw{width:100%;overflow:hidden}.svgw svg{display:block;width:100%;height:auto}
+.lg{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}.lg button{display:flex;align-items:center;gap:6px;background:var(--raise);border:1px solid var(--border);color:var(--mute);border-radius:999px;padding:2px 9px;font:600 11.5px "Segoe UI",system-ui,sans-serif;cursor:pointer}.lg button.on{color:var(--title);border-color:#6b7280}.lg i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.mx{display:grid;gap:3px;font-size:12px}.mx .h{color:var(--mute);font-size:11px;text-align:center}.mx .n{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:6px}
+.mx button{border:0;border-radius:6px;min-height:30px;font:700 12.5px "Segoe UI",system-ui,sans-serif;color:#fff;cursor:pointer}.mx button:disabled{cursor:default;color:var(--mute)}.mx button.sel{outline:2px solid #fff;outline-offset:1px}
+.delta{display:flex;gap:10px;justify-content:center;font-size:12px}.delta span{padding:1px 8px;border-radius:999px;background:var(--raise);border:1px solid var(--edge)}
+.banner{background:rgba(163,230,53,.05);border:1px solid #3a5320;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#cfe8b0;margin:0 0 12px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">AI &amp; Automation · executive</div><h1>AI CISO</h1><div class="sub">One view for the CISO and BISO: posture, risk, decisions and the AI team — from the platform's own records</div></div>
+<span class="sp"></span><span class="muted" id="up"></span>
+<button type="button" class="btn" id="refresh">⟳ Refresh</button>
+<button type="button" class="btn" id="patrol" hidden>▶ Run all AI engineers</button>
+<button type="button" class="btn pri" id="brief" hidden>✦ Write board brief</button>
+<button type="button" class="btn" id="print">🖨 Board pack</button></div>
+<div class="auto" id="auto"></div>
+<div class="banner" id="srcwarn" hidden></div>
+
+<section class="hero">
+ <div class="card ring" id="ring"><div class="empty">Loading…</div></div>
+ <div class="card"><h2>Security posture by domain <span class="c">every point is itemised · click a domain for the breakdown · "not measured" is never scored as fine</span></h2><div class="doms" id="doms"></div></div>
+</section>
+<section class="kpis" id="kpis"></section>
+
+<section class="viz">
+ <div class="card"><h2>Posture over time <span class="c" id="trn"></span></h2><div class="svgw" id="trend"></div><div class="lg" id="trlg"></div></div>
+ <div class="card"><h2>Domains — now vs 30 days ago</h2><div class="svgw" id="radar"></div><div class="muted" style="font-size:11.5px" id="radn"></div></div>
+</section>
+<section class="viz2">
+ <div class="card"><h2>Risk matrix <span class="c">domain × severity · click a cell to filter the register</span></h2><div id="matrix"></div></div>
+ <div class="card"><h2>How long risks stay open <span class="c" id="agen"></span></h2><div class="svgw" id="ages"></div></div>
+</section>
+
+<section class="g2">
+ <div class="card brief" id="briefc"><h2>Board brief</h2><div class="empty">Loading…</div></div>
+ <div class="card"><h2>Decisions waiting for you <span class="c" id="decn"></span></h2><div id="dec"></div></div>
+</section>
+
+<section class="card" style="margin:0 0 12px"><h2>Risk register <span class="c" id="riskn"></span></h2>
+ <div class="flt"><span class="chip on" data-sev="">All</span><span class="chip" data-sev="critical">Critical</span><span class="chip" data-sev="high">High</span>
+ <select id="fdom"><option value="">Every domain</option></select><input type="search" id="fq" placeholder="Search risks, systems, sources…"></div>
+ <div class="tw"><table><thead><tr><th>Severity</th><th>Risk</th><th>Domain</th><th>Source</th><th>Status</th><th>Site</th><th>Age</th></tr></thead><tbody id="risks"></tbody></table></div>
+</section>
+
+<section class="g2">
+ <div class="card"><h2>BISO view — where the risk sits <span class="c">sites only where a record names one</span></h2><div class="g2i"><div><div class="eb" style="margin:0 0 8px">By domain</div><div class="heat" id="hdom"></div></div><div><div class="eb" style="margin:0 0 8px">By site</div><div class="heat" id="hsite"></div></div></div></div>
+ <div class="card"><h2>Compliance &amp; resilience</h2><div id="comp"></div></div>
+</section>
+
+<section class="g2">
+ <div class="card"><h2>AI engineering team <span class="c">the AI CISO's direct reports · <a href="ai-team.html#charters" style="color:var(--info);text-decoration:none">roles &amp; approvals →</a></span></h2><div class="team" id="team"></div></div>
+ <div class="card"><h2>Data sources</h2><div id="srcs"></div></div>
+</section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var API='/api/itam', RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, B=null, F={sev:'',dom:'',q:''};
+  var SEVC={critical:'bad',high:'warn',medium:'info',low:'mut'};
+  var DOMN={governance:'Governance',compliance:'SAMA CSF',detection:'Detection & response',exposure:'Exposure',resilience:'Resilience',operations:'Operations'};
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function pill(t,k){return '<span class="p '+esc(k||'mut')+'">'+esc(t)+'</span>';}
+  function col(s){return s==null?'#6b7280':s>=85?'var(--ok)':s>=70?'var(--info)':s>=50?'var(--warn)':'var(--bad)';}
+  function ago(t){if(!t)return 'never';var s=Math.max(0,(Date.now()-t)/1000);return s<90?Math.round(s)+' s ago':s<5400?Math.round(s/60)+' min ago':s<172800?Math.round(s/3600)+' h ago':Math.round(s/86400)+' d ago';}
+  function hours(h){return h==null?'—':h<48?h+' h':Math.round(h/24)+' d';}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function req(m,p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,API+p);x.withCredentials=true;x.timeout=400000;if(m!=='GET')x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(m!=='GET'?'{}':null);});}
+  function refLink(r){var pg=r.indexOf('duty:')===0?'ai-team.html':r.indexOf('sama:')===0||r==='domain:compliance'?'sama-compliance.html':r.indexOf('drill')===0||r==='domain:resilience'?'dr-drills.html':r.indexOf('case:')===0||r==='domain:detection'?'soc-tickets.html':r.indexOf('approval:')===0?'soc-response.html':r.indexOf('grc')===0||r==='domain:governance'?'grc-policies.html':r==='domain:exposure'?'pentest.html':'ai-team.html';
+    if(V){var x=V.risks.concat(V.decisions).filter(function(z){return z.ref===r;})[0];if(x&&x.link)pg=x.link;}
+    return '<a class="ref" href="'+esc(pg)+'" title="'+esc(r)+'">'+esc(r)+'</a>';}
+
+  function load(force){
+    $('refresh').disabled=true;
+    Promise.all([req('GET','/ciso/overview'+(force?'?refresh=1':'')),req('GET','/ciso/briefs?limit=1'),req('GET','/ciso/status').catch(function(){return null;})]).then(function(R){
+      V=R[0];var last=(R[1].briefs||[])[0];drawAuto(R[2]);
+      draw();
+      if(last&&(!B||B.id!==last.id))req('GET','/ciso/briefs/'+encodeURIComponent(last.id)).then(function(b){B=b;drawBrief();}).catch(function(){drawBrief();});else drawBrief();
+      $('up').textContent=V.stale?'figures from '+Math.round((V.age_s||0)/60)+' min ago · refreshing…':'updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      if(V.stale){clearTimeout(window.__cisoSt);window.__cisoSt=setTimeout(function(){load(false);},8000);}
+    }).catch(function(e){
+      var msg=e.status===404?'The AI CISO is not installed on the server yet — run the platform update (add-ciso.sh).':'Could not load: '+e.message;
+      $('ring').innerHTML='<div class="empty">'+esc(msg)+'</div>';$('doms').innerHTML='';$('briefc').innerHTML='<h2>Board brief</h2><div class="empty">'+esc(msg)+'</div>';
+    }).then(function(){$('refresh').disabled=false;});
+  }
+
+  function drawAuto(st){
+    if(!st){$('auto').innerHTML='';return;}
+    var d=function(t){return t?new Date(t).toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';};
+    $('auto').innerHTML='<span class="dot" style="background:'+(st.running?(st.last_error?'var(--warn)':'var(--ok)'):'#6b7280')+'"></span>'
+      +(st.running?'<b>Runs on its own</b> · board brief every working morning at '+esc(('0'+st.brief_hour).slice(-2))+':00 ('+esc(st.working_days)+') · next <b>'+esc(d(st.next_brief))+'</b> · posture recorded hourly ('+esc(st.history_days)+' days of history)':'<b>Automatic run is off</b> (ciso.enabled=false) — the page still works on demand')
+      +(st.last_error?' · <span style="color:var(--warn)">last run: '+esc(st.last_error)+'</span>':'');
+  }
+  function spark(tr){
+    var pts=(tr||[]).filter(function(x){return x.overall!=null;});
+    if(pts.length<2)return '<div class="why" style="margin-top:4px">Trend appears after the second day of history.</div>';
+    var w=220,h=44,mn=Math.min.apply(null,pts.map(function(p){return p.overall;})),mx=Math.max.apply(null,pts.map(function(p){return p.overall;}));if(mx-mn<10){mn=Math.max(0,mn-5);mx=Math.min(100,mx+5);}
+    var X=function(i){return 4+i*(w-8)/(pts.length-1);},Y=function(v){return h-4-(v-mn)/(mx-mn||1)*(h-8);};
+    var dpath=pts.map(function(p,i){return (i?'L':'M')+X(i).toFixed(1)+' '+Y(p.overall).toFixed(1);}).join(''),last=pts[pts.length-1],first=pts[0],ch=last.overall-first.overall;
+    return '<svg class="spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="Posture trend over '+pts.length+' days"><path d="'+dpath+'" fill="none" stroke="'+col(last.overall)+'" stroke-width="2" stroke-linejoin="round"/><circle cx="'+X(pts.length-1).toFixed(1)+'" cy="'+Y(last.overall).toFixed(1)+'" r="3" fill="'+col(last.overall)+'"/></svg>'
+      +'<div class="why">'+esc(pts.length)+' days: '+(ch===0?'no change':(ch>0?'up ':'down ')+Math.abs(ch)+' points')+' since '+esc(first.day)+'</div>';
+  }
+  function draw(){
+    var P=V.posture;
+    // gauge: a half dial with the grade bands, the needle at the score, change against 7 and 30 days ago
+    $('ring').innerHTML=gauge(P.overall)+'<div class="g" style="color:'+col(P.overall)+'">'+esc(P.grade||'not measurable')+'</div>'
+      +'<div class="why">'+(P.overall==null?esc(P.withheld_why):esc(P.measured+' of '+P.of+' domains measured · weighted by domain'))+'</div>'+deltas()+spark((V.trend||[]).slice(-30));
+    // domains
+    $('doms').innerHTML=P.domains.map(function(d){var top=d.measured?(d.items.filter(function(i){return i.points<0;}).sort(function(a,b){return a.points-b.points;})[0]||d.items[0]):null;
+      return '<button type="button" class="dom" data-dom="'+esc(d.id)+'"><div class="hd"><b>'+esc(d.name)+'</b><span class="s" style="color:'+col(d.score)+'">'+(d.measured?esc(d.score):'—')+'</span></div>'
+        +'<div class="bar"><i style="width:'+(d.measured?d.score:0)+'%;background:'+col(d.score)+'"></i></div>'
+        +'<div class="it">'+(d.measured?esc(top?top.label:''):'<span style="color:var(--warn)">Not measured</span> · '+esc(d.not_measured_why))+'</div></button>';}).join('');
+    // KPIs
+    var crit=V.risks.filter(function(x){return x.severity==='critical';}).length, soc=V.soc||{}, cm=V.compliance||{}, sla=soc.sla||{}, team=V.team.filter(function(t){return t.state==='live';});
+    var late=team.filter(function(t){return t.late||t.last_error;}).length;
+    function k(v,l,n,cl){return '<div class="kpi"><div class="v" style="color:'+(cl||'inherit')+'">'+esc(v)+'</div><div class="l">'+esc(l)+'</div>'+(n?'<div class="n">'+esc(n)+'</div>':'')+'</div>';}
+    $('kpis').innerHTML=k(crit,'Critical risks',V.risks_total+' open in the register',crit?'var(--bad)':'var(--ok)')
+      +k(V.decisions.length,'Decisions waiting','approvals, sign-offs, reviews',V.decisions.length?'#c5f27a':'inherit')
+      +k(cm.sama?cm.sama.coverage_pct+'%':'—','SAMA CSF coverage',cm.sama?(cm.sama.counts.gap||0)+' gap controls':'not available',cm.sama?col(cm.sama.coverage_pct):'')
+      +k(sla.resolve_compliance_pct!=null?sla.resolve_compliance_pct+'%':'—','SOC resolve SLA',soc.sla?(sla.breaching_now||0)+' breaching now':'SOC metrics not available',sla.resolve_compliance_pct!=null?col(sla.resolve_compliance_pct):'')
+      +k(cm.drills?cm.drills.overdue:'—','DR systems overdue',cm.drills?cm.drills.systems+' systems in the drill plan':'no drills recorded',cm.drills&&cm.drills.overdue?'var(--warn)':'')
+      +k(team.length?team.length-late+'/'+team.length:'—','AI engineers healthy',late?late+' late or with a patrol problem':'all patrolling',late?'var(--warn)':'');
+    // decisions
+    $('decn').textContent=V.decisions.length?V.decisions.length+' item(s)':'';
+    var KN={'approve-change':'Approve change','needs-a-person':'Needs a person','approve-response':'Approve response','sign-off':'Sign off','policy-review':'Review policies'};
+    $('dec').innerHTML=V.decisions.length?V.decisions.slice(0,14).map(function(d){return '<div class="dec">'+pill(d.severity,SEVC[d.severity])+'<div class="t"><b>'+esc(d.title)+'</b><span>'+esc(KN[d.kind]||d.kind)+' · '+esc(d.from)+' · by '+esc(d.who)+'</span></div><a href="'+esc(d.link)+'">Open →</a></div>';}).join('')+(V.decisions.length>14?'<div class="muted" style="padding-top:8px">and '+(V.decisions.length-14)+' more</div>':''):'<div class="empty">Nothing is waiting for a decision.</div>';
+    // filters
+    var doms={};V.risks.forEach(function(x){doms[x.domain]=1;});
+    $('fdom').innerHTML='<option value="">Every domain</option>'+Object.keys(doms).map(function(d){return '<option value="'+esc(d)+'"'+(F.dom===d?' selected':'')+'>'+esc(DOMN[d]||d)+'</option>';}).join('');
+    drawRisks();drawAreas();drawComp();drawTeam();drawViz();
+    // sources
+    var bad=V.sources.filter(function(x){return x.state!=='live';});
+    $('srcwarn').hidden=!bad.length;$('srcwarn').textContent=bad.length?bad.length+' of '+V.sources.length+' data sources are not available, so parts of this view are not measured (listed under Data sources). Nothing is filled in for them.':'';
+    $('srcs').innerHTML=V.sources.map(function(x){var k=x.state==='live'?['Live','ok']:x.state==='not_connected'?['Not connected','mut']:['Error','bad'];return '<div class="src">'+pill(k[0],k[1])+'<span>'+esc(x.name)+'</span>'+(x.error?'<span class="e">'+esc(x.error)+'</span>':'')+'</div>';}).join('');
+  }
+
+  /* ---- graphics (inline SVG, no library; every chart is drawn from records the engine returned) ---- */
+  var DCOL={governance:'#a371f7',compliance:'#79b8ff',detection:'#ff7b72',exposure:'#e3b341',resilience:'#3fb950',operations:'#56d4dd'}, TR={on:{overall:1}};
+  function gauge(sc){
+    var cx=110,cy=104,r=84,pt=function(v,rr){var a=Math.PI*(1-v/100);return [cx+rr*Math.cos(a),cy-rr*Math.sin(a)];};
+    var arc=function(a,b,c){var p=pt(a,r),q=pt(b,r);return '<path d="M'+p[0].toFixed(1)+' '+p[1].toFixed(1)+' A'+r+' '+r+' 0 0 1 '+q[0].toFixed(1)+' '+q[1].toFixed(1)+'" fill="none" stroke="'+c+'" stroke-width="16" stroke-opacity=".9"/>';};
+    var o='<svg viewBox="0 0 220 128" width="230" role="img" aria-label="Overall security posture '+(sc==null?'not measurable':sc+' of 100')+'">'
+      +arc(0,49.5,'#ff7b72')+arc(50.5,69.5,'#e3b341')+arc(70.5,84.5,'#79b8ff')+arc(85.5,100,'#3fb950');
+    [0,50,70,85,100].forEach(function(v){var p=pt(v,r+15);o+='<text x="'+p[0].toFixed(1)+'" y="'+(p[1]+4).toFixed(1)+'" text-anchor="middle" font-size="9" fill="#8C93A1">'+v+'</text>';});
+    if(sc!=null){var n=pt(sc,r-22);o+='<line x1="'+cx+'" y1="'+cy+'" x2="'+n[0].toFixed(1)+'" y2="'+n[1].toFixed(1)+'" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#fff"/>';}
+    return o+'<text x="'+cx+'" y="'+(cy-24)+'" text-anchor="middle" font-size="30" font-weight="800" fill="#fff">'+(sc==null?'—':sc)+'</text></svg>';
+  }
+  function ago_(days){var H=(V.trend||[]).filter(function(h){return h.overall!=null;});if(H.length<2)return null;var t=H[H.length-1].at-days*864e5,best=null;H.forEach(function(h){if(h.at<=t+36e5)best=h;});return best;}
+  function deltas(){var cur=V.posture.overall;if(cur==null)return '';var o=[];[[7,'7 d'],[30,'30 d']].forEach(function(d){var h=ago_(d[0]);if(h){var ch=cur-h.overall;o.push('<span style="color:'+(ch>0?'var(--ok)':ch<0?'var(--bad)':'var(--mute)')+'">'+(ch>0?'▲ +':ch<0?'▼ ':'= ')+(ch||0)+' vs '+d[1]+'</span>');}});
+    return o.length?'<div class="delta">'+o.join('')+'</div>':'';}
+  function drawViz(){ drawTrend(); drawRadar(); drawMatrix(); drawAges(); }
+  function drawTrend(){
+    var H=(V.trend||[]).filter(function(h){return h.overall!=null||h.domains;}), W=640, Hh=200, L=34, R=12, T=10, Bm=24;
+    $('trn').textContent=H.length?H.length+' day'+(H.length>1?'s':'')+' recorded':'';
+    if(H.length<2){$('trend').innerHTML='<div class="empty">The trend starts after the second day of history ('+H.length+' so far). The posture is recorded every hour, one point per day.</div>';$('trlg').innerHTML='';return;}
+    var x=function(i){return L+i*(W-L-R)/(H.length-1);}, y=function(v){return T+(100-v)*(Hh-T-Bm)/100;};
+    var o='<svg viewBox="0 0 '+W+' '+Hh+'" role="img" aria-label="Posture over '+H.length+' days">';
+    [[0,50,'rgba(255,123,114,.06)'],[50,70,'rgba(227,179,65,.05)'],[70,85,'rgba(121,184,255,.05)'],[85,100,'rgba(63,185,80,.06)']].forEach(function(b){o+='<rect x="'+L+'" y="'+y(b[1]).toFixed(1)+'" width="'+(W-L-R)+'" height="'+(y(b[0])-y(b[1])).toFixed(1)+'" fill="'+b[2]+'"/>';});
+    [0,50,70,85,100].forEach(function(v){o+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+'" stroke="#252933"/><text x="'+(L-6)+'" y="'+(y(v)+3).toFixed(1)+'" text-anchor="end" font-size="10" fill="#8C93A1">'+v+'</text>';});
+    var step=Math.max(1,Math.ceil(H.length/6));H.forEach(function(h,i){if(i%step===0||i===H.length-1)o+='<text x="'+x(i).toFixed(1)+'" y="'+(Hh-6)+'" text-anchor="middle" font-size="10" fill="#8C93A1">'+esc(String(h.day||'').slice(5))+'</text>';});
+    var line=function(get,c,w,area){var d='',pts=[];H.forEach(function(h,i){var v=get(h);if(v==null)return;pts.push([x(i),y(v)]);});if(pts.length<2)return '';
+      d=pts.map(function(p,i){return (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1);}).join('');
+      return (area?'<path d="'+d+'L'+pts[pts.length-1][0].toFixed(1)+' '+y(0).toFixed(1)+'L'+pts[0][0].toFixed(1)+' '+y(0).toFixed(1)+'Z" fill="'+c+'" fill-opacity=".12"/>':'')+'<path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+w+'" stroke-linejoin="round" stroke-linecap="round"/>';};
+    V.posture.domains.forEach(function(d){if(TR.on[d.id])o+=line(function(h){return h.domains?h.domains[d.id]:null;},DCOL[d.id]||'#8C93A1',1.6,false);});
+    if(TR.on.overall)o+=line(function(h){return h.overall;},'#fff',2.6,true);
+    var last=H[H.length-1];if(TR.on.overall&&last.overall!=null)o+='<circle cx="'+x(H.length-1).toFixed(1)+'" cy="'+y(last.overall).toFixed(1)+'" r="4" fill="#fff"/>';
+    $('trend').innerHTML=o+'</svg>';
+    $('trlg').innerHTML='<button type="button" data-tr="overall" class="'+(TR.on.overall?'on':'')+'"><i style="background:#fff"></i>Overall</button>'+V.posture.domains.map(function(d){return '<button type="button" data-tr="'+esc(d.id)+'" class="'+(TR.on[d.id]?'on':'')+'"><i style="background:'+(DCOL[d.id]||'#8C93A1')+'"></i>'+esc(d.name)+'</button>';}).join('');
+  }
+  function drawRadar(){
+    var D=V.posture.domains, n=D.length, cx=150, cy=135, r=100, old=ago_(30)||ago_(7), od=old&&old.domains||{};
+    var pt=function(i,v){var a=-Math.PI/2+i*2*Math.PI/n;return [cx+r*v/100*Math.cos(a),cy+r*v/100*Math.sin(a)];};
+    var o='<svg viewBox="0 0 300 270" role="img" aria-label="Domain scores now'+(old?' and on '+esc(old.day):'')+'">';
+    [25,50,75,100].forEach(function(v){o+='<polygon points="'+D.map(function(_,i){return pt(i,v).map(function(z){return z.toFixed(1);}).join(',');}).join(' ')+'" fill="none" stroke="#252933"/>';});
+    D.forEach(function(d,i){var e=pt(i,100),lb=pt(i,118);o+='<line x1="'+cx+'" y1="'+cy+'" x2="'+e[0].toFixed(1)+'" y2="'+e[1].toFixed(1)+'" stroke="#252933"/><text x="'+lb[0].toFixed(1)+'" y="'+(lb[1]+3).toFixed(1)+'" text-anchor="middle" font-size="10" fill="'+(d.measured?'#ECEEF2':'#6b7280')+'">'+esc(DOMN[d.id]||d.name)+(d.measured?'':' (n/m)')+'</text>';});
+    var poly=function(get,c,fo,dash){var ps=D.map(function(d,i){var v=get(d);return pt(i,v==null?0:v);});return '<polygon points="'+ps.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ')+'" fill="'+c+'" fill-opacity="'+fo+'" stroke="'+c+'" stroke-width="2"'+(dash?' stroke-dasharray="4 3"':'')+'/>';};
+    if(old)o+=poly(function(d){return od[d.id];},'#8C93A1',0.06,true);
+    o+=poly(function(d){return d.measured?d.score:null;},'#a3e635',0.18,false);
+    D.forEach(function(d,i){if(d.measured){var p=pt(i,d.score);o+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="'+col(d.score)+'"><title>'+esc(d.name+': '+d.score)+'</title></circle>';}});
+    $('radar').innerHTML=o+'</svg>';
+    $('radn').innerHTML='<span style="color:#a3e635">■</span> now'+(old?' · <span style="color:#8C93A1">┄</span> '+esc(old.day):' · the comparison appears once a week of history exists')+' · a domain not measured sits at the centre and is marked n/m - it is not scored as fine';
+  }
+  var SEVS=['critical','high','medium','low'], SEVHEX={critical:'#ff7b72',high:'#e3b341',medium:'#79b8ff',low:'#8C93A1'};
+  function drawMatrix(){
+    var R=V.risks, doms=V.posture.domains.map(function(d){return d.id;}); R.forEach(function(x){if(doms.indexOf(x.domain)<0)doms.push(x.domain);});
+    var cnt={},mx=1;R.forEach(function(x){var k=x.domain+'|'+x.severity;cnt[k]=(cnt[k]||0)+1;mx=Math.max(mx,cnt[k]);});
+    var o='<div class="mx" style="grid-template-columns:minmax(110px,1.3fr) repeat(4,1fr) 52px"><span></span>'+SEVS.map(function(s){return '<span class="h">'+esc(s)+'</span>';}).join('')+'<span class="h">total</span>';
+    doms.forEach(function(d){var tot=0;o+='<span class="n" title="'+esc(DOMN[d]||d)+'">'+esc(DOMN[d]||d)+'</span>';
+      SEVS.forEach(function(s){var c=cnt[d+'|'+s]||0;tot+=c;var a=c?0.25+0.75*c/mx:0;
+        o+='<button type="button" data-mx="'+esc(d)+'|'+s+'"'+(c?'':' disabled')+' class="'+(F.dom===d&&F.sev===s?'sel':'')+'" style="background:'+(c?hexA(SEVHEX[s],a):'rgba(255,255,255,.03)')+'" aria-label="'+esc((DOMN[d]||d)+': '+c+' '+s)+'">'+(c||'·')+'</button>';});
+      o+='<span class="h" style="align-self:center;color:var(--text)">'+tot+'</span>';});
+    $('matrix').innerHTML=R.length?o+'</div><div class="muted" style="font-size:11.5px;margin-top:8px">'+(V.risks_total>R.length?'first '+R.length+' of '+V.risks_total+' risks · ':'')+'colour strength = how many risks in the cell</div>':'<div class="empty">No open risk in the register.</div>';
+  }
+  function hexA(h,a){var n=parseInt(h.slice(1),16);return 'rgba('+(n>>16)+','+((n>>8)&255)+','+(n&255)+','+a.toFixed(2)+')';}
+  function drawAges(){
+    var B=[['< 1 day',0,24],['1–7 days',24,168],['8–30 days',168,720],['31–90 days',720,2160],['> 90 days',2160,1e9]], R=V.risks.filter(function(x){return x.age_h!=null;}), un=V.risks.length-R.length;
+    if(!R.length){$('ages').innerHTML='<div class="empty">No risk in the register carries the date it was found.</div>';$('agen').textContent='';return;}
+    var W=420,Hh=190,L=78,bh=26,gap=8,mx=1,rows=B.map(function(b){var r={l:b[0]};SEVS.forEach(function(s){r[s]=R.filter(function(x){return x.severity===s&&x.age_h>=b[1]&&x.age_h<b[2];}).length;});r.t=SEVS.reduce(function(n,s){return n+r[s];},0);mx=Math.max(mx,r.t);return r;});
+    var o='<svg viewBox="0 0 '+W+' '+Hh+'" role="img" aria-label="Open risks by age">';
+    rows.forEach(function(r,i){var yy=8+i*(bh+gap),xx=L;o+='<text x="'+(L-8)+'" y="'+(yy+bh/2+4)+'" text-anchor="end" font-size="11" fill="#ECEEF2">'+r.l+'</text>';
+      SEVS.forEach(function(s){if(!r[s])return;var w=r[s]/mx*(W-L-40);o+='<rect x="'+xx.toFixed(1)+'" y="'+yy+'" width="'+Math.max(2,w).toFixed(1)+'" height="'+bh+'" rx="3" fill="'+SEVHEX[s]+'"><title>'+r[s]+' '+s+'</title></rect>';xx+=w;});
+      o+='<text x="'+(xx+6).toFixed(1)+'" y="'+(yy+bh/2+4)+'" font-size="11" fill="#8C93A1">'+r.t+'</text>';});
+    $('ages').innerHTML=o+'</svg>';
+    var old=rows[3].t+rows[4].t;$('agen').textContent=old?old+' open longer than 30 days':'none older than 30 days';
+    if(un)$('ages').insertAdjacentHTML('beforeend','<div class="muted" style="font-size:11.5px">'+un+' risk(s) carry no date found and are not shown.</div>');
+  }
+  function drawRisks(){
+    var q=F.q.toLowerCase(), list=V.risks.filter(function(x){return (!F.sev||x.severity===F.sev)&&(!F.dom||x.domain===F.dom)&&(!q||(x.title+' '+x.source+' '+(x.site||'')+' '+x.ref).toLowerCase().indexOf(q)>=0);});
+    $('riskn').textContent=list.length+' of '+V.risks_total+(V.risks_total>V.risks.length?' (first '+V.risks.length+' shown)':'');
+    $('risks').innerHTML=list.length?list.map(function(x){return '<tr class="rowc" data-link="'+esc(x.link)+'"><td>'+pill(x.severity,SEVC[x.severity])+'</td><td><b style="font-weight:600">'+esc(x.title)+'</b><div class="muted" style="font:11px Consolas,monospace">'+esc(x.ref)+'</div></td><td>'+esc(DOMN[x.domain]||x.domain)+'</td><td class="muted">'+esc(x.source)+'</td><td>'+esc(x.status||'')+'</td><td class="muted">'+esc(x.site||'—')+'</td><td class="muted">'+esc(hours(x.age_h))+'</td></tr>';}).join(''):'<tr><td colspan="7" class="empty">'+(V.risks_total?'No risk matches the filter.':'No open critical or high risk in the sources that are connected.')+'</td></tr>';
+  }
+  function heat(rows,key,label){var mx=Math.max(1,Math.max.apply(null,rows.map(function(r){return r.total;})));
+    return rows.length?rows.slice(0,8).map(function(r){var o=r.total-r.critical-r.high;return '<div class="hrow"><span title="'+esc(label(r))+'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(label(r))+'</span><span class="bars" style="width:'+Math.max(8,r.total/mx*100)+'%">'
+      +(r.critical?'<i style="flex:'+r.critical+';background:var(--bad)"></i>':'')+(r.high?'<i style="flex:'+r.high+';background:var(--warn)"></i>':'')+(o?'<i style="flex:'+o+';background:var(--info)"></i>':'')+'</span><span class="muted">'+esc(r.critical)+' / '+esc(r.high)+'</span></div>';}).join('')+'<div class="muted" style="font-size:11.5px">critical / high · <span style="color:var(--bad)">■</span> critical <span style="color:var(--warn)">■</span> high</div>':'<div class="empty">No risk to place.</div>';}
+  function drawAreas(){$('hdom').innerHTML=heat(V.areas.by_domain,'domain',function(r){return r.name;});$('hsite').innerHTML=heat(V.areas.by_site,'site',function(r){return r.site;});}
+  function drawComp(){var c=V.compliance||{},h=[];
+    function row(l,v,n){h.push('<div class="hrow" style="grid-template-columns:minmax(150px,1fr) auto"><span>'+esc(l)+(n?'<div class="muted" style="font-size:11.5px">'+esc(n)+'</div>':'')+'</span><b>'+v+'</b></div>');}
+    if(c.sama)row('SAMA CSF coverage','<span style="color:'+col(c.sama.coverage_pct)+'">'+esc(c.sama.coverage_pct)+'%</span>',(c.sama.counts.covered||0)+' covered · '+(c.sama.counts.partial||0)+' partial · '+(c.sama.counts.gap||0)+' gap');else row('SAMA CSF coverage','<span class="muted">not available</span>');
+    if(c.grc)row('Approved IT policies',esc(c.grc.policies),c.grc.overdue+' past review · '+c.grc.attested+' attested · '+(c.grc.by_cls.automated||0)+' automated controls');
+    if(c.drills){row('DR / BCM drills',esc(c.drills.total),c.drills.systems+' systems · '+c.drills.overdue+' overdue · '+(c.drills.awaiting_signoff||0)+' awaiting sign-off');row('RTO met',c.drills.rto&&c.drills.rto.pct!=null?esc(c.drills.rto.pct)+'%':'<span class="muted">not measured</span>');row('RPO met',c.drills.rpo&&c.drills.rpo.pct!=null?esc(c.drills.rpo.pct)+'%':'<span class="muted">not measured</span>');}
+    var soc=V.soc;if(soc){row('Mean time to detect',soc.mttd_s!=null?esc(Math.round(soc.mttd_s/60))+' min':'—');row('Mean time to resolve',soc.mttr_s!=null?esc(Math.round(soc.mttr_s/3600))+' h':'—');}
+    $('comp').innerHTML='<div class="heat">'+h.join('')+'</div>';}
+  function drawTeam(){$('team').innerHTML=V.team.map(function(t){
+      if(t.state!=='live')return '<div class="eng"><b>'+(t.engine==='siem'?'SIEM engineers':'IT Asset engineers')+'</b><div class="st"><span class="dot" style="background:#6b7280"></span>'+esc(t.error||'not connected')+'</div></div>';
+      var c=t.not_connected?'#6b7280':(t.late||t.last_error)?'var(--warn)':'var(--ok)';
+      return '<a class="eng" href="'+esc(t.link)+'"><b>'+esc(t.name)+'</b><div class="st"><span class="dot" style="background:'+c+'"></span>'+(t.not_connected?'source not connected':'patrolled '+esc(ago(t.last_patrol))+(t.late?' (late)':''))+'</div><div class="st">'+esc(t.open)+' open · <span style="color:'+(t.critical?'var(--bad)':'inherit')+'">'+esc(t.critical)+' critical</span> · '+esc(t.resolved_24h||0)+' fixed 24 h</div></a>';}).join('');}
+
+  function drawBrief(){
+    var h='<h2>Board brief '+(B?pill(B.kind==='ai'?'AI'+(B.model?' · '+B.model:''):'Rule-based',B.kind==='ai'?'acc':'mut')+(B.auto?' '+pill('morning brief','info'):'')+' <span class="c">'+esc(new Date(B.at).toLocaleString('en-GB'))+' · by '+esc(B.auto?'the AI CISO (scheduled)':(B.by||'—'))+'</span>':'')+'</h2>';
+    if(!B){$('briefc').innerHTML=h+'<div class="empty">No brief yet. '+(can('operator')?'“Write board brief” has the AI summarise the posture, risks and decisions above — citing only those records.':'An operator can write one.')+'</div>';return;}
+    var H={today:'bad',"this week":'warn',"this quarter":'info'};
+    h+='<p class="hl">'+esc(B.headline)+'</p><p class="sm">'+esc(B.summary)+'</p>';
+    h+=(B.priorities||[]).map(function(p,i){return '<div class="prio"><span class="no">'+(i+1)+'</span><div style="min-width:0"><div class="a">'+esc(p.action)+' '+pill(p.horizon,H[p.horizon])+'</div><div class="w">'+esc(p.why)+(p.owner_role?' · owner: '+esc(p.owner_role):'')+'</div><div class="refs">'+(p.refs||[]).map(refLink).join('')+'</div></div></div>';}).join('');
+    if((B.board_points||[]).length)h+='<div class="eb" style="margin-top:12px">For the board</div><ul class="bp">'+B.board_points.map(function(b){return '<li>'+esc(b.text)+' <span class="refs" style="display:inline-flex">'+(b.refs||[]).map(refLink).join('')+'</span></li>';}).join('')+'</ul>';
+    if((B.not_measured||[]).length)h+='<div class="eb" style="margin-top:12px">Not measured</div><ul class="bp">'+B.not_measured.map(function(x){return '<li class="muted">'+esc(x)+'</li>';}).join('')+'</ul>';
+    if(B.kind!=='ai'&&B.why_rules)h+='<div class="muted" style="font-size:12px;margin-top:10px">Rule-based because: '+esc(B.why_rules)+'</div>';
+    if(B.refs_dropped)h+='<div class="muted" style="font-size:12px;margin-top:6px">'+esc(B.refs_dropped)+' citation(s) the AI made up were removed.</div>';
+    $('briefc').innerHTML=h;
+  }
+
+  function printPack(){
+    if(!V){toast('Nothing loaded yet');return;}
+    var P=V.posture, w=window.open('','_blank');if(!w){toast('Allow pop-ups to print the board pack');return;}
+    var d=P.domains.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+(x.measured?esc(x.score):'not measured')+'</td><td>'+(x.measured?x.items.map(function(i){return esc(i.label)+' ('+esc(i.points)+')';}).join('<br>'):esc(x.not_measured_why))+'</td></tr>';}).join('');
+    var r=V.risks.slice(0,25).map(function(x){return '<tr><td>'+esc(x.severity)+'</td><td>'+esc(x.title)+'</td><td>'+esc(x.source)+'</td><td>'+esc(x.ref)+'</td></tr>';}).join('');
+    var b=B?'<h2>Board brief ('+(B.kind==='ai'?'AI-drafted, citing platform records':'rule-based')+')</h2><p><b>'+esc(B.headline)+'</b></p><p>'+esc(B.summary)+'</p><ol>'+(B.priorities||[]).map(function(p){return '<li><b>'+esc(p.action)+'</b> — '+esc(p.why)+' ['+esc(p.horizon)+', '+esc(p.owner_role)+'] <small>'+esc((p.refs||[]).join(', '))+'</small></li>';}).join('')+'</ol>':'';
+    w.document.write('<!doctype html><title>Security posture - board pack</title><style>body{font:13px Segoe UI,sans-serif;margin:32px;color:#111}h1{font-size:20px}h2{font-size:15px;margin-top:22px}table{border-collapse:collapse;width:100%;margin-top:6px}td,th{border:1px solid #ccc;padding:5px 7px;text-align:left;vertical-align:top}th{background:#f3f3f3}small{color:#555}</style>'
+      +('<h1>' + ZYB_ORG.short + ' — security posture board pack</h1><p>Generated ')+esc(new Date(V.generated).toLocaleString('en-GB'))+' from the platform\'s own records. Overall posture: <b>'+(P.overall==null?'withheld ('+esc(P.withheld_why)+')':esc(P.overall)+'/100 ('+esc(P.grade)+')')+'</b>.</p>'
+      +b+'<h2>Posture by domain</h2><table><tr><th>Domain</th><th>Score</th><th>Why</th></tr>'+d+'</table>'
+      +'<h2>Top risks ('+esc(V.risks_total)+' open)</h2><table><tr><th>Severity</th><th>Risk</th><th>Source</th><th>Record</th></tr>'+(r||'<tr><td colspan="4">none</td></tr>')+'</table>'
+      +'<h2>Decisions waiting ('+esc(V.decisions.length)+')</h2><table><tr><th>Severity</th><th>Decision</th><th>By</th></tr>'+V.decisions.slice(0,20).map(function(x){return '<tr><td>'+esc(x.severity)+'</td><td>'+esc(x.title)+'</td><td>'+esc(x.who)+'</td></tr>';}).join('')+'</table>');
+    w.document.close();setTimeout(function(){try{w.focus();w.print();}catch(e){ /* element already gone: nothing to focus */ }},300);
+  }
+
+  // wiring (no inline handlers: the page runs under the strict Content-Security-Policy)
+  $('refresh').addEventListener('click',function(){load(true);});
+  $('print').addEventListener('click',printPack);
+  $('patrol').addEventListener('click',function(){var b=this;b.disabled=true;b.textContent='Running…';
+    req('POST','/ciso/patrol').then(function(r){var bad=r.results.filter(function(x){return !x.ok;});toast(r.results.length+' patrols run'+(bad.length?' · '+bad.length+' with a problem: '+bad.map(function(x){return (x.engineer||x.engine)+' – '+x.error;}).join('; '):''));load(true);})
+      .catch(function(e){toast('Could not run: '+e.message);}).then(function(){b.disabled=false;b.textContent='▶ Run all AI engineers';});});
+  $('brief').addEventListener('click',function(){var b=this;b.disabled=true;b.textContent='Writing… (up to a few minutes)';
+    req('POST','/ciso/brief').then(function(r){B=r;drawBrief();toast(r.kind==='ai'?'Board brief written by the AI':'Rule-based brief written ('+(r.why_rules||'')+')');})
+      .catch(function(e){toast('Could not write the brief: '+e.message);}).then(function(){b.disabled=false;b.textContent='✦ Write board brief';});});
+  $('doms').addEventListener('click',function(e){var t=e.target.closest('[data-dom]');if(!t||!V)return;var d=V.posture.domains.filter(function(x){return x.id===t.getAttribute('data-dom');})[0];if(!d)return;
+    var body=d.measured?Z.tbl(['Item','Points'],d.items.map(function(i){return [esc(i.label),'<b style="color:'+(i.points<0?'var(--bad)':'inherit')+'">'+esc(i.points)+'</b>'];}))+'<p class="muted" style="font-size:12.5px">Score = 100 + the points above (floor 0). Weight in the overall score: '+esc(d.weight)+'.</p>':'<p>Not measured: '+esc(d.not_measured_why)+'</p><p class="muted">A domain without data is left out of the overall score — it is never counted as fine.</p>';
+    Z.open('Posture domain',d.name+(d.measured?' — '+d.score+'/100':''),body+'<p><a href="'+esc(d.page)+'" style="color:var(--info)">Open the source page →</a></p>');});
+  $('risks').addEventListener('click',function(e){var tr=e.target.closest('tr[data-link]');if(tr)location.href=tr.getAttribute('data-link');});
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('[data-tr]');if(t&&V){var k=t.getAttribute('data-tr');TR.on[k]=!TR.on[k];if(!Object.keys(TR.on).some(function(z){return TR.on[z];}))TR.on.overall=1;drawTrend();return;}
+    var m=e.target.closest('[data-mx]');if(m&&V){var p=m.getAttribute('data-mx').split('|');if(F.dom===p[0]&&F.sev===p[1]){F.dom='';F.sev='';}else{F.dom=p[0];F.sev=p[1];}
+      $('fdom').value=F.dom;Array.prototype.forEach.call(document.querySelectorAll('.flt .chip'),function(x){x.classList.toggle('on',x.getAttribute('data-sev')===F.sev);});
+      drawRisks();drawMatrix();var rk=$('risks');if(rk&&rk.scrollIntoView)rk.closest('section').scrollIntoView({behavior:'smooth',block:'start'});}
+  });
+  document.querySelector('.flt').addEventListener('click',function(e){var c=e.target.closest('.chip');if(!c)return;F.sev=c.getAttribute('data-sev');Array.prototype.forEach.call(this.querySelectorAll('.chip'),function(x){x.classList.toggle('on',x===c);});if(V)drawRisks();});
+  $('fdom').addEventListener('change',function(){F.dom=this.value;if(V)drawRisks();});
+  $('fq').addEventListener('input',function(){F.q=this.value;if(V)drawRisks();});
+
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }$('patrol').hidden=$('brief').hidden=!can('operator');load(false);};w.onerror=function(){load(false);};w.send();
+  setInterval(function(){if(!document.hidden)load(false);},120000);
+})();
+</script></body></html>

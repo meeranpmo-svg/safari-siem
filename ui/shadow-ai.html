@@ -1,0 +1,214 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shadow AI DLP</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--bg:#0b0e14;--pn:#121722;--rs:#18202d;--ln:#232c3c;--tx:#e8ecf3;--mu:#8c95a8;--bad:#ef5b6b;--warn:#f59f00;--ok:#3ccf91;--ac:#3b82f6}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 60px}
+.hero{text-align:center;padding:18px 10px 6px}.hero h1{margin:0;font-size:34px;font-weight:600}.hero p{max-width:920px;margin:8px auto 0;color:var(--mu);font-size:15px}
+.bar1{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:7px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.btn:hover{border-color:#3a4560}.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}.btn.sm{padding:4px 9px;font-size:12px}
+.tabs{display:flex;gap:6px;margin:4px 0 14px;border-bottom:1px solid var(--ln);flex-wrap:wrap}.tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--mu);font:600 14px Inter,"Segoe UI",system-ui,sans-serif;padding:8px 12px;cursor:pointer}.tab[aria-selected="true"]{color:var(--tx);border-bottom-color:var(--ac)}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:14px}.k{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:12px 16px;min-width:0}.k .v{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}.k .l{font-size:12px;color:var(--mu)}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:16px 18px;min-width:0;margin-bottom:14px}.card h2{margin:0 0 10px;font-size:17px}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mu);font-weight:600;font-size:12px;padding:8px;border-bottom:1px solid var(--ln);white-space:nowrap}td{padding:9px 8px;border-bottom:1px solid #1a2130;vertical-align:middle}
+.st{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.3px}.st-sanctioned{background:rgba(60,207,145,.16);color:#7be3b5}.st-tolerated{background:rgba(245,159,0,.16);color:#ffc35a}.st-blocked{background:rgba(239,91,107,.18);color:#ff8f9b}.st-unreviewed{background:#1f2736;color:var(--mu)}
+.tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--ln);background:var(--rs);white-space:nowrap;margin:1px}.tag.warn{border-color:rgba(239,91,107,.55);color:#ffb3bb}
+.bars{display:flex;align-items:flex-end;gap:4px;height:140px;padding-top:6px}.bars .c{flex:1;display:flex;flex-direction:column-reverse;min-width:6px;border-radius:3px 3px 0 0;overflow:hidden;background:var(--rs)}.bars .c i{display:block}.bx{display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-top:4px}
+.lgd{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:12px}.lgd span{display:inline-flex;gap:5px;align-items:center}.lgd i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.inp{background:var(--bg);color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:7px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.frm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.frm label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mu)}.frm .w{grid-column:1/-1}.cls{display:flex;gap:10px;flex-wrap:wrap}.cls label{flex-direction:row;align-items:center;gap:5px;color:var(--tx)}
+.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:12px;margin-bottom:12px}
+.note{background:var(--rs);border:1px solid var(--ln);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.empty{color:var(--mu);padding:22px;text-align:center}
+.tok{font-family:ui-monospace,Consolas,monospace;background:var(--bg);border:1px dashed var(--warn);border-radius:8px;padding:10px;word-break:break-all;margin:8px 0}
+pre{background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:10px;overflow:auto;font-size:12px;max-height:260px}
+ol{margin:6px 0 0 18px;padding:0}ol li{margin:4px 0}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.g2{grid-template-columns:1fr}}@media (max-width:640px){.kpis{grid-template-columns:1fr 1fr}.hero h1{font-size:26px}.frm{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="hero"><h1>Shadow AI DLP</h1><p>Which AI apps people use, found in the firewall, proxy and DNS logs the SIEM already receives; what each app is allowed to receive; and the data-loss signals towards AI. The browser extension checks prompts and files on the PC and sends only what it found, never the text.</p></div>
+<div id="err"></div>
+<div class="bar1"><label class="sm mu" for="hours">Period</label><select class="inp" id="hours"><option value="24">24 hours</option><option value="168" selected>7 days</option><option value="720">30 days</option></select><span class="sp"></span><span class="sm mu" id="gen"></span><button type="button" class="btn" id="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button></div>
+<div class="tabs" role="tablist"><button type="button" class="tab" role="tab" data-tab="apps" aria-selected="true">AI apps in use</button><button type="button" class="tab" role="tab" data-tab="reg" aria-selected="false">Sanctioned AI register</button><button type="button" class="tab" role="tab" data-tab="sig" aria-selected="false">DLP signals</button><button type="button" class="tab" role="tab" data-tab="ext" aria-selected="false">Browser extension</button></div>
+
+<section id="p-apps">
+ <div id="appsnote"></div>
+ <div class="kpis" id="kpis"></div>
+ <div class="g2"><div class="card"><h2>Requests to AI apps per day</h2><div id="trend"></div></div><div class="card"><h2>Large uploads to AI apps <span class="sm mu" id="upth"></span></h2><div id="uploads"></div></div></div>
+ <div class="card"><h2>AI apps found</h2><div class="tw" id="apps"></div></div>
+ <div class="card" id="peoplecard" hidden><h2>People and AI apps <span class="sm mu">operators and administrators (PDPL)</span></h2><div class="tw" id="people"></div></div>
+ <p class="sm mu" id="appsfoot"></p>
+</section>
+
+<section id="p-reg" hidden>
+ <div class="note">A change to the register is a request; a different person approves it (an administrator or a security approver). The requester never approves their own change. Blocked apps feed the firewall block list and the browser extension.</div>
+ <div class="card" id="pendcard"><h2>Waiting for approval</h2><div class="tw" id="pending"></div></div>
+ <div class="card"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h2 style="margin:0">Register</h2><span class="sp"></span><button type="button" class="btn sm" id="bl-txt" hidden><i class="ti ti-download"></i>Block list (.txt)</button><button type="button" class="btn sm" id="bl-csv" hidden><i class="ti ti-file-spreadsheet"></i>Block list (.csv)</button></div><div class="tw" id="reg" style="margin-top:10px"></div></div>
+ <div class="card" id="reqcard" hidden><h2 id="reqh">Request a change</h2>
+  <form id="reqf" class="frm" novalidate>
+   <label>App<select class="inp" id="r-app"></select></label>
+   <label>Status<select class="inp" id="r-status"><option value="sanctioned">Sanctioned</option><option value="tolerated">Tolerated</option><option value="blocked">Blocked</option></select></label>
+   <label>Owner<input class="inp" id="r-owner" maxlength="120"></label>
+   <label class="w">Data classes it may receive (sanctioned apps only)<span class="cls" id="r-cls"></span></label>
+   <label>Review by<input class="inp" id="r-review" type="date"></label>
+   <label class="w">Reason (required)<input class="inp" id="r-reason" maxlength="500"></label>
+   <div class="w" id="r-custom" hidden><div class="frm"><label>App name<input class="inp" id="r-name" maxlength="80"></label><label>Vendor<input class="inp" id="r-vendor" maxlength="80"></label><label>Domains (comma separated)<input class="inp" id="r-domains" placeholder="chat.example.com"></label></div></div>
+   <div class="w"><button type="submit" class="btn pri">Send for approval</button> <span class="sm mu" id="r-msg"></span></div>
+  </form></div>
+</section>
+
+<section id="p-sig" hidden>
+ <div class="kpis" id="skpis"></div>
+ <div class="card"><h2>DLP incidents towards AI apps</h2><div class="tw" id="inc"></div></div>
+ <div class="g2"><div class="card"><h2>Policy gaps</h2><div id="gaps"></div></div><div class="card"><h2>Large uploads</h2><div id="sup"></div></div></div>
+ <p class="sm mu" id="sigfoot"></p>
+</section>
+
+<section id="p-ext" hidden>
+ <div class="kpis" id="ekpis"></div>
+ <div class="g2">
+  <div class="card"><h2>Connect the extension</h2>
+   <ol><li>Create the ingest token here (administrators) and copy it: it is shown once.</li><li>Publish <span class="mono">agents/browser-ai-dlp</span> (sentra-siem) as a private Chrome / Edge item, or host the packed .crx.</li><li>Force-install it with <span class="mono">ExtensionInstallForcelist</span> and set its policy: <span class="mono">siem_url</span>, <span class="mono">token</span>, optional <span class="mono">device</span>.</li><li>Block other browsers and private windows for the AI domains.</li></ol>
+   <div id="tokbox" style="margin-top:12px"></div></div>
+  <div class="card"><h2>Versions seen in the last 24 hours</h2><div class="tw" id="vers"></div></div>
+ </div>
+ <div class="card" id="setcard" hidden><h2>Settings</h2>
+  <form id="setf" class="frm" novalidate>
+   <label>When sensitive data is found<select class="inp" id="s-mode"><option value="warn">Warn: Cancel / Send anyway (recorded)</option><option value="block">Block</option></select></label>
+   <label>Large upload threshold (MB per person and app)<input class="inp" id="s-mb" type="number" min="1" max="10240"></label>
+   <label>Heartbeat (minutes)<input class="inp" id="s-hb" type="number" min="15" max="1440"></label>
+   <label class="w">Protected keywords (comma separated, plain text, at least 3 characters)<input class="inp" id="s-kw" maxlength="6000"></label>
+   <label class="w">Automatic SOC cases<span class="cls"><label><input type="checkbox" id="s-auto"> on</label><label><input type="checkbox" id="s-dlp"> sensitive data let through to an AI app</label><label><input type="checkbox" id="s-gap"> blocked app still reachable</label></span></label>
+   <div class="w"><button type="submit" class="btn pri">Save</button> <span class="sm mu" id="s-msg"></span></div>
+  </form></div>
+ <div class="card"><h2>Policy the extension receives</h2><pre id="pol"></pre></div>
+</section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',TAB='apps',D=null,REG=null,SIG=null,EXT=null,SET=null,PEND=[];
+  var PAL=['#3b82f6','#22d3ee','#a78bfa','#f59f00','#3ccf91','#ef5b6b','#f472b6','#94a3b8'];
+  var STL={sanctioned:'Sanctioned',tolerated:'Tolerated',blocked:'Blocked',unreviewed:'Not reviewed'};
+  var CLS={personal:'Personal',financial:'Financial',health:'Health',credentials:'Credentials',confidential:'Confidential'};
+  function at(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('The SIEM is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function st(s){return '<span class="st st-'+esc(s)+'">'+esc(STL[s]||s)+'</span>';}
+  function n(v){return v==null?'<span class="mu">not in the logs</span>':esc(String(v));}
+  function d16(v){return v?esc(String(v).slice(0,16)):'';}
+  function tiles(el,list){$(el).innerHTML=list.map(function(x){return '<div class="k"><div class="v">'+esc(String(x[0]))+'</div><div class="l">'+esc(x[1])+'</div></div>';}).join('');}
+  function err(e){$('err').innerHTML=e?'<div class="err">'+esc(e)+'</div>':'';}
+  function H(){return $('hours').value;}
+
+  // ---------------- AI apps in use
+  function renderApps(){
+    var v=D;if(!v)return;
+    if(!v.configured){$('appsnote').innerHTML='<div class="note">'+esc(v.note)+'</div>';$('kpis').innerHTML='';$('trend').innerHTML=$('uploads').innerHTML=$('apps').innerHTML='<div class="empty">Nothing to show until the logs arrive.</div>';$('peoplecard').hidden=true;$('appsfoot').textContent='';return;}
+    $('appsnote').innerHTML=v.sources.length?'':'<div class="note">Web, firewall or DNS logs are arriving, but no AI app was seen in this period.</div>';
+    var t=v.totals;tiles('kpis',[[t.apps,'AI apps in use'],[t.users,'people using them'],[t.unsanctioned_apps,'not sanctioned, still used'],[t.unsanctioned_users,'people on unsanctioned apps'],[t.gaps,'blocked apps still reachable'],[t.mb_sent==null?'-':t.mb_sent+' MB','sent to AI apps']]);
+    var top=v.apps.slice(0,7).map(function(a){return a.id;});
+    if(!v.trend.length)$('trend').innerHTML='<div class="empty">No daily data.</div>';
+    else{var max=Math.max.apply(null,v.trend.map(function(d){return Object.keys(d.apps).reduce(function(s,k){return s+d.apps[k];},0);}))||1;
+      $('trend').innerHTML='<div class="bars">'+v.trend.map(function(d){var tot=0,seg=Object.keys(d.apps).map(function(k){tot+=d.apps[k];var i=top.indexOf(k);return d.apps[k]?'<i style="height:'+(d.apps[k]/max*134).toFixed(1)+'px;background:'+(i<0?PAL[7]:PAL[i])+'"></i>':'';}).join('');return '<div class="c" title="'+esc(d.date+': '+tot)+'">'+seg+'</div>';}).join('')+'</div><div class="bx"><span>'+esc(v.trend[0].date)+'</span><span>'+esc(v.trend[v.trend.length-1].date)+'</span></div>'
+        +'<div class="lgd">'+top.map(function(id,i){var a=v.apps[i];return '<span><i style="background:'+PAL[i]+'"></i>'+esc(a.name)+'</span>';}).join('')+'</div>';}
+    $('upth').textContent='above '+v.upload_mb+' MB per person and app';
+    $('uploads').innerHTML=!v.bytes_in_logs?'<div class="empty">The logs carry no byte counts - send firewall traffic logs with sent bytes to measure uploads.</div>':!v.uploads.length?'<div class="empty">No upload above the threshold.</div>'
+      :'<table><thead><tr><th>Person</th><th>App</th><th>Sent</th><th></th></tr></thead><tbody>'+v.uploads.slice(0,12).map(function(u){return '<tr><td>'+(u.who?esc(u.who):'<span class="mu">hidden</span>')+'</td><td>'+esc(u.app_name)+' '+st(u.status)+'</td><td>'+esc(u.mb_sent+' MB')+'</td><td>'+(at('operator')&&u.who?'<button type="button" class="btn sm" data-case="upload" data-app="'+esc(u.app)+'" data-who="'+esc(u.who)+'" data-detail="'+esc(u.why)+'">Open case</button>':'')+'</td></tr>';}).join('')+'</tbody></table>';
+    $('apps').innerHTML=!v.apps.length?'<div class="empty">No AI app seen in this period.</div>':'<table><thead><tr><th>App</th><th>Vendor</th><th>Status</th><th>People</th><th>Requests</th><th>Blocked</th><th>Sent</th><th>Last seen</th><th>Seen as</th></tr></thead><tbody>'
+      +v.apps.map(function(a){return '<tr><td><b>'+esc(a.name)+'</b>'+(a.new_in_window?' <span class="tag">new</span>':'')+(a.gap?' <span class="tag warn">gap</span>':'')+'</td><td>'+esc(a.vendor)+'</td><td>'+st(a.status)+'</td><td>'+a.users+'</td><td>'+a.requests+'</td><td>'+a.blocked+'</td><td>'+n(a.mb_sent==null?null:a.mb_sent+' MB')+'</td><td>'+d16(a.last)+'</td><td class="sm mu">'+a.hosts.slice(0,3).map(esc).join(', ')+'</td></tr>';}).join('')+'</tbody></table>';
+    $('peoplecard').hidden=!v.named;
+    if(v.named)$('people').innerHTML=!v.people.length?'<div class="empty">No named activity.</div>':'<table><thead><tr><th>Person / device</th><th>App</th><th>Status</th><th>Requests</th><th>Blocked</th><th>Sent</th><th>Last</th></tr></thead><tbody>'+v.people.slice(0,100).map(function(p){var a=v.apps.find(function(x){return x.id===p.app;});return '<tr><td>'+esc(p.who)+'</td><td>'+esc(a?a.name:p.app)+'</td><td>'+st(p.status)+'</td><td>'+p.requests+'</td><td>'+p.blocked+'</td><td>'+n(p.mb_sent==null?null:p.mb_sent+' MB')+'</td><td>'+d16(p.last)+'</td></tr>';}).join('')+'</tbody></table>';
+    $('appsfoot').textContent=v.note+' Sources: '+(v.sources.map(function(s){return s.source+' ('+s.category+')';}).join(', ')||'none in this period')+'.';
+  }
+
+  // ---------------- register
+  function renderReg(){
+    if(!REG)return;
+    var items=REG.items;
+    $('reg').innerHTML='<table><thead><tr><th>App</th><th>Vendor</th><th>Category</th><th>Status</th><th>May receive</th><th>Owner</th><th>Review by</th><th>Approved by</th><th></th></tr></thead><tbody>'+items.map(function(a){
+      return '<tr><td><b>'+esc(a.name)+'</b>'+(a.custom?' <span class="tag">custom</span>':'')+'<div class="sm mu">'+a.domains.slice(0,3).map(esc).join(', ')+'</div></td><td>'+esc(a.vendor)+'</td><td>'+esc(a.category)+'</td><td>'+st(a.status)+(a.pending.length?' <span class="tag">change pending</span>':'')+'</td><td>'+(a.allowed_classes.length?a.allowed_classes.map(function(c){return '<span class="tag">'+esc(CLS[c]||c)+'</span>';}).join(''):'<span class="mu">nothing sensitive</span>')+'</td><td>'+esc(a.owner)+'</td><td>'+esc(a.review_by)+(a.review_due?' <span class="tag warn">due</span>':'')+'</td><td>'+esc(a.approved_by)+'</td><td>'+(at('operator')&&!a.pending.length?'<button type="button" class="btn sm" data-edit="'+esc(a.id)+'">Change</button>':'')+'</td></tr>';}).join('')+'</tbody></table>';
+    var sel=$('r-app'),cur=sel.value;sel.innerHTML=items.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>';}).join('')+'<option value="__new">New app (custom)...</option>';if(cur)sel.value=cur;
+    $('r-cls').innerHTML=REG.classes.map(function(c){return '<label><input type="checkbox" value="'+esc(c.id)+'"> '+esc(c.label)+'</label>';}).join('');
+    $('reqcard').hidden=!at('operator');$('bl-txt').hidden=$('bl-csv').hidden=!at('operator');
+    $('pendcard').hidden=!at('analyst');
+    if(at('analyst'))$('pending').innerHTML=!PEND.length?'<div class="empty">Nothing is waiting for approval.</div>':'<table><thead><tr><th>App</th><th>Change</th><th>Reason</th><th>Requested by</th><th>When</th><th></th></tr></thead><tbody>'+PEND.map(function(r){
+      var ch=Object.keys(r.change).map(function(k){var v=r.change[k];return esc(k)+': '+esc(Array.isArray(v)?(v.join(', ')||'none'):String(v));}).join('<br>');
+      return '<tr><td><b>'+esc(r.app_name)+'</b></td><td class="sm">'+ch+'</td><td class="sm">'+esc(r.reason)+'</td><td>'+esc(r.requested_by)+'</td><td>'+esc(new Date(r.requested_at).toISOString().slice(0,16).replace('T',' '))+'</td><td>'+(at('operator')?'<button type="button" class="btn sm pri" data-dec="approve" data-id="'+esc(r.id)+'">Approve</button> <button type="button" class="btn sm" data-dec="reject" data-id="'+esc(r.id)+'">Reject</button>':'')+'</td></tr>';}).join('')+'</tbody></table>';
+  }
+  function fillReq(id){var a=REG.items.find(function(x){return x.id===id;});if(!a)return;$('r-app').value=id;$('r-status').value=a.status==='unreviewed'?'tolerated':a.status;$('r-owner').value=a.owner;$('r-review').value=a.review_by;
+    [].forEach.call($('r-cls').querySelectorAll('input'),function(c){c.checked=a.allowed_classes.indexOf(c.value)>=0;});$('r-custom').hidden=true;$('reqh').textContent='Request a change: '+a.name;$('reqcard').scrollIntoView({behavior:'smooth'});$('r-reason').focus();}
+
+  // ---------------- signals
+  function renderSig(){
+    var s=SIG;if(!s)return;var t=s.totals;
+    tiles('skpis',[[t.incidents,'DLP incidents to AI apps'],[t.left,'let through'],[t.sensitive_left,'sensitive data let through'],[t.blocked,'blocked'],[t.uploads,'large uploads'],[t.gaps,'policy gaps']]);
+    $('inc').innerHTML=!s.incidents.length?'<div class="empty">No DLP incident towards an AI app in this period. DLP products (Somansa, Forcepoint, Symantec, Trend, Zscaler) and the browser extension report here once connected.</div>'
+      :'<table><thead><tr><th>When</th><th>App</th><th>Source</th><th>Person</th><th>Action</th><th>Data</th><th>Matches</th><th></th></tr></thead><tbody>'+s.incidents.slice(0,200).map(function(i){
+        return '<tr><td>'+d16(i.ts)+'</td><td>'+esc(i.app_name)+' '+st(i.status)+'</td><td>'+esc(i.source)+'</td><td>'+(i.who?esc(i.who):'<span class="mu">hidden</span>')+'</td><td>'+(i.left?'<span class="tag warn">let through</span>':'<span class="tag">'+esc(i.action)+'</span>')+'</td><td>'+(i.classes.length?i.classes.map(function(c){return '<span class="tag">'+esc(CLS[c]||c)+'</span>';}).join(''):esc(i.classification))+'</td><td>'+i.matches+'</td><td>'+(at('operator')&&i.app?'<button type="button" class="btn sm" data-case="dlp" data-app="'+esc(i.app)+'" data-who="'+esc(i.who||'')+'" data-inc="'+esc(i.id||'')+'" data-detail="'+esc(i.classes.join(', ')+' ('+i.source+', '+i.action+')')+'">Open case</button>':'')+'</td></tr>';}).join('')+'</tbody></table>';
+    $('gaps').innerHTML=!s.gaps.length?'<div class="empty">No blocked app was reachable.</div>':s.gaps.map(function(g){return '<div class="note">'+esc(g.why)+(at('operator')?' <button type="button" class="btn sm" data-case="gap" data-app="'+esc(g.app)+'" data-detail="'+esc(g.why)+'">Open case</button>':'')+'</div>';}).join('');
+    $('sup').innerHTML=!s.bytes_in_logs?'<div class="empty">The logs carry no byte counts.</div>':!s.uploads.length?'<div class="empty">No upload above the threshold.</div>':s.uploads.slice(0,10).map(function(u){return '<div class="note">'+(u.who?esc(u.who)+': ':'')+esc(u.why)+'</div>';}).join('');
+    $('sigfoot').textContent=s.note;
+  }
+
+  // ---------------- extension
+  function renderExt(){
+    if(!at('operator')){$('ekpis').innerHTML='';$('vers').innerHTML='<div class="empty">Extension coverage is for operators and administrators.</div>';$('tokbox').innerHTML='';$('pol').textContent='';$('setcard').hidden=true;return;}
+    var e=EXT;if(!e)return;
+    tiles('ekpis',[[e.token_set?'Connected':'Not set','ingest token'],[e.users_24h,'people with the extension (24 h)'],[e.versions.length,'versions'],[e.actions_7d.blocked||0,'blocked (7 days)'],[(e.actions_7d.sent_after_warning||0),'sent after a warning (7 days)'],[e.actions_7d.page_blocked||0,'blocked apps opened (7 days)']]);
+    $('vers').innerHTML=!e.versions.length?'<div class="empty">No extension has reported yet.</div>':'<table><thead><tr><th>Version</th><th>People</th><th>Devices</th><th>Last</th></tr></thead><tbody>'+e.versions.map(function(x){return '<tr><td>'+esc(x.version)+'</td><td>'+x.users+'</td><td>'+x.devices+'</td><td>'+d16(x.last)+'</td></tr>';}).join('')+'</tbody></table>';
+    $('tokbox').innerHTML=at('admin')?'<button type="button" class="btn" id="mktok"><i class="ti ti-key"></i>'+(e.token_set?'Replace token':'Create token')+'</button> <span class="sm mu">'+(e.token_set?'Replacing stops the old token at once.':'')+'</span><div id="tokout"></div>':'<span class="sm mu">An administrator creates the ingest token.</span>';
+    var p=JSON.parse(JSON.stringify(e.policy));p.apps=p.apps.filter(function(a){return a.status!=='unreviewed';}).concat([{note:'+ '+e.policy.apps.filter(function(a){return a.status==='unreviewed';}).length+' apps not reviewed (sensitive data stopped)'}]);
+    $('pol').textContent=JSON.stringify(p,null,2);
+    $('setcard').hidden=!at('admin')||!SET;
+    if(SET&&at('admin')){$('s-mode').value=SET.extension.mode;$('s-mb').value=SET.upload_mb;$('s-hb').value=SET.extension.heartbeat_min;$('s-kw').value=(SET.extension.keywords||[]).join(', ');$('s-auto').checked=!!SET.auto_cases.enabled;$('s-dlp').checked=!!SET.auto_cases.dlp_left;$('s-gap').checked=!!SET.auto_cases.gaps;}
+  }
+
+  function load(){
+    err('');var h=H();
+    var jobs=[req('GET','/shadow-ai/discovery?hours='+h).then(function(v){D=v;renderApps();}),req('GET','/shadow-ai/register').then(function(v){REG=v;}),req('GET','/shadow-ai/signals?hours='+h).then(function(v){SIG=v;renderSig();})];
+    if(at('analyst'))jobs.push(req('GET','/shadow-ai/requests?status=pending').then(function(v){PEND=v.items;}),req('GET','/shadow-ai/settings').then(function(v){SET=v;}));
+    if(at('operator'))jobs.push(req('GET','/shadow-ai/extension').then(function(v){EXT=v;}));
+    Promise.all(jobs.map(function(p){return p.then(null,function(e){return e;});})).then(function(rs){
+      var bad=rs.filter(function(r){return r instanceof Error;});if(bad.length)err('Some parts could not be loaded: '+bad[0].message);
+      renderReg();renderExt();$('gen').textContent='Updated '+new Date().toLocaleTimeString();
+    });
+  }
+  function show(t){TAB=t;[].forEach.call(document.querySelectorAll('.tab'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});['apps','reg','sig','ext'].forEach(function(k){$('p-'+k).hidden=k!==t;});}
+
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('button');if(!b)return;
+    if(b.classList.contains('tab'))return show(b.getAttribute('data-tab'));
+    if(b.id==='refresh')return load();
+    if(b.hasAttribute('data-edit'))return fillReq(b.getAttribute('data-edit'));
+    if(b.id==='bl-txt'||b.id==='bl-csv'){location.href='/api/soc/shadow-ai/blocklist?format='+(b.id==='bl-txt'?'txt':'csv');return;}
+    if(b.hasAttribute('data-dec')){var dec=b.getAttribute('data-dec'),cm=dec==='reject'?(prompt('Why is it rejected?')||''):'';b.disabled=true;
+      req('POST','/shadow-ai/requests/'+encodeURIComponent(b.getAttribute('data-id'))+'/decide',{decision:dec,comment:cm}).then(function(){toast(dec==='approve'?'Approved: the register is updated.':'Rejected.');load();},function(x){b.disabled=false;toast(x.message);});return;}
+    if(b.hasAttribute('data-case')){var body={kind:b.getAttribute('data-case'),app:b.getAttribute('data-app')};['who','inc','detail'].forEach(function(k){var v=b.getAttribute('data-'+k);if(v)body[k==='inc'?'incident_id':k]=k==='detail'?v.slice(0,300):v;});b.disabled=true;
+      req('POST','/shadow-ai/cases',body).then(function(r){toast((r.existed?'Already open: ':'Case opened: ')+r.case_id);},function(x){b.disabled=false;toast(x.message);});return;}
+    if(b.id==='mktok'){if(EXT&&EXT.token_set&&!confirm('Replace the token? Extensions using the old one stop reporting until their policy is updated.'))return;b.disabled=true;
+      req('POST','/shadow-ai/extension/token',{}).then(function(r){var o=$('tokout');o.innerHTML='<div class="tok"></div><div class="sm mu"></div>';o.querySelector('.tok').textContent=r.token;o.querySelector('.sm').textContent=r.note;b.disabled=false;EXT.token_set=true;},function(x){b.disabled=false;toast(x.message);});}
+  });
+  $('r-app').addEventListener('change',function(){var nw=this.value==='__new';$('r-custom').hidden=!nw;$('reqh').textContent='Request a change';if(!nw)fillReq(this.value);});
+  $('reqf').addEventListener('submit',function(e){e.preventDefault();var app=$('r-app').value,b={status:$('r-status').value,reason:$('r-reason').value.trim()};
+    if(b.reason.length<5){$('r-msg').textContent='Give a reason (at least 5 characters).';return;}
+    if($('r-owner').value.trim())b.owner=$('r-owner').value.trim();if($('r-review').value)b.review_by=$('r-review').value;
+    b.allowed_classes=b.status==='sanctioned'?[].filter.call($('r-cls').querySelectorAll('input'),function(c){return c.checked;}).map(function(c){return c.value;}):[];
+    if(app==='__new'){var nm=$('r-name').value.trim();if(!nm){$('r-msg').textContent='Give the app a name.';return;}app='custom:'+nm.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);b.name=nm;if($('r-vendor').value.trim())b.vendor=$('r-vendor').value.trim();
+      b.domains=$('r-domains').value.split(',').map(function(s){return s.trim().toLowerCase();}).filter(Boolean);if(!b.domains.length){$('r-msg').textContent='List at least one domain.';return;}}
+    b.app=app;$('r-msg').textContent='Sending...';
+    req('POST','/shadow-ai/requests',b).then(function(){$('r-msg').textContent='Sent: a different person approves it.';$('r-reason').value='';load();},function(x){$('r-msg').textContent=x.message;});});
+  $('setf').addEventListener('submit',function(e){e.preventDefault();
+    var kw=$('s-kw').value.split(',').map(function(s){return s.trim();}).filter(Boolean),b={mode:$('s-mode').value,upload_mb:parseInt($('s-mb').value,10),heartbeat_min:parseInt($('s-hb').value,10),keywords:kw,auto_enabled:$('s-auto').checked,auto_dlp_left:$('s-dlp').checked,auto_gaps:$('s-gap').checked};
+    if(kw.some(function(k){return k.length<3;})){$('s-msg').textContent='Each keyword needs at least 3 characters.';return;}
+    req('POST','/shadow-ai/settings',b).then(function(r){SET=r.settings;$('s-msg').textContent=r.changed.length?'Saved: '+r.changed.join(', '):'Nothing changed.';load();},function(x){$('s-msg').textContent=x.message;});});
+  $('hours').addEventListener('change',load);
+
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(x){/* not signed in: the engine decides */}load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

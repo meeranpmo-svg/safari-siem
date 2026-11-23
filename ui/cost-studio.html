@@ -1,0 +1,145 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cost Studio</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--c-bg:#0b0d12;--c-panel:#12151c;--c-raise:#181c25;--c-line:#232837;--c-ink:#e7eaf0;--c-mute:#8b93a4;--c-ok:#2fb344;--c-warn:#f59f00;--c-bad:#e5484d;--c-acc:#5b8def;--c-ai:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--c-bg);color:var(--c-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--c-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--c-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--c-raise);color:var(--c-ink);border:1px solid var(--c-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--c-acc);border-color:var(--c-acc);color:#fff}.btn.ok{background:rgba(47,179,68,.18);border-color:rgba(47,179,68,.5);color:#7ee28f}.btn.ai{background:linear-gradient(135deg,#7c4dff,#5b8def);border:0;color:#fff}.btn.ghost{background:transparent}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--c-panel);border:1px solid var(--c-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--c-mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:center;background:radial-gradient(circle at 12% 40%,rgba(47,179,68,.16),transparent 55%),var(--c-panel)}
+.big{text-align:center}.big b{display:block;font-size:44px;line-height:1.05;color:#56d364}.big span{color:var(--c-mute);font-size:12.5px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--c-raise);border:1px solid var(--c-line);border-radius:12px;padding:11px 13px;text-align:left;color:inherit;font:inherit;cursor:pointer}.kpi:hover{border-color:var(--c-acc)}.kpi .n{font-size:22px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--c-mute)}
+.env{margin:10px 0 16px}.env .hd{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}.env .hd b{font-size:14px}
+.track{position:relative;height:22px;border-radius:7px;background:#1b2030;overflow:visible}.track .fill{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:linear-gradient(90deg,#5b8def,#3bc9db)}.track .appr{position:absolute;left:0;top:7px;height:8px;border-radius:4px;background:#2fb344}
+.track .exp{position:absolute;top:-5px;bottom:-5px;width:3px;background:#a371f7;border-radius:2px}.track .cap{position:absolute;top:-6px;bottom:-6px;width:2px;background:#e7eaf0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--c-mute);margin-top:6px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.fchip{font:600 12px Inter,"Segoe UI",system-ui,sans-serif;padding:4px 10px;border-radius:999px;background:var(--c-raise);border:1px solid var(--c-line);color:var(--c-ink);cursor:pointer}.fchip.on{border-color:var(--c-acc);background:rgba(91,141,239,.15)}
+.opp{border:1px solid var(--c-line);border-radius:12px;padding:11px 12px;margin-bottom:8px;background:var(--c-raise)}.opp .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13.5px}.opp .ev{font-size:12.5px;color:var(--c-mute);margin:4px 0}
+.sv{font-weight:800;color:#56d364;white-space:nowrap}.sv.res{color:#9dbbff}
+.conf{width:56px;height:6px;border-radius:4px;background:#232837;overflow:hidden;display:inline-block;vertical-align:middle}.conf i{display:block;height:100%;background:linear-gradient(90deg,#a371f7,#5b8def)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;background:rgba(139,147,164,.16);color:#aab2c2}.pill.ai{background:rgba(163,113,247,.18);color:#c6a6ff}.pill.open{background:rgba(91,141,239,.18);color:#9dbbff}.pill.done{background:rgba(47,179,68,.15);color:#56d364}
+.inp{background:#0b0d12;color:var(--c-ink);border:1px solid var(--c-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hb{display:grid;grid-template-columns:150px 1fr 90px;gap:8px;align-items:center;font-size:12.5px;margin:5px 0}.hb .bar{height:9px;border-radius:5px;background:#232837;overflow:hidden}.hb .bar i{display:block;height:100%;border-radius:5px}
+.tabs{display:flex;gap:4px;margin-bottom:10px}.tab{background:none;border:1px solid var(--c-line);color:var(--c-mute);border-radius:8px;padding:5px 11px;cursor:pointer;font:600 12.5px Inter,"Segoe UI",system-ui,sans-serif}.tab.on{color:var(--c-ink);background:var(--c-raise);border-color:#3a4258}
+.un{border-left:3px solid var(--c-warn);background:rgba(245,159,0,.07);padding:7px 10px;border-radius:6px;font-size:12.8px;margin:6px 0}
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.col{background:var(--c-raise);border:1px solid var(--c-line);border-radius:12px;padding:10px;min-height:100px}.col h3{margin:0 0 8px;font-size:13px;display:flex;justify-content:space-between}
+.it{background:#10141c;border:1px solid var(--c-line);border-radius:10px;padding:8px;margin-bottom:6px;font-size:12.5px}.it.prop{border-color:rgba(163,113,247,.5)}
+.ask{display:flex;gap:8px;flex-wrap:wrap}.ask textarea{flex:1;min-width:240px;min-height:64px}
+.ans{white-space:pre-wrap;background:var(--c-raise);border:1px solid var(--c-line);border-radius:12px;padding:12px;margin-top:10px;font-size:13px}.steps{font-size:12px;color:var(--c-mute);margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.empty{color:var(--c-mute);padding:8px 0;font-size:13px}
+@media (max-width:1100px){.cols,.hero{grid-template-columns:1fr}.board{grid-template-columns:1fr 1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT Asset Management · cost</div><h1>Cost Studio</h1><div class="mute">Where the IT money goes, where it can be saved and how this year's budget will really be spent - from your own licences, contracts, VMs, purchases and last year's budget. Savings are priced only from recorded costs; people decide every action.</div></div>
+ <span class="sp"></span><span class="mute sm" id="up"></span><a class="btn ghost" href="budget.html"><i class="ti ti-report-money"></i>IT Budget</a><button type="button" class="btn" id="refresh"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+<section class="card hero"><div class="big" id="big"></div><div><div class="kpis" id="kpis"></div><p class="mute sm" id="learned" style="margin:10px 0 0"></p></div></section>
+<section class="card"><h2><i class="ti ti-chart-arcs"></i>Budget envelopes <span class="c" id="fy"></span></h2><div id="envs"></div>
+ <div class="legend"><span><i style="background:#5b8def"></i>proposed (priced lines)</span><span><i style="background:#2fb344"></i>approved</span><span><i style="background:#a371f7"></i>expected spend - learned from last year</span><span><i style="background:#e7eaf0"></i>envelope</span></div></section>
+<div class="cols">
+ <section class="card" id="c-sav"><h2><i class="ti ti-pig-money"></i>Savings opportunities <span class="c" id="sc"></span></h2><div class="chips" id="kinds"></div><div id="opps"></div></section>
+ <div>
+  <section class="card"><h2><i class="ti ti-chart-bar"></i>Last year's execution <span class="c" id="pfy"></span></h2><div id="exe"></div></section>
+  <section class="card" id="c-un"><h2><i class="ti ti-alert-triangle"></i>Unusual budget lines</h2><div id="unusual"></div></section>
+  <section class="card"><h2><i class="ti ti-building"></i>Where the money is <span class="c">purchase cost of active assets</span></h2>
+   <div class="tabs" role="tablist"><button type="button" class="tab on" data-dim="site">Site</button><button type="button" class="tab" data-dim="department">Department</button><button type="button" class="tab" data-dim="type">Type</button></div><div id="show"></div></section>
+ </div>
+</div>
+<section class="card" id="c-act"><h2><i class="ti ti-layout-kanban"></i>Saving actions <span class="c" id="ac"></span></h2><div class="board" id="board"></div></section>
+<section class="card"><h2><i class="ti ti-sparkles"></i>AI cost analyst <span class="c" id="ais"></span></h2>
+ <div class="ask"><textarea class="inp" id="q" maxlength="4000" placeholder="e.g. Where can we save before the licence renewals? Which budget lines are unlikely to be spent?" aria-label="Question"></textarea><button type="button" class="btn ai" id="go" disabled><i class="ti ti-send"></i>Ask</button></div>
+ <div class="sm mute" style="margin-top:6px">The analyst reads with read-only tools and may record action PROPOSALS on the opportunities found - a person accepts or drops each one. It never changes a licence, contract, VM or budget line; budget decisions stay with administrators.</div>
+ <div id="out"></div></section>
+</div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, KIND='', DIM='site';
+  var KL={'unused-licence':['Unused licences','license'],'contract-quantity':['Contract over quantity','file-certificate'],'contract-stale-assets':['Contract lists retired assets','file-alert'],'contract-overlap':['Overlapping contracts','copy'],'vm-off':['Powered-off VMs','power'],'vm-rightsize':['Oversized VMs','box']};
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=240000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function money(v){return v==null?'—':'SAR '+Math.round(v).toLocaleString('en-US');}
+  function conf(c){return '<span class="conf" title="'+Math.round(c*100)+'% confidence"><i style="width:'+Math.round(c*100)+'%"></i></span>';}
+
+  function drawTop(){var s=V.summary;
+    $('big').innerHTML='<b>'+esc(money(s.saving_known))+'</b><span>savings found and priced from recorded costs<br>'+esc(s.opportunities)+' opportunit'+(s.opportunities===1?'y':'ies')+' · '+esc(s.opportunities-s.priced_opportunities)+' more where the money is not known</span>';
+    function k(n,l,c,go){return '<button type="button" class="kpi" data-go="'+esc(go)+'"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></button>';}
+    $('kpis').innerHTML=k(money(s.tracked),'being worked on','#9dbbff','c-act')+k(money(s.realised),'realised','#56d364','c-act')+k(money(s.licence_cost),'licence cost on record','','c-sav')+k(money(s.contract_cost),'support contracts (active)','','c-sav')
+      +k(s.unusual,'unusual budget lines',s.unusual?'#f5b544':'','c-un')+k(s.assets_with_cost,'assets with a purchase cost','','c-sav');
+    var miss=['budget','licences','support','virt'].filter(function(k){return !V.sources[k];}).map(function(k){return {budget:'IT Budget',licences:'the licence register',support:'Support Contracts',virt:'virtualization capacity'}[k];});
+    $('learned').textContent=V.learned.note+(miss.length?' Not read: '+miss.join(', ')+' - its savings are not shown.':'');
+  }
+  function drawEnvs(){$('fy').textContent=V.fy?'FY'+V.fy:'';
+    $('envs').innerHTML=V.envelopes.length?V.envelopes.map(function(e){var ex=V.expected.find(function(x){return x.envelope===e.id;})||{},max=Math.max(e.envelope,e.proposed,1)*1.08,pc=function(v){return Math.min(100,100*v/max)+'%';};
+      return '<div class="env"><div class="hd"><b>'+esc(e.name)+'</b><span class="sm mute">envelope '+esc(money(e.envelope))+' · proposed '+esc(money(e.proposed))+' · approved '+esc(money(e.approved))+(ex.expected_spend!=null?' · expected spend <b style="color:#c6a6ff">'+esc(money(ex.expected_spend))+'</b> ('+esc(ex.lines_with_history)+' of '+esc(ex.lines)+' lines with history)':'')+'</span><span class="sp"></span>'
+        +(e.unpriced?'<span class="pill" title="lines without a recorded price">'+esc(e.unpriced)+' price needed</span>':'')+(e.over?' <span class="pill" style="color:#ff7b80">'+esc(e.over)+' do not fit</span>':'')+'</div>'
+        +'<div class="track"><span class="fill" style="width:'+pc(e.proposed)+'"></span><span class="appr" style="width:'+pc(e.approved)+'"></span>'+(ex.expected_spend!=null?'<span class="exp" style="left:'+pc(ex.expected_spend)+'" title="expected spend"></span>':'')+'<span class="cap" style="left:'+pc(e.envelope)+'" title="envelope"></span></div>'
+        +(ex.likely_unspent>0?'<div class="sm" style="margin-top:4px;color:#c6a6ff">Likely unspent if this year runs like last year: '+esc(money(ex.likely_unspent))+'</div>':'')+'</div>';}).join('')
+      :'<div class="empty">The IT Budget is not installed or has no envelopes yet - open IT Budget to set them.</div>';}
+  function oppHtml(o){var kl=KL[o.kind]||[o.kind,'coin'];
+    return '<div class="opp" data-okey="'+esc(o.key)+'"><div class="hd"><i class="ti ti-'+esc(kl[1])+'"></i><b>'+esc(o.title)+'</b><span class="sp"></span>'+(o.saving?'<span class="sv" title="'+esc(o.saving.basis)+'">'+esc(money(o.saving.value))+'</span>':'<span class="sv res" title="no recorded cost - the money is not known">'+esc(o.resource||'—')+'</span>')+' '+conf(o.confidence)+'</div>'
+      +'<div class="ev">'+esc(o.evidence)+(o.saving?' · '+esc(o.saving.basis):' · money not known (no recorded cost)')+(o.where?' · <a href="'+esc(o.where)+'" style="color:#9dbbff">open</a>':'')+'</div>'
+      +(can('operator')?'<div class="row"><input class="inp" data-owner placeholder="owner (you if empty)" aria-label="Owner" style="width:170px"><button type="button" class="btn ok" data-track="'+esc(o.key)+'"><i class="ti ti-target-arrow"></i>Track</button><input class="inp" data-reason placeholder="why not (for Not right)" aria-label="Reason" style="flex:1;min-width:120px"><button type="button" class="btn ghost" data-dismiss="'+esc(o.key)+'">Not right</button></div>':'')+'</div>';}
+  function drawOpps(){var cnt={};V.savings.forEach(function(o){cnt[o.kind]=(cnt[o.kind]||0)+1;});
+    $('kinds').innerHTML='<button type="button" class="fchip'+(KIND?'':' on')+'" data-kind="">All '+esc(V.savings.length)+'</button>'+Object.keys(cnt).map(function(k){return '<button type="button" class="fchip'+(KIND===k?' on':'')+'" data-kind="'+esc(k)+'">'+esc((KL[k]||[k])[0])+' '+esc(cnt[k])+'</button>';}).join('');
+    var L=V.savings.filter(function(o){return !KIND||o.kind===KIND;});
+    $('opps').innerHTML=L.length?L.slice(0,80).map(oppHtml).join(''):'<div class="empty">No opportunity found. Record licence seats and costs, support contracts and connect virtualization capacity - savings appear from what is recorded.</div>';
+    $('sc').textContent=money(V.summary.saving_known)+' priced';}
+  function drawExe(){$('pfy').textContent=V.previous_fy?'FY'+V.previous_fy+': approved vs spent':'';
+    $('exe').innerHTML=V.execution.length?V.execution.map(function(e){var p=Math.round(e.ratio*100);return '<div class="hb"><span>'+esc((e.envelope==='cyber'?'Cyber':'IT Ops')+' · '+(e.area||'—')+' · '+e.kind)+'</span><span class="bar"><i style="width:'+Math.min(100,p)+'%;background:'+(p>100?'#e5484d':p<70?'#f59f00':'#2fb344')+'"></i></span><span class="sm">'+esc(p)+'% of '+esc(money(e.approved))+'</span></div>';}).join('')
+      +'<div class="sm mute" style="margin-top:6px">Groups with 3 or more of last year\'s lines. Under 70 % = money approved but not spent.</div>':'<div class="empty">Import last year\'s budget (approved and spent) on IT Budget to learn how much of each area is really spent.</div>';}
+  function drawUnusual(){$('unusual').innerHTML=V.unusual.length?V.unusual.map(function(u){return '<div class="un"><b>'+esc(u.title)+'</b> · '+esc(money(u.amount))+'<div class="sm mute">'+esc(u.why)+'</div></div>';}).join(''):'<div class="empty">No unusual line.</div>';}
+  function drawShow(){var L=V.showback[DIM]||[],max=L.length?L[0].cost:1;
+    $('show').innerHTML=L.length?L.slice(0,12).map(function(x){return '<div class="hb"><span>'+esc(x.name)+'</span><span class="bar"><i style="width:'+Math.max(3,100*x.cost/max)+'%;background:linear-gradient(90deg,#5b8def,#3bc9db)"></i></span><span class="sm">'+esc(money(x.cost))+'</span></div>';}).join(''):'<div class="empty">No purchase cost recorded on the assets yet.</div>';}
+  function drawBoard(){var A=V.actions,cols=[['proposed','Proposed'],['open','Being worked on'],['done','Done'],['dropped','Dropped']];
+    $('ac').textContent=A.filter(function(a){return a.status==='open';}).length+' open · '+A.filter(function(a){return a.status==='proposed';}).length+' proposed';
+    $('board').innerHTML=cols.map(function(c){var L=A.filter(function(a){return a.status===c[0];});return '<div class="col"><h3><span>'+esc(c[1])+'</span><span class="mute sm">'+esc(L.length)+'</span></h3>'+L.slice(0,30).map(function(a){
+      var ctl='';if(can('operator')&&(a.status==='proposed'||a.status==='open'))ctl='<div class="row" style="margin-top:6px">'+(a.status==='proposed'?'<button type="button" class="btn ok" data-st="open" data-id="'+esc(a.id)+'">Accept</button>':'<input class="inp" data-real placeholder="saved (SAR)" aria-label="Saving realised" style="width:100px" inputmode="numeric"><button type="button" class="btn ok" data-st="done" data-id="'+esc(a.id)+'">Done</button>')
+        +'<input class="inp" data-note placeholder="why (to drop)" aria-label="Note" style="flex:1;min-width:70px"><button type="button" class="btn ghost" data-st="dropped" data-id="'+esc(a.id)+'">Drop</button></div>';
+      return '<div class="it'+(a.status==='proposed'?' prop':'')+'"><div class="row"><b style="flex:1">'+esc(a.title)+'</b><span class="pill '+esc(a.status==='proposed'?'ai':a.status)+'">'+esc(a.status)+'</span></div><div class="sm">'+esc(a.expected!=null?'expected '+money(a.expected):a.resource||'')+(a.realised!=null?' · realised '+money(a.realised):'')+'</div>'
+        +'<div class="sm mute">'+esc((a.owner?'owner '+a.owner+' · ':'')+'by '+a.by)+(a.note?' · '+esc(a.note):'')+'</div>'+ctl+'</div>';}).join('')+'</div>';}).join('');}
+  function draw(){drawTop();drawEnvs();drawOpps();drawExe();drawUnusual();drawShow();drawBoard();}
+  function load(){
+    req('GET','/cost-studio').then(function(v){V=v;$('main').hidden=false;$('err').innerHTML='';draw();
+      $('ais').textContent=v.ai.enabled?'Claude '+v.ai.model:v.ai.reason;$('go').disabled=!(v.ai.enabled&&can('operator'));
+      $('up').textContent='updated '+new Date(v.generated_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});},
+      function(e){$('main').hidden=true;$('err').innerHTML='<div class="card"><p>'+esc(e.status===403?'Cost Studio is for operators and administrators (it shows costs and contracts).':e.status===404?'Cost Studio is not installed yet - run the platform update (update-platform.ps1).':e.status===409?'Cost Studio runs in Python and Python did not answer - run the update.':e.message)+'</p></div>';});
+  }
+  document.addEventListener('click',function(ev){
+    var t=ev.target.closest('[data-track],[data-dismiss],[data-st],[data-kind],[data-dim],[data-go]');if(!t)return;
+    if(t.hasAttribute('data-track')){var box=t.closest('.opp'),own=box.querySelector('[data-owner]').value.trim(),b={key:t.getAttribute('data-track')};if(own)b.owner=own;t.disabled=true;
+      req('POST','/cost-studio/actions',b).then(function(){toast('Tracked as a saving action (audited)');load();},function(e){t.disabled=false;toast(e.message);});return;}
+    if(t.hasAttribute('data-dismiss')){var bx=t.closest('.opp'),why=bx.querySelector('[data-reason]').value.trim();if(why.length<3){bx.querySelector('[data-reason]').focus();toast('Say why it is not right (3 characters or more) - it is kept so it is not shown again');return;}
+      req('POST','/cost-studio/dismiss',{key:t.getAttribute('data-dismiss'),reason:why}).then(function(){toast('Dismissed - it will not be shown again');load();},function(e){toast(e.message);});return;}
+    if(t.hasAttribute('data-st')){var st=t.getAttribute('data-st'),it=t.closest('.it'),note=it.querySelector('[data-note]').value.trim(),real=it.querySelector('[data-real]'),b2={status:st};
+      if(st==='dropped'&&!note){toast('Say why it is dropped');it.querySelector('[data-note]').focus();return;}if(note)b2.note=note;
+      if(st==='done'){var rv=real&&real.value.trim().replace(/[,\s]/g,'');if(rv==='' ){toast('Enter the saving actually achieved (0 if none)');if(real)real.focus();return;}b2.realised=Number(rv);if(!(b2.realised>=0)){toast('The saving must be a number');return;}}
+      t.disabled=true;req('POST','/cost-studio/actions/'+encodeURIComponent(t.getAttribute('data-id'))+'/status',b2).then(function(){toast(st==='open'?'Accepted':st==='done'?'Marked done':'Dropped');load();},function(e){t.disabled=false;toast(e.message);});return;}
+    if(t.hasAttribute('data-kind')){KIND=t.getAttribute('data-kind');drawOpps();return;}
+    if(t.hasAttribute('data-dim')){DIM=t.getAttribute('data-dim');document.querySelectorAll('[data-dim]').forEach(function(b){b.classList.toggle('on',b===t);});drawShow();return;}
+    if(t.hasAttribute('data-go')){var el=$(t.getAttribute('data-go'));if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
+  });
+  $('refresh').addEventListener('click',load);
+  $('go').addEventListener('click',function(){var q=$('q').value.trim(),b=this;if(q.length<3){$('out').innerHTML='<div class="ans">Type a question first.</div>';return;}
+    b.disabled=true;$('out').innerHTML='<div class="ans mute">The analyst is reading the cost data…</div>';
+    req('POST','/cost-studio/ai/ask',{question:q}).then(function(r){
+      $('out').innerHTML='<div class="ans">'+esc(r.answer)+'</div><div class="steps">'+esc(r.model)+' · '+r.steps.length+' step(s): '+esc(r.steps.map(function(s){return s.tool+(s.ok?'':' (refused)');}).join(', '))
+        +(r.proposed.length?' · '+r.proposed.length+' action proposal(s) for your decision':'')+(r.injection_signals.length?' · ⚠ text in the data looked like instructions - treated as data':'')+'</div>';
+      if(r.proposed.length)load();
+    },function(e){$('out').innerHTML='<div class="ans">'+esc(e.message)+'</div>';}).then(function(){b.disabled=!(V&&V.ai&&V.ai.enabled&&can('operator'));});});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden&&!document.activeElement.matches('textarea,input,select'))load();},120000);
+})();
+</script></body></html>

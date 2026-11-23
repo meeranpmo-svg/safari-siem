@@ -1,0 +1,171 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Power Control</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
+.pill.ok{background:rgba(63,185,80,.15);color:var(--ok)}.pill.warn{background:rgba(227,179,65,.15);color:var(--warn)}.pill.bad{background:rgba(255,123,114,.16);color:var(--bad)}.pill.mut{color:#a3a9b5}.pill.inf{background:rgba(121,184,255,.14);color:var(--info)}
+pre.snip{white-space:pre-wrap;background:#0b0c10;border:1px solid var(--edge);border-radius:8px;padding:10px;font:12px Consolas,monospace;color:#d6dbe4;max-height:340px;overflow:auto}
+.acts{display:flex;gap:6px;flex-wrap:wrap}.acts button{padding:4px 10px;font-size:12px}
+textarea,input[type=text],select{width:100%;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font:inherit}
+textarea{min-height:60px}
+label.f{display:block;font-size:12px;color:var(--mute);margin:10px 0 4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.chips button{border-radius:999px;padding:4px 11px;font-size:12px}.chips button.on{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.bar input,.bar select{height:34px;padding:5px 10px;font:inherit;font-size:13px;color:var(--text,#e6edf3);background:var(--raise,#1a1d25);border:1px solid var(--border,#3a4150);border-radius:8px;min-width:180px}
+.bar input{flex:1 1 240px;max-width:320px}.bar select{max-width:230px}.bar input::placeholder{color:var(--mute,#8c93a1)}.bar input:focus,.bar select:focus{outline:2px solid #1f6feb;outline-offset:0}
+.pwc{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.pwc button{border-radius:999px;padding:5px 12px;font-size:12.5px;display:inline-flex;gap:6px;align-items:center}
+.pwc button i{width:9px;height:9px;border-radius:50%;display:inline-block;background:#8b949e}.pwc button[data-pwc="on"] i{background:#3fb950}.pwc button[data-pwc="off"] i{background:#f0883e}.pwc button[data-pwc=""] i{background:linear-gradient(90deg,#3fb950 50%,#f0883e 50%)}
+.pwc button.on{background:#1f6feb;border-color:#1f6feb;color:#fff}.pwc b{font-weight:700}
+ul.chk{margin:0;padding-left:18px}ul.chk li{margin:3px 0}
+.chkrow{display:flex;gap:8px;align-items:flex-start;margin:4px 0}.chkrow .pill{flex:none}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Infrastructure · virtualization</div><h1>Power Control</h1><div class="muted small">Restart, shut down and start VMware ESXi hosts, VMware VMs, Nutanix AHV hosts and Nutanix VMs - as approved change plans with safety checks, verified by the next collection</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button><a href="virtualization.html" style="color:var(--info);text-decoration:none;font-weight:600">Virtualization →</a><a href="ai-virt-admin.html" style="color:var(--info);text-decoration:none;font-weight:600">AI Virtualization Admin →</a></div>
+<div class="banner">This page never powers anything itself. You ask for an action; the platform checks it is safe (the rest of the cluster can carry the running VMs, one Nutanix node at a time, VMware Tools for a clean guest shutdown) and writes the exact steps. An approver who did not ask approves it (a failed check needs the accepted risk in words), an engineer runs the steps and records it here, and the next vCenter / Prism collection verifies the result. Approvals last 24 hours. A powered-off host is started from its iDRAC / iLO / IPMI - the engineer's own login is asked for when the command runs and is never stored.</div>
+<div class="k" id="kk"></div>
+<div class="card"><h2>Power plans <span class="c" id="pc"></span></h2><div class="chips" id="pchips"></div><div class="tw" id="plans"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Hosts and VMs <span class="c" id="tc"></span></h2>
+<div class="chips" id="tchips"><button type="button" data-t="host" class="on">Physical hosts</button><button type="button" data-t="vm">Virtual machines</button></div>
+<div class="bar"><input type="text" id="q" placeholder="Search name, IP, host, cluster" maxlength="100"><select id="pf"><option value="">All platforms</option></select><select id="pw" aria-label="Power state"><option value="">All power states</option><option value="on">Powered on</option><option value="off">Powered off</option><option value="unknown">Power not reported</option></select></div>
+<div class="pwc" id="pwchips" role="group" aria-label="Filter by power state"></div>
+<div class="tw" id="targets"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var V=null, PF='open', TT='host';
+  function itam(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){/* not JSON: the status below says what failed */}if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status,body:j}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management did not answer'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  var STP={proposed:['waiting for approval','warn'],approved:['approved - to run','inf'],applied:['run - verifying','inf'],verified:['verified','ok'],'not-verified':['not verified','bad'],rejected:['rejected','mut'],cancelled:['cancelled','mut']};
+  var CHK={ok:['ok','ok'],warn:['check','warn'],fail:['failed','bad'],info:['note','inf']};
+  function approver(){return Z.can('admin')||(window.zybApproves&&window.zybApproves('eng:virt'));}
+  function stateHost(h){var p=h.maintenance?Z.pill('maintenance','mut'):h.state==='connected'?Z.pill('connected','ok'):Z.pill(h.state||'unknown','bad');return h.state==='connected'&&!h.known_up?p+' <span class="muted small">last known - platform not read now</span>':p;}
+  // one power state for the filter: a host is on when connected or last known up (maintenance is still powered), off when the
+  // platform says it is not connected; a VM as the platform reports it - anything else is 'not reported', never guessed
+  function powerOf(t){if(t.type&&t.type.slice(-4)==='host'){if(!t.state&&!t.known_up)return 'unknown';return t.state==='connected'||t.known_up?'on':'off';}return t.power==='on'||t.power==='off'?t.power:'unknown';}
+  function statePower(v){return v.power==='on'?Z.pill('on','ok'):v.power==='off'?Z.pill('off','mut'):Z.pill(v.power||'unknown','warn');}
+  // which actions fit the state: the engine refuses the others too (this only keeps the buttons honest)
+  function actsFor(t){
+    // a host is offered power on unless it is KNOWN to be running: when its platform is shut down the last collection still says connected
+    if(t.type.slice(-4)==='host'){return t.known_up?['restart','shutdown']:(t.state==='connected'?['start','restart','shutdown']:['start','power-cycle']);}
+    if(t.power==='on'){var guest=t.type==='nutanix-vm'||t.tools==='running';return (guest?['shutdown','restart']:[]).concat(['power-off','reset']);}
+    return ['start'];
+  }
+  function paint(){
+    var P=V.plans, H=V.hosts, M=V.vms;
+    var wait=P.filter(function(p){return p.state==='proposed';}).length, run=P.filter(function(p){return p.state==='approved';}).length, ver=P.filter(function(p){return p.state==='applied';}).length, nv=P.filter(function(p){return p.state==='not-verified';}).length;
+    var stale=V.platforms.filter(function(p){return p.stale||p.error;}).length;
+    $('kk').innerHTML=Z.tile('Platforms',V.platforms.length,V.platforms.length?(stale?stale+' stale or failing':'collected'):'none collected',V.platforms.length?(stale?'warn':'ok'):'na')
+      +Z.tile('Hosts',H.length,H.filter(function(h){return h.state!=='connected';}).length+' not connected',H.some(function(h){return h.state!=='connected'&&!h.maintenance;})?'bad':'ok')
+      +Z.tile('VMs on',M.filter(function(v){return v.power==='on';}).length,M.filter(function(v){return v.power!=='on';}).length+' off','')
+      +Z.tile('Waiting for approval',wait,'power plans',wait?'warn':'ok')
+      +Z.tile('Approved - to run',run,'within '+esc(V.approval_hours)+' h of approval',run?'inf':'ok')
+      +Z.tile('Verifying',ver,nv?nv+' not verified':'by the next collection',nv?'bad':'ok');
+    var opts='<option value="">All platforms</option>'+V.platforms.map(function(p){return '<option value="'+esc(p.id)+'">'+esc(p.label)+(p.stale?' (stale)':'')+'</option>';}).join('');
+    var keep=$('pf').value;$('pf').innerHTML=opts;$('pf').value=keep;
+    plansPaint();targetsPaint();
+    $('up').textContent='updated '+Z.dt(V.generated);
+  }
+  function plansPaint(){
+    var A=V.plans,F={open:function(c){return c.state==='proposed'||c.state==='approved'||c.state==='applied';},proposed:function(c){return c.state==='proposed';},done:function(c){return c.state==='verified'||c.state==='not-verified';},all:function(){return true;}};
+    $('pchips').innerHTML=[['open','Open'],['proposed','Waiting for approval'],['done','Run'],['all','All']].map(function(x){return '<button type="button" data-f="'+x[0]+'" class="'+(PF===x[0]?'on':'')+'">'+esc(x[1])+' · '+A.filter(F[x[0]]).length+'</button>';}).join('');
+    var L=A.filter(F[PF]);$('pc').textContent=A.length?A.length+' in total':'';
+    $('plans').innerHTML=L.length?'<table><thead><tr><th>Plan</th><th>Action</th><th>Target</th><th>Platform</th><th>Checks</th><th>State</th><th>Asked by</th><th></th></tr></thead><tbody>'+L.map(function(c){var s=STP[c.state]||[c.state,'mut'];
+      var f=(c.checks||[]).filter(function(x){return x.status==='fail';}).length,w=(c.checks||[]).filter(function(x){return x.status==='warn';}).length;
+      return '<tr><td class="mono">'+esc(c.id)+'</td><td><b>'+esc((V.actions[c.target_type.slice(-4)==='host'?'host':'vm']||{})[c.action]||c.action)+'</b>'+(c.risk==='high'?' '+Z.pill('high risk','bad'):'')+'</td><td>'+esc(c.target)+'<div class="muted small">'+esc(V.types[c.target_type]||c.target_type)+'</div></td><td>'+esc(c.platform)+'</td>'
+        +'<td>'+(f?Z.pill(f+' failed','bad'):w?Z.pill(w+' to check','warn'):Z.pill('passed','ok'))+'</td><td>'+Z.pill(s[0],s[1])+'</td><td>'+esc(c.requested_by)+'<div class="muted small">'+esc(Z.ago(c.requested_at))+'</div></td><td><button type="button" data-plan="'+esc(c.id)+'">Open</button></td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">'+(A.length?'Nothing in this view.':'No power plans yet. Pick a host or VM below and ask for an action.')+'</div>';
+  }
+  function targetsPaint(){
+    if(!V.installed){$('targets').innerHTML='<p class="err">The capacity collection is not installed in IT Asset Management - run the update (add-virt-capacity.sh). Power plans are written from it.</p>';return;}
+    if(!V.platforms.length){$('targets').innerHTML='<div class="empty">No vCenter or Prism collected yet. Connect them on <a href="virtualization.html">Virtualization</a> (read-only accounts) and run a capacity collection.</div>';return;}
+    var q=$('q').value.trim().toLowerCase(), pf=$('pf').value, pw=$('pw').value, op=Z.can('operator');
+    var B=(TT==='host'?V.hosts:V.vms).filter(function(t){return (!pf||t.platform_id===pf)&&(!q||[t.name,t.host,t.cluster,t.platform,t.ip||'',t.host_ip||'',(t.ips||[]).join(' ')].join(' ').toLowerCase().indexOf(q)>=0);});
+    var cn={'':B.length,on:0,off:0,unknown:0};B.forEach(function(t){cn[powerOf(t)]++;});
+    $('pwchips').innerHTML=[['','All'],['on','Powered on'],['off','Powered off'],['unknown','Power not reported']].filter(function(c){return c[0]!=='unknown'||cn.unknown;}).map(function(c){return '<button type="button" data-pwc="'+c[0]+'" class="'+(pw===c[0]?'on':'')+'" aria-pressed="'+(pw===c[0])+'"><i></i>'+esc(c[1])+' <b>'+cn[c[0]]+'</b></button>';}).join('');
+    var L=(TT==='host'?V.hosts:V.vms).filter(function(t){return (!pf||t.platform_id===pf)&&(!pw||powerOf(t)===pw)&&(!q||[t.name,t.host,t.cluster,t.platform,t.ip||'',t.host_ip||'',(t.ips||[]).join(' ')].join(' ').toLowerCase().indexOf(q)>=0);});
+    $('tc').textContent=L.length+' shown';
+    if(!L.length){$('targets').innerHTML='<div class="empty">Nothing matches.</div>';return;}
+    var cut=L.slice(0,300);
+    if(TT==='host')$('targets').innerHTML='<table><thead><tr><th>Host</th><th>Platform / cluster</th><th>State</th><th class="num">VMs on</th><th>Out-of-band controller</th><th>Actions</th></tr></thead><tbody>'+cut.map(function(h){
+      var b=h.bmc||{};return '<tr><td><b>'+esc(h.name)+'</b><div class="muted small">'+esc(V.types[h.type])+'</div>'+ipLine(h.ip?[h.ip]:[],'host address not reported')+(h.cvm_ip?'<div class="muted small mono">CVM '+esc(h.cvm_ip)+'</div>':'')+'</td><td>'+esc(h.platform)+'<div class="muted small">'+esc(h.cluster)+'</div></td><td>'+stateHost(h)+'</td><td class="num">'+esc(h.vms_on)+' / '+esc(h.vms)+'</td>'
+        +'<td>'+(b.address?'<span class="mono">'+esc(b.address)+'</span><div class="muted small">'+esc((V.bmc_kinds[b.kind]||b.kind||'')+' · '+(b.source||''))+'</div>':'<span class="muted">not recorded</span>')+(Z.can('admin')?' <button type="button" data-bmc="'+esc(h.key)+'">'+(b.address?'Edit':'Add')+'</button>':'')+'</td>'
+        +'<td><div class="acts">'+(op?actsFor(h).map(function(a){return '<button type="button" data-ask="'+esc(h.key)+'" data-a="'+esc(a)+'">'+esc(V.actions.host[a])+'</button>';}).join(''):'<span class="muted small">operators ask</span>')+'</div></td></tr>';}).join('')+'</tbody></table>';
+    else $('targets').innerHTML='<table><thead><tr><th>VM</th><th>Host / cluster</th><th>Platform</th><th>Power</th><th>Tools</th><th>Actions</th></tr></thead><tbody>'+cut.map(function(v){
+      return '<tr><td><b>'+esc(v.name)+'</b><div class="muted small">'+esc(V.types[v.type])+'</div>'+ipLine(v.ips||[],'no IP reported',v.ip_src)+'</td><td>'+esc(v.host||'–')+ipLine(v.host_ip?[v.host_ip]:[],'')+'<div class="muted small">'+esc(v.cluster)+'</div></td><td>'+esc(v.platform)+'</td><td>'+statePower(v)+'</td><td>'+(v.type==='nutanix-vm'?'<span class="muted small">ACPI</span>':v.tools?Z.pill(v.tools,v.tools==='running'?'ok':'warn'):'<span class="muted">–</span>')+'</td>'
+        +'<td><div class="acts">'+(op?actsFor(v).map(function(a){return '<button type="button" data-ask="'+esc(v.key)+'" data-a="'+esc(a)+'">'+esc(V.actions.vm[a])+'</button>';}).join(''):'<span class="muted small">operators ask</span>')+'</div></td></tr>';}).join('')+'</tbody></table>'+(L.length>300?'<p class="note">First 300 of '+esc(L.length)+' - search to narrow.</p>':'');
+  }
+  // addresses as the platform reported them (vCenter Tools / Prism, else Asset Discovery or the asset register) - never guessed
+  var SRC={vcenter:'from vCenter',prism:'from Prism',discovery:'from Asset Discovery',asset:'from the asset register',mac:'matched by MAC'};
+  function ipLine(l,none,src){if(!l.length)return none?'<div class="muted small">'+esc(none)+'</div>':'';return '<div class="small mono"'+(src?' title="'+esc(SRC[src]||src)+'"':'')+'>'+esc(l.slice(0,2).join(', '))+(l.length>2?' +'+(l.length-2):'')+'</div>';}
+  function find(key){return V.hosts.concat(V.vms).filter(function(t){return t.key===key;})[0];}
+  function ask(key,a){
+    var t=find(key);if(!t)return;var D=window.zybDetail,isHost=t.type.slice(-4)==='host',label=V.actions[isHost?'host':'vm'][a];
+    D.open('Ask for a power action',label+': '+t.name,D.kv([['Target',esc(t.name)],['Type',esc(V.types[t.type])],['Platform',esc(t.platform)],['Now',isHost?stateHost(t):statePower(t)]])
+      +'<label class="f" for="rq-r">Why (at least 10 characters; the approver reads it)</label><textarea id="rq-r" maxlength="1000" placeholder="e.g. ESXi patch 8.0U3, CAB-1234, owner informed"></textarea>'
+      +'<label class="f" for="rq-w">When (optional)</label><input type="text" id="rq-w" maxlength="200" placeholder="e.g. tonight 22:00-23:00">'
+      +'<div class="acts" style="margin-top:10px"><button type="button" id="rq-go">Write the plan</button></div><p class="note">Nothing is changed now: the platform writes the plan with its safety checks; an approver decides; an engineer runs it.</p>');
+    $('rq-go').addEventListener('click',function(){
+      var r=$('rq-r').value.trim();if(r.length<10){Z.toast('Say why - at least 10 characters');return;}
+      $('rq-go').disabled=true;
+      itam('POST','/virt/power/requests',{platform_id:t.platform_id,target_id:t.id,action:a,reason:r,window:$('rq-w').value.trim()}).then(function(p){Z.toast('Plan '+p.id+' written - it needs approval');load(p.id);},function(e){Z.toast(e.message);$('rq-go').disabled=false;});
+    });
+  }
+  function bmcEdit(key){
+    var h=find(key);if(!h)return;var D=window.zybDetail,b=h.bmc||{};
+    D.open('Out-of-band controller',h.name,'<p>The iDRAC / iLO / IPMI address of this host, used in "start" and "power-cycle" plans. Only the address is kept: the engineer types their own login when the command runs.</p>'
+      +'<label class="f" for="bm-a">Address (host name or IP)</label><input type="text" id="bm-a" maxlength="253" value="'+esc(b.address||'')+'">'
+      +'<label class="f" for="bm-k">Kind</label><select id="bm-k">'+Object.keys(V.bmc_kinds).map(function(k){return '<option value="'+esc(k)+'"'+(k===(b.kind||'idrac')?' selected':'')+'>'+esc(V.bmc_kinds[k])+'</option>';}).join('')+'</select>'
+      +'<div class="acts" style="margin-top:10px"><button type="button" id="bm-ok">Save</button>'+(b.source&&b.source.indexOf('set by')===0?'<button type="button" id="bm-rm">Remove</button>':'')+'</div>');
+    $('bm-ok').addEventListener('click',function(){itam('PUT','/virt/power/bmc/'+encodeURIComponent(key),{address:$('bm-a').value.trim(),kind:$('bm-k').value}).then(function(){Z.toast('Saved');D.close();load();},function(e){Z.toast(e.message);});});
+    if($('bm-rm'))$('bm-rm').addEventListener('click',function(){itam('DELETE','/virt/power/bmc/'+encodeURIComponent(key)).then(function(){Z.toast('Removed');D.close();load();},function(e){Z.toast(e.message);});});
+  }
+  function openPlan(id){
+    var c=V.plans.filter(function(x){return x.id===id;})[0];if(!c)return;
+    var D=window.zybDetail, s=STP[c.state]||[c.state,'mut'];
+    var chk=(c.checks||[]).map(function(x){var k=CHK[x.status]||[x.status,'mut'];return '<div class="chkrow">'+Z.pill(k[0],k[1])+'<div><b>'+esc(x.name)+'</b><div class="muted small">'+esc(x.detail)+'</div></div></div>';}).join('');
+    var li=function(a){return '<ul class="chk">'+(a||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';};
+    var who=[['State',Z.pill(s[0],s[1])],['Target',esc(c.target)+' · '+esc(V.types[c.target_type]||'')],['Platform',esc(c.platform)],['Risk',esc(c.risk)],['Asked by',esc(c.requested_by)+' · '+esc(Z.dt(c.requested_at))],['Why',esc(c.reason)]];
+    if(c.window)who.push(['When',esc(c.window)]);
+    if(c.decided_by)who.push([c.state==='rejected'?'Rejected by':'Approved by',esc(c.decided_by)+' · '+esc(Z.dt(c.decided_at))+(c.comment?' - '+esc(c.comment):'')]);
+    if(c.accepted_risk)who.push(['Accepted risk',esc(c.accepted_risk)]);
+    if(c.expires_at&&c.state==='approved')who.push(['Approval valid until',esc(Z.dt(c.expires_at))]);
+    if(c.applied_by)who.push(['Run by',esc(c.applied_by)+' · '+esc(Z.dt(c.applied_at))+' - '+esc(c.note||'')]);
+    if(c.verify_note)who.push(['Verification',esc(c.verify_note)]);
+    var h=D.kv(who)+D.sec('Safety checks',chk||'<p class="muted">none</p>')+D.sec('Steps',li(c.steps))+D.sec('Commands',(c.commands||[]).map(function(k){return '<div class="muted small">'+esc(k.lang)+'</div><pre class="snip">'+esc(k.text)+'</pre>';}).join(''))+D.sec('If it goes wrong','<pre class="snip">'+esc(c.rollback||'–')+'</pre>');
+    var me=Z.user().toLowerCase(), acts='';
+    if(c.state==='proposed'&&approver()&&me!==String(c.requested_by).toLowerCase())acts='<textarea id="pl-t" maxlength="500" placeholder="Comment (required to reject)"></textarea>'+(c.blocked?'<label class="f" for="pl-r">A check failed: to approve anyway, say why the risk is acceptable</label><textarea id="pl-r" maxlength="1000"></textarea>':'')+'<div class="acts" style="margin-top:8px"><button type="button" id="pl-ok">Approve</button><button type="button" id="pl-no">Reject</button></div>';
+    else if(c.state==='proposed'&&approver())acts='<p class="note">You asked for this - another approver decides (four-eyes).</p>';
+    if(c.state==='approved'&&Z.can('operator')&&me!==String(c.decided_by).toLowerCase())acts+='<textarea id="pl-n" maxlength="1000" placeholder="What was done and when (required)"></textarea><div class="acts" style="margin-top:8px"><button type="button" id="pl-ap">Record as run</button></div><p class="note">Record it once the steps are done; the next collection verifies it.</p>';
+    if((c.state==='proposed'||c.state==='approved')&&(me===String(c.requested_by).toLowerCase()||Z.can('admin')))acts+='<label class="f" for="pl-c">Cancel: why</label><textarea id="pl-c" maxlength="500"></textarea><div class="acts" style="margin-top:8px"><button type="button" id="pl-cx">Cancel this plan</button></div>';
+    D.open('Power plan '+c.id,c.title,h+(acts?D.sec('Decision',acts):''));
+    var act=function(path,body,msg){itam('POST','/virt/power/requests/'+encodeURIComponent(c.id)+'/'+path,body).then(function(){Z.toast(msg);D.close();load();},function(e){Z.toast(e.message);});};
+    var v=function(id){var el=$(id);return el?el.value.trim():'';};
+    if($('pl-ok'))$('pl-ok').addEventListener('click',function(){var b={comment:v('pl-t')};if(v('pl-r'))b.accept_risk=v('pl-r');act('approve',b,'Approved - an engineer runs it now');});
+    if($('pl-no'))$('pl-no').addEventListener('click',function(){if(!v('pl-t')){Z.toast('Say why it is rejected');return;}act('reject',{reason:v('pl-t')},'Rejected');});
+    if($('pl-ap'))$('pl-ap').addEventListener('click',function(){if(!v('pl-n')){Z.toast('Say what was done');return;}act('applied',{note:v('pl-n')},'Recorded - the next collection verifies it');});
+    if($('pl-cx'))$('pl-cx').addEventListener('click',function(){if(!v('pl-c')){Z.toast('Say why it is cancelled');return;}act('cancel',{reason:v('pl-c')},'Cancelled');});
+  }
+  // one delegated listener for every button in the tables (no inline handlers)
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('button');if(!b||!V)return;
+    if(b.hasAttribute('data-plan'))openPlan(b.getAttribute('data-plan'));
+    else if(b.hasAttribute('data-ask'))ask(b.getAttribute('data-ask'),b.getAttribute('data-a'));
+    else if(b.hasAttribute('data-bmc'))bmcEdit(b.getAttribute('data-bmc'));
+    else if(b.parentNode&&b.parentNode.id==='pchips'){PF=b.getAttribute('data-f');plansPaint();}
+    else if(b.parentNode&&b.parentNode.id==='tchips'){TT=b.getAttribute('data-t');[].forEach.call($('tchips').children,function(x){x.classList.toggle('on',x===b);});targetsPaint();}
+  });
+  $('q').addEventListener('input',function(){if(V)targetsPaint();});
+  $('pf').addEventListener('change',function(){if(V)targetsPaint();});
+  $('pw').addEventListener('change',function(){if(V)targetsPaint();});
+  $('pwchips').addEventListener('click',function(e){var b=e.target.closest('[data-pwc]');if(!b||!V)return;$('pw').value=b.getAttribute('data-pwc');targetsPaint();});
+  function load(openId){itam('GET','/virt/power').then(function(j){V=j;paint();if(openId)openPlan(openId);},function(e){
+    $('kk').innerHTML='';
+    var msg=e.status===404?'Power control is not installed in IT Asset Management yet - run the update (add-virt-power.sh).':e.status===403?'Your role cannot see this page.':'Could not load: '+e.message;
+    $('plans').innerHTML='<p class="err">'+esc(msg)+'</p>';$('targets').innerHTML='<div class="empty">Waiting for IT Asset Management - see above.</div>';
+  });}
+  $('refresh').addEventListener('click',function(){load();});
+  Z.ready(function(){load();});
+  setInterval(function(){if(!document.hidden&&!(document.getElementById('zd')&&!document.getElementById('zd').hidden))load();},120000);
+})();
+</script></body></html>

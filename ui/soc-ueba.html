@@ -1,0 +1,126 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>User Behaviour (UEBA)</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-secops.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-copilot.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+</head><body><main class="so">
+<div class="so-head"><div><div class="eb">Security Operations · User &amp; Entity Behaviour (machine learning)</div><h1>User Behaviour</h1></div><span class="sp"></span>
+ <span class="so-chip" id="up">loading…</span><button type="button" class="so-btn" id="refresh" aria-label="Refresh">⟳ Refresh</button></div>
+<div id="err"></div>
+<p class="so-note" style="margin:-6px 0 12px">UEBA learns each user's, service account's and host's normal behaviour - hours, hosts, countries, volumes, privileged actions - and its peers', and scores what departs from it. <b>A deviation is an indicator to look into, never proof of wrongdoing</b> (PDPL): review findings, and ask before concluding.</p>
+<div class="so-kpis" id="kpis"></div>
+<div class="so-grid">
+ <section class="so-p w6"><h2>Behaviour findings <span class="c">last 14 days, by severity</span></h2><div class="so-ch short"><canvas id="c-trend"></canvas></div></section>
+ <section class="so-p w3"><h2>Risk tiers</h2><div class="so-ch short"><canvas id="c-tier"></canvas></div></section>
+ <section class="so-p w3"><h2>Risk-score distribution <span class="c">entities with a score</span></h2><div class="so-ch short"><canvas id="c-hist"></canvas></div></section>
+</div>
+<div class="so-tabs" role="tablist">
+ <button type="button" role="tab" data-tab="ent" aria-selected="true">Riskiest entities</button><button type="button" role="tab" data-tab="find">Findings</button><button type="button" role="tab" data-tab="det">Detectors &amp; precision</button>
+ <button type="button" role="tab" data-tab="peer">Peer groups</button><button type="button" role="tab" data-tab="dept">By department</button>
+</div>
+<div id="tab-ent"><div class="so-fil"><select id="e-type" aria-label="Type"><option value="">All types</option><option value="user">Users</option><option value="host">Hosts</option><option value="service_account">Service accounts</option><option value="ai_agent">AI agents</option></select>
+ <select id="e-tier" aria-label="Tier"><option value="">All tiers</option><option value="critical">Critical</option><option value="high">High</option><option value="elevated">Elevated</option><option value="low">Low</option></select><input type="search" id="e-q" placeholder="Search name or peer group" aria-label="Search entities"></div>
+ <div class="so-tw" id="ents"><div class="so-empty">Loading…</div></div></div>
+<div id="tab-find" hidden><div class="so-fil"><select id="f-st" aria-label="Status"><option value="open">Open</option><option value="confirmed">Confirmed</option><option value="benign">Benign</option></select><select id="f-det" aria-label="Detector"><option value="">All detectors</option></select><input type="search" id="f-q" placeholder="Search entity or explanation" aria-label="Search findings"></div>
+ <div class="so-tw" id="finds"><div class="so-empty">Loading…</div></div><p class="so-note"><b>Confirm</b> raises the finding's weight in the score; <b>Benign</b> marks the behaviour as expected for this entity and detector so it is not raised again. Both are written to the audit log with your name - and teach the detector precision below.</p></div>
+<div id="tab-det" hidden><div class="so-grid"><section class="so-p w6"><h2>Detector precision <span class="c">learned from reviews: confirmed ÷ (confirmed + benign), 30 days</span></h2><div class="so-ch"><canvas id="c-prec"></canvas></div></section>
+ <section class="so-p w6"><h2>Detectors</h2><div class="so-tw" id="dets"></div></section></div></div>
+<div id="tab-peer" hidden><section class="so-p w12"><h2>Peer groups <span class="c">average and highest risk score; entities above low</span></h2><div class="so-ch"><canvas id="c-peer"></canvas></div><div class="so-tw" id="peers" style="margin-top:10px"></div></section></div>
+<div id="tab-dept" hidden><section class="so-p w12"><h2>Threats by department <span class="c">alerts attributed to Active Directory departments</span>
+ <select id="d-days" aria-label="Days" style="margin-left:auto;background:var(--so-panel2);color:var(--so-ink);border:1px solid var(--so-line);border-radius:6px;font-size:11.5px"><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option></select></h2>
+ <div class="so-ch"><canvas id="c-dept"></canvas></div><div class="so-tw" id="depts" style="margin-top:10px"></div></section></div>
+<div id="ws"></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc, C=window.zybCharts, esc=S.esc, $=function(i){return document.getElementById(i);};
+  var IN=null, TAB='ent', EF={type:'',tier:'',q:''}, FF={status:'open',detector:'',q:''}, FIND=[];
+  var TIERS=[['critical','crit'],['high','warn'],['elevated','purple'],['low','mute']];
+  var REC={likely_benign:['Likely benign','ok'],watch:['Watch','acc'],investigate:['Investigate','warn'],open_case:['Open a case','crit']};
+  function kpi(l,v,s,cls,tier){return '<button type="button" class="so-kpi '+(cls||'')+'" data-tier="'+esc(tier||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function tierTag(t){var c={critical:'crit',high:'warn',elevated:'',low:''}[t]||'';return '<span class="so-tag '+c+'">'+esc(t)+'</span>';}
+  function bar(score){var c=score>=80?'var(--so-crit)':score>=60?'var(--so-warn)':score>=30?'var(--so-purple)':'var(--so-mute)';return '<div class="so-bar" style="width:120px"><span style="width:'+Math.min(100,score)+'%;background:'+c+'"></span></div>';}
+  function spark(tl){if(!tl||tl.length<2)return '<span class="so-why">—</span>';var w=90,h=22,mx=100,pts=tl.map(function(p,i){return (i/(tl.length-1)*w).toFixed(1)+','+(h-(p.score/mx)*h).toFixed(1);}).join(' ');return '<svg width="'+w+'" height="'+h+'" role="img" aria-label="risk score from '+esc(tl[0].score)+' to '+esc(tl[tl.length-1].score)+'"><polyline points="'+pts+'" fill="none" stroke="var(--so-acc)" stroke-width="1.6"/></svg>';}
+  function loadIn(){return S.req('GET','/soc/ueba/insights').then(function(x){IN=x;$('err').innerHTML='';drawIn();}).catch(function(e){$('err').innerHTML=S.errHtml(e,'User Behaviour');$('up').textContent='not loaded';});}
+  function drawIn(){var x=IN,t=x.tiers;$('up').textContent='updated '+S.dt(x.generated_at);
+    $('kpis').innerHTML=kpi('Entities monitored',S.n(x.entity_counts.total),x.coverage.pct_established+'% with an established baseline','','')+kpi('Critical risk',S.n(t.critical),'act on these first',t.critical?'crit':'ok','critical')
+      +kpi('High risk',S.n(t.high),'review this shift',t.high?'warn':'','high')+kpi('Elevated',S.n(t.elevated),'watch','purple','elevated')+kpi('New findings 24 h',S.n(x.new_findings_24h),'open behaviour findings','','')
+      +kpi('Still learning',S.n(x.entity_counts.learning),'baseline after '+(x.learning.min_days_established||'?')+' days of history','','');
+    C.bars($('c-trend'),x.series.map(function(r){return r.day.slice(5);}),[{label:'Critical',data:x.series.map(function(r){return r.critical;}),color:'crit'},{label:'High',data:x.series.map(function(r){return r.high;}),color:'warn'},{label:'Medium',data:x.series.map(function(r){return r.medium;}),color:'acc'},{label:'Low',data:x.series.map(function(r){return r.low;}),color:'mute'}],{stacked:true,title:'Behaviour findings per day by severity'});
+    var tk=TIERS.filter(function(k){return t[k[0]];});
+    if(tk.length)C.ring($('c-tier'),tk.map(function(k){return k[0];}),tk.map(function(k){return t[k[0]];}),tk.map(function(k){return k[1];}),{v:S.n(x.entity_counts.total),l:'entities'},{title:'Entities by risk tier',onClick:function(i){setTier(tk[i][0]);}});else C.empty($('c-tier'),'No entity yet.');
+    var hh=x.score_histogram;if(hh.some(function(b){return b.n;}))C.bars($('c-hist'),hh.map(function(b){return b.from+'-'+b.to;}),[{label:'Entities',data:hh.map(function(b){return b.n;}),colors:hh.map(function(b){return b.from>=80?'crit':b.from>=60?'warn':b.from>=30?'purple':'mute';})}],{title:'Entities by risk score'});else C.empty($('c-hist'),'No entity has a risk score.');
+    var D=x.detectors;$('f-det').innerHTML='<option value="">All detectors</option>'+D.map(function(d){return '<option>'+esc(d.detector)+'</option>';}).join('');$('f-det').value=FF.detector;
+    var P=D.filter(function(d){return d.precision!==null;});
+    if(P.length)C.bars($('c-prec'),P.map(function(d){return d.detector;}),[{label:'Precision %',data:P.map(function(d){return d.precision;}),colors:P.map(function(d){return d.precision>=60?'ok':d.precision>=30?'warn':'crit';})}],{horizontal:true,title:'Detector precision from analysts reviews'});
+    else C.empty($('c-prec'),'No detector has '+x.min_reviews+' reviews yet - confirm or mark findings benign to teach it.');
+    $('dets').innerHTML=D.length?'<table class="so-t"><thead><tr><th>Detector</th><th>30 days</th><th>Open</th><th>Confirmed</th><th>Benign</th><th>Precision</th></tr></thead><tbody>'+D.map(function(d){return '<tr class="r" data-det="'+esc(d.detector)+'" tabindex="0"><td><b>'+esc(d.detector)+'</b></td><td>'+S.n(d.findings)+'</td><td>'+S.n(d.open)+'</td><td>'+S.n(d.confirmed)+'</td><td>'+S.n(d.benign)+'</td><td>'+(d.precision===null?'<span class="so-why">needs '+x.min_reviews+' reviews</span>':esc(d.precision)+'%')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No finding in 30 days.</div>';
+    var PG=x.peers;if(PG.length)C.bars($('c-peer'),PG.map(function(p){return p.peer_group;}),[{label:'Average',data:PG.map(function(p){return p.avg;}),color:'acc'},{label:'Highest',data:PG.map(function(p){return p.max;}),color:'warn'}],{horizontal:true,title:'Risk score by peer group'});else C.empty($('c-peer'),'No peer group yet.');
+    $('peers').innerHTML=PG.length?'<table class="so-t"><thead><tr><th>Peer group</th><th>Entities</th><th>Average score</th><th>Highest</th><th>Above low</th></tr></thead><tbody>'+PG.map(function(p){return '<tr class="r" data-peer="'+esc(p.peer_group)+'" tabindex="0"><td><b>'+esc(p.peer_group)+'</b></td><td>'+S.n(p.entities)+'</td><td>'+esc(p.avg)+'</td><td>'+esc(p.max)+'</td><td>'+S.n(p.elevated)+'</td></tr>';}).join('')+'</tbody></table>':'';
+  }
+  function setTier(t){EF.tier=t;$('e-tier').value=t;show('ent');loadEnts();}
+  function loadEnts(){var p=['limit=200'];if(EF.type)p.push('type='+EF.type);if(EF.tier)p.push('tier='+EF.tier);if(EF.q)p.push('q='+encodeURIComponent(EF.q));
+    return S.req('GET','/ueba/entities?'+p.join('&')).then(function(r){var tl={};((IN&&IN.top)||[]).forEach(function(e){tl[e.id]=e.timeline;});
+      $('ents').innerHTML=r.items.length?'<table class="so-t"><thead><tr><th>Entity</th><th>Risk</th><th>14 days</th><th>Tier</th><th>Open findings</th><th>Baseline</th><th>Last finding</th></tr></thead><tbody>'+r.items.map(function(e){
+        return '<tr class="r" data-ent="'+esc(e.id)+'" tabindex="0"><td><b>'+esc(e.name)+'</b> <span class="so-why">'+esc(e.type)+' · '+esc(e.peer_group||'')+'</span></td><td><b>'+esc(e.risk_score)+'</b>'+bar(e.risk_score)+'</td><td>'+spark(tl[e.id])+'</td><td>'+tierTag(e.tier)+'</td><td>'+S.n(e.open_findings)+'</td><td class="so-why">'+esc(e.state)+' · '+esc(e.days_observed)+' d</td><td class="so-why">'+esc(e.last_finding_at?S.ago(e.last_finding_at):'—')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No entity matches. UEBA builds profiles from the authentication, network and endpoint events the SIEM collects.</div>';
+    }).catch(function(e){$('ents').innerHTML=S.errHtml(e,'the entities');});}
+  function loadFinds(){var p=['limit=200','status='+FF.status];if(FF.status==='benign')p.push('include_benign=1');if(FF.detector)p.push('detector='+encodeURIComponent(FF.detector));if(FF.q)p.push('q='+encodeURIComponent(FF.q));
+    return S.req('GET','/ueba/findings?'+p.join('&')).then(function(r){FIND=r.items;var can=S.can('operator');
+      $('finds').innerHTML=FIND.length?'<table class="so-t"><thead><tr><th>Entity</th><th>Detector</th><th>What was unusual</th><th>Severity</th><th>Seen</th><th>Status</th>'+(can?'<th></th>':'')+'</tr></thead><tbody>'+FIND.map(function(f,i){
+        return '<tr><td><a href="#" data-ent="'+esc(f.entity_id)+'">'+esc(f.entity_name)+'</a><div class="so-why">'+esc(f.entity_type)+'</div></td><td><span class="so-tag">'+esc(f.detector)+'</span></td><td class="so-why" style="max-width:520px">'+esc(f.explanation||'')+'</td><td><span class="so-sev s'+esc(Math.min(4,f.severity||0))+'"></span>'+esc(f.severity)+'</td><td class="so-why">'+esc(S.ago(f.last_seen||f.created))+(f.count>1?' · ×'+esc(f.count):'')+'</td><td>'+esc(f.status)+(f.reviewed_by?'<div class="so-why">by '+esc(f.reviewed_by)+'</div>':'')+'</td>'
+          +(can?'<td>'+(f.status==='open'?'<button type="button" class="so-btn ok" data-rev="confirm" data-i="'+i+'">Confirm</button> <button type="button" class="so-btn" data-rev="benign" data-i="'+i+'">Benign</button>':'')+'</td>':'')+'</tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No finding with these filters.</div>';
+    }).catch(function(e){$('finds').innerHTML=S.errHtml(e,'the findings');});}
+  function loadDept(){var d=$('d-days').value;return S.req('GET','/threats/departments?days='+d).then(function(r){var L=r.departments||[];
+    if(L.length)C.bars($('c-dept'),L.slice(0,12).map(function(x){return x.department;}),[{label:'Risk (severity-weighted alerts)',data:L.slice(0,12).map(function(x){return x.risk;}),color:'warn'}],{horizontal:true,title:'Alert risk by department'});else C.empty($('c-dept'),'No alert in this period.');
+    $('depts').innerHTML=L.length?'<table class="so-t"><thead><tr><th>Department</th><th>Alerts</th><th>Open</th><th>Risk</th><th>Per 100 users</th><th>Users / hosts affected</th><th>Top rules</th></tr></thead><tbody>'+L.map(function(x){return '<tr><td><b>'+esc(x.department)+'</b><div class="so-why">'+S.n(x.users_in_ad)+' users in AD</div></td><td>'+S.n(x.alerts)+'</td><td>'+S.n(x.open)+'</td><td>'+S.n(x.risk)+'</td><td>'+(x.risk_per_100_users==null?'—':esc(x.risk_per_100_users))+'</td><td>'+S.n(x.users_affected)+' / '+S.n(x.hosts_affected)+'</td><td class="so-why">'+(x.top_rules||[]).slice(0,3).map(function(t){return esc(t.rule||t.name||'');}).join(' · ')+'</td></tr>';}).join('')+'</tbody></table>'
+      +'<p class="so-note">'+S.n(r.attributed)+' of '+S.n(r.total_alerts)+' alerts attributed through the user\'s or host\'s department in Active Directory'+(r.names_included?'':' (names are shown to analysts and above)')+'.</p>':'';
+  }).catch(function(e){$('depts').innerHTML=S.errHtml(e,'threats by department');});}
+  // ---- entity workspace
+  function openEnt(id){if(window.zybCopilot)window.zybCopilot.context({kind:'entity',id:id});return Promise.all([S.req('GET','/ueba/entities/'+encodeURIComponent(id)),S.can('operator')?S.req('GET','/soc/ueba/assess/'+encodeURIComponent(id)).catch(function(e){if(e.status===404)return null;throw e;}):Promise.resolve(null)]).then(function(r){drawEnt(r[0],r[1]);$('ws').scrollIntoView({behavior:'smooth'});}).catch(function(e){S.toast(e.message);});}
+  function drawEnt(p,ai){var e=p.entity,rk=p.risk,can=S.can('operator'),st=(IN&&IN.ai)||{};
+    var h='<div class="so-ws" id="wsp"><div class="so-head" style="margin:0"><div><div class="eb">'+esc(e.type)+' · '+esc(e.peer_group||'')+' · '+esc(e.state)+' ('+esc(e.days_observed)+' days)</div><h2>'+esc(e.name)+'</h2></div><span class="sp"></span>'+tierTag(rk.tier)+' <span class="so-score '+(rk.score>=80?'act-now':rk.score>=60?'investigate':'review')+'">'+esc(rk.score)+'</span>'
+      +' <a class="so-btn" href="soc-hunt.html?q='+encodeURIComponent((e.type==='host'?'host:':'user:')+'"'+e.name+'"')+'">Hunt this '+(e.type==='host'?'host':'user')+'</a> <button type="button" class="so-btn" id="wsclose">Close panel</button></div>'
+      +'<div class="so-grid" style="margin-top:10px"><section class="so-p w6"><h2>Risk score over time</h2><div class="so-ch short"><canvas id="c-ent"></canvas></div></section><section class="so-p w6"><h2>Why this score <span class="c">contributions</span></h2>'+contrib(rk.contributions)+'</section></div>'
+      +'<div class="so-grid"><section class="so-p w6"><h2>Behaviour vs baseline</h2>'+feat(p.features)+'</section><section class="so-p w6"><h2>Compared with peers</h2>'+peerTbl(p.peer_comparison)+'</section></div>'
+      +'<section class="so-p w12" style="margin-bottom:12px"><h2>AI behaviour assessment <span class="c">indicators, not proof · a draft for the analyst</span></h2>'+aiHtml(e,ai,can,st)+'</section>'
+      +'<section class="so-p w12"><h2>Findings <span class="c">'+S.n(p.findings.length)+'</span></h2>'+(p.findings.length?'<ul class="so-list">'+p.findings.slice(0,30).map(function(f){return '<li><span class="so-tag">'+esc(f.detector)+'</span><span class="grow">'+esc(f.explanation||'')+'</span><span class="so-why">'+esc(f.status)+' · '+esc(S.ago(f.last_seen||f.created))+'</span></li>';}).join('')+'</ul>':'<div class="so-empty">No finding.</div>')
+      +(p.linked_alerts.length?'<div class="so-why" style="margin-top:8px">Linked alerts: '+p.linked_alerts.map(function(a){return '<a href="soc-alerts.html?status=all&id='+encodeURIComponent(a.id)+'">'+esc(a.id)+'</a>';}).join(', ')+'</div>':'')+'</section></div>';
+    $('ws').innerHTML=h;
+    var tl=(p.risk_timeline||[]).slice(-120);if(tl.length>1)C.area($('c-ent'),tl.map(function(x){var d=new Date(x.at);return (d.getMonth()+1)+'-'+d.getDate()+' '+d.getHours()+'h';}),[{label:'Risk score',data:tl.map(function(x){return x.score;}),color:'warn'}],{title:'Risk score over time'});else C.empty($('c-ent'),'Not enough history for a trend yet.');
+  }
+  function contrib(L){if(!L||!L.length)return '<div class="so-empty">No contribution: the score is 0.</div>';var mx=Math.max.apply(null,L.map(function(c){return Math.abs(c.points||c.score||0);}).concat([1]));
+    return '<div class="so-pts">'+L.slice(0,10).map(function(c){var v=c.points!=null?c.points:(c.score||0);return '<span>'+esc(c.detector||c.factor||c.kind||'')+'</span><div class="pb"><span class="pos" style="width:'+(Math.abs(v)/mx*50).toFixed(1)+'%"></span></div><span class="num">+'+esc(Math.round(v))+'</span><span class="rs">'+esc(c.reason||c.explanation||'')+'</span>';}).join('')+'</div>';}
+  function feat(F){if(!F||!F.length)return '<div class="so-empty">No baseline yet: the entity is still learning.</div>';
+    return '<table class="so-t"><thead><tr><th>Feature</th><th>Normal</th><th>Now</th></tr></thead><tbody>'+F.filter(function(f){return f.feature!=='active_hours';}).map(function(f){var b=f.baseline||{},o=f.observed;
+      if(o&&typeof o==='object'&&'new' in o)return '<tr><td>'+esc(f.feature)+'</td><td class="so-why">'+esc(b.known_count)+' known</td><td>'+(o.new.length?o.new.slice(0,6).map(function(v){return '<span class="so-tag warn">new: '+esc(v)+'</span>';}).join(''):'<span class="so-why">nothing new</span>')+'</td></tr>';
+      var hi=o!=null&&b.p95!=null&&o>b.p95;return '<tr><td>'+esc(f.feature)+'</td><td class="so-why">median '+esc(b.median==null?'—':b.median)+' · p95 '+esc(b.p95==null?'—':b.p95)+'</td><td'+(hi?' style="color:var(--so-warn);font-weight:700"':'')+'>'+esc(o==null?'—':o)+(hi?' ↑':'')+'</td></tr>';}).join('')+'</tbody></table>';}
+  function peerTbl(P){return P&&P.length?'<table class="so-t"><thead><tr><th>Feature</th><th>This entity</th><th>Peer median</th><th>Peer p95</th><th></th></tr></thead><tbody>'+P.map(function(p){return '<tr><td>'+esc(p.feature)+'</td><td>'+esc(p.entity_value)+'</td><td>'+esc(p.peer_median)+'</td><td>'+esc(p.peer_p95)+'</td><td>'+(p.outlier?'<span class="so-tag warn">outlier</span>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No peer comparison yet.</div>';}
+  function aiHtml(e,a,can,st){
+    var run=can?(st.enabled?'<button type="button" class="so-btn pri" data-assess="'+esc(e.id)+'">✦ '+(a?'Re-assess':'Assess this behaviour')+' with AI</button>':'<p class="so-err">'+esc(st.reason||'The AI is not available.')+'</p>'):'<p class="so-why">The AI assessment reads personal behaviour data: operator role and above.</p>';
+    if(!a)return '<div class="so-ai"><p>The AI reads the profile, findings, linked alerts and a few events, and drafts what is unusual, ordinary explanations to rule out first, and questions for the manager or service owner. It changes nothing and accuses no one.</p>'+run+'</div>';
+    var r=REC[a.recommendation]||[a.recommendation,''];
+    return '<div class="so-ai"><div class="so-why">'+esc(a.by)+' · '+esc(S.dt(a.at))+' · requested by '+esc(a.requested_by)+'</div><div class="vd"><span class="so-tag '+r[1]+'">'+esc(r[0])+'</span></div><p>'+esc(a.summary)+'</p>'
+      +(a.concerns.length?'<div class="so-why">What is unusual</div><ul class="so-ev">'+a.concerns.map(function(c){return '<li><span class="'+(c.verified?'ok':'un')+'">'+(c.verified?'✓':'⚠')+'</span><span>'+esc(c.point)+' <b>'+esc(c.ref)+'</b></span></li>';}).join('')+'</ul>':'')
+      +(a.benign_explanations.length?'<div class="so-why">Rule out first</div><ul>'+a.benign_explanations.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>':'')
+      +(a.questions.length?'<div class="so-why">Questions to ask</div><ul>'+a.questions.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>':'')
+      +(a.unverified?'<p class="so-err">'+esc(a.unverified)+' point(s) cite something no tool returned.</p>':'')+run+'</div>';}
+  function show(t){TAB=t;[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});['ent','find','det','peer','dept'].forEach(function(k){$('tab-'+k).hidden=k!==t;});
+    if(t==='find')loadFinds();if(t==='dept')loadDept();if(t==='ent')loadEnts();}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-tab]'))){show(x.getAttribute('data-tab'));return;}
+    if((x=t.closest('.so-kpi'))){var tr=x.getAttribute('data-tier');setTier(tr);return;}
+    if((x=t.closest('[data-ent]'))){ev.preventDefault();openEnt(x.getAttribute('data-ent'));return;}
+    if((x=t.closest('[data-det]'))){FF.detector=x.getAttribute('data-det');$('f-det').value=FF.detector;show('find');return;}
+    if((x=t.closest('[data-peer]'))){EF.q=x.getAttribute('data-peer');$('e-q').value=EF.q;show('ent');return;}
+    if((x=t.closest('[data-rev]'))){var f=FIND[+x.getAttribute('data-i')],a=x.getAttribute('data-rev');S.req('POST','/ueba/findings/'+encodeURIComponent(f.id)+'/'+a,{}).then(function(){S.toast(a==='benign'?'Marked benign - recorded with your name':'Confirmed');loadFinds();loadIn();}).catch(function(e){S.toast(e.message);});return;}
+    if((x=t.closest('[data-assess]'))){var id=x.getAttribute('data-assess');x.disabled=true;x.textContent='Assessing… (up to a minute)';S.req('POST','/soc/ueba/assess/'+encodeURIComponent(id),{}).then(function(){S.toast('Assessment ready');openEnt(id);}).catch(function(e){x.disabled=false;x.textContent='✦ Assess this behaviour with AI';S.toast(e.message);});return;}
+    if(t.id==='wsclose'){$('ws').innerHTML='';return;}
+    if(t.closest('#refresh')){loadIn();show(TAB);}
+  });
+  document.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&ev.target.matches&&ev.target.matches('tr[data-ent],tr[data-det],tr[data-peer]'))ev.target.click();});
+  var qt=null;$('e-q').addEventListener('input',function(){clearTimeout(qt);var v=this.value;qt=setTimeout(function(){EF.q=v.trim();loadEnts();},300);});
+  $('f-q').addEventListener('input',function(){clearTimeout(qt);var v=this.value;qt=setTimeout(function(){FF.q=v.trim();loadFinds();},300);});
+  $('e-type').addEventListener('change',function(){EF.type=this.value;loadEnts();});$('e-tier').addEventListener('change',function(){EF.tier=this.value;loadEnts();});
+  $('f-st').addEventListener('change',function(){FF.status=this.value;loadFinds();});$('f-det').addEventListener('change',function(){FF.detector=this.value;loadFinds();});
+  $('d-days').addEventListener('change',loadDept);
+  var u=new URLSearchParams(location.search);
+  S.ready(function(){loadIn().then(function(){loadEnts();if(u.get('entity'))openEnt(u.get('entity'));if(u.get('tab'))show(u.get('tab'));});});
+})();
+</script></body></html>

@@ -1,0 +1,78 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Threat Intelligence</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-secops.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-copilot.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+</head><body><main class="so">
+<div class="so-head"><div><div class="eb">Security Operations · Threat Intelligence</div><h1>Threat Intelligence</h1></div><span class="sp"></span>
+ <span class="so-chip" id="up">loading…</span><button type="button" class="so-btn" id="refresh" aria-label="Refresh">⟳ Refresh</button></div>
+<div id="err"></div>
+<div class="so-kpis" id="kpis"></div>
+<div class="so-grid">
+ <section class="so-p w6"><h2>Sightings <span class="c">alerts carrying a listed indicator, last 30 days</span></h2><div class="so-ch short"><canvas id="c-sight"></canvas></div></section>
+ <section class="so-p w3"><h2>Indicators loaded</h2><div class="so-ch short"><canvas id="c-kind"></canvas></div></section>
+ <section class="so-p w3"><h2>Sightings by list</h2><div class="so-ch short"><canvas id="c-list"></canvas></div></section>
+</div>
+<div class="so-tabs" role="tablist">
+ <button type="button" role="tab" data-tab="sight" aria-selected="true">Sightings</button><button type="button" role="tab" data-tab="retro">Retro-hunt traffic</button><button type="button" role="tab" data-tab="look">Indicator lookup</button>
+ <button type="button" role="tab" data-tab="lists">Lists</button><button type="button" role="tab" data-tab="feeds">Feeds</button>
+</div>
+<div id="tab-sight"><div class="so-tw" id="sight"><div class="so-empty">Loading…</div></div><p class="so-note" id="snote"></p></div>
+<div id="tab-retro" hidden><section class="so-p w12"><h2>Retro-hunt <span class="c">the most contacted destinations, DNS names, domains and file hashes in recent traffic, checked against today's lists</span></h2>
+ <form id="rf" class="so-fil"><select id="rh" aria-label="Window"><option value="6">Last 6 hours</option><option value="24" selected>Last 24 hours</option><option value="72">Last 3 days</option><option value="168">Last 7 days</option></select><button type="submit" class="so-btn pri">Run retro-hunt</button></form>
+ <div id="rout"><div class="so-empty">An indicator added to a feed today is found in yesterday's traffic - even when no rule alerted on it.</div></div></section></div>
+<div id="tab-look" hidden><section class="so-p w12"><h2>Look up indicators <span class="c">IPs, domains, URL hosts or file hashes - one per line, up to 200</span></h2>
+ <form id="lf" class="so-qbar"><textarea id="lv" placeholder="203.0.113.66&#10;evil.example&#10;44d88612fea8a8f36de82e1278abb02f"></textarea><button type="submit" class="so-btn pri">Look up</button></form><div id="lout"></div></section></div>
+<div id="tab-lists" hidden><div class="so-tw" id="lists"></div></div>
+<div id="tab-feeds" hidden><div class="so-tw" id="feeds"></div><p class="so-note">Built-in feeds are off until an administrator switches them on - nothing is downloaded implicitly. A failed download keeps the last good list. Private and internal addresses are never treated as malicious.</p></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc, C=window.zybCharts, esc=S.esc, $=function(i){return document.getElementById(i);};
+  var O=null, FEEDS=[], TAB='sight';
+  function kpi(l,v,s,cls,tab){return '<button type="button" class="so-kpi '+(cls||'')+'" data-go="'+esc(tab||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function hunt(v){var f=/^\d{1,3}(\.\d{1,3}){3}$/.test(v)?'ip':/^[a-f0-9]{32,64}$/.test(v)?'hash':'domain';return 'soc-hunt.html?q='+encodeURIComponent(f==='ip'?'ip:'+v:f==='hash'?'hash:"'+v+'"':'"'+v+'"');}
+  function load(){return Promise.all([S.req('GET','/soc/intel/overview'),S.req('GET','/intel/feeds').catch(function(){return {items:[]};})]).then(function(r){O=r[0];FEEDS=r[1].items||[];$('err').innerHTML='';draw();}).catch(function(e){$('err').innerHTML=S.errHtml(e,'Threat Intelligence');$('up').textContent='not loaded';});}
+  function draw(){var o=O;
+    if(!o.enabled){$('up').textContent='not loaded';$('kpis').innerHTML='';$('sight').innerHTML='<div class="so-empty">'+esc(o.note)+'. Switch on a feed in the Feeds tab (administrator) or upload a list.</div>';drawFeeds();return;}
+    $('up').textContent='lists loaded '+S.ago(o.loaded_at);
+    var en=FEEDS.filter(function(f){return f.enabled;}),bad=en.filter(function(f){return f.last_error;});
+    $('kpis').innerHTML=kpi('Indicators',S.n(o.totals.ip+o.totals.domain+o.totals.hash),S.n(o.totals.lists)+' lists','','lists')+kpi('Open sightings',S.n(o.open_sightings),'indicators on open alerts',o.open_sightings?'crit':'ok','sight')
+      +kpi('Sightings, 30 days',S.n(o.sightings_total),'distinct indicators seen in alerts','','sight')+kpi('Feeds on',S.n(en.length),bad.length?bad.length+' failing':'all downloading',bad.length?'warn':'','feeds')+kpi('Retro-hunt','Run','check recent traffic against the lists','purple','retro');
+    var lab=o.series.map(function(r){return r.day.slice(5);});
+    C.bars($('c-sight'),lab,[{label:'Alerts with a listed indicator',data:o.series.map(function(r){return r.sightings;}),color:'crit'}],{title:'Threat-intel sightings per day'});
+    var k=[['IP addresses',o.totals.ip,'acc'],['Domains',o.totals.domain,'purple'],['File hashes',o.totals.hash,'teal']].filter(function(x){return x[1];});
+    if(k.length)C.ring($('c-kind'),k.map(function(x){return x[0];}),k.map(function(x){return x[1];}),k.map(function(x){return x[2];}),{v:S.n(o.totals.ip+o.totals.domain+o.totals.hash),l:'indicators'},{title:'Indicators by type'});else C.empty($('c-kind'),'No indicator loaded.');
+    var L=o.lists.filter(function(l){return l.sightings;});
+    if(L.length)C.bars($('c-list'),L.map(function(l){return l.name;}),[{label:'Sightings',data:L.map(function(l){return l.sightings;}),color:'warn'}],{horizontal:true,title:'Sightings by list'});else C.empty($('c-list'),'No sighting in 30 days.');
+    var X=o.sightings;
+    $('sight').innerHTML=X.length?'<table class="so-t"><thead><tr><th>Indicator</th><th>Lists</th><th>Alerts</th><th>Open</th><th>Involved</th><th>Last seen</th><th></th></tr></thead><tbody>'+X.map(function(s){
+      return '<tr><td><span class="so-q">'+esc(s.indicator)+'</span></td><td>'+s.lists.map(function(l){return '<span class="so-tag crit">'+esc(l)+'</span>';}).join('')+'</td><td>'+S.n(s.alerts)+'</td><td>'+(s.open?'<b style="color:var(--so-crit)">'+S.n(s.open)+'</b>':'0')+'</td><td>'+s.entities.slice(0,4).map(function(e){return '<span class="so-tag ent">'+esc(e)+'</span>';}).join('')+'</td><td class="so-why">'+esc(S.ago(s.last))+'</td>'
+        +'<td><a class="so-btn" href="soc-alerts.html?status=all&q='+encodeURIComponent(s.indicator)+'">Alerts</a> <a class="so-btn" href="'+esc(hunt(s.indicator))+'">Hunt</a></td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No alert in 30 days carries an indicator from the threat lists.</div>';
+    $('snote').textContent=o.note;
+    drawLists();drawFeeds();
+  }
+  function drawLists(){var L=(O&&O.lists)||[];$('lists').innerHTML=L.length?'<table class="so-t"><thead><tr><th>List</th><th>IPs / ranges</th><th>Domains</th><th>Hashes</th><th>Hits since load</th><th>Sightings (30 d)</th></tr></thead><tbody>'+L.map(function(l){return '<tr><td><b>'+esc(l.name)+'</b>'+(l.reference?' <span class="so-tag ok">reference - not a threat</span>':'')+'</td><td>'+S.n(l.ip)+'</td><td>'+S.n(l.domain)+'</td><td>'+S.n(l.hash)+'</td><td>'+S.n(l.hits)+'</td><td>'+S.n(l.sightings)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No list loaded.</div>';}
+  function drawFeeds(){var adm=S.can('admin');
+    $('feeds').innerHTML=FEEDS.length?'<table class="so-t"><thead><tr><th>Feed</th><th>Indicators</th><th>Every</th><th>Last download</th><th>State</th>'+(adm?'<th></th>':'')+'</tr></thead><tbody>'+FEEDS.map(function(f){
+      return '<tr><td><b>'+esc(f.name)+'</b><div class="so-why">'+esc(f.url||'')+'</div></td><td>'+S.n(f.count||0)+'</td><td>'+esc(f.interval_h)+' h</td><td class="so-why">'+esc(f.last_ok?S.ago(f.last_ok):'never')+'</td><td>'+(f.enabled?(f.last_error?'<span class="so-tag crit" title="'+esc(f.last_error)+'">failing</span><div class="so-why">'+esc(f.last_error)+'</div>':'<span class="so-tag ok">on</span>'):'<span class="so-tag">off</span>')+'</td>'
+        +(adm?'<td><button type="button" class="so-btn" data-tog="'+esc(f.id)+'" data-on="'+(f.enabled?'0':'1')+'">'+(f.enabled?'Switch off':'Switch on')+'</button> <button type="button" class="so-btn pri" data-run="'+esc(f.id)+'">Download now</button></td>':'')+'</tr>';}).join('')+'</tbody></table>':'<div class="so-empty">No feed configured.</div>';}
+  function show(t){TAB=t;[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});['sight','retro','look','lists','feeds'].forEach(function(k){$('tab-'+k).hidden=k!==t;});}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-tab]'))){show(x.getAttribute('data-tab'));return;}
+    if((x=t.closest('.so-kpi'))){var g=x.getAttribute('data-go');if(g)show(g);return;}
+    if((x=t.closest('[data-tog]'))){S.req('POST','/intel/feeds',{id:x.getAttribute('data-tog'),enabled:x.getAttribute('data-on')==='1'}).then(function(){S.toast('Saved - recorded in the audit log');load();}).catch(function(e){S.toast(e.message);});return;}
+    if((x=t.closest('[data-run]'))){x.disabled=true;x.textContent='Downloading…';S.req('POST','/intel/feeds/'+encodeURIComponent(x.getAttribute('data-run'))+'/run',{}).then(function(r){var z=(r.results||[])[0]||{};S.toast(z.ok?'Downloaded '+S.n(z.count)+' indicators':'Failed: '+(z.error||''));load();}).catch(function(e){S.toast(e.message);load();});return;}
+    if(t.closest('#refresh'))load();
+  });
+  document.addEventListener('submit',function(ev){var fm=ev.target;
+    if(fm.id==='rf'){ev.preventDefault();$('rout').innerHTML='<div class="so-empty">Checking traffic…</div>';
+      S.req('POST','/soc/intel/retro',{hours:+$('rh').value}).then(function(r){var H=r.hits;
+        $('rout').innerHTML=(H.length?'<table class="so-t"><thead><tr><th>Indicator</th><th>Seen as</th><th>Events</th><th>Lists</th><th></th></tr></thead><tbody>'+H.map(function(h){return '<tr><td><span class="so-q">'+esc(h.indicator)+'</span></td><td>'+esc(h.field)+'</td><td>'+S.n(h.events)+'</td><td>'+h.lists.map(function(l){return '<span class="so-tag crit">'+esc(l)+'</span>';}).join('')+'</td><td><a class="so-btn pri" href="soc-hunt.html?q='+encodeURIComponent(h.query)+'">Investigate in Hunting</a></td></tr>';}).join('')+'</tbody></table>'
+          :'<div class="so-empty">None of the most contacted destinations, DNS names, domains or hashes in the last '+esc(r.hours)+' hours is on a threat list.</div>')+'<p class="so-note">'+esc(r.note)+'</p>';
+      }).catch(function(e){$('rout').innerHTML='<p class="so-err">'+esc(e.message)+'</p>';});}
+    if(fm.id==='lf'){ev.preventDefault();var v=$('lv').value.split(/[\s,;]+/).map(function(s){return s.trim();}).filter(Boolean).slice(0,200);if(!v.length){S.toast('Enter at least one indicator');return;}
+      S.req('POST','/intel/check',{values:v}).then(function(r){if(!r.enabled){$('lout').innerHTML='<p class="so-err">Threat intelligence is not loaded.</p>';return;}
+        $('lout').innerHTML='<table class="so-t"><thead><tr><th>Indicator</th><th>Result</th><th></th></tr></thead><tbody>'+v.map(function(x){var k=x.toLowerCase(),hit=r.results[k],ref=r.reference[k];return '<tr><td><span class="so-q">'+esc(x)+'</span></td><td>'+(hit?hit.map(function(l){return '<span class="so-tag crit">'+esc(l)+'</span>';}).join(''):ref?ref.map(function(l){return '<span class="so-tag ok">'+esc(l)+' (reference)</span>';}).join(''):'<span class="so-why">not on any list</span>')+'</td><td><a class="so-btn" href="'+esc(hunt(k))+'">Hunt</a></td></tr>';}).join('')+'</tbody></table><p class="so-note">Not on a list does not mean safe - only that no loaded feed names it.</p>';
+      }).catch(function(e){$('lout').innerHTML='<p class="so-err">'+esc(e.message)+'</p>';});}
+  });
+  S.ready(load);
+})();
+</script></body></html>

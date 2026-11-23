@@ -1,0 +1,205 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VAPT Studio</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}a{color:#7aa7ff}
+.top{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.ai{background:linear-gradient(135deg,#7c4dff,#5b8def);border:0;color:#fff}.btn:disabled{opacity:.5;cursor:not-allowed}.btn.sm{padding:3px 9px;font-size:12px}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:190px 1fr;gap:18px;align-items:center}
+.ring{position:relative;width:170px;height:170px;margin:auto}.ring svg{transform:rotate(-90deg)}.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.ring .v b{font-size:38px}.ring .v span{font-size:11.5px;color:var(--d-mute)}
+.ring circle.fg{transition:stroke-dashoffset 1.2s cubic-bezier(.2,.7,.2,1)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:9px 12px}.kpi .n{font-size:21px;font-weight:800}.kpi .l{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--d-mute)}
+.srcs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.src{background:var(--d-raise);border:1px solid var(--d-line);border-radius:14px;padding:12px}.src .hd{display:flex;gap:8px;align-items:center}.src .hd b{flex:1}.src .n{font-size:24px;font-weight:800;margin:6px 0 2px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+svg text{font:11px Inter,"Segoe UI",system-ui,sans-serif;fill:#c9d1dc}
+.bar{display:flex;align-items:center;gap:8px;font-size:12.5px;margin:6px 0}.bar .lb{width:70px;color:var(--d-mute)}.bar .tr{flex:1;height:14px;border-radius:5px;background:#232837;display:flex;overflow:hidden}.bar .tr i{display:block;height:100%}
+.fam{display:flex;justify-content:space-between;font-size:12.8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+table.t{width:100%;border-collapse:collapse;font-size:12.8px}table.t th{text-align:left;color:var(--d-mute);font-weight:500;padding:6px;border-bottom:1px solid var(--d-line);white-space:nowrap}table.t td{padding:6px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}table.t tbody tr{cursor:pointer}table.t tbody tr:hover td{background:rgba(255,255,255,.03)}
+.chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(139,147,164,.16);color:#aab2c2;white-space:nowrap}
+.s-critical{background:rgba(229,72,77,.18);color:#ff7b80}.s-high{background:rgba(245,120,0,.18);color:#ffa25c}.s-medium{background:rgba(245,159,0,.16);color:#f5c544}.s-low{background:rgba(47,179,68,.15);color:#56d364}
+.v-firecompass{background:rgba(255,106,61,.15);color:#ff9a76}.v-tenable{background:rgba(0,160,223,.15);color:#5fc6ef}.v-greenbone{background:rgba(102,195,63,.15);color:#8fd66b}
+.risk{font-weight:800}.tw{overflow-x:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(500px,100vw);background:var(--d-panel);border-left:1px solid var(--d-line);z-index:50;padding:18px;overflow:auto;box-shadow:-20px 0 40px -20px rgba(0,0,0,.7)}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px;margin:10px 0}.kv span:nth-child(odd){color:var(--d-mute)}
+.why{font-size:12.5px;margin:3px 0;display:flex;gap:8px;align-items:center}.why .b{height:9px;border-radius:3px;background:#e5484d}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto}.modal .box{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:18px;width:min(860px,100%)}
+table.map td{padding:4px 6px;font-size:12.8px}.conf{display:inline-block;width:46px;height:6px;border-radius:4px;background:#232837;overflow:hidden;vertical-align:middle}.conf i{display:block;height:100%;background:#5b8def}
+.ask{display:flex;gap:8px;flex-wrap:wrap}.ask textarea{flex:1;min-width:240px;min-height:64px}
+.ans{white-space:pre-wrap;background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-top:10px;font-size:13px}.steps{font-size:12px;color:var(--d-mute);margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.empty{color:var(--d-mute);font-size:13px;padding:6px 0}
+@media (max-width:1150px){.hero,.cols,.srcs{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.ring circle.fg{transition:none}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Pentest &amp; Vulnerability Management · Greenbone · FireCompass · Tenable</div><h1>VAPT Studio</h1><div class="mute">Every vulnerability the platform holds, from the internal Greenbone scans, FireCompass (the external attack surface) and Tenable (cloud or a Nessus scanner), merged: what is exposed to the internet, the same weakness seen by two tools, an explained risk per finding and the weakness families one fix closes. Read-only; nothing on this page is a sample.</div></div>
+ <span class="sp"></span><a class="btn" href="vuln-scans.html"><i class="ti ti-radar"></i>Greenbone scans</a><button type="button" class="btn" id="imp"><i class="ti ti-file-import"></i>Import FireCompass export</button><button type="button" class="btn" id="exp"><i class="ti ti-download"></i>CSV</button><span class="mute sm" id="up"></span><button type="button" class="btn" id="refresh"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+<section class="card"><div class="hero"><div class="ring" id="ring"></div><div><div class="kpis" id="kpis"></div><div class="srcs" id="srcs"></div></div></div></section>
+<div class="cols">
+ <section class="card"><h2><i class="ti ti-circles-relation"></i>Who sees what <span class="c">open findings</span></h2><svg id="venn" viewBox="0 0 360 200" role="img" aria-label="Overlap between tools"></svg><div class="sm mute">A finding is the same when the asset matches and a CVE is shared; likely the same when most title words match on that asset. Never by title alone.</div></section>
+ <section class="card"><h2><i class="ti ti-chart-bar"></i>Severity × exposure</h2><div id="sev"></div><h2 style="margin-top:14px"><i class="ti ti-chart-histogram"></i>Risk distribution</h2><svg id="hist" viewBox="0 0 360 120" role="img" aria-label="Risk distribution"></svg></section>
+ <section class="card"><h2><i class="ti ti-stack-2"></i>Weakness families <span class="c">one fix, several findings</span></h2><div id="fams"></div></section>
+</div>
+<section class="card"><h2><i class="ti ti-world"></i>Attack surface <span class="c">each bubble is an asset · size = open findings · colour = worst severity · click to filter</span></h2><svg id="map" viewBox="0 0 1000 150" role="img" aria-label="Attack surface"></svg></section>
+<section class="card"><h2><i class="ti ti-list-details"></i>Findings <span class="c" id="fc"></span></h2>
+ <div class="tools"><input class="inp" id="q" placeholder="search asset, title, CVE" aria-label="Search" style="flex:1;min-width:200px"><select class="inp" id="fv" aria-label="Source"><option value="">every source</option><option value="firecompass">FireCompass</option><option value="tenable">Tenable</option></select><select class="inp" id="fe" aria-label="Exposure"><option value="">internal and external</option><option value="external">external</option><option value="internal">internal</option></select><select class="inp" id="fs" aria-label="Severity"><option value="">every severity</option><option>critical</option><option>high</option><option>medium</option><option>low</option></select><select class="inp" id="fo" aria-label="Status"><option value="open">open</option><option value="">all</option><option value="pending">waiting for a decision</option><option value="false_positive">false positive</option><option value="accepted">risk accepted</option><option value="closed">closed</option></select></div>
+ <div class="tw"><table class="t"><thead><tr><th>Risk</th><th>Finding</th><th>Asset</th><th>Severity</th><th>Source</th><th>Also in</th><th>Owner</th></tr></thead><tbody id="rows"></tbody></table></div><div class="sm mute" id="foot"></div></section>
+<section class="card" id="admin" hidden><h2><i class="ti ti-plug-connected"></i>Connections <span class="c">administrators · keys are sealed and never shown again</span></h2>
+ <div class="cols" style="grid-template-columns:1fr 1fr">
+  <div><b>FireCompass API</b><div class="sm mute">FireCompass publishes no public API schema: enter what your FireCompass contact gives you. Nothing is stored until the column mapping is confirmed (Test connection, or one import).</div>
+   <div class="row"><input class="inp" id="fcu" placeholder="https://… (FireCompass API address)" aria-label="FireCompass address" style="flex:1"></div>
+   <div class="row"><input class="inp" id="fcp" placeholder="/path/to/findings" aria-label="Path" style="flex:1"><input class="inp" id="fch" placeholder="Authorization" aria-label="Header" style="width:130px"><input class="inp" id="fcx" placeholder="Bearer" aria-label="Prefix" style="width:80px"></div>
+   <div class="row"><input class="inp" id="fck" type="password" placeholder="API key (blank = keep)" aria-label="FireCompass key" autocomplete="off" style="flex:1"><button type="button" class="btn sm pri" id="fcs">Save</button><button type="button" class="btn sm" id="fct">Test</button><button type="button" class="btn sm" id="fcl">Pull now</button></div><div class="sm" id="fco"></div></div>
+  <div><b>Tenable</b><div class="sm mute">Tenable Vulnerability Management (cloud.tenable.com) or a Nessus scanner (https://scanner:8834). An API key pair with read access; GET only.</div>
+   <div class="row"><select class="inp" id="tnk" aria-label="Tenable kind"><option value="cloud">Tenable cloud</option><option value="nessus">Nessus scanner</option></select><input class="inp" id="tnu" placeholder="https://cloud.tenable.com" aria-label="Tenable address" style="flex:1"></div>
+   <div class="row"><input class="inp" id="tna" type="password" placeholder="access key (blank = keep)" aria-label="Access key" autocomplete="off" style="flex:1"><input class="inp" id="tns" type="password" placeholder="secret key" aria-label="Secret key" autocomplete="off" style="flex:1"></div>
+   <div class="row"><button type="button" class="btn sm pri" id="tnsv">Save</button><button type="button" class="btn sm" id="tnt">Test</button><button type="button" class="btn sm" id="tnp" hidden>Trust &amp; pin</button><button type="button" class="btn sm" id="tnl">Pull now</button></div><div class="sm" id="tno"></div></div>
+ </div></section>
+<section class="card"><h2><i class="ti ti-sparkles"></i>AI vulnerability analyst <span class="c" id="ais"></span></h2>
+ <div class="ask"><textarea class="inp" id="aq" maxlength="4000" placeholder="e.g. What is exposed to the internet and should be fixed this week? Which one fix closes the most findings?" aria-label="Question"></textarea><button type="button" class="btn ai" id="go" disabled><i class="ti ti-send"></i>Ask</button></div>
+ <div class="sm mute" style="margin-top:6px">Read-only: it cannot close a finding, accept a risk or start a test. Decisions are made on this page by a different named person.</div><div id="out"></div></section>
+</div>
+<aside class="drawer" id="dr" hidden aria-label="Finding"></aside>
+<div class="modal" id="mod" hidden><div class="box" id="mbox"></div></div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',WHO='',V=null,OPEN=null,HOST='';
+  var SC={critical:'#e5484d',high:'#f57800',medium:'#f5b544',low:'#2fb344',info:'#8b93a4',unknown:'#8b93a4'};
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error&&j.error!=='internal error'?j.error:'')||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function rcol(r){return r>=70?'#e5484d':r>=45?'#f57800':r>=25?'#f5b544':'#2fb344';}
+  function ringSvg(p,c){var r=78,ci=2*Math.PI*r,off=ci*(1-(p||0)/100);return '<svg width="170" height="170"><circle cx="85" cy="85" r="'+r+'" fill="none" stroke="#232837" stroke-width="14"/><circle class="fg" cx="85" cy="85" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+ci.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';}
+  function when(t){return t?new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'never';}
+  function drawTop(){var s=V.summary,p=s.posture;
+    $('ring').innerHTML=ringSvg(p==null?0:p,p==null?'#8b93a4':p>=80?'#2fb344':p>=55?'#f5b544':'#e5484d')+'<div class="v"><b>'+(p==null?'—':esc(p))+'</b><span>exposure posture</span></div>';
+    function k(n,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    var by=s.by_severity||{};
+    $('kpis').innerHTML=k(s.open,'open findings')+k(by.critical||0,'critical',by.critical?'#ff7b80':'')+k(by.high||0,'high',by.high?'#ffa25c':'')+k(s.external,'exposed to the internet',s.external?'#ff9a76':'')+k(s.high_risk,'risk 70+',s.high_risk?'#ff7b80':'')+k(s.hosts,'assets affected')+k(s.pending_decisions,'waiting for a decision',s.pending_decisions?'#f5b544':'');
+    var C=V.connection,T=V.tenable,G=V.greenbone;
+    // every source tile is clickable: it opens what configures that source (Greenbone -> Vulnerability Scans, FireCompass / Tenable ->
+    // the Connections form for an administrator, the export import for an operator)
+    function src(cls,name,n,line,ok,cfg){return '<div class="src" data-cfg="'+cfg+'" role="button" tabindex="0" style="cursor:pointer" title="'+esc(ok?'Open the '+name+' settings':'Connect '+name)+'"><div class="hd"><span class="dot" style="background:'+(ok?'#2fb344':'#8b93a4')+'"></span><b>'+esc(name)+'</b><span class="chip '+cls+'">'+esc(ok?'connected':'not connected')+'</span></div><div class="n">'+esc(n)+'</div><div class="sm mute">'+line+'</div><div class="sm" style="margin-top:6px;color:#79b8ff">'+esc(ok?'Settings →':'Configure →')+'</div></div>';}
+    var fcN=(s.by_vendor||{}).firecompass||0,tnN=(s.by_vendor||{}).tenable||0,lastImp=(V.imports||[]).find(function(x){return (x.vendor||'firecompass')==='firecompass';});
+    $('srcs').innerHTML=src('v-greenbone','Greenbone (internal)',G.open,G.installed?'open findings from the approved internal scans · <a href="vuln-scans.html">scans</a>':'Greenbone is not installed',G.installed&&G.open>=0,'greenbone')
+      +src('v-firecompass','FireCompass (external)',fcN,esc(C.configured?'API '+(C.verified?'verified':'not verified yet')+' · last pull '+when(C.last_pull):'no API connection')+(lastImp?' · last import '+esc(when(lastImp.at)):' · import an export to start')+(C.last_error?'<br><span style="color:#ff7b80">'+esc(C.last_error)+'</span>':''),C.verified||!!lastImp,'firecompass')
+      +src('v-tenable','Tenable',tnN,esc(T.configured?(T.kind==='cloud'?'Tenable cloud':'Nessus scanner')+' · '+(T.assets==null?'':T.assets+' assets · ')+'last pull '+when(T.last_pull):(can('admin')?'not connected - click to add the API keys':'not connected - an administrator adds the API keys'))+(T.last_error?'<br><span style="color:#ff7b80">'+esc(T.last_error)+'</span>':''),T.verified,'tenable');
+  }
+  function drawVenn(){var o=V.overlap,a=o.fc_only,b=o.both,c=o.gb_only;
+    $('venn').innerHTML='<circle cx="130" cy="100" r="78" fill="#ff6a3d" fill-opacity=".18" stroke="#ff6a3d"/><circle cx="230" cy="100" r="78" fill="#66c33f" fill-opacity=".18" stroke="#66c33f"/>'
+      +'<text x="95" y="105" text-anchor="middle" style="font-size:24px;font-weight:800">'+esc(a)+'</text><text x="180" y="105" text-anchor="middle" style="font-size:24px;font-weight:800">'+esc(b)+'</text><text x="265" y="105" text-anchor="middle" style="font-size:24px;font-weight:800">'+esc(c)+'</text>'
+      +'<text x="95" y="190" text-anchor="middle">FireCompass + Tenable only</text><text x="180" y="125" text-anchor="middle" style="fill:#8b93a4">both</text><text x="265" y="190" text-anchor="middle">Greenbone only</text>';}
+  function drawSev(){var open=V.findings.filter(function(f){return f.status==='open';});
+    $('sev').innerHTML=['critical','high','medium','low'].map(function(sv){var L=open.filter(function(f){return f.severity===sv;}),ex=L.filter(function(f){return f.exposure==='external';}).length,inn=L.length-ex,max=Math.max(1,open.length);
+      return '<div class="bar"><span class="lb">'+esc(sv)+'</span><span class="tr" title="'+esc(ex+' external · '+inn+' internal')+'"><i style="width:'+(ex/max*100)+'%;background:'+SC[sv]+'"></i><i style="width:'+(inn/max*100)+'%;background:'+SC[sv]+';opacity:.45"></i></span><b>'+L.length+'</b></div>';}).join('')+'<div class="sm mute">solid = external · light = internal</div>';
+    var bins=[0,0,0,0,0,0,0,0,0,0];open.forEach(function(f){bins[Math.min(9,Math.floor(f.risk/10))]++;});var mx=Math.max(1,Math.max.apply(null,bins));
+    $('hist').innerHTML=bins.map(function(n,i){var h=n/mx*90;return '<rect x="'+(10+i*34)+'" y="'+(100-h)+'" width="28" height="'+h+'" rx="3" fill="'+rcol(i*10+5)+'"><title>risk '+(i*10)+'-'+(i*10+9)+': '+n+'</title></rect><text x="'+(24+i*34)+'" y="114" text-anchor="middle" style="fill:#8b93a4;font-size:9.5px">'+(i*10)+'</text>';}).join('');}
+  function drawFams(){$('fams').innerHTML=V.families.length?V.families.map(function(f){return '<div class="fam" data-fam="'+esc(f.family)+'"><span>'+esc(f.family)+'</span><b>'+esc(f.findings)+'</b></div>';}).join(''):'<div class="empty">No weakness repeats across findings yet.</div>';}
+  function drawMap(){var H=V.hosts,ext=H.filter(function(h){return h.exposure==='external';}),inn=H.filter(function(h){return h.exposure!=='external';}),o='',CELL=118,ROWH=86,PER=4,maxRows=1;
+    // a grid cell per asset wide enough for its label; the map is as tall as its longest column, never a mostly empty box
+    function lay(L,x0){var n=Math.min(L.length,48);maxRows=Math.max(maxRows,Math.ceil(n/PER));L.slice(0,n).forEach(function(h,k){var r=Math.min(30,12+Math.sqrt(h.findings)*6),cx=x0+CELL/2+(k%PER)*CELL,cy=58+Math.floor(k/PER)*ROWH,lb=String(h.host);if(lb.length>17)lb=lb.slice(0,16)+'…';
+      o+='<g class="hb" data-host="'+esc(h.host)+'" style="cursor:pointer"><circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+SC[h.worst]+'" fill-opacity=".8" stroke="'+(h.criticality?'#fff':'none')+'" stroke-width="2.5"><title>'+esc(h.host+' · '+h.findings+' open · worst '+h.worst+' · risk '+h.max_risk+(h.criticality?' · business-critical':''))+'</title></circle><text x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle" style="font-size:12px;font-weight:800;fill:#0b0d12">'+esc(h.findings)+'</text><text x="'+cx+'" y="'+(cy+r+14)+'" text-anchor="middle" style="font-size:10.5px">'+esc(lb)+'</text></g>';});
+      if(L.length>n)o+='<text x="'+(x0+10)+'" y="'+(58+maxRows*ROWH-10)+'" style="fill:#8b93a4">… '+(L.length-n)+' more in the table</text>';}
+    lay(ext,0);lay(inn,500);var hgt=Math.max(150,40+maxRows*ROWH);
+    o='<text x="10" y="20" style="fill:#ff9a76;font-weight:700">External ('+ext.length+')</text><text x="510" y="20" style="fill:#8fd66b;font-weight:700">Internal ('+inn.length+')</text><line x1="500" y1="10" x2="500" y2="'+(hgt-6)+'" stroke="#232837"/>'+o
+      +(H.length?'<text x="990" y="'+(hgt-6)+'" text-anchor="end" style="fill:#8b93a4;font-size:10px">white ring = business-critical · number = open findings</text>':'<text x="500" y="80" text-anchor="middle" style="fill:#8b93a4">no open finding</text>');
+    var m=$('map');m.setAttribute('viewBox','0 0 1000 '+hgt);m.innerHTML=o;}
+  function list(){var q=$('q').value.trim().toLowerCase(),fv=$('fv').value,fe=$('fe').value,fs=$('fs').value,fo=$('fo').value;
+    return V.findings.filter(function(f){if(fv&&f.vendor!==fv)return false;if(fe&&f.exposure!==fe)return false;if(fs&&f.severity!==fs)return false;if(HOST&&f.host!==HOST)return false;
+      if(fo==='pending'){if(!(f.decision&&f.decision.state==='pending'))return false;}else if(fo&&f.status!==fo)return false;
+      return !q||[f.asset,f.title,f.family,(f.cves||[]).join(' ')].some(function(x){return String(x||'').toLowerCase().indexOf(q)>=0;});});}
+  function drawRows(){var L=list(),N=L.slice(0,400);$('fc').textContent=L.length+' of '+V.findings.length+(HOST?' · asset '+HOST:'');
+    $('rows').innerHTML=N.length?N.map(function(f){return '<tr data-id="'+esc(f.id)+'"><td class="risk" style="color:'+rcol(f.risk)+'">'+esc(f.risk)+'</td><td><b>'+esc(f.title)+'</b>'+((f.cves||[]).length?'<div class="sm mute">'+esc(f.cves.join(' '))+'</div>':'')+(f.decision&&f.decision.state==='pending'?'<div class="sm" style="color:#f5b544">waiting for a decision: '+esc(f.decision.want.replace('_',' '))+'</div>':'')+'</td>'
+      +'<td>'+esc(f.asset)+'<div class="sm mute">'+esc(f.exposure)+(f.asset_criticality?' · business-critical':'')+'</div></td><td><span class="chip s-'+esc(f.severity)+'">'+esc(f.severity)+'</span>'+(f.cvss!=null?' <span class="sm mute">'+esc(f.cvss)+'</span>':'')+'</td><td><span class="chip v-'+esc(f.vendor)+'">'+esc(f.vendor)+'</span></td>'
+      +'<td>'+(f.overlap?'<span class="chip v-greenbone">Greenbone · '+esc(f.overlap)+'</span>':'<span class="mute sm">—</span>')+'</td><td class="sm">'+esc(f.owner||'—')+'</td></tr>';}).join('')
+      :'<tr><td colspan="7" class="empty">'+(V.findings.length?'No finding matches.':'No finding yet. Import a FireCompass export, or connect FireCompass or Tenable below (administrators).')+'</td></tr>';
+    $('foot').textContent=L.length>400?'Showing the 400 highest risks - narrow the filters.':'';}
+  function openF(id){var f=V.findings.find(function(x){return x.id===id;});if(!f)return;OPEN=id;var d=$('dr'),dc=f.decision;d.hidden=false;
+    var mine=dc&&String(dc.by||'').toLowerCase()===String(WHO).toLowerCase();
+    d.innerHTML='<div style="display:flex;gap:8px;align-items:center"><b style="font-size:16px;flex:1">'+esc(f.title)+'</b><button type="button" class="btn sm" id="drx" aria-label="Close"><i class="ti ti-x"></i></button></div>'
+      +'<div class="kv"><span>Asset</span><span>'+esc(f.asset)+'</span><span>Exposure</span><span>'+esc(f.exposure)+'</span><span>Source</span><span>'+esc(f.vendor+(f.source_id?' · '+f.source_id:''))+'</span><span>Severity</span><span>'+esc(f.severity+(f.cvss!=null?' · CVSS '+f.cvss:''))+'</span><span>CVEs</span><span>'+esc((f.cves||[]).join(', ')||'—')+'</span><span>First seen</span><span>'+esc(f.first_seen||'not reported')+(f.age_days!=null?' ('+f.age_days+' days)':'')+'</span><span>Status</span><span>'+esc(f.status+(f.seen_in_latest===false?' · not in the latest full import':''))+'</span>'
+      +(f.overlap_with?'<span>Greenbone</span><span>'+esc(f.overlap+' the same: '+f.overlap_with.name+' ('+f.overlap_with.host+')')+'</span>':'')+'</div>'
+      +'<div style="font-weight:700">Risk '+esc(f.risk)+' / 100</div>'+f.why_risk.map(function(w){return '<div class="why"><span class="b" style="width:'+(w.points*2)+'px;background:'+rcol(f.risk)+'"></span><b>+'+esc(w.points)+'</b><span>'+esc(w.text)+'</span></div>';}).join('')
+      +(f.remediation?'<div style="font-weight:700;margin-top:10px">Remediation</div><div class="sm">'+esc(f.remediation)+'</div>':'')+(f.description?'<div style="font-weight:700;margin-top:10px">Description</div><div class="sm">'+esc(f.description)+'</div>':'')
+      +(can('operator')?'<div style="font-weight:700;margin-top:12px">Owner</div><div class="row"><input class="inp" id="own" value="'+esc(f.owner||'')+'" aria-label="Owner" style="flex:1"><button type="button" class="btn sm" id="owns">Save</button></div>':'')
+      +(dc&&dc.state==='pending'?'<div style="font-weight:700;margin-top:12px">Waiting for a decision</div><div class="sm">'+esc(dc.by+' asks: '+dc.want.replace('_',' ')+(dc.until?' until '+dc.until:'')+' - '+dc.reason)+'</div>'+(can('operator')&&!mine?'<div class="row"><input class="inp" id="dnote" placeholder="note" aria-label="Decision note" style="flex:1"><button type="button" class="btn sm pri" id="dyes">Approve</button><button type="button" class="btn sm" id="dno">Reject</button></div>':'<div class="sm mute">A different person decides.</div>')
+       :(dc?'<div class="sm mute" style="margin-top:10px">'+esc('Decision: '+dc.want.replace('_',' ')+' '+dc.state+' by '+(dc.decided_by||'')+(dc.note?' - '+dc.note:''))+'</div>':'')
+       +(can('operator')&&f.status==='open'?'<div style="font-weight:700;margin-top:12px">Ask for a decision</div><div class="row"><select class="inp" id="tw" aria-label="Decision"><option value="false_positive">false positive</option><option value="accepted">accept the risk until</option></select><input class="inp" type="date" id="tu" aria-label="Until"></div><div class="row"><input class="inp" id="tr" placeholder="reason (at least 10 characters) - a different person decides" aria-label="Reason" style="flex:1"><button type="button" class="btn sm" id="trs">Request</button></div>':''));
+    $('drx').addEventListener('click',closeF);}
+  function closeF(){OPEN=null;$('dr').hidden=true;$('dr').innerHTML='';}
+  function act(p,b,msg){return req('POST','/vapt-studio/findings/'+encodeURIComponent(OPEN)+p,b).then(function(){toast(msg);var k=OPEN;return load().then(function(){openF(k);});},function(e){toast(e.message);});}
+  function drawAdmin(){$('admin').hidden=!can('admin');if(!can('admin'))return;var C=V.connection,T=V.tenable;
+    if(C.base_url&&!$('fcu').value){$('fcu').value=C.base_url;$('fcp').value=C.path||'';$('fch').value=C.auth_header||'';}
+    $('fco').innerHTML=esc(C.configured?'key '+(C.key_set?'saved':'missing')+' · '+(C.mapping_confirmed?'mapping confirmed by '+C.mapping_by:'mapping not confirmed yet')+' · every '+C.interval_h+' h':'not configured');
+    if(T.configured&&!$('tnu').value){$('tnk').value=T.kind;$('tnu').value=T.base_url||'';}
+    $('tno').innerHTML=esc(T.configured?'keys '+(T.keys_set?'saved':'missing')+(T.kind==='nessus'?' · certificate '+(T.pinned?'pinned':'not pinned'):'')+' · every '+T.interval_h+' h':'not configured');
+    $('tnp').hidden=!(T.kind==='nessus'&&T.seen_fingerprint&&!T.pinned);}
+  function draw(){drawTop();drawVenn();drawSev();drawFams();drawMap();drawRows();drawAdmin();}
+  function load(){return req('GET','/vapt-studio').then(function(v){V=v;$('main').hidden=false;$('err').innerHTML='';draw();
+      $('ais').textContent=v.ai.enabled?'Claude '+v.ai.model:v.ai.reason;$('go').disabled=!v.ai.enabled;$('up').textContent='updated '+new Date(v.generated_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});},
+    function(e){$('main').hidden=true;$('err').innerHTML='<div class="card"><p>'+esc(e.status===403?'Vulnerability details name internal hosts: operators and administrators only.':e.status===404?'VAPT Studio is not installed yet - run the platform update (update-platform.ps1).':e.message)+'</p></div>';});}
+  // ---- import wizard: file -> proposed mapping (confirm / change) -> import
+  var IMP=null;
+  function openImport(){var m=$('mod'),b=$('mbox');m.hidden=false;IMP=null;
+    b.innerHTML='<div style="display:flex;align-items:center"><b style="font-size:16px;flex:1">Import a FireCompass export</b><button type="button" class="btn sm" id="mx">Close</button></div><p class="sm mute">Export the findings from the FireCompass portal as CSV or JSON. The columns are matched to fields by machine learning on their names and values; check the mapping before importing. Nothing is stored until you press Import.</p><input type="file" id="mf" accept=".csv,.json,text/csv,application/json" aria-label="Export file"><div id="mw"></div>';
+    $('mx').addEventListener('click',function(){m.hidden=true;});
+    $('mf').addEventListener('change',function(){var f=this.files[0];if(!f)return;if(f.size>5*1024*1024){$('mw').innerHTML='<p style="color:#ff7b80">The file is larger than 5 MB.</p>';return;}
+      var rd=new FileReader();rd.onload=function(){IMP={name:f.name,content:String(rd.result)};$('mw').innerHTML='<p class="mute">Reading the columns…</p>';
+        req('POST','/vapt-studio/firecompass/import/preview',{filename:IMP.name,content:IMP.content}).then(showMap,function(e){$('mw').innerHTML='<p style="color:#ff7b80">'+esc(e.message)+'</p>';});};rd.readAsText(f);});}
+  function showMap(p){IMP.columns=p.columns;
+    var opt=function(sel){return '<option value="">(not in this file)</option>'+p.columns.map(function(c){return '<option'+(c===sel?' selected':'')+'>'+esc(c)+'</option>';}).join('');};
+    $('mw').innerHTML='<p class="sm">'+esc(p.rows+' rows · '+p.columns.length+' columns'+(p.used_saved?' · the mapping confirmed last time fits this file':''))+'</p><table class="map">'+p.fields.map(function(f){var c=p.confidence[f];return '<tr><td><b>'+esc(f.replace('_',' '))+'</b>'+(f==='asset'||f==='title'?' *':'')+'</td><td><select class="inp" data-f="'+esc(f)+'" aria-label="'+esc(f)+'">'+opt(p.mapping[f])+'</select></td><td>'+(c!=null?'<span class="conf" title="confidence '+Math.round(c*100)+'%"><i style="width:'+Math.round(c*100)+'%"></i></span>':'')+'</td></tr>';}).join('')+'</table>'
+      +'<p class="sm" style="font-weight:700;margin-top:10px">How the first rows read</p>'+p.sample.map(function(s){return '<div class="sm">'+esc(s.asset+' · '+s.title+' · '+s.severity+(s.cves.length?' · '+s.cves.join(' '):''))+'</div>';}).join('')
+      +'<div class="row" style="margin-top:12px"><label class="sm"><input type="checkbox" id="mfull"> full export (findings missing from it are marked "not in the latest import")</label><span class="sp"></span><button type="button" class="btn pri" id="mgo">Import</button></div><div id="mres"></div>';
+    $('mgo').addEventListener('click',function(){var map={};[].forEach.call(document.querySelectorAll('#mbox select[data-f]'),function(s){if(s.value)map[s.getAttribute('data-f')]=s.value;});
+      if(!map.asset||!map.title){$('mres').innerHTML='<p style="color:#ff7b80">Choose the asset and the title columns.</p>';return;}
+      this.disabled=true;req('POST','/vapt-studio/firecompass/import',{filename:IMP.name,content:IMP.content,mapping:map,full:$('mfull').checked}).then(function(r){var i=r.import;$('mod').hidden=true;toast(i.added+' new, '+i.updated+' updated'+(i.dropped.no_asset+i.dropped.no_title?', '+(i.dropped.no_asset+i.dropped.no_title)+' rows without an asset or title left out':'')+' (audited)');load();},function(e){$('mgo').disabled=false;$('mres').innerHTML='<p style="color:#ff7b80">'+esc(e.message)+'</p>';});});}
+  // ---- events
+  ['q','fv','fe','fs','fo'].forEach(function(id){$(id).addEventListener(id==='q'?'input':'change',drawRows);});
+  document.addEventListener('click',function(e){var t=e.target;
+    var r=t.closest('tr[data-id]');if(r){openF(r.getAttribute('data-id'));return;}
+    var h=t.closest('[data-host]');if(h){HOST=HOST===h.getAttribute('data-host')?'':h.getAttribute('data-host');drawRows();document.querySelector('table.t').scrollIntoView({behavior:'smooth'});return;}
+    var fm=t.closest('[data-fam]');if(fm){$('q').value=fm.getAttribute('data-fam');HOST='';drawRows();document.querySelector('table.t').scrollIntoView({behavior:'smooth'});return;}
+    if(t.id==='owns')return act('/owner',{owner:$('own').value.trim()},'Owner saved (audited)');
+    if(t.id==='trs'){var b={want:$('tw').value,reason:$('tr').value.trim()};if($('tu').value)b.until=$('tu').value;return act('/triage',b,'Requested - a different person decides (audited)');}
+    if(t.id==='dyes'||t.id==='dno')return act('/decision',{decision:t.id==='dyes'?'approve':'reject',note:$('dnote').value.trim()},'Decision recorded (audited)');
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(!$('mod').hidden)$('mod').hidden=true;else if(OPEN)closeF();}});
+  $('refresh').addEventListener('click',load);$('imp').addEventListener('click',openImport);
+  function openCfg(k){if(k==='greenbone'){location.href='vuln-scans.html';return;}
+    if(can('admin')){var a=$('admin'),f=$(k==='firecompass'?'fcu':'tnu');a.hidden=false;a.scrollIntoView({behavior:'smooth',block:'start'});a.style.outline='2px solid #79b8ff';setTimeout(function(){a.style.outline='';},2500);if(f)setTimeout(function(){f.focus();},400);return;}
+    if(k==='firecompass'){$('imp').click();return;}
+    toast('An administrator connects '+(k==='tenable'?'Tenable':'this source')+' (keys are admin-only). Ask your platform administrator.');}
+  $('srcs').addEventListener('click',function(ev){var t=ev.target;if(t.closest('a'))return;var x=t.closest('[data-cfg]');if(x)openCfg(x.getAttribute('data-cfg'));});
+  $('srcs').addEventListener('keydown',function(ev){if(ev.key!=='Enter')return;var x=ev.target.closest&&ev.target.closest('[data-cfg]');if(x){ev.preventDefault();openCfg(x.getAttribute('data-cfg'));}});
+  $('exp').addEventListener('click',function(){req('GET','/vapt-studio/export').then(function(r){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r.csv],{type:'text/csv'}));a.download=r.filename;a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},2000);},function(e){toast(e.message);});});
+  function adm(m,u,b,out){return req(m,u,b).then(function(r){toast(r.ok===false?r.error:'Done (audited)');if(out)$(out).textContent=r.ok===false?r.error:r.ok?('OK - '+(r.rows!=null?r.rows+' rows':r.count+' '+(r.what||''))):'';return load();},function(e){toast(e.message);if(out)$(out).textContent=e.message;return load();});}
+  $('fcs').addEventListener('click',function(){var b={base_url:$('fcu').value.trim(),path:$('fcp').value.trim()};if($('fch').value.trim())b.auth_header=$('fch').value.trim();if($('fcx').value.trim())b.auth_prefix=$('fcx').value.trim();if($('fck').value)b.api_key=$('fck').value;adm('PUT','/vapt-studio/firecompass/config',b).then(function(){$('fck').value='';});});
+  $('fct').addEventListener('click',function(){adm('POST','/vapt-studio/firecompass/test',{},'fco');});
+  $('fcl').addEventListener('click',function(){adm('POST','/vapt-studio/firecompass/pull',{});});
+  $('tnsv').addEventListener('click',function(){var b={kind:$('tnk').value};if($('tnu').value.trim())b.base_url=$('tnu').value.trim();if($('tna').value){b.access_key=$('tna').value;b.secret_key=$('tns').value;}adm('PUT','/vapt-studio/tenable/config',b).then(function(){$('tna').value='';$('tns').value='';});});
+  $('tnt').addEventListener('click',function(){adm('POST','/vapt-studio/tenable/test',{},'tno');});
+  $('tnp').addEventListener('click',function(){var fp=V.tenable.seen_fingerprint;if(!confirm('Trust the scanner certificate with SHA-256 fingerprint\n'+fp.match(/../g).join(':')+'?\nCompare it with the certificate on the Nessus scanner first.'))return;adm('POST','/vapt-studio/tenable/pin',{fingerprint:fp});});
+  $('tnl').addEventListener('click',function(){adm('POST','/vapt-studio/tenable/pull',{});});
+  $('go').addEventListener('click',function(){var q=$('aq').value.trim(),b=this;if(q.length<3){$('out').innerHTML='<div class="ans">Type a question first.</div>';return;}
+    b.disabled=true;$('out').innerHTML='<div class="ans mute">The analyst is reading the findings…</div>';
+    req('POST','/vapt-studio/ai/ask',{question:q}).then(function(r){$('out').innerHTML='<div class="ans">'+esc(r.answer)+'</div><div class="steps">'+esc(r.model)+' · '+r.steps.length+' step(s): '+esc(r.steps.map(function(s){return s.tool+(s.ok?'':' (refused)');}).join(', '))+(r.injection_signals.length?' · ⚠ text in the findings looked like instructions - treated as data':'')+'</div>';},
+      function(e){$('out').innerHTML='<div class="ans">'+esc(e.status===503?(V&&V.ai&&V.ai.reason)||'The AI is not available.':e.message)+'</div>';}).then(function(){b.disabled=!(V&&V.ai&&V.ai.enabled);});});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;WHO=String(j.user||'');}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden&&!OPEN&&$('mod').hidden&&!document.activeElement.matches('textarea,input,select'))load();},180000);
+})();
+</script></body></html>

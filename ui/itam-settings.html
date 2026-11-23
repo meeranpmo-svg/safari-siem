@@ -1,0 +1,113 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ITAM Settings</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- ITAM Settings over /api/itam/settings (+ /settings/advisor, /settings/agent-tokens, /agents, /settings/credential, /import/run):
+     an advisor that scores the configuration and recommends changes with their evidence (thresholds learned from the register,
+     silent sources, agent coverage by site, stale agents and tokens, adoption, AI privacy) - applied only when an administrator
+     clicks; discovery sources and thresholds (with how many assets each value flags); agent enrolment; write-only connector
+     credentials; CSV / CMDB import with a dry run. Administrators only. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1300px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn:disabled{opacity:.5}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}.tabs button{font:600 13px Inter,system-ui,sans-serif;background:transparent;color:var(--d-mute);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}.tabs button[aria-selected=true]{color:var(--d-ink);background:var(--d-raise)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:14px;margin-bottom:12px}.card h2{margin:0 0 10px;font-size:15px}
+.hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.ring{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;font-size:26px;font-weight:800}
+.rec{border:1px solid var(--d-line);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start}.rec .b{flex:1}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600}.pill.high{background:rgba(255,123,128,.16);color:var(--bad)}.pill.medium{background:rgba(245,181,68,.16);color:var(--warn)}.pill.low{background:rgba(141,176,255,.16);color:var(--info)}.pill.ok{background:rgba(95,210,122,.16);color:var(--ok)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);font-size:13px;vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:11.5px;text-transform:uppercase}
+.inp{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:inherit}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.f label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--d-mute)}
+.tok{font:13px ui-monospace,Consolas,monospace;background:#0e1118;border:1px dashed var(--acc);border-radius:8px;padding:10px;word-break:break-all}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+.empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad);font-size:13px;margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT assets · configuration · administrators</div><h1>ITAM Settings</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn" id="rf">⟳</button></div>
+<div id="gate"></div>
+<div id="app" hidden>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="ad" aria-selected="true">Advisor</button><button type="button" role="tab" data-tab="ge" aria-selected="false">Sources &amp; thresholds</button><button type="button" role="tab" data-tab="ag" aria-selected="false">Agents</button><button type="button" role="tab" data-tab="cr" aria-selected="false">Credentials</button><button type="button" role="tab" data-tab="im" aria-selected="false">Import</button></div>
+<section id="ad"><div class="card"><div class="hero"><div class="ring" id="score">–</div><div><h2 style="margin:0">Configuration health</h2><div class="sm mut" id="scoreS"></div></div></div></div><div class="card"><h2>Recommendations</h2><div id="recs"></div></div><div class="card"><h2>Recent changes</h2><div id="hist"></div></div></section>
+<section id="ge" hidden><div class="card"><h2>Discovery sources</h2><div id="srcs"></div><label class="chk"><input type="checkbox" id="g-adopt"> Auto-adopt newly discovered devices into the register</label></div>
+  <div class="card"><h2>Thresholds</h2><div class="f"><label>Not seen after (days)<input class="inp" type="number" min="1" max="365" id="g-ns"><span class="sm" id="g-nsh"></span></label><label>Warranty / end-of-life window (days)<input class="inp" type="number" min="7" max="730" id="g-ew"><span class="sm" id="g-ewh"></span></label></div></div>
+  <div class="card"><h2>AI privacy</h2><label class="chk"><input type="checkbox" id="g-ext"> Allow the external model provider (content is sanitised before it leaves)</label><label class="sm mut" style="display:block">Extra redaction terms (one per line)<textarea class="inp" id="g-red" rows="3" style="width:100%;margin-top:4px"></textarea></label></div>
+  <button type="button" class="btn pri" id="g-save">Save settings</button> <span class="sm mut" id="g-last"></span><div class="err" id="g-err"></div></section>
+<section id="ag" hidden><div id="tokNew"></div><div class="card"><h2>Issue a one-time enrolment token</h2><div class="f"><label>Site<input class="inp" id="t-site"></label><label>Note<input class="inp" id="t-note" placeholder="e.g. finance laptops batch 2"></label></div><button type="button" class="btn pri" id="t-issue" style="margin-top:8px">Issue token</button></div>
+  <div class="card"><h2>Coverage</h2><div id="cov"></div></div><div class="card"><h2>Enrolment tokens</h2><div id="toks"></div></div><div class="card"><h2>Enrolled agents</h2><div id="ags"></div></div></section>
+<section id="cr" hidden><div class="card"><h2>Connector credentials <span class="mut sm">write-only - never shown again</span></h2><div id="creds"></div></div></section>
+<section id="im" hidden><div class="card"><h2>Import from a CSV / CMDB export</h2><div class="f"><label>Mapping<select class="inp" id="i-map"></select></label><label>Format<select class="inp" id="i-fmt"><option>csv</option><option>json</option></select></label><label>File<input class="inp" type="file" id="i-file" accept=".csv,.json,.txt"></label></div>
+  <label class="sm mut" style="display:block;margin-top:8px">…or paste the export<textarea class="inp" id="i-text" rows="6" style="width:100%;margin-top:4px" placeholder="Asset Name,Asset Tag,Product Type,Manufacturer,Serial Number,IP Address"></textarea></label>
+  <div style="margin-top:8px;display:flex;gap:8px"><button type="button" class="btn" id="i-dry">Preview (dry run)</button><button type="button" class="btn pri" id="i-run">Run import</button></div><div id="i-res"></div>
+  <div class="sm mut" style="margin-top:8px">Re-running the same file merges by serial / asset tag and never duplicates. Imports win business facts (owner, location, warranty); discovery keeps winning technical facts.</div></div></section>
+</div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, S = null, A = null, CR = {}, IM = [];
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  var SRC = { sensor: 'Site sensors (network discovery)', agent: 'Endpoint agent', vcenter: 'vCenter connector (read-only)', netops: 'netops API (legacy)' };
+  var CREDS = [['vcenter_user', 'vCenter username (read-only role account)'], ['vcenter_pass', 'vCenter password'], ['netops_token', 'netops API token'], ['private_token', 'Private model token']];
+  function load() {
+    return Promise.all([req('GET', '/settings'), req('GET', '/settings/advisor').catch(function () { return null; })]).then(function (r) { S = r[0].settings; CR = r[0].credentials || {}; IM = r[0].imports || []; A = r[1]; $('gate').innerHTML = ''; $('app').hidden = false; draw(); loadAgents(); })
+      .catch(function (e) { $('app').hidden = true; $('gate').innerHTML = '<div class="card"><div class="empty">' + esc(e.status === 403 ? 'ITAM Settings are for administrators.' : e.status === 404 ? 'IT Asset Management is not on this platform yet - run the update.' : 'Not reachable: ' + e.message) + '</div></div>'; });
+  }
+  function draw() {
+    $('up').textContent = 'read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    if (A) {
+      var sc = A.score, col = sc == null ? '#5b6273' : sc >= 80 ? '#2fb344' : sc >= 50 ? '#f59f00' : '#e5484d';
+      $('score').textContent = sc == null ? '–' : sc; $('score').style.background = 'conic-gradient(' + col + ' ' + (sc || 0) * 3.6 + 'deg, rgba(255,255,255,.07) 0)';
+      $('scoreS').innerHTML = A.checks.filter(function (c) { return c.pass; }).length + ' of ' + A.checks.length + ' checks pass · agent coverage ' + (A.agents.coverage_pct == null ? '–' : A.agents.coverage_pct + ' %') + ' · ' + A.discovery_waiting + ' discovered device(s) waiting';
+      $('recs').innerHTML = A.recommendations.length ? A.recommendations.map(function (r) { return '<div class="rec"><span class="pill ' + r.severity + '">' + esc(r.severity) + '</span><div class="b"><b>' + esc(r.title) + '</b><div class="sm mut">' + esc(r.why) + '</div>' + (r.fix ? '<div class="sm">→ ' + esc(r.fix) + '</div>' : '') + (r.apply_note ? '<div class="sm" style="color:var(--warn)">' + esc(r.apply_note) + '</div>' : '') + '</div>' + (r.apply ? '<button type="button" class="btn pri" data-apply="' + esc(r.id) + '">Apply: ' + esc(Object.keys(r.apply).map(function (k) { return k + ' = ' + (typeof r.apply[k] === 'object' ? 'on' : r.apply[k]); }).join(', ')) + '</button>' : '') + '</div>'; }).join('') : '<div class="empty">Nothing to change - every check passes.</div>';
+      $('hist').innerHTML = A.history.length ? '<table><thead><tr><th>When</th><th>Who</th><th>Change</th></tr></thead><tbody>' + A.history.map(function (h) { return '<tr><td class="sm">' + esc(String(h.at || '').slice(0, 16).replace('T', ' ')) + '</td><td>' + esc(h.by) + '</td><td class="sm">' + esc(h.action) + ' ' + esc(h.target || '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No change recorded yet.</div>';
+    }
+    $('srcs').innerHTML = Object.keys(S.sources || {}).map(function (k) { return '<label class="chk"><input type="checkbox" data-src="' + esc(k) + '"' + (S.sources[k] ? ' checked' : '') + '> ' + esc(SRC[k] || k) + '</label>'; }).join('');
+    $('g-adopt').checked = !!S.auto_adopt; $('g-ns').value = S.not_seen_days; $('g-ew').value = S.expiry_window_days; $('g-ext').checked = !!S.external_ai_allowed; $('g-red').value = (S.redact_terms || []).join('\n');
+    var ns = A && A.learned.not_seen; $('g-nsh').innerHTML = ns ? 'flags ' + ns.flagged_now + ' asset(s) now' + (ns.learned != null ? ' · learned <b>' + ns.learned + '</b> days (90 % of ' + ns.sample + ' assets report within it) → ' + ns.flagged_learned + ' flagged' : ' · needs 10 reporting assets to learn') : '';
+    var ex = A && A.learned.expiry; $('g-ewh').innerHTML = ex && ex.max_lead_days != null ? 'renewals need up to <b>' + ex.max_lead_days + '</b> days (' + esc(ex.basis) + ') - keep the window at least ' + (ex.max_lead_days + 30) : '';
+    $('g-last').textContent = 'Last change: ' + (S.updated_by || '–') + (S.updated_at ? ' · ' + String(S.updated_at).slice(0, 16).replace('T', ' ') : '');
+    $('creds').innerHTML = '<table><thead><tr><th>Credential</th><th>State</th><th>Set a new value</th></tr></thead><tbody>' + CREDS.map(function (c) { var s = CR[c[0]] || {}; return '<tr><td><b>' + esc(c[1]) + '</b><div class="sm mut">' + esc(c[0]) + '</div></td><td>' + (s.configured ? '<span class="pill ok">set</span>' + (s.updated_at ? ' <span class="sm mut">' + esc(String(s.updated_at).slice(0, 10)) + '</span>' : '') : '<span class="pill medium">not set</span>') + '</td><td><input class="inp" type="password" autocomplete="off" data-cv="' + esc(c[0]) + '" style="width:60%"> <button type="button" class="btn" data-cs="' + esc(c[0]) + '">Save</button></td></tr>'; }).join('') + '</tbody></table>';
+    $('i-map').innerHTML = IM.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m === 'manageengine' ? 'ManageEngine AssetExplorer' : m === 'db' ? 'Database export' : m) + '</option>'; }).join('');
+  }
+  function loadAgents() {
+    Promise.all([req('GET', '/settings/agent-tokens'), req('GET', '/agents')]).then(function (r) {
+      var toks = r[0].tokens || [], ags = r[1].agents || [], now = Date.now();
+      $('toks').innerHTML = toks.length ? '<table><thead><tr><th>Token</th><th>Site</th><th>Note</th><th>State</th><th>Issued</th><th></th></tr></thead><tbody>' + toks.slice().reverse().map(function (t) { var exp = t.expires_at && Date.parse(t.expires_at) < now; return '<tr><td><code>' + esc(t.token_prefix) + '…</code></td><td>' + esc(t.site || '–') + '</td><td class="sm">' + esc(t.note || '') + '</td><td>' + (t.used_at ? '<span class="pill ok">used</span>' : exp ? '<span class="pill medium">expired</span>' : '<span class="pill low">open</span>') + '</td><td class="sm">' + esc(String(t.created_at).slice(0, 10)) + ' · ' + esc(t.created_by || '') + '</td><td>' + (!t.used_at ? '<button type="button" class="btn" data-rv="' + esc(t.token_prefix) + '">Revoke</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No token issued yet.</div>';
+      $('ags').innerHTML = ags.length ? '<table><thead><tr><th>Agent</th><th>Platform</th><th>Site</th><th>State</th><th>Last report</th></tr></thead><tbody>' + ags.map(function (a) { return '<tr><td><b>' + esc(a.name || a.id) + '</b></td><td>' + esc(a.platform || '') + '</td><td>' + esc(a.site || '–') + '</td><td>' + (a.stale ? '<span class="pill medium">not reporting</span>' : '<span class="pill ok">reporting</span>') + '</td><td class="sm">' + esc(String(a.last_report_at || a.last_seen || '–').slice(0, 16).replace('T', ' ')) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No agent enrolled yet - issue a token above and install the agent.</div>';
+    }).catch(function (e) { $('toks').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+    if (A) { var bs = A.agents.by_site || {}; $('cov').innerHTML = '<div class="sm">' + (A.agents.coverage_pct == null ? 'No servers or PCs in the register yet.' : '<b>' + A.agents.coverage_pct + ' %</b> of ' + A.agents.need + ' servers and PCs run the agent · ' + A.agents.without + ' without it') + '</div>' + (Object.keys(bs).length ? '<table style="margin-top:6px"><thead><tr><th>Site</th><th>Without the agent</th><th></th></tr></thead><tbody>' + Object.keys(bs).sort(function (a, b) { return bs[b] - bs[a]; }).map(function (s) { return '<tr><td>' + esc(s) + '</td><td>' + bs[s] + '</td><td><button type="button" class="btn" data-tsite="' + esc(s === '(no site)' ? '' : s) + '">Issue a token for this site</button></td></tr>'; }).join('') + '</tbody></table>' : ''); }
+  }
+  function save(patch, msg) { return req('POST', '/settings', patch).then(function () { toast(msg || 'Settings saved'); return load(); }, function (e) { $('g-err').textContent = e.message; toast(e.message); }); }
+  document.addEventListener('click', function (e) {
+    var ap = e.target.closest('[data-apply]'); if (ap) { var r = A.recommendations.filter(function (x) { return x.id === ap.dataset.apply; })[0]; if (r) save(r.apply, 'Applied: ' + r.title); return; }
+    var cs = e.target.closest('[data-cs]'); if (cs) { var inp = document.querySelector('[data-cv="' + cs.dataset.cs + '"]'); if (!inp.value) { toast('Type the new value first'); return; } req('POST', '/settings/credential', { name: cs.dataset.cs, value: inp.value }).then(function (j) { inp.value = ''; CR = j.credentials || CR; toast('Saved - the value is not shown again'); draw(); }, function (er) { toast(er.message); }); return; }
+    var rv = e.target.closest('[data-rv]'); if (rv) { req('POST', '/settings/agent-tokens/' + encodeURIComponent(rv.dataset.rv) + '/revoke', {}).then(function () { toast('Token revoked'); load(); }, function (er) { toast(er.message); }); return; }
+    var ts = e.target.closest('[data-tsite]'); if (ts) { $('t-site').value = ts.dataset.tsite; $('t-note').focus(); return; }
+  });
+  $('g-save').addEventListener('click', function () { $('g-err').textContent = '';
+    var src = {}; Array.prototype.forEach.call(document.querySelectorAll('[data-src]'), function (c) { src[c.dataset.src] = c.checked; });
+    var ns = Number($('g-ns').value), ew = Number($('g-ew').value);
+    if (!(ns >= 1 && ns <= 365)) { $('g-err').textContent = 'Not seen after: 1-365 days.'; return; } if (!(ew >= 7 && ew <= 730)) { $('g-err').textContent = 'Warranty / end-of-life window: 7-730 days.'; return; }
+    save({ sources: src, auto_adopt: $('g-adopt').checked, not_seen_days: ns, expiry_window_days: ew, external_ai_allowed: $('g-ext').checked, redact_terms: $('g-red').value.split(/\n/).map(function (x) { return x.trim(); }).filter(Boolean) }); });
+  $('t-issue').addEventListener('click', function () { var b = {}; if ($('t-site').value.trim()) b.site = $('t-site').value.trim(); if ($('t-note').value.trim()) b.note = $('t-note').value.trim();
+    req('POST', '/settings/agent-tokens', b).then(function (tk) { var srv = 'https://' + location.host + '/agent';
+      $('tokNew').innerHTML = '<div class="card" style="border-color:var(--acc)"><h2>Enrolment token - shown once</h2><div class="tok" id="tokv">' + esc(tk.token) + '</div><div class="sm mut" style="margin-top:6px">Single use; expires ' + esc(String(tk.expires_at).slice(0, 16).replace('T', ' ')) + '. Copy it now - it is not shown again.</div><div class="sm" style="margin-top:8px"><b>Windows</b> (PowerShell as administrator)</div><div class="tok">powershell -ExecutionPolicy Bypass -File agent\\install\\install.ps1 -Server ' + esc(srv) + ' -Token ' + esc(tk.token) + '</div><div class="sm" style="margin-top:8px"><b>Linux / macOS</b></div><div class="tok">sudo agent/install/install.sh --server ' + esc(srv) + ' --token ' + esc(tk.token) + '</div><button type="button" class="btn" id="tokDone" style="margin-top:8px">Done</button></div>';
+      $('tokDone').addEventListener('click', function () { $('tokNew').innerHTML = ''; }); loadAgents(); }, function (er) { toast(er.message); }); });
+  function runImport(dry) { var send = function (txt) { if (!txt) { toast('Paste or choose an export first'); return; }
+      req('POST', '/import/run', { format: $('i-fmt').value, mapping: $('i-map').value, text: txt, dry_run: dry }).then(function (r) { var un = r.unmapped_columns || [];
+        $('i-res').innerHTML = '<div class="card" style="margin-top:10px"><b>' + (r.dry_run ? 'Preview' : 'Imported') + '</b> · ' + (r.rows || 0) + ' rows' + (r.dry_run ? '' : ' · ' + (r.created || 0) + ' created · ' + (r.updated || 0) + ' updated') + (un.length ? '<div class="sm" style="color:var(--warn)">Unmapped columns (ignored): ' + un.map(esc).join(', ') + '</div>' : '<div class="sm mut">Every non-empty column was mapped.</div>') + ((r.errors || []).length ? '<div class="sm err">' + r.errors.slice(0, 10).map(function (x) { return 'row ' + x.row + ': ' + esc(x.error); }).join('; ') + '</div>' : '') + (r.dry_run && (r.preview || []).length ? '<table style="margin-top:6px"><thead><tr><th>Row</th><th>Mapped fields</th></tr></thead><tbody>' + r.preview.slice(0, 20).map(function (p) { return '<tr><td>' + p.row + '</td><td class="sm mut">' + esc(JSON.stringify(p.fields)) + '</td></tr>'; }).join('') + '</tbody></table>' : '') + '</div>';
+        if (!dry) toast('Import finished'); }, function (er) { $('i-res').innerHTML = '<div class="err">' + esc(er.message) + '</div>'; }); };
+    var f = $('i-file').files; if (f && f.length) { var rd = new FileReader(); rd.onload = function () { send(String(rd.result || '')); }; rd.readAsText(f[0]); } else send($('i-text').value); }
+  $('i-dry').addEventListener('click', function () { runImport(true); }); $('i-run').addEventListener('click', function () { runImport(false); });
+  document.querySelector('.tabs').addEventListener('click', function (e) { var b = e.target.closest('[data-tab]'); if (!b) return; ['ad', 'ge', 'ag', 'cr', 'im'].forEach(function (t) { $(t).hidden = t !== b.dataset.tab; document.querySelector('[data-tab="' + t + '"]').setAttribute('aria-selected', String(t === b.dataset.tab)); }); });
+  $('rf').addEventListener('click', load);
+  load();
+})();
+</script></body></html>

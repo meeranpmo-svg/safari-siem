@@ -1,0 +1,75 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unified Communications</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+.fil{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.fil input[type=search]{width:100%;max-width:300px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:1000px){.two{grid-template-columns:1fr}}
+.bars{display:flex;flex-direction:column;gap:6px}.br{display:grid;grid-template-columns:minmax(110px,40%) 1fr 44px;gap:8px;align-items:center;font-size:12.5px;cursor:pointer;padding:2px 4px;border-radius:5px}.br:hover{background:rgba(87,148,242,.08)}
+.br .tr{height:14px;border-radius:3px;background:rgba(127,127,127,.18);overflow:hidden}.br .tr i{display:block;height:100%;background:linear-gradient(90deg,#1f60c4,#5794f2)}.br b{text-align:right}
+tr.cl{cursor:pointer}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Unified Communications · voice and video</div><h1>Unified Communications</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div class="card"><h2>Call control, voicemail and gateways <span class="c" id="svc"></span></h2><div class="tw" id="srv"></div>
+ <p class="note">Servers whose service or name is a UC role (Cisco CUCM / Unity / IM&amp;P / UCCX / Expressway, SBC / CUBE, voice gateways, Avaya, Mitel, Teams SBC). Up / down and availability come from Server Availability. Phone registration status (registered / unregistered per phone) needs a read of the call manager itself, which is not connected yet - it is not guessed from anything else.</p></div>
+<div class="two">
+ <div class="card"><h2>Phones and video by vendor <span class="c" id="vc"></span></h2><div class="bars" id="ven"></div></div>
+ <div class="card"><h2>By site <span class="c" id="sc"></span></h2><div class="bars" id="site"></div></div>
+</div>
+<div class="card"><h2>IP phones and video devices <span class="c" id="pc"></span></h2>
+ <div class="fil"><input type="search" id="q" placeholder="Search name, IP, MAC, model, user, site…"><select id="fv"><option value="">All vendors</option></select><select id="fs"><option value="">Registered and found</option><option value="reg">In the asset register</option><option value="new">Found, not registered</option></select></div>
+ <div class="tw" id="ph"></div>
+ <p class="note">In the asset register = IT Asset Management assets of type IP phone (or a UC model). Found, not registered = devices Asset Discovery saw on the network as phones but nobody has approved yet - approve them in <a href="network-discovery.html">Asset Discovery</a> so owner, site and warranty are tracked.</p></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,Z=window.zybDetail,esc=S.esc,$=function(i){return document.getElementById(i);};
+  var PH=[],SRV=[],FV='',FSITE='';
+  // a UC role: by the service an administrator set, else by the server name (shown as "guessed")
+  var UC_SVC=/\b(cucm|call ?manager|unified communications?|unity|im ?& ?p|imp|presence|uccx|contact cent(er|re)|expressway|vcs|cube|sbc|session border|voice gateway|voip|avaya|mitel|teams ?(sbc|direct routing)|ribbon|audiocodes)\b/i;
+  var UC_NAME=/(^|[-_.])(cucm|ucm|cups|imp|unity|cuc|uccx|ccx|expe?|expc|vcs|cube|sbc|vgw?\d*|voip|pbx|avaya|mitel)([-_.\d]|$)/i;
+  var UC_MODEL=/\b(cisco ip phone|cp-\d{4}|\b(78|79|88|69)\d\d\b|polycom|poly |yealink|grandstream|avaya|mitel|snom|fanvil|audiocodes|webex (room|desk|board)|teams (room|phone)|room kit|tandberg)\b/i;
+  function get(u){return new Promise(function(ok){var x=new XMLHttpRequest();x.open('GET',u);x.withCredentials=true;x.timeout=60000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }ok(x.status>=200&&x.status<300?j:{__err:x.status});};x.onerror=x.ontimeout=function(){ok({__err:0});};x.send();});}
+  var vendorOf=function(d){var t=[d.vendor,d.model,d.name].join(' ').toLowerCase();return /cisco|cp-\d|webex|tandberg/.test(t)?'Cisco':/poly/.test(t)?'Poly':/yealink/.test(t)?'Yealink':/grandstream/.test(t)?'Grandstream':/avaya/.test(t)?'Avaya':/mitel/.test(t)?'Mitel':/snom/.test(t)?'Snom':/fanvil/.test(t)?'Fanvil':/audiocodes/.test(t)?'AudioCodes':(d.vendor||'not reported');};
+  function bars(el,m,key,cur){var L=Object.keys(m).map(function(k){return [k,m[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,12),mx=L.length?L[0][1]:1;
+    el.innerHTML=L.length?L.map(function(x){return '<div class="br" data-'+key+'="'+esc(x[0])+'" role="button" tabindex="0" title="Click to filter the list"'+(cur===x[0]?' style="outline:1px solid #5794f2"':'')+'><span>'+esc(x[0])+'</span><span class="tr"><i style="width:'+Math.max(3,x[1]/mx*100)+'%"></i></span><b>'+x[1]+'</b></div>';}).join(''):'<div class="empty">Nothing yet.</div>';}
+  function draw(){
+    var reg=PH.filter(function(p){return p.reg;}),neu=PH.filter(function(p){return !p.reg;}),on=SRV.filter(function(h){return h.status==='online';}).length,off=SRV.filter(function(h){return h.status==='offline';}).length;
+    var stale=reg.filter(function(p){return p.last_seen&&Date.now()-Date.parse(p.last_seen)>30*864e5;}).length;
+    $('kp').innerHTML=S.tile('UC servers',S.n(SRV.length),on+' online','','tile:srv')+S.tile('UC servers down',S.n(off),'',off?'bad':'ok','tile:srv')+S.tile('Phones and video',S.n(reg.length),'in the asset register','','tile:reg')+S.tile('Found, not registered',S.n(neu.length),'approve in Asset Discovery',neu.length?'warn':'ok','tile:new')+S.tile('Not seen 30 days',S.n(stale),'registered phones',stale?'warn':'ok','tile:stale')+S.tile('Vendors',S.n(Object.keys(PH.reduce(function(m,p){m[p.vendor]=1;return m;},{})).length),'','');
+    $('svc').textContent=SRV.length+'';
+    $('srv').innerHTML=SRV.length?'<table><thead><tr><th>Server</th><th>Role</th><th>IP</th><th>Site</th><th>Status</th><th>Availability 7 d</th></tr></thead><tbody>'+SRV.map(function(h){return '<tr><td><b>'+esc(h.name)+'</b></td><td>'+esc(h.service||h.role_guess)+(h.guess?' '+S.pill('guessed from the name','warn'):'')+'</td><td class="mono">'+esc(h.ip)+'</td><td>'+esc(h.site||'—')+'</td><td>'+(h.status==='online'?S.pill('online','ok'):h.status==='offline'?S.pill('down','bad'):S.pill(h.status||'unknown'))+'</td><td>'+(h.availability&&h.availability.d7!=null?h.availability.d7+' %':'—')+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No UC server is monitored yet. Add the call manager, voicemail and gateways on <a href="server-availability.html">Server Availability</a> (or <a href="add-server.html">Add Server</a>) and set their service (e.g. "CUCM") - they appear here.</div>';
+    var vm={},sm={};PH.forEach(function(p){vm[p.vendor]=(vm[p.vendor]||0)+1;sm[p.site||'site not set']=(sm[p.site||'site not set']||0)+1;});
+    $('vc').textContent=PH.length+'';bars($('ven'),vm,'v',FV);$('sc').textContent=Object.keys(sm).length+'';bars($('site'),sm,'s',FSITE);
+    var cur=$('fv').value;$('fv').innerHTML='<option value="">All vendors</option>'+Object.keys(vm).sort().map(function(v){return '<option'+(v===cur?' selected':'')+'>'+esc(v)+'</option>';}).join('');
+    list();}
+  function list(){var q=$('q').value.trim().toLowerCase(),fv=$('fv').value||FV,fs=$('fs').value;
+    var L=PH.filter(function(p){return (!q||[p.name,p.ip,p.mac,p.model,p.user,p.site,p.vendor].join(' ').toLowerCase().indexOf(q)>=0)&&(!fv||p.vendor===fv)&&(!FSITE||(p.site||'site not set')===FSITE)&&(!fs||(fs==='reg'?p.reg:!p.reg))&&(!FSTALE||(p.reg&&p.last_seen&&Date.now()-Date.parse(p.last_seen)>30*864e5));});
+    $('pc').textContent=L.length+(L.length!==PH.length?' of '+PH.length:'');
+    $('ph').innerHTML=L.length?'<table><thead><tr><th>Device</th><th>Vendor / model</th><th>IP</th><th>MAC</th><th>User</th><th>Site</th><th>Last seen</th><th>Register</th></tr></thead><tbody>'+L.slice(0,1000).map(function(p,i){return '<tr class="cl" data-i="'+PH.indexOf(p)+'" tabindex="0"><td><b>'+esc(p.name||'—')+'</b></td><td>'+esc(p.vendor)+(p.model?'<div class="small muted">'+esc(p.model)+'</div>':'')+'</td><td class="mono">'+esc(p.ip||'—')+'</td><td class="mono small">'+esc(p.mac||'—')+'</td><td>'+esc(p.user||'—')+'</td><td>'+esc(p.site||'—')+'</td><td>'+esc(p.last_seen?S.ago(p.last_seen):'—')+'</td><td>'+(p.reg?S.pill('registered','ok'):S.pill('found, not registered','warn'))+'</td></tr>';}).join('')+'</tbody></table>'+(L.length>1000?'<p class="note">First 1000 - search to narrow.</p>':'')
+      :'<div class="empty">'+(PH.length?'Nothing matches.':'No IP phone or video device known yet. Run an Asset Discovery scope on the voice VLAN (phones answer SNMP / LLDP-MED / CDP), then approve them.')+'</div>';}
+  var FSTALE=false;
+  function load(){
+    Promise.all([get('/api/itam/assets?type=phone&limit=5000'),get('/api/itam/assets?limit=20000'),get('/api/itam/discovery/results?status=new&type=phone&limit=2000'),get('/api/soc/netops/avail')]).then(function(R){
+      if(R[0].__err===403||R[1].__err===403){$('kp').innerHTML='<div class="card" style="grid-column:1/-1"><p>Operators and administrators see device details.</p></div>';}
+      var seen={},out=[];
+      var add=function(a,reg){var k=a.id||a.mac||a.ip;if(!k||seen[k])return;seen[k]=1;out.push({id:a.id,reg:reg,name:a.name||a.hostname||a.asset_tag||'',vendor:vendorOf(a),model:a.model||'',ip:a.mgmt_ip||a.ip||'',mac:a.mac||((a.macs||[])[0])||'',user:a.custodian||a.owner||'',site:a.site||a.location||'',last_seen:a.last_seen||null,serial:a.serial||'',status:a.status||''});};
+      ((R[0]&&R[0].assets)||[]).forEach(function(a){if(!/retired|disposed/.test(a.status||''))add(a,true);});
+      ((R[1]&&R[1].assets)||[]).forEach(function(a){if(a.type!=='phone'&&!/retired|disposed/.test(a.status||'')&&UC_MODEL.test([a.vendor,a.model,a.name].join(' '))&&a.type!=='server')add(a,true);});
+      ((R[2]&&R[2].devices)||[]).forEach(function(d){if(!d.asset_id)add({id:'disc:'+d.id,name:d.hostname,ip:d.ip,mac:d.mac||((d.macs||[])[0]),vendor:d.vendor,model:d.model,site:d.site,last_seen:d.last_seen},false);});
+      PH=out;
+      SRV=((R[3]&&R[3].items)||[]).map(function(h){var bySvc=UC_SVC.test(h.service||''),byName=!h.service&&UC_NAME.test(String(h.name||'').toLowerCase().split('.')[0]);if(!bySvc&&!byName)return null;
+        return Object.assign({},h,{guess:!bySvc,role_guess:byName?'UC server':''});}).filter(Boolean).sort(function(a,b){return (a.status==='offline'?0:1)-(b.status==='offline'?0:1)||String(a.name).localeCompare(String(b.name));});
+      draw();$('up').textContent='read '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    });}
+  document.addEventListener('click',function(e){var t=e.target,x;
+    if((x=t.closest('[data-act^="tile:"]'))){var a=x.getAttribute('data-act').slice(5);FSTALE=a==='stale';$('fs').value=a==='reg'?'reg':a==='new'?'new':'';if(a==='srv')$('srv').scrollIntoView({behavior:'smooth'});else{list();$('ph').scrollIntoView({behavior:'smooth'});}return;}
+    if((x=t.closest('[data-v]'))){FV=FV===x.getAttribute('data-v')?'':x.getAttribute('data-v');$('fv').value=FV;draw();return;}
+    if((x=t.closest('[data-s]'))){FSITE=FSITE===x.getAttribute('data-s')?'':x.getAttribute('data-s');draw();return;}
+    if((x=t.closest('tr.cl'))){var p=PH[+x.getAttribute('data-i')];Z.open(p.reg?'IP phone / video device':'Found by Asset Discovery',p.name||p.ip,Z.kv([['Vendor',esc(p.vendor)],['Model',esc(p.model||'—')],['IP',esc(p.ip||'—')],['MAC',esc(p.mac||'—')],['Serial',esc(p.serial||'—')],['User',esc(p.user||'—')],['Site',esc(p.site||'—')],['Last seen',esc(p.last_seen?S.ago(p.last_seen):'—')],['Register',p.reg?'in the asset register':'not registered - approve it in Asset Discovery']]));return;}
+    if(t.id==='refresh'){load();return;}
+  });
+  $('q').addEventListener('input',list);$('fv').onchange=function(){FV=$('fv').value;draw();};$('fs').onchange=function(){FSTALE=false;list();};
+  S.ready(load);
+})();
+</script></body></html>

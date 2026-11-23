@@ -1,0 +1,51 @@
+--- a/engine/discovery/index.js	2026-10-14 09:33:35.925560663 +0000
++++ b/engine/discovery/index.js	2026-10-14 09:33:35.939513383 +0000
+@@ -226,11 +226,21 @@
+   // verbatim: { ok, latency_ms, error_class, stage, http, tls:{trusted, pinned, presented}, message, hint, discovered }.
+   // The connectors (vcenter/ad/cucm/azure/aws) build this via diag.js so a TLS problem is never mislabelled as auth.
+   // helper / storage answers → the standard test result; the helper's own text is kept where it says what to do
+-  function lerr(kind, r, t0) {
++  function lerr(kind, r, t0, where) {
+     const ec = (r && r.error_class) || 'error';
+     const code = { auth: 'auth', denied: 'authz', authz: 'authz', timeout: 'timeout', refused: 'unreachable', unreachable: 'unreachable', missing_module: 'config', config: 'config', tls: 'tls' }[ec] || 'protocol';
+     const out = diag.fromError(kind, diag.err(code, (r && r.error) || 'login failed'), { latency_ms: Date.now() - t0 });
+     if (ec === 'missing_module' || ec === 'config' || ec === 'denied') out.message = scrubber.text(String((r && r.error) || out.message).slice(0, 300));
++    // name the address and port that was tried: a site that runs Oracle / SQL Server / SSH on its own ports gets
++    // "refused" on the default port, and the fix is the Port on the credential
++    if (where && (ec === 'refused' || ec === 'timeout' || ec === 'unreachable')) {
++      const what = kind === 'ssh' ? 'SSH' : kind === 'db_login' ? 'database listener' : 'management API';
++      out.message = ec === 'refused'
++        ? `Connection refused at ${where.ip}:${where.port} - nothing listens there.${where.defaulted ? ` ${where.port} is the default ${what} port; if this server uses another one, set Port on this credential and test again.` : ` Check that the ${what} runs on port ${where.port}.`}`
++        : ec === 'timeout'
++          ? `No answer from ${where.ip}:${where.port} - a firewall between the platform server and this host is probably dropping that port${where.defaulted ? ` (or the ${what} uses another port: set Port on this credential)` : ''}.`
++          : `Cannot reach ${where.ip} (no route) - check the address and the network path from the platform server.`;
++    }
+     return out;
+   }
+   async function testCredential(id, body, who) {
+@@ -250,12 +260,13 @@
+       try {
+         let r;
+         if (meta.kind === 'db_login') {
+-          r = await invRun({ op: 'db', engine: c.target.engine, host: ip, port: c.target.port || loginM.DB_DEFAULT_PORT[c.target.engine], username: c.secret.username, password: c.secret.password, service: c.target.service, database: c.target.database });
++          const dbPort = c.target.port || loginM.DB_DEFAULT_PORT[c.target.engine];
++          r = await invRun({ op: 'db', engine: c.target.engine, host: ip, port: dbPort, username: c.secret.username, password: c.secret.password, service: c.target.service, database: c.target.database });
+           res = r && r.ok ? diag.result(meta.kind, { latency_ms: Date.now() - t0, message: 'Logged in: ' + String(r.version || '').slice(0, 160) })
+-            : lerr(meta.kind, r, t0);
++            : lerr(meta.kind, r, t0, { ip, port: dbPort, defaulted: !c.target.port });
+         } else if (meta.kind === 'ssh') {
+           const port = c.target.port || 22, hk = await invRun({ op: 'hostkey', host: ip, port });
+-          if (!hk || !hk.ok) res = lerr(meta.kind, hk, t0);
++          if (!hk || !hk.ok) res = lerr(meta.kind, hk, t0, { ip, port, defaulted: !c.target.port });
+           else {
+             const tr = trust.see('ssh', ip, port, hk.fp, { type: hk.type });
+             if (tr.state !== 'trusted') res = { ok: false, error_class: tr.state === 'changed' ? 'hostkey_changed' : 'hostkey_untrusted', latency_ms: Date.now() - t0, message: tr.state === 'changed' ? 'The SSH host key of this server CHANGED - not logged in. Check it, then trust the new key under Trust.' : `Host key recorded (${hk.type} SHA256 ${hk.fp.slice(0, 16)}…) - trust it under Trust, then test again. No password was sent.` };
+@@ -263,7 +274,7 @@
+               r = await invRun({ op: 'ssh_facts', host: ip, port, username: c.secret.username, password: c.secret.password, private_key: c.secret.private_key, fp: tr.fp });
+               const u = r && r.ok ? loginM.parseUnix(r.facts) : null;
+               res = u ? diag.result(meta.kind, { latency_ms: Date.now() - t0, message: 'Logged in: ' + [u.hostname, u.os, u.model, u.serial].filter(Boolean).join(' · ') })
+-                : lerr(meta.kind, r, t0);
++                : lerr(meta.kind, r, t0, { ip, port, defaulted: !c.target.port });
+             }
+           }
+         } else {

@@ -1,0 +1,91 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Risk Prioritization</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--bg:#0b0e14;--pn:#121722;--rs:#18202d;--ln:#232c3c;--tx:#e8ecf3;--mu:#8c95a8;--cr:#ef4f5f;--me:#f59f00;--lo:#3ccf91;--ac:#3b82f6;--nv:#7aa2ff}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 60px}
+.hero{text-align:center;padding:18px 10px 6px}.hero h1{margin:0;font-size:34px;font-weight:600}.hero p{max-width:900px;margin:8px auto 0;color:var(--mu);font-size:15px}
+.bar1{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:7px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.btn:hover{border-color:#3a4560}.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}.btn.no{color:#ff9a9e}
+.cards{display:grid;grid-template-columns:1fr 1fr 2fr 1.5fr;gap:14px;margin-bottom:14px}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:16px 18px;min-width:0}.card .t{font-size:12px;color:var(--mu);text-align:center;margin-bottom:6px}
+.big{font-size:44px;font-weight:300;line-height:1.1;text-align:center;font-variant-numeric:tabular-nums}
+.fx div.r{display:grid;grid-template-columns:minmax(0,1fr) 62px;border:1px solid var(--ln);border-radius:4px;margin-bottom:6px;overflow:hidden;font-size:13px}.fx .r span{padding:6px 9px}.fx .r b{display:grid;place-items:center;font-size:12px;color:#0b0e14}
+.lg{display:flex;gap:12px;justify-content:center;font-size:12px;margin-top:6px;flex-wrap:wrap}.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+.panel{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:16px 18px;margin-bottom:14px}.panel h2{margin:0 0 10px;font-size:17px;display:flex;gap:8px;align-items:center}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px}th{text-align:left;color:var(--mu);font-weight:600;font-size:12px;padding:8px;border-bottom:1px solid var(--ln)}td{padding:9px 8px;border-bottom:1px solid #1a2130;vertical-align:middle}
+.pill{display:inline-block;min-width:76px;text-align:center;padding:4px 8px;border-radius:5px;font-size:11px;font-weight:700;color:#0b0e14}
+.b-critical{background:var(--cr);color:#fff}.b-high{background:#ff8a5c}.b-medium{background:var(--me)}.b-low{background:var(--lo)}
+.tg{position:relative;width:44px;height:24px;border-radius:999px;border:0;cursor:pointer;background:#3a4560}.tg::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}.tg[aria-checked="true"]{background:var(--ac)}.tg[aria-checked="true"]::after{left:23px}.tg:disabled{cursor:default;opacity:.85}
+.inp{background:#0b0e14;color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mu)}.ck{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--tx)}
+.sbar{height:8px;border-radius:5px;background:#232c3c;overflow:hidden;min-width:80px}.sbar i{display:block;height:100%}
+.why{font-size:12px;color:var(--mu)}.why b{color:var(--tx)}
+.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:12px;margin-bottom:12px}
+.empty{color:var(--mu);padding:20px;text-align:center}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999}
+@media (max-width:1100px){.cards{grid-template-columns:1fr 1fr}}@media (max-width:640px){.cards{grid-template-columns:1fr}.hero h1{font-size:26px}}
+</style></head><body><main>
+<div class="hero"><h1>Risk Prioritization</h1><p>Every device gets an explained 0-100 risk score from its open vulnerabilities and its context - internet exposure, end of support, sensitive data, business criticality, endpoint protection - so teams fix what matters first. An input the platform does not hold adds nothing and is shown as not measured.</p></div>
+<div id="err"></div>
+<div class="bar1"><span class="sm mu" id="meta"></span><span class="sp"></span><button type="button" class="btn" id="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button></div>
+<div class="cards">
+ <div class="card"><div class="t">Devices by profile</div><div id="pie"></div></div>
+ <div class="card"><div class="t">Overall Risk Score</div><div id="overall"></div></div>
+ <div class="card"><div class="t">Devices per risk band, daily</div><div id="trend"></div></div>
+ <div class="card"><div class="t">Risk factors (share of scored devices)</div><div class="fx" id="factors"></div></div>
+</div>
+<div class="panel"><h2><i class="ti ti-adjustments"></i>Risk profiles<span class="sp"></span><button type="button" class="btn pri" id="addp" hidden><i class="ti ti-plus"></i>Add profile</button></h2>
+ <div id="pform" hidden style="margin-bottom:12px"><div class="frm"><label class="f">Name<input class="inp" id="pn" maxlength="80"></label><label class="f">Description<input class="inp" id="pd" maxlength="300"></label><label class="f">Profile severity (business weight)<select class="inp" id="ps"><option>critical</option><option>high</option><option selected>medium</option><option>low</option></select></label></div>
+  <div class="frm" style="margin-top:10px"><div class="f sm mu">Device types<div class="ck" id="pt"></div></div><div class="f sm mu">OS families<div class="ck" id="po"></div></div></div>
+  <div class="bar1"><button type="button" class="btn pri" id="psave">Save profile</button><button type="button" class="btn" id="pcancel">Cancel</button><span class="sm mu" id="pmsg"></span></div></div>
+ <div id="profiles"></div></div>
+<div class="panel" id="ffp" hidden><h2><i class="ti ti-target-arrow"></i>Fix first<span class="sm mu" style="font-weight:400">ordered by risk x profile weight</span></h2><div id="ff"></div></div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',V=null;
+  var BC={critical:'#ef4f5f',medium:'#f59f00',low:'#3ccf91'},PC=['#3ccf91','#f59f00','#1e2a5a','#ef4f5f','#7aa2ff','#a371f7','#3ccfcf','#ff8ad8'];
+  var TYPES={server:'Server',workstation:'Workstation',laptop:'Laptop',network:'Network',storage:'Storage',printer:'Printer',phone:'Phone',mobile:'Mobile',appliance:'Appliance',virtual:'Virtual machine',other:'Other'},OSF={windows:'Windows',linux:'Linux',macos:'macOS',unix:'Unix',network:'Network OS',other:'Other'};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function pie(items){var tot=items.reduce(function(a,g){return a+g.devices;},0);if(!tot)return '<div class="empty sm">No devices in an active profile.</div>';var a0=-Math.PI/2,svg='<svg viewBox="0 0 120 120" width="100%" style="max-height:160px" role="img" aria-label="devices by profile">';
+    items.forEach(function(g,i){var a1=a0+2*Math.PI*g.devices/tot,large=a1-a0>Math.PI?1:0,p=function(a){return (60+52*Math.cos(a)).toFixed(2)+' '+(60+52*Math.sin(a)).toFixed(2);};svg+=items.length===1?'<circle cx="60" cy="60" r="52" fill="'+PC[0]+'"/>':'<path d="M60 60 L'+p(a0)+' A52 52 0 '+large+' 1 '+p(a1)+' Z" fill="'+PC[i%PC.length]+'"><title>'+esc(g.key+': '+g.devices)+'</title></path>';a0=a1;});
+    return svg+'</svg><div class="sm" style="margin-top:6px">'+items.map(function(g,i){return '<div style="display:flex;gap:6px;align-items:center"><i style="width:9px;height:9px;border-radius:2px;background:'+PC[i%PC.length]+';display:inline-block"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.key)+'</span><b>'+g.devices+'</b></div>';}).join('')+'</div>';}
+  function line(T){if(T.length<2)return '<div class="empty sm">The chart starts after two daily snapshots ('+T.length+' so far).</div>';var W=420,H=170,P=26,mx=Math.max(1,Math.max.apply(null,T.map(function(t){return Math.max(t.critical,t.medium,t.low);})));
+    var x=function(i){return P+(W-P-8)*i/(T.length-1);},y=function(v){return H-P-(H-P-10)*v/mx;};
+    var g='';for(var k=0;k<=4;k++){var vv=Math.round(mx*k/4);g+='<line x1="'+P+'" x2="'+(W-8)+'" y1="'+y(vv)+'" y2="'+y(vv)+'" stroke="#232c3c"/><text x="'+(P-5)+'" y="'+(y(vv)+4)+'" font-size="9" fill="#8c95a8" text-anchor="end">'+vv+'</text>';}
+    var pl=function(k){return '<polyline fill="none" stroke="'+BC[k]+'" stroke-width="2.2" points="'+T.map(function(t,i){return x(i).toFixed(1)+','+y(t[k]).toFixed(1);}).join(' ')+'"/>';};
+    return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="devices per risk band over time">'+g+pl('low')+pl('medium')+pl('critical')+'<text x="'+P+'" y="'+(H-8)+'" font-size="9" fill="#8c95a8">'+esc(T[0].day)+'</text><text x="'+(W-8)+'" y="'+(H-8)+'" font-size="9" fill="#8c95a8" text-anchor="end">'+esc(T[T.length-1].day)+'</text></svg><div class="lg"><span><i style="background:'+BC.critical+'"></i>Critical</span><span><i style="background:'+BC.medium+'"></i>Medium</span><span><i style="background:'+BC.low+'"></i>Low</span></div>';}
+  function draw(){var v=V;$('meta').textContent=v.scored+' device(s) scored'+(v.inactive?' · '+v.inactive+' in inactive profiles (not scored)':'')+' · updated '+String(v.generated_at).slice(11,16)+' UTC';
+    $('pie').innerHTML=pie(v.by_profile);
+    $('overall').innerHTML=v.scored?v.bands.map(function(b){return '<div class="big" style="color:'+BC[b.key]+'" title="'+esc(b.devices+' '+b.key+' device(s)')+'">'+esc(String(b.pct))+'%</div>';}).join('')+'<div class="sm mu" style="text-align:center;margin-top:6px">critical · medium · low devices<br>average risk '+esc(String(v.overall))+'/100</div>':'<div class="empty sm">No device scored yet - add assets to the register.</div>';
+    var L=v.learning,pw=L.per_week;$('trend').innerHTML=line(v.trend)+'<div class="sm mu" style="margin-top:4px"><i class="ti ti-sparkles" style="color:#a371f7"></i> '+(L.note?esc(L.note):esc('per week: critical '+(pw.critical>0?'+':'')+pw.critical+', medium '+(pw.medium>0?'+':'')+pw.medium+', low '+(pw.low>0?'+':'')+pw.low+' (least squares over '+L.days+' days)'))+'</div>';
+    $('factors').innerHTML=v.factors.map(function(f){return '<div class="r" title="'+esc(f.measured?f.devices+' device(s)':'not measured: the platform holds no data for this')+'"><span>'+esc(f.label)+'</span><b style="background:'+(f.measured?BC[f.level]:'#3a4560;color:#e8ecf3')+'">'+(f.measured?esc(String(f.pct))+'%':'n/a')+'</b></div>';}).join('')+'<div class="lg"><span><i style="background:'+BC.critical+'"></i>&ge;30%</span><span><i style="background:'+BC.medium+'"></i>10-29%</span><span><i style="background:'+BC.low+'"></i>&lt;10%</span></div>';
+    $('addp').hidden=!v.can_edit;
+    $('profiles').innerHTML='<div class="tw"><table><thead><tr><th>Profile name</th><th>Description</th><th>Active status</th><th>Profile severity</th><th>Device count</th><th>Average score</th>'+(v.can_edit?'<th></th>':'')+'</tr></thead><tbody>'+v.profiles.map(function(p){
+      var sev=v.can_edit?'<select class="inp" data-sev="'+esc(p.id)+'" aria-label="Severity of '+esc(p.name)+'">'+['critical','high','medium','low'].map(function(s){return '<option'+(s===p.severity?' selected':'')+'>'+s+'</option>';}).join('')+'</select>':'<span class="pill b-'+esc(p.severity)+'">'+esc(p.severity.toUpperCase())+'</span>';
+      return '<tr><td><b>'+esc(p.name)+'</b><div class="sm mu">'+esc(p.catchall?'every other device':[].concat(p.types.map(function(t){return TYPES[t]||t;}),p.os.map(function(o){return OSF[o]||o;})).join(', '))+'</div></td><td class="mu">'+esc(p.description)+'</td><td><button type="button" class="tg" role="switch" aria-checked="'+p.active+'" aria-label="'+esc(p.name)+' active" data-tg="'+esc(p.id)+'"'+(v.can_edit?'':' disabled')+'></button></td><td>'+sev+'</td><td>'+p.devices+'</td><td>'+(p.average_score==null?'<span class="mu">—</span>':esc(String(p.average_score)))+'</td>'+(v.can_edit?'<td>'+(p.catchall?'':'<button type="button" class="btn no" data-delp="'+esc(p.id)+'" aria-label="Delete '+esc(p.name)+'"><i class="ti ti-trash"></i></button>')+'</td>':'')+'</tr>';}).join('')+'</tbody></table></div>';
+    $('ffp').hidden=!v.can_see_devices;if(!v.can_see_devices)return;
+    var F=v.fix_first||[];$('ff').innerHTML=F.length?'<div class="tw"><table><thead><tr><th>Device</th><th>Profile</th><th>Risk</th><th>Band</th><th>Why</th></tr></thead><tbody>'+F.map(function(d){var pn=(v.profiles.find(function(p){return p.id===d.profile;})||{}).name||d.profile;
+      return '<tr><td><b>'+esc(d.name)+'</b><div class="sm mu">'+esc((d.type||'')+' · '+d.os)+'</div></td><td>'+esc(pn)+'</td><td style="min-width:140px"><div style="display:flex;gap:8px;align-items:center"><div class="sbar" style="flex:1"><i style="width:'+d.score+'%;background:'+BC[d.band]+'"></i></div><b>'+d.score+'</b></div></td><td><span class="pill b-'+esc(d.band)+'">'+esc(d.band.toUpperCase())+'</span></td><td class="why">'+d.why.map(function(w){return '<b>+'+w.points+'</b> '+esc(w.text);}).join('<br>')+(d.not_measured.length?'<br><i>not measured: '+esc(d.not_measured.join('; '))+'</i>':'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No device carries risk yet.</div>';}
+  function load(){return req('GET','/risk-prioritization').then(function(v){$('err').innerHTML='';V=v;draw();},function(e){$('err').innerHTML='<div class="err"><b>Risk Prioritization could not load.</b> '+esc(e.message)+(e.status===404?' - update IT Asset Management (engine/vuln-intel.js).':'')+'</div>';});}
+  function put(id,b,msg){return req('PUT','/risk-prioritization/profiles/'+encodeURIComponent(id),b).then(function(){toast(msg);return load();},function(e){toast(e.message);load();});}
+  $('pt').innerHTML=Object.keys(TYPES).map(function(k){return '<label><input type="checkbox" value="'+k+'"> '+esc(TYPES[k])+'</label>';}).join('');
+  $('po').innerHTML=Object.keys(OSF).map(function(k){return '<label><input type="checkbox" value="'+k+'"> '+esc(OSF[k])+'</label>';}).join('');
+  document.addEventListener('change',function(ev){var t=ev.target;if(t.hasAttribute&&t.hasAttribute('data-sev'))put(t.getAttribute('data-sev'),{severity:t.value},'Profile severity saved');});
+  document.addEventListener('click',function(ev){var b=ev.target.closest('button');if(!b)return;
+    if(b.id==='refresh'){load();return;}
+    if(b.hasAttribute('data-tg')){var on=b.getAttribute('aria-checked')!=='true';put(b.getAttribute('data-tg'),{active:on},on?'Profile active':'Profile inactive - its devices are no longer scored');return;}
+    if(b.hasAttribute('data-delp')){if(b.getAttribute('data-sure')){req('POST','/risk-prioritization/profiles/'+encodeURIComponent(b.getAttribute('data-delp'))+'/delete').then(function(){toast('Profile deleted');load();},function(e){toast(e.message);});}else{b.setAttribute('data-sure','1');b.innerHTML='Delete?';}return;}
+    if(b.id==='addp'){$('pform').hidden=false;$('pn').focus();return;}
+    if(b.id==='pcancel'){$('pform').hidden=true;return;}
+    if(b.id==='psave'){var vals=function(id){return [].slice.call(document.querySelectorAll('#'+id+' input:checked')).map(function(x){return x.value;});};
+      req('POST','/risk-prioritization/profiles',{name:$('pn').value.trim(),description:$('pd').value.trim(),severity:$('ps').value,types:vals('pt'),os:vals('po'),active:true}).then(function(){$('pform').hidden=true;$('pn').value='';$('pd').value='';toast('Profile added');load();},function(e){$('pmsg').textContent=e.message;});}});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(e){/* not signed in: viewer */}load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

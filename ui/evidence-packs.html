@@ -1,0 +1,129 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Regulator Evidence Packs</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-xlsx.js"></script>
+<style>
+[hidden]{display:none!important}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.fp{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;word-break:break-all}
+.au-num{font-size:20px;font-weight:600}.au-lbl{font-size:12px;color:var(--tblr-secondary)}
+.miss{margin:0;padding-left:16px;font-size:12px}.ev{font-size:12px}.ev+.ev{margin-top:4px}
+td{vertical-align:top}
+@media print{.d-print-none,#zyb-err,.toast-zyb{display:none!important}body{background:#fff!important;color:#000!important}.card{break-inside:avoid;border:1px solid #999!important}a{color:#000!important;text-decoration:none}}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Audit & assurance · monthly</div><h2 class="page-title">Regulator Evidence Packs</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2" id="tools"><select class="form-select w-auto" id="fw" aria-label="Framework to build"><option value="all">All frameworks</option></select><button type="button" class="btn btn-primary" id="build"><i class="ti ti-package me-1"></i>Build now</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3 d-print-none" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Every month the platform builds a frozen evidence pack per framework - SAMA CSF, Insurance Authority, NCA ECC, PDPL and NDMO - from the registers as they stand, with a SHA-256 fingerprint, so an auditor's request is answered from a pack that already exists. Each control shows its result as the register holds it, the evidence the platform has (record counts, test runs, policies, evidence files' names and hashes - never the files themselves), the owner and what is missing. A compliance reviewer (an administrator who did not build the pack) signs it off; a signed pack cannot change. The last 24 packs per framework are kept.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div id="body"><div class="card"><div class="card-body text-secondary">Loading…</div></div></div>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var esc=function(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var $=function(id){return document.getElementById(id);};
+  var L=null, PK=null, CMP=null, FILT='', CF='all', CQ='';
+  var ST={implemented:['implemented','green'],partial:['partial','yellow'],not_implemented:['not implemented','red'],not_applicable:['not applicable','secondary'],not_tested:['not tested','orange']};
+  var EVS={current:['current','green'],due_soon:['due soon','yellow'],stale:['expired','red'],retired:['retired','secondary']};
+  var INT={verified:['hash verified','green'],mismatch:['HASH MISMATCH','red'],missing:['file missing','red'],link:['link - no hash','secondary']};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported below with the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function why(e){
+    if(e&&e.status===403&&/requires role/.test(e.message||''))return 'Regulator evidence packs name the owner of every control, so they need the operator role (sign-off needs an administrator). An administrator can change your role in Identity & Sign-in → Users.';
+    if(e&&e.status===404&&/HTTP 404/.test(e.message||''))return 'The server part of this page is not installed or not running yet. Run the update from the PC: git pull origin main, then scripts\\update-platform.ps1.';
+    return (e&&e.message)||'request failed';}
+  function badge(t,c){return '<span class="badge bg-'+(c||'secondary')+'-lt">'+esc(t)+'</span>';}
+  function st(s){var x=ST[s]||[s,'secondary'];return badge(x[0],x[1]);}
+  function tile(v,l,cls){return '<div class="col-6 col-md-4 col-xl"><div class="card card-sm"><div class="card-body"><div class="au-num'+(cls?' '+cls:'')+'">'+esc(v===null||v===undefined?'—':v)+'</div><div class="au-lbl">'+esc(l)+'</div></div></div></div>';}
+  function toast(t){var d=document.createElement('div');d.className='toast-zyb';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  var dt=function(v){return v?String(v).replace('T',' ').replace(/:\d\d(\.\d+)?Z$|Z$/,'').slice(0,16):'—';};
+  function fail(e){$('kpis').innerHTML='';$('body').innerHTML='<div class="card"><div class="card-body"><div class="alert alert-warning mb-0" id="refused">'+esc(why(e))+'</div></div></div>';if(e&&e.status===403)$('tools').hidden=true;}
+  function load(){return req('GET','/evidence-packs').then(function(v){L=v;$('tools').hidden=false;
+      var fw=$('fw'),cur=fw.value;fw.innerHTML='<option value="all">All frameworks</option>'+v.frameworks.map(function(f){return '<option value="'+esc(f.key)+'">'+esc(f.short)+'</option>';}).join('');fw.value=cur||'all';
+      $('build').hidden=!v.can.build;$('fw').hidden=!v.can.build;
+      kpis();if(PK)return openPack(PK.id);list();}).catch(fail);}
+  function kpis(){$('kpis').innerHTML=L.frameworks.map(function(f){var p=f.latest,s=p&&p.summary;
+    return '<div class="col-sm-6 col-lg"><div class="card card-sm"><div class="card-body"><div class="d-flex align-items-center mb-1"><b class="me-auto">'+esc(f.short)+'</b>'+(!f.installed?badge('not installed','secondary'):p?(p.signoff?badge('signed off','green'):badge('awaiting sign-off','orange')):badge('no pack yet','orange'))+'</div>'
+      +(p?'<div class="au-num">'+esc(s&&s.implemented_pct!=null?s.implemented_pct+' %':'—')+'</div><div class="au-lbl">'+esc(s?'implemented of applicable · '+s.controls+' controls':(p.installed?'':'module not installed'))+'</div><div class="mut mt-1">'+esc(p.period)+' · '+esc(p.id)+(f.this_month?'':' · this month not built yet')+'</div>'
+        :'<div class="mut">'+esc(f.installed?'No pack built yet - press Build now or wait for the monthly job.':'The module is not installed on this server.')+'</div>')+'</div></div></div>';}).join('');}
+  function list(){PK=null;CMP=null;var rows=L.packs.filter(function(p){return !FILT||p.framework===FILT;});
+    $('body').innerHTML='<section class="card"><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">Packs ('+esc(rows.length)+')</h3><select class="form-select form-select-sm w-auto d-print-none" id="filt" aria-label="Show framework"><option value="">Every framework</option>'
+      +L.frameworks.map(function(f){return '<option value="'+esc(f.key)+'"'+(FILT===f.key?' selected':'')+'>'+esc(f.short)+'</option>';}).join('')+'</select></div>'
+      +(L.job.last_error?'<div class="alert alert-warning m-3 mb-0">The last monthly run could not build every pack: '+esc(L.job.last_error)+'</div>':'')
+      +(rows.length?'<div class="table-responsive"><table class="table table-vcenter card-table table-sm"><thead><tr><th>Pack</th><th>Framework</th><th>Period</th><th>Built</th><th>Implemented</th><th>Fingerprint (SHA-256)</th><th>Sign-off</th><th></th></tr></thead><tbody>'
+        +rows.map(function(p){var s=p.summary;return '<tr data-pack="'+esc(p.id)+'"><td><b>'+esc(p.id)+'</b></td><td>'+esc(p.name)+(p.installed?'':' '+badge('module not installed','secondary'))+'</td><td>'+esc(p.period)+'</td><td>'+esc(dt(p.built_at))+'<div class="mut">'+esc(p.built_by)+' · '+esc(p.kind)+'</div></td>'
+          +'<td>'+(s?esc((s.implemented_pct==null?'—':s.implemented_pct+' %')+' ('+s.counts.implemented+' / '+s.applicable+')'):'—')+'</td><td class="fp">'+esc(p.sha256.slice(0,16))+'…</td><td>'+(p.signoff?badge('signed','green')+'<div class="mut">'+esc(p.signoff.by)+' · '+esc(dt(p.signoff.at))+'</div>':badge('not signed','secondary'))+'</td>'
+          +'<td><button type="button" class="btn btn-sm" data-act="open" data-id="'+esc(p.id)+'">Open</button></td></tr>';}).join('')+'</tbody></table></div>'
+        :'<div class="card-body text-secondary">No pack yet. An operator presses Build now; otherwise the monthly job builds one per framework at the start of each month.</div>')+'</section>';}
+  function openPack(id){return req('GET','/evidence-packs/'+encodeURIComponent(id)).then(function(p){PK=p;if(CMP&&CMP.pack.id!==p.id)CMP=null;drawPack();}).catch(function(e){PK=null;toast(why(e));list();});}
+  function kv(rows){return '<div class="datagrid">'+rows.map(function(r){return '<div class="datagrid-item"><div class="datagrid-title">'+esc(r[0])+'</div><div class="datagrid-content">'+r[1]+'</div></div>';}).join('')+'</div>';}
+  function drawPack(){var p=PK,s=p.summary,I=p.integrity;
+    var h='<section class="card mb-3" id="pack" data-pack="'+esc(p.id)+'"><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">'+esc(p.id)+' · '+esc(p.name)+'</h3>'
+      +(I.ok?badge('fingerprint intact','green'):badge('DOES NOT MATCH ITS FINGERPRINT','red'))+' '+(p.signoff?badge('signed off','green'):badge('not signed off','orange'))+'</div><div class="card-body">'
+      +'<div class="d-flex flex-wrap gap-2 mb-3 d-print-none"><button type="button" class="btn" data-act="back"><i class="ti ti-arrow-left me-1"></i>All packs</button><button type="button" class="btn" data-act="compare"'+(p.previous?'':' disabled')+'><i class="ti ti-arrows-diff me-1"></i>Compare with '+esc(p.previous?p.previous.id:'the previous month')+'</button>'
+      +'<button type="button" class="btn" data-act="xlsx"><i class="ti ti-file-spreadsheet me-1"></i>Export to Excel</button><button type="button" class="btn" data-act="print"><i class="ti ti-printer me-1"></i>Print</button></div>'
+      +kv([['Period',esc(p.period)],['Built',esc(dt(p.built_at))+' by '+esc(p.built_by)+' ('+esc(p.kind)+')'],['SHA-256 fingerprint','<span class="fp" id="sha">'+esc(p.sha256)+'</span>'],['Integrity',esc(I.why)],['Previous pack',esc(p.prev?p.prev.id:'none')],['Source',esc(p.source)],
+        ['Register',esc(p.register?((p.register.status||'—').replace(/_/g,' ')+(p.register.score!=null?' · score '+p.register.score:'')):'—')],['Signed off',p.signoff?esc(p.signoff.by+' · '+dt(p.signoff.at)+(p.signoff.note?' · '+p.signoff.note:'')):esc('not yet')]])
+      +'</div></section>';
+    if(!p.installed)h+='<div class="alert alert-warning" id="notinst">'+esc(p.reason)+'</div>';
+    else h+='<div class="row row-cards mb-3">'+tile(s.implemented_pct==null?'—':s.implemented_pct+' %','Implemented of applicable')+tile(s.counts.implemented,'Implemented','text-green')+tile(s.counts.partial,'Partial')+tile(s.counts.not_implemented,'Not implemented',s.counts.not_implemented?'text-red':'')
+      +tile(s.counts.not_tested,'Not tested',s.counts.not_tested?'text-orange':'')+tile(s.counts.not_applicable,'Not applicable')+tile(s.evidence.items,'Evidence files')+tile(s.without_owner,'Without an owner',s.without_owner?'text-orange':'')+'</div>';
+    h+='<div id="cmp"></div>';
+    if(p.installed)h+=live(p.live)+controls();
+    h+='<section class="card mt-3 d-print-none" id="signbox"><div class="card-header"><h3 class="card-title">Sign-off by the compliance reviewer</h3></div><div class="card-body">'
+      +(p.signoff?'<p class="mb-0">Signed off by <b>'+esc(p.signoff.by)+'</b> on '+esc(dt(p.signoff.at))+' (fingerprint '+esc(p.signoff.sha256.slice(0,16))+'…). A signed pack cannot change.</p>'
+        :p.can_sign?'<label class="form-check"><input type="checkbox" class="form-check-input" id="stmt"><span class="form-check-label">I reviewed this evidence pack as the compliance reviewer. It reflects the registers as they stood when it was built; I did not build it.</span></label><div class="mb-2"><label class="form-label" for="signnote">Note (optional)</label><input class="form-control" id="signnote" maxlength="1000"></div><button type="button" class="btn btn-success" data-act="sign"><i class="ti ti-signature me-1"></i>Sign off</button> <span class="small text-secondary" id="signmsg"></span>'
+        :'<p class="text-secondary mb-0" id="signwhy">'+esc(p.sign_block||'')+'</p>')+'</div></section>';
+    $('body').innerHTML=h;if(CMP)drawCmp();}
+  function live(v){if(!v)return '';var parts=[];
+    if(v.pillars)parts.push(['Evidence pillars',v.pillars.map(function(x){return x.name+': '+x.connected+' of '+x.automated+' automated connected, '+x.ok+' met, '+x.gaps+' gap(s)';})]);
+    if(v.sources)parts.push(['Sources',v.sources.map(function(x){return x.id+': '+(x.connected?'connected':'not connected');})]);
+    if(v.resilience)parts.push(['Operational resilience',v.resilience.areas?v.resilience.areas.map(function(x){return x.name+': '+(x.measured?x.score+' - ':'not measured - ')+x.why;}):[v.resilience.note||v.resilience.error||'']]);
+    if(v.record_counts)parts.push(['Register record counts',Object.keys(v.record_counts).length?Object.keys(v.record_counts).map(function(k){return k+': '+v.record_counts[k];}):['no records yet']]);
+    if(v.sama_assessment)parts.push(['SAMA assessment runs',[v.sama_assessment.runs+' daily run(s)'+(v.sama_assessment.last?', last '+v.sama_assessment.last:'')]]);
+    if(v.control_monitoring)parts.push(['Control monitoring',v.control_monitoring.installed===false?['not installed']:v.control_monitoring.tests?[(v.control_monitoring.run||'')+' '+dt(v.control_monitoring.at)].concat(v.control_monitoring.tests.map(function(t){return t.name+': '+t.status+(t.exceptions?' ('+t.exceptions+' exception(s))':'');})):[v.control_monitoring.note||'no run yet']]);
+    if(v.audit_log)parts.push(['Audit-log chain',[v.audit_log.ok?'intact ('+v.audit_log.checked+' records checked)':'BROKEN']]);
+    return '<section class="card mb-3"><div class="card-header"><h3 class="card-title">Live evidence when the pack was built</h3></div><div class="card-body"><div class="row g-3">'+parts.map(function(x){return '<div class="col-md-6 col-xl-4"><div class="fw-bold small mb-1">'+esc(x[0])+'</div><ul class="miss">'+x[1].map(function(l){return '<li>'+esc(l)+'</li>';}).join('')+'</ul></div>';}).join('')+'</div></div></section>';}
+  function controls(){var all=PK.controls,q=CQ.toLowerCase();
+    var rows=all.filter(function(c){return (CF==='all'||(CF==='missing'?c.missing.length:c.status===CF))&&(!q||(c.ref+' '+c.title+' '+c.owner).toLowerCase().indexOf(q)>=0);});
+    return '<section class="card" id="controls"><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">Controls ('+esc(rows.length)+' of '+esc(all.length)+')</h3><select class="form-select form-select-sm w-auto d-print-none" id="cf" aria-label="Show result">'
+      +[['all','Every result'],['missing','Something missing'],['implemented','Implemented'],['partial','Partial'],['not_implemented','Not implemented'],['not_tested','Not tested'],['not_applicable','Not applicable']].map(function(o){return '<option value="'+o[0]+'"'+(CF===o[0]?' selected':'')+'>'+esc(o[1])+'</option>';}).join('')
+      +'</select><input class="form-control form-control-sm w-auto d-print-none" id="cq" placeholder="Search reference, title, owner" aria-label="Search" value="'+esc(CQ)+'"></div>'
+      +'<div class="table-responsive"><table class="table card-table table-sm"><thead><tr><th>Reference</th><th>Control</th><th>Result</th><th>Evidence</th><th>Owner</th><th>Last tested</th><th>What is missing</th></tr></thead><tbody>'
+      +rows.map(function(c){return '<tr data-ref="'+esc(c.ref)+'"><td><b>'+esc(c.ref)+'</b>'+(c.ref_doc?'<div class="mut">'+esc(c.ref_doc)+'</div>':'')+'</td><td>'+esc(c.title)+'<div class="mut">'+esc(c.group)+'</div></td><td>'+st(c.status)+'<div class="mut">register: '+esc(String(c.register_result||'').replace(/_/g,' '))+'</div></td>'
+        +'<td>'+evid(c)+'</td><td>'+(c.owner?esc(c.owner)+'<div class="mut">'+esc(c.owner_source)+'</div>':'<span class="text-secondary">—</span>')+'</td><td>'+(c.tested?esc(dt(c.tested.at))+'<div class="mut">'+esc(c.tested.how)+'</div>':'—')+'</td>'
+        +'<td>'+(c.missing.length?'<ul class="miss">'+c.missing.map(function(m){return '<li>'+esc(m)+'</li>';}).join('')+'</ul>':badge('nothing missing','green'))+'</td></tr>';}).join('')+'</tbody></table></div></section>';}
+  function evid(c){var h='';
+    if(c.why&&c.automated)h+='<div class="ev">'+esc((c.status==='not_tested'?'':'automated check: ')+c.why)+'</div>';
+    if(c.confirmation)h+='<div class="ev">confirmation: '+esc(c.confirmation.status.replace(/_/g,' '))+(c.confirmation.evidence?' - '+esc(c.confirmation.evidence):'')+'<div class="mut">recorded by '+esc(c.confirmation.recorded_by)+(c.confirmation.approved_by?', approved by '+esc(c.confirmation.approved_by)+' '+esc(dt(c.confirmation.approved_at)):', not approved yet')+'</div></div>';
+    c.evidence.forEach(function(e){var s=EVS[e.state]||[e.state,'secondary'],i=INT[e.integrity]||[e.integrity,'secondary'];h+='<div class="ev"><b>'+esc(e.id)+'</b> '+esc(e.title)+' '+badge(s[0],s[1])+' '+badge(i[0],i[1])+'<div class="mut">'+esc(e.file)+(e.next_due?' · due '+esc(e.next_due):'')+'</div>'+(e.sha256?'<div class="fp">'+esc(e.sha256)+'</div>':'')+'</div>';});
+    (c.policies||[]).forEach(function(x){h+='<div class="ev">policy '+esc(x.doc_id)+' '+esc(x.title)+'<div class="mut">'+esc(x.status)+(x.score!=null?' · '+esc(x.score)+' / 100':'')+'</div></div>';});
+    (c.actions||[]).forEach(function(a){h+='<div class="ev">action '+esc(a.id)+' · '+esc(a.status.replace(/_/g,' '))+(a.due?' · due '+esc(a.due):'')+'</div>';});
+    return h||'<span class="text-secondary">—</span>';}
+  function drawCmp(){var c=CMP,el=$('cmp');if(!el)return;
+    var tb=function(title,rows,cols,id){return '<div class="col-lg-6" id="'+id+'"><div class="fw-bold mb-1">'+esc(title)+' ('+esc(rows.length)+')</div>'+(rows.length?'<table class="table table-sm"><tbody>'+rows.map(function(r){return '<tr>'+cols.map(function(f){return '<td>'+f(r)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>':'<div class="text-secondary small mb-2">none</div>')+'</div>';};
+    var mv=[function(r){return '<b>'+esc(r.ref)+'</b>';},function(r){return esc(r.title);},function(r){return st(r.from)+' → '+st(r.to);}];
+    var evc=[function(r){return '<b>'+esc(r.id)+'</b> '+esc(r.title);},function(r){return esc(r.control);},function(r){return esc(r.was?(EVS[r.was]||[r.was])[0]+' → '+((EVS[r.now]||[r.now])[0]):r.integrity?'integrity: '+r.integrity:'hash changed');}];
+    el.innerHTML='<section class="card mb-3" id="compare"><div class="card-header"><h3 class="card-title">'+esc(c.previous?'Compared with '+c.previous.id+' ('+c.previous.period+')':'Nothing to compare with')+'</h3></div><div class="card-body">'
+      +(c.previous?'<div class="mb-2">'+esc((c.delta.implemented_pct!=null?'Implemented '+(c.delta.implemented_pct>=0?'+':'')+c.delta.implemented_pct+' points':'')+' · '+c.worse.length+' worse · '+c.better.length+' better · '+c.evidence_expired.length+' evidence expired')+'</div><div class="row g-3">'
+        +tb('Got worse',c.worse,mv,'worse')+tb('Got better',c.better,mv,'better')+tb('Changed',c.changed,mv,'changed')+tb('Evidence expired',c.evidence_expired,evc,'expired')+tb('Evidence changed',c.evidence_changed,evc,'evchanged')
+        +tb('New evidence',c.evidence_new,[function(r){return '<b>'+esc(r.id)+'</b> '+esc(r.title);},function(r){return esc(r.control);}],'evnew')
+        +tb('Controls added / removed',c.added.map(function(x){return Object.assign({k:'added'},x);}).concat(c.removed.map(function(x){return Object.assign({k:'removed'},x);})),[function(r){return '<b>'+esc(r.ref)+'</b>';},function(r){return esc(r.title);},function(r){return esc(r.k);}],'addrem')+'</div>'
+        :'<p class="text-secondary mb-0">'+esc(c.note||'')+'</p>')+'</div></section>';}
+  function xlsx(){req('GET','/evidence-packs/'+encodeURIComponent(PK.id)+'/export').then(function(r){window.zybXlsx.download(r.filename,r.sheets,{title:r.title,by:L.me.user,filter:'the whole pack '+PK.id+' (SHA-256 '+PK.sha256+')'});toast('Exported '+r.filename);}).catch(function(e){toast(why(e));});}
+  document.addEventListener('click',function(ev){var b=ev.target.closest('[data-act]');if(!b)return;var a=b.getAttribute('data-act');
+    if(a==='open'){openPack(b.getAttribute('data-id'));return;}
+    if(a==='back'){PK=null;CMP=null;list();return;}
+    if(a==='compare'){req('GET','/evidence-packs/'+encodeURIComponent(PK.id)+'/compare').then(function(c){CMP=c;drawCmp();var el=$('compare');if(el&&el.scrollIntoView)el.scrollIntoView({block:'nearest'});}).catch(function(e){toast(why(e));});return;}
+    if(a==='xlsx'){xlsx();return;}
+    if(a==='print'){window.print();return;}
+    if(a==='sign'){if(!$('stmt').checked){$('signmsg').textContent='Tick the statement first.';return;}b.disabled=true;var note=$('signnote').value.trim(),body={confirm:true};if(note)body.note=note;
+      req('POST','/evidence-packs/'+encodeURIComponent(PK.id)+'/sign',body).then(function(p){toast('Signed off: '+p.id);PK=p;load();}).catch(function(e){b.disabled=false;$('signmsg').textContent=why(e);});return;}});
+  document.addEventListener('change',function(ev){var t=ev.target;if(t.id==='filt'){FILT=t.value;list();}if(t.id==='cf'){CF=t.value;drawPack();}});
+  document.addEventListener('input',function(ev){var t=ev.target;if(t.id==='cq'){CQ=t.value;var pos=t.selectionStart;drawPack();var n=$('cq');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(e){/* not every input type keeps a caret */}}}});
+  $('build').addEventListener('click',function(){var b=this,fw=$('fw').value;b.disabled=true;toast('Building… this reads every register and can take a minute');
+    req('POST','/evidence-packs/build',{framework:fw}).then(function(r){toast('Built '+r.built.length+' pack(s)'+(r.failed.length?' · not built: '+r.failed.map(function(f){return f.framework+' ('+f.error+')';}).join('; '):''));PK=null;CMP=null;return load();}).catch(function(e){toast(why(e));}).then(function(){b.disabled=false;});});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

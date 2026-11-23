@@ -1,0 +1,103 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Renewals &amp; Expiry</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Renewals & Expiry over /api/itam/expiry: one calendar of licences, support contracts, certificates, domains, hosting, app secrets,
+     warranties and Cisco coverage - each read from the module that owns it - ranked by an itemised risk (lead time learned from
+     verified renewals), with owner / in progress / renewed / not renewing tracked by a person. "Renewed" stays a claim until the owning
+     module shows the new date. 12-month forecast and expiry storms; costs for operators and above. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:5px 11px;cursor:pointer}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px 14px}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:24px;font-weight:800}.t .s{font-size:11.5px;color:var(--d-mute)}.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:14px;margin-bottom:12px}.card h2{margin:0 0 10px;font-size:15px}
+.cal{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}@media(max-width:1000px){.cal{grid-template-columns:repeat(6,1fr)}}
+.m{background:var(--d-raise);border:1px solid var(--d-line);border-radius:10px;padding:8px;cursor:pointer;color:inherit;font:inherit;text-align:left}.m.on{outline:2px solid var(--acc)}.m b{display:block;font-size:20px}.m .h{height:5px;border-radius:3px;background:#5b8def;margin-top:4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.chip{font:600 12px Inter,system-ui,sans-serif;border:1px solid var(--d-line);background:transparent;color:var(--d-mute);border-radius:999px;padding:4px 10px;cursor:pointer}.chip.on{color:var(--d-ink);background:var(--d-raise);border-color:var(--acc)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);font-size:13px;vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:11.5px;text-transform:uppercase}
+tr.rw{cursor:pointer}tr.rw:hover{background:rgba(255,255,255,.03)}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:rgba(141,176,255,.16);color:var(--info)}.pill.bad{background:rgba(255,123,128,.16);color:var(--bad)}.pill.warn{background:rgba(245,181,68,.16);color:var(--warn)}.pill.ok{background:rgba(95,210,122,.16);color:var(--ok)}
+.risk{display:inline-block;min-width:34px;text-align:center;border-radius:7px;padding:2px 6px;font-weight:800;font-size:12px}
+.inp{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:inherit;width:100%}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}.f label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--d-mute)}
+.empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad);font-size:13px;margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+.drw{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--d-panel);border-left:1px solid var(--d-line);padding:18px;overflow:auto;z-index:50;box-shadow:-10px 0 30px rgba(0,0,0,.4)}
+a.lk{color:var(--info);text-decoration:none}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT assets · everything that expires · one calendar</div><h1>Renewals &amp; Expiry</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn" id="rf">⟳</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div class="card"><h2>Next 12 months <span class="mut sm" id="calh"></span></h2><div class="cal" id="cal"></div><div class="sm mut" id="storms" style="margin-top:8px"></div></div>
+<div class="card"><div class="chips" id="kinds"></div><div class="chips" id="states"></div><input class="inp" id="q" placeholder="Search…" aria-label="Search" style="max-width:320px;margin-bottom:8px"><div id="list"></div></div>
+<div class="card"><h2>Lead time per kind</h2><div id="lead"></div></div>
+<aside class="drw" id="drw" hidden></aside>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, KIND = '', STATE = 'open', MON = '';
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var money = function (n) { return n == null ? '–' : Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  var SC = { expired: 'bad', due: 'warn', claimed: 'warn', renewed: 'ok', 'not renewing': '', upcoming: '', later: '' };
+  var rc = function (r) { return r >= 60 ? 'background:rgba(255,123,128,.2);color:var(--bad)' : r >= 30 ? 'background:rgba(245,181,68,.2);color:var(--warn)' : 'background:rgba(95,210,122,.14);color:var(--ok)'; };
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s) + '</div></div>'; }
+  function load() { return req('GET', '/expiry').then(function (v) { V = v; draw(); if (!$('drw').hidden) openDrawer($('drw').dataset.key); }).catch(function (e) { $('kp').innerHTML = '<div class="card" style="grid-column:1/-1"><div class="empty">' + esc(e.status === 404 ? 'Renewals & Expiry is not on this platform yet - run the update.' : 'Not reachable: ' + e.message) + '</div></div>'; }); }
+  function draw() {
+    var K = V.kpis; $('up').textContent = V.items.length + ' items · read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    $('kp').innerHTML = tile('Expired', K.expired, 'not renewed in time', K.expired ? 'bad' : 'ok') + tile('Inside lead time', K.due, 'renew now', K.due ? 'warn' : 'ok') + tile('Next 30 days', K.d30, K.d90 + ' in 90 days') + tile('High risk', K.high_risk, 'risk 60+', K.high_risk ? 'bad' : '')
+      + tile('No owner', K.no_owner, 'expiring within 90 days', K.no_owner ? 'warn' : 'ok') + tile('Claimed, not verified', K.claimed, 'the source has not shown the new date', K.claimed ? 'warn' : '') + (V.costs_visible ? tile('Cost next 90 days', money(K.cost_90), 'from known costs') : '');
+    var mx = Math.max.apply(null, V.months.map(function (m) { return m.count; }).concat([1]));
+    $('cal').innerHTML = V.months.map(function (m) { var d = new Date(m.month + '-01T00:00:00Z'); return '<button type="button" class="m' + (MON === m.month ? ' on' : '') + '" data-mon="' + m.month + '"><span class="sm mut">' + d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit', timeZone: 'UTC' }) + '</span><b>' + m.count + '</b>' + (V.costs_visible && m.cost ? '<span class="sm mut">' + money(m.cost) + (m.unpriced ? ' +' + m.unpriced + ' ?' : '') + '</span>' : '') + '<div class="h" style="width:' + (m.count / mx * 100) + '%"></div></button>'; }).join('');
+    $('calh').textContent = MON ? '· showing ' + MON + ' (click again to clear)' : '· click a month to filter';
+    $('storms').innerHTML = V.storms.length ? '⚡ Expiry storms: ' + V.storms.map(function (s) { return '<b>' + s.count + '</b> in the week of ' + esc(s.week_of); }).join(' · ') + ' - plan these renewals early.' : '';
+    $('kinds').innerHTML = '<button type="button" class="chip' + (!KIND ? ' on' : '') + '" data-kind="">All kinds</button>' + V.by_kind.map(function (k) { return '<button type="button" class="chip' + (KIND === k.kind ? ' on' : '') + '" data-kind="' + k.kind + '">' + esc(k.label) + ' ' + k.count + (k.due ? ' · <span style="color:var(--warn)">' + k.due + ' due</span>' : '') + '</button>'; }).join('');
+    $('states').innerHTML = [['open', 'Open'], ['expired', 'Expired'], ['due', 'Due'], ['claimed', 'Claimed'], ['renewed', 'Renewed'], ['all', 'Everything']].map(function (s) { return '<button type="button" class="chip' + (STATE === s[0] ? ' on' : '') + '" data-state="' + s[0] + '">' + s[1] + '</button>'; }).join('');
+    $('lead').innerHTML = '<table><thead><tr><th>Kind</th><th>Items</th><th>Lead time</th><th>Basis</th></tr></thead><tbody>' + V.by_kind.map(function (k) { return '<tr><td>' + esc(k.label) + '</td><td>' + k.count + '</td><td><b>' + k.lead_days + ' days</b> before expiry</td><td class="sm mut">' + (k.lead_learned ? 'learned from ' + k.lead_n + ' verified renewals' : 'default (needs 3 verified renewals; ' + k.lead_n + ' so far)') + '</td></tr>'; }).join('') + '</tbody></table>';
+    drawList();
+  }
+  function drawList() {
+    var q = $('q').value.trim().toLowerCase();
+    var L = V.items.filter(function (x) { return (!KIND || x.kind === KIND) && (!MON || x.expires.slice(0, 7) === MON) && (STATE === 'all' || (STATE === 'open' ? ['renewed', 'not renewing'].indexOf(x.state) < 0 && x.days_left <= 365 : x.state === STATE)) && (!q || (x.name + ' ' + (x.owner || '')).toLowerCase().indexOf(q) >= 0); });
+    $('list').innerHTML = L.length ? '<table><thead><tr><th>Risk</th><th>Item</th><th>Kind</th><th>Expires</th><th>State</th><th>Owner</th>' + (V.costs_visible ? '<th style="text-align:right">Cost</th>' : '') + '</tr></thead><tbody>' + L.slice(0, 400).map(function (x) {
+      return '<tr class="rw" data-key="' + esc(x.key) + '"><td><span class="risk" style="' + rc(x.risk) + '">' + x.risk + '</span></td><td><b>' + esc(x.name) + '</b><div class="sm mut">' + esc(x.source) + '</div></td><td>' + esc(x.kind_label) + '</td><td>' + esc(x.expires) + '<div class="sm ' + (x.days_left < 0 ? '' : 'mut') + '"' + (x.days_left < 0 ? ' style="color:var(--bad)"' : '') + '>' + (x.days_left < 0 ? -x.days_left + ' days ago' : 'in ' + x.days_left + ' days') + '</div></td><td><span class="pill ' + (SC[x.state] || '') + '">' + esc(x.state) + '</span></td><td>' + (x.owner ? esc(x.owner) : '<span class="sm" style="color:var(--warn)">no owner</span>') + '</td>' + (V.costs_visible ? '<td style="text-align:right">' + money(x.cost) + '</td>' : '') + '</tr>'; }).join('') + '</tbody></table>'
+      : '<div class="empty">' + (V.items.length ? 'Nothing matches.' : 'No expiry date known yet - licences, contracts, certificates and domains appear here as soon as their modules hold them.') + '</div>';
+  }
+  function openDrawer(key) {
+    var x = V.items.filter(function (i) { return i.key === key; })[0]; if (!x) { $('drw').hidden = true; return; }
+    var t = x.tracking || {};
+    $('drw').innerHTML = '<div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;flex:1">' + esc(x.name) + '</h2><button type="button" class="btn" id="d-x" aria-label="Close">✕</button></div>'
+      + '<div class="sm mut">' + esc(x.kind_label) + ' · expires ' + esc(x.expires) + ' · <a class="lk" href="' + esc(x.href) + '">open in ' + esc(x.source) + '</a></div>'
+      + '<div class="card" style="margin-top:12px"><h2>Risk <span class="risk" style="' + rc(x.risk) + '">' + x.risk + '</span></h2>' + (x.why.length ? x.why.map(function (w) { return '<div class="sm">' + (w.points ? (w.points > 0 ? '+' : '') + w.points + ' · ' : '') + esc(w.why) + '</div>'; }).join('') : '<div class="sm mut">Nothing raises it.</div>') + '</div>'
+      + '<div class="card"><h2>Tracking</h2>' + (t.renewed ? '<div class="sm">Renewed by ' + esc(t.renewed.by) + ' (' + esc(t.renewed.reference) + ')' + (t.renewed.new_expiry ? ', new expiry ' + esc(t.renewed.new_expiry) : '') + ' - ' + (t.verified_at ? '<b style="color:var(--ok)">verified by ' + esc(x.source) + '</b>' : '<b style="color:var(--warn)">waiting for ' + esc(x.source) + ' to show the new date</b> <button type="button" class="btn" id="d-rf">⟳ Check again</button>') + '</div>' : '')
+      + (t.in_progress ? '<div class="sm">In progress since ' + esc(String(t.in_progress.at).slice(0, 10)) + ' (' + esc(t.in_progress.by) + ')</div>' : '') + (t.not_renewing ? '<div class="sm">Not renewing: ' + esc(t.not_renewing.note) + '</div>' : '')
+      + '<div class="f" style="margin-top:10px"><label>Owner<input class="inp" id="t-owner" value="' + esc(x.owner || '') + '"></label></div><button type="button" class="btn" data-act="owner" style="margin-top:6px">Set owner</button> <button type="button" class="btn" data-act="in_progress">Mark in progress</button>'
+      + '<h3 style="font-size:13px;margin:14px 0 6px">Record the renewal</h3><div class="f"><label>New expiry<input class="inp" type="date" id="t-new"></label><label>Cost<input class="inp" type="number" min="0" id="t-cost"></label><label>Reference (order / invoice)<input class="inp" id="t-ref"></label></div><button type="button" class="btn pri" data-act="renewed" style="margin-top:6px">Renewed</button>'
+      + '<h3 style="font-size:13px;margin:14px 0 6px">Not renewing</h3><input class="inp" id="t-note" placeholder="Why (decommissioned, replaced…)"><button type="button" class="btn" data-act="not_renewing" style="margin-top:6px">Not renewing</button> ' + (x.tracking ? '<button type="button" class="btn" data-act="clear">Clear tracking</button>' : '') + '<div class="err" id="t-err"></div></div>';
+    $('drw').hidden = false; $('drw').dataset.key = key;
+  }
+  $('drw').addEventListener('click', function (e) {
+    if (e.target.id === 'd-x') { $('drw').hidden = true; return; }
+    if (e.target.id === 'd-rf') { load(); return; }
+    var a = e.target.closest('[data-act]'); if (!a) return;
+    var b = { key: $('drw').dataset.key, action: a.dataset.act };
+    if (b.action === 'owner') { b.owner = $('t-owner').value.trim(); if (!b.owner) { $('t-err').textContent = 'Owner is required.'; return; } }
+    if (b.action === 'renewed') { if (!$('t-ref').value.trim()) { $('t-err').textContent = 'The order / invoice reference is required.'; return; } b.reference = $('t-ref').value.trim(); if ($('t-new').value) b.new_expiry = $('t-new').value; if ($('t-cost').value !== '') b.cost = Number($('t-cost').value); }
+    if (b.action === 'not_renewing') { b.note = $('t-note').value.trim(); if (!b.note) { $('t-err').textContent = 'Say why it is not renewed.'; return; } }
+    req('POST', '/expiry/track', b).then(function () { toast('Saved'); load(); }, function (er) { $('t-err').textContent = er.status === 403 ? 'Operators and administrators track renewals.' : er.message; });
+  });
+  $('cal').addEventListener('click', function (e) { var m = e.target.closest('[data-mon]'); if (!m) return; MON = MON === m.dataset.mon ? '' : m.dataset.mon; if (MON) STATE = 'all'; draw(); });
+  $('kinds').addEventListener('click', function (e) { var c = e.target.closest('[data-kind]'); if (!c) return; KIND = c.dataset.kind; draw(); });
+  $('states').addEventListener('click', function (e) { var c = e.target.closest('[data-state]'); if (!c) return; STATE = c.dataset.state; draw(); });
+  $('list').addEventListener('click', function (e) { var r = e.target.closest('[data-key]'); if (r) openDrawer(r.dataset.key); });
+  $('q').addEventListener('input', drawList); $('rf').addEventListener('click', load);
+  load();
+})();
+</script></body></html>

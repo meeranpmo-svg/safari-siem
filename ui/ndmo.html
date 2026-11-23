@@ -1,0 +1,121 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NDMO Data Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-assist.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script><script src="vendor/zyb-levels.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.dom{display:block;width:100%;text-align:left;border:1px solid var(--tblr-border-color);border-radius:10px;padding:10px 12px;background:transparent;color:inherit;height:100%}
+.dom:hover{border-color:#2dd4bf}.dom.on{border-color:#2dd4bf;box-shadow:0 0 0 1px #2dd4bf inset}
+.dom .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px}.dom .bar i{display:block;height:100%;background:linear-gradient(90deg,#14b8a6,#2dd4bf)}
+.lvl{font-size:11px;font-weight:600}.tabs-zyb .btn{margin-right:6px}
+textarea.csv{font:12px/1.4 ui-monospace,Consolas,monospace;min-height:140px}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Data Management · NDMO (SDAIA) · linked to PDPL</div><h2 class="page-title">NDMO Data Management</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn" id="grc"><i class="ti ti-list-check me-1"></i>Send gaps to GRC</button><button type="button" class="btn" id="csv"><i class="ti ti-download me-1"></i>Export CSV</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>The 15 domains of the NDMO Data Management and Personal Data Protection Standards, as a register for {{org.short}}. The platform checks each control against what it already holds - the PDPL registers, the Data Catalog, the GRC policy register, database monitoring, backups and route maps - and re-checks on every patrol of the AI Data Governance Officer. The <b>Personal Data Protection</b> domain is the PDPL register itself, so the two can never disagree. A person records the rest with evidence and a second person approves (the Chief Data Officer or an administrator). Register controls (ZS-…) are this platform's plain-language register; the <b>official NDMO controls</b> are imported from the NDMO document and mapped to them. The maturity level is indicative, from this register - it is not NDMO's own assessment.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div class="row g-3 mb-3">
+ <div class="col-lg-4"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-shield-lock me-1"></i>Linked to PDPL</h3></div><div class="card-body" id="pdpl"><span class="text-secondary">Loading…</span></div></section></div>
+ <div class="col-lg-8"><section class="card h-100"><div class="card-header"><h3 class="card-title">Maturity by domain <span class="mut">(indicative · click a domain to filter)</span></h3></div><div class="card-body"><div class="row g-2" id="domains"></div></div></section></div>
+</div>
+<div class="tabs-zyb mb-2"><button type="button" class="btn btn-primary" data-tab="controls">Controls</button><button type="button" class="btn" data-tab="official">Official NDMO list</button><button type="button" class="btn" data-tab="profile">Profile</button></div>
+<section class="card mb-3" data-pane="controls"><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h3 class="card-title me-auto">Register controls <span class="mut" id="filt"></span></h3>
+ <select class="form-select form-select-sm w-auto" id="fdom" aria-label="Domain"><option value="">All domains</option></select>
+ <select class="form-select form-select-sm w-auto" id="fres" aria-label="Result"><option value="">All results</option><option value="gap">Gaps</option><option value="no_evidence">No evidence yet</option><option value="pending">Waiting for approval</option><option value="auto_pass">Automated evidence</option><option value="met">Met (approved)</option><option value="partial">Partial</option><option value="not_applicable">Not applicable</option></select></div>
+ <div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="note"></div></section>
+<section class="card mb-3" data-pane="official" hidden><div class="card-header"><h3 class="card-title">Official NDMO control list</h3></div><div class="card-body">
+ <div id="cov" class="mb-3"></div>
+ <div class="mb-3"><div class="fw-semibold mb-1">Import (administrator)</div><div class="mut mb-2">From the NDMO Data Management and Personal Data Protection Standards: one control per line as CSV with the columns <b>code, domain, title, specification</b> (in Excel: File → Save As → CSV). The domain may be the code (DG, MCM, DQ …) or the name. Importing replaces the list; mappings whose code is gone are dropped.</div>
+  <input type="file" class="form-control mb-2" id="file" accept=".csv,text/csv"><textarea class="form-control csv mb-2" id="paste" placeholder="code,domain,title,specification&#10;DG.1.1,Data Governance,…,…"></textarea>
+  <button type="button" class="btn btn-primary" id="imp">Import the list</button> <span class="mut" id="impmsg"></span></div>
+ <div id="unmapped"></div></div></section>
+<section class="card mb-3" data-pane="profile" hidden><div class="card-header"><h3 class="card-title">NDMO profile (administrator)</h3></div><div class="card-body" id="prof"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+  var V=null, DOM='', RES='';
+  var RC={met:['met','green'],auto_pass:['automated evidence','teal'],partial:['partial','yellow'],gap:['gap','red'],pending:['waiting for approval','orange'],no_evidence:['no evidence yet','secondary'],not_applicable:['not applicable','secondary']};
+  function rb(r){var x=RC[r]||[r,'secondary'];return P.badge(x[0],x[1]);}
+  function lvlc(l){return l===null||l===undefined?'secondary':l>=4?'green':l>=3?'teal':l>=2?'yellow':l>=1?'orange':'red';}
+  function load(){return P.req('GET','/ndmo').then(function(v){V=v;draw();}).catch(function(e){P.fail($('list'),e);$('pdpl').innerHTML='';$('domains').innerHTML='';});}
+  function draw(){var v=V,c=v.counts||{};
+    var ZL=window.zybLevels;
+    $('kpis').innerHTML=(ZL&&v.levels?ZL.tiles(v.levels,P.tile,'controls'):'')+P.tile(v.score===null?'—':v.score+'%','Register score (indicative)')+P.tile((c.met||0)+' + '+(c.auto_pass||0),'Met + automated evidence')+P.tile(c.gap||0,'Gaps',c.gap?'text-red':'')+P.tile((c.no_evidence||0)+(c.pending||0),'No evidence / waiting')
+      +P.tile(v.official_total?v.coverage.mapped+' / '+v.coverage.total:'not imported','Official controls mapped',v.official_total&&v.coverage.unmapped?'text-orange':'');
+    var pd=v.pdpl||{};
+    $('pdpl').innerHTML=pd.available?'<div class="au-num">'+esc(pd.compliance_pct)+'%</div><div class="au-lbl mb-2">PDPL compliance (AI PDPL Consultant)</div>'
+      +(pd.non_compliant.length?'<div class="small mb-2">Non-compliant: '+pd.non_compliant.map(function(x){return P.badge(x,'red');}).join(' ')+'</div>':'<div class="small text-green mb-2">No PDPL requirement non-compliant.</div>')
+      +'<div class="small text-secondary mb-2">The Personal Data Protection domain below reads these results; closing a PDPL gap closes it here.</div><a class="btn btn-sm" href="ai-pdpl.html">AI PDPL Consultant</a> <a class="btn btn-sm" href="pdpl-office.html">Privacy Office</a> <a class="btn btn-sm" href="pdpl-catalog.html">Data Catalog</a>'
+      :'<div class="text-secondary">The AI PDPL Consultant is not answering - the Personal Data Protection domain cannot be read. Run the update so the PDPL engine is installed.</div>';
+    $('domains').innerHTML=v.maturity.map(function(m){var d=v.domains.find(function(x){return x.code===m.domain;})||{};
+      return '<div class="col-6 col-md-4 col-xl-3"><button type="button" class="dom'+(DOM===m.domain?' on':'')+'" data-dom="'+esc(m.domain)+'"><div class="d-flex justify-content-between"><b class="small">'+esc(m.name)+'</b><span class="mut">'+esc(m.domain)+'</span></div>'
+        +'<div class="lvl text-'+lvlc(m.level)+'">'+(m.level===null||m.level===undefined?esc(m.level_name):'Level '+esc(m.level)+' · '+esc(m.level_name))+(m.score!==null&&m.score!==undefined?' · '+esc(m.score)+'%':'')+'</div>'
+        +(function(){var g=(v.domain_levels||[]).find(function(x){return x.key===m.domain;});return ZL&&g?'<div class="mut mt-1">'+esc(ZL.label(g.status))+'</div>'+ZL.bar(g)+ZL.pcts(g):'<div class="bar"><i style="width:'+(m.score||0)+'%"></i></div>';})()+'<div class="mut mt-1">'+esc(m.gaps)+' gap(s) · '+esc(m.no_evidence)+' without evidence'+(d.decide&&!(v.profile.applicability||{})[m.domain]?' · applicability to decide':'')+'</div></button></div>';}).join('');
+    if(ZL)$('domains').insertAdjacentHTML('beforeend','<div class="col-12">'+ZL.legend('Not assessed = no evidence yet or waiting for approval - never counted as compliant.')+'</div>');
+    var fd=$('fdom');if(fd.options.length<2)v.domains.forEach(function(d){var o=document.createElement('option');o.value=d.code;o.textContent=d.name;fd.appendChild(o);});fd.value=DOM;
+    rows();drawOfficial();drawProfile();$('note').textContent=v.note;}
+  function rows(){var r=V.controls.filter(function(x){return (!DOM||x.domain===DOM)&&(!RES||x.result===RES);});
+    $('filt').textContent='('+r.length+' of '+V.controls.length+')';
+    $('list').innerHTML=P.table([['Control',function(x){return '<b>'+esc(x.id)+'</b><div class="mut">'+esc(x.domain_name)+'</div>';}],['What it asks',function(x){return esc(x.title)+(x.official.length?'<div class="mut">official: '+esc(x.official.join(', '))+'</div>':'');}],
+      ['Result',function(x){return (window.zybLevels&&x.level?window.zybLevels.badge(x.level)+' ':'')+rb(x.result)+(x.conflict?' '+P.badge('registers disagree','red'):'')+(x.automated?'<div class="mut">checked automatically</div>':'');}],['Why',function(x){return '<span class="small">'+esc(x.why||'')+'</span>';}]],r,function(x){return 'class="rowc" data-id="'+esc(x.id)+'"';},'No control matches the filter.');}
+  function open(x){var c=x.confirmation;
+    var h=Z.kv([['Domain',esc(x.domain_name)],['Level',window.zybLevels&&x.level?window.zybLevels.badge(x.level):'—'],['Result',rb(x.result)],['Why',esc(x.why||'')],['Evidence expected',esc(x.evidence_hint)],['Official NDMO controls',esc(x.official.join(', ')||'none mapped')]]);
+    if(x.automated)h+=Z.sec('Automated evidence','<p class="small mb-0">'+esc(x.auto||'nothing to read yet')+'</p>');
+    if(c)h+=Z.sec('Recorded','<p class="small mb-1">'+esc(c.status.replace('_',' '))+' by '+esc(c.by)+' on '+esc(P.dt(c.at))+'</p>'+(c.evidence?'<p class="small mb-1">Evidence: '+esc(c.evidence)+'</p>':'')+(c.note?'<p class="small mb-1">Note: '+esc(c.note)+'</p>':'')
+      +(c.approved_by?'<p class="small mb-0">Approved by '+esc(c.approved_by)+'</p>':'<div class="mt-2"><button type="button" class="btn btn-sm btn-success" data-decide="approve">Approve</button> <button type="button" class="btn btn-sm" data-decide="reject">Reject</button><div class="mut mt-1">The Chief Data Officer or an administrator - never the person who recorded it.</div></div>'));
+    h+=Z.sec('Record this control',P.form('cform',[['status','sel','Status',1,[['compliant','Compliant'],['partial','Partial'],['non_compliant','Non-compliant'],['not_applicable','Not applicable']]],['evidence','text','Evidence (document, register or record relied on)'],['note','area','Note (required for non-compliant / not applicable)']],{},'Record')
+      +'<div class="mut">A second person approves it before it counts. Automated evidence of a gap is never hidden by a record.</div>');
+    Z.open('NDMO',x.id+' · '+x.title,h+'<input type="hidden" id="cid" value="'+esc(x.id)+'">');}
+  function reopen(id){load().then(function(){var x=V.controls.find(function(q){return q.id===id;});if(x)open(x);});}
+  function drawOfficial(){var cv=V.coverage||{};
+    $('cov').innerHTML=V.official_total?'<div class="d-flex flex-wrap gap-3"><div><div class="au-num">'+esc(cv.total)+'</div><div class="au-lbl">official controls</div></div><div><div class="au-num">'+esc(cv.mapped)+'</div><div class="au-lbl">mapped</div></div><div><div class="au-num'+(cv.unmapped?' text-orange':'')+'">'+esc(cv.unmapped)+'</div><div class="au-lbl">not mapped</div></div></div>'
+      +'<div class="small mt-2">'+Object.keys(cv.by_result||{}).map(function(k){return rb(k)+' '+esc(cv.by_result[k]);}).join(' &nbsp; ')+'</div>'
+      :'<div class="text-secondary">No official list imported yet. Import it below from the NDMO standard - until then the register controls stand on their own.</div>';
+    if(!V.official_total||!cv.unmapped){$('unmapped').innerHTML='';return;}
+    P.req('GET','/ndmo/suggest').then(function(s){var by={};(s.suggestions||[]).forEach(function(x){by[x.code]=x;});
+      $('unmapped').innerHTML='<div class="d-flex align-items-center mb-2"><div class="fw-semibold me-auto">Not mapped yet</div>'+((s.suggestions||[]).length?'<button type="button" class="btn btn-sm btn-primary" id="acceptall">Accept all suggestions</button>':'')+'</div>'
+        +P.table([['Official',function(o){return '<b>'+esc(o.code)+'</b><div class="mut">'+esc(o.domain)+'</div>';}],['Title',function(o){return '<span class="small">'+esc(o.title)+'</span>';}],
+          ['Suggested register control',function(o){var g=by[o.code];return g?esc(g.control)+'<div class="mut">'+esc(g.title)+' · match '+esc(Math.round(g.score*100))+'%</div>':'<span class="text-secondary">none</span>';}],
+          ['',function(o){var g=by[o.code];return g?'<button type="button" class="btn btn-sm" data-accept="'+esc(o.code)+'">Accept</button>':'';}]],cv.unmapped_list||[],null,'Every official control is mapped.')
+        +'<div class="mut mt-1">A suggestion is the register control in the same domain whose wording overlaps most. Nothing is mapped until an administrator accepts it.</div>';}).catch(function(e){$('unmapped').innerHTML='<div class="alert alert-warning">'+esc(P.why(e))+'</div>';});}
+  function drawProfile(){var p=V.profile||{},a=p.applicability||{},n=p.applicability_note||{};
+    var A=[['applies','Applies'],['partial','Applies in part'],['not_applicable','Does not apply']];
+    $('prof').innerHTML=P.form('pform',[['cdo_user','text','Chief Data Officer (user name)'],['dmo_established','date','Data management office established'],['strategy_approved','date','Data management strategy approved by top management'],['committee_last_met','date','Data governance committee last met'],
+      ['od','sel','Open Data - does it apply to the company?',0,A],['od_note','text','Why (required when it does not apply)'],['foi','sel','Freedom of Information - does it apply?',0,A],['foi_note','text','Why (required when it does not apply)']],
+      {cdo_user:p.cdo_user,dmo_established:p.dmo_established,strategy_approved:p.strategy_approved,committee_last_met:p.committee_last_met,od:a.OD,od_note:n.OD,foi:a.FOI,foi_note:n.FOI},'Save profile')
+      +('<div class="mut mt-2">Open Data and Freedom of Information are written mainly for public entities: record whether and how they apply to ' + ZYB_ORG.short + ', and why. ')+(p.updated_by?'Last saved by '+esc(p.updated_by)+' on '+esc(P.dt(p.updated_at))+'.':'')+'</div>';}
+  // a small CSV reader: quoted fields, doubled quotes, commas and new lines inside quotes; the first row may be a header
+  function csv(t){var out=[],row=[],f='',q=false;for(var i=0;i<t.length;i++){var ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++;}else q=false;}else f+=ch;}else if(ch==='"')q=true;else if(ch===','){row.push(f);f='';}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(f);f='';if(row.some(function(x){return x.trim();}))out.push(row);row=[];}else f+=ch;}
+    row.push(f);if(row.some(function(x){return x.trim();}))out.push(row);
+    if(out.length&&/^\s*code\s*$/i.test(out[0][0]||''))out.shift();
+    return out.map(function(r){return {code:(r[0]||'').trim(),domain:(r[1]||'').trim(),title:(r[2]||'').trim(),spec:(r[3]||'').trim()};});}
+  $('file').addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;if(f.size>2000000){P.toast('The file is larger than 2 MB');return;}var r=new FileReader();r.onload=function(){$('paste').value=String(r.result||'');};r.readAsText(f);});
+  $('imp').addEventListener('click',function(){var rows=csv($('paste').value||'');if(!rows.length){$('impmsg').textContent='Paste the CSV or choose the file first.';return;}
+    $('imp').disabled=true;P.req('POST','/ndmo/official',{rows:rows,replace:true}).then(function(r){$('impmsg').textContent=r.imported+' imported'+(r.error_count?', '+r.error_count+' refused: '+r.errors.slice(0,3).join('; '):'')+'.';load();})
+      .catch(function(e){$('impmsg').textContent=P.why(e);}).then(function(){$('imp').disabled=false;});});
+  document.addEventListener('click',function(ev){
+    var t=ev.target.closest('[data-tab]');if(t){[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.className='btn'+(b===t?' btn-primary':'');});[].forEach.call(document.querySelectorAll('[data-pane]'),function(p){p.hidden=p.getAttribute('data-pane')!==t.getAttribute('data-tab');});return;}
+    var d=ev.target.closest('[data-dom]');if(d){DOM=DOM===d.getAttribute('data-dom')?'':d.getAttribute('data-dom');draw();return;}
+    var tr=ev.target.closest('#list tr[data-id]');if(tr&&V){open(V.controls.find(function(x){return x.id===tr.getAttribute('data-id');}));return;}
+    var a=ev.target.closest('[data-accept]');if(a){P.req('POST','/ndmo/mapping',{accept:[a.getAttribute('data-accept')]}).then(function(){P.toast('Mapped');load();}).catch(function(e){P.toast(P.why(e));});return;}
+    if(ev.target.closest('#acceptall')){var codes=(V.coverage.unmapped_list||[]).map(function(o){return o.code;});P.req('POST','/ndmo/mapping',{accept:codes}).then(function(r){P.toast(r.accepted+' mapped');load();}).catch(function(e){P.toast(P.why(e));});return;}
+    var dc=ev.target.closest('[data-decide]');if(dc){var id=$('cid').value,dec=dc.getAttribute('data-decide'),note='';if(dec==='reject'){note=window.prompt('Why is it rejected?')||'';if(!note)return;}
+      P.req('POST','/ndmo/confirm/'+encodeURIComponent(id)+'/decide',{decision:dec,note:note}).then(function(){P.toast(dec==='approve'?'Approved':'Rejected');reopen(id);}).catch(function(e){P.toast(P.why(e));});}});
+  document.addEventListener('submit',function(ev){var fm=ev.target;
+    if(fm.id==='cform'){ev.preventDefault();var id=$('cid').value,b=P.body(fm);b.id=id;P.req('POST','/ndmo/confirm',b).then(function(){P.toast('Recorded - waiting for approval');reopen(id);}).catch(function(e){P.msg(fm,P.why(e));});}
+    if(fm.id==='pform'){ev.preventDefault();var o=P.body(fm),body={cdo_user:o.cdo_user,dmo_established:o.dmo_established,strategy_approved:o.strategy_approved,committee_last_met:o.committee_last_met,applicability:{},applicability_note:{}};
+      if(o.od)body.applicability.OD=o.od;if(o.foi)body.applicability.FOI=o.foi;if(o.od_note)body.applicability_note.OD=o.od_note;if(o.foi_note)body.applicability_note.FOI=o.foi_note;
+      Object.keys(body).forEach(function(k){if(body[k]===undefined)delete body[k];});
+      P.req('POST','/ndmo/profile',body).then(function(){P.toast('Profile saved');load();}).catch(function(e){P.msg(fm,P.why(e));});}});
+  $('fdom').addEventListener('change',function(){DOM=this.value;draw();});
+  $('fres').addEventListener('change',function(){RES=this.value;rows();});
+  $('grc').addEventListener('click',function(){P.req('POST','/ndmo/gaps-to-grc',{}).then(function(r){P.toast(r.created.length+' GRC action(s) created'+(r.skipped.length?', '+r.skipped.length+' already tracked':''));}).catch(function(e){P.toast(P.why(e));});});
+  $('csv').addEventListener('click',function(){P.req('GET','/ndmo/export').then(function(r){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r.csv],{type:'text/csv'}));a.download=r.filename;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);}).catch(function(e){P.toast(P.why(e));});});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

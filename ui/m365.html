@@ -1,0 +1,109 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Microsoft 365</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{margin-left:auto;font-weight:400;color:var(--mute);font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin:0 0 10px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:22px;font-weight:700;margin-top:2px}.t .s{font-size:11.5px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.na .v{color:var(--mute);font-size:15px}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}button.sm{padding:3px 9px;font-size:12px}
+select,input{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}td>b{white-space:nowrap}
+tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(255,255,255,.035)}.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap;margin:1px 2px 1px 0}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:12px;margin:10px 0}.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.tabs{display:flex;gap:6px;margin:0 0 12px;border-bottom:1px solid var(--edge)}.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 14px;font-size:14px;color:var(--mute)}.tabs button.on{color:var(--title);border-bottom-color:#3fb950}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Identity &amp; Cloud · live</div><h1>Microsoft 365</h1></div><span class="sp"></span>
+  <span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="dash" class="on">📊 Overview</button><button type="button" role="tab" data-tab="ins">🧠 Insights</button><button type="button" role="tab" data-tab="cfg">⚙️ Configuration</button></div>
+<div id="tab-dash">
+<div class="card"><h2>☁️ Tenant at a glance <span class="c" id="dc">from Microsoft Graph, refreshed every 15 minutes</span></h2><div id="syncw"></div><div class="k" id="kk"></div>
+  <p class="note">The portal's <b>Microsoft 365</b>, <b>User Management</b> (sign-ins), <b>Intune</b> and <b>M365 Security</b> pages fill from the same data automatically.</p></div>
+<div class="card"><h2>🎫 Licences <span class="c" id="lc"></span></h2><div class="tw" id="lic"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>🌐 Service health <span class="c">Microsoft's own status for this tenant</span></h2><div id="sh"><div class="empty">Loading…</div></div></div>
+</div>
+<div id="tab-ins" hidden><div id="m365x"><div class="empty">Loading the insights…</div></div></div>
+<div id="tab-cfg" hidden>
+<div class="card"><h2>⚙️ Connection <span class="c">administrators · the client secret is write-only</span></h2><div id="cfg"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>🔑 Microsoft Graph permissions <span class="c">what each part needs · granted once by a Global Administrator</span></h2><div class="tw" id="perm"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>🧭 One-time setup in Microsoft Entra <span class="c">about 5 minutes</span></h2><ol style="margin:0;padding-left:20px;line-height:1.8">
+  <li><b>Entra admin center → App registrations → New registration</b>, name it e.g. <i>{{org.short}} SIEM</i>, single tenant, no redirect URI.</li>
+  <li>Copy the <b>Directory (tenant) ID</b> and the <b>Application (client) ID</b> from the app's Overview into the form above.</li>
+  <li><b>Certificates &amp; secrets → New client secret</b> (12 or 24 months), copy the <b>Value</b> (not the Secret ID) into the form. Note the expiry date for renewal.</li>
+  <li><b>API permissions → Add a permission → Microsoft Graph → Application permissions</b>: add the permissions in the table above. For the Exchange Online audit log also add <b>Office 365 Management APIs → Application → ActivityFeed.Read</b>.</li>
+  <li>Press <b>Grant admin consent for …</b>, then <b>Save</b> and <b>Sync now</b> here. Each row in the table turns green as soon as its permission works.</li>
+  <li>The SIEM server needs outbound HTTPS to <span class="mono">login.microsoftonline.com</span>, <span class="mono">graph.microsoft.com</span> and (audit log) <span class="mono">manage.office.com</span>.</li></ol>
+  <p class="note">All permissions are read-only. Sign-in logs and risky users also need an Entra ID P1/P2 licence in the tenant.</p></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', WHO={}, D=null, CFG=null;
+  var LABEL={licenses:'Licences',users:'Users',signins:'Sign-in logs',intune:'Intune devices',serviceHealth:'Service health',secureScore:'Secure Score',mfa:'MFA registration',riskyUsers:'Risky users',riskDetections:'Risky sign-in detections',conditionalAccess:'Conditional Access policies',defenderAlerts:'Defender alerts'};
+  function req(m,url,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,url);x.withCredentials=true;x.timeout=120000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function tab(t){[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===t);});$('tab-dash').hidden=t!=='dash';$('tab-cfg').hidden=t!=='cfg';$('tab-ins').hidden=t!=='ins';if(t==='ins'&&window.zybM365x)window.zybM365x.load();if(t==='cfg')cfgLoad();}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function fmt(t){try{return new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}catch(e){return t||'';}}
+  function draw(){
+    var d=D||{};
+    var Y=d.sync||{},adm=RANK[ROLE]>=3;
+    $('syncw').innerHTML=(Y.last_error||Y.stale)&&d.configured?'<div style="border:1px solid rgba(248,81,73,.5);border-radius:10px;padding:10px 12px;margin:0 0 10px;background:rgba(248,81,73,.06)"><b class="err">'+(Y.last_error?'The last Microsoft 365 sync failed — the figures below are from '+esc(fmt(d.updated))+'.':'The figures below are from '+esc(fmt(d.updated))+' — no successful sync since (it should run every '+Math.round((Y.interval_s||900)/60)+' minutes).')+'</b>'+(Y.last_error?'<div class="err" style="margin-top:4px">'+esc(Y.last_error)+'</div>':'')+'<div class="muted" style="margin-top:4px">'+(adm?'Open <b>Configuration</b> to check the connection and press <b>Sync now</b>. A changed or expired client secret is the most common cause.':'An administrator needs to check the connection under Configuration.')+'</div></div>':'';
+    if(!d.configured){$('kk').innerHTML=tile('Status','Not connected',d.reason||'enter the connection in Configuration','na');$('lic').innerHTML='<div class="empty">No data yet.</div>';$('sh').innerHTML='<div class="empty">No data yet.</div>';$('up').textContent='';return;}
+    $('up').innerHTML=(Y.running?'syncing… · ':'')+'<span class="'+(Y.last_error||Y.stale?'err':'')+'">synced '+esc(fmt(d.updated))+'</span>';
+    var B=d.blocks||{},k='';
+    var paid=(d.licenses||[]).filter(function(l){return !l.free;}),tot=paid.reduce(function(s,l){return s+l.total;},0),used=paid.reduce(function(s,l){return s+l.consumed;},0);
+    k+=B.licenses&&B.licenses.ok?tile('Paid licences',used+' / '+tot,(tot-used)+' free',tot&&used/tot>=.95?'bad':tot&&used/tot>=.85?'warn':'ok'):tile('Licences','—','permission not granted','na');
+    if(d.users){var on=d.users.list.filter(function(u){return u.enabled;}).length,unl=d.users.list.filter(function(u){return u.enabled&&!u.lic;}).length;k+=tile('Users',on,'enabled · '+(d.users.total-on)+' disabled · '+unl+' unlicensed');}else k+=tile('Users','—','permission not granted','na');
+    if(d.intuneOk){var nc=d.intune.filter(function(x){return /noncompliant/i.test(x.compliance);}).length;k+=tile('Intune devices',d.intune.length,nc+' non-compliant',nc?'warn':'ok');}else k+=tile('Intune devices','—','permission not granted','na');
+    if(d.signinsOk){var f=d.signins.filter(function(x){return x.status!=='Success';}).length;k+=tile('Recent sign-ins',d.signins.length,f+' failed',f>20?'warn':'');}else k+=tile('Sign-in logs','—','permission / Entra P1 needed','na');
+    var S=d.security||{};
+    if(S.secureScore&&S.secureScore.ok){var p=Math.round(S.secureScore.data.current/S.secureScore.data.max*100);k+=tile('Secure Score',p+'%',Math.round(S.secureScore.data.current)+' of '+Math.round(S.secureScore.data.max),p<50?'bad':p<70?'warn':'ok');}else k+=tile('Secure Score','—','permission not granted','na');
+    if(S.mfa&&S.mfa.ok){var m=S.mfa.data,mp=m.users?Math.round(m.registered/m.users*100):0;k+=tile('MFA registered',mp+'%',m.registered+' of '+m.users+' users',mp<90?'bad':mp<98?'warn':'ok');}else k+=tile('MFA','—','permission not granted','na');
+    if(S.riskyUsers&&S.riskyUsers.ok)k+=tile('Risky users',S.riskyUsers.data.length,'at risk now',S.riskyUsers.data.length?'bad':'ok');
+    if(S.defenderAlerts&&S.defenderAlerts.ok){var oa=S.defenderAlerts.data.filter(function(a){return !/resolved/i.test(a.status||'');}).length;k+=tile('Defender alerts',oa,'open',oa?'warn':'ok');}
+    $('kk').innerHTML=k;
+    var L=d.licenses||[];$('lc').textContent=L.length?L.length+' subscriptions':'';
+    $('lic').innerHTML=!(B.licenses&&B.licenses.ok)?'<div class="empty">Needs the Graph permission <b>LicenseManagement.Read.All</b> (or Organization.Read.All).</div>':!L.length?'<div class="empty">No subscriptions.</div>':'<table><thead><tr><th>Subscription</th><th>Assigned</th><th>Available</th><th>Renews</th></tr></thead><tbody>'+L.map(function(l){var left=l.total-l.consumed,c=l.free?'':left<=0?'bad':l.consumed/l.total>=.85?'warn':'ok';return '<tr><td><b>'+esc(l.sku)+'</b></td><td class="mono">'+l.consumed+(l.free?'':' / '+l.total)+'</td><td>'+(l.free?'<span class="pill">free plan</span>':'<span class="pill '+c+'">'+left+'</span>')+'</td><td class="mono">'+(l.renews?esc(l.renews)+(l.days!=null?' <span class="pill '+(l.days<=30?'bad':l.days<=90?'warn':'ok')+'">'+l.days+' d</span>':''):'—')+'</td></tr>';}).join('')+'</tbody></table>';
+    var H=d.serviceHealth||{};
+    if(!H.ok){$('sh').innerHTML='<div class="empty">Needs the Graph permission <b>ServiceHealth.Read.All</b>.</div>';}
+    else{var bad=(H.services||[]).filter(function(s){return !/operational|restored|resolved/i.test(s.status);}),act=(H.issues||[]).filter(function(i){return !i.isResolved;});
+      $('sh').innerHTML='<div>'+(bad.length?bad.map(function(s){return '<span class="pill warn">'+esc(s.service)+' · '+esc(String(s.status).replace(/([a-z])([A-Z])/g,'$1 $2'))+'</span>';}).join(' '):'<span class="pill ok">All '+(H.services||[]).length+' services operational</span>')+'</div>'
+        +(act.length?'<table style="margin-top:10px"><thead><tr><th>Service</th><th>Type</th><th>Issue</th><th>Since</th></tr></thead><tbody>'+act.slice(0,15).map(function(i){return '<tr><td><b>'+esc(i.service)+'</b></td><td><span class="pill '+(/advisory/i.test(i.classification)?'warn':'bad')+'">'+esc(i.classification)+'</span></td><td>'+esc(i.title)+'</td><td class="mono">'+esc(fmt(i.start))+'</td></tr>';}).join('')+'</tbody></table>':'');}
+  }
+  function load(){req('GET','/api/soc/m365/graph?_='+Date.now()).then(function(j){D=j;draw();if(!D.configured&&RANK[ROLE]>=3&&!location.hash)tab('cfg');}).catch(function(e){$('kk').innerHTML='<p class="err">'+(e.status===404?'The SIEM on the server does not have this feature yet — run the update (update-platform.ps1).':'Not available: '+esc(e.message))+'</p>';});}
+  function cfgLoad(){req('GET','/api/soc/m365/config').then(function(c){CFG=c;drawCfg();}).catch(function(e){$('cfg').innerHTML=e.status===403?'<p class="muted">The SIEM says your account is not an administrator ('+esc(WHO.user||'unknown user')+', role "'+esc(WHO.role||'none')+'"). Only administrators can change the Microsoft 365 connection.</p>':e.status===404?'<p class="err">The SIEM on the server does not have this feature yet — run the update (update-platform.ps1).</p>':'<p class="err">Settings are not available ('+esc(e.message)+').</p>';$('perm').innerHTML='';});}
+  function drawCfg(){
+    var m=CFG.m365||{},g=CFG.graph||{},a=CFG.audit||{};
+    var st=g.running?'<span class="pill info">syncing…</span>':g.last_error?'<span class="pill bad" title="'+esc(g.last_error)+'">sync failed</span>':g.updated?'<span class="pill ok">connected · synced '+esc(fmt(g.updated))+'</span>':g.ready?'<span class="pill warn">first sync pending</span>':'<span class="pill">not configured</span>';
+    $('cfg').innerHTML='<div>'+st+(a&&a.enabled?' <span class="pill ok">audit log collecting</span>':'')+'</div>'+(g.last_error?'<p class="err">'+esc(g.last_error)+'</p>':'')
+      +'<form class="form" id="mf"><label>Directory (tenant) ID<input id="m-ten" value="'+esc(m.tenant||'')+'" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off" spellcheck="false"></label>'
+      +'<label>Application (client) ID<input id="m-cid" value="'+esc(m.client_id||'')+'" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off" spellcheck="false"></label>'
+      +'<label>Client secret (value)<input id="m-sec" type="password" autocomplete="new-password" placeholder="'+(m.secret_set?'set — leave empty to keep':'paste the secret value')+'"></label>'
+      +'<label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="m-gr"'+(m.graph!==false?' checked':'')+'> Licences, users, devices &amp; security (Graph)</label>'
+      +'<label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="m-en"'+(m.enabled?' checked':'')+'> Exchange Online / M365 audit log into the SIEM</label>'
+      +'<div style="display:flex;gap:8px"><button class="pri" type="submit">Save</button><button type="button" id="m-sync">⟳ Sync now</button></div></form>'
+      +(a&&a.error?'<p class="err">Audit log: '+esc(a.error)+'</p>':a&&a.last_error?'<p class="err">Audit log: '+esc(a.last_error)+'</p>':'');
+    var P=CFG.permissions||{},BL=g.blocks||{};
+    $('perm').innerHTML='<table><thead><tr><th>Part</th><th>Graph application permission</th><th>Status</th></tr></thead><tbody>'+Object.keys(LABEL).map(function(k){var b=BL[k];return '<tr><td><b>'+esc(LABEL[k])+'</b></td><td class="mono">'+esc(P[k]||'')+'</td><td>'+(!b?'<span class="pill">not checked yet</span>':b.ok?'<span class="pill ok">✓ working</span>':'<span class="pill bad" title="'+esc(b.error||'')+'">'+esc(b.error||'not working')+'</span>')+'</td></tr>';}).join('')
+      +'<tr><td><b>Exchange Online audit log</b></td><td class="mono">Office 365 Management APIs · ActivityFeed.Read</td><td>'+(a&&a.enabled&&!a.error&&!a.last_error?'<span class="pill ok">✓ on</span>':a&&a.enabled?'<span class="pill bad">see error above</span>':'<span class="pill">off</span>')+'</td></tr></tbody></table>';
+    $('mf').onsubmit=function(e){e.preventDefault();var b={tenant:$('m-ten').value.trim(),client_id:$('m-cid').value.trim(),graph:$('m-gr').checked,enabled:$('m-en').checked};if($('m-sec').value)b.client_secret=$('m-sec').value;
+      req('PUT','/api/soc/m365/config',b).then(function(r){CFG=r;drawCfg();toast('Saved'+(r.m365_error?' (audit log: '+r.m365_error+')':'')+' — first sync running');setTimeout(function(){cfgLoad();load();},8000);setTimeout(function(){cfgLoad();load();},30000);}).catch(function(e){toast(e.message);});};
+    $('m-sync').onclick=function(){var bt=this;bt.disabled=true;bt.textContent='Syncing…';req('POST','/api/soc/m365/sync',{}).then(function(r){CFG=r;drawCfg();load();toast(r.graph&&r.graph.last_error?'Sync failed: '+r.graph.last_error:'Synced');}).catch(function(e){toast(e.message);bt.disabled=false;bt.textContent='⟳ Sync now';});};
+  }
+  document.addEventListener('click',function(e){var tb=e.target.closest('[data-tab]');if(tb){e.preventDefault();tab(tb.getAttribute('data-tab'));}});
+  $('refresh').onclick=function(){load();if(!$('tab-cfg').hidden)cfgLoad();};
+  if(/config/.test(location.hash)) setTimeout(function(){tab('cfg');},0); else if(/insights/.test(location.hash)) setTimeout(function(){tab('ins');},0);
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);WHO=j||{};var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden)load();},300000);
+})();
+</script><script src="vendor/zyb-m365x.js"></script>
+</body></html>

@@ -1,0 +1,24 @@
+--- a/engine/routes.js	2026-10-19 18:25:12.856711681 +0000
++++ b/engine/routes.js	2026-10-19 18:25:12.885827164 +0000
+@@ -161,7 +161,20 @@
+   srv.route('POST', '/import/run', (ctx) => { ctx.need('operator'); const r = importer.runImport(ctx.body, assets, { dryRun: ctx.body.dry_run === true, who: ctx.who }); A(ctx.who, 'import.run', ctx.body.mapping || 'generic', { rows: r.rows, created: r.created, updated: r.updated, dry_run: r.dry_run }); return r; }, { maxBody: 8 * 1024 * 1024 });
+ 
+   // ---- audit (admin) ----------------------------------------------------------------------------------------------
+-  srv.route('GET', '/audit', (ctx) => { ctx.need('admin'); return { audit: store.auditTail(limitOf(ctx.query.limit, 200, 2000)), verify: store.verifyAudit() }; });
++  // the hash-chain check reads every audit file: on a worker thread (engine/audit-verify.js) it runs at the same speed
++  // but no longer stops this process meanwhile. audit.engine = "python" (pyengine/store.py) or "node" (here, in line)
++  srv.route('GET', '/audit', async (ctx) => {
++    ctx.need('admin');
++    const eng = ((app.config && app.config.audit) || {}).engine;
++    let verify = null;
++    if (eng !== 'node' && store.dir) {
++      try {
++        if (eng === 'python') { const r = await require('./pyengine').createPyEngine({ python: ((app.config && app.config.discovery) || {}).python_bin || undefined, timeoutMs: 120000 }).call('store.verify_audit', { dir: store.dir }); if (r && typeof r.ok === 'boolean' && typeof r.checked === 'number') verify = r; }
++        else verify = await require('./audit-verify').verifyInWorker(store.dir, 120000);
++      } catch (e) { verify = null; }
++    }
++    return { audit: store.auditTail(limitOf(ctx.query.limit, 200, 2000)), verify: verify || store.verifyAudit() };
++  });
+ 
+   // ---- AGENT GATEWAY (per-agent token; NO portal identity) -------------------------------------------------------
+   srv.route('POST', '/enrol', (ctx) => agentgw.enrol(ctx.body), { agent: true });

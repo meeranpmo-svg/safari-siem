@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Risk Assessments</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Process Risk Assessments: standalone deep-dives on procurement / succession / pricing / etc (engine/process-assessment.js, /api/itam/process-assessment). Logic in vendor/zyb-procassess.js. -->
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:20px;font-weight:700;margin-top:3px}.t .s{font-size:11.5px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button:disabled{opacity:.5;cursor:default}
+.ph{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:0 0 12px}.ph>div{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:9px 11px;cursor:pointer}.ph>div.on{outline:2px solid var(--info)}.ph b{display:block;font-size:13px}.ph .bar,.tk .bar{height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px}.ph .bar i,.tk .bar i{display:block;height:100%}
+.tk{display:grid;grid-template-columns:28px minmax(0,1fr) 150px 140px 120px;gap:10px;align-items:center;padding:9px 6px;border-top:1px solid var(--edge);cursor:pointer}.tk:hover{background:rgba(255,255,255,.03)}.tk .n{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-weight:800;font-size:12px}
+.tk .ttl{font-weight:600}.tk .sub{font-size:11.5px;color:var(--mute)}.pill{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;border:1px solid var(--border);margin-right:4px}.pill.ok{color:var(--ok);border-color:rgba(63,185,80,.45)}.pill.warn{color:var(--warn);border-color:rgba(227,179,65,.45)}.pill.bad{color:var(--bad);border-color:rgba(255,123,114,.45)}.pill.info{color:var(--info);border-color:rgba(121,184,255,.45)}
+.g2{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:12px}@media(max-width:1000px){.g2{grid-template-columns:1fr}.tk{grid-template-columns:28px minmax(0,1fr)}.tk>:nth-child(n+3){grid-column:2}}
+.nx{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--edge)}.nx:first-child{border-top:0}.muted{color:var(--mute)}.small{font-size:12px}a{color:var(--info)}
+.form{display:grid;grid-template-columns:110px 1fr;gap:8px 10px;align-items:center;margin-top:8px}.form label{color:var(--mute);font-size:12px}input,select,textarea{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;width:100%}
+dialog{background:var(--panel);color:inherit;border:1px solid var(--edge);border-radius:12px;padding:16px;width:min(640px,94vw)}dialog::backdrop{background:rgba(0,0,0,.55)}.empty{color:var(--mute);padding:8px 0}
+.st{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px;margin:0 0 12px}.st>div{background:var(--raise);border:1px solid var(--edge);border-radius:9px;padding:7px 8px;font-size:12px}.st>div.on{outline:2px solid var(--info)}.st>div.done{border-color:rgba(63,185,80,.45)}.st b{display:block;font-size:12.5px}@media(max-width:1000px){.st{grid-template-columns:repeat(3,minmax(0,1fr))}}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:6px 7px;border-top:1px solid var(--edge);vertical-align:top}th{color:var(--mute);font-weight:600;font-size:11.5px;text-transform:uppercase}tr[data-eng]{cursor:pointer}tr[data-eng]:hover{background:rgba(255,255,255,.03)}.acts{display:flex;gap:6px;flex-wrap:wrap}.acts button{padding:4px 9px;font-size:12px}.hint{color:var(--mute);font-size:11.5px}.chk{display:flex;gap:8px;align-items:flex-start;padding:4px 0}.chk input{width:auto;margin-top:3px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Business risk · assessments</div><h1>Risk Assessments</h1><div class="muted small">Standalone deep-dives on a process - procurement, succession, pricing and more. Separate from the risk register. Approved by Risk (four eyes), extracted as a report.</div></div><span class="sp"></span><span class="muted small" id="up"></span><button type="button" id="newb" hidden>+ New assessment</button><button type="button" id="refresh">&#10227; Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+ <div id="listv"><div class="k" id="kk"></div>
+  <div class="card"><h2>Assessments <span class="c" id="lc"></span></h2><div id="list"></div></div></div>
+ <div id="detv" hidden>
+  <div class="top"><button type="button" id="back">&larr; All assessments</button><div><div class="eb" id="dk"></div><h1 id="dt" style="font-size:18px"></h1></div><span class="sp"></span><button type="button" id="rep">Report</button></div>
+  <div class="k" id="dkk"></div>
+  <div class="card"><h2>Objective &amp; scope</h2><div id="obj"></div><div class="acts" id="acts" style="margin-top:8px"></div></div>
+  <div class="card"><h2>Findings <span class="c" id="fc"></span><span class="sp"></span><button type="button" id="addf" hidden>+ Add finding</button></h2><div id="finds"></div></div>
+ </div>
+</div>
+<dialog id="dlg" aria-labelledby="dlgt"><h2 id="dlgt" style="margin:0 0 6px;font-size:16px"></h2><div id="dlgb"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button type="button" id="dlgx">Cancel</button><button type="button" id="dlgok">Save</button></div></dialog>
+</main>
+<script src="vendor/zyb-procassess.js"></script>
+</body></html>

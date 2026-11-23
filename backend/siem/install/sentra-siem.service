@@ -1,0 +1,72 @@
+# Sentra SIEM engine - systemd unit (template: install.sh replaces @NODE_BIN@).
+# Installed as /etc/systemd/system/sentra-siem.service. Local overrides: `systemctl edit sentra-siem` (drop-ins), never edit
+# this file in place - install.sh rewrites it on upgrade.
+[Unit]
+Description=Sentra SIEM engine (collectors, parsing, detection, SOC API)
+Documentation=file:///opt/sentra-siem/docs/OPERATOR-GUIDE.md
+After=network-online.target clickhouse-server.service
+Wants=network-online.target
+# ClickHouse is wanted, not required: the engine keeps collecting and detecting (spooling to disk) while it is down.
+Wants=clickhouse-server.service
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=sentra-siem
+Group=sentra-siem
+WorkingDirectory=/opt/sentra-siem
+Environment=NODE_ENV=production
+Environment=SENTRA_SIEM_CONFIG=/etc/sentra-siem/config.json
+# NODE_OPTIONS (heap size) and SENTRA_SIEM_LOG_LEVEL live here:
+EnvironmentFile=-/etc/default/sentra-siem
+ExecStart=@NODE_BIN@ /opt/sentra-siem/engine/main.js
+Restart=always
+RestartSec=5
+# give the writer time to flush batches / spool on shutdown
+TimeoutStopSec=45
+KillSignal=SIGTERM
+LimitNOFILE=65536
+UMask=0077
+# logs are JSON lines on stdout -> journald (journalctl -u sentra-siem)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sentra-siem
+
+# ---- hardening ---------------------------------------------------------------------------------------------------
+NoNewPrivileges=yes
+ProtectSystem=strict
+# writable: state/ (journals, snapshots), spool/, intel lists - and /etc/sentra-siem, because the Connect & Onboard hub,
+# Add Devices / asset-discovery Connect and the AI Network Engineer write config.json / secrets.json there
+# (atomic rename in that directory). The TLS keys stay read-only.
+ReadWritePaths=/var/lib/sentra-siem /etc/sentra-siem
+ReadOnlyPaths=/etc/sentra-siem/tls
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RemoveIPC=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# No capabilities at all by default (all listeners use ports >= 1024). When a listener must bind < 1024
+# (e.g. syslog on 514), install.sh adds the drop-in sentra-siem.service.d/10-low-ports.conf granting only
+# CAP_NET_BIND_SERVICE.
+CapabilityBoundingSet=
+AmbientCapabilities=
+# MemoryDenyWriteExecute is intentionally NOT set: the V8 JIT needs writable+executable pages.
+# On a host shared with the portal, cap memory with a drop-in, e.g.:  [Service] MemoryHigh=2G  MemoryMax=3G
+
+[Install]
+WantedBy=multi-user.target

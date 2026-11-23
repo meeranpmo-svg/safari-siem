@@ -1,0 +1,74 @@
+#!/bin/bash
+# sentra-siem-validate - prove the SIEM detects attacks, rule by rule (installed to /usr/local/sbin).
+#
+#   sudo sentra-siem-validate setup              one time: ingest token for the test source "sentra-validate", then restart
+#   sudo sentra-siem-validate live  [options]    send labelled synthetic attacks to the running engine, report PASS/FAIL
+#        sentra-siem-validate offline [options]  same scenarios through the rule engine in memory (changes nothing)
+#   sudo sentra-siem-validate check --host H --since T [--expect SENTRA-…]   alerts after an endpoint test script
+#   sudo sentra-siem-validate remove             revoke the test source's token (live tests stop working)
+#
+# Options: --wait S (120)  --out DIR (current dir)  --only windows,linux,fortigate,web,m365,exchange,intel
+#          --keep-alerts (leave the test alerts open)  --no-intel  --json
+# Reports: sentra-siem-validation-<mode>-<time>-<run>.html / .json in --out. See /opt/sentra-siem/docs/VALIDATION.md.
+set -euo pipefail
+
+APP="${SENTRA_SIEM_APP:-/opt/sentra-siem}"
+ETC="${SENTRA_SIEM_ETC:-/etc/sentra-siem}"
+SRC="sentra-validate"
+if [ -z "${NODE_BIN:-}" ] && [ -r /etc/default/sentra-siem ]; then
+  NODE_BIN="$(sed -n 's/^NODE_BIN=//p' /etc/default/sentra-siem | tail -n 1)"
+fi
+NODE_BIN="${NODE_BIN:-$(command -v node || true)}"
+
+usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+die() { echo "sentra-siem-validate: $*" >&2; exit 1; }
+# Running as root, only execute a Node.js binary that no other account can replace (same rule as sentra-siem-token).
+trusted_bin() {
+  local p
+  p="$(readlink -f "$1" 2>/dev/null)" || return 1
+  [ -x "$p" ] || return 1
+  while [ -n "$p" ] && [ "$p" != "/" ]; do
+    [ "$(stat -c %u "$p")" = 0 ] || return 1
+    case "$(stat -c %A "$p")" in ?????w????|????????w?) return 1 ;; esac
+    p="$(dirname "$p")"
+  done
+  return 0
+}
+
+[ $# -ge 1 ] || usage
+CMD="$1"; shift
+[ -n "$NODE_BIN" ] && [ -x "$NODE_BIN" ] || die "node not found (set NODE_BIN in /etc/default/sentra-siem)"
+if [ "$(id -u)" = 0 ] && [ -z "${SENTRA_SIEM_ETC:-}" ] && ! trusted_bin "$NODE_BIN"; then
+  die "refusing to run $NODE_BIN as root: it or a parent directory is not root-owned or is group/world-writable"
+fi
+[ -f "$APP/engine/validate/cli.js" ] || die "$APP/engine/validate/cli.js not found - upgrade sentra-siem first"
+
+case "$CMD" in
+  setup)
+    [ "$(id -u)" = 0 ] || die "run with sudo"
+    if sentra-siem-token list 2>/dev/null | grep -qx "$SRC"; then
+      echo "test source $SRC already has an ingest token"
+    else
+      sentra-siem-token add "$SRC" --type syslog >/dev/null
+      echo "created an ingest token for the test source $SRC (type syslog: content detection, like an unconfigured sender)"
+      echo "the engine reads tokens at start-up: restarting sentra-siem now (a few seconds; senders retry / are spooled)"
+      systemctl restart sentra-siem
+      sleep 3
+      systemctl is-active --quiet sentra-siem || die "sentra-siem did not come back up - journalctl -u sentra-siem -n 50"
+    fi
+    echo "ready: sudo sentra-siem-validate live"
+    ;;
+  remove)
+    [ "$(id -u)" = 0 ] || die "run with sudo"
+    sentra-siem-token revoke "$SRC" && echo "token of $SRC revoked (takes effect at the next: systemctl restart sentra-siem)"
+    ;;
+  live|check)
+    [ "$(id -u)" = 0 ] || die "run with sudo (reads $ETC/secrets.json)"
+    exec "$NODE_BIN" "$APP/engine/validate/cli.js" "$CMD" --etc "$ETC" --source "$SRC" "$@"
+    ;;
+  offline)
+    exec "$NODE_BIN" "$APP/engine/validate/cli.js" offline --source "$SRC" "$@"
+    ;;
+  -h|--help|help) usage ;;
+  *) usage ;;
+esac

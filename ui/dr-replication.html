@@ -1,0 +1,118 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DR Replication</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.card h3{margin:14px 0 8px;font-size:13px;color:var(--title)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}
+.stmt{font-size:14.5px;line-height:1.6}.stmt p{margin:0 0 8px}.stmt .b{color:var(--title);font-weight:600}
+.chk{list-style:none;margin:0;padding:0}.chk li{padding:3px 0}.chk .y{color:var(--ok);font-weight:700}.chk .n{color:var(--bad);font-weight:700}
+.kv{display:grid;grid-template-columns:170px 1fr;gap:4px 10px;font-size:13px}.kv dt{color:var(--mute)}.kv dd{margin:0;overflow-wrap:anywhere}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+ul.plain{margin:0;padding-left:18px}ul.plain li{margin:3px 0}
+@media print{.top button,.noprint{display:none!important}body{background:#fff;color:#000}.card,.t{border-color:#bbb;background:#fff;break-inside:avoid}.banner{color:#000;background:#f3f6fa}.card h2,.t .v,.stmt .b{color:#000}.muted,.note,th{color:#444}}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--panel);color:var(--mute);border:1px solid var(--edge);border-radius:999px;padding:6px 13px;cursor:pointer}.tabs button.on{background:#e7eaf0;color:#0a0b0f;border-color:#e7eaf0}.tabs button i{font-style:normal;opacity:.7;margin-left:4px}
+select,input.in{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:13px}.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+td.sql{font-family:Consolas,monospace;font-size:11.8px;color:var(--mute);max-width:520px;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+
+.t{text-align:left}button.t{font:inherit;color:inherit;width:100%;cursor:pointer;transition:transform .12s,box-shadow .12s}button.t:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.3)}button.t:focus-visible{outline:2px solid #fff;outline-offset:2px}button.t[aria-pressed="true"]{box-shadow:0 0 0 2px var(--info) inset}
+.sites{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}
+.site h2 .tag{font:600 11px ui-monospace,Consolas,monospace;color:var(--mute)}
+.rs{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+.why{color:var(--mute);font-size:12px;margin-top:2px}
+.alertbox{border:1px solid #6b2b2b;background:rgba(255,123,114,.08);border-radius:10px;padding:10px 12px;margin:0 0 12px}
+.bar{height:6px;border-radius:3px;background:var(--raise);overflow:hidden;min-width:80px}.bar i{display:block;height:100%;background:var(--info)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Storage, Backup &amp; DR · Nutanix protection domains and Leap · SAMA BCM · NCA 3-1</div><h1>DR Replication</h1></div><span class="sp"></span><a href="dr-studio.html" style="color:var(--info);font-weight:600;margin-right:12px">DR Studio: readiness, forecast, Data Guard →</a><span class="muted" id="up"></span>
+  <button type="button" class="btn pri" id="fetch" title="Read protection domains, replication and remote sites from Prism now">⚡ Fetch now</button><button type="button" class="btn" id="xlsx">⬇ Excel</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="muted" id="live" style="font-size:12px;margin:-4px 0 10px"></div>
+<div class="banner">Replication from the production Nutanix cluster to the DR cluster, read from every Prism connected on the Virtualization page (HQ and DR): each protection domain's schedule (its RPO), when its last copy reached the remote site, replications in progress, the remote sites' state, VMs that are in no protection domain, and - comparing both sites - a protection domain active on both (split brain) or on none. Read-only; refreshed every minute. Problems open work items for the AI Virtualization Administrator, who raises the ticket.</div>
+<div class="k" id="kk"></div>
+<div id="cross"></div>
+<div class="sites" id="sites"></div>
+<div class="card"><h2>Protection domains<span class="c" id="pdc"></span></h2><div class="ctl"><select id="fs" aria-label="Status"><option value="">All statuses</option><option value="problem">Problems only</option><option value="ok">Within RPO</option><option value="missed">RPO missed</option><option value="no-remote">No DR copy</option><option value="standby">Standby (DR side)</option></select></div><div id="pds"></div></div>
+<div class="card" id="unprot-card"><h2>VMs in no protection domain<span class="c" id="upc"></span></h2><div id="unprot"></div></div>
+<div class="card" id="leap-card" hidden><h2>Leap (Prism Central) protection rules and recovery plans</h2><div id="leap"></div></div>
+</main>
+<script src="vendor/zyb-live.js"></script>
+<script src="vendor/zyb-xlsx.js"></script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);}, R=null, ERR='';
+  var ST={ok:['Within RPO','ok'],late:['RPO missed','warn'],critical:['RPO missed badly','bad'],'no-remote':['No DR copy','bad'],'no-schedule':['No schedule','bad'],unknown:['Not reported','mut'],standby:['Standby','info']};
+  function pill(s){var x=ST[s]||[s,'mut'];return '<span class="pill p-'+x[1]+'">'+esc(x[0])+'</span>';}
+  // every tile is a button: it filters the protection-domain table, or opens / scrolls to what it counts (tileGo)
+  var TON='';
+  function tile(l,v,s,cls,act,hint){return '<button type="button" class="t '+(cls||'')+'" data-tile="'+esc(act)+'" aria-pressed="'+(TON===act)+'" title="'+esc(hint||'Show them')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function age(m){return m==null?'—':m<60?m+' min':m<2880?Math.round(m/60*10)/10+' h':Math.round(m/1440)+' d';}
+  function every(m){return m==null?'—':m%10080===0?'every '+(m/10080)+' week(s)':m%1440===0?'every '+(m/1440)+' day(s)':m%60===0?'every '+(m/60)+' h':'every '+m+' min';}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function draw(){
+    if(ERR){$('kk').innerHTML='';$('pds').innerHTML='<p class="err">'+esc(ERR)+'</p>';return;}
+    var D=R.dr||{sites:[],cross:[],totals:{}},T=D.totals||{};
+    $('live').textContent=zybVirtLive.line(R);
+    if(!D.sites.length){$('kk').innerHTML='';$('sites').innerHTML='';$('cross').innerHTML='';$('pds').innerHTML='<div class="empty">No Nutanix cluster is connected yet. Add the HQ and DR Prism on the <a href="virtualization.html">Virtualization</a> page (Viewer role is enough).</div>';$('unprot').innerHTML='';return;}
+    $('kk').innerHTML=tile('Protection domains',T.protection_domains||0,D.sites.length+' Nutanix site(s)','info','all','Show every protection domain')+tile('Within RPO',T.ok||0,'last DR copy on time',T.ok?'ok':'','ok','Show the ones within RPO')
+      +tile('RPO missed',(T.late||0)+(T.critical||0),(T.critical||0)+' badly (over 4x)',(T.critical?'bad':T.late?'warn':'ok'),'missed','Show the ones that missed their RPO')+tile('No DR copy',T.no_remote||0,'snapshots stay local',T.no_remote?'bad':'ok','no-remote','Show the ones with no remote copy')
+      +tile('Remote sites down',T.remote_sites_down||0,'nothing replicates',T.remote_sites_down?'bad':'ok','rsdown','List the remote sites that are down')+tile('Unprotected VMs',T.unprotected_vms||0,'powered on, in no protection domain',T.unprotected_vms?'warn':'ok','unprot','Go to the VMs in no protection domain')
+      +tile('Cross-site issues',T.cross||0,'active on both / on none',T.cross?'bad':'ok','cross','Show the cross-site issues');
+    $('cross').innerHTML=(D.cross||[]).length?'<div class="alertbox"><b>Cross-site check (HQ ↔ DR)</b>'+D.cross.map(function(x){return '<div class="rs"><span><b>'+esc(x.name)+'</b> — '+esc(x.why)+'</span>'+'<span class="pill p-bad">'+(x.status==='both-active'?'split brain':'none active')+'</span></div>';}).join('')+'</div>':'';
+    $('sites').innerHTML=D.sites.map(function(S){var pr=S.protection_domains.filter(function(d){return d.status!=='ok'&&d.status!=='standby';}).length;
+      return '<div class="card site"><h2>'+esc(S.platform)+' <span class="tag">'+esc(S.site||'')+'</span>'+(pr?'<span class="pill p-warn">'+pr+' problem(s)</span>':S.protection_domains.length?'<span class="pill p-ok">OK</span>':'')+'</h2>'
+        +'<div class="muted" style="font-size:12px;margin-bottom:6px">'+(S.read?'read '+esc(S.at?new Date(S.at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'')+' · '+S.protection_domains.length+' protection domain(s)':'DR state not read yet')+'</div>'
+        +'<div><b style="font-size:12px">Remote sites</b>'+(S.remote_sites.length?S.remote_sites.map(function(r){return '<div class="rs"><span>'+esc(r.name)+(r.address?' <span class="muted mono">'+esc(r.address)+'</span>':'')+'</span>'+(r.healthy===false?'<span class="pill p-bad">'+esc(r.status)+'</span>':r.healthy?'<span class="pill p-ok">'+esc(r.status)+'</span>':'<span class="pill p-mut">status not reported</span>')+'</div>';}).join(''):'<div class="muted" style="font-size:12px">none configured</div>')+'</div>'
+        +(S.replications.length?'<div style="margin-top:8px"><b style="font-size:12px">Replicating now</b>'+S.replications.map(function(r){return '<div class="rs"><span>'+esc(r.protection_domain)+' → '+esc(r.remote_site||'')+'</span><span style="display:flex;gap:6px;align-items:center">'+(r.pct!=null?'<span class="bar"><i style="width:'+r.pct+'%"></i></span>'+r.pct+'%':'')+'</span></div>';}).join('')+'</div>':'')
+        +(S.read_errors.length?'<p class="err" style="font-size:12px">Not readable: '+esc(S.read_errors.join('; '))+'</p>':'')+'</div>';}).join('');
+    var f=$('fs').value, rows=[];D.sites.forEach(function(S){S.protection_domains.forEach(function(d){rows.push({S:S,d:d});});});
+    var vis=rows.filter(function(x){return !f||(f==='problem'?x.d.status!=='ok'&&x.d.status!=='standby':f==='missed'?x.d.status==='late'||x.d.status==='critical':x.d.status===f);});
+    var rank={critical:0,'no-remote':1,'no-schedule':1,late:2,unknown:3,ok:4,standby:5};vis.sort(function(a,b){return (rank[a.d.status]||9)-(rank[b.d.status]||9)||a.d.name.localeCompare(b.d.name);});
+    $('pdc').textContent=vis.length+' of '+rows.length;
+    $('pds').innerHTML=vis.length?'<div class="tw"><table><thead><tr><th>Status</th><th>Protection domain</th><th>Site</th><th>Role</th><th>VMs</th><th>Remote site(s)</th><th>Schedule (RPO)</th><th>Last DR copy</th></tr></thead><tbody>'
+      +vis.map(function(x,i){var d=x.d;return '<tr data-i="'+i+'" style="cursor:pointer"><td>'+pill(d.status)+(d.stuck?' <span class="pill p-warn">replication '+d.stuck.minutes+' min</span>':'')+'<div class="why">'+esc(d.why)+'</div></td><td><b>'+esc(d.name)+'</b></td><td>'+esc(x.S.platform)+'</td><td>'+(d.active===true?'active':d.active===false?'standby':'—')+(d.metro?' · metro':'')+'</td><td>'+d.vms.length+'</td><td>'+esc(d.remote_sites.join(', ')||'none')+'</td><td>'+esc(every(d.schedule_min))+'</td><td>'+age(d.age_min)+(d.basis==='snapshot'?' <span class="muted">(local)</span>':'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No protection domain matches.</div>';
+    $('pds').onclick=function(e){var tr=e.target.closest('tr[data-i]');if(!tr)return;var x=vis[+tr.getAttribute('data-i')],d=x.d;
+      Z.open('Protection domain · '+x.S.platform,d.name,Z.kv([['Status',pill(d.status)],['Role here',d.active===true?'active':d.active===false?'standby':'not reported'],['Schedule',esc(every(d.schedule_min))],['RPO used',d.rpo_min+' min'],['Last DR copy',d.last_replicated_at?esc(new Date(d.last_replicated_at).toLocaleString('en-GB'))+(d.replicated_to?' → '+esc(d.replicated_to):''):'not reported'],['Last snapshot',d.last_snapshot_at?esc(new Date(d.last_snapshot_at).toLocaleString('en-GB')):'not reported']])
+        +Z.sec('Why',esc(d.why))+Z.sec('VMs ('+d.vms.length+')',d.vms.length?esc(d.vms.join(', ')):'<span class="zd-dim">none</span>')
+        +(d.replicating.length?Z.sec('Replicating now',Z.tbl(['Remote site','Direction','Started','Done'],d.replicating.map(function(r){return [esc(r.remote_site),esc(r.direction),r.started_at?esc(new Date(r.started_at).toLocaleString('en-GB')):'—',r.pct!=null?r.pct+'%':'—'];}))):'')
+        +Z.sec('Work items','<p>Problems here are opened as work items for the <a href="ai-virt-admin.html">AI Virtualization Administrator</a>, who writes the plan and raises the ticket. Nothing is changed in Prism from this page.</p>'));};
+    var up=[];D.sites.forEach(function(S){(S.unprotected_vms||[]).forEach(function(n){up.push([S.platform,n]);});});
+    $('upc').textContent=up.length;$('unprot').innerHTML=up.length?'<p class="muted" style="font-size:12px">Powered-on VMs that no protection domain covers: decide for each whether it needs DR, and record the ones that do not in Risks &amp; Actions.</p><div class="tw"><table><thead><tr><th>Site</th><th>VM</th></tr></thead><tbody>'+up.slice(0,500).map(function(x){return '<tr><td>'+esc(x[0])+'</td><td>'+esc(x[1])+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">Every powered-on VM is in a protection domain'+(D.sites.some(function(S){return S.unprotected_vms==null;})?' (not checked on Prism Central)':'')+'.</div>';
+    var L=D.sites.filter(function(S){return S.leap&&((S.leap.rules||[]).length||(S.leap.plans||[]).length);});$('leap-card').hidden=!L.length;
+    $('leap').innerHTML=L.map(function(S){return '<h3>'+esc(S.platform)+'</h3>'+Z.tbl(['Protection rule','RPO','State'],(S.leap.rules||[]).map(function(r){return [esc(r.name),r.rpo_min!=null?r.rpo_min+' min':'—',esc(r.state||'')];}))+Z.tbl(['Recovery plan','Stages','State'],(S.leap.plans||[]).map(function(r){return [esc(r.name),String(r.stages),esc(r.state||'')];}));}).join('');
+  }
+  function load(){req('GET','/virt/capacity').then(function(r){R=r;ERR='';draw();$('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}).catch(function(e){ERR=e.status===404?'The capacity add-on is not installed on this server yet - run the update (update-platform.ps1).':e.message;draw();});}
+  function goTo(el){if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});}
+  function tileGo(a){var D=(R&&R.dr)||{sites:[],cross:[]};
+    if(a==='rsdown'){var L=[];D.sites.forEach(function(S){(S.remote_sites||[]).forEach(function(r){if(r.healthy===false)L.push([esc(S.platform),esc(r.name),'<span class="mono">'+esc(r.address||'')+'</span>',esc(r.status||'')]);});});
+      Z.open('DR Replication','Remote sites down ('+L.length+')',L.length?Z.tbl(['Site','Remote site','Address','Status'],L)+'<p class="muted">While a remote site is down nothing replicates to it: every protection domain that uses it falls behind its RPO.</p>':'<p class="muted">Every remote site Prism reports is up.</p>');return;}
+    if(a==='unprot'){goTo($('unprot-card'));return;}
+    if(a==='cross'){if((D.cross||[]).length)goTo($('cross'));else Z.open('DR Replication','Cross-site issues','<p class="muted">No protection domain is active on both sites or on none.</p>');return;}
+    TON=TON===a&&a!=='all'?'':a;$('fs').value=TON==='all'?'':TON;draw();goTo($('pds').closest('.card'));}
+  $('kk').addEventListener('click',function(e){var b=e.target.closest('[data-tile]');if(b)tileGo(b.getAttribute('data-tile'));});
+  $('fs').onchange=function(){TON=this.value;draw();};$('refresh').onclick=load;
+  $('fetch').onclick=function(){zybVirtLive.fetch(this,function(r){R=r;draw();});};
+  $('xlsx').onclick=function(){if(!R||!window.zybXlsx)return;var D=R.dr||{sites:[]},rows=[];D.sites.forEach(function(S){S.protection_domains.forEach(function(d){rows.push([S.platform,S.site,d.name,(ST[d.status]||[d.status])[0],d.why,d.active===true?'active':d.active===false?'standby':'',d.vms.length,d.remote_sites.join(', '),d.schedule_min==null?'':d.schedule_min,d.rpo_min,d.age_min==null?'':d.age_min,d.last_replicated_at||'',d.last_snapshot_at||'']);});});
+    zybXlsx.download('dr-replication-'+new Date().toISOString().slice(0,10)+'.xlsx',[
+      {name:'Protection domains',columns:[{h:'Platform',w:16},{h:'Site',w:14},{h:'Protection domain',w:24},{h:'Status',w:16},{h:'Why',w:70},{h:'Role',w:9},{h:'VMs',w:6},{h:'Remote sites',w:20},{h:'Schedule (min)',w:10},{h:'RPO (min)',w:9},{h:'Age of last DR copy (min)',w:12},{h:'Last replicated',w:22},{h:'Last snapshot',w:22}],rows:rows},
+      {name:'Remote sites',columns:[{h:'Platform',w:16},{h:'Remote site',w:20},{h:'Address',w:24},{h:'Status',w:16}],rows:[].concat.apply([],D.sites.map(function(S){return S.remote_sites.map(function(r){return [S.platform,r.name,r.address,r.status||'not reported'];});}))},
+      {name:'Unprotected VMs',columns:[{h:'Platform',w:16},{h:'VM',w:30}],rows:[].concat.apply([],D.sites.map(function(S){return (S.unprotected_vms||[]).map(function(n){return [S.platform,n];});}))},
+      {name:'Cross-site',columns:[{h:'Protection domain',w:24},{h:'Issue',w:14},{h:'Detail',w:70}],rows:(D.cross||[]).map(function(x){return [x.name,x.status,x.why];})}],
+      {title:'DR Replication (Nutanix)',filter:'all Nutanix sites',by:(ZYB_ORG.short + ' — IT Operations and Cyber Security Automation Platform')});};
+  load();setInterval(function(){if(!document.hidden)load();},30000);
+})();
+</script>
+</body></html>

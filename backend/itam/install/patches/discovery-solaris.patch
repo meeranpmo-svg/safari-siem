@@ -1,0 +1,43 @@
+diff -ru a/engine/discovery/classify.js b/engine/discovery/classify.js
+--- a/engine/discovery/classify.js	2026-10-12 13:10:03.480266962 +0000
++++ b/engine/discovery/classify.js	2026-10-12 13:10:03.485683802 +0000
+@@ -76,6 +76,8 @@
+   [/VMware ESXi/i, 'server', 85, 'VMware'],
+   [/Windows.*Server|Server 20(08|12|16|19|22|25)/i, 'server', 70, 'Microsoft'],
+   [/Windows/i, 'workstation', 45, 'Microsoft'],
++  [/SunOS|Solaris/i, 'server', 75, 'Oracle'],
++  [/AIX|HP-UX/i, 'server', 70, null],
+   [/Linux|Ubuntu|Red Hat|CentOS|Debian|SUSE/i, 'server', 45, null],
+ ];
+ const NAME_RULES = [
+@@ -84,9 +86,19 @@
+   [/^(srv|svr|dc\d|sql|app|web|db|esx|hv|exch|file)[-_.\d]/i, 'server'], [/^(pc|ws|lt|lap|desk|nb)[-_.\d]/i, 'workstation'],
+ ];
+ 
++// "SunOS host 5.11 11.4.42.111.0 sun4v" → "Oracle Solaris 11.4 (SPARC)"; "SunOS host 5.10 Generic_150400-59 i86pc" → "Oracle Solaris 10 (x86)"
++function solaris(d) {
++  const m = /SunOS\s+\S+\s+5\.(\d+)(?:\s+(11\.\d+))?[^\n]*?\b(sun4\w*|i86pc)?\s*$/i.exec(d) || /SunOS[^\n]*?5\.(\d+)(?:\s+(11\.\d+))?/i.exec(d);
++  if (!m) return /Solaris\s*\d+(\.\d+)?/i.test(d) ? 'Oracle ' + /Solaris\s*\d+(\.\d+)?/i.exec(d)[0] : null;
++  const major = Number(m[1]), rel = major >= 11 ? (m[2] || (/\b11\.(\d)\b/.exec(d) || [])[0] || '11') : String(major);
++  const arch = /sun4/i.test(d) ? ' (SPARC)' : /i86pc/i.test(d) ? ' (x86)' : '';
++  return 'Oracle Solaris ' + rel + arch;
++}
++
+ function osFrom(dev) {
+   if (dev.os) return dev.os;
+   const d = String(dev.sys_descr || '');
++  if (/SunOS|Solaris/i.test(d)) return solaris(d);
+   let m = /(Windows[^,;]*)/i.exec(d); if (m) return m[1].trim().slice(0, 80);
+   m = /(FortiOS[^,;]*|PAN-OS[^,;]*|NX-OS|Cisco IOS[^,;]*|ArubaOS-CX[^,;]*|JUNOS [^,;]*|VMware ESXi[^,;]*|RouterOS[^,;]*)/i.exec(d); if (m) return m[1].trim().slice(0, 80);
+   if (/Linux/i.test(d)) return 'Linux';
+diff -ru a/engine/discovery/siem.js b/engine/discovery/siem.js
+--- a/engine/discovery/siem.js	2026-10-12 13:10:03.485683802 +0000
++++ b/engine/discovery/siem.js	2026-10-12 13:10:03.490236544 +0000
+@@ -32,6 +32,7 @@
+   { when: 'Cisco switch / router / AP', kind: 'cisco', test: (c) => ['switch', 'router', 'ap'].includes(c.cls) && /cisco/.test(c.vendor) },
+   { when: 'Dell iDRAC / HPE iLO (out-of-band)', kind: 'dell-idrac', test: (c) => /idrac/.test(c.os + c.name) },
+   { when: 'HPE iLO', kind: 'hpe-ilo', test: (c) => /\bilo\b/.test(c.os + c.name) },
++  { when: 'Oracle Solaris / AIX / HP-UX server (syslog)', kind: 'syslog', test: (c) => /solaris|sunos|\baix\b|hp-ux/.test(c.os) },
+   { when: 'Linux / Unix server', kind: 'linux', test: (c) => /linux|ubuntu|red hat|rhel|centos|debian|suse|unix/.test(c.os) },
+   { when: 'Other network device (switch / router / AP / firewall)', kind: 'syslog', test: (c) => ['switch', 'router', 'ap', 'firewall'].includes(c.cls) },
+ ];

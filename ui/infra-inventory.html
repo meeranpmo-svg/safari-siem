@@ -1,0 +1,142 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Infrastructure Inventory</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:190px minmax(0,1fr);gap:16px;align-items:center}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;text-align:left;color:inherit;font:inherit;cursor:pointer}.kpi:hover{border-color:#3a4258}.kpi .n{font-size:22px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.classes{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:14px}.cl{background:var(--d-raise);border:1px solid var(--d-line);border-radius:14px;padding:12px;cursor:pointer;text-align:left;color:inherit;font:inherit}.cl:hover{border-color:#3a4258}.cl[aria-pressed="true"]{border-color:var(--d-acc);background:#172036}.cl i{font-size:22px;color:#8db0ff}.cl .n{font-size:22px;font-weight:800}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tabs button{background:transparent;border:1px solid var(--d-line);color:var(--d-mute);border-radius:999px;padding:6px 14px;font:600 13px Inter,"Segoe UI",system-ui,sans-serif;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.tabs button[aria-selected="true"]{color:#fff;border-color:var(--d-acc);background:rgba(91,141,239,.2)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.v-ok{background:rgba(47,179,68,.15);color:#56d364}.v-bad{background:rgba(229,72,77,.2);color:#ff8a8e}.v-warn{background:rgba(245,159,0,.18);color:#f5b544}.v-mute{background:rgba(139,147,164,.16);color:#aab2c2}.v-info{background:rgba(91,141,239,.18);color:#8db0ff}
+.bar{height:8px;border-radius:4px;background:#232837;overflow:hidden}.bar i{display:block;height:100%}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12.8px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--d-line)}td{padding:7px 8px;border-bottom:1px solid #1b2030;vertical-align:top}
+tr.rk{cursor:pointer}tr.rk:hover td{background:#151924}tr.sel td{background:#172036}
+.hm td.h{text-align:center;cursor:pointer;font-weight:800;border-radius:6px}.hm td.h:hover{outline:1px solid #fff}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:3px;vertical-align:-2px}.d-yes{background:#2fb344}.d-no{background:#e5484d}.d-silent{background:#f59f00}.d-unk{background:#3a3f4b}
+.inp,select.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.site{background:var(--d-raise);border:1px solid var(--d-line);border-radius:14px;padding:12px}
+.ans{white-space:pre-wrap;background:#10131a;border:1px solid var(--d-line);border-radius:10px;padding:12px;margin-top:10px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1100px){.hero{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Infrastructure</div><h1>Infrastructure Inventory</h1><div class="sm mute">Every firewall, switch, router, server, VM, storage system and cloud server in the asset register - and what actually sees it: discovery, the agents, the hypervisors, the SIEM, an owner, a site, a criticality. An unknown is shown as unknown, never as covered.</div></div><div class="sp"></div>
+ <span class="sm mute" id="me"></span><button class="btn" id="xls" type="button"><i class="ti ti-file-spreadsheet"></i>Excel</button><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <section class="card hero"><div id="ring"></div><div class="kpis" id="kpis"></div></section>
+ <div id="siemnote"></div>
+ <div class="classes" id="classes"></div>
+ <div class="tabs" id="tabs" role="tablist"></div>
+ <div id="view"></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var V=null, TAB='coverage', F={cls:'',site:'',q:'',sig:''}, SEL='', ANS=null, PORTAL=null, ROLE='viewer', USER='';
+  var ICON={firewall:'shield-half',network:'switch-horizontal',wireless:'wifi',server:'server',vm:'box',storage:'database',cloud:'cloud'};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,/^\/(dashboards|api)\//.test(u)?u:'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function sigLabel(id){var s=V.signals.find(function(x){return x.id===id;});return s?s.label:id;}
+  function clsLabel(id){var c=V.classes.find(function(x){return x.id===id;});return c?c.label:id;}
+  function dot(v,label){var c=v===true?'d-yes':v==='silent'?'d-silent':v===false?'d-no':'d-unk';return '<span class="dot '+c+'" title="'+esc(label+': '+(v===true?'yes':v==='silent'?'silent (no logs lately)':v===false?'no':'unknown'))+'"></span>';}
+  function covCol(p){return p==null?'#3a3f4b':p>=90?'#2fb344':p>=70?'#f59f00':'#e5484d';}
+  function load(){$('err').hidden=true;return req('GET','/infra-inventory').then(function(v){V=v;$('main').hidden=false;$('me').textContent=v.can_act?'Operator':'Read-only';draw();
+      req('GET','/api/netassets').then(function(p){PORTAL=(p&&p.assets)||[];if(TAB==='portal')draw();}).catch(function(){PORTAL=null;/* the portal list is optional - its tab says it was not read */});})
+    .catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>Infrastructure Inventory is not available</h2>'+note(e.status===404?'Not installed on the server - run the update (update-platform.ps1).':e.message);});}
+  function ring(p){var r=66,c=2*Math.PI*r,v=p==null?0:p;return '<svg viewBox="0 0 170 170" width="170" height="170" role="img" aria-label="Average coverage '+(p==null?'not measured':p+'%')+'"><circle cx="85" cy="85" r="'+r+'" fill="none" stroke="#232837" stroke-width="15"/><circle cx="85" cy="85" r="'+r+'" fill="none" stroke="'+covCol(p)+'" stroke-width="15" stroke-linecap="round" stroke-dasharray="'+(c*v/100).toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 85 85)"/><text x="85" y="84" text-anchor="middle" fill="#e7eaf0" font-size="32" font-weight="800" font-family="Inter,sans-serif">'+(p==null?'—':p+'%')+'</text><text x="85" y="106" text-anchor="middle" fill="#8b93a4" font-size="11" font-family="Inter,sans-serif">average coverage</text></svg>';}
+  function draw(){var s=V.summary;$('ring').innerHTML=ring(s.coverage);
+    function kp(n,l,col,go){return '<button type="button" class="kpi" data-go="'+go+'"><div class="n" style="color:'+(col||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></button>';}
+    $('kpis').innerHTML=kp(s.assets,'infrastructure assets','','assets:')+kp(s.fully_covered,'fully covered','#56d364','assets:')+kp(s.gaps,'coverage gaps',s.gaps?'#f5b544':'','gaps:')+kp(s.outliers,'outliers against their peers',s.outliers?'#ff7b80':'','gaps:')
+      +kp(s.no_logs,'not sending logs to the SIEM',s.no_logs?'#ff7b80':'','assets:logs')+kp(s.stale,'not seen for 30 days',s.stale?'#f5b544':'','issues:')+kp(s.duplicates,'duplicate serial / IP',s.duplicates?'#f5b544':'','issues:')+kp(V.sites.length,'sites','','sites:');
+    $('siemnote').innerHTML=V.siem.reachable?'':'<div class="note" style="margin-bottom:12px"><b>SIEM not answering:</b> '+esc(V.siem.error)+'. Log coverage reads unknown (grey) and is left out of the percentages - it is not counted as covered.</div>';
+    $('classes').innerHTML=V.matrix.map(function(m){var a=V.assets.filter(function(r){return r.class===m.class&&r.coverage!=null;}),p=a.length?Math.round(a.reduce(function(x,r){return x+r.coverage;},0)/a.length):null;
+      return '<button type="button" class="cl" data-cls="'+m.class+'" aria-pressed="'+(F.cls===m.class)+'"><div class="row"><i class="ti ti-'+(ICON[m.class]||'device-desktop')+'"></i><span class="sp"></span><span class="n">'+m.assets+'</span></div><b>'+esc(m.label)+'</b><div class="bar" style="margin-top:6px"><i style="width:'+(p||0)+'%;background:'+covCol(p)+'"></i></div><div class="sm mute">'+(p==null?'not measured':p+'% covered')+'</div></button>';}).join('');
+    var T=[['coverage','grid-dots','Coverage'],['assets','list-details','Assets ('+V.assets.length+')'],['gaps','alert-triangle','Gaps ('+V.gaps.length+')'],['sites','building','Sites'],['issues','copy','Stale & duplicates'],['portal','table','Portal list'],['ai','robot','AI analyst']];
+    $('tabs').innerHTML=T.map(function(t){return '<button type="button" role="tab" data-tab="'+t[0]+'" aria-selected="'+(TAB===t[0])+'"><i class="ti ti-'+t[1]+'"></i>'+esc(t[2])+'</button>';}).join('');
+    var v=$('view');v.innerHTML=TAB==='coverage'?coverageView():TAB==='assets'?assetsView():TAB==='gaps'?gapsView():TAB==='sites'?sitesView():TAB==='issues'?issuesView():TAB==='portal'?portalView():aiView();}
+  // ---------- coverage heat map
+  function coverageView(){if(!V.matrix.length)return note('No infrastructure asset in the register yet. Servers, network devices and storage come from Asset Discovery, vCenter / Prism and the agents.');
+    var head='<tr><th>Class</th><th>Assets</th>'+V.signals.map(function(s){return '<th title="'+esc(s.fix)+'">'+esc(s.label)+'</th>';}).join('')+'</tr>';
+    var rows=V.matrix.map(function(m){return '<tr><td><b>'+esc(m.label)+'</b></td><td>'+m.assets+'</td>'+V.signals.map(function(s){var c=m.cells[s.id];if(c===null)return '<td class="sm mute" style="text-align:center">—</td>';
+      var p=c.pct;return '<td class="h" data-hm="'+m.class+'|'+s.id+'" style="background:'+covCol(p)+'33;color:'+covCol(p)+'" title="'+esc(c.have+' of '+c.of+' known'+(m.assets-c.of?' ('+(m.assets-c.of)+' unknown)':''))+'">'+(p==null?'?':p+'%')+'<div class="sm" style="font-weight:400;color:#8b93a4">'+c.have+'/'+c.of+'</div></td>';}).join('')+'</tr>';}).join('');
+    return '<section class="card"><h2>What sees each class <span class="c">% of the assets that have the signal · — not expected for the class · click a cell for the assets missing it</span></h2><div style="overflow-x:auto"><table class="hm">'+head+rows+'</table></div></section>';}
+  // ---------- assets
+  function filtered(){return V.assets.filter(function(r){if(F.cls&&r.class!==F.cls)return false;if(F.site&&r.site!==F.site)return false;if(F.q&&(r.name+' '+r.ip+' '+r.vendor+' '+r.model+' '+r.owner).toLowerCase().indexOf(F.q.toLowerCase())<0)return false;
+    if(F.sig==='logs')return r.signals.logs===false||r.signals.logs==='silent';if(F.sig)return r.missing.indexOf(F.sig)>=0;return true;});}
+  function assetsView(){var L=filtered(),sites=V.sites.map(function(s){return s.site;});
+    var bar='<div class="row" style="margin-bottom:10px"><input class="inp" id="q" style="max-width:260px" placeholder="Search name, IP, vendor, owner" value="'+esc(F.q)+'"><select class="inp" id="fsite" style="max-width:200px"><option value="">All sites</option>'+sites.map(function(s){return '<option'+(F.site===s?' selected':'')+'>'+esc(s)+'</option>';}).join('')+'</select>'
+      +'<select class="inp" id="fsig" style="max-width:240px"><option value="">Any coverage</option>'+V.signals.map(function(s){return '<option value="'+s.id+'"'+(F.sig===s.id?' selected':'')+'>Missing: '+esc(s.label)+'</option>';}).join('')+'</select>'+(F.cls||F.site||F.sig||F.q?'<button class="btn sm" type="button" id="clr">Clear filters</button>':'')+'<span class="sm mute">'+L.length+' shown</span></div>';
+    var t='<table><thead><tr><th>Asset</th><th>Class</th><th>Site</th><th>Coverage</th><th>Signals</th><th>Last seen</th></tr></thead><tbody>'+L.slice(0,800).map(function(r){
+      return '<tr class="rk'+(SEL===r.id?' sel':'')+'" data-asset="'+esc(r.id)+'"><td><b>'+esc(r.name)+'</b><div class="sm mute">'+esc([r.vendor,r.model,r.ip].filter(Boolean).join(' · '))+'</div></td><td>'+esc(clsLabel(r.class))+'</td><td>'+esc(r.site||'—')+'</td>'
+        +'<td style="min-width:110px"><div class="bar"><i style="width:'+(r.coverage||0)+'%;background:'+covCol(r.coverage)+'"></i></div><span class="sm">'+(r.coverage==null?'unknown':r.coverage+'%')+'</span></td>'
+        +'<td>'+r.expected.map(function(k){return dot(r.signals[k],sigLabel(k));}).join('')+(r.outliers.length?' '+pill('outlier','v-bad'):'')+(r.stale?' '+pill('stale','v-warn'):'')+(r.duplicates?' '+pill('duplicate','v-warn'):'')+'</td><td class="sm">'+esc(r.last_seen?r.last_seen.slice(0,10):'never')+'</td></tr>'
+        +(SEL===r.id?'<tr><td colspan="6">'+assetDetail(r)+'</td></tr>':'');}).join('')+'</tbody></table>';
+    return '<section class="card">'+bar+(L.length?t:note('No asset matches.'))+'</section>';}
+  function assetDetail(r){return '<table><tbody>'+r.expected.map(function(k){var s=V.signals.find(function(x){return x.id===k;}),v=r.signals[k],o=r.outliers.find(function(x){return x.signal===k;});
+      return '<tr><td>'+dot(v,s.label)+'</td><td><b>'+esc(s.label)+'</b>'+(o?' '+pill('outlier: '+o.why,'v-bad'):'')+'</td><td class="sm">'+(v===true?'yes':v===null?'unknown - the source did not answer':esc(s.fix))+'</td></tr>';}).join('')+'</tbody></table>'
+    +'<div class="sm mute" style="margin-top:6px">Sources that saw it: '+esc(r.sources.join(', ')||'none')+(r.duplicates?' · duplicate '+esc(r.duplicates.join(', ')):'')+' · <a href="asset-studio.html">open in Asset Studio</a></div>';}
+  // ---------- gaps
+  function gapsView(){if(!V.gaps.length)return note('No coverage gap: every asset has what its class expects.');
+    return '<section class="card"><h2>Coverage gaps <span class="c">outliers against their peers first, then by criticality</span></h2><table><thead><tr><th>Asset</th><th>Class</th><th>Missing</th><th>What to do</th></tr></thead><tbody>'+V.gaps.slice(0,500).map(function(g){
+      return '<tr class="rk" data-asset="'+esc(g.asset)+'"><td><b>'+esc(g.name)+'</b><div class="sm mute">'+esc([g.site,g.criticality].filter(Boolean).join(' · '))+'</div></td><td>'+esc(clsLabel(g.class))+'</td><td>'+esc(g.label)+(g.state==='silent'?' '+pill('silent','v-warn'):'')+(g.outlier?' '+pill('outlier','v-bad'):'')+'</td><td class="sm">'+esc(g.fix)+'</td></tr>';}).join('')+'</tbody></table></section>';}
+  // ---------- sites
+  function sitesView(){return '<div class="grid3">'+V.sites.map(function(s){return '<div class="site" data-site="'+esc(s.site)+'" style="cursor:pointer"><div class="row"><b>'+esc(s.site)+'</b><span class="sp"></span>'+pill(s.coverage==null?'not measured':s.coverage+'%',s.coverage==null?'v-mute':s.coverage>=90?'v-ok':s.coverage>=70?'v-warn':'v-bad')+'</div><div class="sm mute">'+s.assets+' asset(s) · '+s.gaps+' gap(s)'+(s.stale?' · '+s.stale+' stale':'')+'</div>'
+      +'<div class="sm" style="margin-top:6px">'+Object.keys(s.classes).map(function(c){return '<span style="margin-right:8px"><i class="ti ti-'+(ICON[c]||'device-desktop')+'"></i> '+s.classes[c]+'</span>';}).join('')+'</div><div class="bar" style="margin-top:6px"><i style="width:'+(s.coverage||0)+'%;background:'+covCol(s.coverage)+'"></i></div></div>';}).join('')+'</div>';}
+  // ---------- stale & duplicates
+  function issuesView(){var st=V.assets.filter(function(r){return r.stale;});
+    return '<section class="card"><h2>Not seen for 30 days <span class="c">still in use, or retire them in the register</span></h2>'+(st.length?'<table><tbody>'+st.map(function(r){return '<tr class="rk" data-asset="'+esc(r.id)+'"><td><b>'+esc(r.name)+'</b></td><td>'+esc(clsLabel(r.class))+'</td><td>'+esc(r.site||'—')+'</td><td class="sm">last seen '+esc(r.last_seen?r.last_seen.slice(0,10):'never')+'</td></tr>';}).join('')+'</tbody></table>':note('Every asset was seen in the last 30 days.'))+'</section>'
+      +'<section class="card"><h2>Duplicates <span class="c">two in-use assets with one serial or management IP - merge them in Ownership & Reconciliation</span></h2>'+(V.duplicates.length?'<table><tbody>'+V.duplicates.map(function(d){return '<tr><td>'+esc(d.key==='ip'?'Management IP':'Serial')+'</td><td class="mono">'+esc(d.value)+'</td><td>'+d.assets.map(function(a){return esc(a.name);}).join(', ')+'</td></tr>';}).join('')+'</tbody></table>':note('No duplicate serial or management IP.'))+'</section>';}
+  // ---------- portal list
+  function portalView(){if(PORTAL===null)return note('The portal\'s hand-kept list (/api/netassets) was not read - open this page from the portal to compare it.');
+    var known=new Set(V.assets.map(function(r){return (r.name||'').toLowerCase();}).concat(V.assets.map(function(r){return r.ip;}).filter(Boolean)));
+    var extra=PORTAL.filter(function(a){return a.source!=='itam'&&!known.has(String(a.name||'').toLowerCase())&&!(a.ip&&known.has(a.ip));});
+    return '<section class="card"><h2>In the portal list, not in the asset register <span class="c">typed in by hand - add them to the register so discovery, monitoring and the SIEM cover them</span></h2>'+(extra.length?'<table><thead><tr><th>Name</th><th>Category</th><th>IP</th><th>Site</th></tr></thead><tbody>'+extra.map(function(a){return '<tr><td><b>'+esc(a.name||'—')+'</b></td><td>'+esc(a.cat||'')+'</td><td class="mono">'+esc(a.ip||'')+'</td><td>'+esc(a.site||'')+'</td></tr>';}).join('')+'</tbody></table>':note('Every row of the portal list is in the asset register.'))+'</section>';}
+  // ---------- AI
+  function aiView(){var a=V.ai||{};if(!a.enabled)return note('The AI inventory analyst is off: '+(a.reason||'not configured')+'. Everything else on this page works without it.');if(!V.can_act)return note('The AI inventory analyst is for operators and administrators.');
+    return '<section class="card"><h2>AI inventory analyst <span class="c">reads the coverage, gaps and register issues; changes nothing</span></h2><div class="row"><input class="inp" id="aq" style="max-width:720px" placeholder="e.g. Which critical assets are not sending logs, and what should we close first?"><button class="btn pri" type="button" id="ask">Ask</button></div>'
+      +(ANS?'<div class="ans">'+esc(ANS.answer)+'</div>'+(ANS.injection_signals&&ANS.injection_signals.length?'<div class="note" style="margin-top:8px">Some asset text looked like instructions to the AI and was treated as data: '+esc(ANS.injection_signals.join(', '))+'.</div>':''):'')+'</section>';}
+  // ---------- Excel
+  function xls(){var s=V.summary,yn=function(v){return v===true?'yes':v==='silent'?'silent':v===false?'no':v===null?'unknown':'n/a';};
+    var sheets=[{name:'Summary',columns:[{h:'Measure',w:40},{h:'Value',w:14}],rows:[['Infrastructure assets',s.assets],['Average coverage %',s.coverage],['Fully covered',s.fully_covered],['Coverage gaps',s.gaps],['Peer outliers',s.outliers],['Not sending logs',s.no_logs],['Not seen for 30 days',s.stale],['Duplicate serial / IP',s.duplicates],['SIEM answered',V.siem.reachable?'yes':'no - '+V.siem.error]]},
+      {name:'Assets',columns:[{h:'Asset',w:26},{h:'Class',w:18},{h:'Vendor',w:16},{h:'Model',w:20},{h:'Serial',w:18},{h:'IP',w:16},{h:'Site',w:16},{h:'Owner',w:18},{h:'Criticality',w:10},{h:'Coverage %',t:'n'}].concat(V.signals.map(function(x){return {h:x.label,w:14};})).concat([{h:'Outlier',w:30},{h:'Stale',w:8},{h:'Last seen',w:12}]),
+        rows:V.assets.map(function(r){return [r.name,clsLabel(r.class),r.vendor,r.model,r.serial,r.ip,r.site,r.owner,r.criticality,r.coverage].concat(V.signals.map(function(x){return r.expected.indexOf(x.id)>=0?yn(r.signals[x.id]):'not expected';})).concat([r.outliers.map(function(o){return sigLabel(o.signal)+' ('+o.why+')';}).join('; '),r.stale?'yes':'no',r.last_seen?r.last_seen.slice(0,10):'never']);})},
+      {name:'Gaps',columns:[{h:'Asset',w:26},{h:'Class',w:18},{h:'Site',w:16},{h:'Missing',w:30},{h:'State',w:10},{h:'Outlier',w:8},{h:'What to do',w:80}],rows:V.gaps.map(function(g){return [g.name,clsLabel(g.class),g.site,g.label,g.state,g.outlier?'yes':'no',g.fix];})},
+      {name:'Coverage matrix',columns:[{h:'Class',w:20},{h:'Assets',t:'n'}].concat(V.signals.map(function(x){return {h:x.label,w:14};})),rows:V.matrix.map(function(m){return [m.label,m.assets].concat(V.signals.map(function(x){var c=m.cells[x.id];return c===null?'not expected':c.pct==null?'unknown':c.pct+'% ('+c.have+'/'+c.of+')';}));})},
+      {name:'Sites',columns:[{h:'Site',w:22},{h:'Assets',t:'n'},{h:'Coverage %',t:'n'},{h:'Gaps',t:'n'},{h:'Stale',t:'n'}],rows:V.sites.map(function(x){return [x.site,x.assets,x.coverage,x.gaps,x.stale];})},
+      {name:'Stale & duplicates',columns:[{h:'Issue',w:14},{h:'Value',w:24},{h:'Assets',w:60}],rows:V.assets.filter(function(r){return r.stale;}).map(function(r){return ['stale',r.last_seen?r.last_seen.slice(0,10):'never',r.name];}).concat(V.duplicates.map(function(d){return ['duplicate '+d.key,d.value,d.assets.map(function(a){return a.name;}).join(', ')];}))}];
+    window.zybXlsx.download('infrastructure-inventory-'+String(V.at).slice(0,10)+'.xlsx',sheets,{title:('Infrastructure Inventory - ' + ZYB_ORG.short),filter:'all in-use infrastructure assets; generated '+V.at,by:USER||ROLE});}
+  // ---------- events
+  document.addEventListener('input',function(ev){if(ev.target.id==='q'){F.q=ev.target.value;var pos=ev.target.selectionStart;$('view').innerHTML=assetsView();var q=$('q');q.focus();try{q.setSelectionRange(pos,pos);}catch(e){/* not a text field */}}});
+  document.addEventListener('change',function(ev){if(ev.target.id==='fsite'){F.site=ev.target.value;$('view').innerHTML=assetsView();}if(ev.target.id==='fsig'){F.sig=ev.target.value;$('view').innerHTML=assetsView();}});
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-tab],[data-go],[data-cls],[data-hm],[data-asset],[data-site],button[id]');if(!el)return;
+    if(el.dataset.tab){TAB=el.dataset.tab;return draw();}
+    if(el.dataset.go!=null){var g=el.dataset.go.split(':');TAB=g[0];if(TAB==='assets')F={cls:'',site:'',q:'',sig:g[1]||''};return draw();}
+    if(el.dataset.cls){F.cls=F.cls===el.dataset.cls?'':el.dataset.cls;if(TAB==='coverage')TAB='assets';return draw();}
+    if(el.dataset.hm){var p=el.dataset.hm.split('|');F={cls:p[0],site:'',q:'',sig:p[1]};TAB='assets';return draw();}
+    if(el.dataset.site){F={cls:'',site:el.dataset.site,q:'',sig:''};TAB='assets';return draw();}
+    if(el.dataset.asset){SEL=SEL===el.dataset.asset?'':el.dataset.asset;TAB='assets';return draw();}
+    var id=el.id;
+    if(id==='refresh'){el.disabled=true;return (V&&V.can_act?req('POST','/infra-inventory/refresh').then(function(v){V=v;draw();}):load()).then(function(){el.disabled=false;toast('Refreshed');}).catch(function(e){el.disabled=false;toast(e.message);});}
+    if(id==='clr'){F={cls:'',site:'',q:'',sig:''};return draw();}
+    if(id==='xls'&&V)return xls();
+    if(id==='ask'){var q=$('aq').value.trim();if(q.length<3)return toast('Type a question');el.disabled=true;el.textContent='Thinking…';return req('POST','/infra-inventory/ai/ask',{question:q}).then(function(r){ANS=r;draw();}).catch(function(e){el.disabled=false;el.textContent='Ask';toast(e.message);});}
+  });
+  req('GET','/dashboards/whoami.json').then(function(w){ROLE=(w&&w.role)||'viewer';USER=(w&&w.user)||'';}).catch(function(){ROLE='viewer';/* no identity: read-only */}).then(load);
+})();
+</script></body></html>

@@ -1,0 +1,204 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Workflow Automation</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:20px;font-weight:700;margin-top:3px}.t .s{font-size:11.5px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button:disabled{opacity:.5;cursor:default}
+button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button.dang{color:var(--bad)}button.sm{padding:4px 9px;font-size:12px}
+input,select,textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px}textarea{width:100%;min-height:70px;resize:vertical}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+tr[data-id]{cursor:pointer}tr[data-id]:hover td{background:rgba(255,255,255,.03)}
+.tw{overflow-x:auto;max-height:560px;overflow-y:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;border:1px solid var(--edge);color:var(--mute);margin:2px 4px 2px 0;white-space:nowrap}
+.s-open,.s-in_progress{color:var(--info);border-color:rgba(121,184,255,.45)}.s-awaiting_approval,.s-returned,.s-fulfilled{color:var(--warn);border-color:rgba(227,179,65,.45)}.s-closed{color:var(--ok);border-color:rgba(63,185,80,.45)}.s-rejected,.s-cancelled{color:var(--mute)}.late{color:var(--bad);border-color:rgba(255,123,114,.45)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button[aria-selected="true"]{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.cat{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.ci{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px;cursor:pointer;text-align:left;font-weight:400}.ci:hover,.ci.sel{border-color:#1f6feb}.ci b{display:block;color:var(--title);margin-bottom:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+label.f{display:block;font-size:12px;color:var(--mute);margin-top:8px}label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:3px}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--panel);border-left:1px solid var(--edge);box-shadow:-20px 0 60px rgba(0,0,0,.5);z-index:80;overflow:auto;padding:16px;display:none}.drawer.open{display:block}
+.drawer h3{margin:0 0 6px;color:var(--title);font-size:17px}.drawer h4{margin:14px 0 6px;font-size:13px;color:var(--title)}
+dl.kv{display:grid;grid-template-columns:140px 1fr;gap:4px 10px;margin:0;font-size:13px}dl.kv dt{color:var(--mute)}dl.kv dd{margin:0}
+.hist{font-size:12px;color:var(--mute);border-left:2px solid var(--edge);padding-left:10px}.hist div{margin:3px 0}
+.pre{white-space:pre-wrap;background:var(--raise);border:1px solid var(--edge);border-radius:8px;padding:8px 10px;font-size:13px}
+.dlg-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:90}.dlg-bg.open{display:flex}
+.dlg{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;max-width:560px;width:calc(100% - 32px);max-height:90vh;overflow:auto}.dlg h3{margin:0 0 10px;color:#fff;font-size:16px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.okb{border:1px solid rgba(63,185,80,.45);background:rgba(63,185,80,.07);border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:13px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Command &amp; leadership · business ↔ IT teams · AI &amp; machine learning</div><h1>Workflow Automation</h1></div><span class="sp"></span><span class="muted" id="me"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="okb">What the CISO office, risk, audit, HR, administration, GRC, IT governance and the DPO need from the network, server, database, security, identity, backup, endpoint and application teams - as tracked requests with an SLA. Changes and access are <b>approved by a lead who did not ask for them</b>; the requesting side <b>accepts</b> the result, never the person who did it. Evidence is collected from what the platform already holds; recurring requests are scheduled; overdue ones are escalated. Nothing here changes a system.</div>
+<div class="k" id="kk"></div>
+<div class="tabs" role="tablist"><button type="button" data-tab="new" aria-selected="true">New request</button><button type="button" data-tab="mine">My requests</button><button type="button" data-tab="queue">Team queue</button><button type="button" data-tab="auto">Automation &amp; insights</button><button type="button" data-tab="all" id="tab-all" hidden>All requests</button><button type="button" data-tab="set" id="tab-set" hidden>Settings</button></div>
+<section id="p-new">
+  <div class="card"><h2>Describe what you need <span class="c">machine learning suggests the request type and the team</span></h2>
+    <div class="bar"><input id="need" placeholder="e.g. list of privileged database accounts for the Q4 audit" style="flex:1;min-width:260px"><button type="button" id="sugg">Suggest</button></div><div id="suggout" class="muted" style="font-size:12.5px"></div></div>
+  <div class="card"><h2>Request catalogue <span class="c" id="catc"></span></h2>
+    <div class="bar"><label class="muted" style="font-size:12px">I request for <select id="nf"></select></label><input id="ncq" type="search" placeholder="Search the catalogue" style="min-width:220px"></div>
+    <div class="cat" id="cat"></div></div>
+  <div class="card" id="nform" hidden><h2 id="nft"></h2><div id="nfi" class="muted" style="font-size:12.5px"></div>
+    <div class="grid2"><div><label class="f">Title<input id="n-title" maxlength="200"></label><label class="f">System / target (optional)<input id="n-target" maxlength="300" placeholder="e.g. CLAIMS database, core switch, dbsrv01"></label>
+      <label class="f" id="n-teamw" hidden>IT team<select id="n-team"></select></label></div>
+      <div><label class="f">Priority<select id="n-pri"><option value="normal">normal</option><option value="high">high</option><option value="urgent">urgent</option><option value="low">low</option></select></label><label class="f">Needed by (optional - the SLA applies if earlier)<input id="n-due" type="date"></label></div></div>
+    <label class="f">What exactly do you need<textarea id="n-details" maxlength="5000"></textarea></label>
+    <div class="bar" style="margin-top:10px"><button type="button" class="pri" id="n-submit">Submit request</button><button type="button" id="n-cancel">Cancel</button></div></div>
+</section>
+<section id="p-mine" hidden><div class="card"><h2>My requests <span class="c">raised by me or my function</span></h2><div id="mine"></div></div></section>
+<section id="p-queue" hidden><div class="card" id="apcard" hidden><h2>Waiting for my approval</h2><div id="approvals"></div></div><div class="card"><h2>Team queue <span class="c" id="queuec"></span></h2><div id="queue"></div></div></section>
+<section id="p-auto" hidden>
+  <div class="card"><h2>Scheduled requests <span class="c">raised automatically on their date, with the evidence pack attached</span></h2><div id="scheds"></div>
+    <div class="bar" style="margin-top:10px"><select id="s-type"></select><select id="s-from"></select><select id="s-every"></select><input id="s-next" type="date"><input id="s-title" placeholder="Title" maxlength="200"><button type="button" id="s-add">Add schedule</button></div></div>
+  <div class="card"><h2>Where the time goes <span class="c">machine learning: median hours in each stage, from each request's own history - the longest is the bottleneck</span></h2><div id="flowst"></div></div>
+  <div class="card"><h2>Demand next week <span class="c">Holt's linear smoothing over 12 weeks, against what each team fulfils a week</span></h2><div id="flowdm"></div></div>
+  <div class="card"><h2>What to automate first <span class="c">frequent, steady requests the platform can already collect evidence for</span></h2><div id="flowac"></div></div>
+  <div class="card"><h2>Recurring demand <span class="c">machine learning: the same request 3+ times in 90 days - schedule it</span></h2><div id="recur"></div></div>
+  <div class="card"><h2>Teams <span class="c">open, overdue, on-time rate (Beta(1,1) over fulfilled requests), suggested assignee</span></h2><div id="teams"></div></div>
+  <div class="card"><h2>Possible duplicates <span class="c">open requests to the same team with the same words (Jaccard ≥ 0.6)</span></h2><div id="dups"></div></div>
+</section>
+<section id="p-all" hidden><div class="card"><h2>All requests <span class="c">administrators</span></h2><div class="bar"><input id="aq" type="search" placeholder="Search id, title, team, requester" style="min-width:260px"></div><div id="allr"></div></div></section>
+<section id="p-set" hidden><div class="card"><h2>Who is who <span class="c">user names, comma separated. A function with nobody listed accepts any signed-in person (marked declared, not verified); a team with nobody is worked by an administrator.</span></h2>
+  <div class="grid2"><div><h4 style="margin:4px 0">Requesting functions</h4><div id="setf"></div></div><div><h4 style="margin:4px 0">IT teams (members · leads who approve)</h4><div id="sett"></div></div></div>
+  <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px"><input type="checkbox" id="set-esc"> Escalate overdue requests to Notification &amp; Escalation</label>
+  <div class="bar" style="margin-top:10px"><button type="button" class="pri" id="set-save">Save</button></div></div></section>
+</main>
+<div class="drawer" id="drawer" role="dialog" aria-modal="false" aria-labelledby="drt"><div class="bar"><span class="sp"></span><button type="button" id="drx" aria-label="Close">✕</button></div><div id="drb"></div></div>
+<div class="dlg-bg" id="dlgbg" role="dialog" aria-modal="true" aria-labelledby="dlgt"><div class="dlg"><h3 id="dlgt"></h3><div id="dlgb"></div><div class="bar" style="margin-top:12px;justify-content:flex-end"><button type="button" id="dlgno">Cancel</button><button type="button" class="pri" id="dlgok">OK</button></div></div></div>
+<script>
+(function(){'use strict';
+  var $=function(i){return document.getElementById(i);},esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b!==undefined)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: the status explains */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('the server did not answer'));};x.send(b!==undefined?JSON.stringify(b):null);});}
+  var api=function(m,p,b){return req(m,'/api/itam/workflow'+p,b);};
+  function toast(m){var t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove();},4500);}
+  var V=null,SEL=null,OPEN=null,DLG=null,TAB='new';
+  var when=function(x){return x?String(x).replace('T',' ').slice(0,16):'—';};
+  var st=function(s){return '<span class="pill s-'+esc(s)+'">'+esc(String(s).replace(/_/g,' '))+'</span>';};
+  function ask(t,h,lab,fn){DLG=fn;$('dlgt').textContent=t;$('dlgb').innerHTML=h;$('dlgok').textContent=lab;$('dlgbg').classList.add('open');setTimeout(function(){var f=$('dlgb').querySelector('textarea,input');(f||$('dlgok')).focus();},30);}
+  $('dlgno').addEventListener('click',function(){$('dlgbg').classList.remove('open');DLG=null;});
+  $('dlgok').addEventListener('click',function(){var f=DLG;if(!f)return;if(f()===false)return;$('dlgbg').classList.remove('open');DLG=null;});
+  // ---------- load
+  function load(){return api('GET','').then(function(v){V=v;draw();if(OPEN)openReq(OPEN,true);},function(e){$('kk').innerHTML='<div class="t bad"><div class="l">Workflow Automation</div><div class="s">'+esc(e.status===404?'Not installed on this server - run the update.':e.message)+'</div></div>';});}
+  function draw(){var k=V.kpis;$('me').textContent=V.me.user+' · '+V.me.role+(V.me.teams.length?' · '+V.me.teams.map(function(t){return V.teams[t];}).join(', '):'');
+    var tile=function(l,v,s,c){return '<div class="t '+(c||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v==null?'—':v)+'</div><div class="s">'+esc(s)+'</div></div>';};
+    $('kk').innerHTML=tile('Open',k.open,'with the IT teams')+tile('Awaiting approval',k.awaiting_approval,'changes and access',k.awaiting_approval?'warn':'')+tile('Overdue',k.overdue,'past their due date',k.overdue?'bad':'ok')
+      +tile('Waiting acceptance',k.fulfilled_waiting_acceptance,'fulfilled, not yet accepted')+tile('Closed (30 days)',k.closed_30d,'accepted by the requester')+tile('On time',k.on_time_rate==null?null:k.on_time_rate+'%',k.on_time_rate==null?'no fulfilled requests yet':'fulfilled within the SLA')+tile('Scheduled',k.scheduled,'raised automatically');
+    $('tab-all').hidden=V.me.role!=='admin';$('tab-set').hidden=!V.settings;
+    var fs=Object.keys(V.functions),prev=$('nf').value;$('nf').innerHTML=fs.map(function(f){var m=V.me.functions.indexOf(f)>=0,o=V.open_functions.indexOf(f)>=0;return '<option value="'+f+'">'+esc(V.functions[f])+(m?' ✓':o?'':' (not a member)')+'</option>';}).join('');
+    $('nf').value=prev||(V.me.functions[0]||fs[0]);
+    $('n-team').innerHTML=Object.keys(V.teams).map(function(t){return '<option value="'+t+'">'+esc(V.teams[t])+'</option>';}).join('');
+    drawCat();drawLists();drawAuto();drawSet();}
+  function drawCat(){var f=$('nf').value,q=($('ncq').value||'').toLowerCase(),L=V.catalogue.filter(function(c){return c.from.indexOf(f)>=0&&(!q||(c.title+' '+(V.teams[c.team]||'')+' '+c.kind).toLowerCase().indexOf(q)>=0);});
+    $('catc').textContent=L.length+' request type(s) for '+V.functions[f];
+    $('cat').innerHTML=L.map(function(c){var ta=c.turnaround||{};return '<button type="button" class="ci'+(SEL===c.id?' sel':'')+'" data-type="'+esc(c.id)+'"><b>'+esc(c.title)+'</b><span class="pill">'+esc(V.kinds[c.kind])+'</span><span class="pill">'+esc(c.team?V.teams[c.team]:'you choose the team')+'</span><span class="pill">SLA '+esc(c.sla_h)+' h</span>'+(c.approval?'<span class="pill s-awaiting_approval">approval</span>':'')+(c.sources.length?'<span class="pill s-closed">auto evidence</span>':'')
+      +'<div class="muted" style="font-size:11.5px;margin-top:4px">'+(ta.median_h!=null?'Usually done in '+esc(ta.median_h)+' h (median of '+esc(ta.n)+')':esc(ta.why||''))+'</div></button>';}).join('')||'<div class="empty">Nothing for this function matches.</div>';}
+  function row(r){var br=r.breach_risk&&r.breach_risk.p!=null?'<span class="pill'+(r.breach_risk.p>=0.6?' late':'')+'" title="'+esc(r.breach_risk.why)+'">risk '+Math.round(r.breach_risk.p*100)+'%</span>':'';
+    return '<tr data-id="'+esc(r.id)+'" tabindex="0"><td class="mono">'+esc(r.id)+'</td><td><b>'+esc(r.title)+'</b><div class="muted" style="font-size:12px">'+esc(r.type_title)+'</div></td><td>'+esc(r.from_name)+(r.from_verified?'':' <span class="pill" title="function declared, not verified">declared</span>')+'</td><td>'+esc(r.team_name)+'</td><td>'+st(r.status)+(r.overdue?'<span class="pill late">overdue</span>':'')+br+'</td><td class="mono">'+esc(when(r.due))+'</td><td>'+esc(r.assignee||'—')+'</td></tr>';}
+  function tbl(L,none){return L.length?'<div class="tw"><table><thead><tr><th>Id</th><th>Request</th><th>From</th><th>Team</th><th>Status</th><th>Due</th><th>Assignee</th></tr></thead><tbody>'+L.map(row).join('')+'</tbody></table></div>':'<div class="empty">'+esc(none)+'</div>';}
+  function drawLists(){$('mine').innerHTML=tbl(V.mine,'No requests yet - pick one from the catalogue.');
+    $('queuec').textContent=V.me.teams.length?V.me.teams.map(function(t){return V.teams[t];}).join(', '):(V.me.role==='admin'?'every team (administrator)':'you are in no IT team (Settings)');
+    $('queue').innerHTML=tbl(V.queue,'Nothing waiting for your team.');$('apcard').hidden=!V.approvals.length;$('approvals').innerHTML=tbl(V.approvals,'');
+    var q=($('aq').value||'').toLowerCase();$('allr').innerHTML=tbl((V.all||[]).filter(function(r){return !q||[r.id,r.title,r.team_name,r.requester,r.from_name].join(' ').toLowerCase().indexOf(q)>=0;}),'No requests.');}
+  function drawFlow(){var F=V.ml&&V.ml.flow;if(!F){['flowst','flowdm','flowac'].forEach(function(i){$(i).innerHTML='<div class="muted">Update IT Asset Management to see this.</div>';});return;}
+    var SC={approval:'#79b8ff',start:'#e3b341',work:'#3fb950',accept:'#b877d9'},L=F.teams.filter(function(t){return t.bottleneck||t.next_week!=null||t.open;});
+    $('flowst').innerHTML=L.some(function(t){return t.bottleneck;})?'<div class="muted" style="font-size:12px;margin-bottom:6px">'+Object.keys(F.stages).map(function(k){return '<span style="color:'+SC[k]+'">■</span> '+esc(F.stages[k]);}).join(' · ')+'</div>'+L.filter(function(t){return t.bottleneck;}).map(function(t){var tot=Object.keys(t.stages).reduce(function(a,k){return a+(t.stages[k]||0);},0)||1;
+      return '<div style="display:grid;grid-template-columns:170px 1fr 260px;gap:10px;align-items:center;margin:6px 0;font-size:13px"><b>'+esc(t.name)+'</b><span style="display:flex;height:12px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.06)">'+Object.keys(t.stages).map(function(k){var v=t.stages[k];return v?'<i title="'+esc(F.stages[k]+': '+v+' h')+'" style="display:block;width:'+(v/tot*100).toFixed(1)+'%;background:'+SC[k]+'"></i>':'';}).join('')+'</span><span class="muted">'+esc('bottleneck: '+t.bottleneck.label+' ('+t.bottleneck.hours+' h)')+(t.rework?' · '+esc(t.rework.rate+'% returned'):'')+'</span></div>';}).join('')
+      +'<div class="muted" style="font-size:12px;margin-top:6px">A long wait before the work starts means the queue, not the work, is slow - assign on arrival. A long wait for acceptance means requesters are not closing - remind them. Each stage needs 5 requests that passed through it.</div>':'<div class="muted">Not enough history yet - each stage needs 5 requests that passed through it.</div>';
+    $('flowdm').innerHTML=L.length?'<div class="tw"><table><thead><tr><th>Team</th><th>Last 12 weeks</th><th>Next week</th><th>Fulfils a week</th><th>Backlog</th><th>Expected wait</th></tr></thead><tbody>'+L.map(function(t){var mx=Math.max.apply(null,t.weekly.concat([1])),pts=t.weekly.map(function(v,i){return (i/11*110).toFixed(1)+','+(26-v/mx*22).toFixed(1);}).join(' ');
+      return '<tr><td>'+esc(t.name)+'</td><td><svg width="112" height="28" role="img" aria-label="'+esc(t.name+' requests per week')+'"><polyline points="'+pts+'" fill="none" stroke="#79b8ff" stroke-width="2"/></svg></td><td>'+(t.next_week==null?'<span class="muted" title="'+esc(t.why)+'">withheld</span>':esc(t.next_week))+'</td><td>'+esc(t.throughput)+'</td><td>'+(t.growth==null?'<span class="muted">—</span>':t.growth>0?'<b style="color:#ff7b72">grows ~'+esc(t.growth)+'/week</b>':'<span style="color:#3fb950">steady or shrinking</span>')+'</td><td>'+esc(t.wait_weeks==null?'—':t.wait_weeks+' week(s) for '+t.open+' open')+'</td></tr>';}).join('')+'</tbody></table></div><div class="muted" style="font-size:12px;margin-top:6px">Expected wait = open requests / requests fulfilled a week (Little\'s law). When next week\'s demand is above what the team fulfils, the backlog grows - move work or people before it does.</div>':'<div class="muted">No request yet.</div>';
+    $('flowac').innerHTML=F.candidates.length?'<div class="tw"><table><thead><tr><th>Request</th><th>Team</th><th>Last 90 days</th><th>Turnaround</th><th>Steady</th><th>How</th></tr></thead><tbody>'+F.candidates.map(function(c){return '<tr><td>'+esc(c.title)+'</td><td>'+esc(c.team)+'</td><td>'+esc(c.n90)+'</td><td>'+esc(c.median_h+' h')+'</td><td>'+esc(c.steady+'%')+(c.auto_evidence?' · evidence collected by the platform':'')+'</td><td class="muted">'+esc(c.how)+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="muted">Not enough history - a type needs 5 fulfilled requests.</div>';}
+  function drawAuto(){try{drawFlow();}catch(e){$('flowst').innerHTML='<div class="muted">The flow could not be drawn: '+esc(e.message)+'</div>';/* shown on the page; the rest of the tab still works */}
+    $('scheds').innerHTML=V.schedules.length?'<div class="tw"><table><thead><tr><th>Request</th><th>From</th><th>Every</th><th>Next</th><th>Owner</th><th>Runs</th><th></th></tr></thead><tbody>'+V.schedules.map(function(s){return '<tr><td>'+esc(s.title)+'<div class="muted" style="font-size:12px">'+esc((V.catalogue.filter(function(c){return c.id===s.type;})[0]||{}).title)+'</div></td><td>'+esc(V.functions[s.from])+'</td><td>'+esc(s.every)+'</td><td class="mono">'+esc(when(s.next))+'</td><td>'+esc(s.owner)+'</td><td>'+esc(s.runs||0)+'</td><td><button type="button" class="sm dang" data-unsched="'+esc(s.id)+'">Remove</button></td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No scheduled requests.</div>';
+    var sch=V.catalogue.filter(function(c){return !c.approval&&c.id!=='other';});$('s-type').innerHTML=sch.map(function(c){return '<option value="'+c.id+'">'+esc(c.title)+'</option>';}).join('');syncFrom();
+    $('s-every').innerHTML=V.every.map(function(x){return '<option>'+x+'</option>';}).join('');
+    $('recur').innerHTML=V.ml.recurring.length?'<div class="tw"><table><thead><tr><th>Request</th><th>From</th><th>Times</th><th>Why</th><th></th></tr></thead><tbody>'+V.ml.recurring.map(function(x,i){return '<tr><td>'+esc(x.title)+'</td><td>'+esc(x.function)+'</td><td>'+esc(x.count)+'</td><td class="muted">'+esc(x.why)+'</td><td><button type="button" class="sm" data-recur="'+i+'">Schedule '+esc(x.every)+'</button></td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No request has come back 3+ times in 90 days.</div>';
+    $('teams').innerHTML='<div class="tw"><table><thead><tr><th>Team</th><th>Open</th><th>Overdue</th><th>On time</th><th>Suggested assignee</th></tr></thead><tbody>'+V.ml.teams.map(function(t){var a=V.ml.assign[t.team];return '<tr><td>'+esc(t.name)+'</td><td>'+esc(t.open)+'</td><td'+(t.overdue?' class="err"':'')+'>'+esc(t.overdue)+'</td><td>'+(t.n?esc(t.on_time+' of '+t.n)+' <span class="muted">(estimate '+Math.round(t.rate*100)+'%)</span>':'<span class="muted">no history</span>')+'</td><td>'+(a?esc(a.user)+' <span class="muted">'+esc(a.why)+'</span>':'<span class="muted">—</span>')+'</td></tr>';}).join('')+'</tbody></table></div>';
+    $('dups').innerHTML=V.ml.duplicates.length?V.ml.duplicates.map(function(d){return '<div><a href="#" data-open="'+esc(d.a)+'">'+esc(d.a)+'</a> and <a href="#" data-open="'+esc(d.b)+'">'+esc(d.b)+'</a> <span class="muted">'+Math.round(d.similarity*100)+'% the same words</span></div>';}).join(''):'<div class="empty">None.</div>';}
+  function syncFrom(){var c=V.catalogue.filter(function(x){return x.id===$('s-type').value;})[0];if(!c)return;var pv=$('s-from').value;$('s-from').innerHTML=c.from.map(function(f){return '<option value="'+f+'">'+esc(V.functions[f])+'</option>';}).join('');if(c.from.indexOf(pv)>=0)$('s-from').value=pv;}
+  function drawSet(){if(!V.settings)return;var S=V.settings,lst=function(o,k){return esc(((o||{})[k]||[]).join(', '));};
+    $('setf').innerHTML=Object.keys(V.functions).map(function(f){return '<label class="f">'+esc(V.functions[f])+'<input data-setf="'+f+'" value="'+lst(S.functions,f)+'"></label>';}).join('');
+    $('sett').innerHTML=Object.keys(V.teams).map(function(t){return '<label class="f">'+esc(V.teams[t])+'<input data-sett="'+t+'" value="'+lst(S.teams,t)+'" placeholder="members"><input data-setl="'+t+'" value="'+lst(S.leads,t)+'" placeholder="leads (approve changes and access)" style="margin-top:4px"></label>';}).join('');
+    $('set-esc').checked=S.escalate!==false;}
+  // ---------- new request
+  function pick(id){SEL=id;var c=V.catalogue.filter(function(x){return x.id===id;})[0];if(!c)return;drawCat();$('nform').hidden=false;$('nft').textContent=c.title;
+    $('nfi').innerHTML=esc(V.functions[$('nf').value])+' → '+esc(c.team?V.teams[c.team]:'the team you choose')+' · SLA '+esc(c.sla_h)+' h'+(c.approval?' · approved first by a team lead':'')+(c.sources.length?' · the team can collect evidence from: '+esc(c.sources.join('; ')):'')+(c.page?' · <a href="'+esc(c.page)+'" style="color:var(--info)">the page that shows it</a>':'');
+    $('n-teamw').hidden=!!c.team;if(!$('n-title').value)$('n-title').value=c.title;$('nform').scrollIntoView({behavior:'smooth',block:'start'});}
+  $('cat').addEventListener('click',function(e){var b=e.target.closest('[data-type]');if(b)pick(b.getAttribute('data-type'));});
+  $('nf').addEventListener('change',function(){SEL=null;$('nform').hidden=true;drawCat();});$('ncq').addEventListener('input',drawCat);
+  $('n-cancel').addEventListener('click',function(){SEL=null;$('nform').hidden=true;drawCat();});
+  $('n-submit').addEventListener('click',function(){var c=V.catalogue.filter(function(x){return x.id===SEL;})[0];if(!c)return;
+    var b={type:c.id,from:$('nf').value,title:($('n-title').value||'').trim(),details:($('n-details').value||'').trim(),priority:$('n-pri').value};
+    if($('n-target').value.trim())b.target=$('n-target').value.trim();if($('n-due').value)b.due=$('n-due').value+'T23:59:00Z';if(!c.team)b.team=$('n-team').value;
+    if(!b.title){toast('Title: what is this request?');return;}if(!b.details){toast('What exactly do you need: a sentence or two for the team.');return;}
+    api('POST','/requests',b).then(function(r){toast(r.id+' sent to '+r.team_name+(r.status==='awaiting_approval'?' - waiting for approval':''));SEL=null;$('nform').hidden=true;['n-title','n-details','n-target','n-due'].forEach(function(i){$(i).value='';});load().then(function(){tab('mine');});},function(e){toast('Not sent: '+e.message);});});
+  $('sugg').addEventListener('click',function(){var t=($('need').value||'').trim();if(!t){toast('Describe what you need first.');return;}
+    api('POST','/classify',{text:t}).then(function(s){var c=V.catalogue.filter(function(x){return x.id===s.type;})[0];
+      $('suggout').innerHTML='Suggested: <b>'+esc(s.title)+'</b>'+(s.team_name?' → '+esc(s.team_name):'')+' <span class="muted">('+esc(s.method)+(s.confidence!=null?', confidence '+Math.round(s.confidence*100)+'%':'')+')</span>'+(s.why?' - '+esc(s.why):'');
+      if(c){var f=$('nf').value;if(c.from.indexOf(f)<0){$('nf').value=c.from.filter(function(x){return V.me.functions.indexOf(x)>=0;})[0]||c.from[0];}SEL=null;drawCat();pick(c.id);if(!c.team&&s.team)$('n-team').value=s.team;if(!$('n-details').value)$('n-details').value=t;}},function(e){toast('No suggestion: '+e.message);});});
+  // ---------- a request
+  function openReq(id,quiet){OPEN=id;api('GET','/requests/'+encodeURIComponent(id)).then(function(r){if(OPEN!==id)return;drawReq(r);$('drawer').classList.add('open');},function(e){if(!quiet)toast(e.message);});}
+  function evHtml(e){if(e.kind==='auto'){return '<div style="margin:6px 0"><span class="pill s-closed">platform evidence</span> <span class="muted">'+esc(when(e.at))+' · '+esc(e.by)+' · SHA-256 <span class="mono">'+esc(e.pack.sha256.slice(0,16))+'…</span></span>'
+      +e.pack.parts.map(function(p){var cols=[];p.sample.forEach(function(s){Object.keys(s).forEach(function(k){if(cols.indexOf(k)<0&&cols.length<6)cols.push(k);});});
+        return '<div style="margin-top:6px"><b>'+esc(p.label)+'</b> <span class="muted">· '+esc(p.collection)+' · '+esc(p.records)+' record(s)'+(p.latest?' · latest '+esc(when(p.latest)):'')+'</span>'+(p.note?'<div class="muted" style="font-size:12px">'+esc(p.note)+'</div>':'')
+          +(p.sample.length?'<div class="tw" style="max-height:220px"><table><thead><tr>'+cols.map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+'</tr></thead><tbody>'+p.sample.map(function(s){return '<tr>'+cols.map(function(c){return '<td>'+esc(s[c]==null?'':s[c])+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>':'')+'</div>';}).join('')+'</div>';}
+    return '<div style="margin:6px 0"><span class="pill">'+esc(e.kind)+'</span> <span class="muted">'+esc(when(e.at))+' · '+esc(e.by)+'</span><div class="pre">'+esc(e.text)+'</div></div>';}
+  function drawReq(r){if($('drb').getAttribute('data-req')!==r.id)$('drb').removeAttribute('data-draft');var c=r.can||[],b=function(a,l,cls){return c.indexOf(a)>=0?'<button type="button" class="sm '+(cls||'')+'" data-act="'+a+'">'+l+'</button>':'';};
+    var h='<div class="eb">'+esc(r.id)+' · '+esc(r.type_title)+'</div><h3 id="drt">'+esc(r.title)+'</h3><div>'+st(r.status)+(r.overdue?'<span class="pill late">overdue</span>':'')+(r.escalated_at?'<span class="pill late">escalated</span>':'')+'<span class="pill">'+esc(r.priority)+'</span></div>'
+      +'<dl class="kv" style="margin-top:10px"><dt>From</dt><dd>'+esc(r.from_name)+(r.from_verified?'':' <span class="muted">(declared, not verified)</span>')+' · '+esc(r.requester)+'</dd><dt>To</dt><dd>'+esc(r.team_name)+'</dd><dt>Assignee</dt><dd>'+esc(r.assignee||'—')+'</dd><dt>Due</dt><dd>'+esc(when(r.due))+' <span class="muted">(SLA '+esc(r.sla_h)+' h)</span></dd>'
+      +(r.breach_risk?'<dt>Breach risk</dt><dd>'+(r.breach_risk.p!=null?Math.round(r.breach_risk.p*100)+'% ':'')+'<span class="muted">'+esc(r.breach_risk.why)+'</span></dd>':'')+(r.target?'<dt>Target</dt><dd>'+esc(r.target)+'</dd>':'')
+      +(r.approval?'<dt>Approval</dt><dd>'+esc(r.approval.decision)+' by '+esc(r.approval.by)+' '+esc(when(r.approval.at))+(r.approval.note?' - '+esc(r.approval.note):'')+'</dd>':'')+(r.schedule?'<dt>Raised by</dt><dd>schedule '+esc(r.schedule)+'</dd>':'')+(r.page?'<dt>Where it lives</dt><dd><a href="'+esc(r.page)+'" style="color:var(--info)">'+esc(r.page)+'</a></dd>':'')+'</dl>'
+      +'<h4>What is needed</h4><div class="pre">'+esc(r.details)+'</div>'
+      +(c.length?'<h4>Actions</h4><div class="bar">'+b('approve','Approve','pri')+b('reject','Reject','dang')+b('start','Take it')+b('assign','Assign…')+(r.auto_evidence?b('evidence','Collect evidence from the platform'):'')+(c.indexOf('evidence')>=0?'<button type="button" class="sm" data-act="ref">Attach reference / note</button>':'')+b('ai-draft','🤖 AI draft response')+b('fulfil','Fulfil…','pri')+b('accept','Accept','pri')+b('return','Return…','dang')+b('comment','Comment…')+b('cancel','Cancel request','dang')+'</div>':'')
+      +(r.response?'<h4>Response</h4><div class="pre">'+esc(r.response)+'</div><div class="muted" style="font-size:12px">by '+esc(r.fulfilled_by)+' '+esc(when(r.fulfilled_at))+'</div>':'')
+      +'<h4>Evidence ('+(r.evidence||[]).length+')</h4>'+((r.evidence||[]).length?r.evidence.map(evHtml).join(''):'<div class="empty">None yet.</div>')
+      +((r.comments||[]).length?'<h4>Comments</h4>'+r.comments.map(function(x){return '<div style="margin:4px 0"><b>'+esc(x.by)+'</b> <span class="muted">'+esc(when(x.at))+'</span><div>'+esc(x.text)+'</div></div>';}).join(''):'')
+      +'<h4>History</h4><div class="hist">'+(r.history||[]).map(function(x){return '<div>'+esc(when(x.at))+' · <b>'+esc(x.by)+'</b> '+esc(x.action)+(x.note?' - '+esc(x.note):'')+'</div>';}).join('')+'</div>';
+    $('drb').innerHTML=h;$('drb').setAttribute('data-req',r.id);}
+  function doAct(id,a,body,msg){return api('POST','/requests/'+encodeURIComponent(id)+'/'+a,body||{}).then(function(r){toast(msg||(r.id+': '+r.status.replace(/_/g,' ')));drawReq(r);load();},function(e){toast('Not done: '+e.message);});}
+  function textAsk(t,label,field,ok,need,init){ask(t,'<label class="f">'+esc(label)+'<textarea id="dlgtx" maxlength="8000">'+esc(init||'')+'</textarea></label>',ok,function(){var v=($('dlgtx').value||'').trim();if(need&&!v){toast(label+': needed.');return false;}var o={};if(v)o[field]=v;DLG.cb(o);});}
+  $('drb').addEventListener('click',function(e){var t=e.target.closest('[data-act]');if(!t)return;var a=t.getAttribute('data-act'),id=$('drb').getAttribute('data-req');
+    var withText=function(title,label,field,need,act,init){textAsk(title,label,field,'OK',need,init);DLG.cb=function(o){doAct(id,act,o);};};
+    if(a==='approve')withText('Approve '+id,'Note (optional)','note',false,'approve');
+    else if(a==='reject')withText('Reject '+id,'Reason','reason',true,'reject');
+    else if(a==='return')withText('Return '+id+' to the team','What is missing','reason',true,'return');
+    else if(a==='cancel')withText('Cancel '+id,'Reason','reason',true,'cancel');
+    else if(a==='comment')withText('Comment on '+id,'Comment','text',true,'comment');
+    else if(a==='accept')withText('Accept '+id,'Note (optional)','note',false,'accept');
+    else if(a==='fulfil')withText('Fulfil '+id,'Response to the requester (what was done, where the evidence is)','response',true,'fulfil',$('drb').getAttribute('data-draft')||'');
+    else if(a==='ref'){ask('Attach evidence to '+id,'<label class="f">Kind<select id="dlgk"><option value="reference">Reference (document, ticket, file location)</option><option value="note">Note</option></select></label><label class="f">Text<textarea id="dlgtx" maxlength="3000"></textarea></label>','Attach',function(){var v=($('dlgtx').value||'').trim();if(!v){toast('Text: needed.');return false;}doAct(id,'evidence',{kind:$('dlgk').value,text:v},'Evidence attached');});}
+    else if(a==='evidence')doAct(id,'evidence',{kind:'auto'},'Evidence collected from the platform');
+    else if(a==='start')doAct(id,'start',{});
+    else if(a==='assign'){var r0=(V.queue.concat(V.all||[])).filter(function(x){return x.id===id;})[0]||{},sug=V.ml.assign[r0.team];
+      ask('Assign '+id,'<label class="f">User name (a member of the team)<input id="dlgas" value="'+esc(sug?sug.user:'')+'"></label>'+(sug?'<p class="muted" style="font-size:12px">Suggested: '+esc(sug.user)+' - '+esc(sug.why)+'</p>':''),'Assign',function(){var v=($('dlgas').value||'').trim();if(!v){toast('User name: needed.');return false;}doAct(id,'assign',{assignee:v});});}
+    else if(a==='ai-draft'){t.disabled=true;api('POST','/requests/'+encodeURIComponent(id)+'/ai-draft',{}).then(function(d){$('drb').setAttribute('data-draft',d.text);ask(d.label,'<div class="pre">'+esc(d.text)+'</div><p class="muted" style="font-size:12px">A draft. It changes nothing; Fulfil opens with it so you can correct it first.</p>','Use it to fulfil',function(){setTimeout(function(){var f=$('drb').querySelector('[data-act="fulfil"]');if(f)f.click();},50);});},function(er){toast('No draft: '+er.message);}).then(function(){t.disabled=false;});}
+  });
+  // ---------- lists, tabs, automation, settings
+  document.addEventListener('click',function(e){var t;
+    if((t=e.target.closest('tr[data-id]'))){openReq(t.getAttribute('data-id'));return;}
+    if((t=e.target.closest('[data-open]'))){e.preventDefault();openReq(t.getAttribute('data-open'));return;}
+    if((t=e.target.closest('[data-tab]'))){tab(t.getAttribute('data-tab'));return;}
+    if((t=e.target.closest('[data-unsched]'))){var sid=t.getAttribute('data-unsched');ask('Remove this schedule?','<p>No more requests will be raised from it. Requests already raised stay.</p>','Remove',function(){api('POST','/schedules/'+encodeURIComponent(sid)+'/delete',{}).then(function(){toast('Schedule removed');load();},function(er){toast('Not removed: '+er.message);});});return;}
+    if((t=e.target.closest('[data-recur]'))){var x=V.ml.recurring[+t.getAttribute('data-recur')];if(!x)return;$('s-type').value=x.type;syncFrom();$('s-from').value=x.from;$('s-every').value=x.every;$('s-title').value=x.title;$('s-next').focus();toast('Choose the first date, then Add schedule');return;}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(DLG){$('dlgbg').classList.remove('open');DLG=null;}else if(OPEN){$('drawer').classList.remove('open');OPEN=null;}}if(e.key==='Enter'&&e.target.matches&&e.target.matches('tr[data-id]'))openReq(e.target.getAttribute('data-id'));});
+  $('drx').addEventListener('click',function(){$('drawer').classList.remove('open');OPEN=null;});
+  function tab(n){TAB=n;Array.prototype.forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===n));});['new','mine','queue','auto','all','set'].forEach(function(k){$('p-'+k).hidden=k!==n;});}
+  $('aq').addEventListener('input',drawLists);$('s-type').addEventListener('change',syncFrom);
+  $('s-add').addEventListener('click',function(){var b={type:$('s-type').value,from:$('s-from').value,every:$('s-every').value,title:($('s-title').value||'').trim(),next:$('s-next').value?$('s-next').value+'T05:00:00Z':''};
+    var c=V.catalogue.filter(function(x){return x.id===b.type;})[0];if(!b.title)b.title=c?c.title:'';b.details=(c?c.title:'')+' - raised '+b.every+' by schedule';
+    if(!b.next){toast('First date: needed.');return;}api('POST','/schedules',b).then(function(){toast('Scheduled: '+b.title);$('s-title').value='';load();},function(e){toast('Not scheduled: '+e.message);});});
+  $('set-save').addEventListener('click',function(){var sp=function(v){return String(v||'').split(/[,;\s]+/).map(function(x){return x.trim();}).filter(Boolean);},o={version:V.settings.version,escalate:$('set-esc').checked,functions:{},teams:{},leads:{}};
+    Array.prototype.forEach.call(document.querySelectorAll('[data-setf]'),function(i){o.functions[i.getAttribute('data-setf')]=sp(i.value);});
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sett]'),function(i){o.teams[i.getAttribute('data-sett')]=sp(i.value);});
+    Array.prototype.forEach.call(document.querySelectorAll('[data-setl]'),function(i){o.leads[i.getAttribute('data-setl')]=sp(i.value);});
+    api('POST','/settings',o).then(function(){toast('Saved');load();},function(e){toast('Not saved: '+e.message);});});
+  $('refresh').addEventListener('click',load);
+  var h=(location.hash||'').match(/req=([A-Za-z0-9-]+)/);
+  var tb=(location.hash||'').match(/tab=(new|mine|queue|auto|all|set)\b/);
+  load().then(function(){if(tb)tab(tb[1]);if(h)openReq(h[1]);});
+})();
+</script></body></html>

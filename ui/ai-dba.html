@@ -1,0 +1,56 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Oracle DBA</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-teamviz.js"></script>
+<style>
+:root{--tblr-border-color:#252933;--tblr-secondary:#8C93A1;color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:22px;color:var(--title)}.sub{color:var(--mute);font-size:13px}.sp{flex:1}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:16px;margin:0 0 12px;min-width:0}.card h2{margin:0 0 12px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:0 0 12px}.kpi{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:12px 14px}.kpi .v{font-size:24px;font-weight:800}.kpi .l{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.empty{color:var(--mute);padding:12px 0}
+.p{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.ok{background:rgba(63,185,80,.15);color:var(--ok)}.warn{background:rgba(227,179,65,.15);color:var(--warn)}.bad{background:rgba(255,123,114,.16);color:var(--bad)}.mut{background:rgba(140,147,161,.16);color:#a3a9b5}
+a.lk{color:var(--info);text-decoration:none;font-weight:600}
+.banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">AI &amp; Automation · database</div><h1>AI Oracle DBA</h1><div class="sub">Patrols every Oracle instance the collector reports, opens a work item per problem with the DBA's next step, and follows it until the collector no longer reports it</div></div><span class="sp"></span><a class="lk" href="db-performance.html">Database performance →</a></div>
+<div class="banner">The AI DBA recommends; a DBA decides and applies. It never runs SQL against a database or changes one. Data comes from the read-only Oracle collector (agents/oracle) — an instance that stops reporting is shown as stale, never as healthy.</div>
+<section class="card" id="ov"><h2>Overview <span class="c">live - the AI Oracle DBA and every Oracle database it looks after</span><span class="sp"></span><span class="c" id="ovc"></span></h2><div id="floor"><div class="empty">Loading…</div></div></section>
+<section data-zyb-duty="dba" data-api="/api/soc"></section>
+<section class="kpis" id="kpis"></section>
+<section class="card"><h2>Oracle estate <span class="c" id="gen"></span></h2><div class="tw"><table><thead><tr><th>Instance</th><th>Status</th><th>Role</th><th>Fullest tablespace</th><th>Sessions</th><th>Last backup</th><th>Data Guard lag</th><th>FRA</th><th>Issues</th></tr></thead><tbody id="inst"><tr><td colspan="9" class="empty">Loading…</td></tr></tbody></table></div></section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  function pill(t,k){return '<span class="p '+esc(k)+'">'+esc(t)+'</span>';}
+  function sevk(n){return n>=4?'bad':n>=3?'warn':n>=2?'warn':'ok';}
+  function load(){var x=new XMLHttpRequest();x.open('GET','/api/soc/db/oracle');x.withCredentials=true;x.timeout=60000;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }
+      if(x.status!==200||!j){$('inst').innerHTML='<tr><td colspan="9" class="empty">'+(x.status===404?'The Oracle module is not installed in the SIEM.':'Could not read the Oracle summary ('+esc(x.status)+').')+'</td></tr>';return;}
+      var T=j.totals||{};
+      function k(v,l,c){return '<div class="kpi"><div class="v" style="color:'+(c||'inherit')+'">'+esc(v)+'</div><div class="l">'+esc(l)+'</div></div>';}
+      $('kpis').innerHTML=k(T.instances||0,'Instances')+k(T.down||0,'Down',T.down?'var(--bad)':'')+k(T.stale||0,'Not reporting',T.stale?'var(--warn)':'')+k(T.with_issues||0,'With issues',T.with_issues?'var(--warn)':'')+k(T.blocked_sessions||0,'Blocked sessions',T.blocked_sessions?'var(--warn)':'')+k(T.failed_logons_24h||0,'Failed logons 24 h');
+      $('gen').textContent=(j.clickhouse&&!j.clickhouse.ok?'history store unavailable · ':'')+'updated '+new Date(j.generated_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      var I=j.instances||[];
+      $('inst').innerHTML=I.length?I.map(function(i){var tb=(i.tablespaces||[])[0],bk=i.backup,dg=i.dataguard,s=i.sessions;
+        return '<tr><td><b>'+esc(i.instance)+'</b><div class="muted" style="font-size:12px">'+esc(i.host)+(i.version?' · '+esc(i.version):'')+'</div></td>'
+          +'<td>'+(i.stale?pill('not reporting','warn'):i.up?pill(i.open_mode||i.status||'open','ok'):i.state==='unknown'?pill('status unknown','warn'):pill(i.status||'down','bad'))+'</td><td>'+esc(i.role||'—')+'</td>'
+          +'<td>'+(tb?esc(tb.name)+' '+pill(tb.used_pct+'%',tb.used_pct>=95?'bad':tb.used_pct>=90?'warn':'ok'):'—')+'</td>'
+          +'<td>'+(s?esc(s.total)+'/'+esc(s.max_sessions||'?')+(s.blocked?' '+pill(s.blocked+' blocked','warn'):''):'—')+'</td>'
+          +'<td>'+(bk?pill(bk.status||'?',bk.severity>=3?'bad':'ok')+' <span class="muted">'+esc(bk.age_h)+' h</span>':'<span class="muted">not reported</span>')+'</td>'
+          +'<td>'+(dg?esc(dg.apply_lag_s)+' s':'—')+'</td><td>'+(i.fra?pill(i.fra.used_pct+'%',i.fra.used_pct>=85?'warn':'ok'):'—')+'</td>'
+          +'<td>'+(i.issues.length?pill(i.issues.length,sevk(i.worst_severity))+' <span class="muted">'+esc(i.issues[0].text)+'</span>':pill('none','ok'))+'</td></tr>';}).join(''):'<tr><td colspan="9" class="empty">No Oracle instance reports to the SIEM yet. Install the read-only collector on the database hosts (agents/oracle, docs/ORACLE.md).</td></tr>';
+    };x.onerror=x.ontimeout=function(){$('inst').innerHTML='<tr><td colspan="9" class="empty">The SIEM is not reachable.</td></tr>';};x.send();}
+  load();setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script>
+<script>
+// Overview: the AI Oracle DBA and every Oracle database it looks after (vendor/zyb-teamviz.js oracleEstate - shared with the AI
+// Engineering Team page)
+(function(){ 'use strict'; var TV=window.zybTeamViz, f=document.getElementById('floor'); if(!TV||!f)return;
+  var go=function(){TV.oracleEstate(f,document.getElementById('ovc'));}; go();
+  setInterval(function(){var zd=document.getElementById('zd');if(!document.hidden&&(!zd||zd.hidden))go();},60000); })();
+</script>
+<script src="vendor/zyb-duty.js" defer></script></body></html>

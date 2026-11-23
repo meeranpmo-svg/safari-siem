@@ -1,0 +1,156 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Support Center</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Support Center - the service-desk queue over ManageEngine ServiceDesk Plus (/api/itam/me). It reads the tickets the
+     platform opens (from the asset / patch rules and by hand) and shows them as a worked queue: waiting for approval,
+     open at the desk, closed, rejected; with the age of each against a per-priority target so a breach is visible.
+     Opening a request waits for a second person; approve / reject are four-eyes and the server enforces it (you cannot
+     approve your own). The integration itself - connecting ServiceDesk Plus, Endpoint Central, the rules and patch
+     actions - stays on the ManageEngine Automation page, linked below. Nothing is changed here without a person. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}.btn:hover{border-color:#3a4258}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.sm{padding:3px 9px;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px 14px;text-align:left;color:inherit;text-decoration:none;cursor:pointer}.t.on{outline:2px solid var(--acc)}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:28px;font-weight:800;line-height:1.1}.t .s{font-size:11.5px;color:var(--d-mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.fil{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.fil input[type=search],.fil select{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:5px 9px;font:inherit}.fil input[type=search]{min-width:220px}
+.chip{display:inline-block;border:1px solid var(--d-line);border-radius:999px;padding:2px 10px;font-size:12px;cursor:pointer;background:transparent;color:inherit}.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);font-size:13px;vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600}
+.pill.pending{background:rgba(245,181,68,.16);color:var(--warn)}.pill.sending{background:rgba(141,176,255,.16);color:var(--info)}.pill.open{background:rgba(95,210,122,.16);color:var(--ok)}.pill.closed{background:rgba(139,147,164,.16);color:var(--d-mute)}.pill.rejected,.pill.failed,.pill.error{background:rgba(255,123,128,.16);color:var(--bad)}
+.pr{font-weight:700}.pr.Urgent,.pr.High{color:var(--bad)}.pr.Medium{color:var(--warn)}.pr.Low{color:var(--d-mute)}
+.breach{color:var(--bad);font-weight:700}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50}
+.dlg{background:var(--d-panel);border:1px solid var(--d-line);border-radius:14px;padding:18px;width:min(520px,94vw)}.dlg h2{margin:0 0 12px;font-size:17px}.dlg label{display:block;font-size:12px;color:var(--d-mute);margin:8px 0 3px}.dlg input,.dlg textarea,.dlg select{width:100%;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:7px 9px;font:inherit}.dlg .act{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.empty{color:var(--d-mute);padding:14px;text-align:center}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+a.lk{color:var(--info);text-decoration:none}a.lk:hover{text-decoration:underline}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Support & Service Desk · ManageEngine ServiceDesk Plus</div><h1>Support Center</h1></div><span class="sp"></span><span class="mut sm" id="up"></span>
+  <button type="button" class="btn pri" id="new" hidden>➕ New request</button><a class="btn" href="manageengine.html">⚙ Integration & rules</a><button type="button" class="btn" id="rf">⟳ Refresh</button></div>
+<div id="banner"></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div class="card" id="attnc" hidden><h2>⚠ Needs attention <span class="c">oldest first — approvals waiting, and open tickets past their target</span></h2><div id="attn"></div></div>
+<div class="card"><h2>Service desk queue <span class="c" id="qc"></span></h2>
+  <div class="fil"><input type="search" id="q" placeholder="Search title, requester, asset, ticket…"><span id="chips"></span>
+    <select id="pf"><option value="">Any priority</option><option>Urgent</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+  <div id="rows"></div></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var API = '/api/itam/me', ROLE = 'viewer', USER = '', ST = null, TK = [], F = '', PF = '', Q = '', SEL = null;
+  var $ = function (i) { return document.getElementById(i); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var SLA = { Urgent: 4, High: 24, Medium: 72, Low: 168 };   // hours to resolve by priority (target, not a promise)
+  var OPEN = ['pending', 'sending', 'open', 'failed'];
+  function can(r) { var R = { viewer: 0, operator: 1, admin: 2 }; return (R[ROLE] || 0) >= (R[r] || 0); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 4500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, /^\/dashboards\//.test(u) ? u : API + u); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json'); x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } if (x.status >= 200 && x.status < 300) ok(j || {}); else bad(Object.assign(new Error((j && (j.error || (j.errors && j.errors.join('; ')))) || ('HTTP ' + x.status)), { status: x.status })); }; x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('the platform is not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  function ageH(t) { var r = Date.parse(t.requested_at || 0); return r ? (Date.now() - r) / 3600000 : null; }
+  function agoTxt(h) { if (h == null) return '–'; if (h < 1) return Math.round(h * 60) + ' min'; if (h < 48) return Math.round(h) + ' h'; return Math.round(h / 24) + ' d'; }
+  function breaching(t) { return OPEN.indexOf(t.status) >= 0 && t.status !== 'pending' && ageH(t) != null && ageH(t) > (SLA[t.priority] || SLA.Medium); }
+  function load() {
+    return req('GET', '/status').then(function (s) { ST = s; if (s.you && s.you.role) { ROLE = String(s.you.role).toLowerCase(); USER = s.you.user || ''; } return req('GET', '/tickets?status=all'); })
+      .then(function (r) { TK = (r && r.tickets) || []; draw(); $('up').textContent = 'read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); })
+      .catch(function (e) { $('kp').innerHTML = ''; $('banner').innerHTML = '<div class="card"><div class="empty">' + (e.status === 404 ? 'The ManageEngine service-desk integration is not on this platform yet — run the update.' : e.status === 403 ? 'Your role cannot see the service desk. Ask an administrator for the operator level.' : esc(e.message)) + '</div></div>'; });
+  }
+  function draw() {
+    var sdp = ST && ST.sdp || {}, configured = !!(sdp.base_url && sdp.key_set);
+    $('new').hidden = !(configured && can('operator'));
+    $('banner').innerHTML = configured ? '' : '<div class="card"><div class="empty">ServiceDesk Plus is not connected yet. An administrator sets the server address and technician key on <a class="lk" href="manageengine.html">ManageEngine Automation → Connections</a>. Until then the queue below shows only what the platform has recorded locally.</div></div>';
+    var cnt = function (f) { return TK.filter(f).length; };
+    var pend = cnt(function (t) { return t.status === 'pending'; }), open = cnt(function (t) { return t.status === 'open' || t.status === 'sending'; });
+    var closed30 = cnt(function (t) { return t.status === 'closed' && (Date.now() - Date.parse(t.closed_at || t.requested_at || 0)) < 30 * 864e5; });
+    var probs = cnt(function (t) { return t.status === 'rejected' || t.status === 'failed' || t.status === 'error'; });
+    var breach = TK.filter(breaching).length;
+    var T = function (f, l, v, s, cls) { return '<button type="button" class="t ' + (cls || '') + (F === f ? ' on' : '') + '" data-f="' + f + '"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + esc(s) + '</div></button>'; };
+    $('kp').innerHTML = T('pending', 'Waiting for approval', pend, 'a second person decides', pend ? 'warn' : 'ok')
+      + T('open', 'Open at the desk', open, 'with ServiceDesk Plus', '')
+      + T('breach', 'Past target', breach, 'open longer than the priority target', breach ? 'bad' : 'ok')
+      + T('closed', 'Closed (30 days)', closed30, 'resolved and closed', 'ok')
+      + T('problem', 'Rejected / failed', probs, 'rejected or not sent', probs ? 'bad' : 'ok');
+    // needs attention
+    var attn = TK.filter(function (t) { return t.status === 'pending' || breaching(t); }).sort(function (a, b) { return (Date.parse(a.requested_at || 0)) - (Date.parse(b.requested_at || 0)); });
+    $('attnc').hidden = !attn.length;
+    $('attn').innerHTML = attn.length ? attn.slice(0, 8).map(function (t) { return '<div style="display:flex;gap:8px;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--d-line)"><span>' + statusPill(t) + ' <b>' + esc(t.title) + '</b> <span class="pr ' + esc(t.priority || '') + '">' + esc(t.priority || '') + '</span></span><span class="mut sm">' + (t.status === 'pending' ? 'waiting ' : 'open ') + agoTxt(ageH(t)) + (breaching(t) ? ' · <span class="breach">past target</span>' : '') + '</span></div>'; }).join('') : '';
+    drawRows();
+    chips();
+  }
+  function statusPill(t) { var lab = { pending: 'waiting', sending: 'sending', open: 'open', closed: 'closed', rejected: 'rejected', failed: 'failed', error: 'error' }[t.status] || t.status; return '<span class="pill ' + esc(t.status) + '">' + esc(lab) + '</span>'; }
+  function chips() {
+    var defs = [['', 'All'], ['pending', 'Waiting'], ['open', 'Open'], ['closed', 'Closed'], ['problem', 'Rejected/failed'], ['breach', 'Past target']];
+    $('chips').innerHTML = defs.map(function (d) { return '<button type="button" class="chip' + (F === d[0] ? ' on' : '') + '" data-f="' + d[0] + '">' + esc(d[1]) + '</button>'; }).join(' ');
+  }
+  function match(t) {
+    if (PF && t.priority !== PF) return false;
+    if (F === 'open' && !(t.status === 'open' || t.status === 'sending')) return false;
+    if (F === 'pending' && t.status !== 'pending') return false;
+    if (F === 'closed' && t.status !== 'closed') return false;
+    if (F === 'problem' && !(t.status === 'rejected' || t.status === 'failed' || t.status === 'error')) return false;
+    if (F === 'breach' && !breaching(t)) return false;
+    if (Q && (String(t.title || '') + ' ' + (t.requested_by || '') + ' ' + (t.asset_name || '') + ' ' + (t.sdp_id || '') + ' ' + (t.id || '')).toLowerCase().indexOf(Q) < 0) return false;
+    return true;
+  }
+  function drawRows() {
+    var rows = TK.filter(match).sort(function (a, b) { return (Date.parse(b.requested_at || 0)) - (Date.parse(a.requested_at || 0)); });
+    $('qc').textContent = rows.length + ' of ' + TK.length;
+    if (!rows.length) { $('rows').innerHTML = '<div class="empty">' + (TK.length ? 'No ticket matches this filter.' : 'No ticket yet. The platform opens one when an asset or patch rule fires, or you can raise one with “New request”.') + '</div>'; return; }
+    $('rows').innerHTML = '<table><thead><tr><th>Ticket</th><th>Priority</th><th>Status</th><th>Age</th><th>Requested by</th><th>Asset</th><th></th></tr></thead><tbody>'
+      + rows.slice(0, 500).map(function (t) {
+        var link = t.sdp_url ? '<a class="lk" href="' + esc(t.sdp_url) + '" target="_blank" rel="noopener">SDP #' + esc(t.sdp_id) + ' ↗</a>' : '';
+        var act = (t.status === 'pending' && can('operator')) ? '<button type="button" class="btn sm" data-ap="' + esc(t.id) + '">Approve</button> <button type="button" class="btn sm" data-rj="' + esc(t.id) + '">Reject</button>' : '';
+        return '<tr><td><b>' + esc(t.title) + '</b>' + (t.rule && t.rule !== 'manual' ? ' <span class="mut sm">· rule: ' + esc(t.rule) + '</span>' : '') + '<div class="mut sm">' + link + (t.reason ? ' · ' + esc(t.reason) : '') + '</div></td>'
+          + '<td><span class="pr ' + esc(t.priority || '') + '">' + esc(t.priority || '–') + '</span></td><td>' + statusPill(t) + '</td>'
+          + '<td' + (breaching(t) ? ' class="breach"' : '') + '>' + agoTxt(ageH(t)) + '</td><td>' + esc(t.requested_by || '–') + '</td><td>' + esc(t.asset_name || '–') + '</td><td>' + act + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  function dialog(title, inner, onok, okLabel) {
+    var o = document.createElement('div'); o.className = 'ov'; o.innerHTML = '<div class="dlg" role="dialog" aria-modal="true"><h2>' + esc(title) + '</h2>' + inner + '<div class="act"><button type="button" class="btn" data-x>Cancel</button><button type="button" class="btn pri" data-ok>' + esc(okLabel || 'Save') + '</button></div></div>';
+    document.body.appendChild(o);
+    var close = function () { o.remove(); };
+    o.addEventListener('click', function (e) { if (e.target === o || e.target.hasAttribute('data-x')) close(); });
+    o.querySelector('[data-ok]').addEventListener('click', function () { onok(o, close); });
+    var f = o.querySelector('input,textarea,select'); if (f) f.focus();
+    return o;
+  }
+  function newReq() {
+    dialog('New support request', '<label>Title</label><input id="d-title" maxlength="250" placeholder="Short summary of the request">'
+      + '<label>Priority</label><select id="d-pr"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select>'
+      + '<label>Description</label><textarea id="d-desc" rows="4" maxlength="8000" placeholder="What is needed and why"></textarea>'
+      + '<p class="mut sm">It is logged as waiting — a second person approves it before it goes to ServiceDesk Plus.</p>',
+      function (o, close) {
+        var b = { title: (o.querySelector('#d-title').value || '').trim(), priority: o.querySelector('#d-pr').value, description: (o.querySelector('#d-desc').value || '').trim() };
+        if (b.title.length < 4) { toast('Enter a title of at least 4 characters'); return; }
+        req('POST', '/tickets', b).then(function () { close(); toast('Request logged — waiting for approval'); load(); }).catch(function (e) { toast(e.message); });
+      }, 'Log request');
+  }
+  function approve(id) { req('POST', '/tickets/' + encodeURIComponent(id) + '/approve').then(function () { toast('Approved and sent to the service desk'); load(); }).catch(function (e) { toast(e.message); }); }
+  function reject(id) {
+    dialog('Reject ticket', '<label>Why it is rejected</label><textarea id="d-r" rows="3" maxlength="500"></textarea>', function (o, close) {
+      var reason = (o.querySelector('#d-r').value || '').trim(); if (reason.length < 3) { toast('Give a reason'); return; }
+      req('POST', '/tickets/' + encodeURIComponent(id) + '/reject', { reason: reason }).then(function () { close(); toast('Rejected'); load(); }).catch(function (e) { toast(e.message); });
+    }, 'Reject');
+  }
+  document.addEventListener('click', function (ev) {
+    var b;
+    if ((b = ev.target.closest('[data-f]'))) { F = b.getAttribute('data-f'); draw(); return; }
+    if ((b = ev.target.closest('[data-ap]'))) return approve(b.getAttribute('data-ap'));
+    if ((b = ev.target.closest('[data-rj]'))) return reject(b.getAttribute('data-rj'));
+  });
+  $('new').addEventListener('click', newReq);
+  $('rf').addEventListener('click', load);
+  $('q').addEventListener('input', function () { Q = this.value.trim().toLowerCase(); drawRows(); });
+  $('pf').addEventListener('change', function () { PF = this.value; drawRows(); });
+  // role for the controls, then load
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ROLE = String(j.role || '').toLowerCase() || ROLE; USER = j.user || USER; } catch (e) { /* viewer */ } load(); }; w.onerror = function () { load(); }; w.send();
+  setInterval(function () { if (!document.hidden && !document.querySelector('.ov')) load(); }, 60000);
+})();
+</script></body></html>

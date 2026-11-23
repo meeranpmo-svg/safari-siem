@@ -1,0 +1,60 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Breach Response</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+pre.letter{white-space:pre-wrap;font:13px/1.55 "Segoe UI",system-ui,sans-serif;background:rgba(255,255,255,.03);padding:12px;border-radius:8px}pre.letter[dir=rtl]{text-align:right}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">Breach Response</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><input class="form-control w-auto" id="bcase" placeholder="CASE-000123" maxlength="20" aria-label="SIEM incident id"><button type="button" class="btn btn-primary" id="bopen"><i class="ti ti-alarm me-1"></i>Open from SIEM incident</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>From the moment a person decides an incident affects personal data, <b>SDAIA must be told within 72 hours</b>, and the people affected without undue delay when harm is likely (Implementing Regulation Art. 24). Each breach follows the playbook: contain, assess (what data, how many people, sensitive?, likely harm), notify SDAIA, notify the data subjects, remediate, lessons learned. Every step is stamped with who and when. The platform prepares the SDAIA notification and the data-subject notice; the DPO files them in SDAIA's portal - nothing is sent from here. Each breach also carries a decision for the other regulators (Insurance Authority, SAMA, NCA, Council of Health Insurance): required or not, and when and under which reference each was told.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Breaches</h3></div><div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+
+  var V=null;
+  function clock(x){if(x.hours_left===null)return x.late?P.badge('notified late','red'):P.badge('notified','green');return x.hours_left<0?P.badge('overdue '+Math.abs(x.hours_left)+' h','red'):P.badge(x.hours_left+' h left',x.hours_left<24?'red':'orange');}
+  function rcol(r){return r.status==='notified'||r.status==='not required'?'green':r.status==='to decide'?'secondary':r.late||r.status==='overdue'?'red':'orange';}
+  function rclock(r){if(r.status==='not required')return P.badge('not required','green')+' <span class="mut">'+esc(r.reason||'')+'</span>';if(r.status==='to decide')return P.badge('to decide','secondary');
+    if(r.notified_at)return P.badge((r.late?'notified late ':'notified ')+P.dt(r.notified_at),r.late?'red':'green')+' <span class="mut">'+esc(r.ref||'')+'</span>';
+    if(r.hours_left===null)return P.badge('required - set its deadline in the PDPL profile','orange');return r.hours_left<0?P.badge('overdue '+Math.abs(r.hours_left)+' h','red'):P.badge(r.hours_left+' h left','orange');}
+  function load(){return P.req('GET','/pdpl/breaches').then(function(r){V=r;var b=r.breaches;
+    $('kpis').innerHTML=P.tile(r.open,'Open')+P.tile(b.filter(function(x){return x.hours_left!==null&&x.hours_left<24;}).length,'Under 24 h to notify',b.some(function(x){return x.hours_left!==null&&x.hours_left<24;})?'text-red':'')+P.tile(b.filter(function(x){return x.late;}).length,'Notified late')+P.tile(b.length,'Recorded');
+    $('list').innerHTML=P.table([['Breach',function(x){return '<b>'+esc(x.ref)+'</b><div class="mut">'+esc(x.id)+(x.source_case?' · '+esc(x.source_case):'')+'</div>';}],['Aware at',function(x){return esc(P.dt(x.aware_at));}],['SDAIA (72 h)',clock],
+      ['Playbook',function(x){var d=x.steps.filter(function(s){return s.done;}).length;return '<div class="d-flex gap-1">'+x.steps.map(function(s){return '<span class="badge bg-'+(s.done?'green':'secondary')+'-lt" title="'+esc(s.label)+'">'+esc(s.step.replace('notify_','→ '))+'</span>';}).join('')+'</div><div class="mut">'+d+' / '+x.steps.length+'</div>';}],
+      ['Other regulators',function(x){return (x.regulators||[]).map(function(r){return '<span class="badge bg-'+rcol(r)+'-lt me-1" title="'+esc(r.label+': '+r.status)+'">'+esc(r.key.toUpperCase())+'</span>';}).join('');}],
+      ['Next',function(x){return x.next?'<span class="small">'+esc(x.next)+'</span>':P.badge('closed','green');}]],b,function(x){return 'class="rowc" data-id="'+esc(x.id)+'"';},'No breaches recorded. Open one from a SIEM incident when an incident affects personal data.');
+    }).catch(function(e){P.fail($('list'),e);});}
+  function open(x){
+    var h=Z.kv([['Aware at',esc(P.dt(x.aware_at))],['Deadline',esc(P.dt(x.deadline))+' '+clock(x)],['People affected',esc(x.subjects_count===null||x.subjects_count===undefined?'not assessed':x.subjects_count)],['Data',esc((x.categories||[]).join(', ')||'—')],['What happened',esc(x.description||'—')]]);
+    h+=Z.sec('Playbook',P.table([['Step',function(s){return esc(s.label);}],['Done',function(s){return s.done?P.badge(P.dt(s.at),'green')+' <span class="mut">'+esc(s.by||'')+'</span>':P.badge('to do','secondary');}],['Note',function(s){return esc(s.note||'');}]],x.steps));
+    var todo=x.steps.filter(function(s){return !s.done;});
+    if(todo.length)h+=Z.sec('Record a step',P.form('pform',[['step','sel','Step',1,todo.map(function(s){return [s.step,s.label];})],['at','dtl','Done at (blank = now)'],['note','text','Note (no personal data)']],{},'Record'));
+    var regs=x.regulators||[];
+    h+=Z.sec('Other regulators','<p class="mut mb-1">'+esc(V.regulator_note||'')+'</p>'+P.table([['Regulator',function(r){return esc(r.label)+(r.hours?' <span class="mut">('+esc(r.hours)+' h)</span>':'');}],['Status',rclock],['Decided',function(r){return r.by?'<span class="mut">'+esc(r.by)+' · '+esc(P.dt(r.at))+'</span>':'';}]],regs)
+      +P.form('rform',[['regulator','sel','Regulator',1,regs.filter(function(r){return !r.notified_at;}).map(function(r){return [r.key,r.label];}).concat(regs.some(function(r){return r.key==='other';})?[]:[['other','Other authority']])],['required','sel','Notification required?',1,[['yes','Yes - its instructions require it'],['no','No']]],
+        ['reason','text','If not required: why'],['notified_at','dtl','Notified at (leave blank if not yet)'],['ref','text','Regulator reference / letter or e-mail reference'],['name','text','Other authority: name'],['hours','num','Other authority: deadline (hours)']],{},'Record decision'));
+    h+=Z.sec('Drafts','<button type="button" class="btn btn-sm" id="draft"><i class="ti ti-file-text me-1"></i>SDAIA notification and data-subject notice</button><div id="draftout" class="mt-2"></div>');
+    Z.open('Breach response',x.id+' · '+x.ref,h+'<input type="hidden" id="bid" value="'+esc(x.id)+'">');}
+  $('list').addEventListener('click',function(ev){var tr=ev.target.closest('tr[data-id]');if(!tr||!V)return;open(V.breaches.find(function(x){return x.id===tr.getAttribute('data-id');}));});
+  $('bopen').addEventListener('click',function(){var c=$('bcase').value.trim();P.req('POST','/pdpl/breach/from-incident',{case_id:c}).then(function(r){P.toast('Opened '+r.id+' - the 72-hour clock is running');load();}).catch(function(e){P.toast(P.why(e));});});
+  document.addEventListener('click',function(ev){if(!ev.target.closest('#draft'))return;P.req('GET','/pdpl/breach/'+encodeURIComponent($('bid').value)+'/draft').then(function(d){
+    var sd=Array.isArray(d.sdaia)?'<table class="table table-sm"><tbody>'+d.sdaia.map(function(r){return '<tr><th>'+esc(r[0])+'</th><td>'+esc(r[1])+'</td></tr>';}).join('')+'</tbody></table>':'<pre class="letter">'+esc(JSON.stringify(d.sdaia,null,1))+'</pre>';
+    var sn=d.subject_notice||{};
+    $('draftout').innerHTML=(d.missing&&d.missing.length?'<div class="alert alert-warning small">Still missing: '+esc(d.missing.join('; '))+'</div>':'')+'<div class="fw-semibold small">SDAIA notification</div>'+sd+(sn.en?'<div class="fw-semibold small">Notice to the data subjects</div><pre class="letter">'+esc(sn.en)+'</pre>':'')+(sn.ar?'<pre class="letter" dir="rtl" lang="ar">'+esc(sn.ar)+'</pre>':'');}).catch(function(e){$('draftout').textContent=P.why(e);});});
+  document.addEventListener('submit',function(ev){var fm=ev.target;if(fm.id!=='rform')return;ev.preventDefault();var id=$('bid').value,b=P.body(fm);b.required=b.required==='yes';
+    P.req('POST','/pdpl/breach/'+encodeURIComponent(id)+'/regulator',b).then(function(){P.toast(id+': regulator decision recorded');load().then(function(){var x=V.breaches.find(function(q){return q.id===id;});if(x)open(x);});}).catch(function(e){P.msg(fm,P.why(e));});});
+  document.addEventListener('submit',function(ev){var fm=ev.target;if(fm.id!=='pform')return;ev.preventDefault();var id=$('bid').value;
+    P.req('POST','/pdpl/breach/'+encodeURIComponent(id)+'/step',P.body(fm)).then(function(r){P.toast(id+': step recorded');load().then(function(){var x=V.breaches.find(function(q){return q.id===id;});if(x)open(x);});}).catch(function(e){P.msg(fm,P.why(e));});});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

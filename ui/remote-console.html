@@ -1,0 +1,209 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Remote Console</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/guacamole-common.js"></script>
+<style>
+:root{--r-bg:#0b0d12;--r-panel:#12151c;--r-raise:#181c25;--r-line:#232837;--r-ink:#e7eaf0;--r-mute:#8b93a4;--r-ok:#2fb344;--r-warn:#f59f00;--r-bad:#e5484d;--r-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--r-bg);color:var(--r-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--r-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--r-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--r-raise);color:var(--r-ink);border:1px solid var(--r-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--r-acc);border-color:var(--r-acc);color:#fff}.btn.ok{background:rgba(47,179,68,.18);border-color:rgba(47,179,68,.5);color:#7ee28f}.btn.bad{background:rgba(229,72,77,.15);border-color:rgba(229,72,77,.5);color:#ff9ea1}.btn.ghost{background:transparent}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--r-panel);border:1px solid var(--r-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--r-mute);font-weight:400;font-size:12px}
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}.flow div{background:var(--r-raise);border:1px solid var(--r-line);border-radius:12px;padding:10px 12px;font-size:12.5px}.flow b{display:block;font-size:13.5px;margin-bottom:2px}.flow i{color:var(--r-acc);margin-right:4px}
+.cols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px}
+.inp{background:#0b0d12;color:var(--r-ink);border:1px solid var(--r-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;max-height:520px;overflow:auto}
+.srv{background:var(--r-raise);border:1px solid var(--r-line);border-radius:12px;padding:10px 12px}.srv b{display:block}.srv .row{margin-top:6px}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-pending{background:rgba(245,159,0,.16);color:#f5b544}.p-approved{background:rgba(47,179,68,.15);color:#56d364}.p-rejected,.p-expired,.p-ended,.p-cancelled{background:rgba(139,147,164,.16);color:#aab2c2}.p-on{background:rgba(47,179,68,.15);color:#56d364}.p-off{background:rgba(229,72,77,.16);color:#ff7b80}
+.q{border:1px solid var(--r-line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--r-raise)}.q .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.q .why{font-size:12.5px;color:var(--r-mute);margin:4px 0}
+.form{display:grid;grid-template-columns:120px 1fr;gap:8px 10px;align-items:center;font-size:13px}.form label{color:var(--r-mute)}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--r-mute);padding:6px 8px;border-bottom:1px solid var(--r-line)}td{padding:7px 8px;border-bottom:1px solid #1b2030}
+#ov{position:fixed;inset:0;background:#05070b;z-index:100;display:flex;flex-direction:column}
+#ov .bar{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#10141c;border-bottom:1px solid var(--r-line);flex-wrap:wrap}
+#ov .bar b{font-size:14px}#scr{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}#scr:focus{outline:none}
+#cred{position:absolute;inset:0;background:rgba(5,7,11,.85);display:flex;align-items:center;justify-content:center;z-index:5}
+#cred .box{background:var(--r-panel);border:1px solid var(--r-line);border-radius:14px;padding:18px;width:min(380px,92vw)}
+#status{font-size:12.5px}.rec{color:#ff7b80;font-weight:700}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.empty{color:var(--r-mute);padding:8px 0;font-size:13px}
+@media (max-width:1100px){.cols{grid-template-columns:1fr}.flow{grid-template-columns:1fr 1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Servers &amp; Virtualization · privileged access</div><h1>Remote Console</h1><div class="mute">Log in to Windows (Remote Desktop), Linux, Solaris, ESXi, Nutanix and network devices (SSH) from the portal - after another person approves a time-limited request. You type your own account; every gateway session is recorded. Physical servers also open their <b>out-of-band controller</b> (iDRAC / iLO / XClarity) so you can watch a reboot from POST and BIOS to the login screen.</div></div>
+ <span class="sp"></span><span id="gw"></span><button type="button" class="btn" id="refresh"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+<div class="flow"><div><b><i class="ti ti-hand-finger"></i>1 Request</b>one server, one protocol, how long and why</div><div><b><i class="ti ti-user-check"></i>2 Approve</b>another person - never you, never an AI</div><div><b><i class="ti ti-plug-connected"></i>3 Connect</b>inside the window, with your own login</div><div><b><i class="ti ti-player-record"></i>4 Recorded</b>the screen, not your keystrokes</div><div><b><i class="ti ti-clock-stop"></i>5 Ends</b>at the end of the window, or when you end it</div></div>
+<div class="cols">
+ <section class="card"><h2><i class="ti ti-server-2"></i>Servers <span class="c" id="tc"></span></h2>
+  <div class="row" style="margin-bottom:10px"><input class="inp" id="find" placeholder="Search name, IP, OS, site" aria-label="Search servers" style="flex:1;min-width:200px"></div>
+  <div class="grid" id="targets"></div>
+  <div id="reqform" class="q" hidden style="margin-top:12px"></div></section>
+ <div>
+  <section class="card" id="c-mine"><h2><i class="ti ti-key"></i>My access <span class="c" id="mc"></span></h2><div id="mine"></div></section>
+  <section class="card" id="c-wait"><h2><i class="ti ti-user-check"></i>Waiting for my approval <span class="c" id="wc"></span></h2><div id="wait"></div></section>
+  <section class="card" id="c-live"><h2><i class="ti ti-broadcast"></i>Live sessions</h2><div id="live"></div></section>
+ </div>
+</div>
+<section class="card" id="c-rec" hidden><h2><i class="ti ti-movie"></i>Recordings <span class="c">administrators · every download is audited</span></h2><div id="recs"></div></section>
+<section class="card" id="c-oob" hidden><h2><i class="ti ti-server-bolt"></i>Out-of-band controllers <span class="c" id="oobc"></span></h2>
+ <div class="sm mute" style="margin-bottom:8px">Record each physical server's iDRAC / iLO / XClarity / BMC address once. Operators then request it like any other console. Only the address is kept - never a controller account or password. The kind is suggested from the vendor; check it.</div>
+ <div class="row" style="margin-bottom:8px"><input class="inp" id="oobfind" placeholder="Search server, vendor, address" aria-label="Search physical servers" style="flex:1;min-width:200px"><label class="sm"><input type="checkbox" id="oobmiss"> only servers without a controller</label></div>
+ <div id="oob" style="max-height:460px;overflow:auto"></div></section>
+<section class="card" id="c-set" hidden><h2><i class="ti ti-settings"></i>Settings <span class="c">administrators</span></h2><div id="set"></div></section>
+</div>
+<div id="ov" hidden><div class="bar"><b id="ovt"></b><span id="status" class="mute"></span><span class="rec" id="ovrec"></span><span class="sp"></span><span class="sm mute" id="ovleft"></span>
+ <button type="button" class="btn" id="cad" title="Send Ctrl+Alt+Del">Ctrl+Alt+Del</button><button type="button" class="btn" id="fs"><i class="ti ti-maximize"></i>Full screen</button><button type="button" class="btn bad" id="disc"><i class="ti ti-plug-x"></i>Disconnect</button></div>
+ <div id="scr" tabindex="0" aria-label="Remote screen"><div id="cred" hidden></div></div></div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, PICK=null, CLIENT=null, KB=null, REC=null, LEFT=null;
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function req(m,u,b,blob){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;if(blob)x.responseType='blob';if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){if(blob){if(x.status===200)return ok(x.response);return bad(Object.assign(new Error('HTTP '+x.status),{status:x.status}));}var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function mins(s){s=Math.max(0,Math.round(s));var h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+' h '+m+' min':m+' min';}
+  var PICON={rdp:'brand-windows',ssh:'terminal-2',web:'world-www',oob:'server-bolt'}, CHK={};
+
+  function drawTargets(){var q=$('find').value.trim().toLowerCase(),L=V.targets.filter(function(t){return !q||[t.name,t.ip,t.os,t.site].join(' ').toLowerCase().indexOf(q)>=0;});
+    $('tc').textContent=L.length+' of '+V.targets.length+' (in use, with a management IP)';
+    $('targets').innerHTML=L.slice(0,300).map(function(t){return '<div class="srv"><b>'+esc(t.name)+'</b><span class="sm mute">'+esc([t.ip,t.os,t.site].filter(Boolean).join(' · '))+'</span>'+(t.bmc?'<div class="sm" style="margin-top:4px"><i class="ti ti-server-bolt"></i> controller '+esc(t.bmc.address+(t.bmc.port!==443?':'+t.bmc.port:''))+' <button type="button" class="btn ghost" style="padding:1px 7px;font-size:11px" data-bmccheck="'+esc(t.id)+'">Check</button> <span data-chk="'+esc(t.id)+'">'+chkTxt(t.id)+'</span></div>':'')+'<div class="row">'
+      +t.protocols.map(function(p){return '<button type="button" class="btn" data-pick="'+esc(t.id)+'" data-proto="'+esc(p.protocol)+'"><i class="ti ti-'+esc(PICON[p.protocol])+'"></i>'+esc(p.label)+'</button>';}).join('')+'</div></div>';}).join('')
+      ||'<div class="empty">No server to connect to. Servers, VMs, network and storage devices that are in use and have a management IP in IT Asset Management appear here.</div>';}
+  function chkTxt(id){var c=CHK[id];if(!c)return '';return c.reachable?'<span class="pill p-on">reachable · '+esc(c.ms)+' ms</span>':'<span class="pill p-off" title="'+esc(c.error||'')+'">not reachable</span>';}
+  function drawForm(){var f=$('reqform');if(!PICK){f.hidden=true;return;}var t=PICK.t,p=PICK.p,mx=V.settings.max_minutes,opts=[15,30,60,120,240,480].filter(function(m){return m<=mx;});
+    f.hidden=false;f.innerHTML='<div class="hd"><b>Request '+esc(p.label)+' to '+esc(t.name)+'</b><span class="mute sm">'+esc(t.ip+':'+p.port)+'</span><span class="sp"></span><button type="button" class="btn ghost" id="fclose">Close</button></div>'
+      +'<div class="form" style="margin-top:10px"><label for="fmin">How long</label><select class="inp" id="fmin">'+opts.map(function(m){return '<option value="'+m+'"'+(m===60?' selected':'')+'>'+esc(mins(m*60))+'</option>';}).join('')+'</select>'
+      +'<label for="freason">Why</label><input class="inp" id="freason" maxlength="500" placeholder="what you will do (10 characters or more)"><label for="fticket">Ticket / change</label><input class="inp" id="fticket" maxlength="60" placeholder="optional, e.g. CHG-1042"></div>'
+      +(p.protocol==='oob'?'<div class="sm mute" style="margin-top:6px">After approval the '+esc(p.label)+' opens in a new tab. Log in with <b>your own controller account</b> and open the virtual console: it keeps running while the server reboots, so you see POST, BIOS / UEFI, the RAID controller and the boot loader. Power on / off / reset is done in the controller and recorded there. It is not proxied or recorded by the platform, and no controller password is stored.</div>':'')
+      +(p.protocol==='web'?'<div class="sm mute" style="margin-top:6px">The '+esc(p.label)+' opens directly in your browser after approval - it is not proxied or recorded by the platform.</div>':'')
+      +'<div class="row" style="margin-top:10px"><button type="button" class="btn pri" id="fsend"><i class="ti ti-send"></i>Send for approval</button></div>';
+    $('freason').focus();}
+  function reqCard(r,mode){var st=r.status==='approved'&&r.left_s<=0?'expired':r.status;
+    var act='';
+    if(mode==='mine'){if(r.status==='pending')act='<button type="button" class="btn ghost" data-cancel="'+esc(r.id)+'">Cancel</button>';
+      if(r.status==='approved'&&r.left_s>0)act='<button type="button" class="btn pri" data-connect="'+esc(r.id)+'"><i class="ti ti-plug-connected"></i>'+(r.protocol==='web'||r.protocol==='oob'?'Open '+esc(r.label):'Connect')+'</button><button type="button" class="btn ghost" data-end="'+esc(r.id)+'">End access</button>';}
+    if(mode==='wait')act='<button type="button" class="btn ok" data-approve="'+esc(r.id)+'"><i class="ti ti-check"></i>Approve</button><input class="inp" data-note placeholder="note (required to reject)" aria-label="Note" style="flex:1;min-width:120px"><button type="button" class="btn ghost" data-reject="'+esc(r.id)+'">Reject</button>';
+    if(mode==='active'&&!r.mine)act='<button type="button" class="btn ghost" data-end="'+esc(r.id)+'">End access</button>';
+    return '<div class="q" data-req="'+esc(r.id)+'"><div class="hd"><span class="pill p-'+esc(st)+'">'+esc(st)+'</span><b>'+esc(r.asset_name)+'</b><span class="mute sm"><i class="ti ti-'+esc(PICON[r.protocol])+'"></i> '+esc(r.label)+' · '+esc(mins(r.minutes*60))+'</span><span class="sp"></span>'+(r.left_s>0?'<span class="sm" style="color:#56d364">'+esc(mins(r.left_s))+' left</span>':'')+'</div>'
+      +'<div class="why">'+esc(r.reason)+(r.ticket?' · '+esc(r.ticket):'')+(mode!=='mine'?' · asked by '+esc(r.by):'')+(r.decided_by?' · '+esc(r.status==='rejected'?'rejected':'approved')+' by '+esc(r.decided_by)+(r.note?' ("'+esc(r.note)+'")':''):'')+(r.live?' · '+esc(r.live)+' live session(s)':'')+'</div>'
+      +(act?'<div class="row">'+act+'</div>':'')+'</div>';}
+  function draw(){
+    $('gw').innerHTML=V.settings.enabled?'<span class="pill p-on">gateway on</span>':'<span class="pill p-off" title="An administrator switches it on in Settings after installing guacd">gateway off - web and controller consoles only</span>';
+    drawTargets();drawForm();
+    $('mine').innerHTML=V.mine.length?V.mine.slice(0,30).map(function(r){return reqCard(r,'mine');}).join(''):'<div class="empty">No request yet. Choose a server and how to connect.</div>';
+    $('mc').textContent=V.mine.filter(function(r){return r.status==='pending'||r.left_s>0;}).length+' open';
+    $('wait').innerHTML=V.waiting.length?V.waiting.map(function(r){return reqCard(r,'wait');}).join(''):'<div class="empty">Nothing waiting for you.</div>';
+    $('wc').textContent=V.waiting.length+'';
+    var others=V.active.filter(function(r){return !r.mine;});
+    $('live').innerHTML=(V.live.length?'<table><thead><tr><th>Who</th><th>Server</th><th>Since</th></tr></thead><tbody>'+V.live.map(function(x){return '<tr><td>'+esc(x.user)+'</td><td>'+esc(x.asset_name)+' <span class="mute">'+esc(x.protocol)+'</span></td><td>'+esc(String(x.started_at).slice(11,16))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No live session.</div>')
+      +(others.length?'<div class="sm mute" style="margin:10px 0 6px">Other open access windows:</div>'+others.map(function(r){return reqCard(r,'active');}).join(''):'');
+    $('c-rec').hidden=!can('admin');$('c-set').hidden=!can('admin');$('c-oob').hidden=!(can('admin')&&V.controllers);
+    if(can('admin')){drawSettings();loadRecs();if(V.controllers)drawOob();}
+  }
+  function drawOob(){var L=V.controllers,q=$('oobfind').value.trim().toLowerCase(),miss=$('oobmiss').checked,K=V.oob_kinds||[];
+    var have=L.filter(function(c){return c.bmc;}).length;$('oobc').textContent=have+' of '+L.length+' physical servers recorded';
+    var R=L.filter(function(c){return (!miss||!c.bmc)&&(!q||[c.name,c.vendor,c.model,c.site,c.bmc?c.bmc.address:''].join(' ').toLowerCase().indexOf(q)>=0);});
+    $('oob').innerHTML=L.length?'<table><thead><tr><th>Server</th><th>Vendor / model</th><th>Controller</th><th>Address</th><th>Port</th><th></th></tr></thead><tbody>'+R.slice(0,300).map(function(c){var k=c.bmc?c.bmc.kind:(c.suggest||'');
+      return '<tr data-oobrow="'+esc(c.id)+'"><td><b>'+esc(c.name)+'</b>'+(c.site?'<div class="sm mute">'+esc(c.site)+'</div>':'')+'</td><td class="sm">'+esc([c.vendor,c.model].filter(Boolean).join(' ')||'not recorded')+'</td>'
+        +'<td><select class="inp" data-ok aria-label="Controller kind">'+(k?'':'<option value="">choose</option>')+K.map(function(x){return '<option value="'+esc(x.kind)+'"'+(x.kind===k?' selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select>'+(!c.bmc&&c.suggest?'<div class="sm mute">suggested from the vendor</div>':'')+'</td>'
+        +'<td><input class="inp" data-oa aria-label="Controller address" placeholder="IP or host name" value="'+esc(c.bmc?c.bmc.address:'')+'" style="width:170px"></td><td><input class="inp" data-op aria-label="Port" value="'+esc(c.bmc?c.bmc.port:443)+'" style="width:70px"></td>'
+        +'<td class="row"><button type="button" class="btn" data-oobsave="'+esc(c.id)+'">Save</button>'+(c.bmc?'<button type="button" class="btn ghost" data-oobdel="'+esc(c.id)+'">Remove</button><span class="sm mute">by '+esc(c.bmc.by)+'</span>':'')+'</td></tr>';}).join('')+'</tbody></table>'
+      +(R.length>300?'<div class="sm mute">Showing 300 of '+R.length+' - search to narrow.</div>':''):'<div class="empty">No physical server in IT Asset Management yet. Servers of type "server" appear here.</div>';}
+  function drawSettings(){var s=V.settings;
+    $('set').innerHTML='<div class="form"><label for="s-en">Gateway</label><label class="sm"><input type="checkbox" id="s-en"'+(s.enabled?' checked':'')+'> switched on (install guacd first: <code>sudo bash add-remote-console.sh --install-gateway</code>)</label>'
+      +'<label for="s-gw">guacd</label><input class="inp" id="s-gw" value="'+esc(s.guacd||'127.0.0.1:4822')+'" placeholder="127.0.0.1:4822">'
+      +'<label for="s-rec">Recordings folder</label><input class="inp" id="s-rec" value="'+esc(s.recording_dir||'')+'">'
+      +'<label for="s-max">Longest window</label><select class="inp" id="s-max">'+[60,120,240,480].map(function(m){return '<option value="'+m+'"'+(m===s.max_minutes?' selected':'')+'>'+esc(mins(m*60))+'</option>';}).join('')+'</select>'
+      +'<label for="s-clip">Clipboard</label><select class="inp" id="s-clip"><option value="off"'+(s.clipboard==='off'?' selected':'')+'>off</option><option value="paste"'+(s.clipboard==='paste'?' selected':'')+'>paste into the server only (default)</option><option value="both"'+(s.clipboard==='both'?' selected':'')+'>paste and copy out</option></select>'
+      +'<label for="s-sec">RDP security</label><select class="inp" id="s-sec">'+['nla','tls','rdp','any'].map(function(x){return '<option'+(x===s.rdp_security?' selected':'')+'>'+x+'</option>';}).join('')+'</select>'
+      +'<label for="s-cert">RDP certificates</label><label class="sm"><input type="checkbox" id="s-cert"'+(s.rdp_ignore_cert?' checked':'')+'> accept self-signed server certificates</label>'
+      +'<label for="s-appr">Approvers</label><input class="inp" id="s-appr" value="'+esc((s.approvers||[]).join(', '))+'" placeholder="empty = any other operator or administrator"></div>'
+      +'<div class="row" style="margin-top:10px"><button type="button" class="btn pri" id="ssave">Save settings</button></div>';}
+  function loadRecs(){req('GET','/console/recordings').then(function(r){var L=r.recordings;
+    $('recs').innerHTML=L.length?'<table><thead><tr><th>When</th><th>Who</th><th>Server</th><th>Duration</th><th>Recording</th></tr></thead><tbody>'+L.slice(0,100).map(function(x){var d=x.ended_at?Math.round((Date.parse(x.ended_at)-Date.parse(x.started_at))/1000):null;
+      return '<tr><td>'+esc(String(x.started_at).slice(0,16).replace('T',' '))+'</td><td>'+esc(x.user)+'</td><td>'+esc(x.asset_name)+' <span class="mute">'+esc(x.protocol)+'</span></td><td>'+esc(d==null?'live':mins(d))+(x.end_reason?'<div class="sm mute">'+esc(x.end_reason)+'</div>':'')+'</td><td>'+(x.size?'<button type="button" class="btn" data-play="'+esc(x.id)+'"><i class="ti ti-player-play"></i>Play</button> <span class="sm mute">'+esc(Math.round(x.size/1024))+' KB</span>':'<span class="sm mute">not in the folder</span>')+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No gateway session yet.</div>';},function(e){$('recs').innerHTML='<div class="empty">'+esc(e.message)+'</div>';});}
+
+  // ---- the console
+  function scaleDisplay(){if(!CLIENT&&!REC)return;var d=(CLIENT||REC).getDisplay(),w=d.getWidth(),h=d.getHeight(),sc=$('scr');if(!w||!h)return;d.scale(Math.min(sc.clientWidth/w,sc.clientHeight/h,1.5));}
+  function openOverlay(title){$('ovt').textContent=title;$('ov').hidden=false;$('status').textContent='connecting…';$('ovrec').textContent='';$('cred').hidden=true;
+    var sc=$('scr');Array.prototype.slice.call(sc.children).forEach(function(c){if(c.id!=='cred')c.remove();});}
+  function closeOverlay(){clearInterval(LEFT);LEFT=null;if(KB){KB.onkeydown=KB.onkeyup=null;KB.reset();KB=null;}
+    if(CLIENT){var c=CLIENT;CLIENT=null;try{c.disconnect();}catch(e){/* already gone */}}if(REC){try{REC.pause();}catch(e){/* nothing playing */}REC=null;}
+    if(document.fullscreenElement)document.exitFullscreen().catch(function(){/* not in full screen */});$('ov').hidden=true;load();}
+  function askCreds(names){var c=$('cred'),labels={username:'Account',password:'Password',domain:'Domain'};
+    c.hidden=false;c.innerHTML='<div class="box"><b>Log in to the server</b><div class="sm mute" style="margin:4px 0 10px">Your own account. The platform does not store or see it - it goes straight to the server.</div><div class="form">'
+      +names.map(function(n){return '<label for="cr-'+esc(n)+'">'+esc(labels[n]||n)+'</label><input class="inp" id="cr-'+esc(n)+'" data-cred="'+esc(n)+'" type="'+(n==='password'?'password':'text')+'" autocomplete="off"'+(n==='username'?' value="'+esc(String(WHOAMI||'').split('@')[0])+'"':'')+'>';}).join('')
+      +'</div><div class="row" style="margin-top:12px"><button type="button" class="btn pri" id="crgo">Log in</button><button type="button" class="btn ghost" id="crno">Cancel</button></div></div>';
+    var first=c.querySelector('[data-cred="password"]')||c.querySelector('[data-cred]');if(first)first.focus();}
+  function sendCreds(){if(!CLIENT)return;Array.prototype.slice.call(document.querySelectorAll('#cred [data-cred]')).forEach(function(i){var st=CLIENT.createArgumentValueStream('text/plain',i.getAttribute('data-cred')),w=new Guacamole.StringWriter(st);w.sendText(i.value);w.sendEnd();i.value='';});
+    $('cred').hidden=true;$('cred').innerHTML='';$('scr').focus();}
+  function connect(r){
+    req('POST','/console/requests/'+encodeURIComponent(r.id)+'/ticket',{}).then(function(t){
+      if(t.url){window.open(t.url,'_blank','noopener');toast(t.note);return;}
+      openOverlay(r.asset_name+' · '+r.label);
+      var tun=new Guacamole.WebSocketTunnel((location.protocol==='https:'?'wss://':'ws://')+location.host+t.tunnel),cl=new Guacamole.Client(tun);CLIENT=cl;
+      var el=cl.getDisplay().getElement(),sc=$('scr');sc.appendChild(el);
+      cl.onstatechange=function(s){$('status').textContent=['idle','connecting…','waiting…','connected','disconnecting…','disconnected'][s]||'';if(s===3){$('ovrec').textContent='● recorded';sc.focus();}if(s===5&&CLIENT===cl)setTimeout(closeOverlay,1500);};
+      cl.onerror=function(st){$('status').textContent='closed: '+(st&&st.message||'error');toast('Console: '+(st&&st.message||'the session was closed'));};
+      cl.onrequired=function(names){askCreds(names);};
+      cl.getDisplay().onresize=scaleDisplay;
+      var m=new Guacamole.Mouse(el);m.onEach(['mousedown','mouseup','mousemove'],function(e){if(CLIENT)CLIENT.sendMouseState(e.state,true);});
+      KB=new Guacamole.Keyboard(sc);KB.onkeydown=function(k){if(!$('cred').hidden)return true;if(CLIENT)CLIENT.sendKeyEvent(1,k);return false;};KB.onkeyup=function(k){if(CLIENT&&$('cred').hidden)CLIENT.sendKeyEvent(0,k);};
+      var dpr=window.devicePixelRatio||1;
+      cl.connect('token='+encodeURIComponent(t.token)+'&width='+Math.round(sc.clientWidth*dpr)+'&height='+Math.round(sc.clientHeight*dpr)+'&dpi='+Math.round(96*dpr));
+      var end=Date.now()+r.left_s*1000;clearInterval(LEFT);LEFT=setInterval(function(){$('ovleft').textContent=mins((end-Date.now())/1000)+' left';},1000);
+    },function(e){toast(e.message);});}
+  function play(id){openOverlay('Recording '+id);$('status').textContent='loading…';$('cad').hidden=true;
+    req('GET','/console/recordings/'+encodeURIComponent(id),null,true).then(function(blob){
+      REC=new Guacamole.SessionRecording(blob);var el=REC.getDisplay().getElement();$('scr').appendChild(el);REC.getDisplay().onresize=scaleDisplay;
+      REC.onload=function(){$('status').textContent='playing · '+mins(REC.getDuration()/1000);REC.play();};REC.onend=function(){$('status').textContent='finished';};
+    },function(e){$('status').textContent=e.message;});}
+  function load(){
+    req('GET','/console').then(function(v){V=v;$('main').hidden=false;$('err').innerHTML='';draw();},
+      function(e){$('main').hidden=true;$('err').innerHTML='<div class="card"><p>'+esc(e.status===403?'The remote console is for operators and administrators.':e.status===404?'The remote console is not installed yet - run the platform update (update-platform.ps1).':e.message)+'</p></div>';});
+  }
+  document.addEventListener('click',function(ev){
+    var t=ev.target.closest('[data-bmccheck],[data-oobsave],[data-oobdel],[data-pick],#fclose,#fsend,[data-cancel],[data-connect],[data-end],[data-approve],[data-reject],#ssave,[data-play],#crgo,#crno');if(!t)return;
+    if(t.hasAttribute('data-bmccheck')){var cid=t.getAttribute('data-bmccheck'),sp=document.querySelector('[data-chk="'+cid+'"]');if(sp)sp.textContent='checking…';
+      req('POST','/console/bmc/'+encodeURIComponent(cid)+'/check',{}).then(function(c){CHK[cid]=c;if(sp)sp.innerHTML=chkTxt(cid);},function(e){if(sp)sp.textContent='';toast(e.message);});return;}
+    if(t.hasAttribute('data-oobsave')){var row=t.closest('tr'),kind=row.querySelector('[data-ok]').value,addr=row.querySelector('[data-oa]').value.trim(),port=Number(row.querySelector('[data-op]').value||443);
+      if(!kind){toast('Choose the controller kind');return;}if(!addr){toast('Type the controller IP address or host name');row.querySelector('[data-oa]').focus();return;}
+      req('PUT','/console/bmc/'+encodeURIComponent(t.getAttribute('data-oobsave')),{kind:kind,address:addr,port:port}).then(function(){toast('Controller saved (audited)');load();},function(e){toast(e.message);});return;}
+    if(t.hasAttribute('data-oobdel')){req('DELETE','/console/bmc/'+encodeURIComponent(t.getAttribute('data-oobdel')),null).then(function(){toast('Controller removed (audited)');load();},function(e){toast(e.message);});return;}
+    if(t.hasAttribute('data-pick')){var tg=V.targets.find(function(x){return x.id===t.getAttribute('data-pick');});PICK={t:tg,p:tg.protocols.find(function(p){return p.protocol===t.getAttribute('data-proto');})};drawForm();$('reqform').scrollIntoView({behavior:'smooth',block:'center'});return;}
+    if(t.id==='fclose'){PICK=null;drawForm();return;}
+    if(t.id==='fsend'){var why=$('freason').value.trim();if(why.length<10){toast('Say what you will do (10 characters or more)');$('freason').focus();return;}t.disabled=true;
+      var b={asset_id:PICK.t.id,protocol:PICK.p.protocol,minutes:Number($('fmin').value),reason:why};if($('fticket').value.trim())b.ticket=$('fticket').value.trim();
+      req('POST','/console/requests',b).then(function(){toast('Sent for approval - another person approves it');PICK=null;load();},function(e){t.disabled=false;toast(e.message);});return;}
+    if(t.hasAttribute('data-cancel')){req('POST','/console/requests/'+encodeURIComponent(t.getAttribute('data-cancel'))+'/cancel',{}).then(function(){toast('Cancelled');load();},function(e){toast(e.message);});return;}
+    if(t.hasAttribute('data-connect')){connect(V.mine.find(function(r){return r.id===t.getAttribute('data-connect');}));return;}
+    if(t.hasAttribute('data-end')){req('POST','/console/requests/'+encodeURIComponent(t.getAttribute('data-end'))+'/end',{reason:'ended from the Remote Console page'}).then(function(){toast('Access ended - any live session was closed');load();},function(e){toast(e.message);});return;}
+    if(t.hasAttribute('data-approve')||t.hasAttribute('data-reject')){var ap=t.hasAttribute('data-approve'),id=t.getAttribute(ap?'data-approve':'data-reject'),note=t.closest('.q').querySelector('[data-note]').value.trim();
+      if(!ap&&!note){toast('Say why it is rejected');t.closest('.q').querySelector('[data-note]').focus();return;}t.disabled=true;
+      req('POST','/console/requests/'+encodeURIComponent(id)+'/decide',note?{decision:ap?'approve':'reject',note:note}:{decision:'approve'}).then(function(){toast(ap?'Approved - the access window starts now':'Rejected');load();},function(e){t.disabled=false;toast(e.message);});return;}
+    if(t.id==='ssave'){var gw=$('s-gw').value.trim().split(':'),b2={enabled:$('s-en').checked,guacd_host:gw[0],guacd_port:Number(gw[1]||4822),recording_dir:$('s-rec').value.trim(),max_minutes:Number($('s-max').value),clipboard:$('s-clip').value,rdp_security:$('s-sec').value,rdp_ignore_cert:$('s-cert').checked,approvers:$('s-appr').value.split(',').map(function(x){return x.trim();}).filter(Boolean)};
+      req('POST','/console/config',b2).then(function(){toast('Settings saved (audited)');load();},function(e){toast(e.message);});return;}
+    if(t.hasAttribute('data-play')){play(t.getAttribute('data-play'));return;}
+    if(t.id==='crgo'){sendCreds();return;}
+    if(t.id==='crno'){closeOverlay();}
+  });
+  document.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&ev.target.closest&&ev.target.closest('#cred')){ev.preventDefault();sendCreds();}});
+  $('find').addEventListener('input',function(){if(V)drawTargets();});
+  $('oobfind').addEventListener('input',function(){if(V&&V.controllers)drawOob();});$('oobmiss').addEventListener('change',function(){if(V&&V.controllers)drawOob();});
+  $('refresh').addEventListener('click',load);
+  $('disc').addEventListener('click',closeOverlay);
+  $('cad').addEventListener('click',function(){if(!CLIENT)return;[0xffe3,0xffe9,0xffff].forEach(function(k){CLIENT.sendKeyEvent(1,k);});[0xffff,0xffe9,0xffe3].forEach(function(k){CLIENT.sendKeyEvent(0,k);});$('scr').focus();});
+  $('fs').addEventListener('click',function(){var o=$('ov');if(document.fullscreenElement)document.exitFullscreen();else if(o.requestFullscreen)o.requestFullscreen().then(function(){setTimeout(scaleDisplay,200);},function(){/* refused by the browser */});});
+  window.addEventListener('resize',scaleDisplay);
+  var WHOAMI='';
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;WHOAMI=j.user||'';}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden&&$('ov').hidden&&!document.activeElement.matches('textarea,input,select'))load();},30000);
+})();
+</script></body></html>

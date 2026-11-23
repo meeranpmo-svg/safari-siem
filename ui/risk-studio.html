@@ -1,0 +1,202 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Risk Studio</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;cursor:pointer;text-align:left;color:inherit;font:inherit}.kpi:hover{border-color:#3a4258}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tabs button{background:transparent;border:1px solid var(--d-line);color:var(--d-mute);border-radius:999px;padding:6px 14px;font:600 13px Inter,"Segoe UI",system-ui,sans-serif;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.tabs button[aria-selected="true"]{color:#fff;border-color:var(--d-acc);background:rgba(91,141,239,.2)}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+/* risk pulse: exposure gauge, risk journey, treatment and owners, ML attention ranking */
+.pulse{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr);gap:14px;margin-bottom:14px}@media(max-width:1000px){.pulse{grid-template-columns:1fr}}
+.pg{background:radial-gradient(420px 220px at 80% -20%,rgba(229,72,77,.18),transparent 60%),var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px}
+.pg svg{display:block}.pg h2{margin:0 0 6px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pg h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}.pg .mlb{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.pg .mlb span{font-size:11.5px;border:1px solid var(--d-line);border-radius:999px;padding:2px 9px}
+.jr{display:grid;grid-template-columns:minmax(0,230px) 1fr 52px;gap:10px;align-items:center;padding:5px 4px;border-radius:8px;cursor:pointer}.jr:hover{background:rgba(255,255,255,.04)}
+.jr .t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jr .t b{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;color:var(--d-mute);margin-right:6px}.jr svg{width:100%;height:22px;display:block}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}@media(max-width:1100px){.trio{grid-template-columns:1fr}}
+.att{display:grid;grid-template-columns:40px 1fr;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer}.att:last-child{border-bottom:0}.att .sc{font:800 15px ui-monospace,Consolas,monospace;text-align:center;border-radius:8px;padding:5px 0}.att .w{font-size:11.5px;color:var(--d-mute)}.cols2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.v-ok{background:rgba(47,179,68,.15);color:#56d364}.v-bad{background:rgba(229,72,77,.2);color:#ff8a8e}.v-warn{background:rgba(245,159,0,.18);color:#f5b544}.v-mute{background:rgba(139,147,164,.16);color:#aab2c2}.v-info{background:rgba(91,141,239,.18);color:#8db0ff}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12.8px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--d-line)}td{padding:7px 8px;border-bottom:1px solid #1b2030;vertical-align:top}
+tr.rk{cursor:pointer}tr.rk:hover td{background:#151924}tr.sel td{background:#172036}
+.inp,select.inp,textarea.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.heat{display:grid;grid-template-columns:22px repeat(5,minmax(0,1fr));gap:4px;font-size:11px}.heat .ax{color:var(--d-mute);display:flex;align-items:center;justify-content:center}
+.heat button{aspect-ratio:1.5;border:0;border-radius:8px;font:800 16px Inter,sans-serif;color:#fff;cursor:pointer;min-height:34px}.heat button.z{opacity:.35;cursor:default}.heat button.on{outline:2px solid #fff}
+.bar{height:8px;border-radius:4px;background:#232837;overflow:hidden;min-width:60px}.bar i{display:block;height:100%}
+.ev{border-left:3px solid var(--d-line);padding:6px 10px;margin:6px 0;background:#10131a;border-radius:0 8px 8px 0}
+.ans{white-space:pre-wrap;background:#10131a;border:1px solid var(--d-line);border-radius:10px;padding:12px;margin-top:10px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1100px){.cols,.cols2{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">GRC</div><h1>Risk Studio</h1><div class="sm mute">The risk register with its evidence: audit findings, platform gaps, overdue actions and expired exceptions linked to each risk, an evidence-based rating beside yours, proposed new risks, appetite and trend. Suggestions only - a person decides.</div></div><div class="sp"></div>
+ <span class="sm mute" id="me"></span><button class="btn" id="xls" type="button"><i class="ti ti-file-spreadsheet"></i>Excel report</button><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <section class="card"><div class="kpis" id="kpis"></div></section>
+ <div class="tabs" id="tabs" role="tablist"></div>
+ <div id="view"></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var V=null, TAB='overview', F={q:'',cell:'',flag:'',cat:''}, SEL='', ANS=null, ROLE='viewer', USER='';
+  var BAND={high:'#e5484d',medium:'#f59f00',low:'#2fb344'};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,/^\/dashboards\//.test(u)?u:'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function bandPill(b,s){return s==null?pill('not rated','v-mute'):pill(s+' '+b,b==='high'?'v-bad':b==='medium'?'v-warn':'v-ok');}
+  function cellColor(s){return s>=15?BAND.high:s>=8?BAND.medium:BAND.low;}
+  function cat(r){return r.category||(r.category_suggested&&r.category_suggested.category)||'Uncategorised';}
+  // a link can open the register filtered, as the tiles here do (or the candidates: #cand): #reg= (all) | #reg=high | #reg=over | #reg=under | #reg=worse | #reg=hygiene
+  function regHash(){if(location.hash==='#cand'&&V){TAB='candidates';return draw();}var m=/^reg=([a-z]*)$/.exec(location.hash.slice(1));if(!m||!V)return;TAB='register';F={q:'',cell:'',cat:'',flag:m[1]};draw();}
+  window.addEventListener('hashchange',regHash);
+  function load(){$('err').hidden=true;return req('GET','/risk-studio').then(function(v){V=v;$('main').hidden=false;$('me').textContent=v.can_admin?'Administrator':v.can_act?'Operator - you can apply suggestions and create risks':'Read-only';draw();regHash();}).catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>Risk Studio is not available</h2>'+note(e.status===404?'Not installed on the server - run the update (update-platform.ps1).':e.message);});}
+  function draw(){var s=V.summary;function kp(n,l,col,go){return '<button type="button" class="kpi" data-go="'+go+'"><div class="n" style="color:'+(col||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></button>';}
+    $('kpis').innerHTML=kp(s.open,'open risks','','reg:')+kp(s.high,'high (15+)',s.high?'#ff7b80':'','reg:high')+kp(s.over_appetite,'over appetite',s.over_appetite?'#ff7b80':'','reg:over')+kp(s.under_rated,'under-rated vs evidence',s.under_rated?'#f5b544':'','reg:under')
+      +kp(s.deteriorating,'worse than 30 days ago',s.deteriorating?'#f5b544':'','reg:worse')+kp(s.hygiene,'need housekeeping',s.hygiene?'#f5b544':'','reg:hygiene')+kp(s.candidates,'proposed new risks',s.candidates?'#8db0ff':'','cand')+kp(V.signals.linked+' / '+V.signals.total,'signals linked to a risk','','reg:');
+    var T=[['overview','chart-dots-3','Overview'],['register','list-details','Register ('+V.risks.length+')'],['candidates','bulb','Proposed risks ('+V.candidates.length+')'],['appetite','gauge','Appetite'],['ai','robot','AI risk analyst']];
+    $('tabs').innerHTML=T.map(function(t){return '<button type="button" role="tab" data-tab="'+t[0]+'" aria-selected="'+(TAB===t[0])+'"><i class="ti ti-'+t[1]+'"></i>'+esc(t[2])+'</button>';}).join('');
+    var v=$('view');v.innerHTML=TAB==='overview'?overview():TAB==='register'?register():TAB==='candidates'?candidates():TAB==='appetite'?appetiteView():aiView();}
+  // ---------- overview
+  function heat(m,kind){var h='<div class="heat"><div></div>';for(var i=1;i<=5;i++)h+='<div class="ax">I'+i+'</div>';
+    for(var l=5;l>=1;l--){h+='<div class="ax">L'+l+'</div>';for(var im=1;im<=5;im++){var n=m[l+'x'+im]||0,k=kind+':'+l+'x'+im;h+='<button type="button" '+(n?'data-cell="'+k+'"':'disabled')+' class="'+(n?'':'z')+(F.cell===k?' on':'')+'" style="background:'+cellColor(l*im)+'" title="likelihood '+l+' x impact '+im+' = '+(l*im)+'">'+(n||'')+'</button>';}}
+    return h+'</div>';}
+  // ---------- risk pulse: drawn from the register's own records and the platform's daily samples - nothing invented
+  function pulse(){var L=V.risks,rated=L.filter(function(r){return r.rated!=null;}),H=V.exposure_history||[],T=V.exposure_trend,ap=(V.appetite&&V.appetite.default)||null;
+    var mean=rated.length?Math.round(rated.reduce(function(t,r){return t+r.rated;},0)/rated.length*10)/10:null,col=mean==null?'#6e7681':cellColor(mean);
+    // gauge: mean rated score on the 1-25 scale, appetite tick, 30-day forecast marker
+    var Rr=70,C=2*Math.PI*Rr,arc=.75,len=C*arc,rot=90+45,ang=function(v){return (rot+(Math.max(0,Math.min(25,v))/25)*360*arc)*Math.PI/180;},pt=function(v,r){var a=ang(v);return [(90+r*Math.cos(a)).toFixed(1),(90+r*Math.sin(a)).toFixed(1)];};
+    var g='<svg viewBox="0 0 180 170" width="100%" style="max-width:250px;margin:0 auto" role="img" aria-label="'+esc(mean==null?'exposure not rated':'mean rated risk '+mean+' of 25')+'"><circle cx="90" cy="90" r="'+Rr+'" fill="none" stroke="#1f2533" stroke-width="13" stroke-linecap="round" stroke-dasharray="'+len.toFixed(1)+' '+C.toFixed(1)+'" transform="rotate('+rot+' 90 90)"/>'
+      +(mean==null?'':'<circle cx="90" cy="90" r="'+Rr+'" fill="none" stroke="'+col+'" stroke-width="13" stroke-linecap="round" stroke-dasharray="'+(len*mean/25).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate('+rot+' 90 90)"/>');
+    if(ap!=null){var a1=pt(ap,58),a2=pt(ap,84);g+='<line x1="'+a1[0]+'" y1="'+a1[1]+'" x2="'+a2[0]+'" y2="'+a2[1]+'" stroke="#fff" stroke-width="2"><title>appetite '+esc(ap)+'</title></line>';}
+    if(T&&T.forecast_30d!=null){var f=pt(T.forecast_30d,Rr);g+='<circle cx="'+f[0]+'" cy="'+f[1]+'" r="5" fill="#0b0d12" stroke="#ffd166" stroke-width="2"><title>30-day forecast '+esc(T.forecast_30d)+'</title></circle>';}
+    g+='<text x="90" y="92" text-anchor="middle" fill="#fff" font-size="'+(mean==null?15:34)+'" font-weight="800" font-family="ui-monospace,Consolas,monospace">'+(mean==null?'not rated':esc(mean))+'</text><text x="90" y="112" text-anchor="middle" fill="#9aa3b2" font-size="10.5">mean rated risk / 25</text>'
+      +(ap!=null?'<text x="90" y="128" text-anchor="middle" fill="#cfd5e0" font-size="10.5">appetite '+esc(ap)+' · '+esc(V.summary.over_appetite)+' over</text>':'')+'</svg>';
+    var sp='';if(H.length>=2){var W=280,Hh=60,X=function(i){return 4+(W-30)*i/(H.length-1);},Y=function(v){return 4+(Hh-10)*(1-v/25);},pts=H.map(function(h,i){return X(i).toFixed(1)+','+Y(h.mean).toFixed(1);});
+      sp='<svg viewBox="0 0 '+W+' '+Hh+'" style="width:100%;height:60px" preserveAspectRatio="none" role="img" aria-label="'+esc('mean rated risk over '+H.length+' days')+'">'+(ap!=null?'<line x1="0" x2="'+W+'" y1="'+Y(ap).toFixed(1)+'" y2="'+Y(ap).toFixed(1)+'" stroke="#ffffff55" stroke-dasharray="3 4"/>':'')
+        +'<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+col+'" stroke-width="2"/>'+(T&&T.forecast_30d!=null?'<line x1="'+X(H.length-1).toFixed(1)+'" y1="'+Y(H[H.length-1].mean).toFixed(1)+'" x2="'+(W-4)+'" y2="'+Y(T.forecast_30d).toFixed(1)+'" stroke="#ffd166" stroke-width="2" stroke-dasharray="4 4"/>':'')+'</svg>';}
+    else sp='<div class="note">The exposure history starts with the first daily sample; the trend and forecast follow after 7 days.</div>';
+    var mlb=[];if(T){mlb.push('<span style="color:'+(T.direction==='rising'?'#ff9a94':T.direction==='falling'?'#7ee2a0':'#cfd5e0')+'">'+(T.direction==='rising'?'▲ ':T.direction==='falling'?'▼ ':'▬ ')+esc(T.direction)+' '+(T.per_week>0?'+':'')+esc(T.per_week)+' / week</span>');mlb.push('<span>30-day forecast '+esc(T.forecast_30d)+'</span>');}
+    if(V.summary.deteriorating)mlb.push('<span style="color:#ff9a94">'+esc(V.summary.deteriorating)+' deteriorating in 30 days</span>');if(V.summary.under_rated)mlb.push('<span style="color:#f5c26b">'+esc(V.summary.under_rated)+' under-rated vs evidence</span>');
+    var gauge='<div class="pg"><h2>Register exposure <span class="c">ML on the daily samples</span></h2>'+g+sp+'<div class="mlb">'+mlb.join('')+'</div></div>';
+    // journey: inherent -> rated per risk, the evidence-suggested score and the appetite
+    var J=rated.slice().sort(function(a,b){return b.rated-a.rated;}).slice(0,10),x=function(v){return (4+(v/25)*92).toFixed(1)+'%';};
+    var jr=J.length?J.map(function(r){var i=r.inherent!=null?r.inherent:r.rated,c=cellColor(r.rated),s2=r.suggested&&r.suggested.score;
+      return '<div class="jr" data-risk="'+esc(r.id)+'" title="'+esc(r.title+' - inherent '+i+' → rated '+r.rated+(s2?' · evidence suggests '+s2:'')+' · appetite '+r.appetite)+'"><div class="t"><b>'+esc(r.id)+'</b>'+esc(r.title)+'</div><svg aria-hidden="true">'
+        +'<line x1="4%" x2="96%" y1="11" y2="11" stroke="#252b38" stroke-width="6" stroke-linecap="round"/><line x1="'+x(r.appetite)+'" x2="'+x(r.appetite)+'" y1="2" y2="20" stroke="#ffffffaa" stroke-width="1.5"/>'
+        +(i!==r.rated?'<line x1="'+x(i)+'" x2="'+x(r.rated)+'" y1="11" y2="11" stroke="'+c+'" stroke-opacity=".5" stroke-width="3"/><circle cx="'+x(i)+'" cy="11" r="4" fill="#0b0d12" stroke="#9aa3b2" stroke-width="2"/>':'')
+        +(s2?'<rect x="'+x(s2)+'" y="5" width="9" height="9" fill="none" stroke="#f5c26b" stroke-width="2" transform="translate(-4.5,0)"/>':'')+'<circle cx="'+x(r.rated)+'" cy="11" r="6" fill="'+c+'"/></svg><span class="pill '+(r.band==='high'?'v-bad':r.band==='medium'?'v-warn':'v-ok')+'">'+esc(r.rated)+'</span></div>';}).join('')
+      :note('No rated risk yet.');
+    var journey='<section class="card" style="margin:0"><h2>Risk journey <span class="c">○ inherent → ● rated · ◇ evidence suggests · | appetite · click a risk</span></h2>'+jr+'</section>';
+    // treatment, owners, attention
+    var TR={},OW={};L.forEach(function(r){var t=r.treatment||'not set';TR[t]=(TR[t]||0)+1;var o=r.owner||'no owner';OW[o]=OW[o]||{n:0,s:0};OW[o].n++;OW[o].s+=r.rated||0;});
+    var TC={mitigate:'#5b8def',accept:'#f5b544',transfer:'#a371f7',avoid:'#2fb344','not set':'#6e7681'},tot=L.length||1,a0=-Math.PI/2,don='';
+    Object.keys(TR).forEach(function(k){if(TR[k]===tot){don+='<circle cx="60" cy="60" r="44" fill="none" stroke="'+(TC[k]||'#8b93a4')+'" stroke-width="16"><title>'+esc(k+': '+TR[k])+'</title></circle>';return;}   /* one treatment: a full ring, which an arc cannot draw */
+      var a1=a0+2*Math.PI*TR[k]/tot,lg=a1-a0>Math.PI?1:0,p1=[60+44*Math.cos(a0),60+44*Math.sin(a0)],p2=[60+44*Math.cos(a1-0.0001),60+44*Math.sin(a1-0.0001)];
+      don+='<path d="M'+p1[0].toFixed(1)+','+p1[1].toFixed(1)+' A44,44 0 '+lg+',1 '+p2[0].toFixed(1)+','+p2[1].toFixed(1)+'" fill="none" stroke="'+(TC[k]||'#8b93a4')+'" stroke-width="16"><title>'+esc(k+': '+TR[k])+'</title></path>';a0=a1;});
+    var treat='<section class="card" style="margin:0"><h2>Treatment</h2><div style="display:flex;gap:14px;align-items:center"><svg viewBox="0 0 120 120" width="120" height="120" aria-label="treatment mix">'+don+'<text x="60" y="64" text-anchor="middle" fill="#fff" font-size="18" font-weight="800">'+L.length+'</text></svg><div>'
+      +Object.keys(TR).map(function(k){return '<div style="font-size:12.5px;margin:3px 0"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:'+(TC[k]||'#8b93a4')+';margin-right:6px"></i>'+esc(k)+' <b>'+TR[k]+'</b></div>';}).join('')+'</div></div></section>';
+    var ows=Object.keys(OW).sort(function(a,b){return OW[b].s-OW[a].s;}).slice(0,7),om=Math.max.apply(null,[1].concat(ows.map(function(o){return OW[o].s;})));
+    var owners='<section class="card" style="margin:0"><h2>Owners <span class="c">open risks · total rated score</span></h2>'+(ows.length?ows.map(function(o){return '<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span'+(o==='no owner'?' style="color:#ff9a94"':'')+'>'+esc(o)+'</span><span>'+OW[o].n+' · '+OW[o].s+'</span></div><div class="bar"><i style="width:'+Math.round(OW[o].s/om*100)+'%;background:'+(o==='no owner'?'#e5484d':'var(--d-acc)')+'"></i></div></div>';}).join(''):note('No open risks.'))+'</section>';
+    // ML attention: over appetite 40, under-rated vs evidence 30, deteriorating 20, each housekeeping gap 5 - reasons listed
+    var AT=L.map(function(r){var p=[],sc=0;if(r.over_appetite){sc+=40;p.push('over appetite ('+r.rated+' > '+r.appetite+')');}if(r.calibration&&/^under/.test(r.calibration)){sc+=30;p.push(r.calibration);}if(r.trend&&r.trend.change>0){sc+=20;p.push('up '+r.trend.change+' since '+r.trend.since);}
+      if(r.hygiene.length){sc+=Math.min(15,5*r.hygiene.length);p.push(r.hygiene.join(', '));}return {r:r,sc:Math.min(100,sc),p:p};}).filter(function(a){return a.sc;}).sort(function(a,b){return b.sc-a.sc;}).slice(0,6);
+    var att='<section class="card" style="margin:0"><h2>Needs attention <span class="c">ranked: appetite, evidence, trend, housekeeping</span></h2>'+(AT.length?AT.map(function(a){var c=a.sc>=60?'#e5484d':a.sc>=30?'#f59f00':'#5b8def';return '<div class="att" data-risk="'+esc(a.r.id)+'"><div class="sc" style="background:'+c+'22;color:'+c+'">'+a.sc+'</div><div><b>'+esc(a.r.id)+'</b> '+esc(a.r.title)+'<div class="w">'+esc(a.p.join(' · '))+'</div></div></div>';}).join(''):note('Nothing stands out: no risk is over appetite, under-rated, rising or missing its housekeeping.'))+'</section>';
+    return '<div class="pulse">'+gauge+journey+'</div><div class="trio" style="margin-bottom:14px">'+att+treat+owners+'</div>';}
+  function overview(){if(!V.risks.length&&!V.candidates.length)return note('The register is empty and no signals are open. Add risks in Risks & Actions (grc-workspace.html), or connect the audit teams and Live Compliance so their findings show here.');
+    var cats=Object.keys(V.by_category).sort(function(a,b){return V.by_category[b].score-V.by_category[a].score;}),mx=Math.max.apply(null,[1].concat(cats.map(function(c){return V.by_category[c].score;})));
+    var cat_='<table><thead><tr><th>Category</th><th>Open</th><th>High</th><th>Over appetite</th><th>Total score</th></tr></thead><tbody>'+cats.map(function(c){var x=V.by_category[c];return '<tr class="rk" data-cat="'+esc(c)+'"><td>'+esc(c)+'</td><td>'+x.open+'</td><td>'+(x.high?pill(x.high,'v-bad'):'0')+'</td><td>'+(x.over?pill(x.over,'v-bad'):'0')+'</td><td><div class="bar"><i style="width:'+Math.round(x.score/mx*100)+'%;background:var(--d-acc)"></i></div></td></tr>';}).join('')+'</tbody></table>';
+    var under=V.risks.filter(function(r){return r.calibration;}).slice(0,8);
+    return pulse()+'<div class="cols"><section class="card"><h2>Inherent heat map <span class="c">likelihood x impact, click a cell</span></h2>'+heat(V.heat.inherent,'i')+'</section>'
+      +'<section class="card"><h2>Residual heat map <span class="c">after controls</span></h2>'+(Object.keys(V.heat.residual).length?heat(V.heat.residual,'r'):note('No residual ratings yet - rate each risk after its controls in Risks & Actions.'))+'</section>'
+      +'<section class="card"><h2>By category <span class="c">'+esc(V.summary.model)+'</span></h2>'+(cats.length?cat_:note('No open risks.'))+'</section></div>'
+      +'<section class="card"><h2>Ratings the evidence disagrees with</h2>'+(under.length?'<table><tbody>'+under.map(function(r){return '<tr class="rk" data-risk="'+esc(r.id)+'"><td>'+esc(r.id)+'</td><td>'+esc(r.title)+'</td><td>'+bandPill(r.band,r.rated)+'</td><td>'+esc(r.calibration)+'</td></tr>';}).join('')+'</tbody></table>':note('No rating stands out against its linked evidence.'))+'</section>';}
+  // ---------- register
+  function match(r){if(F.q&&(r.id+' '+r.title+' '+(r.owner||'')+' '+cat(r)).toLowerCase().indexOf(F.q.toLowerCase())<0)return false;if(F.cat&&cat(r)!==F.cat)return false;
+    if(F.cell){var p=F.cell.split(':'),lk=p[1].split('x');if(p[0]==='i'&&(String(r.likelihood)!==lk[0]||String(r.impact)!==lk[1]))return false;if(p[0]==='r'&&(String(r.residual_likelihood)!==lk[0]||String(r.residual_impact)!==lk[1]))return false;}
+    var f=F.flag;return !f||(f==='high'&&r.band==='high')||(f==='over'&&r.over_appetite)||(f==='under'&&r.calibration&&/^under/.test(r.calibration))||(f==='worse'&&r.trend&&r.trend.change>0)||(f==='hygiene'&&r.hygiene.length);}
+  function register(){var L=V.risks.filter(match).sort(function(a,b){return (b.rated||0)-(a.rated||0);});
+    var bar='<div class="row" style="margin-bottom:10px"><input class="inp" id="q" style="max-width:320px" placeholder="Search id, title, owner, category" value="'+esc(F.q)+'"><select class="inp" id="flag" style="max-width:220px">'+[['','All open risks'],['high','High (15+)'],['over','Over appetite'],['under','Under-rated vs evidence'],['worse','Worse than 30 days ago'],['hygiene','Need housekeeping']].map(function(o){return '<option value="'+o[0]+'"'+(F.flag===o[0]?' selected':'')+'>'+esc(o[1])+'</option>';}).join('')+'</select>'
+      +(F.cell||F.cat?'<button class="btn sm" type="button" id="clr">Clear '+esc(F.cat?'category '+F.cat:'heat-map cell')+' filter</button>':'')+'<span class="sm mute">'+L.length+' shown</span></div>';
+    var t='<table><thead><tr><th>Risk</th><th>Category</th><th>Owner</th><th>Rating</th><th>Evidence suggests</th><th>Appetite</th><th>30 days</th><th>Housekeeping</th></tr></thead><tbody>'+L.map(function(r){
+      return '<tr class="rk'+(SEL===r.id?' sel':'')+'" data-risk="'+esc(r.id)+'"><td><b>'+esc(r.id)+'</b> '+esc(r.title)+'</td><td>'+esc(cat(r))+(r.category?'':' <span class="sm mute">(suggested)</span>')+'</td><td>'+(r.owner?esc(r.owner):pill('no owner','v-warn'))+'</td><td>'+bandPill(r.band,r.rated)+'</td>'
+        +'<td>'+(r.suggested?bandPill(r.suggested.band,r.suggested.score)+(r.calibration?' '+pill(/^under/.test(r.calibration)?'under-rated':'over-rated?','v-warn'):''):'<span class="sm mute">no evidence linked</span>')+'</td><td>'+(r.over_appetite?pill('over '+r.appetite,'v-bad'):'<span class="sm mute">within '+r.appetite+'</span>')+'</td>'
+        +'<td>'+(r.trend?(r.trend.change>0?pill('+'+r.trend.change,'v-bad'):r.trend.change<0?pill(String(r.trend.change),'v-ok'):'<span class="sm mute">same</span>'):'<span class="sm mute">—</span>')+'</td><td>'+(r.hygiene.length?r.hygiene.map(function(h){return '<div class="sm">'+esc(h)+'</div>';}).join(''):'<span class="sm mute">ok</span>')+'</td></tr>'
+        +(SEL===r.id?'<tr><td colspan="8">'+detail(r)+'</td></tr>':'');}).join('')+'</tbody></table>';
+    return '<section class="card">'+bar+(L.length?t:note(V.risks.length?'No risk matches the filter.':'The register is empty. Risks are created in Risks & Actions, or from a proposed risk here.'))+'</section>';}
+  function detail(r){var ev=r.evidence.map(function(s){return '<div class="ev"><b>'+esc(s.kind)+'</b> '+esc(s.ref)+' · '+pill(s.severity,s.severity==='high'?'v-bad':s.severity==='medium'?'v-warn':'v-mute')+' <span class="sm mute">'+esc(s.source)+(s.similarity<1?' · text similarity '+Math.round(s.similarity*100)+'%':' · linked explicitly')+'</span><div>'+esc(s.title)+'</div></div>';}).join('');
+    var sug=r.suggested?'<div style="margin-top:10px"><b>Evidence-based rating: '+r.suggested.likelihood+' x '+r.suggested.impact+' = '+r.suggested.score+'</b><ul class="sm">'+r.suggested.why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>'
+      +(V.can_act?'<div class="row"><input class="inp" id="anote" style="max-width:520px" placeholder="Why you agree (required, recorded in the risk history)"><button class="btn pri sm" type="button" data-apply="'+esc(r.id)+'">Apply to the '+(r.residual!=null?'residual':'inherent')+' rating</button></div>':'<div class="sm mute">An operator applies a suggestion; it is recorded in the risk history.</div>')+'</div>':'';
+    return '<div class="cols2"><div><div class="sm mute">Linked evidence ('+r.evidence_count+')</div>'+(ev||note('No open finding, gap, overdue action or expired exception is linked to this risk.'))+'</div><div>'
+      +'<div class="sm">Inherent '+esc(r.likelihood)+' x '+esc(r.impact)+' = '+esc(r.inherent)+(r.residual!=null?' · residual '+esc(r.residual_likelihood)+' x '+esc(r.residual_impact)+' = '+esc(r.residual):'')+' · treatment '+esc(r.treatment||'—')+' · '+esc(r.open_actions||0)+' open action(s)'+(r.review_due?' · review '+esc(r.review_due):'')+'</div>'
+      +(r.trend?'<div class="sm mute">Since '+esc(r.trend.since)+': '+esc(r.trend.from)+' → '+esc(r.trend.to)+', signals '+esc(r.trend.signals_from)+' → '+esc(r.evidence_count)+'</div>':'')+sug
+      +'<div class="sm mute" style="margin-top:8px">Edit owner, treatment, actions and acceptance in <a href="grc-workspace.html">Risks &amp; Actions</a>.</div></div></div>';}
+  // ---------- candidates
+  function candidates(){if(!V.candidates.length)return note('No proposed risks: every open signal is covered by a risk in the register, or nothing is open.');
+    return V.candidates.map(function(c){return '<section class="card"><h2>'+bandPill(c.band,c.score)+' '+esc(c.title)+' <span class="c">'+esc(c.category.category)+' · '+esc(c.category.by+' · '+c.category.confidence+'%')+'</span></h2>'
+      +'<div class="sm"><b>Cause:</b> '+esc(c.statement.cause)+'<br><b>Event:</b> '+esc(c.statement.event)+'<br><b>Consequence:</b> '+esc(c.statement.consequence)+'</div>'
+      +c.signals.map(function(s){return '<div class="ev"><b>'+esc(s.kind)+'</b> '+esc(s.ref)+' · '+esc(s.severity)+' <span class="sm mute">'+esc(s.source)+'</span><div>'+esc(s.title)+'</div></div>';}).join('')
+      +(V.can_act?'<div class="row" style="margin-top:8px"><input class="inp" data-cown="'+esc(c.id)+'" style="max-width:280px" placeholder="Risk owner (required)"><button class="btn pri sm" type="button" data-create="'+esc(c.id)+'">Add to the register as '+c.likelihood+' x '+c.impact+'</button></div>':'')+'</section>';}).join('');}
+  // ---------- appetite
+  function appetiteView(){var a=V.appetite,cats=Object.keys(V.by_category).concat(Object.keys(a.categories||{})).filter(function(c,i,L){return L.indexOf(c)===i&&c!=='Uncategorised';}).sort();
+    var rows=cats.map(function(c){var v=(a.categories||{})[c];return '<tr><td>'+esc(c)+'</td><td>'+(V.can_admin?'<input class="inp" style="max-width:90px" type="number" min="1" max="25" data-apc="'+esc(c)+'" value="'+(v!=null?v:'')+'" placeholder="'+a.default+'">':esc(v!=null?v:'default ('+a.default+')'))+'</td><td>'+((V.by_category[c]||{}).over||0)+'</td></tr>';}).join('');
+    return '<section class="card"><h2>Risk appetite <span class="c">the highest score accepted without escalation</span></h2>'
+      +'<div class="row" style="margin-bottom:10px"><span>Default</span>'+(V.can_admin?'<input class="inp" id="apd" style="max-width:90px" type="number" min="1" max="25" value="'+a.default+'">':'<b>'+esc(a.default)+'</b>')+'<span class="sm mute">Leave a category empty to use the default.</span></div>'
+      +(cats.length?'<table><thead><tr><th>Category</th><th>Appetite (1-25)</th><th>Open risks over it</th></tr></thead><tbody>'+rows+'</tbody></table>':note('No categories yet.'))
+      +(V.can_admin?'<div class="row" style="margin-top:10px"><button class="btn pri" type="button" id="apsave">Save appetite</button></div>':'<div class="sm mute" style="margin-top:8px">An administrator sets the appetite.</div>')+'</section>';}
+  // ---------- AI
+  function aiView(){var a=V.ai||{};if(!a.enabled)return note('The AI risk analyst is off: '+(a.reason||'not configured')+'. Everything else on this page works without it.');
+    if(!V.can_act)return note('The AI risk analyst is for operators and administrators.');
+    return '<section class="card"><h2>AI risk analyst <span class="c">reads the register, the proposed risks and the summary - it cannot change a risk</span></h2><div class="row"><input class="inp" id="aq" style="max-width:720px" placeholder="e.g. Which risks should we treat first this quarter, and which ratings should we revisit?"><button class="btn pri" type="button" id="ask">Ask</button></div>'
+      +(ANS?'<div class="ans">'+esc(ANS.answer)+'</div>'+(ANS.injection_signals&&ANS.injection_signals.length?'<div class="note" style="margin-top:8px">Some register text looked like instructions to the AI and was treated as data: '+esc(ANS.injection_signals.join(', '))+'. Check the answer against the register.</div>':'')+'<div class="sm mute">Model '+esc(ANS.model||'')+' · suggestions only - a person decides in the register.</div>':'')+'</section>';}
+  // ---------- Excel
+  function xls(){var r=V.risks,by=USER||ROLE,yn=function(b){return b?'yes':'no';};
+    var sheets=[
+      {name:'Summary',columns:[{h:'Measure',w:40},{h:'Value',w:20}],rows:[['Open risks',V.summary.open],['High (15+)',V.summary.high],['Over appetite',V.summary.over_appetite],['Under-rated against evidence',V.summary.under_rated],['Worse than 30 days ago',V.summary.deteriorating],['Need housekeeping',V.summary.hygiene],['Proposed new risks',V.summary.candidates],['Closed risks',V.closed],['Signals',V.signals.total],['Signals linked to a risk',V.signals.linked],['Default appetite',V.appetite.default],['Category model',V.summary.model]]},
+      {name:'Register',columns:[{h:'ID',w:12},{h:'Title',w:50},{h:'Category',w:24},{h:'Owner',w:22},{h:'Treatment',w:12},{h:'L',t:'n'},{h:'I',t:'n'},{h:'Inherent',t:'n'},{h:'Res L',t:'n'},{h:'Res I',t:'n'},{h:'Residual',t:'n'},{h:'Band',w:10},{h:'Appetite',t:'n'},{h:'Over appetite',w:10},{h:'Evidence',t:'n'},{h:'Suggested',t:'n'},{h:'Calibration',w:50},{h:'30-day change',t:'n'},{h:'Review due',w:12},{h:'Open actions',t:'n'},{h:'Accepted',w:10},{h:'Housekeeping',w:50}],
+        rows:r.map(function(x){return [x.id,x.title,cat(x),x.owner||'',x.treatment||'',x.likelihood,x.impact,x.inherent,x.residual_likelihood,x.residual_impact,x.residual,x.band||'',x.appetite,yn(x.over_appetite),x.evidence_count,x.suggested?x.suggested.score:null,x.calibration||'',x.trend?x.trend.change:null,x.review_due||'',x.open_actions||0,yn(x.accepted),x.hygiene.join('; ')];})},
+      {name:'Heatmap',columns:[{h:'Likelihood',t:'n'},{h:'Impact',t:'n'},{h:'Score',t:'n'},{h:'Inherent risks',t:'n'},{h:'Residual risks',t:'n'}],rows:(function(){var o=[];for(var l=5;l>=1;l--)for(var i=1;i<=5;i++)o.push([l,i,l*i,V.heat.inherent[l+'x'+i]||0,V.heat.residual[l+'x'+i]||0]);return o;})()},
+      {name:'By category',columns:[{h:'Category',w:30},{h:'Open',t:'n'},{h:'High',t:'n'},{h:'Over appetite',t:'n'},{h:'Total score',t:'n'}],rows:Object.keys(V.by_category).map(function(c){var x=V.by_category[c];return [c,x.open,x.high,x.over,x.score];})},
+      {name:'Appetite breaches',columns:[{h:'ID',w:12},{h:'Title',w:50},{h:'Category',w:24},{h:'Owner',w:22},{h:'Rating',t:'n'},{h:'Appetite',t:'n'},{h:'Over by',t:'n'}],rows:r.filter(function(x){return x.over_appetite;}).map(function(x){return [x.id,x.title,cat(x),x.owner||'',x.rated,x.appetite,x.rated-x.appetite];})},
+      {name:'Calibration',columns:[{h:'ID',w:12},{h:'Title',w:50},{h:'Rating',t:'n'},{h:'Suggested L',t:'n'},{h:'Suggested I',t:'n'},{h:'Suggested',t:'n'},{h:'Flag',w:50},{h:'Why',w:80}],rows:r.filter(function(x){return x.suggested;}).map(function(x){return [x.id,x.title,x.rated,x.suggested.likelihood,x.suggested.impact,x.suggested.score,x.calibration||'agrees',x.suggested.why.join('; ')];})},
+      {name:'Evidence',columns:[{h:'Risk',w:12},{h:'Kind',w:18},{h:'Reference',w:18},{h:'Severity',w:10},{h:'Source',w:30},{h:'Title',w:60},{h:'Link',w:18}],rows:[].concat.apply([],r.map(function(x){return x.evidence.map(function(s){return [x.id,s.kind,s.ref,s.severity,s.source,s.title,s.similarity<1?'similarity '+Math.round(s.similarity*100)+'%':'explicit'];});}))},
+      {name:'Proposed risks',columns:[{h:'Candidate',w:14},{h:'Title',w:60},{h:'Category',w:24},{h:'L',t:'n'},{h:'I',t:'n'},{h:'Score',t:'n'},{h:'Cause',w:50},{h:'Consequence',w:60},{h:'Signals',w:60}],rows:V.candidates.map(function(c){return [c.id,c.title,c.category.category,c.likelihood,c.impact,c.score,c.statement.cause,c.statement.consequence,c.signals.map(function(s){return s.kind+' '+s.ref;}).join(', ')];})},
+      {name:'Trend',columns:[{h:'ID',w:12},{h:'Title',w:50},{h:'Since',w:12},{h:'From',t:'n'},{h:'To',t:'n'},{h:'Change',t:'n'},{h:'Signals then',t:'n'},{h:'Signals now',t:'n'}],rows:r.filter(function(x){return x.trend;}).map(function(x){return [x.id,x.title,x.trend.since,x.trend.from,x.trend.to,x.trend.change,x.trend.signals_from,x.evidence_count];})},
+      {name:'Housekeeping',columns:[{h:'ID',w:12},{h:'Title',w:50},{h:'Owner',w:22},{h:'Problem',w:60}],rows:[].concat.apply([],r.map(function(x){return x.hygiene.map(function(h){return [x.id,x.title,x.owner||'',h];});}))}];
+    window.zybXlsx.download('risk-register-'+String(V.at).slice(0,10)+'.xlsx',sheets,{title:('Risk register - ' + ZYB_ORG.short),filter:'all open risks; generated '+V.at,by:by});}
+  // ---------- events
+  document.addEventListener('input',function(ev){if(ev.target.id==='q'){F.q=ev.target.value;var pos=ev.target.selectionStart;$('view').innerHTML=register();var q=$('q');q.focus();try{q.setSelectionRange(pos,pos);}catch(e){/* not a text input in this browser */}}});
+  document.addEventListener('change',function(ev){if(ev.target.id==='flag'){F.flag=ev.target.value;$('view').innerHTML=register();}});
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-tab],[data-go],[data-cell],[data-cat],[data-risk],[data-apply],[data-create],button[id]');if(!el)return;
+    if(el.dataset.tab){TAB=el.dataset.tab;return draw();}
+    if(el.dataset.go!=null){var g=el.dataset.go;if(g==='cand')TAB='candidates';else{TAB='register';F={q:'',cell:'',cat:'',flag:g.split(':')[1]||''};}return draw();}
+    if(el.dataset.cell){F={q:'',flag:'',cat:'',cell:el.dataset.cell};TAB='register';return draw();}
+    if(el.dataset.cat){F={q:'',flag:'',cell:'',cat:el.dataset.cat};TAB='register';return draw();}
+    if(el.dataset.apply){var n=($('anote')||{}).value||'';el.disabled=true;return req('POST','/risk-studio/risks/'+encodeURIComponent(el.dataset.apply)+'/apply-suggestion',{note:n}).then(function(){toast('Rating updated and recorded in the risk history');return load();}).catch(function(e){el.disabled=false;toast(e.message);});}
+    if(el.dataset.create){var o=document.querySelector('[data-cown="'+el.dataset.create+'"]');el.disabled=true;return req('POST','/risk-studio/candidates/'+encodeURIComponent(el.dataset.create)+'/create',{owner:o?o.value:''}).then(function(r){toast('Added to the register as '+r.id);return load();}).catch(function(e){el.disabled=false;toast(e.message);});}
+    if(el.dataset.risk){SEL=SEL===el.dataset.risk?'':el.dataset.risk;TAB='register';return draw();}
+    var id=el.id;
+    if(id==='refresh')return load();
+    if(id==='clr'){F.cell='';F.cat='';return draw();}
+    if(id==='xls'&&V)return xls();
+    if(id==='apsave'){var b={default:parseInt($('apd').value,10),categories:{}};document.querySelectorAll('[data-apc]').forEach(function(i){if(i.value!=='')b.categories[i.dataset.apc]=Number(i.value);});el.disabled=true;
+      return req('POST','/risk-studio/appetite',b).then(function(){toast('Appetite saved');return load();}).catch(function(e){el.disabled=false;toast(e.message);});}
+    if(id==='ask'){var q=$('aq').value.trim();if(!q)return toast('Type a question');el.disabled=true;el.textContent='Thinking…';
+      return req('POST','/risk-studio/ai/ask',{question:q}).then(function(r){ANS=r;draw();}).catch(function(e){el.disabled=false;el.textContent='Ask';toast(e.message);});}
+  });
+  req('GET','/dashboards/whoami.json').then(function(w){ROLE=(w&&w.role)||'viewer';USER=(w&&w.user)||'';}).catch(function(){ROLE='viewer';/* no identity: read-only */}).then(load);
+})();
+</script></body></html>

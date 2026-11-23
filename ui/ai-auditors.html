@@ -1,0 +1,237 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Auditors</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}
+.refs{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.how{display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px}.how>div{flex:1 1 180px;border-left:3px solid #0ca678;padding:2px 10px}
+.rep{background:#fff;color:#111;border-radius:12px;padding:28px 32px;font:13.5px/1.55 "Segoe UI",system-ui,sans-serif}.rep h1{font-size:22px;margin:0 0 4px;color:#111}.rep h2{font-size:16px;margin:22px 0 8px;color:#111;border-bottom:2px solid #0ca678;padding-bottom:4px}.rep h3{font-size:14px;margin:14px 0 6px;color:#111}
+.rep table{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0 10px}.rep th,.rep td{border:1px solid #d0d5dd;padding:5px 7px;text-align:left;vertical-align:top}.rep th{background:#f2f4f7}
+.rep .op{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:700;color:#fff}.rep .op.green{background:#2f9e44}.rep .op.yellow{background:#e8a200}.rep .op.orange{background:#e8590c}.rep .op.red{background:#c92a2a}.rep .op.grey{background:#868e96}
+.rep .sev{font-weight:700;text-transform:uppercase;font-size:11px}.rep .sev.critical{color:#c92a2a}.rep .sev.high{color:#e8590c}.rep .sev.medium{color:#b08800}.rep .sev.low{color:#495057}
+.cl-dom{border:1px solid var(--tblr-border-color);border-radius:8px;margin:0 0 8px}.cl-dom>summary{cursor:pointer;padding:9px 12px;display:flex;gap:10px;align-items:center;list-style:none}.cl-dom>summary::-webkit-details-marker{display:none}.cl-dom .code{font:600 12px ui-monospace,Consolas,monospace;min-width:58px}
+.rep .fd{border:1px solid #d0d5dd;border-radius:8px;padding:10px 12px;margin:0 0 10px;page-break-inside:avoid}.rep .mut{color:#555;font-size:12px}.rep .sig td{height:42px}
+@media print{.d-print-none{display:none!important}body.printing-report main>.container-xl>*:not(#repwrap){display:none!important}body.printing-report #repwrap .reptools{display:none!important}body.printing-report .rep{border-radius:0;padding:0}
+ body.printing-report #zyb-side,body.printing-report #zyb-bar{display:none!important}}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-3"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">AI &amp; Automation · independent audit</div><h2 class="page-title">AI IT &amp; Cyber Security Auditors</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><span class="text-secondary small" id="up"></span><button type="button" class="btn" id="report"><i class="ti ti-report me-1"></i>Audit report</button><button type="button" class="btn" id="csv"><i class="ti ti-file-spreadsheet me-1"></i>Audit report (CSV)</button><button type="button" class="btn btn-primary" id="run"><i class="ti ti-player-play me-1"></i>Run audit now</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>The auditors are independent of the people and AI engineers they audit: they read records, test controls and report — they change nothing and approve nothing. A test passes only on evidence; a source that is not connected is <b>not tested</b>, never passed, and its earlier findings stay open. Each finding goes to the owning department; it closes when the auditor's re-test passes (or a person records a risk acceptance with a reason).</div></div></div>
+<div class="card mb-3"><div class="card-body how">
+ <div><b>1 · Test</b><br><span class="text-secondary">every patrol, each control in the programme</span></div>
+ <div><b>2 · Find</b><br><span class="text-secondary">an exception becomes a finding with evidence and criteria</span></div>
+ <div><b>3 · Route</b><br><span class="text-secondary">to the department that owns the fix</span></div>
+ <div><b>4 · Re-test</b><br><span class="text-secondary">fixed → closed; still there → stays open</span></div>
+</div></div>
+<ul class="nav nav-tabs mb-3" id="tabs" role="tablist">
+ <li class="nav-item"><a class="nav-link" href="#itaudit" data-tab="itaudit" role="tab"><i class="ti ti-file-search me-1"></i>AI IT Auditor</a></li>
+ <li class="nav-item"><a class="nav-link" href="#cyberaudit" data-tab="cyberaudit" role="tab"><i class="ti ti-shield-check me-1"></i>AI Cyber Security Auditor</a></li>
+ <li class="nav-item"><a class="nav-link" href="#checklist" data-tab="checklist" role="tab"><i class="ti ti-list-check me-1"></i>Audit checklist · SAMA · IA · NCA</a></li>
+</ul>
+<div id="auview"><div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Audit programme <span class="card-subtitle ms-2" id="about"></span></h3><div class="card-actions text-secondary small" id="lastrun"></div></div><div class="table-responsive" id="prog"><div class="card-body text-secondary">Loading…</div></div></section>
+</div>
+<section id="clview" class="mb-3" hidden>
+ <div class="d-flex flex-wrap gap-2 align-items-center mb-3"><div class="btn-group" role="group" id="clfw"><button type="button" class="btn" data-fw="sama">SAMA CSF</button><button type="button" class="btn" data-fw="ia">Insurance Authority (IA)</button><button type="button" class="btn" data-fw="nca">NCA ECC</button></div>
+  <select class="form-select form-select-sm w-auto" id="clfilter"><option value="">All results</option><option value="non_compliant">Non-compliant</option><option value="not_assessed">Not assessed</option><option value="auto_pass">Automated pass - to confirm</option><option value="partial">Partially compliant</option><option value="compliant">Compliant</option><option value="not_applicable">Not applicable</option></select>
+  <span class="ms-auto"></span><button type="button" class="btn" id="clcsv"><i class="ti ti-file-spreadsheet me-1"></i>Checklist (CSV)</button><button type="button" class="btn" id="clprint"><i class="ti ti-printer me-1"></i>Print checklist</button></div>
+ <div class="row row-cards mb-3" id="clkpis"></div>
+ <div class="alert alert-secondary small mb-3" id="clbasis"></div>
+ <div id="cldoms"><div class="text-secondary">Loading…</div></div>
+ <section class="card mt-3" id="pbc"><div class="card-header"><h3 class="card-title">Evidence requests (PBC list) <span class="card-subtitle ms-2">what the auditors ask each department to provide</span></h3>
+  <div class="card-actions d-flex gap-2 align-items-center"><label class="small text-secondary" for="pbcdue">Due</label><input type="date" class="form-control form-control-sm w-auto" id="pbcdue"><button type="button" class="btn btn-sm btn-primary" id="pbcissue"><i class="ti ti-send me-1"></i>Issue open requests</button><button type="button" class="btn btn-sm" id="pbccsv"><i class="ti ti-file-spreadsheet me-1"></i>PBC list (CSV)</button></div></div>
+  <div class="card-body py-2 small text-secondary" id="pbcsum"></div><div class="table-responsive" id="pbcbody"><div class="card-body text-secondary">Loading…</div></div></section>
+</section>
+<section id="repwrap" class="mb-3" hidden><div class="reptools d-flex gap-2 mb-2 align-items-center"><b>Audit report</b><select class="form-select form-select-sm w-auto" id="repwhich"><option value="all">IT and Cyber Security (both)</option><option value="itaudit">AI IT Auditor</option><option value="cyberaudit">AI Cyber Security Auditor</option></select><button type="button" class="btn btn-sm btn-primary" id="repprint"><i class="ti ti-printer me-1"></i>Print / Save as PDF</button><button type="button" class="btn btn-sm" id="repclose">Close</button><span class="small text-secondary" id="repmeta"></span></div><div class="rep" id="rep"></div></section>
+<h3 class="mb-2" id="dutyh">Findings on the duty desk</h3>
+<section data-zyb-duty="itaudit" data-api="/api/itam" id="duty-itaudit"></section>
+<section data-zyb-duty="cyberaudit" data-api="/api/itam" id="duty-cyberaudit" hidden></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var DATA=null, H=(location.hash||'').replace('#',''), TAB=H==='cyberaudit'||H==='checklist'?H:'itaudit';
+  var ST={pass:['Pass','green'],fail:['Fail','red'],not_tested:['Not tested','yellow'],not_run:['Not run yet','secondary']};
+  function toast(t){var d=document.createElement('div');d.className='toast-zyb';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function cur(){return DATA&&DATA.auditors.filter(function(a){return a.id===TAB;})[0];}
+  function tile(v,l,cls,flt){var on=flt!=null&&$('clfilter')&&$('clfilter').value===flt;
+    if(flt==null)return '<div class="col-6 col-md-3"><div class="card card-sm"><div class="card-body"><div class="au-num'+(cls?' '+cls:'')+'">'+esc(v)+'</div><div class="au-lbl">'+esc(l)+'</div></div></div></div>';
+    // a tile is a filter: click shows only those checks, click again shows all (the same filter as the "All results" list)
+    return '<div class="col-6 col-md-3"><button type="button" class="card card-sm w-100 text-start" data-clf="'+esc(flt)+'" aria-pressed="'+on+'" title="'+esc(on?'Show all results':'Show only: '+l)+'" style="cursor:pointer;background:inherit;color:inherit;'+(on?'outline:2px solid #4299e1;':'')+'"><div class="card-body"><div class="au-num'+(cls?' '+cls:'')+'">'+esc(v)+'</div><div class="au-lbl">'+esc(l)+(on?' · showing':'')+'</div></div></button></div>';}
+  function draw(){
+    [].forEach.call(document.querySelectorAll('#tabs [data-tab]'),function(a){a.classList.toggle('active',a.getAttribute('data-tab')===TAB);});
+    $('duty-itaudit').hidden=TAB!=='itaudit';$('duty-cyberaudit').hidden=TAB!=='cyberaudit';
+    var isCl=TAB==='checklist';$('auview').hidden=isCl;$('clview').hidden=!isCl;$('dutyh').hidden=isCl;$('csv').hidden=isCl;
+    if(isCl){CL.draw();return;}
+    var a=cur(); if(!a){$('prog').innerHTML='<div class="card-body text-secondary">No audit programme.</div>';return;}
+    var c=a.counts, open=a.tests.reduce(function(n,t){return n+(t.findings||0);},0);
+    $('kpis').innerHTML=tile(a.pass_pct==null?'—':a.pass_pct+'%','tests passed (of tested)',a.pass_pct==null?'text-secondary':a.pass_pct>=85?'text-green':a.pass_pct>=60?'text-yellow':'text-red')+tile(c.fail,'tests failed',c.fail?'text-red':'')+tile(c.not_tested+c.not_run,'not tested (no evidence)',(c.not_tested+c.not_run)?'text-yellow':'')+tile(open,'findings',open?'text-orange':'');
+    $('about').textContent=a.about;
+    $('lastrun').textContent=a.last_run?'last run '+new Date(a.last_run).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'not run yet - the first patrol runs it, or press Run audit now';
+    $('prog').innerHTML='<table class="table table-vcenter card-table"><thead><tr><th>Test</th><th>Control</th><th>Owner</th><th>Result</th><th>Findings</th></tr></thead><tbody>'+a.tests.map(function(t){var s=ST[t.state]||[t.state,'secondary'];
+      return '<tr class="rowc" data-test="'+esc(t.id)+'"><td class="text-nowrap fw-semibold">'+esc(t.id)+'</td><td><div>'+esc(t.title)+'</div><div class="refs">'+esc(t.area)+' · '+esc(t.refs.join(' · '))+'</div><div class="small text-secondary">'+esc(t.detail)+'</div></td><td class="small">'+esc(t.owner_name)+'</td><td><span class="badge bg-'+s[1]+'-lt">'+esc(s[0])+'</span></td><td>'+(t.findings?'<b class="text-orange">'+esc(t.findings)+'</b>':'<span class="text-secondary">0</span>')+'</td></tr>';}).join('')+'</tbody></table>'
+      +'<div class="card-footer small text-secondary">'+esc(DATA.note)+'</div>';
+  }
+  function load(){return req('GET','/audit-programme').then(function(r){DATA=r;draw();$('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});})
+    .catch(function(e){$('prog').innerHTML='<div class="card-body text-secondary">'+esc(e.status===404?'The auditors are not installed on IT Asset Management yet - run the update (update-all.ps1).':e.message)+'</div>';});}
+  document.addEventListener('click',function(ev){
+    var tb=ev.target.closest('#tabs [data-tab]'); if(tb){ev.preventDefault();TAB=tb.getAttribute('data-tab');history.replaceState(null,'','#'+TAB);draw();return;}
+    var tr=ev.target.closest('[data-test]'); if(!tr)return;
+    var a=cur(), t=a&&a.tests.filter(function(x){return x.id===tr.getAttribute('data-test');})[0]; if(!t)return;
+    var s=ST[t.state]||[t.state,'secondary'];
+    var items=t.items===undefined?'<p class="text-secondary">Operators and administrators see the findings\' evidence.</p>':t.items.length?t.items.map(function(f){return '<div class="mb-3"><div class="fw-semibold"><span class="badge bg-'+({critical:'red',high:'orange',medium:'yellow',low:'secondary'}[f.severity]||'secondary')+'-lt me-1">'+esc(f.severity)+'</span>'+esc(f.title)+'</div>'+(f.evidence.length?'<ul class="small mb-1">'+f.evidence.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>':'')+(f.basis&&f.basis.length?'<div class="small text-secondary mb-1">'+f.basis.map(esc).join('<br>')+'</div>':'')+(f.evidence_rows!=null?'<button type="button" class="btn btn-sm mb-1" data-evkey="'+esc(f.key)+'" data-evref="'+esc(f.key)+'">Download evidence - '+esc(f.evidence_rows)+' row(s)</button>':'')+'<div class="small"><b>Recommendation:</b> '+esc(f.recommendation)+'</div></div>';}).join(''):'<p class="text-secondary">No findings.</p>';
+    Z.open(a.name,t.id+' · '+t.title,Z.kv([['Result',esc(s[0])+' — '+esc(t.detail)],['Area',esc(t.area)],['Owner (fixes it)',esc(t.owner_name)],['Criteria',esc(t.refs.join(' · '))]])+Z.sec('Findings',items));
+  });
+  $('run').addEventListener('click',function(){var b=this;b.disabled=true;var both=TAB==='checklist';toast(both?'Running both audit programmes…':'Running the '+(TAB==='itaudit'?'IT':'cyber security')+' audit programme…');
+    req('POST','/audit-programme/run',both?{}:{auditor:TAB}).then(function(r){toast(r.auditors.map(function(p){return p.name+': '+p.counts.pass+' passed, '+p.counts.fail+' failed, '+p.counts.not_tested+' not tested';}).join(' · '));return load().then(function(){if(both)return CL.load();});})
+      .catch(function(e){toast(e.status===403?'Running the audit needs the operator role.':e.message);}).then(function(){b.disabled=false;});});
+  $('csv').addEventListener('click',function(){var a=cur();if(!a)return;
+    var q=function(v){var x=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
+    var rows=[['Auditor',a.name],['Exported',new Date().toISOString()],['Last run',a.last_run?new Date(a.last_run).toISOString():'not run'],['Tests passed (of tested)',a.pass_pct==null?'not measurable':a.pass_pct+'%'],[],['Test','Area','Control','Criteria','Owner','Result','Detail','Findings','Severity','Finding','Evidence','Recommendation']];
+    a.tests.forEach(function(t){var base=[t.id,t.area,t.title,t.refs.join(' | '),t.owner_name,(ST[t.state]||[t.state])[0],t.detail,t.findings];
+      if(t.items&&t.items.length)t.items.forEach(function(f){rows.push(base.concat([f.severity,f.title,f.evidence.join(' | '),f.recommendation]));});else rows.push(base);});
+    var blob=new Blob(['﻿'+rows.map(function(r){return r.map(q).join(',');}).join('\r\n')],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(blob),l=document.createElement('a');
+    l.href=u;l.download=a.id+'-audit-report-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(l);l.click();setTimeout(function(){URL.revokeObjectURL(u);l.remove();},500);});
+  // ---- the audit report (operator): opinion, scope, criteria, findings, limitations, management response, sign-off
+  var RES={pass:'Effective',fail:'Exceptions found',not_tested:'Not tested',not_run:'Not run'};
+  function dt(v){return v?new Date(v).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';}
+  function evTable(cols,rows){return '<table><thead><tr>'+(cols||[]).map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+'</tr></thead><tbody>'+(rows||[]).map(function(r){return '<tr>'+r.map(function(c){return '<td>'+esc(c)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';}
+  function evidenceCsv(key,ref){req('GET','/audit-programme/evidence?key='+encodeURIComponent(key)).then(function(ev){
+      var q=function(v){var x=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
+      var rows=[['Audit evidence',ref+' '+ev.title],['Finding key',ev.key],['Taken',ev.taken_at||''],['Digest (SHA-256)',ev.digest||''],['Exported',new Date().toISOString()]].concat((ev.basis||[]).map(function(b){return ['Basis',b];})).concat([[],ev.columns]).concat(ev.rows);
+      if(ev.counter&&ev.counter.rows.length)rows=rows.concat([[],[ev.counter.title],ev.counter.columns]).concat(ev.counter.rows);
+      var blob=new Blob(['\ufeff'+rows.map(function(r){return r.map(q).join(',');}).join('\r\n')],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(blob),l=document.createElement('a');
+      l.href=u;l.download='evidence-'+String(ref||key).replace(/[^A-Za-z0-9-]/g,'_')+'-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(l);l.click();setTimeout(function(){URL.revokeObjectURL(u);l.remove();},500);})
+    .catch(function(e){toast(e.status===403?'Evidence is for operators and administrators.':e.status===404?'Run the audit again: the evidence is kept from the last run.':e.message);});}
+  document.addEventListener('click',function(ev){var b=ev.target.closest('[data-evkey]');if(b)evidenceCsv(b.getAttribute('data-evkey'),b.getAttribute('data-evref'));});
+  function renderReport(R){
+    var h='<h1>'+esc(R.title)+'</h1><div class="mut">'+esc(R.organisation)+' · generated '+esc(dt(R.generated_at))+' · '+esc(R.digest)+'</div>'
+      +'<h2>1. Basis of this report</h2><p>'+esc(R.basis)+'</p>';
+    R.sections.forEach(function(S,si){var n=si+2;
+      h+='<h2>'+n+'. '+esc(S.name)+'</h2>'
+        +'<p><b>Audit opinion:</b> <span class="op '+esc(S.opinion.tone)+'">'+esc(S.opinion.rating)+'</span></p><p>'+esc(S.opinion.why)+'</p>'
+        +'<table><tr><th>Last test run</th><td>'+esc(dt(S.run_at))+'</td><th>Controls tested</th><td>'+esc(S.counts.pass+S.counts.fail)+' of '+esc(S.programme.length)+(S.pass_pct==null?'':' ('+esc(S.pass_pct)+'% effective)')+'</td></tr>'
+        +'<tr><th>Findings</th><td colspan="3">'+['critical','high','medium','low'].map(function(k){return '<span class="sev '+k+'">'+k+'</span> '+esc(S.by_severity[k]||0);}).join(' · ')+'</td></tr></table>'
+        +'<h3>'+n+'.1 Scope</h3><p>'+esc(S.scope)+'.</p>'
+        +'<h3>'+n+'.2 Audit programme and results</h3><table><thead><tr><th>Test</th><th>Area</th><th>Control</th><th>Owner</th><th>Result</th><th>Findings</th></tr></thead><tbody>'+S.programme.map(function(t){return '<tr><td>'+esc(t.id)+'</td><td>'+esc(t.area)+'</td><td>'+esc(t.title)+'<div class="mut">'+esc(t.detail)+'</div></td><td>'+esc(t.owner)+'</td><td>'+esc(RES[t.result]||t.result)+'</td><td>'+esc(t.findings)+'</td></tr>';}).join('')+'</tbody></table>'
+        +'<h3>'+n+'.3 Findings</h3>'+(S.findings.length?S.findings.map(function(f){return '<div class="fd"><div><b>'+esc(f.ref)+'</b> · <span class="sev '+esc(f.severity)+'">'+esc(f.severity)+'</span> · '+esc(f.area)+' ('+esc(f.test)+')</div><div style="font-weight:600;margin:3px 0 6px">'+esc(f.title)+'</div>'
+          +'<table><tr><th style="width:150px">Condition (evidence)</th><td>'+(f.condition.length?f.condition.map(esc).join('<br>'):'—')+'</td></tr>'
+          +(f.basis&&f.basis.length?'<tr><th>Basis of the test</th><td>'+f.basis.map(esc).join('<br>')+'</td></tr>':'')
+          +(f.evidence?'<tr><th>Evidence ('+esc(f.evidence.count)+' row'+(f.evidence.count===1?'':'s')+')</th><td>'+evTable(f.evidence.columns,f.evidence.rows.slice(0,15))+(f.evidence.count>15?'<div class="mut">first 15 of '+esc(f.evidence.count)+' - every row is in Annex A ('+esc(f.ref)+')</div>':'')+'<div class="mut">taken '+esc(dt(f.evidence.taken_at))+' · '+esc(f.evidence.digest)+'</div><button type="button" class="btn btn-sm d-print-none mt-1" data-evkey="'+esc(f.key)+'" data-evref="'+esc(f.ref)+'">Download evidence (CSV)</button></td></tr>':'')
+          +(f.counter&&f.counter.count?'<tr><th>Counter-evidence</th><td>'+esc(f.counter.count)+' backup object(s) matched no server in the register - a server registered under another name is backed up. Reconcile these before concluding.'+evTable(f.counter.columns,f.counter.rows.slice(0,10))+'</td></tr>':'')
+          +'<tr><th>Criteria</th><td>'+f.criteria.map(esc).join('<br>')+'</td></tr><tr><th>Effect</th><td>'+esc(f.effect)+'</td></tr><tr><th>Recommendation</th><td>'+esc(f.recommendation)+'</td></tr>'
+          +'<tr><th>Owner</th><td>'+esc(f.owner)+(f.assignee?' · assigned to '+esc(f.assignee):'')+'</td></tr><tr><th>Status</th><td>'+esc(f.status)+(f.since?' · open since '+esc(dt(f.since)):'')+(f.work_item?' · work item '+esc(f.work_item):'')+'</td></tr>'
+          +'<tr><th>Management response</th><td style="height:38px"></td></tr><tr><th>Agreed action / date</th><td style="height:28px"></td></tr></table></div>';}).join(''):'<p>No findings.</p>')
+        +'<h3>'+n+'.4 Limitations (not tested)</h3>'+(S.limitations.length?'<table><thead><tr><th>Test</th><th>Control</th><th>Why it could not be tested</th></tr></thead><tbody>'+S.limitations.map(function(l){return '<tr><td>'+esc(l.id)+'</td><td>'+esc(l.title)+'</td><td>'+esc(l.why)+'</td></tr>';}).join('')+'</tbody></table><p class="mut">A control that was not tested is neither effective nor ineffective in this report.</p>':'<p>Every control in the programme was tested.</p>')
+        +'<h3>'+n+'.5 Criteria used</h3><p class="mut">'+S.criteria.map(esc).join(' · ')+'</p>';});
+    var k=R.sections.length+2, annex=[];
+    R.sections.forEach(function(S){S.findings.forEach(function(f){if(f.evidence&&f.evidence.count)annex.push(f);});});
+    if(annex.length){h+='<h2>'+k+'. Annex A - evidence</h2><p class="mut">The rows behind each finding, as the auditor read them. The digest is the SHA-256 of the evidence at the time of the test.</p>'+annex.map(function(f){return '<h3>'+esc(f.ref)+' · '+esc(f.title)+'</h3><div class="mut">'+esc(f.evidence.digest)+' · taken '+esc(dt(f.evidence.taken_at))+'</div>'+evTable(f.evidence.columns,f.evidence.rows.slice(0,1000))+(f.evidence.count>1000?'<p class="mut">first 1,000 of '+esc(f.evidence.count)+' rows - the CSV has them all</p>':'')+(f.counter&&f.counter.count?'<h3>'+esc(f.ref)+' · counter-evidence: backup objects that matched no server</h3>'+evTable(f.counter.columns,f.counter.rows.slice(0,1000)):'');}).join('');k++;}
+    h+='<h2>'+k+'. Sign-off</h2><table class="sig"><tr><th style="width:220px">Prepared by</th><td>'+esc(R.signoff.prepared_by)+'</td><th>Date</th><td>'+esc(dt(R.generated_at))+'</td></tr>'
+      +'<tr><th>Reviewed by (Head of IT &amp; Cyber Security Audit)</th><td></td><th>Signature / date</th><td></td></tr><tr><th>Management (CIO / CISO)</th><td></td><th>Signature / date</th><td></td></tr></table><p class="mut">'+esc(R.signoff.review_note)+'</p>';
+    $('rep').innerHTML=h;$('repmeta').textContent=R.digest;
+  }
+  function loadReport(){var w=$('repwhich').value;$('rep').innerHTML='<p>Preparing the report…</p>';
+    req('GET','/audit-programme/report?auditor='+encodeURIComponent(w)).then(renderReport).catch(function(e){$('rep').innerHTML='<p>'+esc(e.status===403?'The audit report is for operators and administrators (it names devices and evidence).':e.status===404?'The audit report needs the IT Asset Management update.':e.message)+'</p>';});}
+  $('report').addEventListener('click',function(){$('repwrap').hidden=false;$('repwhich').hidden=false;$('repwhich').value=TAB==='cyberaudit'?'cyberaudit':TAB==='itaudit'?'itaudit':'all';loadReport();$('repwrap').scrollIntoView({behavior:'smooth'});});
+  $('repwhich').addEventListener('change',loadReport);
+  $('repclose').addEventListener('click',function(){$('repwrap').hidden=true;});
+  $('repprint').addEventListener('click',function(){document.body.classList.add('printing-report');window.print();setTimeout(function(){document.body.classList.remove('printing-report');},500);});
+  // ---- the audit checklist by framework (SAMA CSF / IA / NCA ECC): AI auditor results + the human auditor's assessment
+  var CL=(function(){
+    var FWK=(/[?&]fw=(sama|nca|ia)/.exec(location.search)||[])[1]||'sama', V=null;
+    var R={compliant:['Compliant','green'],partial:['Partially compliant','yellow'],non_compliant:['Non-compliant','red'],not_applicable:['Not applicable','secondary'],auto_pass:['Automated pass - to confirm','azure'],not_assessed:['Not assessed','orange']};
+    var AS={pass:'pass',fail:'fail',not_tested:'not tested',not_run:'not run'};
+    var badge=function(r){var x=R[r]||[r,'secondary'];return '<span class="badge bg-'+x[1]+'-lt">'+esc(x[0])+'</span>';};
+    function load(){$('cldoms').innerHTML='<div class="text-secondary">Loading…</div>';
+      return req('GET','/audit-checklist?fw='+FWK).then(function(v){V=v;draw();if(typeof PB!=='undefined')PB.load();})
+        .catch(function(e){V=null;$('clkpis').innerHTML='';$('clbasis').hidden=true;$('cldoms').innerHTML='<div class="text-secondary">'+esc(e.status===404?'The audit checklist is not installed on IT Asset Management yet - run the update (update-all.ps1).':e.message)+'</div>';});}
+    function chk(id){return V&&V.checks.filter(function(c){return c.id===id;})[0];}
+    function draw(){
+      [].forEach.call(document.querySelectorAll('#clfw [data-fw]'),function(b){b.classList.toggle('btn-primary',b.getAttribute('data-fw')===FWK);});
+      if(!V||V.fw!==FWK){load();return;}
+      var c=V.counts,f=$('clfilter').value;
+      $('clkpis').innerHTML=tile(V.compliance_pct==null?'—':V.compliance_pct+'%','compliance (confirmed by a person)',V.compliance_pct==null?'text-secondary':V.compliance_pct>=85?'text-green':V.compliance_pct>=60?'text-yellow':'text-red','compliant')
+        +tile(c.non_compliant,'non-compliant',c.non_compliant?'text-red':'','non_compliant')+tile(c.auto_pass,'automated pass - to confirm',c.auto_pass?'text-azure':'','auto_pass')+tile(c.not_assessed,'not assessed',c.not_assessed?'text-orange':'','not_assessed');
+      $('clbasis').hidden=false;$('clbasis').textContent=V.name+' · '+V.checks.length+' audit checks over '+V.domains.length+' domains. '+(V.basis?V.basis+' ':'')+V.note;
+      var doms=V.domains.filter(function(d){return !f||d.checks.some(function(id){var x=chk(id);return x&&x.result===f;});});
+      $('cldoms').innerHTML=doms.length?doms.map(function(d){var rows=d.checks.map(chk).filter(function(x){return x&&(!f||x.result===f);});
+        return '<details class="cl-dom"'+(f||d.result==='non_compliant'?' open':'')+'><summary><span class="code">'+esc(d.code)+'</span><span class="flex-fill fw-semibold">'+esc(d.name)+'</span><span class="small text-secondary">'+esc(d.checks.length)+' check(s)</span>'+badge(d.result)+'</summary>'
+          +'<div class="table-responsive"><table class="table table-vcenter card-table mb-0"><thead><tr><th>Check</th><th>Requirement · audit procedure</th><th>AI auditor</th><th>Auditor assessment</th><th>Result</th></tr></thead><tbody>'
+          +rows.map(function(x){var at=x.auto?x.auto.tests.map(function(t){return '<div class="text-nowrap"><b>'+esc(t.id)+'</b> '+esc(AS[t.state]||t.state)+'</div>';}).join(''):'<span class="text-secondary small">manual check</span>';
+            var as=x.assessment?esc((R[x.assessment.status]||[x.assessment.status])[0])+'<div class="small text-secondary">'+esc(new Date(x.assessment.at).toLocaleDateString('en-GB'))+(x.assessment.by?' · '+esc(x.assessment.by):'')+(x.assessment.expired?' · <b class="text-orange">due again</b>':'')+'</div>':'<span class="text-secondary">—</span>';
+            return '<tr class="rowc" data-check="'+esc(x.id)+'"><td class="text-nowrap fw-semibold">'+esc(x.id)+'</td><td><div>'+esc(x.title)+'</div><div class="refs">'+esc(x.procedure)+'</div></td><td class="small">'+at+'</td><td class="small">'+as+'</td><td>'+badge(x.result)+(x.conflict?'<div class="small text-red">conflicts with the AI test</div>':'')+'</td></tr>';}).join('')
+          +'</tbody></table></div></details>';}).join(''):'<div class="text-secondary">No check with this result.</div>';
+    }
+    function openCheck(id){var x=chk(id);if(!x)return;
+      var tests=x.auto?x.auto.tests.map(function(t){return '<li><b>'+esc(t.id)+'</b> '+esc(t.title||'')+' — '+esc(AS[t.state]||t.state)+'<div class="small text-secondary">'+esc(t.detail||'')+'</div></li>';}).join(''):'';
+      var a=x.assessment, form='<form id="clform" data-id="'+esc(x.id)+'" class="mt-2"><label class="form-label">Result</label><select class="form-select mb-2" name="status"><option value="compliant">Compliant</option><option value="partial">Partially compliant</option><option value="non_compliant">Non-compliant</option><option value="not_applicable">Not applicable</option></select>'
+        +'<label class="form-label">Evidence reference <span class="text-secondary small">(document, record, screenshot ID - required for compliant / partial)</span></label><input class="form-control mb-2" name="evidence" maxlength="500">'
+        +'<label class="form-label">Note <span class="text-secondary small">(what is missing, or why it does not apply - required for non-compliant / not applicable)</span></label><textarea class="form-control mb-2" name="note" rows="3" maxlength="1000"></textarea>'
+        +'<div class="d-flex gap-2 align-items-center"><button type="submit" class="btn btn-primary">Record assessment</button><span class="small text-secondary" id="clmsg"></span></div><div class="small text-secondary mt-1">Recorded under your name and written to the audit trail; due again after 12 months.</div></form>';
+      Z.open('Audit checklist · '+V.name,x.id+' · '+x.title,
+        Z.kv([['Result',badge(x.result)+' '+esc(x.why)],['SAMA CSF',esc(x.sama.join(', ')||'—')],['NCA ECC',esc(x.nca.join(', ')||'—')],['IA',esc(x.ia.join(', ')||'—')],['Owner',esc(x.owner_name)]])
+        +Z.sec('Audit procedure','<p>'+esc(x.procedure)+'</p><p class="small"><b>Evidence expected:</b> '+esc(x.evidence_expected)+'</p>')
+        +Z.sec('AI auditor tests',tests?'<ul class="small">'+tests+'</ul>'+(x.conflict?'<p class="text-red small">The auditor recorded compliant, but an AI test fails: the check stays non-compliant until the test passes.</p>':''):'<p class="small text-secondary">No automated test covers this check - the auditor assesses it from the evidence.</p>')
+        +Z.sec('Auditor assessment',(a?'<p class="small">'+esc((R[a.status]||[a.status])[0])+' on '+esc(new Date(a.at).toLocaleString('en-GB'))+(a.by?' by '+esc(a.by)+' ('+esc(a.role)+')':'')+(a.expired?' — <b>over 12 months old, re-assess</b>':'')+'</p>'+(a.evidence?'<p class="small"><b>Evidence:</b> '+esc(a.evidence)+'</p>':'')+(a.note?'<p class="small"><b>Note:</b> '+esc(a.note)+'</p>':''):'<p class="small text-secondary">Not assessed yet.</p>')+form));
+    }
+    document.addEventListener('click',function(ev){var b=ev.target.closest('#clfw [data-fw]');if(b){FWK=b.getAttribute('data-fw');V=null;draw();return;}var tr=ev.target.closest('[data-check]');if(tr)openCheck(tr.getAttribute('data-check'));});
+    document.addEventListener('submit',function(ev){var fm=ev.target.closest('#clform');if(!fm)return;ev.preventDefault();var btn=fm.querySelector('button');btn.disabled=true;
+      req('POST','/audit-checklist/assess',{id:fm.getAttribute('data-id'),status:fm.status.value,evidence:fm.evidence.value,note:fm.note.value}).then(function(r){toast(r.id+': '+(R[r.result]||[r.result])[0]+(r.conflict?' - conflicts with a failing AI test':''));if(Z.close)Z.close();return load();})
+        .catch(function(e){$('clmsg').textContent=e.status===403?'Recording an assessment needs the operator role (a named person).':e.message;}).then(function(){btn.disabled=false;});});
+    $('clfilter').addEventListener('change',draw);
+    $('clkpis').addEventListener('click',function(e){var b=e.target.closest('[data-clf]');if(!b)return;var f=b.getAttribute('data-clf'),sel=$('clfilter');sel.value=sel.value===f?'':f;draw();var d=$('cldoms');if(d&&d.scrollIntoView)d.scrollIntoView({behavior:'smooth',block:'start'});});
+    $('clcsv').addEventListener('click',function(){if(!V)return;var q=function(v){var x=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
+      var rows=[['Audit checklist',V.name],['Exported',new Date().toISOString()],['Compliance (confirmed)',V.compliance_pct==null?'not measurable':V.compliance_pct+'%'],[],['Domain','Domain name','Check','Requirement','Audit procedure','Evidence expected','Owner','AI auditor tests','Assessment','Evidence','Note','Assessed by','Assessed at','Result','Why']];
+      V.domains.forEach(function(d){d.checks.forEach(function(id){var x=chk(id),a=x.assessment||{};rows.push([d.code,d.name,x.id,x.title,x.procedure,x.evidence_expected,x.owner_name,x.auto?x.auto.tests.map(function(t){return t.id+' '+(AS[t.state]||t.state);}).join(' | '):'manual',a.status||'',a.evidence||'',a.note||'',a.by||'',a.at||'',(R[x.result]||[x.result])[0],x.why]);});});
+      var blob=new Blob(['﻿'+rows.map(function(r){return r.map(q).join(',');}).join('\r\n')],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(blob),l=document.createElement('a');
+      l.href=u;l.download='audit-checklist-'+FWK+'-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(l);l.click();setTimeout(function(){URL.revokeObjectURL(u);l.remove();},500);});
+    $('clprint').addEventListener('click',function(){if(!V)return;
+      var h='<h1>Audit checklist — '+esc(V.name)+('</h1><div class="mut">' + ZYB_ORG.name + ' · ')+esc(dt(V.generated_at))+'</div><p>'+esc(V.basis||'')+' '+esc(V.note)+'</p>'
+        +'<table><tr><th>Compliance (confirmed by a person)</th><td>'+esc(V.compliance_pct==null?'—':V.compliance_pct+'%')+'</td><th>Non-compliant</th><td>'+esc(V.counts.non_compliant)+'</td><th>Not assessed</th><td>'+esc(V.counts.not_assessed+V.counts.auto_pass)+'</td></tr></table>';
+      V.domains.forEach(function(d){h+='<h3>'+esc(d.code)+' '+esc(d.name)+' — '+esc((R[d.result]||[d.result])[0])+'</h3><table><thead><tr><th style="width:52px">Check</th><th>Requirement / procedure / evidence expected</th><th style="width:110px">AI auditor</th><th style="width:150px">Assessment / evidence</th><th style="width:100px">Result</th></tr></thead><tbody>'
+        +d.checks.map(function(id){var x=chk(id),a=x.assessment;return '<tr><td>'+esc(x.id)+'</td><td>'+esc(x.title)+'<div class="mut">'+esc(x.procedure)+'</div><div class="mut"><b>Evidence:</b> '+esc(x.evidence_expected)+'</div></td><td>'+(x.auto?x.auto.tests.map(function(t){return esc(t.id+' '+(AS[t.state]||t.state));}).join('<br>'):'manual')+'</td><td>'+(a?esc((R[a.status]||[a.status])[0])+(a.evidence?'<div class="mut">'+esc(a.evidence)+'</div>':'')+(a.by?'<div class="mut">'+esc(a.by)+' · '+esc(new Date(a.at).toLocaleDateString('en-GB'))+'</div>':''):'')+'</td><td>'+esc((R[x.result]||[x.result])[0])+'</td></tr>';}).join('')+'</tbody></table>';});
+      h+='<h2>Sign-off</h2><table class="sig"><tr><th style="width:220px">Prepared by</th><td></td><th>Date</th><td></td></tr><tr><th>Reviewed by (Head of IT &amp; Cyber Security Audit)</th><td></td><th>Signature / date</th><td></td></tr><tr><th>Management (CIO / CISO)</th><td></td><th>Signature / date</th><td></td></tr></table>';
+      $('rep').innerHTML=h;$('repmeta').textContent='';$('repwhich').hidden=true;$('repwrap').hidden=false;$('repwrap').scrollIntoView({behavior:'smooth'});});
+    return {load:load,draw:draw,fw:function(){return FWK;}};
+  })();
+  // ---- evidence requests (PBC list): issue with a due date, the owner gives the document reference, a different person accepts / rejects
+  var PB=(function(){
+    var L=null, ST={not_issued:['Not issued','secondary'],issued:['Issued','azure'],provided:['Provided - to review','yellow'],accepted:['Accepted','green']};
+    var st=function(x){var v=x.overdue?['Overdue '+x.days_overdue+' d','red']:(ST[x.state]||[x.state,'secondary']);return '<span class="badge bg-'+v[1]+'-lt">'+esc(v[0])+'</span>';};
+    function load(){var fw=CL.fw();return req('GET','/audit-checklist/requests?fw='+fw).then(function(r){L=r;draw();})
+      .catch(function(e){L=null;$('pbcsum').textContent='';$('pbcbody').innerHTML='<div class="card-body text-secondary">'+esc(e.status===403?'The evidence request list names people and documents: operators and administrators only.':e.status===404?'Evidence requests are not installed yet - run the update.':e.message)+'</div>';});}
+    function draw(){if(!L)return;var b=L.by_state;
+      $('pbcsum').textContent=L.items.length+' request(s) · '+b.not_issued+' not issued · '+b.issued+' issued · '+b.provided+' to review · '+b.accepted+' accepted · '+b.overdue+' overdue. '+L.note;
+      $('pbcbody').innerHTML=L.items.length?'<table class="table table-vcenter card-table mb-0"><thead><tr><th>Request</th><th>Evidence expected</th><th>Owner</th><th>Status</th><th>Due</th><th>Response</th><th></th></tr></thead><tbody>'+L.items.map(function(x){
+        var rsp=x.response?esc(x.response.reference)+'<div class="small text-secondary">'+esc(x.response.by)+' · '+esc(new Date(x.response.at).toLocaleDateString('en-GB'))+(x.response.late?' · late':'')+'</div>':(x.decision&&x.decision.decision==='reject'?'<span class="small text-red">rejected: '+esc(x.decision.note)+'</span>':'—');
+        var act=x.state==='issued'?'<button type="button" class="btn btn-sm" data-pbc="respond" data-id="'+esc(x.id)+'">Respond</button>':x.state==='provided'?'<button type="button" class="btn btn-sm btn-success" data-pbc="accept" data-id="'+esc(x.id)+'">Accept</button> <button type="button" class="btn btn-sm" data-pbc="reject" data-id="'+esc(x.id)+'">Reject</button>':'';
+        return '<tr><td class="text-nowrap"><b>'+esc(x.ref)+'</b><div class="small text-secondary">'+esc(x.title)+'</div></td><td class="small">'+esc(x.evidence_expected)+(x.failing_tests.length?'<div class="text-red">AI test failing: '+esc(x.failing_tests.join(', '))+'</div>':'')+'</td><td class="small">'+esc(x.owner_name)+'</td><td>'+st(x)+'</td><td class="small text-nowrap">'+esc(x.due||'—')+'</td><td class="small">'+rsp+'</td><td class="text-nowrap">'+act+'</td></tr>';}).join('')+'</tbody></table>':'<div class="card-body text-secondary">Nothing to request: every check is assessed and current.</div>';}
+    function form(kind,id){var x=L.items.filter(function(i){return i.id===id;})[0];if(!x)return;
+      var body=kind==='respond'?'<label class="form-label">Where is the evidence? <span class="small text-secondary">(document reference / DMS path - the document itself stays in the document store)</span></label><input class="form-control mb-2" name="reference" maxlength="300" required><label class="form-label">Note</label><textarea class="form-control mb-2" name="note" rows="2" maxlength="1000"></textarea>'
+        :'<p class="small">Evidence: <b>'+esc(x.response?x.response.reference:'')+'</b> from '+esc(x.response?x.response.by:'')+'</p><label class="form-label">Note '+(kind==='reject'?'(required: what is missing)':'')+'</label><textarea class="form-control mb-2" name="note" rows="2" maxlength="1000"></textarea>';
+      Z.open('Evidence request',x.ref+' · '+x.title,'<p class="small"><b>Expected:</b> '+esc(x.evidence_expected)+'</p><form id="pbcform" data-kind="'+esc(kind)+'" data-id="'+esc(id)+'">'+body+'<div class="d-flex gap-2 align-items-center"><button type="submit" class="btn btn-primary">'+(kind==='respond'?'Record response':kind==='accept'?'Accept evidence':'Reject evidence')+'</button><span class="small text-secondary" id="pbcmsg"></span></div><div class="small text-secondary mt-1">Recorded under your name and written to the audit trail'+(kind==='respond'?'':'; the person who provided the evidence cannot decide on it')+'.</div></form>');}
+    document.addEventListener('click',function(ev){var b=ev.target.closest('[data-pbc]');if(b)form(b.getAttribute('data-pbc'),b.getAttribute('data-id'));});
+    document.addEventListener('submit',function(ev){var fm=ev.target.closest('#pbcform');if(!fm)return;ev.preventDefault();var k=fm.getAttribute('data-kind'),id=fm.getAttribute('data-id'),btn=fm.querySelector('button');btn.disabled=true;
+      var p=k==='respond'?req('POST','/audit-checklist/requests/respond',{id:id,reference:fm.reference.value,note:fm.note.value}):req('POST','/audit-checklist/requests/decide',{id:id,decision:k,note:fm.note.value});
+      p.then(function(r){toast(id+': '+(ST[r.state]||[r.state])[0]);if(Z.close)Z.close();return load();}).catch(function(e){$('pbcmsg').textContent=e.message;}).then(function(){btn.disabled=false;});});
+    var d0=new Date(Date.now()+14*86400000).toISOString().slice(0,10);$('pbcdue').value=d0;
+    $('pbcissue').addEventListener('click',function(){var b=this;b.disabled=true;req('POST','/audit-checklist/requests/issue',{fw:CL.fw(),due:$('pbcdue').value}).then(function(r){toast(r.issued+' request(s) issued, due '+r.due);return load();}).catch(function(e){toast(e.message);}).then(function(){b.disabled=false;});});
+    $('pbccsv').addEventListener('click',function(){if(!L)return;var q=function(v){var x=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
+      var rows=[['Evidence request list (PBC)',L.name],['Exported',new Date().toISOString()],[],['Request','Check','Evidence expected','Audit procedure','Owner','Status','Due','Days overdue','Response reference','Provided by','Provided at','Decision','Decided by','Note']];
+      L.items.forEach(function(x){var r=x.response||{},d=x.decision||{};rows.push([x.ref,x.title,x.evidence_expected,x.procedure,x.owner_name,x.overdue?'overdue':x.state,x.due||'',x.days_overdue||'',r.reference||'',r.by||'',r.at||'',d.decision||'',d.by||'',d.note||'']);});
+      var blob=new Blob(['\ufeff'+rows.map(function(r){return r.map(q).join(',');}).join('\r\n')],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(blob),l=document.createElement('a');
+      l.href=u;l.download='pbc-list-'+CL.fw()+'-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(l);l.click();setTimeout(function(){URL.revokeObjectURL(u);l.remove();},500);});
+    return {load:load};
+  })();
+  load();if(TAB==='checklist')CL.load();setInterval(function(){if(!document.hidden){load();if(TAB==='checklist')CL.load();}},120000);
+})();
+</script>
+<script src="vendor/zyb-duty.js" defer></script></body></html>

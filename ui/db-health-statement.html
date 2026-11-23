@@ -1,0 +1,69 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Database Health Statement</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 12px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}.frm .wide{grid-column:1/-1}
+.verdict{border-radius:12px;padding:14px 16px;margin:0 0 12px;border:1px solid var(--edge)}.verdict h2{margin:0 0 4px;font-size:18px}.verdict.healthy{background:rgba(63,185,80,.10);border-color:#2b6b3a}.verdict.not_measurable{background:rgba(139,148,158,.12)}
+.verdict.database,.verdict.server,.verdict.network,.verdict.mixed{background:rgba(255,123,114,.10);border-color:#8b2b2b}
+.chk{display:grid;grid-template-columns:110px 120px 1fr;gap:4px 10px;padding:8px 0;border-bottom:1px solid var(--edge);font-size:13px}.chk .ev{color:var(--mute);font-size:12px}.chk .rd{color:var(--mute);font-size:11px}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;font-size:12.5px;margin:6px 0 10px}.meta b{display:block;font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.rt{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+@media print{body *{visibility:hidden}#stmt,#stmt *{visibility:visible}#stmt{position:absolute;left:0;top:0;width:100%}#stmt .noprint{display:none!important}.verdict{border:1px solid #999}}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Databases · evidence</div><h1>Database Health Statement</h1><div class="muted small">When an application team reports "the database is slow": pick the database and the time it happened. The statement checks the database, its server and the network path from the application server, each with the reading behind it, and concludes healthy / database / server / network - or not measurable when there is too little data. Keep it, print it, or route the issue to the team that owns it.</div></div></div>
+<div class="card"><h2>Prepare a statement</h2>
+<form id="f" class="frm" autocomplete="off">
+<label>Database (instance / DB_UNIQUE_NAME)<select id="inst" required><option value="">Loading…</option></select></label>
+<label>From<input id="from" type="datetime-local" required></label>
+<label>To<input id="to" type="datetime-local" required></label>
+<label>Application server IP (optional)<input id="cip" maxlength="15" placeholder="e.g. the app server that complained"></label>
+<label>Database server IP (optional)<input id="dip" maxlength="15" placeholder="found from the server read if empty"></label>
+<label>Application<input id="app" maxlength="120"></label>
+<label>Ticket<input id="tkt" maxlength="60"></label>
+<label class="wide">What was reported<input id="cmp" maxlength="1000" placeholder="e.g. saving a claim takes a minute"></label>
+<div><button type="submit" id="go">Prepare statement</button> <span class="muted small" id="msg"></span></div>
+</form><p class="note">The window can be up to 24 hours within the last 30 days; "normal" is the same hours of the previous 7 days. Times are your browser's local time.</p></div>
+<div class="card" id="stmt" hidden></div>
+<div class="card"><h2>Statements <span class="c">prepared by the DBA team, newest first</span></h2><div class="tw" id="list"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,esc=S.esc,$=function(i){return document.getElementById(i);},CUR=null;
+  var CL={healthy:'Database healthy',database:'Database issue',server:'Server issue',network:'Network issue',mixed:'More than one cause',not_measurable:'Not measurable'};
+  var ST={ok:['ok','ok'],warn:['note','warn'],issue:['ISSUE','bad'],not_measured:['not measured','']};
+  var AR={availability:'Availability',database:'Database',server:'Server',network:'Network',application:'Application'};
+  function local(d){var z=new Date(d.getTime()-d.getTimezoneOffset()*60000);return z.toISOString().slice(0,16);}
+  function why(e){return e.status===403?'Statements are prepared by operators and administrators (they name applications, client IPs and SQL).':e.status===404?'The Database Health Statement is not installed on the SIEM yet - run the update.':e.message;}
+  function draw(s){CUR=s;var el=$('stmt');el.hidden=false;
+    var areas=['availability','database','server','network'];
+    var checks=areas.map(function(a){var cs=s.checks.filter(function(c){return c.area===a;});if(!cs.length)return '';return '<h3 style="margin:12px 0 2px;font-size:14px">'+esc(AR[a])+'</h3>'+cs.map(function(c){var p=ST[c.status]||[c.status,''];
+      return '<div class="chk"><div>'+S.pill(p[0],p[1])+'</div><div class="rd">'+esc(c.reading||'')+'</div><div><b>'+esc(c.title)+'</b>'+(c.evidence&&c.evidence.length?'<div class="ev">'+esc(c.evidence.join(' · '))+'</div>':'')+'</div></div>';}).join('');}).join('');
+    var tw=(s.top_waits||[]).length?'<h3 style="margin:12px 0 2px;font-size:14px">Top wait events in the window</h3><table><thead><tr><th>Event</th><th>Class</th><th>Avg ms</th></tr></thead><tbody>'+s.top_waits.map(function(w){return '<tr><td>'+esc(w.event)+'</td><td>'+esc(w.class||'')+'</td><td>'+esc(w.avg_ms==null?'–':w.avg_ms)+'</td></tr>';}).join('')+'</tbody></table>':'';
+    var tq=(s.top_sql||[]).length?'<h3 style="margin:12px 0 2px;font-size:14px">Top SQL in the window</h3><table><thead><tr><th>SQL_ID</th><th>Module</th><th>Elapsed s</th><th>Executions</th></tr></thead><tbody>'+s.top_sql.map(function(q){return '<tr><td class="mono">'+esc(q.sql_id)+'</td><td>'+esc(q.module)+'</td><td>'+esc(q.elapsed_s==null?'–':q.elapsed_s)+'</td><td>'+esc(q.executions==null?'–':q.executions)+'</td></tr>';}).join('')+'</tbody></table>':'';
+    var rt=(s.routing||[]).map(function(r){return '<li>'+esc(new Date(r.at).toLocaleString())+' - routed to <b>'+esc(r.team)+'</b> by '+esc(r.by)+(r.case_id?' · case '+esc(r.case_id):'')+': '+esc(r.note)+'</li>';}).join('');
+    el.innerHTML='<div class="verdict '+esc(s.conclusion)+'"><h2>'+esc(CL[s.conclusion]||s.conclusion)+' · '+esc(s.instance)+'</h2><div>'+esc(s.conclusion_text)+'</div></div>'
+      +'<div class="meta"><div><b>Window</b>'+esc(new Date(s.from).toLocaleString())+' - '+esc(new Date(s.to).toLocaleString())+'</div><div><b>Application</b>'+esc(s.app||'–')+(s.client_ip?' · '+esc(s.client_ip):'')+'</div><div><b>Reported</b>'+esc(s.complaint||'–')+(s.ticket?' · '+esc(s.ticket):'')+'</div>'
+      +'<div><b>Readings</b>'+esc(s.coverage)+'% of the window</div><div><b>Prepared</b>'+esc(s.prepared_by)+' · '+esc(new Date(s.prepared_at).toLocaleString())+'</div><div><b>Statement</b>'+esc(s.id)+'<div class="muted small mono">'+esc(s.digest)+'</div></div></div>'
+      +checks+tw+tq
+      +(rt?'<h3 style="margin:12px 0 2px;font-size:14px">Routing</h3><ul class="small">'+rt+'</ul>':'')
+      +'<div class="rt noprint"><button type="button" id="print">Print / save as PDF</button><span class="muted small" style="margin-left:8px">Route to:</span><select id="team"><option value="application">Application team</option><option value="network">Network team</option><option value="server">Server / hardware team</option><option value="dba">DBA team</option></select><input id="note" maxlength="1000" placeholder="what they should look at" style="min-width:280px"><button type="button" id="route">Route</button><span class="muted small" id="rmsg"></span></div>'
+      +'<p class="note">Read-only: built from the readings the SIEM already holds; nothing was run on the database for this statement. A check with no reading says "not measured" - it is never counted as healthy.</p>';
+    var t=$('team');if(t)t.value=s.conclusion==='network'?'network':s.conclusion==='server'?'server':s.conclusion==='database'||s.conclusion==='mixed'?'dba':'application';
+    el.scrollIntoView({block:'start'});}
+  function loadList(){return S.req('GET','/db/statements').then(function(j){var I=j.items||[];
+    $('list').innerHTML=I.length?'<table><thead><tr><th>Statement</th><th>Database</th><th>Window</th><th>Application</th><th>Conclusion</th><th>Prepared</th><th>Routed</th></tr></thead><tbody>'+I.map(function(s){return '<tr data-id="'+esc(s.id)+'" style="cursor:pointer"><td class="mono">'+esc(s.id)+'</td><td>'+esc(s.instance)+'</td><td class="small">'+esc(new Date(s.from).toLocaleString())+' - '+esc(new Date(s.to).toLocaleTimeString())+'</td><td>'+esc(s.app||'–')+'</td><td>'+S.pill(CL[s.conclusion]||s.conclusion,s.conclusion==='healthy'?'ok':s.conclusion==='not_measurable'?'':'bad')+'</td><td class="small">'+esc(s.prepared_by)+'</td><td class="small">'+esc((s.routed||[]).join(', ')||'–')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No statement yet.</div>';},function(e){$('list').innerHTML='<div class="empty">'+esc(why(e))+'</div>';});}
+  function loadInst(){return S.req('GET','/db/dba/status').then(function(j){var I=(j.instances||[]).map(function(i){return i.instance;}).filter(function(v,k,a){return a.indexOf(v)===k;}).sort();
+    $('inst').innerHTML=I.length?'<option value="">choose…</option>'+I.map(function(i){return '<option>'+esc(i)+'</option>';}).join(''):'<option value="">no database reports to the SIEM yet</option>';},function(){$('inst').innerHTML='<option value="">databases not readable</option>';});}
+  $('f').addEventListener('submit',function(ev){ev.preventDefault();var b={instance:$('inst').value,from:new Date($('from').value).toISOString(),to:new Date($('to').value).toISOString()};
+    ['cip:client_ip','dip:db_ip','app:app','tkt:ticket','cmp:complaint'].forEach(function(p){var k=p.split(':'),v=$(k[0]).value.trim();if(v)b[k[1]]=v;});
+    $('go').disabled=true;$('msg').textContent='Reading the window…';
+    S.req('POST','/db/statements',b).then(function(s){$('msg').textContent='';draw(s);loadList();},function(e){$('msg').textContent=why(e);}).then(function(){$('go').disabled=false;});});
+  $('stmt').addEventListener('click',function(ev){
+    if(ev.target.id==='print')window.print();
+    if(ev.target.id==='route'&&CUR){var n=$('note').value.trim();if(n.length<3){$('rmsg').textContent='Say what they should look at.';return;}
+      S.req('POST','/db/statements/'+encodeURIComponent(CUR.id)+'/route',{team:$('team').value,note:n}).then(function(s){draw(s);loadList();$('rmsg').textContent='Routed'+(s.routing[s.routing.length-1].case_id?' - case '+s.routing[s.routing.length-1].case_id:'');},function(e){$('rmsg').textContent=why(e);});}});
+  $('list').addEventListener('click',function(ev){var tr=ev.target.closest('tr[data-id]');if(tr)S.req('GET','/db/statements/'+encodeURIComponent(tr.getAttribute('data-id'))).then(draw,function(e){$('msg').textContent=why(e);});});
+  var n=new Date();$('to').value=local(n);$('from').value=local(new Date(n.getTime()-3600000));
+  S.ready(function(){loadInst();loadList();});
+})();
+</script></body></html>

@@ -1,0 +1,89 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Log Flow Assurance</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.chips button{border-radius:999px;padding:4px 11px;font-size:12px}.chips button.on{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.pill.ok{background:rgba(63,185,80,.15);color:var(--ok)}.pill.warn{background:rgba(227,179,65,.15);color:var(--warn)}.pill.bad{background:rgba(255,123,114,.16);color:var(--bad)}.pill.mut{color:#a3a9b5}
+.cov{display:grid;grid-template-columns:minmax(90px,150px) 1fr auto;gap:8px;align-items:center;font-size:12.5px;margin:5px 0}.cov .bar i.c{background:var(--ok)}.cov .bar{display:flex}.cov .bar i.s{background:var(--bad)}.cov .bar i.w{background:var(--warn)}
+pre.snip{white-space:pre-wrap;background:#0b0c10;border:1px solid var(--edge);border-radius:8px;padding:10px;font:12px Consolas,monospace;color:#d6dbe4;max-height:340px;overflow:auto}
+td .acts{display:flex;gap:6px;flex-wrap:wrap}td .acts button{padding:3px 9px;font-size:12px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">SOC · log collection</div><h1>Log Flow Assurance</h1><div class="muted small">Every asset in the inventory that should send logs - is it sending, since when has it been quiet, and what exactly to configure</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button><a class="muted" href="soc-sources.html" style="color:var(--info);text-decoration:none;font-weight:600">Log Sources →</a></div>
+<div class="banner">Discovered assets are enrolled into SIEM log collection automatically (servers, network devices, storage, VMs in use). Enrolment only prepares the SIEM: each device still has to be configured to send, and the AI SIEM Engineer keeps a work item open - with the exact configuration - until its logs arrive. "Silent" is judged per class: a firewall quiet for 15 minutes is a problem, an iLO quiet for a day is not. Nothing here changes a device.</div>
+<section data-zyb-duty="siem" data-api="/api/soc"></section>
+<div class="k" id="kk"></div>
+<div class="g2"><div class="card"><h2>Coverage by class <span class="c">assets that must log</span></h2><div id="bycls"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Coverage by site</h2><div id="bysite"><div class="empty">Loading…</div></div></div></div>
+<div class="card"><h2>Assets that must send logs <span class="c" id="ac"></span><span class="sp"></span><button type="button" id="enrol" hidden>Enrol discovered assets now</button></h2>
+  <div class="chips" id="chips"></div>
+  <div class="fil"><input type="search" id="q" placeholder="Search name, IP, site, source…"></div>
+  <div class="tw" id="assets"><div class="empty">Loading…</div></div>
+  <p class="note" id="autonote"></p></div>
+<div class="card"><h2>Log senders not in the asset inventory <span class="c" id="uc"></span></h2><div class="tw" id="unknown"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Flow quality per source <span class="c">events, delay from the device (receive time − event time) and unparsed share</span></h2><div class="tw" id="quality"><div class="empty">Loading…</div></div>
+  <p class="note">A delay that is large and constant usually means the device clock is wrong (check NTP) rather than a slow path. Unparsed events are kept, but detection rules cannot use them.</p></div>
+<div class="card"><h2>Silence thresholds <span class="c">minutes without an event before a source of the class counts as silent</span></h2><div id="pol" class="small"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var M=null, F='problem', AUTO=null;
+  var ST={covered:['logging','ok'],silent:['silent','bad'],waiting:['waiting for device config','warn'],'not-onboarded':['not onboarded','bad'],'no-connector':['no connector','warn'],paused:['paused','mut'],unknown:['unknown','mut']};
+  var CHIPS=[['problem','Needs action'],['silent','Silent'],['waiting','Waiting for device config'],['not-onboarded','Not onboarded'],['no-connector','No connector'],['covered','Logging'],['all','All']];
+  function itam(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function covRow(g){var t=g.required||1;return '<div class="cov"><span>'+esc(g.key)+'</span><span class="bar"><i class="c" style="width:'+(g.covered/t*100)+'%"></i><i class="s" style="width:'+(g.silent/t*100)+'%"></i><i class="w" style="width:'+(g.waiting/t*100)+'%"></i></span><span class="muted">'+esc(g.covered)+' / '+esc(g.required)+(g.silent?' · <b style="color:var(--bad)">'+esc(g.silent)+' silent</b>':'')+(g.missing?' · '+esc(g.missing)+' missing':'')+'</span></div>';}
+  function paint(){
+    var S=M.summary, inv=M.inventory, col=M.collector;
+    var pct=S.coverage_pct;
+    $('kk').innerHTML=Z.tile('Coverage',pct==null?'not measured':pct+'%',inv.connected?S.covered+' of '+(S.required-S.paused-S.unknown)+' assets logging':'inventory not linked',pct==null?'na':pct>=95?'ok':pct>=80?'warn':'bad','covered')
+      +Z.tile('Silent',S.silent,'stopped sending',S.silent?'bad':'ok','silent')+Z.tile('Waiting for device config',S.waiting,'registered, nothing received',S.waiting?'warn':'ok','waiting')
+      +Z.tile('Not onboarded',S['not-onboarded'],'no SIEM source yet',S['not-onboarded']?'bad':'ok','not-onboarded')+Z.tile('Unknown senders',M.unknown_senders.length,'logging, not in the inventory',M.unknown_senders.length?'warn':'ok','unknown')
+      +Z.tile('Collectors',col.quiet?'QUIET':col.last_event?Z.n(col.eps_1h)+' eps':'–',col.quiet?'nothing received for 15 min':col.last_event?'last event '+Z.ago(col.last_event):'nothing received yet',col.quiet?'bad':col.last_event?'ok':'na');
+    [].forEach.call($('kk').querySelectorAll('[data-act]'),function(b){b.addEventListener('click',function(){var a=b.getAttribute('data-act');if(a==='unknown'){$('unknown').scrollIntoView({behavior:'smooth'});return;}F=a;chips();rows();$('assets').scrollIntoView({behavior:'smooth'});});});
+    $('bycls').innerHTML=inv.connected?(M.by_class.length?M.by_class.map(covRow).join(''):'<div class="empty">No asset in the inventory has to log under the current policy.</div>'):'<p class="err">'+esc(inv.error||'IT Asset Management not linked')+'</p>';
+    $('bysite').innerHTML=inv.connected&&M.by_site.length?M.by_site.map(covRow).join(''):'<div class="empty">'+(inv.connected?'Nothing yet.':'Needs the inventory link.')+'</div>';
+    var U=M.unknown_senders;$('uc').textContent=U.length?U.length+' in the last 24 h':'';
+    $('unknown').innerHTML=!inv.connected?'<div class="empty">Needs the inventory link to tell known from unknown.</div>':U.length?'<table><thead><tr><th>Host</th><th>IP</th><th>Via source</th><th class="num">Events 24 h</th><th>Last seen</th></tr></thead><tbody>'+U.map(function(u){return '<tr><td><b>'+esc(u.host)+'</b></td><td class="mono">'+esc(u.ip||'–')+'</td><td>'+esc(u.src_id||'–')+'</td><td class="num">'+Z.n(u.events_24h)+'</td><td>'+esc(Z.ago(u.last_seen))+'</td></tr>';}).join('')+'</tbody></table><p class="note">Add these to the inventory (Asset Discovery approves them) so their owner, criticality and coverage are known - or investigate them as shadow assets.</p>':'<div class="empty">Every log sender is in the inventory.</div>';
+    var Q=M.sources.filter(function(s){return !s.paused;});
+    $('quality').innerHTML=Q.length?'<table><thead><tr><th>Source</th><th>Kind</th><th>Site</th><th>State</th><th class="num">Events 24 h</th><th class="num">EPS (1 h)</th><th class="num">Delay p95</th><th class="num">Unparsed (1 h)</th></tr></thead><tbody>'+Q.map(function(s){var st=s.state==='receiving'?['receiving','ok']:s.state==='silent'?['silent','bad']:s.state==='never-seen'?['never received','warn']:[s.state,'mut'];
+      return '<tr><td><b>'+esc(s.label||s.src_id)+'</b><div class="muted small mono">'+esc(s.src_id)+(s.match_ip?' · '+esc(s.match_ip):'')+'</div></td><td>'+esc(s.kind)+'</td><td>'+esc(s.site||'–')+'</td><td>'+Z.pill(st[0],st[1])+'<div class="muted small">'+esc(s.last_seen?Z.ago(s.last_seen):'')+'</div></td><td class="num">'+Z.n(s.events_24h)+'</td><td class="num">'+esc(s.eps_1h!=null?s.eps_1h:'–')+'</td>'
+        +'<td class="num">'+(s.lag_p95_s==null?'<span class="muted">–</span>':Z.pill(s.lag_p95_s+' s',s.lag_p95_s>=M.policy.lag_warn_s?'warn':'ok'))+'</td><td class="num">'+(s.parse_error_rate_1h==null?'–':Z.pill(Math.round(s.parse_error_rate_1h*100)+'%',s.parse_error_rate_1h>=M.policy.parse_error_warn?'warn':'ok'))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No log source is registered yet.</div>';
+    var P=M.policy.sla_min;$('pol').innerHTML=Object.keys(P).map(function(k){return Z.pill(k+': '+P[k]+' min','');}).join(' ')+'<p class="note">Assets that must log: types '+esc(M.policy.required_types.join(', '))+(M.policy.require_workstations?' and workstations':' (workstations report through the EDR)')+'. An administrator changes this with PUT /api/soc/collection/policy.</p>';
+    $('up').textContent='updated '+Z.dt(M.generated_at);
+    chips();rows();
+  }
+  function chips(){var A=M.assets,c=function(k){return k==='all'?A.length:k==='problem'?A.filter(prob).length:A.filter(function(a){return a.state===k;}).length;};
+    $('chips').innerHTML=CHIPS.map(function(x){return '<button type="button" data-f="'+x[0]+'" class="'+(F===x[0]?'on':'')+'">'+esc(x[1])+' · '+c(x[0])+'</button>';}).join('');
+    [].forEach.call($('chips').querySelectorAll('button'),function(b){b.addEventListener('click',function(){F=b.getAttribute('data-f');chips();rows();});});}
+  function prob(a){return a.state==='silent'||a.state==='waiting'||a.state==='not-onboarded'||a.state==='no-connector';}
+  function rows(){
+    if(!M.inventory.connected){$('assets').innerHTML='<p class="err">'+esc(M.inventory.error||'IT Asset Management not linked')+'</p><p class="note">The SIEM reads the inventory over its IT Asset Management link (onboard.discovery: base_url + secret_file in the SIEM config). Until then only registered sources are checked.</p>';$('ac').textContent='';return;}
+    var q=$('q').value.trim().toLowerCase();
+    var L=M.assets.filter(function(a){return F==='all'||(F==='problem'?prob(a):a.state===F);}).filter(function(a){return !q||[a.name,a.mgmt_ip,a.site,a.source_id,a.type,a.sla_class].join(' ').toLowerCase().indexOf(q)>=0;});
+    var ord={silent:0,'not-onboarded':1,waiting:2,'no-connector':3,unknown:4,paused:5,covered:6},cls={firewall:0,dc:1,server:2,hypervisor:3,network:4};
+    L.sort(function(a,b){return (ord[a.state]-ord[b.state])||((cls[a.sla_class]==null?9:cls[a.sla_class])-(cls[b.sla_class]==null?9:cls[b.sla_class]))||String(a.name).localeCompare(String(b.name));});
+    $('ac').textContent=L.length+' shown of '+M.assets.length;
+    var admin=Z.can('admin');
+    $('assets').innerHTML=L.length?'<table><thead><tr><th>Asset</th><th>Class</th><th>Site</th><th>State</th><th>Last log</th><th>Source</th><th></th></tr></thead><tbody>'+L.slice(0,500).map(function(a){var st=ST[a.state]||[a.state,'mut'];
+      var act=(a.source_id?'<button type="button" data-setup="'+esc(a.source_id)+'" data-name="'+esc(a.name)+'">Device config</button>':'')+(a.state==='not-onboarded'&&admin?'<button type="button" data-enable="'+esc(a.asset_id)+'">Enrol now</button>':'');
+      return '<tr><td><b>'+esc(a.name)+'</b><div class="muted small mono">'+esc(a.mgmt_ip||a.hostname||'')+'</div></td><td>'+esc(a.type)+' · '+esc(a.sla_class)+'<div class="muted small">silent after '+esc(a.sla_min)+' min</div></td><td>'+esc(a.site||'–')+'</td>'
+        +'<td>'+Z.pill(st[0],st[1])+(a.auto_onboarded&&a.state==='waiting'?'<div class="muted small">enrolled automatically</div>':'')+'</td><td>'+esc(a.last_seen?Z.ago(a.last_seen):'never')+'</td><td class="small">'+esc(a.source_id||(a.suggested_kind?'→ '+a.suggested_kind:'–'))+(a.matched_by&&a.matched_by!=='source'?'<div class="muted">via '+esc(a.matched_by)+'</div>':'')+'</td><td><div class="acts">'+act+'</div></td></tr>';}).join('')+'</tbody></table>'+(L.length>500?'<p class="note">First 500 shown - narrow with the search.</p>':''):'<div class="empty">'+(F==='problem'?'Every asset that must log is logging.':'Nothing in this view.')+'</div>';
+    [].forEach.call($('assets').querySelectorAll('[data-setup]'),function(b){b.addEventListener('click',function(){setup(b.getAttribute('data-setup'),b.getAttribute('data-name'));});});
+    [].forEach.call($('assets').querySelectorAll('[data-enable]'),function(b){b.addEventListener('click',function(){b.disabled=true;itam('POST','/assets/'+encodeURIComponent(b.getAttribute('data-enable'))+'/log-collection',{action:'enable'}).then(function(r){Z.toast('SIEM source '+r.source_id+' ready - now configure the device');load(true);},function(e){b.disabled=false;Z.toast('Not enrolled: '+e.message);});});});
+  }
+  function setup(id,name){Z.req('GET','/collection/sources/'+encodeURIComponent(id)+'/setup').then(function(j){var s=j.setup||{};var h='<p>'+esc((s.summary&&s.summary.en)||'')+'</p>'+(s.syslog_target?'<p>Syslog target: <b class="mono">'+esc(s.syslog_target)+'</b>'+(s.tls_target?' · TLS <b class="mono">'+esc(s.tls_target)+'</b>':'')+'</p>':'')+(s.kit_url?'<p>Agent kit: <span class="mono">'+esc(s.kit_url)+'</span></p>':'')
+      +(s.instructions||[]).map(function(i){return '<h4 style="margin:12px 0 4px">'+esc(i.title&&i.title.en||'')+'</h4><pre class="snip">'+esc(i.body)+'</pre>';}).join('')+'<p class="note">Apply on the device by its administrator (change control as usual). The work item closes by itself once logs arrive.</p>';
+    window.zybDetail.open('Device configuration',name||id,h);},function(e){Z.toast('Could not read the setup: '+e.message);});}
+  function auto(){itam('GET','/log-collection/auto').then(function(a){AUTO=a;var lp=a.last_pass;$('autonote').textContent='Automatic enrolment '+(a.enabled?'on, every '+a.interval_min+' min, types '+a.types.join(', '):'off')+(lp?' · last pass '+Z.ago(lp.at)+': '+lp.enrolled.length+' enrolled, '+lp.refused.length+' refused'+(lp.error?' ('+lp.error+')':''):'')+(a.waiting_retry.length?' · '+a.waiting_retry.length+' waiting for a retry':'');$('enrol').hidden=!Z.can('admin');},function(){$('autonote').textContent='Automatic enrolment is not installed in IT Asset Management yet - run the update.';});}
+  $('enrol').addEventListener('click',function(){var b=$('enrol');b.disabled=true;itam('POST','/log-collection/auto/run').then(function(r){Z.toast(r.enrolled.length+' enrolled, '+r.refused.length+' refused'+(r.error?' - '+r.error:''));load(true);auto();},function(e){Z.toast('Could not run: '+e.message);}).then(function(){b.disabled=false;});});
+  $('q').addEventListener('input',function(){if(M)rows();});
+  function load(fresh){Z.req('GET','/collection/assurance'+(fresh?'?fresh=1':'')).then(function(j){M=j;paint();},function(e){var h=Z.errHtml(e,'log-flow assurance');['bycls','bysite','assets','unknown','quality'].forEach(function(id){$(id).innerHTML=h;});$('kk').innerHTML='';});}
+  $('refresh').addEventListener('click',function(){load(true);auto();});
+  Z.ready(function(){load(false);auto();});
+  setInterval(function(){if(!document.hidden)load(false);},60000);
+})();
+</script>
+<script src="vendor/zyb-duty.js" defer></script></body></html>

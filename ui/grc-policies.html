@@ -1,0 +1,275 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GRC Policies</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.g2{display:grid;grid-template-columns:2fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}.t.acc .v{color:var(--acc)}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}.btn{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}
+input,select,textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}textarea{width:100%;resize:vertical}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.cls-automated{background:rgba(63,185,80,.14);color:var(--ok)}.cls-monitored{background:rgba(121,184,255,.14);color:var(--info)}.cls-manual{background:rgba(140,147,161,.16);color:var(--mute)}
+.st{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}.st.pass{background:var(--ok)}.st.partial{background:var(--warn)}.st.fail{background:var(--bad)}.st.unknown,.st.external{background:#6b7280}
+.fw{display:inline-block;padding:1px 7px;border-radius:5px;font-size:10.5px;background:var(--raise);border:1px solid var(--border);color:var(--mute);margin:0 4px 3px 0}
+.fwgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(188px,1fr));gap:10px}
+.fwcard{background:var(--raise);border:1px solid var(--edge);border-radius:11px;padding:12px;cursor:pointer;transition:border-color .12s,transform .12s;display:flex;gap:11px;align-items:center}
+.fwcard:hover{border-color:#4a5162;transform:translateY(-1px)}.fwcard:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+.fwcard .nm{font-weight:700;color:var(--title);font-size:13.5px}.fwcard .mt{font-size:11.5px;color:var(--mute);margin-top:3px}
+.fwcard .pills{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap}
+.ring{flex:0 0 auto;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;color:var(--title)}
+.ring span{background:var(--raise);width:40px;height:40px;border-radius:50%;display:grid;place-items:center}
+.dot{display:inline-block;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:700}
+.dot.ok{background:rgba(63,185,80,.14);color:var(--ok)}.dot.warn{background:rgba(227,179,65,.15);color:var(--warn)}.dot.bad{background:rgba(255,123,114,.15);color:var(--bad)}.dot.mut{background:rgba(140,147,161,.16);color:var(--mute)}
+.rev-ok{color:var(--ok)}.rev-soon{color:var(--warn)}.rev-over{color:var(--bad);font-weight:700}
+.t[data-tf],.cstat .b[data-ck]{cursor:pointer;transition:border-color .12s,transform .12s}.t[data-tf]:hover,.cstat .b[data-ck]:hover{border-color:#4a5162;transform:translateY(-1px)}.t[data-tf]:focus-visible,.cstat .b[data-ck]:focus-visible{outline:2px solid var(--info);outline-offset:2px}.t.on{border-color:var(--info);box-shadow:inset 0 0 0 1px var(--info)}
+.rowc{cursor:pointer}.rowc:hover{background:rgba(255,255,255,.04)}
+.cstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}.cstat .b{background:var(--raise);border:1px solid var(--edge);border-radius:9px;padding:9px 11px}.cstat .b .n{font-size:12px;color:var(--mute)}.cstat .b .m{font-weight:700;margin-top:2px}
+.flt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+@media print{.top button,.flt{display:none}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Governance · GRC</div><h1>IT Policy Register &amp; Control Automation</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" class="btn" id="print">🖨 Report</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="k" id="kk"></div>
+<div class="g2">
+  <div class="card"><h2>Control automation <span class="c">live status of the controls behind the policies</span></h2><div class="cstat" id="cstat"><div class="empty">Loading…</div></div>
+    <p class="note">A control is <b>automated</b> only where the platform holds the signal (green/amber/red from live data); <b>monitored</b> where a module covers it; <b>manual</b> where an owner attests. Nothing is assumed green.</p></div>
+  <div class="card"><h2>Framework coverage</h2><div id="fw"></div>
+    <p class="note">Policies mapped to each regulatory framework (from each policy's own “Related Frameworks”).</p></div>
+</div>
+<div class="card"><h2>Insurance Authority (IA) framework <span class="c" id="iapct"></span></h2><div class="tw" id="ia"><div class="empty">Loading…</div></div>
+  <p class="note" id="ianote"></p></div>
+<div class="card"><h2>Policy register <span class="c" id="regc"></span></h2>
+  <div class="flt"><input id="q" placeholder="Search policy, ID, purpose…" style="flex:1;min-width:200px">
+    <select id="fdom"><option value="">All domains</option></select>
+    <select id="fcls"><option value="">All types</option><option value="automated">Automated</option><option value="monitored">Monitored</option><option value="manual">Manual</option></select>
+    <select id="frev"><option value="">All reviews</option><option value="overdue">Overdue</option><option value="soon">Due ≤ 90 days</option></select>
+    <button type="button" class="btn" id="xlsx" title="Download the policies shown (with the filter written into the file)">⬇ Excel</button></div>
+  <div class="tw" id="reg"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Policy drafting <span class="c" id="draftc"></span>
+    <span style="margin-left:auto;display:flex;gap:6px" id="drafttools"></span></h2>
+  <div class="tw" id="drafts"><div class="empty">Loading…</div></div>
+  <p class="note">New or replacement policies live here — separate from the signed register, which is never edited. Draft → in-review → approved, each edit bumps the version. Upload a .docx to attach the document; files up to ~1 MB are kept for download, larger are recorded by name + SHA-256.</p></div>
+<input type="file" id="docfile" accept=".docx,.pdf,.doc" hidden>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', REG=[], SUM=null, LIVE={}, IA=null, SAMA=null;
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=60000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function soc(p){return new Promise(function(ok){var x=new XMLHttpRequest();x.open('GET','/api/soc'+p);x.withCredentials=true;x.timeout=20000;x.onload=function(){try{ok(JSON.parse(x.responseText));}catch(e){ok(null);}};x.onerror=x.ontimeout=function(){ok(null);};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4200);}
+  function tile(l,v,s,cls,tf){return '<div class="t '+(cls||'')+(tf&&tfOn(tf)?' on':'')+'"'+(tf?' data-tf="'+esc(tf)+'" tabindex="0" role="button" title="Show these policies in the register (click again for all)"':'')+'><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  // a KPI tile = a register filter: type (automated / monitored / manual) or review (due / overdue); "all" clears both
+  var TF={all:['',''],automated:['automated',''],monitored:['monitored',''],manual:['manual',''],soon:['','soon'],overdue:['','overdue']};
+  function tfOn(k){var f=TF[k];return !!f&&k!=='all'&&$('fcls').value===f[0]&&$('frev').value===f[1];}
+  function tileFilter(k){var f=TF[k];if(!f)return;var off=tfOn(k)||k==='all';$('fcls').value=off?'':f[0];$('frev').value=off?'':f[1];if(k==='all'){$('q').value='';$('fdom').value='';}drawReg();drawSummary();$('reg').scrollIntoView({behavior:'smooth',block:'start'});}
+  var CLBL={automated:'Automated',monitored:'Monitored',manual:'Manual'};
+
+  function load(){
+    Promise.all([req('GET','/grc/register'),req('GET','/grc/summary')]).then(function(R){REG=(R[0]&&R[0].items)||[];SUM=R[1]||{};
+      fillDomains();drawSummary();drawFrameworks();drawReg();
+      req('GET','/grc/frameworks/ia').then(function(d){IA=d;drawIA(d);drawFrameworks();}).catch(function(){$('ia').innerHTML='<div class="empty">Insurance Authority view needs the updated GRC engine — run the engine update.</div>';});
+      // SAMA live SIEM-evidenced coverage (best-effort — badges the SAMA card and feeds its drill-down)
+      soc('/compliance/sama').then(function(d){if(d&&d.summary){SAMA=d;drawFrameworks();}});
+      // SOC-side live signals (best-effort)
+      Promise.all([soc('/dfir/overview'),soc('/netops/npm'),soc('/netops/overview')]).then(function(S){
+        var dfir=S[0]||{},npm=S[1]||{},ov=S[2]||{};
+        if(dfir.cases)LIVE.incidents={state:(dfir.approvals&&dfir.approvals.pending)?'partial':'pass',metric:(dfir.cases.open||0)+' open case(s)',detail:(dfir.approvals&&dfir.approvals.pending||0)+' response action(s) awaiting approval'};
+        if(npm.counts)LIVE.network={state:(npm.counts.critical?'fail':(npm.counts.warning?'partial':'pass')),metric:(npm.counts.up||0)+'/'+(npm.total||0)+' nodes up',detail:(npm.counts.critical||0)+' critical, '+(npm.counts.warning||0)+' warning'};
+        if(ov&&ov.changes_pending!=null)LIVE.change={state:ov.changes_pending?'partial':'pass',metric:(ov.changes_pending||0)+' change(s) pending',detail:'awaiting approval in the change workflow'};
+        drawCstat();
+      });
+      $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    }).catch(function(e){$('kk').innerHTML='<p class="err">'+esc(e.status===404?'IT Asset Management does not have the GRC module yet — run the engine update.':e.message)+'</p>';});
+  }
+  function fillDomains(){var seen={},opt='<option value="">All domains</option>';REG.forEach(function(p){if(!seen[p.domain_code]){seen[p.domain_code]=1;opt+='<option value="'+esc(p.domain_code)+'">'+esc(p.domain)+'</option>';}});$('fdom').innerHTML=opt;}
+  function drawSummary(){var c=SUM.by_cls||{},r=SUM.reviews||{};
+    $('kk').innerHTML=tile('Policies',SUM.total||0,'approved & on register','info','all')+tile('Automated',c.automated||0,'live platform controls','ok','automated')+tile('Monitored',c.monitored||0,'module covers it','info','monitored')+tile('Manual',c.manual||0,'owner attestation','','manual')+tile('Reviews due',r.soon||0,'within 90 days',(r.soon)?'warn':'ok','soon')+tile('Overdue',r.overdue||0,'past review date',(r.overdue)?'bad':'ok','overdue');}
+  function drawCstat(){var cs=(SUM&&SUM.control_status)||{};
+    // merge backend (itam) checks with page-fetched soc checks
+    var merged={}; Object.keys(cs).forEach(function(k){merged[k]=cs[k];}); Object.keys(LIVE).forEach(function(k){merged[k]=LIVE[k];});
+    var NAME=CNAME={register:'Policy register (IT-PPM-001)',assets:'Asset management',patch:'Patch management',backup:'Backup & recoverability',virt:'Virtualization',roles:'Roles & responsibilities',incidents:'Incident management',network:'Network monitoring',change:'Change approval'};
+    var order=['register','assets','patch','backup','virt','incidents','network','change','roles'];
+    var keys=order.filter(function(k){return merged[k];}).concat(Object.keys(merged).filter(function(k){return order.indexOf(k)<0;}));
+    $('cstat').innerHTML=keys.length?keys.map(function(k){var s=merged[k]||{};CST[k]=s;return '<div class="b" data-ck="'+esc(k)+'" tabindex="0" role="button" title="Open this control: its live status, the policies it backs and the page with the evidence"><div class="n"><span class="st '+esc(s.state||'unknown')+'"></span>'+esc(NAME[k]||k)+'</div><div class="m">'+esc(s.metric||(s.state==='unknown'?'not connected':''))+'</div><div class="n">'+esc(s.detail||'')+'</div></div>';}).join(''):'<div class="empty">No control signals yet.</div>';}
+  // ---- control cards (clickable → status, the policies behind it, the page that holds the evidence)
+  var CNAME={}, CST={};
+  var CPAGE={register:'grc-policies.html',assets:'network-discovery.html',patch:'end-user-devices.html',backup:'backup.html',virt:'virtualization.html',incidents:'dfir.html',network:'npm-summary.html',change:'network-engineer.html',roles:'roles.html',cmdb:'reconcile.html'};
+  var STL={pass:'Pass',partial:'Partial',fail:'Failing',unknown:'Not connected',external:'External'};
+  function openControl(k){
+    var s=CST[k]||{},pol=REG.filter(function(p){return p.control&&p.control.check===k;});
+    var page=(pol[0]&&pol[0].control.page)||CPAGE[k]||'';
+    var body=Z.kv([['Control',esc(CNAME[k]||k)],['Status','<span class="st '+esc(s.state||'unknown')+'"></span>'+esc(STL[s.state]||s.state||'Not connected')],['Measured',esc(s.metric||'—')],['Detail',esc(s.detail||'—')]]);
+    body+=Z.sec('Policies this control evidences ('+pol.length+')',pol.length?('<table><thead><tr><th>ID</th><th>Policy</th><th>Type</th><th>Review</th></tr></thead><tbody>'+pol.map(function(p){return '<tr class="rowc" data-id="'+esc(p.doc_id)+'"><td class="mono">'+esc(p.doc_id)+'</td><td>'+esc(p.title)+'</td><td><span class="pill cls-'+esc(p.control.cls)+'">'+esc(CLBL[p.control.cls])+'</span></td><td>'+revCell(p)+'</td></tr>';}).join('')+'</tbody></table>'):'<p class="muted">No approved policy names this control as its evidence yet.</p>');
+    if(page&&page!=='grc-policies.html')body+='<p style="margin-top:10px"><a href="'+esc(page)+'" style="color:var(--info)">Open the records behind this number ↗</a></p>';
+    else if(k==='register')body+='<p style="margin-top:10px" class="muted">The register is on this page, below.</p>';
+    if(s.state==='fail'||s.state==='partial')body+='<p style="margin-top:10px">'+'<a class="btn sm" style="text-decoration:none" href="grc-workspace.html#actions?new=1&amp;source=control&amp;ref='+encodeURIComponent(k)+'&amp;title='+encodeURIComponent((CNAME[k]||k)+' control is '+(STL[s.state]||s.state).toLowerCase())+'">＋ Create a remediation action</a>'+'</p>';
+    Z.open('Control automation',CNAME[k]||k,body);
+  }
+  // ---- Framework coverage cards (clickable → per-framework drill-down)
+  var FWORDER=['SAMA','NCA','PDPL','Insurance Authority','NDMO','ISO 27001','BCM'];
+  function ringCol(p){return p>=70?'var(--ok)':p>=40?'var(--warn)':'var(--bad)';}
+  function ring(pct,col){var p=Math.max(0,Math.min(100,pct||0));return '<div class="ring" style="background:conic-gradient('+col+' '+(p*3.6)+'deg,#20242d 0)"><span>'+p+'%</span></div>';}
+  // aggregate the policy register by framework: mapped count, control mix, overdue reviews
+  function fwAgg(){var m={};REG.forEach(function(p){(p.frameworks_list||[]).forEach(function(f){var a=m[f]||(m[f]={name:f,policies:[],auto:0,mon:0,man:0,overdue:0});a.policies.push(p);if(p.control.cls==='automated')a.auto++;else if(p.control.cls==='monitored')a.mon++;else a.man++;if(p.review&&p.review.overdue)a.overdue++;});});return m;}
+  function drawFrameworks(){
+    var agg=fwAgg();
+    // always surface the frameworks we hold a live assessment for, even if few policies map to them yet
+    if(SAMA&&SAMA.summary&&!agg.SAMA)agg.SAMA={name:'SAMA',policies:[],auto:0,mon:0,man:0,overdue:0};
+    if(IA&&IA.summary&&!agg['Insurance Authority'])agg['Insurance Authority']={name:'Insurance Authority',policies:[],auto:0,mon:0,man:0,overdue:0};
+    var names=Object.keys(agg);
+    names.sort(function(a,b){var ia=FWORDER.indexOf(a),ib=FWORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b);});
+    if(!names.length){$('fw').innerHTML='<div class="empty">—</div>';return;}
+    $('fw').innerHTML='<div class="fwgrid">'+names.map(function(n){var a=agg[n];
+      // assessed coverage where the platform genuinely has it; otherwise control-automation share of mapped policies
+      var assessed=null;
+      if(n==='SAMA'&&SAMA&&SAMA.summary)assessed={pct:SAMA.summary.coverage_pct,label:'SIEM-evidenced'};
+      else if(n==='Insurance Authority'&&IA&&IA.summary)assessed={pct:IA.summary.coverage_pct,label:'crosswalk'};
+      var tot=a.policies.length,autoPct=tot?Math.round((a.auto+a.mon*0.5)/tot*100):0;
+      var pct=assessed?assessed.pct:autoPct,col=ringCol(pct);
+      var sub=assessed?(assessed.label+' coverage'):(a.auto+' automated · '+a.mon+' monitored');
+      return '<div class="fwcard" tabindex="0" role="button" data-fw="'+esc(n)+'" title="Open '+esc(n)+' controls">'
+        +ring(pct,col)
+        +'<div style="min-width:0"><div class="nm">'+esc(n)+'</div><div class="mt">'+tot+' mapped '+(tot===1?'policy':'policies')+'</div>'
+        +'<div class="pills"><span class="dot '+(assessed?'info':'mut')+'" style="'+(assessed?'':'')+'">'+esc(sub)+'</span>'+(a.overdue?'<span class="dot bad">'+a.overdue+' review overdue</span>':'')+'</div></div></div>';
+    }).join('')+'</div>';
+  }
+  function openFramework(name){
+    var agg=fwAgg(),a=agg[name]||{name:name,policies:[],auto:0,mon:0,man:0,overdue:0};
+    var tot=a.policies.length;
+    var head=Z.kv([['Framework',esc(name)],['Mapped policies',String(tot)],['Automated controls',String(a.auto)],['Monitored',String(a.mon)],['Manual (attested)',String(a.man)],['Reviews overdue',a.overdue?('<span class="err">'+a.overdue+'</span>'):'0']]);
+    var body=head;
+    // live, assessed coverage sections where the platform truly has them
+    if(name==='SAMA'){
+      if(SAMA&&SAMA.summary){var s=SAMA.summary,c=s.counts||{};
+        body+=Z.sec('SIEM-evidenced coverage (SAMA CSF)','<p><b style="color:'+ringCol(s.coverage_pct)+'">'+ (s.coverage_pct!=null?s.coverage_pct:0) +'%</b> coverage — '+(c.covered||0)+' covered, '+(c.partial||0)+' partial, '+(c.gap||0)+' gap, '+(c['n/a']||0)+' GRC-owned, across '+(s.evidenced||0)+' SIEM-evidenced controls.</p>'+domsHTML(SAMA)+'<p style="margin-top:8px"><a href="sama-compliance.html" style="color:var(--info)">Open the full SAMA CSF control board ↗</a></p>');
+      } else body+=Z.sec('SIEM-evidenced coverage (SAMA CSF)','<p class="muted">Live SAMA coverage needs the SIEM compliance module — <a href="sama-compliance.html" style="color:var(--info)">open the SAMA page ↗</a>. Below are the approved policies mapped to SAMA.</p>');
+    } else if(name==='Insurance Authority'){
+      if(IA&&IA.domains){var s2=IA.summary||{};
+        body+=Z.sec('IA supervisory coverage (indicative crosswalk)','<p><b style="color:'+ringCol(s2.coverage_pct)+'">'+(s2.coverage_pct!=null?s2.coverage_pct:0)+'%</b> — '+(s2.covered||0)+' covered, '+(s2.partial||0)+' partial, '+(s2.gap||0)+' gap'+(s2.na?(', '+s2.na+' n/a'):'')+'.</p>'+iaDomsHTML(IA)+'<p class="note">'+(IA.indicative?'Indicative crosswalk — confirm against the current IA regulations. ':'')+esc(IA.note||'')+'</p>');
+      }
+    } else {
+      body+=Z.sec('Assessment','<p class="muted">No per-control regulator assessment is connected for '+esc(name)+' yet — coverage below reflects the share of mapped approved policies whose platform control is <b>automated</b>. A control-by-control '+esc(name)+' assessment can be added as a feed.</p>');
+    }
+    // the policies mapped to this framework, always (clickable → policy detail)
+    body+=Z.sec('Mapped policies ('+tot+')', tot?('<table><thead><tr><th>ID</th><th>Policy</th><th>Type</th><th>Review</th></tr></thead><tbody>'
+      +a.policies.slice().sort(function(x,y){return (x.domain_code||'').localeCompare(y.domain_code||'');}).map(function(p){return '<tr class="rowc" data-id="'+esc(p.doc_id)+'"><td class="mono">'+esc(p.doc_id)+'</td><td>'+esc(p.title)+'</td><td><span class="pill cls-'+esc(p.control.cls)+'">'+esc(CLBL[p.control.cls])+'</span></td><td>'+revCell(p)+'</td></tr>';}).join('')+'</tbody></table>'):'<p class="muted">No approved policies map to '+esc(name)+' yet.</p>');
+    Z.open('Framework coverage',name,body);
+  }
+  function domsHTML(V){var bd=(V.summary&&V.summary.by_domain)||{};var keys=Object.keys(bd);if(!keys.length)return '';
+    return '<div class="tw" style="margin-top:8px"><table><thead><tr><th>Domain</th><th>Covered</th><th>Partial</th><th>Gap</th><th>GRC</th></tr></thead><tbody>'+keys.map(function(k){var d=bd[k];return '<tr><td>'+esc(d.title||k)+'</td><td>'+(d.covered||0)+'</td><td>'+(d.partial||0)+'</td><td>'+(d.gap||0)+'</td><td class="muted">'+(d['n/a']||0)+'</td></tr>';}).join('')+'</tbody></table></div>';}
+  function iaDomsHTML(d){return '<div class="tw" style="margin-top:8px"><table><thead><tr><th>IA supervisory domain</th><th>Status</th><th>Policies</th></tr></thead><tbody>'+(d.domains||[]).map(function(x){var st=IAST[x.status]||IAST.na;return '<tr><td>'+esc(x.name)+'</td><td><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+st[1]+';margin-right:6px"></span>'+esc(st[0])+'</td><td>'+((x.policies||[]).length?x.policies.map(function(p){return '<span class="fw">'+esc(p.doc_id)+'</span>';}).join(''):'<span class="muted">none</span>')+'</td></tr>';}).join('')+'</tbody></table></div>';}
+  var IAST={covered:['Covered','var(--ok)'],partial:['Partial','var(--warn)'],gap:['Gap','var(--bad)'],na:['N/A (business)','#6b7280']};
+  function drawIA(d){var s=d.summary||{};
+    $('iapct').textContent=(s.coverage_pct!=null?s.coverage_pct+'% coverage · ':'')+(s.covered||0)+' covered · '+(s.partial||0)+' partial · '+(s.gap||0)+' gap';
+    $('ia').innerHTML='<table><thead><tr><th>IA supervisory domain</th><th>Status</th><th>Policies</th><th>Platform control</th><th>Note</th></tr></thead><tbody>'
+      +(d.domains||[]).map(function(x){var st=IAST[x.status]||IAST.na;
+        return '<tr><td><b>'+esc(x.name)+'</b></td><td><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+st[1]+';margin-right:6px"></span>'+esc(st[0])+'</td>'
+        +'<td>'+((x.policies||[]).length?x.policies.map(function(p){return '<span class="fw" title="'+esc(p.title)+'">'+esc(p.doc_id)+'</span>';}).join(''):'<span class="muted">none</span>')+'</td>'
+        +'<td class="muted">'+esc(x.control||'')+'</td><td class="muted" style="font-size:12px">'+esc(x.note||'')+'</td></tr>';}).join('')+'</tbody></table>';
+    $('ianote').textContent=(d.indicative?'Indicative crosswalk — ':'')+(d.note||'')+' Authority: '+(d.authority||'Insurance Authority');
+  }
+  function revCell(p){var r=p.review||{};if(r.overdue)return '<span class="rev-over">overdue '+Math.abs(r.days)+'d</span>';if(r.soon)return '<span class="rev-soon">in '+r.days+'d</span>';if(r.days!=null)return '<span class="rev-ok">'+esc(r.next_review||'')+'</span>';return '<span class="muted">'+esc(r.next_review||'—')+'</span>';}
+  function drawReg(){
+    var q=$('q').value.trim().toLowerCase(),dom=$('fdom').value,cls=$('fcls').value,rev=$('frev').value;
+    var rows=REG.filter(function(p){if(dom&&p.domain_code!==dom)return false;if(cls&&p.control.cls!==cls)return false;if(rev==='overdue'&&!p.review.overdue)return false;if(rev==='soon'&&!p.review.soon)return false;if(q&&(p.title+' '+p.doc_id+' '+(p.purpose||'')).toLowerCase().indexOf(q)<0)return false;return true;});
+    $('regc').textContent=rows.length+' of '+REG.length;
+    // group by domain
+    var by={};rows.forEach(function(p){(by[p.domain]=by[p.domain]||[]).push(p);});
+    var html='';Object.keys(by).sort().forEach(function(dm){html+='<tr><td colspan="6" style="background:var(--raise);font-weight:700;color:var(--title)">'+esc(dm)+'</td></tr>'
+      +by[dm].map(function(p){return '<tr class="rowc" data-id="'+esc(p.doc_id)+'"><td class="mono">'+esc(p.doc_id)+'</td><td>'+esc(p.title)+(p.is_flow?' <span class="muted">(flow)</span>':'')+'</td><td><span class="pill cls-'+esc(p.control.cls)+'">'+esc(CLBL[p.control.cls])+'</span></td><td>'+esc(p.control.module||'')+'</td><td>'+(p.frameworks_list||[]).map(function(f){return '<span class="fw">'+esc(f)+'</span>';}).join('')+'</td><td>'+revCell(p)+(p.attestation?' <span class="st pass" title="attested"></span>':'')+'</td></tr>';}).join('');});
+    $('reg').innerHTML=rows.length?'<table><thead><tr><th>ID</th><th>Policy</th><th>Type</th><th>Control / module</th><th>Frameworks</th><th>Next review</th></tr></thead><tbody>'+html+'</tbody></table>':'<div class="empty">No policies match the filter.</div>';
+  }
+  function openPolicy(id){req('GET','/grc/policy/'+encodeURIComponent(id)).then(function(p){
+    var cs=(SUM&&SUM.control_status)||{},live=LIVE[p.control.check]||cs[p.control.check];
+    var body=Z.kv([['Document ID',esc(p.doc_id)],['Version',esc(p.version||'—')],['Owner',esc(p.owner||'—')],['Approver',esc(p.approver||'—')],['Effective',esc(p.effective||'—')],['Next review',revCell(p)],['Review cycle',esc(p.review_cycle||'—')],['Status',esc(p.status||'—')],['Classification',esc(p.classification||'—')]]);
+    body+=Z.sec('Control automation','<p><span class="pill cls-'+esc(p.control.cls)+'">'+esc(CLBL[p.control.cls])+'</span> '+esc(p.control.module||'')+(p.control.page?' · <a href="'+esc(p.control.page)+'" style="color:var(--info)">open module ↗</a>':'')+'</p>'+(live?'<p><span class="st '+esc(live.state||'unknown')+'"></span><b>'+esc(live.metric||live.state||'')+'</b> — '+esc(live.detail||'')+'</p>':(p.control.cls==='manual'?'<p class="muted">Owner attestation — no automated signal.</p>':'<p class="muted">Monitored by the module above.</p>')));
+    if(p.purpose)body+=Z.sec('Purpose',' <p>'+esc(p.purpose)+'</p>');
+    if((p.requirements||[]).length)body+=Z.sec('Policy requirements','<ul style="margin:0;padding-left:18px">'+p.requirements.slice(0,20).map(function(r){return '<li>'+esc(r)+'</li>';}).join('')+'</ul>');
+    if((p.frameworks_list||[]).length)body+=Z.sec('Frameworks',p.frameworks_list.map(function(f){return '<span class="fw">'+esc(f)+'</span>';}).join(''));
+    body+=Z.sec('Attestations',(p.attestation?('<p>Last: <b>'+esc(p.attestation.decision)+'</b> by '+esc(p.attestation.by)+' · '+new Date(p.attestation.at).toLocaleDateString('en-GB')+'<br><span class="muted">'+esc(p.attestation.note)+'</span></p>'):'<p class="muted">No attestation recorded yet.</p>')
+      +(can('operator')?'<div style="margin-top:8px"><textarea id="attnote" rows="2" placeholder="Attestation note (what was reviewed / confirmed)"></textarea><div style="margin-top:6px"><input id="attper" placeholder="period e.g. 2026-Q4" style="width:140px"> <button class="btn pri" id="attgo">Record attestation</button>'+(can('admin')?' <button class="btn" id="revgo">Acknowledge review</button>':'')+'</div></div>':''));
+    Z.open('Policy '+p.doc_id,p.title,body);
+    if(can('operator')){var g=document.getElementById('attgo');if(g)g.onclick=function(){var n=document.getElementById('attnote').value.trim();if(!n){toast('Enter an attestation note');return;}g.disabled=true;req('POST','/grc/policy/'+encodeURIComponent(id)+'/attest',{note:n,period:document.getElementById('attper').value.trim()}).then(function(){toast('Attestation recorded');Z.close();load();}).catch(function(e){g.disabled=false;toast(e.message);});};
+      var rv=document.getElementById('revgo');if(rv)rv.onclick=function(){rv.disabled=true;req('POST','/grc/policy/'+encodeURIComponent(id)+'/review',{note:document.getElementById('attnote').value.trim()}).then(function(){toast('Review acknowledged');Z.close();load();}).catch(function(e){rv.disabled=false;toast(e.message);});};}
+  }).catch(function(e){toast(e.message);});}
+
+  $('xlsx').onclick=function(){if(!REG.length||!window.zybXlsx){toast('Nothing to export yet');return;}
+    var q=$('q').value.trim().toLowerCase(),dom=$('fdom').value,cls=$('fcls').value,rev=$('frev').value;
+    var rows=REG.filter(function(p){if(dom&&p.domain_code!==dom)return false;if(cls&&p.control.cls!==cls)return false;if(rev==='overdue'&&!p.review.overdue)return false;if(rev==='soon'&&!p.review.soon)return false;if(q&&(p.title+' '+p.doc_id+' '+(p.purpose||'')).toLowerCase().indexOf(q)<0)return false;return true;});
+    var sel=function(id){var o=$(id).selectedOptions[0];return $(id).value?(o?o.text:$(id).value):'';};
+    var f=[sel('fdom'),sel('fcls'),sel('frev'),q?'search "'+q+'"':''].filter(Boolean).join(', ');
+    zybXlsx.who().then(function(by){zybXlsx.download('it-policy-register-'+new Date().toISOString().slice(0,10)+'.xlsx',[{name:'Policy register',columns:[{h:'ID',w:14},{h:'Policy',w:44},{h:'Domain',w:28},{h:'Type',w:11},{h:'Control / module',w:34},{h:'Frameworks',w:30},{h:'Next review',t:'d',w:13},{h:'Days to review',t:'n',w:10},{h:'Review state',w:12},{h:'Attested',w:9}],
+      rows:rows.map(function(p){var r=p.review||{};return [p.doc_id,p.title,p.domain||'',CLBL[p.control.cls]||p.control.cls,p.control.module||'',(p.frameworks_list||[]).join(', '),r.next_review||'',r.days==null?'':r.days,r.overdue?'overdue':r.soon?'due soon':r.days!=null?'ok':'',p.attestation?'yes':''];})}],
+      {title:'IT Policy Register',by:by,filter:f,notes:'Automated = live platform signal; monitored = a module covers it; manual = owner attestation. Nothing is assumed green.'});});};
+  ['q','fdom','fcls','frev'].forEach(function(id){$(id).addEventListener('input',drawReg);$(id).addEventListener('change',function(){drawReg();if(SUM)drawSummary();});});
+  document.addEventListener('click',function(e){var tf=e.target.closest('[data-tf]');if(tf){tileFilter(tf.getAttribute('data-tf'));return;}var ck=e.target.closest('[data-ck]');if(ck){openControl(ck.getAttribute('data-ck'));return;}var fc=e.target.closest('.fwcard');if(fc&&fc.getAttribute('data-fw')){openFramework(fc.getAttribute('data-fw'));return;}var r=e.target.closest('.rowc');if(r&&r.getAttribute('data-id'))openPolicy(r.getAttribute('data-id'));});
+  document.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')){var tf=e.target.closest&&e.target.closest('[data-tf]');if(tf){e.preventDefault();tileFilter(tf.getAttribute('data-tf'));return;}var ck=e.target.closest&&e.target.closest('[data-ck]');if(ck){e.preventDefault();openControl(ck.getAttribute('data-ck'));return;}var fc=e.target.closest&&e.target.closest('.fwcard');if(fc&&fc.getAttribute('data-fw')){e.preventDefault();openFramework(fc.getAttribute('data-fw'));}}});
+  $('refresh').onclick=load;$('print').onclick=function(){window.print();};
+  // ---- Policy drafting
+  var DST={draft:['Draft','var(--mute)'],'in-review':['In review','var(--warn)'],approved:['Approved','var(--ok)'],rejected:['Rejected','var(--bad)']};
+  var UPLOAD_FOR='';
+  function post(p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('POST','/api/itam'+p);x.withCredentials=true;x.timeout=60000;x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(b?JSON.stringify(b):'{}');});}
+  function loadDrafts(){req('GET','/grc/drafts').then(function(r){drawDrafts((r&&r.items)||[]);}).catch(function(){$('drafts').innerHTML='<div class="empty">Policy drafting needs the updated GRC engine — run the engine update.</div>';});}
+  function drawDrafts(items){
+    $('draftc').textContent=items.length?items.length+' draft(s)':'';
+    $('drafttools').innerHTML=(can('operator')?'<button class="btn" id="newdraft">＋ New draft</button>':'')+(can('admin')?' <button class="btn" id="seedgaps">Create missing-policy drafts</button>':'');
+    if($('newdraft'))$('newdraft').onclick=function(){openDraft(null);};
+    if($('seedgaps'))$('seedgaps').onclick=function(){if(!confirm('Create draft policies for the PDPL / NDMO / IA gaps?'))return;post('/grc/drafts-seed-gaps',{}).then(function(r){toast('Created '+r.created+' draft(s)');loadDrafts();}).catch(function(e){toast(e.message);});};
+    $('drafts').innerHTML=items.length?'<table><thead><tr><th>Policy (draft)</th><th>Status</th><th>Ver</th><th>Frameworks</th><th>Document</th><th>Actions</th></tr></thead><tbody>'
+      +items.map(function(d){var st=DST[d.status]||DST.draft;var doc=d.document;
+        return '<tr><td><b>'+esc(d.title)+'</b>'+(d.domain?' <span class="muted">· '+esc(d.domain)+'</span>':'')+'</td>'
+          +'<td><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+st[1]+';margin-right:6px"></span>'+esc(st[0])+'</td><td class="mono">'+esc(d.version||'')+'</td>'
+          +'<td>'+(frameworksTags(d.frameworks))+'</td>'
+          +'<td>'+(doc?('<span class="mono" title="'+esc(doc.sha256||'')+'">'+esc(doc.filename)+'</span>'+(doc.stored==='inline'?' <a href="#" data-dl="'+esc(d.id)+'">↓</a>':' <span class="muted">(ref)</span>')):'<span class="muted">none</span>')+'</td>'
+          +'<td>'+(can('operator')?'<button class="btn" data-edit="'+esc(d.id)+'">Edit</button> <button class="btn" data-up="'+esc(d.id)+'">Upload</button> ':'')
+            +(can('admin')?(d.status!=='approved'?'<button class="btn" data-st="'+esc(d.id)+'" data-to="approved">Approve</button> ':'')+(d.status==='draft'?'<button class="btn" data-st="'+esc(d.id)+'" data-to="in-review">→Review</button> ':'')+'<button class="btn" data-del="'+esc(d.id)+'">✕</button>':'')+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No drafts yet.'+(can('operator')?' Use “New draft”, or “Create missing-policy drafts” to seed the PDPL / NDMO / IA gaps.':'')+'</div>';
+  }
+  function frameworksTags(s){var l=String(s||'').split(/[,;]/).map(function(x){return x.trim();}).filter(Boolean);return l.length?l.map(function(f){return '<span class="fw">'+esc(f)+'</span>';}).join(''):'<span class="muted">—</span>';}
+  function openDraft(id){
+    var go=function(d){d=d||{};
+      var body='<div style="display:grid;gap:8px">'
+        +'<label>Title<input id="df-t" value="'+esc(d.title||'')+'" style="width:100%"></label>'
+        +'<div style="display:flex;gap:8px"><label style="flex:1">Domain<input id="df-dom" value="'+esc(d.domain||'')+'" style="width:100%"></label><label style="flex:1">Owner<input id="df-own" value="'+esc(d.owner||'')+'" style="width:100%"></label></div>'
+        +'<label>Frameworks (comma separated)<input id="df-fw" value="'+esc(d.frameworks||'')+'" style="width:100%"></label>'
+        +'<label>Purpose<textarea id="df-pur" rows="2" style="width:100%">'+esc(d.purpose||'')+'</textarea></label>'
+        +'<label>Policy requirements (one per line)<textarea id="df-req" rows="5" style="width:100%">'+esc((d.requirements||[]).join('\n'))+'</textarea></label>'
+        +'<label>Body / notes<textarea id="df-body" rows="4" style="width:100%">'+esc(d.body||'')+'</textarea></label>'
+        +'<div><button class="btn pri" id="df-save">Save draft</button> <span class="muted">'+(d.version?'v'+esc(d.version)+' · '+esc(d.status||''):'new')+'</span></div></div>';
+      Z.open(d.id?'Edit draft '+d.id:'New draft policy',d.title||'New policy',body);
+      $('df-save').onclick=function(){var payload={title:document.getElementById('df-t').value,domain:document.getElementById('df-dom').value,owner:document.getElementById('df-own').value,frameworks:document.getElementById('df-fw').value,purpose:document.getElementById('df-pur').value,requirements:document.getElementById('df-req').value,body:document.getElementById('df-body').value};
+        if(!payload.title.trim()){toast('Title required');return;}
+        var p=d.id?'/grc/drafts/'+encodeURIComponent(d.id):'/grc/drafts';$('df-save').disabled=true;post(p,payload).then(function(){toast('Saved');Z.close();loadDrafts();}).catch(function(e){$('df-save').disabled=false;toast(e.message);});};
+    };
+    if(id)req('GET','/grc/drafts/'+encodeURIComponent(id)).then(go).catch(function(e){toast(e.message);});else go(null);
+  }
+  function uploadDoc(id){UPLOAD_FOR=id;$('docfile').value='';$('docfile').click();}
+  $('docfile').onchange=function(){var f=this.files&&this.files[0];if(!f||!UPLOAD_FOR)return;if(f.size>8*1024*1024){toast('File too large (max ~8 MB)');return;}
+    var fr=new FileReader();fr.onload=function(){var buf=fr.result;
+      crypto.subtle.digest('SHA-256',buf).then(function(h){var sha=[].map.call(new Uint8Array(h),function(b){return b.toString(16).padStart(2,'0');}).join('');
+        var bytes=new Uint8Array(buf),bin='';for(var i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);var b64=btoa(bin);
+        post('/grc/drafts/'+encodeURIComponent(UPLOAD_FOR)+'/upload',{filename:f.name,size:f.size,sha256:sha,content_b64:b64}).then(function(){toast('Document attached');loadDrafts();}).catch(function(e){toast(e.message);});
+      });};fr.readAsArrayBuffer(f);};
+  function downloadDoc(id){req('GET','/grc/drafts/'+encodeURIComponent(id)+'/document').then(function(r){var bin=atob(r.content_b64),bytes=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([bytes]));var a=document.createElement('a');a.href=url;a.download=r.filename||'policy';a.click();setTimeout(function(){URL.revokeObjectURL(url);},2000);}).catch(function(e){toast(e.message);});}
+  document.addEventListener('click',function(e){var t=e.target;
+    var ed=t.closest&&t.closest('[data-edit]');if(ed){openDraft(ed.getAttribute('data-edit'));return;}
+    var up=t.closest&&t.closest('[data-up]');if(up){uploadDoc(up.getAttribute('data-up'));return;}
+    var st=t.closest&&t.closest('[data-st]');if(st){post('/grc/drafts/'+encodeURIComponent(st.getAttribute('data-st'))+'/status',{status:st.getAttribute('data-to')}).then(function(){toast('Status updated');loadDrafts();}).catch(function(er){toast(er.message);});return;}
+    var dl=t.closest&&t.closest('[data-dl]');if(dl){e.preventDefault();downloadDoc(dl.getAttribute('data-dl'));return;}
+    var del=t.closest&&t.closest('[data-del]');if(del){if(confirm('Delete this draft?'))post('/grc/drafts/'+encodeURIComponent(del.getAttribute('data-del'))+'/delete',{}).then(function(){toast('Deleted');loadDrafts();}).catch(function(er){toast(er.message);});return;}
+  });
+  var _oldLoad=load;load=function(){_oldLoad();loadDrafts();};
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+})();
+</script><script src="vendor/zyb-xlsx.js"></script></body></html>

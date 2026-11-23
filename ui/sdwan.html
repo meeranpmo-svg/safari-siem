@@ -1,0 +1,109 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SD-WAN</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:1050px){.g3{grid-template-columns:1fr 1fr}}@media(max-width:820px){.g3,.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:26px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+button{font:13px "Segoe UI",system-ui,sans-serif;font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05)}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.st-normal,.st-up{background:var(--ok)}.st-warning{background:var(--warn)}.st-error,.st-down{background:var(--bad)}.st-unknown{background:#6b7280}
+.row-click{cursor:pointer}.row-click:hover{background:rgba(255,255,255,.04)}
+.bar{display:flex;align-items:center;gap:10px;margin:9px 0}.bar .lb{width:110px;color:var(--mute);font-size:12.5px}.bar .track{flex:1;height:16px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}.bar .track i{display:block;height:100%;border-radius:5px}.bar .vv{width:34px;text-align:right;font-weight:700}
+.circ{display:flex;gap:10px;justify-content:space-around;text-align:center;flex-wrap:wrap}.circ .c{width:30%;min-width:84px}.circ .ring{width:76px;height:76px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;border:5px solid var(--edge)}.circ .l{font-size:11px;color:var(--mute);text-transform:uppercase;margin-top:5px}
+.sh{display:flex;align-items:center;justify-content:space-between;padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.05)}.sh .n{font-weight:700}
+.ni{background:var(--raise);border:1px dashed var(--border);border-radius:9px;padding:12px;color:var(--mute);font-size:12.5px;line-height:1.5}.ni b{color:var(--text)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+@media print{.top button{display:none}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · SD-WAN</div><h1>SD-WAN Performance</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="print">🖨 Report</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="k" id="kk"></div>
+<div class="g3">
+  <div class="card"><h2>Control status <span class="c" id="ctc"></span></h2><div id="control"></div>
+    <p class="note">Up = edge reachable with every overlay path alive. Partial = reachable, one or more paths down. Down = unreachable. Unknown = not yet polled.</p></div>
+  <div class="card"><h2>Site health <span class="c" id="shc"></span></h2><div id="sites"></div></div>
+  <div class="card"><h2>Transport interface distribution <span class="c">by link speed</span></h2><div class="tw" id="transport"></div></div>
+</div>
+<div class="g3">
+  <div class="card"><h2>WAN edge inventory</h2><div class="tw" id="inv"></div></div>
+  <div class="card"><h2>WAN edge health <span class="c" id="total"></span></h2><div class="circ" id="health" style="margin:10px 0"></div></div>
+  <div class="card"><h2>Top applications</h2><div id="apps"></div></div>
+</div>
+<div class="card"><h2>Application-aware routing <span class="c" id="tunc"></span></h2><div class="tw" id="tunnels"></div>
+  <p class="note">Per-tunnel latency / loss / jitter from each edge's SD-WAN health checks, worst first. Click a row to open the edge's vital stats.</p></div>
+<div class="card"><h2>WAN edges <span class="c" id="edgec"></span></h2><div class="tw" id="edges"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var V=null;
+  function req(p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/soc/netops'+p);x.withCredentials=true;x.timeout=60000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('The AI Network Engineer service is not reachable'));};x.send();});}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function fnum(v){return v==null?'—':Math.round(v*10)/10;}
+  function bar(lb,v,tot,col){var p=tot?Math.round(v/tot*100):0;return '<div class="bar"><div class="lb">'+esc(lb)+'</div><div class="track"><i style="width:'+p+'%;background:'+col+'"></i></div><div class="vv">'+v+'</div></div>';}
+  function draw(){
+    var ctl=V.control||{}, sh=V.siteHealth||{}, inv=V.inventory||{}, h=V.health||{}, td=V.transportDist||{}, edges=V.edges||[], tun=V.tunnels||[];
+    var sites=(sh.sites||[]);
+    var tunDown=tun.filter(function(t){return (t.loss_pct===100)||/down|dead|fail/i.test(t.status||'');}).length;
+    $('kk').innerHTML=tile('WAN edges',inv.total||0,'in inventory','info')+tile('Deployed',inv.deployed||0,'polled',inv.deployed?'ok':'')
+      +tile('Sites',sites.length,'')+tile('Overlay tunnels',tun.length,'')+tile('Tunnels down',tunDown,'',tunDown?'bad':'ok')+tile('Edges in error',h.error||0,'',(h.error)?'bad':'ok');
+    // control status bars
+    var ctot=(ctl.up||0)+(ctl.partial||0)+(ctl.down||0)+(ctl.unknown||0);
+    $('ctc').textContent='total '+ctot;
+    $('control').innerHTML=ctot?bar('Control up',ctl.up||0,ctot,'var(--ok)')+bar('Partial',ctl.partial||0,ctot,'var(--warn)')+bar('Control down',ctl.down||0,ctot,'var(--bad)')+((ctl.unknown)?bar('Unknown',ctl.unknown,ctot,'#6b7280'):'')
+      :'<div class="empty">No SD-WAN edges in inventory. Add appliances with role WAN edge / SD-WAN appliance (or vendor Silver Peak) in the AI Network Engineer.</div>';
+    // site health
+    $('shc').textContent=sites.length?sites.length+' site(s)':'';
+    var icon={full:'<span class="dot st-up"></span>',partial:'<span class="dot st-warning"></span>',none:'<span class="dot st-error"></span>'};
+    $('sites').innerHTML=(sh.full||sh.partial||sh.none)?'<div class="sh"><div>'+icon.full+'Full WAN connectivity</div><div class="n" style="color:var(--ok)">'+(sh.full||0)+'</div></div>'
+      +'<div class="sh"><div>'+icon.partial+'Partial WAN connectivity</div><div class="n" style="color:var(--warn)">'+(sh.partial||0)+'</div></div>'
+      +'<div class="sh" style="border:0"><div>'+icon.none+'No WAN connectivity</div><div class="n" style="color:var(--bad)">'+(sh.none||0)+'</div></div>'
+      +(sites.length?'<p class="note">'+sites.map(function(s){return esc(s.site)+' ('+s.alive+'/'+s.total+' paths)';}).join(' · ')+'</p>':'')
+      :'<div class="empty">No overlay paths reported yet.</div>';
+    // transport distribution
+    var rows=[['< 10 Mbps','<10'],['10 – 100 Mbps','10-100'],['100 – 500 Mbps','100-500'],['> 500 Mbps','>500']];
+    var tsum=rows.reduce(function(n,r){return n+(td[r[1]]||0);},0);
+    $('transport').innerHTML=tsum?'<table><tbody>'+rows.map(function(r){return '<tr><td>'+esc(r[0])+'</td><td style="text-align:right;font-weight:700">'+(td[r[1]]||0)+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No transport interfaces reported. Enable SNMP/API polling on the edges.</div>';
+    // wan edge inventory
+    $('inv').innerHTML='<table><tbody>'
+      +'<tr><td>Total</td><td style="text-align:right;font-weight:700">'+(inv.total||0)+'</td></tr>'
+      +'<tr><td>Authorized</td><td style="text-align:right;font-weight:700">'+(inv.authorized||0)+'</td></tr>'
+      +'<tr><td>Deployed <span class="muted">(polled)</span></td><td style="text-align:right;font-weight:700">'+(inv.deployed||0)+'</td></tr>'
+      +'<tr><td>Staging <span class="muted">(not polled)</span></td><td style="text-align:right;font-weight:700">'+(inv.staging||0)+'</td></tr></tbody></table>';
+    // health rings
+    $('total').textContent='total '+((h.normal||0)+(h.warning||0)+(h.error||0)+(h.unknown||0));
+    $('health').innerHTML='<div class="c"><div class="ring" style="border-color:var(--ok);color:var(--ok)">'+String(h.normal||0).padStart(2,'0')+'</div><div class="l">Normal</div></div>'
+      +'<div class="c"><div class="ring" style="border-color:var(--warn);color:var(--warn)">'+String(h.warning||0).padStart(2,'0')+'</div><div class="l">Warning</div></div>'
+      +'<div class="c"><div class="ring" style="border-color:var(--bad);color:var(--bad)">'+String(h.error||0).padStart(2,'0')+'</div><div class="l">Error</div></div>'
+      +((h.unknown)?'<div class="c"><div class="ring" style="border-color:#6b7280;color:#6b7280">'+String(h.unknown).padStart(2,'0')+'</div><div class="l">Unknown</div></div>':'');
+    // top apps — honest
+    $('apps').innerHTML='<div class="ni">Per-application usage is <b>not collected</b>. It needs an <b>application-aware (DPI) feed</b> from the SD-WAN fabric — the appliance\'s app stats over its API, or NetFlow/IPFIX with application tags. Overlay-path health (latency / loss / jitter) below is real; application breakdown is not inferred from it.</div>';
+    // tunnels
+    $('tunc').textContent=tun.length?tun.length+' tunnel(s)':'';
+    $('tunnels').innerHTML=tun.length?'<table><thead><tr><th>Tunnel endpoint</th><th>Member</th><th>Status</th><th>Avg latency</th><th>Avg loss</th><th>Avg jitter</th></tr></thead><tbody>'
+      +tun.map(function(t){var bad=(t.loss_pct===100)||/down|dead|fail/i.test(t.status||'');return '<tr class="row-click" data-id="'+esc(t.edge_id)+'"><td>'+esc(t.edge)+' › '+esc(t.name)+'</td><td class="mono">'+esc(t.member||'')+'</td><td><span class="dot st-'+(bad?'error':'up')+'"></span>'+esc(t.status||'—')+'</td><td>'+(t.latency_ms!=null?fnum(t.latency_ms)+' ms':'—')+'</td><td>'+(t.loss_pct!=null?fnum(t.loss_pct)+' %':'—')+'</td><td>'+(t.jitter_ms!=null?fnum(t.jitter_ms)+' ms':'—')+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No overlay paths reported. This table fills from each edge\'s SD-WAN health checks (e.g. FortiGate SD-WAN, Silver Peak overlays).</div>';
+    // edges
+    $('edgec').textContent=edges.length?edges.length+' edge(s)':'';
+    $('edges').innerHTML=edges.length?'<table><thead><tr><th>Edge</th><th>Site</th><th>Vendor</th><th>State</th><th>Paths up</th><th>Response</th><th>Loss</th></tr></thead><tbody>'
+      +edges.map(function(e){return '<tr class="row-click" data-id="'+esc(e.id)+'"><td>'+esc(e.name)+'</td><td>'+esc(e.site||'—')+'</td><td>'+esc(e.vendor||'')+'</td><td><span class="dot st-'+esc(e.state)+'"></span>'+esc(e.state)+'</td><td>'+esc(e.paths_up)+' / '+esc(e.paths)+'</td><td>'+(e.rtt_ms!=null?fnum(e.rtt_ms)+' ms':'—')+'</td><td>'+(e.loss_pct!=null?fnum(e.loss_pct)+' %':'—')+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No SD-WAN edges yet.</div>';
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  document.addEventListener('click',function(e){var r=e.target.closest('.row-click');if(r&&r.getAttribute('data-id'))location.href='node-details.html?id='+encodeURIComponent(r.getAttribute('data-id'));});
+  function load(){return req('/sdwan').then(function(r){V=r;draw();}).catch(function(e){$('kk').innerHTML='<p class="err">'+esc(e.status===404?'The AI Network Engineer on the server does not have the SD-WAN view yet — run the update.':e.message)+'</p>';});}
+  $('refresh').onclick=load;$('print').onclick=function(){window.print();};
+  load();setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script></body></html>

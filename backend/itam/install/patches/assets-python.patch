@@ -1,0 +1,59 @@
+--- a/engine/routes.js	2026-10-19 18:14:55.070849853 +0000
++++ b/engine/routes.js	2026-10-19 18:14:55.169260802 +0000
+@@ -14,6 +14,8 @@
+   const { assets, licences, findings, ingest, stocktake, reports, settings, agentgw, provider, jobs, store, audit, importer } = app;
+   const started = Date.now();
+   const A = (who, action, target, detail) => audit({ by: who.user, role: who.role, ip: who.ip, action, target, detail });
++  // the asset read routes in Python (engine/assets-py.js, docs/PYTHON-MIGRATION.md step 8c); null = Node.js answers
++  const PY = (() => { try { return require('./assets-py').createAssetsPy(app); } catch (e) { return null; } })();
+ 
+   // ---- health / status --------------------------------------------------------------------------------------------
+   srv.route('GET', '/health', () => ({ ok: true, service: 'sentra-itam', version: VERSION, uptime_s: Math.round((Date.now() - started) / 1000) }));
+@@ -31,16 +33,18 @@
+   srv.route('GET', '/reports', () => reports.reports());
+ 
+   // ---- self-service lookup by tag (EVERYONE) ----------------------------------------------------------------------
+-  srv.route('GET', '/lookup', (ctx) => {
++  srv.route('GET', '/lookup', async (ctx) => {
+     const tag = ctx.query.tag || ctx.query.q || '';
+     if (!tag) throw bad('tag query parameter required');
++    const p = PY && await PY.lookup(tag); if (p) return { tag: p.tag, found: p.found, assets: p.assets };
+     const hits = assets.byTag(tag).map((a) => ({ id: a.id, asset_tag: a.asset_tag, name: a.name, type: a.type, status: a.status, owner: a.owner, custodian: a.custodian, department: a.department, site: a.site, location: a.location }));
+     return { tag, found: hits.length, assets: hits };
+   });
+ 
+   // ---- assets -----------------------------------------------------------------------------------------------------
+-  srv.route('GET', '/assets', (ctx) => {
++  srv.route('GET', '/assets', async (ctx) => {
+     const q = ctx.query;
++    const p = PY && await PY.list(q); if (p) return { total: p.total, assets: p.assets };
+     const text = (q.q || '').toLowerCase();
+     const filter = (a) => {
+       if (q.type && a.type !== q.type) return false;
+@@ -57,7 +61,7 @@
+     const limit = limitOf(q.limit, 500, 5000);
+     return { total: list.length, assets: list.slice(0, limit) };
+   });
+-  srv.route('GET', '/assets/:id', (ctx) => { const d = assets.detail(ctx.params.id); if (!d) throw bad('asset not found', 404); return d; });
++  srv.route('GET', '/assets/:id', async (ctx) => { const p = PY && await PY.detail(ctx.params.id); if (p) { if (!p.found) throw bad('asset not found', 404); return p.detail; } const d = assets.detail(ctx.params.id); if (!d) throw bad('asset not found', 404); return d; });
+   srv.route('POST', '/assets', (ctx) => { ctx.need('operator'); return assets.create(ctx.body, ctx.who, { source: 'manual' }); });
+   srv.route('POST', '/assets/:id', (ctx) => { ctx.need('operator'); return assets.edit(ctx.params.id, ctx.body, ctx.who); });
+   for (const action of ['retire', 'dispose', 'repair', 'restock', 'activate', 'lost', 'found']) {
+@@ -90,13 +94,14 @@
+   srv.route('POST', '/assets/:id/assign', (ctx) => { ctx.need('operator'); return assets.assign(ctx.params.id, ctx.body, ctx.who); });
+ 
+   // ---- software + licences ----------------------------------------------------------------------------------------
+-  srv.route('GET', '/software', () => { const { rollup } = require('./model/software'); return { software: rollup(assets.all().filter((a) => a.status !== 'disposed')) }; });
+-  srv.route('GET', '/licences', () => ({ licences: licences.complianceView() }));
++  srv.route('GET', '/software', async () => { const p = PY && await PY.software(); if (p) return { software: p.software }; const { rollup } = require('./model/software'); return { software: rollup(assets.all().filter((a) => a.status !== 'disposed')) }; });
++  srv.route('GET', '/licences', async () => { const p = PY && await PY.licences(); return p ? { licences: p.licences } : { licences: licences.complianceView() }; });
+   srv.route('POST', '/licences', (ctx) => { ctx.need('operator'); return { licence: licences.upsert(ctx.body, ctx.who) }; });
+   srv.route('POST', '/licences/:id/retire', (ctx) => { ctx.need('operator'); return licences.retire(ctx.params.id, ctx.who, ctx.body.reason); });
+ 
+   // ---- CMDB -------------------------------------------------------------------------------------------------------
+-  srv.route('GET', '/cmdb', (ctx) => {
++  srv.route('GET', '/cmdb', async (ctx) => {
++    const p = PY && await PY.cmdb(ctx.query); if (p) return p.graph ? { graph: p.graph } : { relationships: p.relationships };
+     if (ctx.query.asset) return { graph: assets.relationshipsFor(ctx.query.asset, { confirmedOnly: ctx.query.confirmed === '1' }) };
+     return { relationships: assets.allRelationships().map((r) => { const { key, ...rest } = r; return rest; }) };
+   });

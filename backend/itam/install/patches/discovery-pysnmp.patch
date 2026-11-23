@@ -1,0 +1,30 @@
+diff --git a/engine/discovery/index.js b/engine/discovery/index.js
+index 8662ad8..cd86e5a 100644
+--- a/engine/discovery/index.js
++++ b/engine/discovery/index.js
+@@ -17,8 +17,8 @@ const scopesM = require('./scopes');
+ const sched = require('./schedule');
+ const ip4 = require('./ipv4');
+ const runner = require('./runner');
+-const snmpM = require('./methods/snmp');
+ const PM = (() => { try { return require('./py-methods'); } catch (e) { return { wrap: (n, m) => m, configure() {} }; } })();   // inventory sources answered by Python (docs/PYTHON-MIGRATION.md step 5a); a missing bridge never stops the engine
++const snmpM = PM.wrapSnmp ? PM.wrapSnmp(require('./methods/snmp')) : require('./methods/snmp');
+ const adM = PM.wrap('ad', require('./methods/ad'));
+ const vcM = PM.wrap('vcenter', require('./methods/vcenter'));
+ const ntxM = PM.wrap('nutanix', require('./methods/nutanix'));
+diff --git a/engine/discovery/runner.js b/engine/discovery/runner.js
+index b7aa6d2..6adb9ea 100644
+--- a/engine/discovery/runner.js
++++ b/engine/discovery/runner.js
+@@ -9,10 +9,10 @@ const dns = require('node:dns');
+ const ip4 = require('./ipv4');
+ const sched = require('./schedule');
+ const sweep = require('./methods/sweep');
+-const snmpM = require('./methods/snmp');
+ const svcM = require('./methods/services');
+ const loginM = require('./methods/login');
+ const PM = (() => { try { return require('./py-methods'); } catch (e) { return { wrap: (n, m) => m, configure() {} }; } })();   // inventory sources answered by Python (docs/PYTHON-MIGRATION.md step 5a); a missing bridge never stops the engine
++const snmpM = PM.wrapSnmp ? PM.wrapSnmp(require('./methods/snmp')) : require('./methods/snmp');
+ const adM = PM.wrap('ad', require('./methods/ad'));
+ const vcM = PM.wrap('vcenter', require('./methods/vcenter'));
+ const ntxM = PM.wrap('nutanix', require('./methods/nutanix'));

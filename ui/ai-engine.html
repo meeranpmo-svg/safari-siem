@@ -1,0 +1,118 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Engine</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--bg:#0b0d12;--pn:#12151c;--rs:#181c25;--ln:#232837;--tx:#e7eaf0;--mu:#8b93a4;--ok:#2fb344;--wa:#f59f00;--ba:#e5484d;--ac:#5b8def;--ai:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1200px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--mu);text-transform:uppercase}
+.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mu);font-weight:400;font-size:12px}
+.modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.mode{background:var(--rs);border:1.5px solid var(--ln);border-radius:14px;padding:14px;cursor:pointer;text-align:left;color:inherit;font:inherit;display:flex;flex-direction:column;gap:6px}
+.mode:hover{border-color:#3a4258}.mode[aria-pressed="true"]{border-color:var(--ac);background:#151c2b}.mode .t{font-weight:700;font-size:15px;display:flex;gap:8px;align-items:center}.mode .d{font-size:12.5px;color:var(--mu)}
+.mode:disabled{cursor:not-allowed;opacity:.75}
+.eng{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.box{border:1px solid var(--ln);border-radius:12px;padding:12px;background:var(--rs)}.box h3{margin:0 0 6px;font-size:14px;display:flex;gap:8px;align-items:center}
+.kv{display:grid;grid-template-columns:130px minmax(0,1fr);gap:4px 10px;font-size:13px}.kv span:nth-child(odd){color:var(--mu)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-ok{background:rgba(47,179,68,.15);color:#56d364}.p-warn{background:rgba(245,159,0,.16);color:#f5b544}.p-bad{background:rgba(229,72,77,.16);color:#ff7b80}.p-mute{background:rgba(139,147,164,.16);color:#aab2c2}.p-acc{background:rgba(91,141,239,.18);color:#9dbbff}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mu)}
+.inp{background:#0b0d12;color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:7px 10px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:7px 13px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.sm{padding:3px 9px;font-size:12px}table.rt{width:100%;border-collapse:collapse;font-size:12.5px}table.rt th{text-align:left;color:var(--mu);font-weight:600;font-size:11px;text-transform:uppercase;padding:5px;border-bottom:1px solid var(--ln)}table.rt td{padding:5px;border-bottom:1px solid #1b2030;vertical-align:middle}.mono{font-family:Consolas,ui-monospace,monospace}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.steps{margin:8px 0 0;padding:0;list-style:none;font-size:13px}.steps li{padding:4px 0;border-bottom:1px solid #1b2030}
+.note{border-left:3px solid var(--wa);background:rgba(245,159,0,.08);padding:9px 12px;border-radius:0 8px 8px 0;font-size:13px;margin-top:10px}
+.note.ok{border-color:var(--ok);background:rgba(47,179,68,.08)}
+.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:12px;margin-bottom:12px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:#0b0d12;padding:1px 5px;border-radius:4px}
+@media (max-width:900px){.modes,.eng{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Platform Administration · AI</div><h1>AI Engine</h1><div class="mu">Which model the AI features use: the local model on {{org.short}}'s own AI server, Claude through the Anthropic API, or none. It applies to every AI feature in IT Asset Management and in the SIEM, at once, without a restart. Everything that is not AI (collection, detection, rules, scores, dashboards, approvals) works the same in every mode.</div></div>
+ <span class="sp"></span><button type="button" class="btn" id="refresh"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+ <div class="card"><h2><i class="ti ti-switch-3"></i>Model <span class="c" id="who"></span></h2>
+  <div class="modes" id="modes">
+   <button type="button" class="mode" data-mode="local" aria-pressed="false"><span class="t"><i class="ti ti-server-2"></i>Local model</span><span class="d">A model on the AI server (AI-01) inside {{org.short}}'s network. Nothing leaves the network; "external AI allowed" is not needed.</span></button>
+   <button type="button" class="mode" data-mode="anthropic" aria-pressed="false"><span class="t"><i class="ti ti-cloud"></i>Claude (Anthropic API)</span><span class="d">Anthropic's hosted Claude models. Sanitised content leaves the network; needs an API key and "external AI allowed".</span></button>
+   <button type="button" class="mode" data-mode="off" aria-pressed="false"><span class="t"><i class="ti ti-power"></i>Off</span><span class="d">No AI. Every AI panel says it is not available; the rest of the platform is unchanged.</span></button>
+  </div>
+  <div id="localbox" class="frm" style="margin-top:14px">
+   <label class="f">Gateway kind<select class="inp" id="api"><option value="openai">OpenAI-compatible (vLLM, Ollama, LM Studio, LiteLLM, TGI)</option><option value="anthropic">Anthropic-compatible Messages API (LiteLLM /v1/messages)</option></select></label>
+   <label class="f">Address<input class="inp" id="base" maxlength="300" placeholder="http://10.20.0.40:8000/v1"></label>
+   <label class="f">Model name<input class="inp" id="model" maxlength="120" placeholder="the model id the gateway serves"></label>
+   <label class="f">Timeout (seconds)<input class="inp" id="tmo" type="number" min="10" max="600" value="180"></label>
+   <label class="f">Max answer length (tokens)<input class="inp" id="maxt" type="number" min="256" max="32768" value="4096"></label>
+   <label class="f">Tool use<select class="inp" id="tools"><option value="true">on - the AI looks things up through the platform's tools</option><option value="false">off - the model cannot call tools</option></select></label>
+  </div>
+  <div class="sm mu" id="keynote" style="margin-top:8px">If the gateway needs a key, it is set on the servers only, never on this page: <code>sudo itam-secrets set local_ai_key</code> (IT Asset Management) and <code>local_ai_key</code> in the SIEM's secrets.json (<code>secure-secrets.sh</code>).</div>
+  <div class="row" id="actions"><button type="button" class="btn pri" id="save"><i class="ti ti-device-floppy"></i>Save for both engines</button><button type="button" class="btn" id="test"><i class="ti ti-player-play"></i>Test both engines</button><span class="sm mu" id="ro" hidden>Administrators change the AI engine.</span></div>
+ </div>
+ <div class="card" id="routecard"><h2><i class="ti ti-route"></i>Per-feature routing <span class="c">send chosen AI features to a different engine than the model above - e.g. everything touching personal data to the local model, the heavy investigations to Claude</span></h2>
+  <div id="routes"></div>
+  <div class="row" id="ractions" style="margin-top:8px"><button type="button" class="btn" id="radd"><i class="ti ti-plus"></i>Add a rule</button><span class="sm mu">A rule is a feature name (soc.copilot), a group (dfir.* - the feature and everything under it) or * (every feature). The most specific rule wins; a feature with no rule uses the model above. Saved with "Save for both engines".</span></div>
+  <h3 style="font-size:13px;margin:16px 0 6px">AI features used today</h3><div id="feats"></div>
+ </div>
+ <div class="eng" id="engines"></div>
+</div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',USER='',MODE='anthropic',ROUTES=[],E={itam:null,siem:null},ERR={itam:'',siem:''};
+  var ENG=[['itam','IT Asset Management','/api/itam/ai-engine'],['siem','SIEM','/api/soc/ai-engine']];
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,u);x.withCredentials=true;x.timeout=200000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function pill(t,k){return '<span class="pill p-'+esc(k)+'">'+esc(t)+'</span>';}
+  function setMode(m){MODE=m;document.querySelectorAll('[data-mode]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-mode')===m));});syncLocal();}
+  function usesLocal(){return MODE==='local'||ROUTES.some(function(r){return r.engine==='local';});}
+  function syncLocal(){$('localbox').hidden=!usesLocal();$('keynote').hidden=!usesLocal();}
+  var EL={local:'Local model',anthropic:'Claude',off:'Off'};
+  function drawRoutes(){var admin=can('admin');
+    $('routes').innerHTML=ROUTES.length?'<table class="rt"><thead><tr><th>Feature or group</th><th>Engine</th><th></th></tr></thead><tbody>'+ROUTES.map(function(r,i){return '<tr><td><input class="inp mono" data-rm="'+i+'" value="'+esc(r.match)+'" maxlength="80" aria-label="Feature or group '+(i+1)+'"'+(admin?'':' disabled')+'></td><td><select class="inp" data-re="'+i+'" aria-label="Engine '+(i+1)+'"'+(admin?'':' disabled')+'>'+['local','anthropic','off'].map(function(e){return '<option value="'+e+'"'+(r.engine===e?' selected':'')+'>'+esc(EL[e])+'</option>';}).join('')+'</select></td><td>'+(admin?'<button type="button" class="btn sm" data-rdel="'+i+'" aria-label="Remove rule '+(i+1)+'"><i class="ti ti-x"></i></button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="sm mu">No rule: every AI feature uses the model selected above.</div>';
+    $('ractions').hidden=!admin;}
+  function engineFor(f){var best=null,bl=-1;ROUTES.forEach(function(r){if(r.match===f){best=r;bl=1e9;}else if(/\.\*$/.test(r.match)){var p=r.match.slice(0,-2);if((f===p||f.indexOf(p+'.')===0)&&r.match.length>bl){best=r;bl=r.match.length;}}else if(r.match==='*'&&bl<0){best=r;bl=0;}});return best?{engine:best.engine,rule:best.match}:{engine:MODE,rule:null};}
+  function drawFeats(){var m={};['itam','siem'].forEach(function(k){((E[k]||{}).features_today||[]).forEach(function(f){var x=m[f.feature]=m[f.feature]||{feature:f.feature,n:0};x.n+=f.n;});});var L=Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return b.n-a.n;});
+    $('feats').innerHTML=L.length?'<table class="rt"><thead><tr><th>Feature</th><th>Calls today</th><th>Engine (as set on this page)</th><th></th></tr></thead><tbody>'+L.map(function(f){var e=engineFor(f.feature);return '<tr><td class="mono">'+esc(f.feature)+'</td><td>'+esc(f.n)+'</td><td>'+modeLabel(e.engine)+' <span class="sm mu">'+esc(e.rule?'rule '+e.rule:'the default')+'</span></td><td>'+(can('admin')&&!ROUTES.some(function(r){return r.match===f.feature;})?'<button type="button" class="btn sm" data-rfeat="'+esc(f.feature)+'">Route…</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="sm mu">No AI feature has been used today. Each one appears here with its name once it runs, so it can be routed.</div>';}
+  function fill(v){if(!v)return;setMode(v.mode);var L=v.local||{};$('api').value=L.api||'openai';$('base').value=L.base_url||'';$('model').value=L.model||'';$('tmo').value=L.timeout_s||180;$('maxt').value=L.max_tokens||4096;$('tools').value=String(L.tools!==false);ROUTES=(v.routes||[]).map(function(r){return {match:r.match,engine:r.engine};});syncLocal();drawRoutes();drawFeats();}
+  function modeLabel(m){return m==='local'?pill('Local model','ok'):m==='anthropic'?pill('Claude','acc'):pill('Off','mute');}
+  function engCard(k,name){var v=E[k];
+    if(!v)return '<div class="box"><h3>'+esc(name)+' '+pill('not reachable','bad')+'</h3><div class="sm mu">'+esc(ERR[k]||'no answer')+(ERR[k]&&/404/.test(ERR[k])?' - update this engine (it has no AI Engine yet).':'')+'</div></div>';
+    var t=v.last_test;
+    return '<div class="box"><h3>'+esc(name)+' '+modeLabel(v.mode)+(v.data_leaves_network?pill('data leaves the network','warn'):pill('stays inside','ok'))+'</h3><div class="sm" style="margin-bottom:8px">'+esc(v.effective)+'</div><div class="kv">'
+      +(v.routed?'<span>Routing</span><span>'+esc(v.routes.length+' rule(s): '+v.routes.slice(0,4).map(function(r){return r.match+' → '+EL[r.engine];}).join(', ')+(v.routes.length>4?' …':''))+'</span>':'')+(v.mode==='local'||(v.routes||[]).some(function(r){return r.engine==='local';})?'<span>Gateway</span><span>'+esc((v.local.api==='openai'?'OpenAI-compatible':'Anthropic-compatible')+' at '+(v.local.host||'(not set)'))+'</span><span>Model</span><span>'+esc(v.local.model||'(not set)')+'</span><span>Gateway key</span><span>'+(v.local.key_set?'set on the server':'none')+'</span>':'')
+      +(v.mode==='anthropic'||(v.routes||[]).some(function(r){return r.engine==='anthropic';})?'<span>API key</span><span>'+(v.anthropic.key_set?'set':'not set')+'</span>'+(v.anthropic.external_ai_allowed!=null?'<span>External AI allowed</span><span>'+(v.anthropic.external_ai_allowed?'yes':'no (IT Asset Management Settings)')+'</span>':'')+'<span>SDK</span><span>'+(v.anthropic.sdk_installed?'installed':'not installed')+'</span>':'')
+      +'<span>AI calls today</span><span>'+esc(String((v.calls_today||{}).total||0))+'</span><span>Changed</span><span>'+esc(v.updated_at?String(v.updated_at).slice(0,16).replace('T',' ')+' by '+v.updated_by:'never (default)')+'</span></div>'
+      +(t?'<div class="sm" style="margin-top:10px"><b>Last test</b> '+esc(String(t.at).slice(0,16).replace('T',' ')+' by '+t.by+' · '+(t.model||t.mode))+' '+(t.ok?pill('answers','ok'):pill('failed','bad'))+'</div><ul class="steps">'+(t.engines&&t.engines.length>1?t.engines.map(function(g){return '<li>'+(g.ok?pill('ok','ok'):pill('failed','bad'))+' '+esc(EL[g.engine]||g.engine)+(g.model?' · '+esc(g.model):'')+'</li>';}).join(''):'')+t.steps.map(function(s){return '<li>'+(s.ok?pill('ok','ok'):pill('failed','bad'))+' '+esc(s.name)+' · '+esc(s.ms+' ms')+(s.text?' · "'+esc(s.text)+'"':'')+(s.tool?' · called '+esc(s.tool):'')+(s.error?'<div class="sm mu">'+esc(s.error)+'</div>':'')+'</li>';}).join('')+'</ul>':'<div class="sm mu" style="margin-top:10px">Not tested yet.</div>')+'</div>';}
+  function draw(){$('engines').innerHTML=ENG.map(function(e){return engCard(e[0],e[1]);}).join('');drawFeats();
+    var a=E.itam,b=E.siem;$('who').textContent=a&&b&&a.mode!==b.mode?'the two engines are set differently - save to align them':'';
+    var admin=can('admin');document.querySelectorAll('[data-mode]').forEach(function(x){x.disabled=!admin;});['api','base','model','tmo','maxt','tools'].forEach(function(id){$(id).disabled=!admin;});$('save').hidden=$('test').hidden=!admin;$('ro').hidden=admin;}
+  function load(){$('err').innerHTML='';
+    return Promise.all(ENG.map(function(e){return req('GET',e[2]).then(function(v){E[e[0]]=v;ERR[e[0]]='';},function(x){E[e[0]]=null;ERR[e[0]]=(x.status===404?'HTTP 404: ':'')+x.message;});})).then(function(){
+      if(!E.itam&&!E.siem){$('err').innerHTML='<div class="err"><b>AI Engine could not load.</b> '+esc(ERR.itam||ERR.siem)+(ERR.itam&&/403/.test(ERR.itam)?' - operators and administrators see this page.':'')+'</div>';return;}
+      $('main').hidden=false;fill(E.itam||E.siem);draw();});}
+  function payload(){return {mode:MODE,local:{api:$('api').value,base_url:$('base').value.trim(),model:$('model').value.trim(),timeout_s:Number($('tmo').value),max_tokens:Number($('maxt').value),tools:$('tools').value==='true'},routes:ROUTES.filter(function(r){return r.match.trim();}).map(function(r){return {match:r.match.trim().toLowerCase(),engine:r.engine};})};}
+  document.addEventListener('click',function(ev){var b=ev.target.closest('button');if(!b)return;
+    if(b.hasAttribute('data-mode')){if(can('admin'))setMode(b.getAttribute('data-mode'));return;}
+    if(b.id==='refresh'){load();return;}
+    if(b.id==='radd'){ROUTES.push({match:'',engine:'local'});drawRoutes();syncLocal();var ins=document.querySelectorAll('[data-rm]');if(ins.length)ins[ins.length-1].focus();return;}
+    if(b.hasAttribute('data-rdel')){ROUTES.splice(Number(b.getAttribute('data-rdel')),1);drawRoutes();drawFeats();syncLocal();return;}
+    if(b.hasAttribute('data-rfeat')){ROUTES.push({match:b.getAttribute('data-rfeat'),engine:MODE==='local'?'anthropic':'local'});drawRoutes();drawFeats();syncLocal();return;}
+    if(b.id==='save'){b.disabled=true;var p=payload(),res=[];
+      Promise.all(ENG.map(function(e){return req('PUT',e[2],p).then(function(v){E[e[0]]=v;res.push(e[1]+': saved');},function(x){res.push(e[1]+': '+x.message);});})).then(function(){toast(res.join(' · '));draw();b.disabled=false;});return;}
+    if(b.id==='test'){b.disabled=true;toast('Testing both engines - a local model can take a minute…');var res2=[];
+      Promise.all(ENG.map(function(e){return req('POST',e[2]+'/test').then(function(r){res2.push(e[1]+': '+(r.ok?'answers':'failed'));},function(x){res2.push(e[1]+': '+x.message);});})).then(function(){toast(res2.join(' · '));return load();}).then(function(){b.disabled=false;});return;}
+  });
+  document.addEventListener('input',function(ev){var t=ev.target;if(t.hasAttribute&&t.hasAttribute('data-rm')){ROUTES[Number(t.getAttribute('data-rm'))].match=t.value;drawFeats();}});
+  document.addEventListener('change',function(ev){var t=ev.target;if(t.hasAttribute&&t.hasAttribute('data-re')){ROUTES[Number(t.getAttribute('data-re'))].engine=t.value;drawFeats();syncLocal();}});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;USER=j.user||'';}catch(e){/* not signed in: viewer */}load();};w.onerror=load;w.send();
+})();
+</script></body></html>

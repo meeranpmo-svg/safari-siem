@@ -1,0 +1,113 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SAMA Compliance</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-assist.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}.btn{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}
+input,select{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.stat{display:inline-block;padding:1px 9px;border-radius:999px;font-size:11px;font-weight:700}.stat.covered{background:rgba(63,185,80,.15);color:var(--ok)}.stat.partial{background:rgba(227,179,65,.15);color:var(--warn)}.stat.gap{background:rgba(255,123,114,.15);color:var(--bad)}.stat.na{background:rgba(140,147,161,.16);color:var(--mute)}
+.bar{height:16px;border-radius:5px;overflow:hidden;display:flex;background:#20242d;min-width:120px}.bar i{height:100%}
+.t[data-tf],tr[data-dom],td[data-ds]{cursor:pointer}.t[data-tf]{transition:border-color .12s,transform .12s}.t[data-tf]:hover{border-color:#4a5162;transform:translateY(-1px)}.t[data-tf]:focus-visible,tr[data-dom]:focus-visible{outline:2px solid var(--info);outline-offset:2px}.t.on{border-color:var(--info);box-shadow:inset 0 0 0 1px var(--info)}tr[data-dom]:hover{background:rgba(255,255,255,.04)}tr.on td{background:rgba(121,184,255,.08)}td[data-ds]:hover{text-decoration:underline}
+.rowc{cursor:pointer}.rowc:hover{background:rgba(255,255,255,.04)}
+.flt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+@media print{.top button,.flt{display:none}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Governance · compliance</div><h1>SAMA Cyber Security Framework</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" class="btn" id="report">📄 Evidence report</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="banner">Coverage is what the SIEM can <b>evidence from live data</b>, per control. A control the SIEM cannot evidence is marked <b>n/a — owned by GRC</b> (people / process / policy), not counted as a failure. Coverage % = (covered + ½·partial) ÷ SIEM-evidenced controls.</div>
+<div class="k" id="kk"></div>
+<div class="card"><h2>Coverage by domain</h2><div class="tw" id="domains"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Controls <span class="c" id="cc"></span></h2>
+  <div class="flt"><input id="q" placeholder="Search control…" style="flex:1;min-width:180px">
+    <select id="fdom"><option value="">All domains</option></select>
+    <select id="fst"><option value="">All statuses</option><option value="covered">Covered</option><option value="partial">Partial</option><option value="gap">Gap</option><option value="n/a">N/A (GRC)</option><option value="ev">SIEM-evidenced (covered + partial + gap)</option><option value="tools">Implemented in the platform</option><option value="notools">No platform tool</option></select>
+    <button type="button" class="btn" id="xlsx" title="Download the controls shown (with the filter written into the file)">⬇ Excel</button></div>
+  <div class="tw" id="controls"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var V=null;
+  function req(p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/soc'+p);x.withCredentials=true;x.timeout=60000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('The SIEM is not reachable'));};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function tile(l,v,s,cls,tf){return '<div class="t '+(cls||'')+(tf&&$('fst').value===tf?' on':'')+'"'+(tf?' data-tf="'+esc(tf)+'" tabindex="0" role="button" title="Show these controls (click again for all)"':'')+'><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  // a tile = a status filter on the control list; a domain row = a domain filter; a count in it = domain + status
+  function setFilter(dom,st){var same=$('fdom').value===dom&&$('fst').value===st;$('fdom').value=same?'':dom;$('fst').value=same?'':st;drawKpis();drawDomains();drawControls();$('controls').scrollIntoView({behavior:'smooth',block:'start'});}
+  // the platform tools that implement a control: every menu page tagged with its SAMA code (vendor/zyb-nav.js fw.sama) -
+  // the same tags Live Compliance and the Compliance Map read, so the three pages always agree
+  function tools(id){var out=[];(window.ZYB_NAV||[]).forEach(function(a){(a.pages||[]).forEach(function(p){if(((p.fw&&p.fw.sama)||[]).indexOf(id)>=0)out.push({h:p.h,s:p.s,d:p.d||'',area:a.sn||a.name||''});});});return out;}
+  function toolCell(id){var t=tools(id);return t.length?'<span class="stat covered" title="'+esc(t.map(function(x){return x.s;}).join(', '))+'">'+t.length+' tool'+(t.length===1?'':'s')+'</span> <span class="muted">'+esc(t.slice(0,2).map(function(x){return x.s;}).join(', '))+(t.length>2?' …':'')+'</span>':'<span class="muted">none in this platform</span>';}
+  function stPill(s){var m={covered:'covered',partial:'partial',gap:'gap','n/a':'na'};return '<span class="stat '+(m[s]||'na')+'">'+esc(String(s).toUpperCase())+'</span>';}
+  function load(){req('/compliance/sama').then(function(r){V=r;draw();}).catch(function(e){$('kk').innerHTML='<p class="err">'+esc(e.status===404?'The SIEM does not have the SAMA compliance module yet — run the engine update.':e.message)+'</p>';});}
+  function draw(){
+    fillDomSel();drawKpis();drawDomains();drawControls();
+    // the menu registry (vendor/zyb-nav.js) can arrive after the SIEM answer: draw the tool column again once it is there
+    if(!(window.ZYB_NAV||[]).length){var tries=0,iv=setInterval(function(){if((window.ZYB_NAV||[]).length||++tries>40){clearInterval(iv);drawControls();}},250);}
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  function drawKpis(){var s=V.summary||{},c=s.counts||{};
+    $('kk').innerHTML=tile('Coverage',((s.coverage_pct!=null?s.coverage_pct:0))+'%','SIEM-evidenced',(s.coverage_pct>=70?'ok':s.coverage_pct>=40?'warn':'bad'),'ev')
+      +tile('Covered',c.covered||0,'','ok','covered')+tile('Partial',c.partial||0,'',c.partial?'warn':'ok','partial')+tile('Gaps',c.gap||0,'',c.gap?'bad':'ok','gap')
+      +tile('GRC-owned',c['n/a']||0,'not SIEM-evidenced','','n/a')+tile('Evidenced',s.evidenced||0,'of '+(s.total||0)+' controls','info','ev');}
+  function drawDomains(){var bd=(V.summary&&V.summary.by_domain)||{};var keys=Object.keys(bd);
+    $('domains').innerHTML=keys.length?'<table><thead><tr><th>Domain</th><th>Coverage</th><th>Covered</th><th>Partial</th><th>Gap</th><th>GRC</th></tr></thead><tbody>'+keys.map(function(k){var d=bd[k],ev=(d.covered+d.partial+d.gap)||0,pct=ev?Math.round((d.covered+d.partial*0.5)/ev*100):null;
+      function seg(n,col,t){return n?'<i style="width:'+(n/(ev||1)*100)+'%;background:'+col+'" title="'+t+' '+n+'"></i>':'';}
+      var on=$('fdom').value===k, ds=function(n,st,cls){return '<td'+(cls?' class="'+cls+'"':'')+(n?' data-ds="'+esc(st)+'" title="Show the '+esc(st==='n/a'?'GRC-owned':st)+' controls of this domain"':'')+'>'+(n||0)+'</td>';};
+      return '<tr data-dom="'+esc(k)+'" tabindex="0" role="button" class="'+(on?'on':'')+'" title="Show this domain\'s controls (click again for all)"><td>'+esc(d.title||k)+'</td><td><div style="display:flex;align-items:center;gap:8px"><div class="bar">'+seg(d.covered,'var(--ok)','covered')+seg(d.partial,'var(--warn)','partial')+seg(d.gap,'var(--bad)','gap')+'</div><span class="muted">'+(pct==null?'n/a':pct+'%')+'</span></div></td>'+ds(d.covered,'covered')+ds(d.partial,'partial')+ds(d.gap,'gap')+ds(d['n/a'],'n/a','muted')+'</tr>';}).join('')+'</tbody></table>':'<div class="empty">No domains yet.</div>';}
+  function fillDomSel(){var bd=(V.summary&&V.summary.by_domain)||{};var opt='<option value="">All domains</option>';Object.keys(bd).forEach(function(k){opt+='<option value="'+esc(k)+'">'+esc(bd[k].title||k)+'</option>';});$('fdom').innerHTML=opt;}
+  function drawControls(){
+    var q=$('q').value.trim().toLowerCase(),dom=$('fdom').value,st=$('fst').value;
+    var rows=(V.controls||[]).filter(function(c){if(dom&&c.domain!==dom)return false;if(st==='tools'||st==='notools'){if((tools(c.id).length>0)!==(st==='tools'))return false;}else if(st==='ev'?['covered','partial','gap'].indexOf(c.status)<0:(st&&c.status!==st))return false;return !q||[c.id,c.title,c.domain_title,c.owner].concat(tools(c.id).map(function(x){return x.s;})).join(' ').toLowerCase().indexOf(q)>=0;});
+    $('cc').textContent=rows.length+' of '+((V.controls||[]).length);
+    $('controls').innerHTML=rows.length?'<table><thead><tr><th>Control</th><th>Domain</th><th>Owner</th><th>Implemented by</th><th>Status</th></tr></thead><tbody>'
+      +rows.map(function(c){return '<tr class="rowc" data-id="'+esc(c.id)+'"><td class="mono">'+esc(c.id)+' <span class="muted" style="font-family:inherit">'+esc(c.title||'')+'</span></td><td>'+esc(c.domain_title||c.domain||'')+'</td><td>'+esc(c.owner||'—')+'</td><td>'+toolCell(c.id)+'</td><td>'+stPill(c.status)+(c.capped?' <span class="muted" title="SIEM evidence alone cannot fully cover this">capped</span>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No controls match.</div>';
+  }
+  function openControl(id){req('/compliance/sama/'+encodeURIComponent(id)).then(function(c){
+    var body=Z.kv([['Control',esc(c.id)],['Title',esc(c.title||'')],['Domain',esc(c.domain_title||c.domain||'')],['Owner',esc(c.owner||'—')],['Status',stPill(c.status)+(c.capped?' (capped)':'')],['SIEM-evidenced',c.siem_evidenced?'yes':'no — owned by GRC']]);
+    var tl=tools(c.id);
+    body+=Z.sec('Implemented in this platform',tl.length?'<ul style="margin:0;padding-left:18px">'+tl.map(function(x){return '<li><a href="'+esc(x.h)+'" style="color:var(--info)">'+esc(x.s)+'</a> <span class="muted">('+esc(x.area)+')</span><div class="muted">'+esc(x.d)+'</div></li>';}).join('')+'</ul><p class="muted" style="margin-top:6px">A tool in place is not proof the control is effective: open each one for its own evidence and gaps.</p>'
+      :'<p class="muted">No tool in this platform implements this control - it is evidenced outside the platform ('+esc(c.owner||'the control owner')+').</p>');
+    if((c.reasons||[]).length)body+=Z.sec('Assessment','<ul style="margin:0;padding-left:18px">'+c.reasons.map(function(r){return '<li>'+esc(r)+'</li>';}).join('')+'</ul>');
+    if((c.checks||[]).length)body+=Z.sec('Evidence checks','<table><thead><tr><th>Check</th><th>Result</th><th>Detail</th></tr></thead><tbody>'+c.checks.map(function(k){return '<tr><td>'+esc(k.title||k.id)+'</td><td>'+(k.result==='pass'?'<span style="color:var(--ok)">pass</span>':k.result==='warn'?'<span style="color:var(--warn)">warn</span>':'<span style="color:var(--bad)">'+esc(k.result||'')+'</span>')+'</td><td class="muted">'+esc(k.reason||'')+'</td></tr>';}).join('')+'</tbody></table>');
+    if((c.actions||[]).length)body+=Z.sec('Recommended actions','<ul style="margin:0;padding-left:18px">'+c.actions.map(function(a){return '<li>'+esc(a)+'</li>';}).join('')+'</ul>');
+    if(c.status==='gap'||c.status==='partial')body+='<p style="margin-top:12px">'+'<a class="btn sm" style="text-decoration:none" href="grc-workspace.html#actions?new=1&amp;source=sama&amp;ref='+encodeURIComponent(c.id)+'&amp;title='+encodeURIComponent('SAMA '+c.id+': '+(c.title||''))+'&amp;framework=SAMA%20CSF">＋ Create a remediation action</a>'+' <a href="grc-workspace.html#actions" style="color:var(--info)">Risks &amp; Actions ↗</a></p>';
+    Z.open('SAMA '+c.id,c.title||c.id,body);
+  }).catch(function(e){toast(e.message);});}
+  function openReport(){req('/compliance/sama/report').then(function(r){
+    var w=window.open('','_blank');if(!w){toast('Allow pop-ups to open the report');return;}
+    var e=function(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});};
+    var s=r.summary||{},secs=(r.controls||[]).map(function(c){return '<tr><td>'+e(c.id)+'</td><td>'+e(c.title)+'</td><td>'+e(c.domain)+'</td><td>'+e(c.status)+'</td><td>'+e((c.reasons||[]).join('; '))+'</td></tr>';}).join('');
+    w.document.write('<!doctype html><title>SAMA CSF evidence report</title><style>body{font:13px Segoe UI,sans-serif;margin:32px;color:#111}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:12px;margin-top:10px}th,td{border:1px solid #ccc;padding:5px 7px;text-align:left}th{background:#f3f3f3}</style>'
+      +'<h1>SAMA Cyber Security Framework — evidence report</h1><p>'+e((r.org&&r.org.name)||ZYB_ORG.short)+' · generated '+e(r.generated||new Date().toISOString())+'</p>'
+      +'<p><b>Coverage '+e(s.coverage_pct)+'%</b> — '+e((s.counts&&s.counts.covered)||0)+' covered, '+e((s.counts&&s.counts.partial)||0)+' partial, '+e((s.counts&&s.counts.gap)||0)+' gap, across '+e(s.evidenced)+' SIEM-evidenced controls.</p>'
+      +'<table><thead><tr><th>Control</th><th>Title</th><th>Domain</th><th>Status</th><th>Assessment</th></tr></thead><tbody>'+secs+'</tbody></table>'
+      );w.document.close();
+    setTimeout(function(){ try { w.focus(); w.print(); } catch (e) { /* element already gone: nothing to focus */ } },300); // from here, not a script in the report: the strict CSP covers the popup too
+  }).catch(function(e){toast(e.message);});}
+  ['q','fdom','fst'].forEach(function(id){$(id).addEventListener('input',drawControls);$(id).addEventListener('change',drawControls);});
+  function act(e){var t=e.target.closest('[data-tf]');if(t){setFilter($('fdom').value,t.getAttribute('data-tf'));return true;}
+    var d=e.target.closest('[data-dom]');if(d){var c=e.target.closest('[data-ds]');if(c)setFilter(d.getAttribute('data-dom'),c.getAttribute('data-ds'));else setFilter(d.getAttribute('data-dom'),'');return true;}return false;}
+  document.addEventListener('click',function(e){if(act(e))return;var r=e.target.closest('.rowc');if(r)openControl(r.getAttribute('data-id'));});
+  document.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.closest&&(e.target.closest('[data-tf]')||e.target.closest('[data-dom]'))){e.preventDefault();act(e);}});
+  ['fdom','fst'].forEach(function(id){$(id).addEventListener('change',function(){if(V){drawKpis();drawDomains();}});});
+  $('xlsx').onclick=function(){if(!V||!window.zybXlsx){toast('Nothing to export yet');return;}
+    var q=$('q').value.trim().toLowerCase(),dom=$('fdom').value,st=$('fst').value;
+    var rows=(V.controls||[]).filter(function(c){if(dom&&c.domain!==dom)return false;if(st==='tools'||st==='notools'?(tools(c.id).length>0)!==(st==='tools'):st==='ev'?['covered','partial','gap'].indexOf(c.status)<0:(st&&c.status!==st))return false;return !q||[c.id,c.title,c.domain_title,c.owner].join(' ').toLowerCase().indexOf(q)>=0;});
+    var f=[dom?'domain '+(($('fdom').selectedOptions[0]||{}).text||dom):'',st?'status '+(($('fst').selectedOptions[0]||{}).text||st):'',q?'search "'+q+'"':''].filter(Boolean).join(', ');
+    zybXlsx.who().then(function(by){zybXlsx.download('sama-csf-controls-'+new Date().toISOString().slice(0,10)+'.xlsx',[{name:'SAMA controls',columns:[{h:'Control',w:12},{h:'Title',w:50},{h:'Domain',w:36},{h:'Owner',w:18},{h:'Implemented by (platform tools)',w:50},{h:'Status',w:11},{h:'Capped (SIEM alone cannot fully cover)',w:16}],
+      rows:rows.map(function(c){return [c.id,c.title||'',c.domain_title||c.domain||'',c.owner||'',tools(c.id).map(function(x){return x.s;}).join(', ')||'none in this platform',String(c.status||'').toUpperCase(),c.capped?'yes':''];})}],{title:'SAMA Cyber Security Framework - controls',by:by,filter:f,notes:'Coverage is what the SIEM can evidence from live data; N/A = owned by GRC (people / process / policy), not a failure.'});});};
+  $('refresh').onclick=load;$('report').onclick=openReport;
+  load();
+})();
+</script><script src="vendor/zyb-xlsx.js"></script></body></html>

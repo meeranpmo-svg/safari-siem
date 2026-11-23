@@ -1,0 +1,162 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Platform Map</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--bg:#0a0d13;--pn:#111621;--rs:#161c29;--ln:#232b3b;--tx:#e8ecf3;--mu:#8c95a8;--ok:#3ccf8e;--wa:#f5a524;--ba:#ef5b5b;--ac:#5b8def;--hub1:#3ccf8e;--hub2:#1f9e6f;--navy:#0f2347}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 50% 30%,rgba(60,207,142,.07),transparent 60%),var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--mu);text-transform:uppercase}
+.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.sum{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}.chip{font-size:12px;padding:4px 11px;border-radius:999px;background:var(--rs);border:1px solid var(--ln)}.chip b{font-size:13px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}.d-connected{background:var(--ok);box-shadow:0 0 8px rgba(60,207,142,.7)}.d-error{background:var(--wa)}.d-not_connected{background:#4b5468}
+.map{position:relative;display:grid;grid-template-columns:minmax(250px,320px) minmax(260px,1fr) minmax(250px,330px);gap:0 60px;align-items:center;padding:6px 0}
+#wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.col{display:flex;flex-direction:column;gap:9px;position:relative;z-index:1}
+.src{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--pn);border:1px solid var(--ln);border-bottom:3px solid var(--navy);border-radius:11px;padding:8px 11px;text-decoration:none;color:inherit;transition:border-color .2s,transform .2s}
+.src:hover{border-color:#3a4560;transform:translateX(2px)}.src .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;background:#1b2334}
+.src.connected .ic{color:var(--ok)}.src.error .ic{color:var(--wa)}.src.not_connected .ic{color:#6b7488}
+.src .t,.src .v,.src .s{display:block}.src .t{font-weight:700;font-size:13px}.src .v{font-size:11px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.src .s{font-size:11.5px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hubwrap{display:flex;flex-direction:column;align-items:center;gap:14px;position:relative;z-index:1}
+.hub{width:190px;height:190px;border-radius:38px;background:linear-gradient(145deg,var(--hub1),var(--hub2));display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 0 8px rgba(60,207,142,.08),0 0 60px rgba(60,207,142,.35);position:relative}
+.hub svg{width:92px;height:92px}.hub .nm{font-weight:800;color:#06291b;letter-spacing:.04em;margin-top:4px}
+.hub::after{content:"";position:absolute;inset:-14px;border-radius:50px;border:1.5px solid rgba(60,207,142,.35);animation:pulse 3.2s ease-out infinite}
+@keyframes pulse{0%{opacity:.8;transform:scale(.96)}100%{opacity:0;transform:scale(1.12)}}
+.stages{list-style:none;margin:0;padding:0;width:100%;max-width:330px;display:flex;flex-direction:column;gap:6px}
+.stages li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px;align-items:start;background:rgba(17,22,33,.85);border:1px solid var(--ln);border-radius:10px;padding:7px 10px}
+.stages .n{width:24px;height:24px;border-radius:50%;background:#14382a;color:var(--ok);font:700 12px ui-monospace,Consolas,monospace;display:flex;align-items:center;justify-content:center}
+.stages b{font-size:12.5px}.stages span{display:block;font-size:11.5px;color:var(--mu)}
+.aimode{font-size:12px;padding:4px 12px;border-radius:999px;background:var(--rs);border:1px solid var(--ln)}
+.out{display:block;background:var(--navy);border:1px solid #1c3a6e;border-bottom:3px solid var(--ok);border-radius:12px;padding:11px 14px;text-decoration:none;color:inherit;transition:box-shadow .25s,transform .2s}
+.out:hover{box-shadow:0 0 18px rgba(60,207,142,.35);transform:translateX(-2px)}
+.out .t{display:flex;gap:8px;align-items:center;font-weight:700;font-size:14.5px;color:#7ff0c0}.out .t .val{margin-left:auto;font:700 15px ui-monospace,Consolas,monospace;color:var(--tx)}
+.out .h{font-size:11.5px;color:#b7c2d8;margin-top:3px}.out .ml{font-size:11px;color:#7ff0c0;margin-top:4px;opacity:.9}.out .ml i{margin-right:3px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--mu);margin-top:14px}
+.legend svg{vertical-align:middle;margin-right:5px}
+.err{background:rgba(239,91,91,.12);border:1px solid rgba(239,91,91,.4);border-radius:12px;padding:12px;margin-bottom:12px}
+.note{font-size:12px;color:var(--mu);margin-top:12px;max-width:110ch}
+@media (max-width:1100px){.map{grid-template-columns:1fr;gap:18px}#wires{display:none}.hubwrap{order:-1}}
+@media (prefers-reduced-motion:reduce){.hub::after{animation:none}}
+
+.top3{display:grid;grid-template-columns:minmax(260px,320px) minmax(0,1fr) minmax(0,1fr);gap:12px;margin:0 0 14px}@media(max-width:1100px){.top3{grid-template-columns:1fr}}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:14px;min-width:0}.card h2{margin:0 0 8px;font-size:14px;display:flex;gap:8px;align-items:center}.card h2 .c{color:var(--mu);font-weight:400;font-size:11.5px;margin-left:auto}
+.rd{display:flex;gap:14px;align-items:center}.rd svg.ring{width:118px;height:118px;flex:none}.rd .big{font-size:13px;color:var(--mu)}.rd .big b{display:block;font-size:15px;color:var(--tx)}
+svg.trend{display:block;width:100%;height:46px;margin-top:8px}
+.ins{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:210px;overflow:auto}.ins li{font-size:12.5px;padding:6px 9px;border-radius:8px;background:var(--rs);border-left:3px solid var(--ac)}.ins li.bad{border-left-color:var(--ba)}.ins li.warn{border-left-color:var(--wa)}.ins li.good{border-left-color:var(--ok)}
+.nx{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}.nx li{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:12.5px;padding:6px 8px;border-radius:8px;background:var(--rs);cursor:pointer}.nx li:hover{outline:1px solid #3a4560}.nx .n{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-weight:800;background:rgba(91,141,239,.18);color:#9dbbff}.nx .g{font-weight:800;color:var(--ok);white-space:nowrap}.nx small{display:block;color:var(--mu);font-size:11px}
+.hs{display:flex;gap:2px;margin-top:4px}.hs i{width:6px;height:6px;border-radius:2px;background:#232b3b}.hs i.connected{background:var(--ok)}.hs i.error{background:var(--wa)}.hs i.not_connected{background:#4b5468}
+.wt{font-size:10px;font-weight:700;color:var(--mu);border:1px solid var(--ln);border-radius:6px;padding:0 5px;margin-left:6px}
+.out .cf{height:5px;border-radius:3px;background:#232b3b;overflow:hidden;margin-top:6px}.out .cf i{display:block;height:100%}.out .ms{font-size:11px;color:var(--wa);margin-top:3px}
+.map.focus .src:not(.hl),.map.focus .out:not(.hl){opacity:.28}.map.focus #wires path:not(.hl){stroke-opacity:.12}.map.focus #wires path.hl{stroke-width:2.6}
+.map.probs .src.connected{opacity:.35}
+.flt{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 8px}.flt .btn.on{background:var(--ac);border-color:var(--ac);color:#fff}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,96vw);background:var(--pn);border-left:1px solid var(--ln);z-index:60;padding:18px;overflow:auto;box-shadow:-20px 0 40px rgba(0,0,0,.4)}
+#drawer h3{margin:0 0 4px;font-size:18px;display:flex;gap:8px;align-items:center}#drawer .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:12.5px;margin:12px 0}#drawer .kv span:nth-child(odd){color:var(--mu)}
+#drawer .hs i{width:10px;height:18px}#drawer .act{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}a.btn{text-decoration:none}
+</style></head><body><main>
+<div class="top"><div><div class="eb">{{org.short}} · Zyberon platform</div><h1>Platform Map</h1><div class="mu">How the platform works for {{org.short}}: what feeds it, what happens inside, and what comes out. Every source shows its real state now; data visibly flows only from sources that delivered it.</div></div>
+ <span class="sp"></span><span class="mu sm" id="up"></span><button type="button" class="btn" id="refresh"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+ <div class="top3">
+  <section class="card" aria-label="Readiness"><h2><i class="ti ti-gauge"></i>Platform readiness<span class="c">weighted · itemised</span></h2><div class="rd" id="rd"></div><div id="trend"></div></section>
+  <section class="card" aria-label="What changed"><h2><i class="ti ti-sparkles"></i>What the data says<span class="c">from the daily history</span></h2><ul class="ins" id="ins"></ul></section>
+  <section class="card" aria-label="Next best actions"><h2><i class="ti ti-target-arrow"></i>Connect or fix next<span class="c">ranked by what it unlocks</span></h2><ol class="nx" id="nx"></ol></section>
+ </div>
+ <div class="sum" id="sum"></div>
+ <div class="flt"><button type="button" class="btn on" data-flt="all">All sources</button><button type="button" class="btn" data-flt="probs">Only problems</button><span class="mu sm">Hover a source or an outcome to see what depends on what · click a source for its details</span></div>
+ <div class="map" id="map">
+  <svg id="wires" aria-hidden="true"></svg>
+  <div class="col" id="sources" aria-label="Sources"></div>
+  <div class="hubwrap">
+   <div class="hub" id="hub" title="Zyberon"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="#06291b" stroke-width="11" stroke-linecap="round"><path d="M18 46 C28 30 40 22 54 18"/><path d="M14 70 C30 46 50 34 72 28"/><path d="M34 84 C46 64 62 52 84 46"/></g></svg><div class="nm">ZYBERON</div></div>
+   <span class="aimode" id="aimode"></span>
+   <ol class="stages" id="stages"></ol>
+  </div>
+  <div class="col" id="outcomes" aria-label="Outcomes"></div>
+ </div>
+ <div class="legend"><span><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#3ccf8e" stroke-width="2"/><circle cx="20" cy="4" r="3" fill="#3ccf8e"/></svg>connected, data flowing</span><span><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#f5a524" stroke-width="2"/></svg>configured but failing</span><span><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#4b5468" stroke-width="2" stroke-dasharray="4 4"/></svg>not connected</span></div>
+ <div class="note">Machine learning runs on this server (scores, anomalies, trends, forecasts) and every result says how it was worked out. The AI engineers investigate and propose; a named person approves every change. Click a source to connect or check it, an outcome to open it.</div>
+</div>
+<aside id="drawer" hidden role="dialog" aria-label="Source details"></aside>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);},V=null;
+  var REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var COL={connected:'#3ccf8e',error:'#f5a524',not_connected:'#4b5468'},WORD={connected:'connected',error:'needs attention',not_connected:'not connected'};
+  function req(u){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/itam'+u);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send();});}
+  function ago(t){if(!t)return '';var m=Math.round((Date.now()-Date.parse(t))/60000);return m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':Math.round(m/1440)+' d ago';}
+  var FLT='all';
+  function ring(v){var R=48,C=2*Math.PI*R,f=v/100,c=v>=80?'#3ccf8e':v>=50?'#f5a524':'#ef5b5b';return '<svg class="ring" viewBox="0 0 120 120" role="img" aria-label="Readiness '+v+' of 100"><circle cx="60" cy="60" r="'+R+'" fill="none" stroke="#232b3b" stroke-width="11"/><circle cx="60" cy="60" r="'+R+'" fill="none" stroke="'+c+'" stroke-width="11" stroke-linecap="round" stroke-dasharray="'+(C*f).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(-90 60 60)"/><text x="60" y="66" text-anchor="middle" font-size="28" font-weight="800" fill="#e8ecf3">'+v+'</text></svg>';}
+  function trend(P){if(P.length<2)return '<div class="mu sm" style="margin-top:8px">Trend: '+P.length+' day recorded - the history builds one snapshot a day.</div>';
+    var W=300,H=46,x=function(i){return 4+i/(P.length-1)*(W-8);},y=function(v){return H-4-v/100*(H-8);},d=P.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(p.readiness).toFixed(1);}).join('');
+    return '<svg class="trend" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Readiness over '+P.length+' days"><path d="'+d+'L'+x(P.length-1).toFixed(1)+' '+(H-2)+'L4 '+(H-2)+'Z" fill="rgba(60,207,142,.15)"/><path d="'+d+'" fill="none" stroke="#3ccf8e" stroke-width="2"/></svg><div class="mu sm">'+esc(P[0].day)+' → '+esc(P[P.length-1].day)+' · '+P.length+' days</div>';}
+  function strip(h){return '<span class="hs" aria-hidden="true">'+h.map(function(x){return '<i class="'+esc(x.state||'')+'" title="'+esc(x.day+': '+(x.state?WORD[x.state]:'no reading'))+'"></i>';}).join('')+'</span>';}
+  function draw(){
+    var v=V,R=v.readiness||{score:null,items:[],next:[],trend:[],insights:[]};
+    if(R.score!=null){var good=R.items.filter(function(i){return i.state==='connected';}).length;
+      $('rd').innerHTML=ring(R.score)+'<div class="big"><b>'+esc(R.score)+' of 100</b>'+esc(good+' of '+R.items.length+' sources delivering')+'<div class="sm" style="margin-top:6px" title="'+esc(R.items.map(function(i){return i.label+': '+i.why;}).join('\n'))+'">'+esc(R.method)+' <u>hover for the points</u></div></div>';
+      $('trend').innerHTML=trend(R.trend||[]);}
+    $('ins').innerHTML=(R.insights||[]).length?R.insights.map(function(i){return '<li class="'+esc(i.kind)+'"'+(i.source?' data-isrc="'+esc(i.source)+'"':'')+'>'+esc(i.text)+'</li>';}).join(''):'<li>Nothing changed and nothing is unstable.</li>';
+    $('nx').innerHTML=(R.next||[]).length?R.next.slice(0,6).map(function(n,i){return '<li data-nx="'+esc(n.id)+'"><span class="n">'+(i+1)+'</span><span><b>'+esc((n.action==='fix'?'Fix ':'Connect ')+n.label)+'</b><small>'+esc(n.outcomes.length?'improves '+n.outcomes.join(', '):n.why)+'</small></span><span class="g">+'+esc(n.gain)+'</span></li>';}).join(''):'<li><span class="n">✓</span><span><b>Every source delivers</b><small>nothing to connect</small></span><span></span></li>';
+    $('sum').innerHTML='<span class="chip"><i class="dot d-connected"></i><b>'+v.summary.connected+'</b> connected</span><span class="chip"><i class="dot d-error"></i><b>'+v.summary.error+'</b> need attention</span><span class="chip"><i class="dot d-not_connected"></i><b>'+v.summary.not_connected+'</b> not connected</span><span class="chip">'+v.relationships+' CMDB relationships</span>';
+    $('sources').innerHTML=v.sources.map(function(s){return '<a class="src '+esc(s.state)+'" href="'+esc(s.page)+'" data-src="'+esc(s.id)+'" title="'+esc(s.label+': '+WORD[s.state]+' - '+s.detail)+'"><span class="ic"><i class="ti ti-'+esc(s.icon)+'"></i></span><span style="min-width:0"><span class="t">'+esc(s.label)+(s.weight!=null?'<span class="wt" title="share of the platform output that depends on it">'+esc(s.weight)+'</span>':'')+'</span><span class="v">'+esc(s.vendors)+'</span><span class="s">'+esc(s.detail)+(s.last?' · '+esc(ago(s.last)):'')+'</span>'+(s.history?strip(s.history):'')+'</span><i class="dot d-'+esc(s.state)+'" aria-label="'+esc(WORD[s.state])+'"></i></a>';}).join('');
+    $('stages').innerHTML=v.stages.map(function(st,i){return '<li><span class="n">'+(i+1)+'</span><span><b>'+esc(st.label)+'</b><span>'+esc(st.text)+'</span></span></li>';}).join('');
+    $('aimode').innerHTML=v.ai.mode==='local'?'<i class="dot d-connected"></i>AI: local model'+(v.ai.model?' ('+esc(v.ai.model)+')':'')+' · stays inside':v.ai.mode==='anthropic'?'<i class="dot d-error"></i>AI: Claude · data leaves the network':v.ai.mode==='off'?'<i class="dot d-not_connected"></i>AI: off':'<i class="dot d-not_connected"></i>AI: not installed';
+    $('outcomes').innerHTML=v.outcomes.map(function(o){var cf=o.confidence,cc=cf==null?'#4b5468':cf>=80?'#3ccf8e':cf>=50?'#f5a524':'#ef5b5b';
+      return '<a class="out" href="'+esc(o.page)+'" data-out="'+esc(o.id)+'"><span class="t"><i class="ti ti-'+esc(o.icon)+'"></i>'+esc(o.label)+(o.value!=null?'<span class="val">'+esc(String(o.value))+'</span>':'')+'</span><div class="h">'+esc(o.how)+(o.value!=null&&o.unit?' · '+esc(o.unit):'')+'</div><div class="ml"><i class="ti ti-sparkles"></i>'+esc(o.ml)+'</div>'
+        +(cf!=null?'<div class="cf" title="'+esc('built on '+cf+'% of its sources (weighted)')+'"><i style="width:'+Math.max(3,cf)+'%;background:'+cc+'"></i></div><div class="sm mu">'+esc(cf+'% of its sources deliver')+'</div>':'')+((o.missing||[]).length?'<div class="ms">missing: '+esc(o.missing.map(function(m){return m.label;}).join(', '))+'</div>':'')+'</a>';}).join('');
+    $('map').classList.toggle('probs',FLT==='probs');
+    $('up').textContent='Updated '+String(v.generated_at).slice(11,16)+' UTC';
+    requestAnimationFrame(wires);
+  }
+  function srcOf(id){return V.sources.filter(function(s){return s.id===id;})[0];}
+  function highlight(src,out){var map=$('map');if(!src&&!out){map.classList.remove('focus');document.querySelectorAll('.hl').forEach(function(x){x.classList.remove('hl');});return;}
+    var S={},O={};if(src){S[src]=1;(srcOf(src).feeds||[]).forEach(function(o){O[o]=1;});}if(out){O[out]=1;var oo=V.outcomes.filter(function(o){return o.id===out;})[0];((oo&&oo.depends)||[]).forEach(function(k){S[k]=1;});}
+    map.classList.add('focus');document.querySelectorAll('[data-src]').forEach(function(x){x.classList.toggle('hl',!!S[x.getAttribute('data-src')]);});document.querySelectorAll('[data-out]').forEach(function(x){x.classList.toggle('hl',!!O[x.getAttribute('data-out')]);});
+    document.querySelectorAll('#wires path[data-s]').forEach(function(x){x.classList.toggle('hl',!!S[x.getAttribute('data-s')]);});document.querySelectorAll('#wires path[data-o]').forEach(function(x){x.classList.toggle('hl',!!O[x.getAttribute('data-o')]);});}
+  function openDrawer(id){var s=srcOf(id);if(!s)return;var dr=$('drawer'),ins=(V.readiness&&V.readiness.insights||[]).filter(function(i){return i.source===id;}),nx=(V.readiness&&V.readiness.next||[]).filter(function(n){return n.id===id;})[0];
+    var feeds=V.outcomes.filter(function(o){return (s.feeds||[]).indexOf(o.id)>=0;});
+    dr.innerHTML='<div style="display:flex;align-items:center;gap:8px"><h3><i class="ti ti-'+esc(s.icon)+'"></i>'+esc(s.label)+'</h3><span class="sp"></span><button type="button" class="btn" id="drx" aria-label="Close">✕</button></div><div class="mu sm">'+esc(s.vendors)+'</div>'
+      +'<div class="kv"><span>State</span><span><i class="dot d-'+esc(s.state)+'"></i>'+esc(WORD[s.state])+'</span><span>Detail</span><span>'+esc(s.detail)+'</span><span>Newest data</span><span>'+esc(s.last?String(s.last).slice(0,16).replace('T',' ')+' UTC ('+ago(s.last)+')':'not reported')+'</span>'
+      +'<span>Weight</span><span>'+esc(s.weight==null?'—':s.weight+' of 100 readiness points')+'</span><span>Last 30 days</span><span>'+esc(s.days_recorded?s.days_delivering+' of '+s.days_recorded+' recorded days delivering':'no history yet')+'</span>'
+      +'<span>Feeds</span><span>'+esc(feeds.map(function(o){return o.label;}).join(', ')||'—')+'</span>'+(nx?'<span>If you '+esc(nx.action)+' it</span><span>readiness +'+esc(nx.gain)+'</span>':'')+'</div>'
+      +(s.history?strip(s.history):'')+(ins.length?'<ul class="ins" style="margin-top:12px">'+ins.map(function(i){return '<li class="'+esc(i.kind)+'">'+esc(i.text)+'</li>';}).join('')+'</ul>':'')
+      +'<div class="act"><a class="btn" style="background:var(--ac);border-color:var(--ac);color:#fff" href="'+esc(s.page)+'"><i class="ti ti-external-link"></i>'+(s.state==='connected'?'Open':'Connect or check')+'</a></div>';
+    dr.hidden=false;var x=$('drx');if(x)x.focus();}
+  function wires(){
+    var svg=$('wires'),map=$('map');if(!V||getComputedStyle(svg).display==='none')return;
+    var R=map.getBoundingClientRect(),H=$('hub').getBoundingClientRect(),hx=H.left-R.left,hy=H.top-R.top+H.height/2,hr=H.right-R.left,NS='http://www.w3.org/2000/svg',out='';
+    var defs='';
+    document.querySelectorAll('#sources .src').forEach(function(el,i){var b=el.getBoundingClientRect(),x1=b.right-R.left,y1=b.top-R.top+b.height/2,s=V.sources[i],c=COL[s.state],mx=(x1+hx)/2,ty=hy+(i-(V.sources.length-1)/2)*7;
+      var d='M'+x1.toFixed(1)+' '+y1.toFixed(1)+' C'+mx.toFixed(1)+' '+y1.toFixed(1)+' '+mx.toFixed(1)+' '+ty.toFixed(1)+' '+hx.toFixed(1)+' '+ty.toFixed(1);
+      out+='<path id="w'+i+'" data-s="'+esc(s.id)+'" d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+(s.state==='connected'?1.8:1.3)+'" stroke-opacity="'+(s.state==='not_connected'?.55:.9)+'"'+(s.state==='not_connected'?' stroke-dasharray="4 5"':'')+'/>';
+      out+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="3.5" fill="'+c+'"/>';
+      if(s.state==='connected'&&!REDUCED)out+='<circle r="3.2" fill="#a8ffd8" opacity="0"><set attributeName="opacity" to="1" begin="'+(i*.27)+'s"/><animateMotion dur="'+(2.4+(i%5)*.35)+'s" repeatCount="indefinite" begin="'+(i*.27)+'s"><mpath href="#w'+i+'"/></animateMotion></circle>';
+    });
+    document.querySelectorAll('#outcomes .out').forEach(function(el,i){var b=el.getBoundingClientRect(),x2=b.left-R.left,y2=b.top-R.top+b.height/2,mx=(hr+x2)/2,sy=hy+(i-(V.outcomes.length-1)/2)*8;
+      var d='M'+hr.toFixed(1)+' '+sy.toFixed(1)+' C'+mx.toFixed(1)+' '+sy.toFixed(1)+' '+mx.toFixed(1)+' '+y2.toFixed(1)+' '+x2.toFixed(1)+' '+y2.toFixed(1);
+      out+='<path id="o'+i+'" data-o="'+esc(V.outcomes[i].id)+'" d="'+d+'" fill="none" stroke="#3ccf8e" stroke-width="1.6" stroke-opacity=".75"/><circle cx="'+x2.toFixed(1)+'" cy="'+y2.toFixed(1)+'" r="4" fill="#3ccf8e"/>';
+      if(!REDUCED&&V.summary.connected)out+='<circle r="3.4" fill="#a8ffd8" opacity="0"><set attributeName="opacity" to="1" begin="'+(i*.31)+'s"/><animateMotion dur="2.2s" repeatCount="indefinite" begin="'+(i*.31)+'s"><mpath href="#o'+i+'"/></animateMotion></circle>';
+    });
+    svg.setAttribute('viewBox','0 0 '+R.width.toFixed(0)+' '+R.height.toFixed(0));svg.innerHTML=defs+out;
+  }
+  function load(){$('err').innerHTML='';req('/platform-map').then(function(v){V=v;$('main').hidden=false;draw();},function(e){$('err').innerHTML='<div class="err"><b>Platform Map could not load.</b> '+esc(e.message)+(e.status===404?' - update IT Asset Management (engine/platform-map.js).':'')+'</div>';});}
+  if(window.ResizeObserver)new ResizeObserver(function(){if(V)wires();}).observe($('map'));else window.addEventListener('resize',function(){if(V)wires();});
+  $('refresh').addEventListener('click',load);
+  var mp=$('map');
+  mp.addEventListener('mouseover',function(ev){var a=ev.target.closest('[data-src],[data-out]');if(!a||!V)return;highlight(a.getAttribute('data-src'),a.getAttribute('data-out'));});
+  mp.addEventListener('mouseleave',function(){highlight();});
+  document.addEventListener('focusin',function(ev){var a=ev.target.closest&&ev.target.closest('#map [data-src],#map [data-out]');if(a&&V)highlight(a.getAttribute('data-src'),a.getAttribute('data-out'));});
+  document.addEventListener('click',function(ev){var t=ev.target.closest('[data-src],[data-nx],[data-isrc],#drx,[data-flt]');if(!t)return;
+    if(t.id==='drx'){$('drawer').hidden=true;return;}
+    if(t.hasAttribute('data-flt')){FLT=t.getAttribute('data-flt');document.querySelectorAll('[data-flt]').forEach(function(b){b.classList.toggle('on',b===t);});if(V)$('map').classList.toggle('probs',FLT==='probs');return;}
+    if(ev.ctrlKey||ev.metaKey||ev.shiftKey)return;   // open in a new tab as a normal link
+    ev.preventDefault();openDrawer(t.getAttribute('data-src')||t.getAttribute('data-nx')||t.getAttribute('data-isrc'));});
+  document.addEventListener('keydown',function(ev){if(ev.key==='Escape')$('drawer').hidden=true;});
+  load();setInterval(function(){if(!document.hidden)load();},120000);
+})();
+</script></body></html>

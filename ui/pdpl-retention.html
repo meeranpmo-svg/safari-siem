@@ -1,0 +1,146 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Retention Enforcement</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.flow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}.flow span{padding:3px 8px;border-radius:12px;background:rgba(127,127,127,.12)}.flow i{color:var(--tblr-secondary)}
+.ltr{direction:ltr;unicode-bidi:embed}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">Retention Enforcement</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><span class="mut" id="last"></span><button type="button" class="btn btn-primary" id="scan" hidden><i class="ti ti-player-play me-1"></i>Scan now</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>
+ <div class="flow mb-1"><span><i class="ti ti-calendar-time"></i> Retention rule</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-table"></i> Table and date column</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-sum"></i> Monthly count</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-user-check"></i> Data owner records the disposal</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-shield-check"></i> DPO accepts</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-circle-check"></i> Next scan verifies</span></div>
+ PDPL Art. 18 / Implementing Regulation Art. 19: personal data is kept no longer than needed. Each mapped table gets one read-only count of the rows older than its retention rule, through the Data Catalog's read-only login. <b>Counts only - no row and no personal data value is read, stored or shown. The platform never deletes or changes data:</b> the data owner disposes of the rows in the system and records it here.</div></div></div>
+<div class="alert alert-warning mb-3" id="msg" hidden></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3" id="mapcard" hidden><div class="card-header"><h3 class="card-title">Map a rule to a table</h3></div><div class="card-body">
+ <form id="mform" autocomplete="off"><div class="row g-2">
+  <div class="col-md-4"><label class="form-label" for="m-rule">Retention rule *</label><select class="form-select" id="m-rule" required></select></div>
+  <div class="col-md-4"><label class="form-label" for="m-table">Table (from the Data Catalog) *</label><select class="form-select" id="m-table" required></select></div>
+  <div class="col-md-4"><label class="form-label" for="m-col">Date column retention starts from *</label><input class="form-control" id="m-col" list="m-cols" maxlength="128" required placeholder="e.g. closed_date"><datalist id="m-cols"></datalist><div class="mut" id="m-hint"></div></div>
+  <div class="col-md-4"><label class="form-label" for="m-system">System name</label><input class="form-control" id="m-system" maxlength="120"></div>
+  <div class="col-md-4"><label class="form-label" for="m-owner">Data owner (user name)</label><input class="form-control" id="m-owner" maxlength="80" placeholder="else the Privacy Office's data owner of the system"></div>
+ </div><div class="d-flex gap-2 align-items-center mt-2"><button type="submit" class="btn btn-primary">Map</button><span class="small" data-msg></span></div>
+ <div class="mut mt-1">The table must be one the read-only discovery found. The scan confirms the column in the database's own dictionary (it exists and is a date) before it counts.</div></form></div></section>
+<section class="card mb-3" id="mapscard" hidden><div class="card-header"><h3 class="card-title">Mapped tables</h3></div><div class="table-responsive" id="maps"><div class="card-body text-secondary">Loading…</div></div></section>
+<section class="card mb-3" id="actcard" hidden><div class="card-header"><h3 class="card-title" id="acttitle"></h3><div class="card-actions"><button type="button" class="btn btn-sm" id="actclose">Close</button></div></div><div class="card-body" id="actbody"></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title" id="taskstitle">Disposal tasks</h3></div><div class="table-responsive" id="tasks"><div class="card-body text-secondary">Loading…</div></div></section>
+<section class="card mb-3" id="holdscard" hidden><div class="card-header"><h3 class="card-title">Holds on tables</h3></div><div class="table-responsive" id="holds"></div></section>
+<section class="card mb-3" id="setcard" hidden><div class="card-header"><h3 class="card-title">Scan schedule</h3></div><div class="card-body" id="set"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, esc=P.esc, $=P.$;
+  var V=null, MINE=null, ACT=null;
+  var STL={open:['open','orange'],attested:['waiting for the DPO','blue'],accepted:['accepted - next scan verifies','azure'],verified:['verified','green'],not_verified:['not verified','red'],cleared:['no rows past retention','green'],retired:['mapping retired','secondary']};
+  var HST={requested:['waiting for approval','orange'],active:['active','blue'],rejected:['rejected','secondary'],ended:['ended','secondary'],expired:['expired','secondary']};
+  var METH={deletion:'deletion',anonymisation:'anonymisation',archive_legal_hold:'archive under legal hold'};
+  var n=function(v){return v===null||v===undefined?'—':Number(v).toLocaleString('en-US');};
+  var day=function(v){return v?String(v).slice(0,10):'—';};
+  function st(s){var x=STL[s]||[s,'secondary'];return P.badge(x[0],x[1]);}
+  function load(){
+    return P.req('GET','/pdpl/retention/enforcement').then(function(r){V=r;MINE=null;$('msg').hidden=true;draw();}).catch(function(e){
+      if(e.status!==403){V=null;P.fail($('tasks'),e);['kpis'].forEach(function(id){$(id).innerHTML='';});return;}
+      return P.req('GET','/pdpl/retention/enforcement/mine').then(function(m){V=null;MINE=m;drawMine();}).catch(function(e2){P.fail($('tasks'),e2);});});}
+  function show(on){['mapcard','mapscard','holdscard','setcard'].forEach(function(id){$(id).hidden=!on;});$('scan').hidden=!on;}
+  function drawMine(){show(false);$('kpis').innerHTML='';$('last').textContent='';
+    $('msg').hidden=false;$('msg').textContent='Retention enforcement is for operators (the DPO and data stewards). As a data owner you see your own disposal tasks here.';
+    $('taskstitle').textContent='Your disposal tasks';
+    $('tasks').innerHTML=taskTable(MINE.tasks,'No disposal task is assigned to you.');}
+  function draw(){var r=V,t=r.totals;show(true);$('taskstitle').textContent='Disposal tasks';
+    $('last').textContent=r.last_run?'last scan '+P.dt(r.last_run.at)+' by '+r.last_run.by+(r.next_scan?' · next '+day(r.next_scan):''):'never scanned';
+    $('kpis').innerHTML=P.tile(t.mapped,'Mapped tables')+P.tile(n(t.rows_past),'Rows past retention',t.rows_past?'text-red':'')+P.tile(t.tables_past,'Tables past retention',t.tables_past?'text-red':'')+P.tile(t.open,'Open tasks',t.overdue?'text-red':'')
+      +P.tile(t.awaiting,'Waiting for the DPO')+P.tile(t.verified,'Verified',t.verified?'text-green':'')+P.tile(t.not_verified,'Not verified',t.not_verified?'text-red':'')+P.tile(t.failed,'Tables not counted',t.failed?'text-orange':'');
+    var cur=$('m-rule').value;$('m-rule').innerHTML='<option value=""></option>'+r.rules.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.id+' · '+x.name+' · '+x.period_months+' months'+(x.trigger?' from '+x.trigger.replace(/_/g,' '):''))+'</option>';}).join('');$('m-rule').value=cur;
+    var ct=$('m-table').value;$('m-table').innerHTML='<option value=""></option>'+r.catalog.map(function(x,i){return '<option value="'+i+'">'+esc(x.label+' · '+x.schema+'.'+x.table+(x.rows!=null?' · ~'+n(x.rows)+' rows':'')+(x.safe?'':' · name cannot be queried safely')+(x.mapped.length?' · mapped':''))+'</option>';}).join('');$('m-table').value=ct;
+    if(!r.rules.length)$('m-hint').textContent='No retention rule yet: add one on the PDPL registers (kind retention) or set retention months on a processing activity.';
+    else if(!r.catalog.length)$('m-hint').textContent='The Data Catalog is empty: run discovery on the Data Catalog page so tables can be mapped.';
+    pick();
+    $('maps').innerHTML=P.table([['System / table',function(m){return '<b>'+esc(m.system)+'</b><div class="mut font-monospace ltr">'+esc(m.schema+'.'+m.table+'.'+m.date_column)+'</div>'+(m.status!=='active'?P.badge('retired','secondary'):'');}],
+      ['Rule',function(m){return m.rule?esc(m.rule_id)+'<div class="mut">'+esc(m.rule.name)+' · '+esc(m.rule.period_months)+' months</div>':esc(m.rule_id)+' '+P.badge('rule archived','orange');}],
+      ['Rows past retention',function(m){var l=m.last;if(!l)return '<span class="mut">not scanned yet</span>';if(!l.ok)return P.badge('not counted','red')+'<div class="mut">'+esc(l.error)+'</div>';return '<b class="'+(l.count?'text-red':'text-green')+'" data-count>'+esc(n(l.count))+'</b><div class="mut">older than '+esc(l.cutoff)+(l.oldest?' · oldest '+esc(l.oldest):'')+'</div>';}],
+      ['Last scan',function(m){return m.last?esc(P.dt(m.last.at)):'—';}],
+      ['Owner',function(m){return m.owner?esc(m.owner):'<span class="text-orange">not named</span>';}],
+      ['Hold',function(m){return m.hold?P.badge('held until '+m.hold.until,'blue'):m.legal_hold?P.badge('legal hold '+m.legal_hold.id,'blue'):'';}],
+      ['',function(m){if(m.status!=='active')return '';return '<div class="d-flex gap-1">'+(m.hold?'':'<button type="button" class="btn btn-sm" data-hold="'+esc(m.id)+'">Request hold</button>')+'<button type="button" class="btn btn-sm btn-ghost-secondary" data-retire="'+esc(m.id)+'">Retire</button></div>';}]],
+      r.maps,function(m){return 'data-map="'+esc(m.id)+'"';},'No table is mapped yet. Choose a retention rule, a table from the Data Catalog and its date column above.');
+    $('tasks').innerHTML=taskTable(r.tasks,'No disposal task: no mapped table has rows past retention'+(r.last_run?'.':' (no scan yet).'));
+    $('holds').innerHTML=P.table([['Table',function(h){return esc(h.system)+'<div class="mut font-monospace ltr">'+esc(h.table)+'</div>';}],['Reason',function(h){return esc(h.reason);}],['Until',function(h){return esc(h.until);}],
+      ['Status',function(h){var x=HST[h.status]||[h.status,'secondary'];return P.badge(x[0],x[1])+'<div class="mut">requested by '+esc(h.requested_by)+(h.approved_by?' · approved by '+esc(h.approved_by):'')+'</div>';}],
+      ['',function(h){if(!V.can_approve)return h.status==='requested'?'<span class="mut">the DPO or an administrator decides</span>':'';
+        if(h.status==='requested')return '<div class="d-flex gap-1"><button type="button" class="btn btn-sm btn-primary" data-happrove="'+esc(h.id)+'">Approve</button><button type="button" class="btn btn-sm" data-hreject="'+esc(h.id)+'">Reject</button></div>';
+        return h.status==='active'?'<button type="button" class="btn btn-sm" data-hend="'+esc(h.id)+'">End hold</button>':'';}]],r.holds,function(h){return 'data-hid="'+esc(h.id)+'"';},'No hold. A rule can be suspended for one table (a claim or case in progress) - requested by one person, approved by the DPO or an administrator.');
+    var s=r.settings;
+    $('set').innerHTML=r.can_approve?'<div class="row g-2 align-items-end"><div class="col-auto"><label class="form-check"><input type="checkbox" class="form-check-input" id="s-en"'+(s.enabled?' checked':'')+'><span class="form-check-label">Scan on its own</span></label></div><div class="col-auto"><label class="form-label" for="s-every">Every (days)</label><input type="number" class="form-control" id="s-every" min="7" max="92" value="'+esc(s.every_days)+'"></div><div class="col-auto"><label class="form-label" for="s-attest">Escalate after (days without a disposal)</label><input type="number" class="form-control" id="s-attest" min="1" max="180" value="'+esc(s.attest_days)+'"></div><div class="col-auto"><button type="button" class="btn" id="s-save">Save</button></div></div>'
+      :'<p class="mb-0">'+(s.enabled?'Scans every <b>'+esc(s.every_days)+'</b> days':'Scheduled scan is <b>off</b>')+'; a table past retention with no disposal recorded after <b>'+esc(s.attest_days)+'</b> days goes to Notification &amp; Escalation. The DPO ('+esc(r.dpo||'not named')+') or an administrator changes this.</p>';
+    if(ACT)openAct(ACT.kind,ACT.id,true);}
+  function taskTable(rows,empty){var me=V?V.me:MINE.me,ok=V&&V.can_approve;
+    return P.table([['Task',function(x){return '<span class="font-monospace">'+esc(x.id)+'</span><div class="mut">opened '+esc(day(x.opened_at))+'</div>';}],
+      ['System / table',function(x){return '<b>'+esc(x.system)+'</b><div class="mut font-monospace ltr">'+esc(x.table)+(x.date_column?'.'+esc(x.date_column):'')+'</div>';}],
+      ['Rows past retention',function(x){return '<b>'+esc(n(x.count))+'</b><div class="mut">older than '+esc(x.cutoff)+(x.oldest?' · oldest '+esc(x.oldest):'')+'</div>';}],
+      ['Owner',function(x){return x.owner?esc(x.owner):'<span class="text-orange">not named</span>';}],
+      ['Status',function(x){var a=x.attestation,v=x.verification;return st(x.status)+(x.overdue?' '+P.badge('overdue','red'):'')+(x.hold||x.legal_hold?' '+P.badge('on hold','blue'):'')
+        +(a?'<div class="mut">'+esc(METH[a.method]||a.method)+' on '+esc(a.date)+' · '+esc(a.reference)+' · by '+esc(a.by)+'</div>':'')
+        +(x.accepted_by?'<div class="mut">accepted by '+esc(x.accepted_by)+'</div>':'')+(x.return_note?'<div class="mut">returned by '+esc(x.returned_by)+': '+esc(x.return_note)+'</div>':'')
+        +(v?'<div class="mut">scan '+esc(day(v.at))+': '+esc(n(v.before))+' → '+esc(n(v.after))+'</div>':'');}],
+      ['',function(x){var b=[];var mine=x.owner&&String(x.owner).toLowerCase()===String(me).toLowerCase();
+        if((x.status==='open'||x.status==='not_verified')&&(mine||V))b.push('<button type="button" class="btn btn-sm btn-primary" data-attest="'+esc(x.id)+'">Record disposal</button>');
+        if(x.status==='attested'&&ok&&String(x.attestation.by).toLowerCase()!==String(me).toLowerCase())b.push('<button type="button" class="btn btn-sm btn-primary" data-accept="'+esc(x.id)+'">Accept</button><button type="button" class="btn btn-sm" data-return="'+esc(x.id)+'">Return</button>');
+        else if(x.status==='attested')b.push('<span class="mut">'+(ok?'another person (the DPO or an administrator) accepts':'the DPO accepts')+'</span>');
+        return '<div class="d-flex gap-1 flex-wrap">'+b.join('')+'</div>';}]],rows,function(x){return 'data-task="'+esc(x.id)+'"';},empty);}
+  // date column suggestions from the catalog for the chosen table
+  function pick(){if(!V)return;var i=$('m-table').value,t=i===''?null:V.catalog[+i];
+    $('m-cols').innerHTML=t?t.date_columns.map(function(c){return '<option value="'+esc(c.column)+'">'+esc(c.type+(c.note?' - '+c.note:''))+'</option>';}).join(''):'';
+    if(t){$('m-hint').textContent=t.date_columns.length?'Date columns in the catalog: '+t.date_columns.map(function(c){return c.column;}).join(', ')+'. Type another if retention starts from a column the catalog did not list.':'The catalog lists no date column for this table - type the column retention starts from; the scan checks it.';
+      if(!$('m-system').value)$('m-system').value=t.label;if(!$('m-rule').value&&t.rules.length)$('m-rule').value=t.rules[0];}}
+  function actForm(kind,x){
+    if(kind==='attest')return '<div class="row g-2"><div class="col-md-3"><label class="form-label" for="a-method">Method *</label><select class="form-select" id="a-method"><option value=""></option>'+['deletion','anonymisation','archive_legal_hold'].map(function(k){return '<option value="'+k+'">'+esc(METH[k])+'</option>';}).join('')+'</select></div>'
+      +'<div class="col-md-3"><label class="form-label" for="a-date">Date carried out *</label><input type="date" class="form-control" id="a-date"></div><div class="col-md-6"><label class="form-label" for="a-ref">Reference (change / ticket) *</label><input class="form-control" id="a-ref" maxlength="120"></div>'
+      +'<div class="col-12"><label class="form-label" for="a-note">What was done *</label><textarea class="form-control" id="a-note" rows="2" maxlength="1000"></textarea></div></div><p class="mut mt-1">'+esc(x.count)+' row(s) past retention in '+esc(x.table)+'. You attest that you carried this out in the system; the DPO accepts it and the next scan checks the count fell.</p>';
+    if(kind==='return'||kind==='hreject'||kind==='hend'||kind==='retire')return '<label class="form-label" for="a-note">'+(kind==='retire'?'Reason *':'Note *')+'</label><textarea class="form-control" id="a-note" rows="2" maxlength="500"></textarea>';
+    if(kind==='hold')return '<div class="row g-2"><div class="col-md-8"><label class="form-label" for="a-note">Reason (case, claim or inquiry reference) *</label><input class="form-control" id="a-note" maxlength="500"></div><div class="col-md-4"><label class="form-label" for="a-date">Until *</label><input type="date" class="form-control" id="a-date"></div></div><p class="mut mt-1">The DPO or an administrator who is not you approves it. While it is active the table raises no task escalation.</p>';
+    return '';}
+  var TITLE={attest:'Record the disposal',return:'Return the attestation',hold:'Request a hold',hreject:'Reject the hold',hend:'End the hold',retire:'Retire the mapping'};
+  function find(kind,id){if(kind==='hold'||kind==='retire')return (V.maps||[]).filter(function(m){return m.id===id;})[0];if(kind==='hreject'||kind==='hend')return (V.holds||[]).filter(function(h){return h.id===id;})[0];return ((V?V.tasks:MINE.tasks)||[]).filter(function(t){return t.id===id;})[0];}
+  function openAct(kind,id,keep){var x=find(kind,id);if(!x){closeAct();return;}if(keep&&$('actbody').querySelector('form'))return;ACT={kind:kind,id:id};
+    $('acttitle').textContent=TITLE[kind]+' · '+(x.schema?x.schema+'.'+x.table:x.table)+' ('+id+')';
+    $('actbody').innerHTML='<form id="aform">'+actForm(kind,x)+'<div class="d-flex gap-2 align-items-center mt-2"><button type="submit" class="btn btn-primary">'+esc(kind==='attest'?'Record disposal':kind==='hold'?'Request hold':kind==='retire'?'Retire':kind==='return'?'Return':kind==='hreject'?'Reject':'End hold')+'</button><span class="small" data-msg></span></div></form>';
+    $('actcard').hidden=false;$('actcard').scrollIntoView({block:'nearest'});}
+  function closeAct(){ACT=null;$('actcard').hidden=true;$('actbody').innerHTML='';}
+  function done(t){P.toast(t);closeAct();return load();}
+  function failIn(fm,e){var m=fm.querySelector('[data-msg]');if(m){m.className='small text-red';m.textContent=P.why(e);}}
+  document.addEventListener('submit',function(ev){var fm=ev.target;ev.preventDefault();
+    if(fm.id==='mform'){var i=$('m-table').value,t=i===''?null:V.catalog[+i],b={rule_id:$('m-rule').value,date_column:$('m-col').value.trim()};
+      if(t){b.db=t.db;b.schema=t.schema;b.table=t.table;}var sy=$('m-system').value.trim(),ow=$('m-owner').value.trim();if(sy)b.system=sy;if(ow)b.owner=ow;
+      P.req('POST','/pdpl/retention/maps',b).then(function(r){fm.reset();$('m-cols').innerHTML='';P.toast('Mapped '+r.schema+'.'+r.table+' ('+r.id+')');return load();}).catch(function(e){failIn(fm,e);});return;}
+    if(fm.id!=='aform'||!ACT)return;var k=ACT.kind,id=encodeURIComponent(ACT.id),note=$('a-note')?$('a-note').value.trim():'',p,body;
+    if(k==='attest'){p='/pdpl/retention/tasks/'+id+'/attest';body={method:$('a-method').value,date:$('a-date').value,reference:$('a-ref').value.trim(),note:note};}
+    else if(k==='return'){p='/pdpl/retention/tasks/'+id+'/return';body={note:note};}
+    else if(k==='hold'){p='/pdpl/retention/holds';body={map_id:ACT.id,reason:note,until:$('a-date').value};}
+    else if(k==='hreject'){p='/pdpl/retention/holds/'+id+'/reject';body={note:note};}
+    else if(k==='hend'){p='/pdpl/retention/holds/'+id+'/end';body={note:note};}
+    else if(k==='retire'){p='/pdpl/retention/maps/'+id+'/retire';body={reason:note};}
+    P.req('POST',p,body).then(function(){return done({attest:'Disposal recorded - the DPO accepts it',return:'Returned to the data owner',hold:'Hold requested - the DPO or an administrator approves it',hreject:'Hold rejected',hend:'Hold ended',retire:'Mapping retired'}[k]);}).catch(function(e){failIn(fm,e);});});
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-attest]'))){openAct('attest',x.getAttribute('data-attest'));return;}
+    if((x=t.closest('[data-return]'))){openAct('return',x.getAttribute('data-return'));return;}
+    if((x=t.closest('[data-hold]'))){openAct('hold',x.getAttribute('data-hold'));return;}
+    if((x=t.closest('[data-retire]'))){openAct('retire',x.getAttribute('data-retire'));return;}
+    if((x=t.closest('[data-hreject]'))){openAct('hreject',x.getAttribute('data-hreject'));return;}
+    if((x=t.closest('[data-hend]'))){openAct('hend',x.getAttribute('data-hend'));return;}
+    if((x=t.closest('[data-accept]'))){x.disabled=true;P.req('POST','/pdpl/retention/tasks/'+encodeURIComponent(x.getAttribute('data-accept'))+'/accept',{}).then(function(){return done('Accepted - the next scan verifies the count fell');}).catch(function(e){x.disabled=false;P.toast(P.why(e));});return;}
+    if((x=t.closest('[data-happrove]'))){x.disabled=true;P.req('POST','/pdpl/retention/holds/'+encodeURIComponent(x.getAttribute('data-happrove'))+'/approve',{}).then(function(){return done('Hold approved');}).catch(function(e){x.disabled=false;P.toast(P.why(e));});return;}
+    if(t.closest('#actclose')){closeAct();return;}
+    if(t.closest('#s-save')){P.req('POST','/pdpl/retention/settings',{enabled:$('s-en').checked,every_days:+$('s-every').value,attest_days:+$('s-attest').value}).then(function(){P.toast('Saved');return load();}).catch(function(e){P.toast(P.why(e));});return;}
+  });
+  $('m-table').addEventListener('change',function(){$('m-system').value='';pick();});
+  $('scan').addEventListener('click',function(){var b=$('scan');b.disabled=true;P.req('POST','/pdpl/retention/scan',{}).then(function(r){P.toast('Counted '+r.ok+' of '+r.mapped+' table(s)'+(r.failed?' - '+r.failed+' could not be counted (see why in the table)':''));b.disabled=false;return load();}).catch(function(e){b.disabled=false;P.toast(P.why(e));});});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

@@ -1,0 +1,89 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Browsing Traffic</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+[hidden]{display:none!important}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:12px}.g2>.card{margin:0}
+.bars{display:flex;align-items:flex-end;gap:1px;height:150px;border-bottom:1px solid var(--edge)}.bars i{flex:1;display:flex;flex-direction:column-reverse;min-width:1px;height:100%}
+.bars b{display:block}.ca{background:#2f81f7}.cb{background:#f85149}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:6px}.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}.lg .la:before{background:#2f81f7}.lg .lb:before{background:#f85149}
+.rbar{height:6px;border-radius:3px;background:rgba(255,255,255,.07);min-width:60px}.rbar i{display:block;height:100%;border-radius:3px;background:#2f81f7}.rbar i.r{background:#f85149}
+tr.ck{cursor:pointer}tr.ck:hover td{background:rgba(255,255,255,.03)}
+.live{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--mute)}.live i{width:8px;height:8px;border-radius:50%;background:#3fb950;animation:p 2s infinite}@keyframes p{50%{opacity:.3}}
+.flt{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.chip{background:rgba(47,129,247,.15);color:#8db0ff;border-radius:999px;padding:2px 10px;font-size:12px;cursor:pointer;border:0}
+.ans{white-space:pre-wrap;border:1px solid var(--edge);border-radius:10px;padding:12px;margin-top:10px}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Security operations · web</div><h1>Browsing Traffic</h1><div class="muted small">Live, from the firewall's web-filter logs in the SIEM: what is reached and blocked, risky categories that got through, sites never seen before and unusual volumes. Behavioural indicators, not proof of wrongdoing.</div></div>
+<div class="sp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="live" id="live"><i></i><span id="up">connecting…</span></span><select id="hours" aria-label="Period"><option value="1">Last hour</option><option value="24" selected>Last 24 hours</option><option value="168">Last 7 days</option></select><button type="button" id="pause">Pause</button><button type="button" id="xls">Excel</button><button type="button" id="refresh">Refresh</button></div></div>
+<div class="banner" id="nc" hidden></div>
+<div class="flt" id="flt"></div>
+<div id="body">
+<div class="k" id="kk"></div>
+<div class="g2">
+<div class="card"><h2>Requests over time <span class="c" id="bk"></span></h2><div class="bars" id="bars"></div><div class="lg"><span class="la">allowed</span><span class="lb">blocked</span></div></div>
+<div class="card"><h2>Policy gaps <span class="c">risky categories that were ALLOWED</span></h2><div class="tw" id="gaps"></div></div>
+</div>
+<div class="g2" style="margin-top:12px">
+<div class="card"><h2>Top sites <span class="c">click to filter</span></h2><div class="tw" id="sites"></div></div>
+<div class="card"><h2>Categories <span class="c">as the firewall classified them · click to filter</span></h2><div class="tw" id="cats"></div></div>
+</div>
+<div class="g2" style="margin-top:12px">
+<div class="card"><h2>Sites seen for the first time <span class="c">not reached in the 7 days before this period</span></h2><div class="tw" id="newsites"></div></div>
+<div class="card" id="unucard"><h2>Unusual volume <span class="c">last hour against the person's own 7-day hourly average · an indicator, not proof</span></h2><div class="tw" id="unusual"></div></div>
+</div>
+<div class="card" style="margin-top:12px" id="usercard"><h2>Top users <span class="c">operators and administrators - browsing is personal data (PDPL); every view is audited</span></h2><div class="tw" id="users"></div></div>
+<div class="card" style="margin-top:12px"><h2>Live feed <span class="c">latest requests</span></h2><div class="tw" id="tail"></div></div>
+<div class="card" style="margin-top:12px" id="aicard"><h2>AI web-security analyst <span class="c">reads the traffic; changes no policy</span></h2><div id="ai"></div></div>
+<p class="note" id="note"></p>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc,esc=Z.esc,$=function(i){return document.getElementById(i);};
+  var V=null,F={cat:'',site:'',user:''},PAUSED=false,TIMER=null,ANS=null;
+  var tm=function(t,h){var d=new Date(t);return h>24?d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});};
+  function why(e){return e.status===404?'Browsing traffic is not installed on the SIEM yet - run the update.':e.status===403?'Your role cannot do this.':e.message;}
+  function q(){return '/web/browsing?hours='+$('hours').value+(F.cat?'&cat='+encodeURIComponent(F.cat):'')+(F.site?'&site='+encodeURIComponent(F.site):'')+(F.user?'&user='+encodeURIComponent(F.user):'');}
+  function bar(n,mx,red){return '<div class="rbar"><i class="'+(red?'r':'')+'" style="width:'+Math.max(2,n/Math.max(1,mx)*100)+'%"></i></div>';}
+  function tbl(head,rows,empty){return rows.length?'<table><thead><tr>'+head.map(function(h){return '<th>'+esc(h)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table>':'<div class="empty">'+esc(empty)+'</div>';}
+  function draw(v){V=v;$('up').textContent='updated '+new Date().toLocaleTimeString();
+    $('flt').innerHTML=['cat','site','user'].filter(function(k){return F[k];}).map(function(k){return '<button type="button" class="chip" data-clear="'+k+'">'+esc(k+': '+F[k])+' ✕</button>';}).join('');
+    if(!v.configured){$('nc').hidden=false;$('nc').textContent=v.note;$('body').hidden=true;return;}
+    $('nc').hidden=true;$('body').hidden=false;var T=v.totals;
+    $('kk').innerHTML=Z.tile('Requests',Z.n(T.requests),'')+Z.tile('Right now',Z.n(T.last_5min),'last 5 minutes')+Z.tile('Blocked',Z.n(T.blocked),T.blocked_pct==null?'':T.blocked_pct+' %',T.blocked?'warn':'ok')
+      +Z.tile('Risky allowed',Z.n(v.risky.allowed),'policy gaps',v.risky.allowed?'bad':'ok')+Z.tile('Users',Z.n(T.users),'')+Z.tile('Devices',Z.n(T.devices),'')+Z.tile('Sites',Z.n(T.sites),'')+Z.tile('New sites',Z.n(v.first_seen.length),'first seen',v.first_seen.some(function(x){return x.risky;})?'warn':'');
+    var S=v.series,mx=Math.max(1,Math.max.apply(null,S.map(function(x){return x.allowed+x.blocked;})));
+    $('bk').textContent=v.bucket_ms>=21600000?'6-hour buckets':v.bucket_ms>=3600000?'hourly':'5-minute buckets';
+    $('bars').innerHTML=S.map(function(x){var f=function(n,c){return n?'<b class="'+c+'" style="height:'+(n/mx*100)+'%"></b>':'';};return '<i title="'+esc(tm(x.t,v.hours)+': '+x.allowed+' allowed · '+x.blocked+' blocked')+'">'+f(x.allowed,'ca')+f(x.blocked,'cb')+'</i>';}).join('');
+    $('gaps').innerHTML=tbl(['Category','Site','Allowed','Blocked','Users'],v.risky.gaps.map(function(g){return '<tr class="ck" data-site="'+esc(g.site)+'"><td>'+Z.pill(g.category,'bad')+'</td><td class="mono">'+esc(g.site)+'</td><td><b style="color:#f85149">'+Z.n(g.allowed)+'</b></td><td>'+Z.n(g.blocked)+'</td><td>'+Z.n(g.users)+'</td></tr>';}),v.risky.blocked?'Every request to a risky category was blocked.':'No request to a risky category.');
+    var sm=Math.max(1,(v.sites[0]||{}).requests||1);
+    $('sites').innerHTML=tbl(['Site','Category','Requests','','Blocked','Users'],v.sites.map(function(s){return '<tr class="ck" data-site="'+esc(s.site)+'"><td class="mono">'+esc(s.site)+'</td><td>'+(s.category?Z.pill(s.category,s.risky?'bad':''):'<span class="muted">—</span>')+'</td><td>'+Z.n(s.requests)+'</td><td>'+bar(s.requests,sm,s.risky)+'</td><td>'+Z.n(s.blocked)+'</td><td>'+Z.n(s.users)+'</td></tr>';}),'No web request in this period.');
+    var cm=Math.max(1,(v.categories[0]||{}).requests||1);
+    $('cats').innerHTML=tbl(['Category','Requests','','Blocked','Users'],v.categories.map(function(c){return '<tr class="ck" data-cat="'+esc(c.category)+'"><td>'+Z.pill(c.category,c.risky?'bad':'')+'</td><td>'+Z.n(c.requests)+'</td><td>'+bar(c.requests,cm,c.risky)+'</td><td>'+Z.n(c.blocked)+'</td><td>'+Z.n(c.users)+'</td></tr>';}),'No web request in this period.');
+    $('newsites').innerHTML=tbl(['Site','Category','First seen','Requests','Users'],v.first_seen.map(function(s){return '<tr class="ck" data-site="'+esc(s.site)+'"><td class="mono">'+esc(s.site)+'</td><td>'+(s.category?Z.pill(s.category,s.risky?'bad':''):'—')+'</td><td class="small">'+esc(String(s.first).slice(0,16))+'</td><td>'+Z.n(s.requests)+'</td><td>'+Z.n(s.users)+'</td></tr>';}),'No new site in this period.');
+    $('unucard').hidden=$('usercard').hidden=!v.named;
+    if(v.named){$('unusual').innerHTML=tbl(['Who','Last hour','Usual per hour','Why'],v.unusual.map(function(u){return '<tr class="ck" data-user="'+esc(u.who)+'"><td><b>'+esc(u.who)+'</b></td><td>'+Z.n(u.last_hour)+'</td><td>'+esc(u.usual)+'</td><td class="small">'+esc(u.why)+'</td></tr>';}),'Nobody is far above their own usual volume.');
+      var um=Math.max(1,(v.users[0]||{}).requests||1);
+      $('users').innerHTML=tbl(['Who','Requests','','Blocked','Risky','Sites'],v.users.map(function(u){return '<tr class="ck" data-user="'+esc(u.who)+'"><td><b>'+esc(u.who)+'</b></td><td>'+Z.n(u.requests)+'</td><td>'+bar(u.requests,um)+'</td><td>'+Z.n(u.blocked)+'</td><td>'+(u.risky?Z.pill(Z.n(u.risky),'bad'):'0')+'</td><td>'+Z.n(u.sites)+'</td></tr>';}),'No user in this period.');}
+    $('tail').innerHTML=tbl(['Time'].concat(v.named?['Who']:[]).concat(['Site','Category','Result','Source']),v.tail.map(function(x){return '<tr><td class="small">'+esc(String(x.ts).slice(11,19))+'</td>'+(v.named?'<td>'+esc(x.who||'')+'</td>':'')+'<td class="mono">'+esc(x.site)+'</td><td>'+esc(x.category||'—')+'</td><td>'+(x.blocked?Z.pill('blocked','bad'):Z.pill('allowed','ok'))+'</td><td class="small muted">'+esc(x.source)+'</td></tr>';}),'No request in this period.');
+    var a=v.ai||{};$('ai').innerHTML=!a.enabled?'<div class="empty">The AI analyst is off: '+esc(a.reason||'not configured')+'.</div>':!Z.can('operator')?'<div class="empty">The AI analyst is for operators and administrators.</div>'
+      :'<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="aq" style="flex:1;min-width:320px" placeholder="e.g. Which allowed categories should we block, and what changed this week?"><button type="button" id="ask">Ask</button></div>'+(ANS?'<div class="ans">'+esc(ANS.answer)+'</div>':'');
+    $('note').textContent=(v.sources||[]).length?'Sources: '+v.sources.map(function(s){return s.source+' ('+Z.n(s.events_7d)+' in 7 days)';}).join(', ')+'. '+v.note:v.note;}
+  function load(){clearTimeout(TIMER);return Z.req('GET',q()).then(draw,function(e){$('nc').hidden=false;$('nc').textContent=why(e);$('up').textContent='not reachable';}).then(function(){if(!PAUSED)TIMER=setTimeout(function(){if(!document.hidden)load();else TIMER=setTimeout(load,15000);},15000);});}
+  document.addEventListener('click',function(ev){var t=ev.target.closest('[data-site],[data-cat],[data-user],[data-clear],button[id]');if(!t)return;
+    if(t.dataset.clear){F[t.dataset.clear]='';return load();}
+    if(t.dataset.site!=null){F.site=t.dataset.site;return load();}if(t.dataset.cat!=null){F.cat=t.dataset.cat;return load();}if(t.dataset.user!=null){F.user=t.dataset.user;return load();}
+    if(t.id==='refresh')return load();
+    if(t.id==='pause'){PAUSED=!PAUSED;t.textContent=PAUSED?'Resume':'Pause';$('live').querySelector('i').style.animationPlayState=PAUSED?'paused':'running';if(!PAUSED)load();else clearTimeout(TIMER);return;}
+    if(t.id==='ask'){var qq=$('aq').value.trim();if(qq.length<3)return;t.disabled=true;t.textContent='Thinking…';return Z.req('POST','/web/browsing/ask',{question:qq}).then(function(r){ANS=r;draw(V);},function(e){t.disabled=false;t.textContent='Ask';Z.toast(why(e));});}
+    if(t.id==='xls'&&V&&V.configured){var sheets=[{name:'Summary',columns:[{h:'Measure',w:30},{h:'Value',w:16}],rows:[['Requests',V.totals.requests],['Blocked',V.totals.blocked],['Risky allowed',V.risky.allowed],['Users',V.totals.users],['Devices',V.totals.devices],['Sites',V.totals.sites]]},
+      {name:'Sites',columns:[{h:'Site',w:40},{h:'Category',w:24},{h:'Requests',t:'n'},{h:'Blocked',t:'n'},{h:'Users',t:'n'}],rows:V.sites.map(function(s){return [s.site,s.category||'',s.requests,s.blocked,s.users];})},
+      {name:'Categories',columns:[{h:'Category',w:30},{h:'Requests',t:'n'},{h:'Blocked',t:'n'},{h:'Users',t:'n'},{h:'Risky',w:8}],rows:V.categories.map(function(c){return [c.category,c.requests,c.blocked,c.users,c.risky?'yes':''];})},
+      {name:'Policy gaps',columns:[{h:'Category',w:24},{h:'Site',w:40},{h:'Allowed',t:'n'},{h:'Blocked',t:'n'},{h:'Users',t:'n'}],rows:V.risky.gaps.map(function(g){return [g.category,g.site,g.allowed,g.blocked,g.users];})},
+      {name:'First-seen sites',columns:[{h:'Site',w:40},{h:'Category',w:24},{h:'First seen',w:18},{h:'Requests',t:'n'},{h:'Users',t:'n'}],rows:V.first_seen.map(function(s){return [s.site,s.category||'',String(s.first),s.requests,s.users];})}];
+      return window.zybXlsx.download('browsing-traffic-'+new Date().toISOString().slice(0,10)+'.xlsx',sheets,{title:('Browsing Traffic - ' + ZYB_ORG.short),filter:'last '+V.hours+' h'+(F.cat?' · '+F.cat:'')+(F.site?' · '+F.site:'')+' (no user names in the export)',by:Z.user()||Z.role()});}
+  });
+  $('hours').addEventListener('change',load);
+  Z.ready(load);
+})();
+</script></body></html>

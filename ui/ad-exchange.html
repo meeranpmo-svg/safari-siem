@@ -1,0 +1,224 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AD &amp; Exchange</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{margin-left:auto;font-weight:400;color:var(--mute);font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin:0 0 10px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:22px;font-weight:700;margin-top:2px}.t .s{font-size:11.5px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.na .v{color:var(--mute);font-size:15px}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}button.sm{padding:3px 9px;font-size:12px}
+select,input{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}td>b{white-space:nowrap}
+tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(255,255,255,.035)}.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap;margin:1px 2px 1px 0}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:12px;margin:10px 0}.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.tabs{display:flex;gap:6px;margin:0 0 12px;border-bottom:1px solid var(--edge)}.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 14px;font-size:14px;color:var(--mute)}.tabs button.on{color:var(--title);border-bottom-color:#3fb950}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Servers &amp; Cloud · live</div><h1>Active Directory &amp; Exchange</h1></div><span class="sp"></span>
+  <select id="per" aria-label="Period"><option value="24h">Last 24 hours</option><option value="7d" selected>Last 7 days</option><option value="30d">Last 30 days</option></select>
+  <span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="dash" class="on">📊 Dashboard</button><button type="button" role="tab" data-tab="cfg">⚙️ Configuration</button></div>
+<div id="tab-dash">
+<div class="card"><h2>🏛️ Servers <span class="c">from Server Availability · checked every minute</span></h2>
+  <div class="k" id="srvk"></div>
+  <div id="addbox"></div>
+  <div class="tw" id="srv"><div class="empty">Loading…</div></div>
+</div>
+
+<div class="card"><h2>🔐 Active Directory security <span class="c" id="adc">from the domain controllers' Windows logs in the SIEM</span></h2><div class="k" id="adk"></div></div>
+<div class="card"><h2>📧 Exchange security <span class="c">mailbox and admin changes from Exchange / Microsoft 365 logs</span></h2><div class="k" id="exk"></div></div>
+<div class="card"><h2>👥 Directory accounts <span class="c" id="idc"></span></h2><div id="idn"><div class="empty">Loading…</div></div></div>
+</div>
+<div id="tab-cfg" hidden>
+<div class="card" id="cfgcard"><h2>⚙️ Configuration <span class="c">administrators · passwords and secrets are write-only</span></h2><div id="cfg"><div class="empty">Loading…</div></div></div>
+</div>
+</main>
+<script src="vendor/zyb-adacct.js"></script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', WHO={}, V=null, HOSTS=[], LOGS={};
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  function req(m,url,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,url);x.withCredentials=true;x.timeout=30000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function dur(s){if(s==null)return '';var d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?d+' d '+h+' h':h?h+' h '+m+' m':m+' m';}
+  function per(){return $('per').value;}
+
+  /* ---- which monitored servers are DCs / Exchange ---- */
+  var AD_RE=/active directory|^ad$|domain controller|^dc$|^adds$/i, EX_RE=/exchange|^mail$|^mbx$/i;
+  var AD_NAME=/(^|[-_.])(dc|adc|addc)\d*([-_.]|$)|^[a-z]*dc[-_]?[a-z0-9]*$|^asdc/i, EX_NAME=/exch|mbx|(^|[-_])cas\d*([-_.]|$)|mailbox/i;
+  function kindOf(h){var s=h.service||'';if(AD_RE.test(s))return['ad',false];if(EX_RE.test(s))return['ex',false];if(String(s).trim())return[null,false];   /* a service an administrator set always wins over a guess from the name */
+  var n=String(h.name||'').toLowerCase().split('.')[0];if(EX_NAME.test(n))return['ex',true];if(AD_NAME.test(n))return['ad',true];return[null,false];}
+
+  function bar(p){if(p==null)return '';var c=p>=90?'#ff7b72':p>=75?'#e3b341':'#3fb950';return '<span style="display:inline-block;width:42px;height:6px;border-radius:3px;background:rgba(255,255,255,.08);vertical-align:middle;margin-right:5px;overflow:hidden"><i style="display:block;height:100%;width:'+Math.min(100,p)+'%;background:'+c+'"></i></span>';}
+  function res(h){var r=h.resources;if(!r)return '<span class="muted" title="Needs the Windows SIEM agent 1.1">—</span>';var one=function(l,p){return p==null?'':'<div style="white-space:nowrap;font-size:12px">'+bar(p)+l+' '+Math.round(p)+'%</div>';};return one('CPU',r.cpu_pct)+one('Mem',r.mem_pct)+one('Disk',r.disk_max_pct);}
+  function drawServers(){
+    var rows=HOSTS.map(function(h){var k=kindOf(h);return {h:h,k:k[0],guess:k[1]};}).filter(function(x){return x.k;});
+    var ad=rows.filter(function(x){return x.k==='ad';}), ex=rows.filter(function(x){return x.k==='ex';});
+    var on=function(l){return l.filter(function(x){return x.h.status==='online';}).length;};
+    var ISS={'single-server':'single server','no-dr':'no DR copy','dr-offline':'DR copy offline','no-redundancy-now':'running on one server now','service-down':'service down'};
+    var iss=function(g){return (g.issues||[]).map(function(i){return ISS[i]||i;}).join(', ');};
+    function grp(re){var g=(V&&V.groups||[]).filter(function(g){return re.test(g.name||'');})[0];return g;}
+    var gad=grp(AD_RE), gex=grp(EX_RE);
+    var sev=function(l){return !l.length?'na':on(l)===l.length?'ok':on(l)===0?'bad':'warn';};
+    var tiles=[['Domain controllers',ad.length?on(ad)+' / '+ad.length+' online':'none added',sev(ad),ad.length<2&&ad.length?'Only one DC: single point of failure':''],
+      ['Exchange servers',ex.length?on(ex)+' / '+ex.length+' online':'none added',sev(ex),ex.length===1?'Only one server: single point of failure':''],
+      ['AD redundancy',gad?(gad.issues&&gad.issues.length?iss(gad):'redundant'):(ad.length>=2?'set service to see HA/DR':'—'),gad&&gad.issues&&gad.issues.length?'warn':gad?'ok':'na',''],
+      ['Exchange redundancy',gex?(gex.issues&&gex.issues.length?iss(gex):'redundant'):(ex.length>=2?'set service to see HA/DR':'—'),gex&&gex.issues&&gex.issues.length?'warn':gex?'ok':'na','']];
+    $('srvk').innerHTML=tiles.map(function(t){return '<div class="t '+t[2]+'" style="cursor:default"><div class="l">'+esc(t[0])+'</div><div class="v" style="font-size:'+(String(t[1]).length>14?'15px':'22px')+'">'+esc(t[1])+'</div>'+(t[3]?'<div class="s">'+esc(t[3])+'</div>':'')+'</div>';}).join('');
+    $('srv').innerHTML=rows.length?'<table><thead><tr><th>Server</th><th>Role</th><th>IP</th><th>Status</th><th>Availability 7 d</th><th>Last restart</th><th>CPU · memory · disk</th><th>Logs in SIEM ('+esc(per())+')</th><th></th></tr></thead><tbody>'+rows.map(function(x){var h=x.h,a=h.availability||{},st=h.status==='online'?'<span class="pill ok">Online '+dur(h.duration_s)+'</span>':h.status==='offline'?'<span class="pill bad">Offline '+dur(h.duration_s)+'</span>':'<span class="pill">Not checked yet</span>';var lg=LOGS[h.ip];
+      return '<tr tabindex="0" data-h="'+esc(h.id)+'"><td><b>'+esc(h.name)+'</b>'+(h.role?' <span class="muted">· '+esc(h.role)+'</span>':'')+'</td><td>'+(x.k==='ad'?'Domain controller':'Exchange')+(x.guess?' <span class="pill warn" title="Guessed from the name">guessed</span>'+(can('admin')?' <button type="button" class="sm" data-confirm="'+esc(h.id)+'" data-k="'+x.k+'">Confirm</button> <button type="button" class="sm" data-notk="'+esc(h.id)+'" data-k="'+x.k+'" title="The guess is wrong: say what this server is">Not '+(x.k==='ad'?'a DC':'Exchange')+'</button>':''):'')+'</td><td class="mono">'+esc(h.ip)+'</td><td>'+st+'</td><td>'+(a.d7!=null?a.d7+' %':'<span class="muted">—</span>')+'</td><td>'+(h.days_since_boot!=null?h.days_since_boot+' d ago':'<span class="muted">no logs</span>')+'</td><td>'+res(h)+'</td><td>'+(lg==null?'<span class="muted">…</span>':lg?lg.toLocaleString()+' events':'<span class="pill bad">none</span>')+'</td><td><button type="button" class="sm" data-det="'+esc(h.id)+'">Details</button></td></tr>';}).join('')+'</tbody></table>'
+      +'<p class="note">"none" in the logs column: the Windows agent is not sending this server\'s logs to the SIEM — install it from the server\'s Connect button in Asset Discovery.</p>'
+      :'<div class="empty">No domain controller or Exchange server is monitored yet.'+(can('admin')?' Add them below.':' An administrator can add them.')+'</div>';
+    drawAdd(rows);
+  }
+  function drawAdd(rows){
+    if(!can('admin')){$('addbox').innerHTML='';return;}
+    var have={};rows.forEach(function(x){have[x.h.id]=1;});
+    var others=HOSTS.filter(function(h){return !have[h.id];}).sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+    if($('addbox').getAttribute('data-n')===String(others.length)&&$('addbox').innerHTML) return;
+    $('addbox').setAttribute('data-n',String(others.length));
+    $('addbox').innerHTML='<details'+(rows.length?'':' open')+'><summary style="cursor:pointer;font-weight:600;display:inline-block;background:#238636;color:#fff;border-radius:7px;padding:7px 12px;margin:0 0 6px">➕ Add a domain controller or Exchange server</summary>'
+      +'<form class="form" id="fadd"><label>Type<select id="a-k"><option value="ad">Domain controller (Active Directory)</option><option value="ex">Exchange server</option></select></label>'
+      +('<label>Server name<input id="a-n" placeholder="dc-hqa.' + ZYB_ORG.domain + '" required maxlength="120"></label><label>IP address<input id="a-ip" placeholder="192.168.1.52" required maxlength="45"></label>')
+      +'<label>HA role<select id="a-r"><option value="primary">Primary</option><option value="secondary">Secondary</option><option value="dr">DR site</option><option value="standalone">Standalone</option></select></label>'
+      +'<button class="pri" type="submit">Add server</button></form>'
+      +(others.length?'<form class="form" id="fasg"><label style="grid-column:span 2">…or mark a server that is already monitored<select id="s-h">'+others.map(function(h){return '<option value="'+esc(h.id)+'">'+esc(h.name)+' ('+esc(h.ip)+')</option>';}).join('')+'</select></label><label>as<select id="s-k"><option value="ad">Domain controller</option><option value="ex">Exchange server</option></select></label><label>HA role<select id="s-r"><option value="primary">Primary</option><option value="secondary">Secondary</option><option value="dr">DR site</option><option value="standalone">Standalone</option></select></label><button type="submit">Mark</button></form>':'')
+      +'<p class="note">Servers are checked every minute (ping, then RDP/SMB/RPC ports) on the Server Availability page too. The type sets the service ("Active Directory" / "Exchange") used for the HA / DR check.</p></details>';
+    $('fadd').onsubmit=function(e){e.preventDefault();var b={name:$('a-n').value.trim(),ip:$('a-ip').value.trim(),os:'windows',service:$('a-k').value==='ad'?'Active Directory':'Exchange',role:$('a-r').value};
+      req('POST','/api/soc/netops/avail/hosts',b).then(function(){toast(b.name+' added — first check within a minute');$('a-n').value='';$('a-ip').value='';load();}).catch(function(er){toast(er.message);});};
+    if($('fasg'))$('fasg').onsubmit=function(e){e.preventDefault();setKind($('s-h').value,$('s-k').value,$('s-r').value);};
+  }
+  // the name guess is wrong: record what the server really is (its service), so it is never guessed as AD / Exchange again
+  function notKind(id,k){var h=HOSTS.filter(function(x){return x.id===id;})[0]||{},what=k==='ad'?'a domain controller':'an Exchange server';
+    Z.open('Not '+what,h.name||id,'<p>The name made the platform guess this is '+what+'. Say what it is instead - it is saved as the server\'s service (Server Availability uses the same field) and the guess stops.</p>'
+      +'<label class="small" style="display:block;margin:8px 0">What is this server?<input id="nk-s" style="width:100%" placeholder="'+(/connect/i.test(h.name||'')?'e.g. Azure AD Connect':'e.g. Application server, File server, Backup')+'"></label><p><button type="button" class="btn pri" id="nk-ok">Save</button> <button type="button" class="btn" id="nk-no">Cancel</button></p>');
+    setTimeout(function(){var i=document.getElementById('nk-s');if(i)i.focus();document.getElementById('nk-no').onclick=function(){Z.close();};document.getElementById('nk-ok').onclick=function(){var v=i.value.trim();if(!v){toast('Say what the server is');return;}if(AD_RE.test(v)||EX_RE.test(v)){toast('That names the same role - use Confirm instead');return;}
+      req('POST','/api/soc/netops/avail/hosts',{id:id,service:v.slice(0,80)}).then(function(){Z.close();toast('Saved - '+(h.name||id)+' is '+v);load();}).catch(function(er){toast(er.message);});};},50);}
+  function setKind(id,k,role){var b={id:id,service:k==='ad'?'Active Directory':'Exchange'};if(role)b.role=role;req('POST','/api/soc/netops/avail/hosts',b).then(function(){toast('Saved');load();}).catch(function(er){toast(er.message);});}
+
+  /* ---- SIEM security events ---- */
+  var AD_T=[['Failed sign-ins','event_code:4625','warn','Wrong password or unknown account (4625). Many from one source = password guessing.','user'],
+    ['Account lockouts','event_code:4740','warn','Accounts locked after too many failures (4740).','target_user'],
+    ['Privileged group changes','event_code:(4728 OR 4732 OR 4756 OR 4729 OR 4733 OR 4757)','bad','Members added to / removed from security groups such as Domain Admins (4728/4732/4756 …). Each one should match an approved request.','target_user'],
+    ['Accounts created / deleted','event_code:(4720 OR 4726)','info','New (4720) and deleted (4726) user accounts.','target_user'],
+    ['Password resets','event_code:(4724 OR 4723)','info','Passwords reset by an administrator (4724) or changed by the user (4723).','target_user'],
+    ['Kerberos pre-auth failures','event_code:4771','warn','Kerberos sign-in failures (4771); bursts can mean password spraying.','user'],
+    ['Security log cleared','event_code:1102','bad','The Windows security log was cleared (1102) — a classic way to hide activity.','user'],
+    ['AD replication errors','event_code:(1311 OR 2042 OR 1864 OR 2087 OR 2088 OR 1925)','bad','Directory replication problems between domain controllers (needs the Directory Service log collected).','host']];
+  var EX_T=[['Mail forwarding set','action:mail-forwarding-set','bad','A mailbox now forwards mail elsewhere — a common data-theft step.','target_user'],
+    ['Mailbox permissions added','action:(mailbox-permission-added OR mailbox-folder-permission-added)','warn','Someone was given access to another person\'s mailbox.','target_user'],
+    ['Send-As permission added','action:sendas-permission-added','warn','Someone can now send mail as another person.','target_user'],
+    ['Inbox rules','action:(inbox-rule-created OR inbox-rule-modified)','info','New or changed inbox rules (hidden-forwarding rules are a phishing sign).','user'],
+    ['Mailbox audit disabled','action:audit-disabled','bad','Mailbox auditing was switched off.','user']];
+  function tilesFor(id,list){
+    $(id).innerHTML=list.map(function(t,i){return '<button type="button" class="t na" data-q="'+id+':'+i+'"><div class="l">'+esc(t[0])+'</div><div class="v">…</div></button>';}).join('');
+    list.forEach(function(t,i){
+      req('POST','/api/soc/histogram',{q:t[1],from:'now-'+per(),to:'now',buckets:24}).then(function(r){var n=(r&&r.buckets||r&&r.series||[]).reduce(function(s,b){return s+(b.n||0);},0);var el=document.querySelector('[data-q="'+id+':'+i+'"]');if(!el)return;el.className='t '+(n?t[2]:'ok');el.querySelector('.v').textContent=n.toLocaleString();})
+        .catch(function(er){var el=document.querySelector('[data-q="'+id+':'+i+'"]');if(!el)return;el.className='t na';el.querySelector('.v').textContent=er.status===403?'no access':'n/a';});
+    });
+  }
+  function eventDetail(t){
+    var html='<p class="muted">'+esc(t[3])+'</p><p class="muted mono">'+esc(t[1])+' · '+esc(per())+'</p><div id="ed">Loading…</div>';
+    Z.open('SIEM events',t[0],html);
+    Promise.all([req('POST','/api/soc/top',{q:t[1],from:'now-'+per(),to:'now',field:t[4],limit:10}).catch(function(){return null;}),
+      req('POST','/api/soc/top',{q:t[1],from:'now-'+per(),to:'now',field:'src_ip',limit:10}).catch(function(){return null;}),
+      req('POST','/api/soc/search',{q:t[1],from:'now-'+per(),to:'now',limit:25,order:'desc'}).catch(function(){return null;})]).then(function(r){
+      var top=function(x,label,col){var v=(x&&x.values)||[];return v.length?Z.sec(label,Z.tbl([col,'Events'],v.map(function(o){return [esc(o.v),String(o.n)];}))):'';};
+      var rows=(r[2]&&r[2].rows)||[];
+      var ed=document.getElementById('ed'); if(!ed) return;
+      ed.innerHTML=(top(r[0],t[4]==='target_user'?'Accounts affected':t[4]==='host'?'Servers':'Users',t[4]==='host'?'Server':'Account')+top(r[1],'Source IP addresses','IP address'))
+        +(rows.length?Z.sec('Latest events',Z.tbl(['Time','Server','User','Target','Message'],rows.map(function(e){return [esc(String(e.ts||'').replace('T',' ').slice(0,19)),esc(e.host||e.host_ip||''),esc(e.user||''),esc(e.target_user||''),esc(String(e.message||'').slice(0,140))];}))):'<p class="muted">No events in this period.</p>');
+    });
+  }
+
+  /* ---- directory accounts (SIEM AD sync) ---- */
+  function identity(){
+    req('GET','/api/soc/identity/summary').then(function(s){
+      var c=s.counts||{};
+      if(!s.synced){$('idn').innerHTML='<div class="empty">Directory account sync is not configured yet — set it up on the <a href="#config" data-tab="cfg" style="color:var(--info)">Configuration</a> tab (it reads users and privileged groups from AD with a read-only account).</div>';$('idc').textContent='';return;}
+      $('idc').textContent='synced '+new Date(s.synced).toLocaleString()+' from '+(s.domain||s.server||'AD');
+      var k=[['Users',c.enabled+' enabled','','of '+c.users,'all'],['Privileged accounts',c.privileged_enabled,c.privileged_enabled>10?'warn':'','enabled members of admin groups','privileged'],['Dormant accounts',c.dormant,c.dormant?'warn':'ok','no sign-in for '+s.dormant_days+'+ days','dormant'],['Dormant privileged',c.dormant_privileged,c.dormant_privileged?'bad':'ok','admin accounts nobody uses — disable','priv_dormant'],['Service accounts',c.service_accounts,'','','service'],['adminCount leftovers',c.admin_count_orphans,c.admin_count_orphans?'warn':'ok','old admin protection never removed','admin_orphan']];
+      $('idn').innerHTML='<div class="k">'+k.map(function(t){return '<div class="t '+t[2]+'" role="button" tabindex="0" data-idl="'+t[4]+'" title="Show these accounts" style="cursor:pointer"><div class="l">'+esc(t[0])+'</div><div class="v">'+esc(String(t[1]))+'</div><div class="s">'+esc(t[3])+'</div></div>';}).join('')+'</div>'
+        +((s.privileged_groups||[]).length?'<div class="tw"><table><thead><tr><th>Privileged group</th><th>Members</th><th>Of which nested</th></tr></thead><tbody>'+s.privileged_groups.sort(function(a,b){return b.members-a.members;}).map(function(g){return '<tr data-idg="'+esc(g.name)+'" tabindex="0" title="Show the members" style="cursor:pointer"><td><b>'+esc(g.name)+'</b></td><td>'+g.members+'</td><td>'+g.nested_members+'</td></tr>';}).join('')+'</tbody></table></div>':'');
+    }).catch(function(e){$('idn').innerHTML='<div class="empty">'+(e.status===403?'Directory accounts are visible to administrators only.':'Directory account data is not available from the SIEM ('+esc(e.message)+').')+'</div>';});
+  }
+
+  /* ---- configuration (admin): AD account sync + Exchange Online ---- */
+  var CFG=null, AUTO=0;
+  function srvLines(list){return (list||[]).map(function(x){return typeof x==='object'?x.url+(x.ip?', '+x.ip:''):x;}).join('\n');}
+  function parseSrv(t){return t.split('\n').map(function(l){return l.trim();}).filter(Boolean).map(function(l){var p=l.split(/[,\s]+/).filter(Boolean);return p[1]?{url:p[0],ip:p[1]}:p[0];});}
+  function cfgLoad(){
+    /* the SIEM decides who may see the settings (admin); the page only shows its answer */
+    req('GET','/api/soc/identity/config').then(function(c){if(!can('admin')){ROLE='admin';if(V)drawServers();}CFG=c;drawCfg();if(!AUTO){AUTO=1;var none=!(c.ad&&c.ad.enabled)&&!(c.m365&&c.m365.enabled);if(none&&!location.hash)tab('cfg');}}).catch(function(e){$('cfg').innerHTML=e.status===403?'<p class="muted">The SIEM says your account is not an administrator ('+esc(WHO.user||'unknown user')+', role "'+esc(WHO.role||'none')+'"). Only administrators can change the AD and Exchange settings.</p>':e.status===404?'<p class="err">The SIEM on the server does not have this feature yet — run the update (update-platform.ps1).</p>':'<p class="err">Settings are not available ('+esc(e.message)+').</p>';});
+  }
+  function drawCfg(){
+    var a=CFG.ad||{},m=CFG.m365||{},st=CFG.ad_status||{},last=st.last;
+    var stat=!a.enabled?'<span class="pill">sync off</span>':last?(last.ok?'<span class="pill ok">last sync OK '+esc(new Date(last.at).toLocaleString())+'</span>':'<span class="pill bad">last sync failed: '+esc(String(last.error||'').slice(0,160))+'</span>'):'<span class="pill info">waiting for the first sync</span>';
+    $('cfg').innerHTML='<h3 style="margin:4px 0 6px;font-size:14px">Active Directory — account sync (read-only)</h3><p class="note" style="margin-top:0">Reads users, admin groups and dormant accounts from AD every few minutes over an encrypted connection with a read-only service account. Nothing is ever written to AD. '+stat+'</p>'
+      +'<form class="form" id="adf" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">'
+      +'<label><span><input type="checkbox" id="c-en"'+(a.enabled?' checked':'')+'> Sync enabled</span></label>'
+      +('<label style="grid-column:1/-1">Domain controllers — one per line: address, then the IP to connect to (optional)<textarea id="c-srv" rows="2" style="background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px;font:13px Consolas,monospace" placeholder="ldap://dc-hqa.' + ZYB_ORG.domain + ':389, 192.168.1.52">')+esc(srvLines(a.servers))+'</textarea></label>'
+      +'<label>CA certificate file on the SIEM server<input id="c-ca" value="'+esc(a.caFile||'')+'" placeholder="/etc/ssl/corp-hq/corp-ca.pem"></label>'
+      +'<label>Search base (base DN)<input id="c-base" value="'+esc(a.baseDN||'')+'" placeholder="DC=corp-hq,DC=com"></label>'
+      +'<label>Service account (bind DN or user@domain)<input id="c-bind" value="'+esc(a.bindDN||'')+('" placeholder="svc-zyberon@' + ZYB_ORG.domain + '" autocomplete="off"></label>')
+      +'<label>Password<input id="c-pw" type="password" autocomplete="new-password" placeholder="'+(a.password_set?'stored — leave empty to keep':'not set')+'"></label>'
+      +'<label>Sync every (minutes)<input id="c-min" type="number" min="5" max="1440" value="'+(a.sync_minutes||60)+'"></label>'
+      +'<label>Dormant after (days without sign-in)<input id="c-dor" type="number" min="7" max="3650" value="'+(a.dormant_days||90)+'"></label>'
+      +'<label style="grid-column:1/-1">Extra privileged groups (optional, one per line; Domain Admins, Enterprise Admins etc. are always included)<textarea id="c-grp" rows="2" style="background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px">'+esc((a.privileged_groups||[]).join('\n'))+'</textarea></label>'
+      +'<div style="grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="c-test">🔎 Test connection</button><button type="submit" class="pri">Save</button><button type="button" id="c-sync"'+(a.enabled?'':' disabled')+'>⟳ Sync now</button></div>'
+      +'<div id="c-res" style="grid-column:1/-1"></div></form>'
+      +('<p class="note">Use the DC <b>name</b> from its certificate (e.g. dc-hqa.' + ZYB_ORG.domain + ') with the IP after a comma — the certificate is checked against the name. The CA file must be readable by the SIEM (e.g. /etc/ssl/corp-hq/corp-ca.pem); <span class="mono">ad-tls-check.sh</span> finds the right one.</p>')
+      +'<h3 style="margin:18px 0 6px;font-size:14px">Exchange Online / Microsoft 365 — audit log</h3><p class="note" style="margin-top:0">Mailbox, admin and sign-in activity from Microsoft 365 (unified audit log). Needs an Entra ID app registration with the <b>Office 365 Management APIs → ActivityFeed.Read</b> application permission (admin consent granted). '+(m.enabled?'<span class="pill ok">on</span>':'<span class="pill">off</span>')+'</p>'
+      +'<form class="form" id="mf"><label><span><input type="checkbox" id="m-en"'+(m.enabled?' checked':'')+'> Collect Exchange Online / M365 audit</span></label>'
+      +'<label>Tenant ID<input id="m-ten" value="'+esc(m.tenant||'')+'" placeholder="00000000-0000-0000-0000-000000000000"></label>'
+      +'<label>Application (client) ID<input id="m-cid" value="'+esc(m.client_id||'')+'"></label>'
+      +'<label>Client secret<input id="m-sec" type="password" autocomplete="new-password" placeholder="'+(m.secret_set?'stored — leave empty to keep':'not set')+'"></label>'
+      +'<div><button type="submit" class="pri">Save</button></div></form>'
+      +'<h3 style="margin:18px 0 6px;font-size:14px">Exchange Server (on-premises)</h3><p class="note" style="margin-top:0">Admin actions (who changed which mailbox or permission) come from each Exchange server\'s <b>MSExchange Management</b> event log through the Windows SIEM agent — install the agent on every Exchange server (Asset Discovery → Connect). The <b>Logs in SIEM</b> column in Servers above shows which ones send.</p>';
+    $('adf').onsubmit=function(e){e.preventDefault();cfgSave({ad:adBody()});};
+    $('mf').onsubmit=function(e){e.preventDefault();var b={enabled:$('m-en').checked,tenant:$('m-ten').value.trim(),client_id:$('m-cid').value.trim()};if($('m-sec').value)b.client_secret=$('m-sec').value;cfgSave({m365:b});};
+    $('c-test').onclick=function(){var btn=this;btn.disabled=true;$('c-res').innerHTML='<p class="muted">Testing…</p>';req('POST','/api/soc/identity/test',{ad:adBody()}).then(function(r){$('c-res').innerHTML='<div style="background:#0b0c10;border:1px solid var(--edge);border-radius:8px;padding:8px 10px">'+r.steps.map(function(s){return '<div>'+(s.ok?'<span style="color:var(--ok)">✓</span> ':'<span style="color:var(--bad)">✗</span> ')+esc(s.text)+'</div>';}).join('')+'<div style="margin-top:6px"><b>'+(r.ok?'All checks passed — click Save.':'Fix the item marked ✗ and test again.')+'</b></div></div>';}).catch(function(e){$('c-res').innerHTML='<p class="err">'+esc(e.message)+'</p>';}).then(function(){btn.disabled=false;});};
+    $('c-sync').onclick=function(){var btn=this;btn.disabled=true;toast('Syncing with AD…');req('POST','/api/soc/identity/sync',{}).then(function(r){toast(r&&r.ok===false?'Sync failed: '+(r.error||''):'Sync done'+(r&&r.counts?': '+r.counts.users+' users':''));identity();cfgLoad();}).catch(function(e){toast(e.message);}).then(function(){btn.disabled=false;});};
+  }
+  function adBody(){var b={enabled:$('c-en').checked,servers:parseSrv($('c-srv').value),caFile:$('c-ca').value.trim(),baseDN:$('c-base').value.trim(),bindDN:$('c-bind').value.trim(),sync_minutes:+$('c-min').value,dormant_days:+$('c-dor').value,privileged_groups:$('c-grp').value.split('\n').map(function(x){return x.trim();}).filter(Boolean)};if($('c-pw').value)b.bind_password=$('c-pw').value;return b;}
+  function cfgSave(b){req('PUT','/api/soc/identity/config',b).then(function(r){toast('Saved'+(r.ad_applied?' — AD sync restarted':'')+(r.m365_applied?' — Exchange Online collector restarted':'')+(r.m365_error?' (Exchange Online: '+r.m365_error+')':''));CFG=r;drawCfg();setTimeout(identity,15000);}).catch(function(e){toast(e.message);});}
+
+  function logs(){
+    var ips=HOSTS.filter(function(h){return kindOf(h)[0];}).map(function(h){return h.ip;}); LOGS={};
+    if(!ips.length){drawServers();return;}
+    req('POST','/api/soc/top',{q:'host_ip:('+ips.join(' OR ')+')',from:'now-'+per(),to:'now',field:'host_ip',limit:100}).then(function(r){ips.forEach(function(ip){LOGS[ip]=0;});((r&&r.values)||[]).forEach(function(o){LOGS[o.v]=o.n;});drawServers();}).catch(function(){drawServers();});
+  }
+  function load(){
+    req('GET','/api/soc/netops/avail').then(function(v){V=v;HOSTS=v.items||[];drawServers();logs();}).catch(function(e){$('srv').innerHTML='<p class="err">Server Availability is not reachable ('+esc(e.message)+').</p>';});
+    tilesFor('adk',AD_T); tilesFor('exk',EX_T); identity(); if(!CFG) cfgLoad();
+    $('up').textContent='updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  }
+
+  function tab(n){[].forEach.call(document.querySelectorAll('.tabs [data-tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===n);b.setAttribute('aria-selected',b.getAttribute('data-tab')===n);});
+    $('tab-dash').hidden=n!=='dash';$('tab-cfg').hidden=n!=='cfg';try{history.replaceState(null,'',n==='cfg'?'#config':location.pathname);}catch(e){ /* address bar not updated (sandboxed frame): the page works without it */ }if(n==='cfg'&&!CFG)cfgLoad();}
+  document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;var k=e.target.closest&&e.target.closest('[data-idl],[data-idg]');if(k){e.preventDefault();k.click();}});
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    /* the accounts behind a tile or a privileged group: the shared drawer (vendor/zyb-adacct.js) */
+    var il=t.closest('[data-idl]'); if(il){window.zybAdAccounts.open(il.getAttribute('data-idl'));return;}
+    var ig=t.closest('[data-idg]'); if(ig){window.zybAdAccounts.open('',ig.getAttribute('data-idg'));return;}
+    var tb=t.closest('[data-tab]'); if(tb){e.preventDefault();tab(tb.getAttribute('data-tab'));window.scrollTo(0,0);return;}
+    var cf=t.closest('[data-confirm]'); if(cf){e.stopPropagation();setKind(cf.getAttribute('data-confirm'),cf.getAttribute('data-k'));return;}
+    var nk=t.closest('[data-notk]'); if(nk){e.stopPropagation();notKind(nk.getAttribute('data-notk'),nk.getAttribute('data-k'));return;}
+    var q=t.closest('[data-q]'); if(q){var p=q.getAttribute('data-q').split(':');eventDetail((p[0]==='adk'?AD_T:EX_T)[+p[1]]);return;}
+    var d=t.closest('[data-det],tbody tr[data-h]'); if(d){var id=d.getAttribute('data-det')||d.getAttribute('data-h');window.location.href='/dashboards/server-availability.html#'+encodeURIComponent((HOSTS.filter(function(h){return h.id===id;})[0]||{}).ip||'');}
+  });
+  $('refresh').onclick=load; $('per').onchange=load;
+  if(/config/.test(location.hash)) setTimeout(function(){tab('cfg');},0);
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);WHO=j||{};var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden)load();},120000);
+})();
+</script></body></html>

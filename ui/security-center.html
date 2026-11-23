@@ -1,0 +1,103 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Security Center</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1680px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.sm{padding:3px 9px;font-size:12px}
+.lvl{display:flex;gap:14px;align-items:center;border-radius:16px;padding:14px 18px;margin-bottom:14px;border:1px solid var(--d-line);background:var(--d-panel)}.lvl .b{font:800 22px Inter,system-ui,sans-serif;letter-spacing:.06em;padding:6px 16px;border-radius:10px}
+.L-critical .b{background:rgba(229,72,77,.22);color:#ff8a8e}.L-elevated .b{background:rgba(245,159,0,.2);color:#f5b544}.L-normal .b{background:rgba(47,179,68,.16);color:#56d364}.L-unknown .b{background:rgba(139,147,164,.16);color:#aab2c2}
+.kpis{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:10px;margin-bottom:14px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;text-decoration:none;color:inherit;display:block}.kpi:hover{border-color:#3a4258}.kpi .n{font-size:22px;font-weight:800}.kpi .l{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.w2{grid-column:span 2}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}.card h2 a{margin-left:auto;font-size:12px;font-weight:600;color:#8db0ff;text-decoration:none}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.s4{background:rgba(229,72,77,.22);color:#ff8a8e}.s3{background:rgba(245,99,0,.2);color:#ff9b5c}.s2{background:rgba(245,159,0,.18);color:#f5b544}.s1,.s0{background:rgba(139,147,164,.16);color:#aab2c2}.ok{background:rgba(47,179,68,.15);color:#56d364}
+.bar{display:flex;align-items:center;gap:8px;font-size:12.5px;margin:5px 0}.bar .lb{width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bar .tr{flex:1;height:8px;background:#1b2030;border-radius:4px;overflow:hidden}.bar .tr i{display:block;height:100%}.bar .v{width:60px;text-align:right;color:var(--d-mute);font-variant-numeric:tabular-nums}
+.li{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #1b2030;font-size:12.5px}.li:last-child{border-bottom:0}.li .b{flex:1;min-width:0;overflow-wrap:anywhere}
+.big{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px}.big div b{display:block;font-size:22px}.big div span{font-size:11px;color:var(--d-mute);text-transform:uppercase;letter-spacing:.04em}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+svg.h{width:100%;height:120px;display:block}
+@media(max-width:1300px){.kpis{grid-template-columns:repeat(5,minmax(0,1fr))}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.w2{grid-column:span 2}}
+@media(max-width:760px){main{padding:12px 12px 40px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}.w2{grid-column:auto}.top h1{font-size:20px}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security Operations</div><h1>Security Center</h1><div class="sm mute">{{org.short}}'s security posture on one screen, every figure read live from the platform: open alerts, what the firewalls and endpoint protection blocked, endpoint coverage, Microsoft 365, rogue devices and whether every log source is reporting. Each card opens the page that owns it.</div></div><div class="sp"></div>
+ <span class="sm mute" id="up"></span><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div class="lvl L-unknown" id="lvl"><span class="b">…</span><div class="sm" id="lvlwhy">Reading the platform…</div></div>
+<div class="kpis" id="kpis"></div>
+<div class="grid">
+ <section class="card w2"><h2><i class="ti ti-shield-x"></i>Blocked and detected, 24 h <span class="c">firewall blocks, IPS and antivirus detections in the SIEM</span><a href="log-monitor.html">Log analysis →</a></h2><div id="blk"></div></section>
+ <section class="card"><h2><i class="ti ti-bolt"></i>Act now <span class="c">highest-priority open alerts</span><a href="soc-alerts.html">Alert queue →</a></h2><div id="act"></div></section>
+ <section class="card"><h2><i class="ti ti-device-desktop-check"></i>Endpoint protection <span class="c">Kaspersky Security Center</span><a href="ai-ksc-engineer.html">Endpoints →</a></h2><div id="ep"></div></section>
+ <section class="card"><h2><i class="ti ti-brand-office"></i>Microsoft 365 <span class="c">Secure Score and MFA</span><a href="m365-security.html">M365 security →</a></h2><div id="m365"></div></section>
+ <section class="card"><h2><i class="ti ti-spy"></i>Rogue devices <span class="c">on the LANs</span><a href="rogue-detection.html">Rogue detection →</a></h2><div id="rg"></div></section>
+ <section class="card"><h2><i class="ti ti-database"></i>Log source coverage <span class="c">is every source reporting</span><a href="soc-sources.html">Log sources →</a></h2><div id="src"></div></section>
+ <section class="card"><h2><i class="ti ti-target"></i>Most alerted <span class="c">entities and ATT&amp;CK tactics in recent alerts</span><a href="soc-overview.html">SOC overview →</a></h2><div id="ent"></div></section>
+ <section class="card"><h2><i class="ti ti-chart-bar"></i>Alerts by source <span class="c">recent alerts</span><a href="soc-alerts.html">Alert queue →</a></h2><div id="bysrc"></div></section>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var SEV=['info','low','medium','high','critical'],D={};
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc'+u);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('The SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function fail(e,what){return note(e.status===404?'Not installed on the SIEM.':e.status===403?'Your role cannot read this - analysts and above.':'Could not be read.')+(e.status&&e.status!==404&&e.status!==403||e.status===0?'<div class="sm mute mono">'+esc(what+': '+e.message)+'</div>':'');}
+  function bars(list,color,label){var max=Math.max.apply(null,list.map(function(x){return x.n;}).concat([1]));return list.length?list.map(function(x){return '<div class="bar"><span class="lb" title="'+esc(label?label(x.v):x.v)+'">'+esc(label?label(x.v):x.v)+'</span><span class="tr"><i style="width:'+Math.round(100*x.n/max)+'%;background:'+(color||'#5b8def')+'"></i></span><span class="v">'+Number(x.n).toLocaleString()+'</span></div>';}).join(''):note('None.');}
+  function kpis(){var o=D.ov,b=D.blk,e=D.ep,m=D.m365,r=D.rg,s=D.src;function k(n,l,href,c){return '<a class="kpi" href="'+href+'"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n==null?'—':n)+'</div><div class="l">'+esc(l)+'</div></a>';}
+    var sev=o&&o.open?o.open.by_severity:null,crit=sev?(sev[4]||sev.critical||0):null,high=sev?(sev[3]||sev.high||0):null;
+    $('kpis').innerHTML=k(o?o.open.total:null,'open alerts','soc-alerts.html')+k(crit,'critical','soc-alerts.html',crit?'#ff8a8e':'')+k(high,'high','soc-alerts.html',high?'#ff9b5c':'')+k(o?o.open.new_24h:null,'new in 24 h','soc-alerts.html')
+      +k(b?b.total:null,'blocked / detected 24 h','log-monitor.html')+k(e?e.unprotected:null,'endpoints unprotected','ai-ksc-engineer.html',e&&e.unprotected?'#ff8a8e':'')
+      +k(m&&m.score?m.score.pct+'%':null,'Secure Score','m365-security.html')+k(m&&m.mfa?m.mfa.not_registered:null,'users without MFA','m365-security.html',m&&m.mfa&&m.mfa.not_registered?'#f5b544':'')
+      +k(r?r.kpis.rogue:null,'rogue devices','rogue-detection.html',r&&r.kpis.rogue?'#ff8a8e':'')+k(s?s.silent:null,'silent log sources','soc-sources.html',s&&s.silent?'#f5b544':'');
+    // threat level: from what was read, with the reasons; unknown when the alert queue could not be read
+    var why=[],lvl='normal';
+    if(!o){lvl='unknown';why.push('the alert queue could not be read');}
+    else{if(crit){lvl='critical';why.push(crit+' critical alert(s) open');}if(high){if(lvl!=='critical')lvl='elevated';why.push(high+' high alert(s) open');}}
+    if(e&&e.infected){lvl=lvl==='normal'||lvl==='unknown'?'elevated':lvl;why.push(e.infected+' endpoint(s) with an active infection');}
+    if(r&&r.kpis.rogue){if(lvl==='normal')lvl='elevated';why.push(r.kpis.rogue+' rogue device(s) on the LAN');}
+    if(s&&s.silent)why.push(s.silent+' log source(s) silent - what they would show is not seen');
+    if(lvl==='normal'&&!why.length)why.push('no critical or high alert open, no infection, no rogue device');
+    $('lvl').className='lvl L-'+lvl;$('lvl').innerHTML='<span class="b">'+esc(lvl.toUpperCase())+'</span><div class="sm">'+esc(why.join(' · '))+'</div>';}
+  function hist(b){var n=b.length,max=Math.max.apply(null,b.map(function(x){return x.n;}).concat([1])),W=600,H=110,bw=W/n,h='';
+    b.forEach(function(x,i){var hh=(H-14)*x.n/max;h+='<rect x="'+(i*bw+1).toFixed(1)+'" y="'+(H-hh).toFixed(1)+'" width="'+Math.max(1,bw-2).toFixed(1)+'" height="'+hh.toFixed(1)+'" rx="2" fill="#e5484d" opacity=".8"><title>'+esc(new Date(x.t).toLocaleString()+': '+x.n)+'</title></rect>';});
+    return '<svg class="h" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Blocked and detected events per hour">'+h+'</svg>';}
+  var BQ='action:(blocked OR ips-detection OR av-detection)';
+  function load(){D={};$('up').textContent='';var to=Date.now(),from=to-86400000;
+    var jobs=[
+      req('GET','/soc/overview').then(function(o){D.ov=o;var a=o.act_now||[];$('act').innerHTML=a.length?a.map(function(x){return '<div class="li"><span class="pill s'+esc(x.severity)+'">'+esc(SEV[x.severity]||x.severity)+'</span><div class="b"><b>'+esc(x.rule_name)+'</b><div class="mute">'+esc((x.entities||[]).join(' · '))+'</div></div><span class="mute">'+esc(x.priority)+'</span></div>';}).join(''):note('Nothing needs acting on now.');
+        $('ent').innerHTML=(o.top_entities&&o.top_entities.length?bars(o.top_entities.map(function(x){return {v:x.key||x.v||x[0],n:x.n||x.count||x[1]};}),'#b39bff'):note('No recent alert names an entity.'))+(o.tactics&&o.tactics.length?'<div class="sm mute" style="margin-top:8px">Tactics: '+esc(o.tactics.map(function(x){return (x.key||x.v||x[0])+' '+(x.n||x.count||x[1]);}).join(' · '))+'</div>':'');
+        $('bysrc').innerHTML=o.sources&&o.sources.length?bars(o.sources.map(function(x){return {v:x.key||x.v||x[0],n:x.n||x.count||x[1]};}),'#5b8def'):note('No recent alert.');})
+        .catch(function(e){['act','ent','bysrc'].forEach(function(i){$(i).innerHTML=fail(e,'The SOC overview');});}),
+      Promise.all([req('POST','/histogram',{q:BQ,from:from,to:to,buckets:24}),req('POST','/top',{q:BQ,from:from,to:to,field:'src_type',limit:6}),req('POST','/top',{q:BQ,from:from,to:to,field:'action',limit:5}),req('POST','/top',{q:BQ,from:from,to:to,field:'host',limit:6})])
+        .then(function(r){var tot=r[0].buckets.reduce(function(s,x){return s+x.n;},0);D.blk={total:tot};
+          $('blk').innerHTML=tot?hist(r[0].buckets)+'<div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:10px"><div><div class="sm mute">By source</div>'+bars(r[1].values,'#e5484d')+'</div><div><div class="sm mute">By kind</div>'+bars(r[2].values,'#ff9b5c',function(v){return {blocked:'blocked by policy','ips-detection':'IPS detection','av-detection':'antivirus detection'}[v]||v;})+'</div><div><div class="sm mute">Most blocked hosts</div>'+bars(r[3].values,'#b39bff')+'</div></div>'
+            :note('Nothing blocked or detected in 24 hours reached the SIEM. If the firewalls and endpoint protection send their logs, this is a quiet day; if not, connect them in Log sources.');})
+        .catch(function(e){$('blk').innerHTML=fail(e,'Blocked events');}),
+      req('GET','/ksc/overview').then(function(k){var S=(k.servers||[]).map(function(s){return s.last&&s.last.summary;}).filter(Boolean);
+          if(!S.length){$('ep').innerHTML=note((k.servers||[]).length?'Kaspersky Security Center is added but has not been read yet.':'No Kaspersky Security Center is connected - add it on the Endpoints page (read-only login).');return;}
+          var t={hosts:0,protected:0,unprotected:0,outdated:0,infected:0};S.forEach(function(s){Object.keys(t).forEach(function(x){t[x]+=s[x]||0;});});D.ep=t;
+          $('ep').innerHTML='<div class="big"><div><b>'+t.hosts+'</b><span>endpoints</span></div><div><b style="color:#56d364">'+(t.hosts?Math.round(100*t.protected/t.hosts):0)+'%</b><span>protected</span></div><div><b style="color:'+(t.unprotected?'#ff8a8e':'inherit')+'">'+t.unprotected+'</b><span>unprotected</span></div><div><b style="color:'+(t.outdated?'#f5b544':'inherit')+'">'+t.outdated+'</b><span>outdated</span></div><div><b style="color:'+(t.infected?'#ff8a8e':'inherit')+'">'+t.infected+'</b><span>infected</span></div></div>'
+            +((k.findings||[]).length?'<div class="sm mute">'+esc(k.findings.length+' finding(s) on the Endpoints page')+'</div>':'');})
+        .catch(function(e){$('ep').innerHTML=fail(e,'Endpoint protection');}),
+      req('GET','/m365/security').then(function(m){D.m365=m;if(!m.configured){$('m365').innerHTML=note(m.note||'Microsoft 365 is not connected.');return;}
+          $('m365').innerHTML='<div class="big">'+(m.score?'<div><b>'+esc(m.score.pct)+'%</b><span>Secure Score ('+esc(m.score.current)+' / '+esc(m.score.max)+')</span></div>':'<div><b>—</b><span>Secure Score not read</span></div>')+(m.mfa?'<div><b>'+esc(m.mfa.pct)+'%</b><span>MFA registered</span></div><div><b style="color:'+(m.mfa.not_registered?'#f5b544':'inherit')+'">'+esc(m.mfa.not_registered)+'</b><span>without MFA</span></div>':'<div><b>—</b><span>MFA not read</span></div>')+'</div>'
+            +((m.actions||[]).slice(0,3).map(function(a){return '<div class="li"><div class="b">'+esc(a.title||a.what||'')+'</div></div>';}).join(''))+(m.coverage||[]).filter(function(c){return !c.ok;}).slice(0,3).map(function(c){return '<div class="sm mute">'+esc(c.label+': not read'+(c.perm?' (needs '+c.perm+')':''))+'</div>';}).join('');})
+        .catch(function(e){$('m365').innerHTML=fail(e,'Microsoft 365 security');}),
+      req('GET','/netops/rogue').then(function(r){D.rg=r;var k=r.kpis;$('rg').innerHTML=k.devices?'<div class="big"><div><b>'+k.devices+'</b><span>devices</span></div><div><b style="color:'+(k.rogue?'#ff8a8e':'inherit')+'">'+k.rogue+'</b><span>rogue</span></div><div><b style="color:'+(k.suspicious?'#ff9b5c':'inherit')+'">'+k.suspicious+'</b><span>suspicious</span></div><div><b>'+k.trusted+'</b><span>trusted</span></div></div>'+(k.unmanaged_ports?'<div class="sm" style="color:#ff9b5c">'+esc(k.unmanaged_ports+' port(s) with an unmanaged switch behind them')+'</div>':''):note('No device seen yet - rogue detection reads the switch ports, the firewall DHCP / ARP tables and NAC.');})
+        .catch(function(e){$('rg').innerHTML=fail(e,'Rogue detection');}),
+      req('GET','/sources').then(function(s){var L=s.sources||[],by={};L.forEach(function(x){by[x.status]=(by[x.status]||0)+1;});D.src={total:L.length,silent:(by.silent||0)+(by.never||0)};
+          $('src').innerHTML=L.length?'<div class="big"><div><b>'+L.length+'</b><span>sources</span></div><div><b style="color:#56d364">'+(by.ok||0)+'</b><span>reporting</span></div><div><b style="color:'+(D.src.silent?'#f5b544':'inherit')+'">'+D.src.silent+'</b><span>silent</span></div><div><b style="color:'+(by.errors?'#ff8a8e':'inherit')+'">'+(by.errors||0)+'</b><span>with errors</span></div></div>'
+            +L.filter(function(x){return x.status==='silent'||x.status==='never';}).slice(0,5).map(function(x){return '<div class="sm mute">'+esc((x.src_id||'')+' ('+(x.src_type||'')+') - last seen '+(x.last_seen?new Date(x.last_seen).toLocaleString():'never'))+'</div>';}).join(''):note('No log source configured yet.');})
+        .catch(function(e){$('src').innerHTML=fail(e,'Log sources');})];
+    return Promise.all(jobs).then(function(){kpis();$('up').innerHTML='<span>Updated</span> <span class="mono">'+esc(new Date().toLocaleTimeString())+'</span>';});}
+  $('refresh').addEventListener('click',load);
+  load();
+})();
+</script></body></html>

@@ -1,0 +1,93 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Detection Validation</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}.btn{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}
+input,select{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05)}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.st{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}.st.covered{background:var(--ok)}.st.partial{background:var(--warn)}.st.gap{background:var(--bad)}
+.tac{display:flex;align-items:center;gap:10px;margin:6px 0}.tac .nm{width:170px;font-size:12.5px}.tac .bar{flex:1;height:16px;border-radius:5px;overflow:hidden;display:flex;background:#20242d}.tac .bar i{height:100%}.tac .ct{width:120px;text-align:right;font-size:11.5px;color:var(--mute)}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;border:1px solid var(--border);background:var(--raise);cursor:pointer;margin:0 5px 5px 0}.chip.on{border-color:#4a5162;color:var(--title);background:#1f242d}
+.flt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+label.ck{display:inline-flex;gap:6px;align-items:center;margin:3px 10px 3px 0;font-size:12.5px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+@media print{.top button,.flt{display:none}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security · detection validation</div><h1>Detection Validation &amp; ATT&amp;CK Coverage</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" class="btn" id="print">🖨 Report</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="banner">Measures what the SIEM would actually detect. Coverage is read from the <b>detection rules and which log sources are connected</b>. A validation run injects <b>clearly-benign synthetic log lines</b> into an <b>isolated copy</b> of the rules — no real attacks, no endpoints touched, nothing reaches the live SOC.</div>
+<div class="k" id="kk"></div>
+<div class="g2">
+  <div class="card"><h2>ATT&amp;CK coverage by tactic</h2><div id="tactics"><div class="empty">Loading…</div></div>
+    <p class="note"><span class="st covered"></span>covered — enabled rule + a connected source &nbsp; <span class="st partial"></span>partial — rule exists, source not connected &nbsp; <span class="st gap"></span>gap — no enabled rule</p></div>
+  <div class="card"><h2>Validation runs <span class="c" id="runc"></span></h2>
+    <div id="runctl"></div>
+    <div class="tw" id="runs"><div class="empty">Loading…</div></div></div>
+</div>
+<div class="card"><h2>Techniques <span class="c" id="techc"></span></h2>
+  <div class="flt"><input id="q" placeholder="Search technique…" style="flex:1;min-width:180px">
+    <span class="chip on" data-s="">all</span><span class="chip" data-s="covered">covered</span><span class="chip" data-s="partial">partial</span><span class="chip" data-s="gap">gap</span></div>
+  <div class="tw" id="tech"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', COV=null, SCN=null, RUNS=[], SF='';
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc'+p);x.withCredentials=true;x.timeout=120000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('The SIEM is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function opt(p){return req('GET',p).catch(function(){return null;});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function load(){
+    Promise.all([req('GET','/bas/coverage'),opt('/bas/scenarios'),opt('/bas/runs')]).then(function(R){COV=R[0];SCN=R[1];RUNS=(R[2]&&R[2].runs)||[];draw();})
+      .catch(function(e){$('kk').innerHTML='<p class="err">'+esc(e.status===404?'The SIEM does not have the detection-validation (BAS) module yet — run the engine update.':e.message)+'</p>';});
+  }
+  function draw(){
+    var s=(COV&&COV.summary)||{},techs=(COV&&COV.techniques)||[];
+    var cov=s.covered||0,par=s.partial||0,gap=s.gap||0,tot=techs.length||(cov+par+gap);
+    var pct=tot?Math.round((cov+par*0.5)/tot*100):0;
+    $('kk').innerHTML=tile('Techniques',tot,'in the rule catalogue','info')+tile('Coverage',pct+'%',' weighted',(pct>=70?'ok':pct>=40?'warn':'bad'))
+      +tile('Covered',cov,'rule + source','ok')+tile('Partial',par,'rule, source off',par?'warn':'ok')+tile('Gaps',gap,'no rule',gap?'bad':'ok')
+      +tile('Runs',RUNS.length,'validation runs','info');
+    drawTactics();drawTech();drawRuns();
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  function drawTactics(){var T=(COV&&COV.tactics)||[];
+    $('tactics').innerHTML=T.length?T.map(function(t){var c=t.counts||{},tot=t.total||1;
+      function seg(n,col){return n?'<i style="width:'+(n/tot*100)+'%;background:'+col+'"></i>':'';}
+      return '<div class="tac"><div class="nm">'+esc(t.name||t.key)+'</div><div class="bar">'+seg(c.covered,'var(--ok)')+seg(c.partial,'var(--warn)')+seg(c.gap,'var(--bad)')+'</div><div class="ct">'+(c.covered||0)+'/'+tot+' covered</div></div>';}).join(''):'<div class="empty">No tactics mapped yet.</div>';}
+  function drawTech(){var techs=((COV&&COV.techniques)||[]).filter(function(t){if(SF&&t.status!==SF)return false;var q=$('q').value.trim().toLowerCase();return !q||[t.id,t.name,t.tactic].join(' ').toLowerCase().indexOf(q)>=0;});
+    $('techc').textContent=techs.length+' shown';
+    $('tech').innerHTML=techs.length?'<table><thead><tr><th>Technique</th><th>Tactic</th><th>Status</th><th>Rules</th><th>Sources (connected / total)</th></tr></thead><tbody>'
+      +techs.map(function(t){return '<tr><td class="mono">'+esc(t.id)+' <span class="muted">'+esc(t.name||'')+'</span></td><td>'+esc(t.tactic||'')+'</td><td><span class="st '+esc(t.status)+'"></span>'+esc(t.status)+'</td><td>'+(t.enabled_rules||0)+' / '+((t.rules&&t.rules.length)||0)+'</td><td>'+((t.connected_sources||[]).length)+' / '+((t.sources||[]).length)+(((t.sources||[]).length&&!(t.connected_sources||[]).length)?' <span class="muted">(source off)</span>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No techniques match.</div>';}
+  function drawRuns(){
+    var scn=(SCN&&SCN.scenarios)||[];
+    $('runc').textContent=scn.length?scn.length+' scenarios':'';
+    if(can('admin')&&scn.length){$('runctl').innerHTML='<div class="flt"><button class="btn pri" id="runall">▶ Run all scenarios</button><span class="muted" style="font-size:12px">injects synthetic events into an isolated rule copy; nothing reaches the SOC</span></div>';
+      $('runall').onclick=function(){var b=$('runall');b.disabled=true;b.textContent='Running…';req('POST','/bas/simulate',{}).then(function(r){toast('Run complete: '+(r.summary&&r.summary.detected)+' detected, '+(r.summary&&r.summary.missed)+' missed');load();}).catch(function(e){b.disabled=false;b.textContent='▶ Run all scenarios';toast(e.message);});};}
+    else $('runctl').innerHTML=can('admin')?'':'<p class="note">Administrators can run a validation.</p>';
+    $('runs').innerHTML=RUNS.length?'<table><thead><tr><th>When</th><th>Scenarios</th><th>Detected</th><th>Missed</th><th>By</th></tr></thead><tbody>'
+      +RUNS.slice(0,15).map(function(r){var su=r.summary||{};return '<tr class="rowc" data-run="'+esc(r.run_id)+'" style="cursor:pointer"><td class="mono">'+esc((r.at?new Date(r.at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):''))+'</td><td>'+(su.scenarios||0)+'</td><td style="color:var(--ok)">'+(su.detected||0)+'</td><td style="color:'+((su.missed)?'var(--bad)':'var(--mute)')+'">'+(su.missed||0)+'</td><td>'+esc(r.by||'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No validation runs yet.</div>';
+  }
+  function openRun(id){req('GET','/bas/runs/'+encodeURIComponent(id)).then(function(r){var res=r.results||r.scenarios||[];
+    var body=Z.kv([['Run',esc(id)],['Detected',esc(String((r.summary&&r.summary.detected)||0))],['Missed',esc(String((r.summary&&r.summary.missed)||0))],['Events injected',esc(String((r.summary&&r.summary.events_injected)||0))]])
+      +Z.sec('Per scenario',(res.length?'<table><thead><tr><th>Scenario</th><th>Technique</th><th>Result</th><th>Rule fired</th></tr></thead><tbody>'+res.map(function(x){return '<tr><td>'+esc(x.name||x.scenario_id||'')+'</td><td class="mono">'+esc((x.techniques||x.technique||[]).toString())+'</td><td>'+(x.status==='detected'?'<span style="color:var(--ok)">✓ detected</span>':'<span style="color:var(--bad)">✗ missed</span>')+'</td><td class="mono">'+esc(((x.rules||[]).map(function(rr){return rr.rule_id||rr;}).join(', '))||'—')+'</td></tr>';}).join('')+'</tbody></table>':'<p class="muted">No per-scenario detail.</p>'));
+    Z.open('Validation run',id,body);
+  }).catch(function(e){toast(e.message);});}
+  $('q').addEventListener('input',drawTech);
+  document.addEventListener('click',function(e){var c=e.target.closest('[data-s]');if(c){SF=c.getAttribute('data-s');[].forEach.call(document.querySelectorAll('[data-s]'),function(x){x.classList.toggle('on',x===c);});drawTech();return;}var r=e.target.closest('[data-run]');if(r)openRun(r.getAttribute('data-run'));});
+  $('refresh').onclick=load;$('print').onclick=function(){window.print();};
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+})();
+</script></body></html>

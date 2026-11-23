@@ -1,0 +1,42 @@
+[
+ {
+  "id": "SENTRA-OPS-900",
+  "name": "SIEM pipeline canary",
+  "enabled": true,
+  "severity": 0,
+  "mitre": [
+   "T1685"
+  ],
+  "tactic": "defense-impairment",
+  "author":"Sentra SOC",
+  "version": 1,
+  "description": "The SIEM's own pipeline test (engine/ops/canary.js): a labelled test line from host siem-canary with event code ZYB-CANARY is sent through the parser, the pipeline, the detector and the event store every few minutes; this rule must turn it into an alert for each run. The canary closes the alert itself as benign and the analyst views leave this rule out. If it stops firing, Pipeline Health turns red and IT Asset Management raises a platform incident. Not an attack; do not disable.",
+  "type": "single",
+  "match": {
+   "all": [
+    {
+     "field": "host",
+     "op": "eq",
+     "value": "siem-canary"
+    },
+    {
+     "field": "event_code",
+     "op": "eq",
+     "value": "ZYB-CANARY"
+    }
+   ]
+  },
+  "group_by": [
+   "fields.canary_run"
+  ],
+  "suppress_s": 0,
+  "fields_in_alert": [
+   "host",
+   "event_code",
+   "fields.canary_run"
+  ],
+  "sama": [
+   "3.3.14"
+  ]
+ }
+]

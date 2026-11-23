@@ -1,0 +1,95 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cost Optimisation</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Cost Optimisation over /api/itam/platform-cost (operator: platform scenarios over the collected estate - consolidation from
+     measured CPU / memory, non-production off the commercial hypervisor, AHV where Nutanix runs, powered-off VMs, backup platforms,
+     SPARC), POST /platform-cost/cases (operator proposes a business case) and /cases/:id/decide (a DIFFERENT administrator, with a
+     reason), POST /platform-cost/assumptions (admin). Savings priced from recorded costs live in Cost Studio (cost-studio.html).
+     Nothing here changes a host, a VM or a licence. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}a{color:var(--info)}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:5px 11px;cursor:pointer;text-decoration:none;display:inline-block}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn.dng{border-color:var(--bad);color:var(--bad)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-bottom:12px}.card h2{margin:0 0 8px;font-size:14px}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:12px}@media(max-width:1000px){.hero{grid-template-columns:1fr}}
+.big{font-size:34px;font-weight:800}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.t{background:var(--d-raise);border:1px solid var(--d-line);border-radius:10px;padding:8px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--d-mute)}.t .v{font-size:20px;font-weight:800}.t .s{font-size:11px;color:var(--d-mute)}
+.g2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px}@media(max-width:1100px){.g2{grid-template-columns:1fr}}
+.rec{border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--d-panel)}.rec h3{margin:0;font-size:15px}
+.pill{display:inline-block;padding:0 7px;border-radius:999px;font-size:11px;font-weight:600;background:rgba(141,176,255,.16);color:var(--info);margin-right:3px;white-space:nowrap}.pill.bad{background:rgba(255,123,128,.16);color:var(--bad)}.pill.warn{background:rgba(245,181,68,.16);color:var(--warn)}.pill.ok{background:rgba(95,210,122,.16);color:var(--ok)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;font-size:12.5px}@media(max-width:800px){.two{grid-template-columns:1fr}}
+.note{background:var(--d-raise);border-left:3px solid var(--warn);padding:8px 10px;border-radius:6px;font-size:12.5px}
+.hb{display:grid;grid-template-columns:170px 1fr 110px;gap:8px;align-items:center;font-size:12.5px;margin:6px 0}.hb .b{height:10px;background:var(--d-raise);border-radius:5px;overflow:hidden}.hb .b i{display:block;height:100%}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--d-line);font-size:12.5px}th{color:var(--d-mute);font-size:11px;text-transform:uppercase}
+.inp{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:5px 8px;font:inherit;width:100%}
+.asm{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}.asm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--d-mute)}.asm label.chg{color:var(--warn)}
+.empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad);font-size:13px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+dialog{background:var(--d-panel);color:var(--d-ink);border:1px solid var(--d-line);border-radius:12px;padding:16px;width:min(480px,92vw)}dialog::backdrop{background:rgba(0,0,0,.55)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT assets · where the estate can cost less</div><h1>Cost Optimisation</h1></div><span class="sp"></span><a class="btn" href="cost-studio.html">Savings from recorded costs → Cost Studio</a><button type="button" class="btn" id="rf">⟳</button></div>
+<div id="msg"></div>
+<div id="main" hidden>
+<div class="hero"><div class="card"><div class="eb">Savings identified · per year</div><div class="big" id="tot"></div><div class="sm mut" id="tot2"></div><p class="sm mut" id="note"></p></div>
+  <div class="card"><h2>Estate the scenarios use</h2><div class="k" id="facts"></div><div class="sm mut" id="plats" style="margin-top:6px"></div></div></div>
+<div class="g2"><div id="recs"></div>
+  <div><div class="card"><h2>Hypervisor cost per host per year</h2><div id="hv"></div></div>
+  <div class="card"><h2>Assumptions <span class="sm mut" id="asmv"></span></h2><p class="sm mut">Planning figures, not quotes. Replace them with contract prices and the scenarios recalculate. A licence recorded in the register for the platform is used instead of the list price.</p><div class="asm" id="asm"></div>
+    <div style="margin-top:8px;display:flex;gap:6px" id="asmb"><button type="button" class="btn pri" id="asave">Save &amp; recalculate</button><button type="button" class="btn" id="areset">Reset to defaults</button></div><div class="err" id="aerr"></div></div></div></div>
+</div>
+<dialog id="dlg"><h3 id="dlg-t" style="margin-top:0"></h3><div id="dlg-b"></div><div class="err" id="dlg-e"></div><div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px"><button type="button" class="btn" id="dlg-x">Cancel</button><button type="button" class="btn pri" id="dlg-ok">OK</button></div></dialog>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, ME = { role: 'viewer', user: '' }, DLG = null;
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var sar = function (n) { n = Number(n) || 0; return n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n)); };
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, u.charAt(0) === '/' && u.indexOf('/dashboards/') === 0 ? u : '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON: reported below */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && (j.message || j.error)) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  function dialog(t, html, fn) { $('dlg-t').textContent = t; $('dlg-b').innerHTML = html; $('dlg-e').textContent = ''; DLG = fn; $('dlg').showModal(); var f = $('dlg-b').querySelector('input,textarea'); if (f) f.focus(); }
+  $('dlg-x').addEventListener('click', function () { $('dlg').close(); });
+  $('dlg-ok').addEventListener('click', function () { if (DLG) DLG(function (m) { $('dlg-e').textContent = m; }, function () { $('dlg').close(); }); });
+  var admin = function () { return ME.role === 'admin'; };
+  function paint() {
+    var F = V.facts, T = V.totals;
+    $('tot').textContent = T.high ? 'SAR ' + sar(T.low) + ' – ' + sar(T.high) : 'SAR 0';
+    $('tot2').textContent = 'One-off effort ≈ SAR ' + sar(T.one_off) + ' · ' + V.recs.length + ' scenario(s) apply to this estate';
+    $('note').textContent = V.note;
+    $('facts').innerHTML = [['VMware hosts', F.vmware_hosts, F.avg_cores + ' cores avg'], ['Nutanix nodes', F.nutanix_nodes, ''], ['VMs', F.vms, F.vms_on + ' on'], ['Non-production VMs', F.nonprod_vms, 'by name'], ['Powered off', F.off_vms, 'VMs'], ['SPARC servers', F.sparc, ''], ['Backup platforms', F.backup_platforms.length, F.backup_platforms.join(', ')]]
+      .map(function (x) { return '<div class="t"><div class="l">' + esc(x[0]) + '</div><div class="v">' + esc(x[1]) + '</div><div class="s">' + esc(x[2]) + '</div></div>'; }).join('');
+    $('plats').textContent = V.platforms.length ? 'From: ' + V.platforms.map(function (p) { return p.label + ' (' + p.kind + (p.at ? ', collected ' + new Date(p.at).toLocaleString() : ', not collected') + ')'; }).join(' · ') : '';
+    $('recs').innerHTML = V.recs.length ? V.recs.map(function (r) { var c = r.case, st = !c ? '<span class="pill">no business case</span>' : c.status === 'proposed' ? '<span class="pill warn">awaiting approval · proposed by ' + esc(c.proposed_by) + '</span>' : c.status === 'approved' ? '<span class="pill ok">approved by ' + esc(c.decided_by) + '</span>' : '<span class="pill bad">rejected by ' + esc(c.decided_by) + '</span>';
+      var pay = r.saving && r.one_off ? Math.max(1, Math.round(r.one_off / ((r.saving.low + r.saving.high) / 24))) : null;
+      var acts = !c || c.status === 'rejected' ? '<button type="button" class="btn" data-prop="' + esc(r.id) + '">Propose business case</button>' : c.status === 'proposed' && admin() && c.proposed_by !== ME.user ? '<button type="button" class="btn pri" data-dec="approve" data-id="' + esc(c.id) + '">Approve</button> <button type="button" class="btn dng" data-dec="reject" data-id="' + esc(c.id) + '">Reject</button>' : c.status === 'proposed' && c.proposed_by === ME.user ? '<span class="sm mut">a different administrator decides (four-eyes)</span>' : '';
+      return '<div class="rec"><div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><span class="pill">' + esc(r.id) + '</span><div style="flex:1;min-width:240px"><h3>' + esc(r.title) + '</h3><div style="margin-top:4px">' + r.audience.map(function (a) { return '<span class="pill">' + esc(a) + '</span>'; }).join('') + '<span class="pill">' + esc(r.category) + '</span><span class="pill ' + (/High/.test(r.risk) ? 'bad' : /Medium/.test(r.risk) ? 'warn' : 'ok') + '">risk ' + esc(r.risk) + '</span><span class="pill">effort ' + esc(r.effort) + '</span></div></div>' +
+        '<div style="text-align:right;min-width:160px"><div style="font-size:20px;font-weight:800">' + (r.saving ? 'SAR ' + sar(r.saving.low) + '–' + sar(r.saving.high) : '—') + '</div><div class="sm mut">per year' + (r.one_off != null ? ' · one-off ' + sar(r.one_off) : '') + (pay ? ' · pays back in ~' + pay + ' mo' : '') + '</div></div></div>' +
+        '<div class="two"><div><b>Evidence.</b> ' + esc(r.evidence) + '<div style="margin-top:6px"><b>Why.</b> ' + esc(r.why) + '</div><div class="mut" style="margin-top:6px"><b>Confidence.</b> ' + esc(r.confidence) + '</div><div style="margin-top:6px">' + r.measured.map(function (m) { return '<span class="pill ok">measured: ' + esc(m) + '</span>'; }).join('') + r.assumed.map(function (a) { return '<span class="pill warn">assumption: ' + esc(a) + '</span>'; }).join('') + '</div></div>' +
+        '<div><div class="note"><b>CISO view.</b> ' + esc(r.ciso) + '</div><div class="mut" style="margin-top:6px"><b>Compliance.</b> ' + esc(r.compliance) + '</div>' + (r.clusters ? '<table style="margin-top:6px"><tr><th>Cluster</th><th>Hosts</th><th>Needed</th><th>In use</th></tr>' + r.clusters.map(function (c2) { return '<tr><td>' + esc(c2.cluster) + '</td><td>' + c2.hosts + '</td><td>' + (c2.measured ? c2.need : '<span class="mut">not measured</span>') + '</td><td>' + (c2.measured ? c2.cpu_used_pct + '% CPU · ' + c2.mem_used_pct + '% mem' : '—') + '</td></tr>'; }).join('') + '</table>' : '') + '</div></div>' +
+        '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">' + st + (c && c.reason ? '<span class="sm mut">"' + esc(c.reason) + '"</span>' : '') + '<span class="sp"></span>' + acts + '</div></div>'; }).join('')
+      : '<div class="card empty">' + (V.connected ? 'No scenario applies to the estate as collected.' : 'No virtual estate collected yet. Connect vCenter / Prism on the Virtualization page (read-only login) and run a collection - the scenarios are computed from what it reads, never from sample figures.') + '</div>';
+    var P = V.per_host, rows = [['VMware (current)', P.vmware, P.vmware_src], ['Nutanix AHV (AOS)', P.aos, P.nutanix_recorded ? 'recorded Nutanix cost in the register' : 'assumption: aos_per_core_usd'], ['Proxmox VE Standard', P.proxmox, 'assumption: proxmox_per_socket_eur'], ['Windows Server DC SA', P.windows, 'with any hypervisor'], ['Running cost', P.run, 'power, cooling, rack, support']], mx = Math.max.apply(null, rows.map(function (x) { return x[1]; }).concat([1]));
+    $('hv').innerHTML = F.vmware_hosts ? rows.map(function (x, i) { return '<div class="hb" title="' + esc(x[2]) + '"><span>' + esc(x[0]) + '</span><span class="b"><i style="width:' + Math.round(100 * x[1] / mx) + '%;background:' + (i === 0 ? 'var(--warn)' : i === 1 ? 'var(--ok)' : 'var(--acc)') + '"></i></span><span class="sm">SAR ' + sar(x[1]) + '</span></div>'; }).join('') + '<div class="sm mut">Per host of ' + F.avg_cores + ' cores / ' + F.avg_sockets + ' sockets (the collected average). Hover a bar for the source of its figure.</div>' : '<div class="empty">No VMware hosts collected.</div>';
+    var A = V.assumptions; $('asmv').textContent = 'version ' + A.version + (A.by ? ' · last changed by ' + A.by : '');
+    $('asm').innerHTML = Object.keys(A.notes).map(function (k) { var ch = A.changed.indexOf(k) >= 0; return '<label class="' + (ch ? 'chg' : '') + '" title="' + esc(A.notes[k].note) + '">' + esc(k.replace(/_/g, ' ')) + (ch ? ' (changed; default ' + esc(A.notes[k].default) + ')' : '') + '<input class="inp" type="number" step="any" data-a="' + esc(k) + '" value="' + esc(A.values[k]) + '"' + (admin() ? '' : ' disabled') + '><span class="sm mut">' + esc(A.notes[k].note) + '</span></label>'; }).join('');
+    $('asmb').hidden = !admin();
+  }
+  function load() { req('GET', '/platform-cost').then(function (v) { V = v; $('main').hidden = false; $('msg').innerHTML = ''; paint(); },
+    function (e) { $('main').hidden = true; $('msg').innerHTML = '<div class="card ' + (e.status === 403 ? 'empty' : 'err') + '">' + (e.status === 403 ? 'Cost figures are shown to operators and administrators.' : 'Could not read the scenarios: ' + esc(e.message) + (e.status === 0 ? ' - the ITAM engine is not reachable.' : '')) + '</div>'; }); }
+  document.addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || !V) return;
+    if (b.hasAttribute('data-prop')) { var rid = b.getAttribute('data-prop'); dialog('Propose a business case for ' + rid, '<label class="sm mut">Note for the approver<textarea class="inp" id="p-note" rows="3" maxlength="1000"></textarea></label><p class="sm mut">A different administrator approves or rejects it. Approving records the decision; nothing is changed on a host or a VM.</p>',
+      function (err, done) { req('POST', '/platform-cost/cases', { rec: rid, note: $('p-note').value.trim() || undefined }).then(function () { done(); toast('Business case proposed'); load(); }, function (e) { err(e.status === 403 ? 'Operators and administrators propose business cases.' : e.message); }); }); }
+    if (b.hasAttribute('data-dec')) { var d = b.getAttribute('data-dec'), id = b.getAttribute('data-id'); dialog((d === 'approve' ? 'Approve' : 'Reject') + ' the business case', '<label class="sm mut">Reason (required)<textarea class="inp" id="d-why" rows="3" maxlength="1000"></textarea></label>',
+      function (err, done) { var w = $('d-why').value.trim(); if (!w) return err('Give the reason.'); req('POST', '/platform-cost/cases/' + encodeURIComponent(id) + '/decide', { decision: d, reason: w }).then(function () { done(); toast('Business case ' + (d === 'approve' ? 'approved' : 'rejected')); load(); }, function (e) { err(e.message); }); }); } });
+  $('asave').addEventListener('click', function () { var b = { baseVersion: V.assumptions.version }; document.querySelectorAll('#asm [data-a]').forEach(function (i) { if (i.value !== '') b[i.getAttribute('data-a')] = Number(i.value); });
+    req('POST', '/platform-cost/assumptions', b).then(function (r) { toast(r.changed ? 'Saved - ' + r.changed + ' figure(s) changed' : 'Nothing changed'); $('aerr').textContent = ''; load(); }, function (e) { $('aerr').textContent = e.message; }); });
+  $('areset').addEventListener('click', function () { req('POST', '/platform-cost/assumptions', { reset: true, baseVersion: V.assumptions.version }).then(function () { toast('Assumptions reset to the defaults'); load(); }, function (e) { $('aerr').textContent = e.message; }); });
+  $('rf').addEventListener('click', load);
+  req('GET', '/dashboards/whoami.json').then(function (w) { ME = w || ME; }, function () { /* no identity: read-only controls */ }).then(load);
+})();
+</script></body></html>

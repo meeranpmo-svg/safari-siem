@@ -1,0 +1,81 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Morning Health Check</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+.fil{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px}
+.box{border:1px solid var(--edge);border-radius:12px;padding:12px 14px;border-left:5px solid #8b949e;background:rgba(255,255,255,.02)}
+.box.fail{border-left-color:var(--bad)}.box.warn{border-left-color:#d29922}.box.ok{border-left-color:var(--ok)}.box.nc{border-left-color:#8b949e}
+.box h3{margin:0 0 2px;font-size:15px;display:flex;gap:8px;align-items:center}.box h3 .sp{flex:1}.box .sub{color:var(--mute);font-size:12px;margin:0 0 8px}
+.ck{width:100%;border-collapse:collapse;font-size:12.5px}.ck td{padding:4px 6px;border-top:1px solid rgba(127,127,127,.15);vertical-align:top}.ck tr{cursor:pointer}.ck tr:hover td{background:rgba(127,127,127,.08)}
+.st{font-weight:700;font-size:11px;border-radius:6px;padding:1px 7px;white-space:nowrap}.st.fail{background:rgba(255,123,114,.18);color:var(--bad)}.st.warn{background:rgba(210,153,34,.18);color:#d29922}.st.ok{background:rgba(63,185,80,.15);color:var(--ok)}.st.nc{background:rgba(127,127,127,.18)}.st.na{color:var(--mute)}
+.rv{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.rv input{flex:1;min-width:220px}
+@media print{.noprint,.top button{display:none!important}.box{break-inside:avoid}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Databases · the DBA's daily round, done by the platform</div><h1>Morning Health Check</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="run">▶ Run now</button><button type="button" id="csv">⬇ CSV</button><button type="button" id="print">🖨 Print</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div class="card noprint" id="rvc" hidden><h2>Sign-off</h2><div id="rv"></div></div>
+<div class="card"><h2>Databases <span class="c" id="dbc"></span></h2>
+ <div class="fil noprint"><label class="small"><input type="checkbox" id="only" checked> only items that need attention</label><input type="search" id="q" placeholder="Search database, check, value…"></div>
+ <div class="grid2" id="dbs"></div></div>
+<div class="card"><h2>Database servers <span class="c" id="svc"></span></h2><div class="grid2" id="srv"></div></div>
+<div class="card noprint"><h2>History</h2><div class="tw" id="hist"></div></div>
+<div class="card noprint" id="setc"><h2>Schedule and thresholds</h2><div id="set"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,Z=window.zybDetail,esc=S.esc,$=function(i){return document.getElementById(i);};
+  var ST=null,REP=null,ROLE='viewer',ME='';
+  var LBL={fail:'FAIL',warn:'WARN',nc:'NOT CHECKED',ok:'PASS',na:'n/a'},DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  function itam(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=m==='GET'?60000:900000;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management could not be reached'));};x.send(b?JSON.stringify(b):null);});}
+  var can=function(r){var k={viewer:0,operator:1,admin:2};return (k[ROLE]||0)>=k[r];};
+  var st=function(s){return '<span class="st '+esc(s)+'">'+(LBL[s]||esc(s))+'</span>';};
+  function n(L,s){return L.reduce(function(a,x){return a+x.checks.filter(function(c){return c.status===s;}).length;},0);}
+  function tiles(){var r=REP;if(!r){$('kp').innerHTML='<div class="card" style="grid-column:1/-1"><p>No health check has run yet. '+(ST&&ST.next?'The first one runs '+esc(new Date(ST.next).toLocaleString('en-GB'))+'.':'')+(can('operator')?' Click <b>Run now</b> to run it now.':'')+'</p></div>';return;}
+    var s=r.summary;$('kp').innerHTML=S.tile('Result',LBL[s.status]||s.status,esc(r.day)+' · '+(r.why==='schedule'?'scheduled':'run by '+r.by),s.status==='fail'?'bad':s.status==='warn'?'warn':s.status==='ok'?'ok':'')
+      +S.tile('Failed checks',S.n(s.fail),'need the DBA today',s.fail?'bad':'ok')+S.tile('Warnings',S.n(s.warn),'',s.warn?'warn':'ok')+S.tile('Not checked',S.n(s.nc),'the platform could not read them',s.nc?'warn':'')
+      +S.tile('Covered',S.n(s.databases)+' DB · '+S.n(s.servers)+' servers',S.n(s.ok)+' checks passed','')
+      +S.tile('E-mail',r.mail?(r.mail.ok?'sent':'not sent'):'off',r.mail&&!r.mail.ok?r.mail.error:'to the DBA recipients',r.mail&&!r.mail.ok?'bad':'')
+      +S.tile('Signed off',r.review?r.review.by:'not yet',r.review?S.ago(r.review.at):'',r.review?'ok':'warn');
+    $('up').textContent='ran '+new Date(r.at).toLocaleString('en-GB')+' · took '+r.took_s+' s'+(ST&&ST.next?' · next '+new Date(ST.next).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit'}):'');}
+  function boxes(L,kind,host){var only=$('only').checked,q=$('q').value.trim().toLowerCase();
+    var out=L.map(function(x,i){var C=x.checks.map(function(c,j){return {c:c,j:j};}).filter(function(o){var c=o.c;return (!only||c.status==='fail'||c.status==='warn'||c.status==='nc')&&(!q||[x.label,x.host,x.instance,c.area,c.check,c.value,c.detail].join(' ').toLowerCase().indexOf(q)>=0);});
+      if(q&&!C.length)return '';
+      var cnt=['fail','warn','nc'].map(function(s){var k=x.checks.filter(function(c){return c.status===s;}).length;return k?st(s)+' '+k:'';}).filter(Boolean).join(' ');
+      return '<div class="box '+esc(x.status)+'"><h3>'+esc(x.label||x.host)+(x.instance?' <span class="muted">'+esc(x.instance)+'</span>':'')+'<span class="sp"></span>'+st(x.status)+'</h3><div class="sub">'+(kind==='db'?esc([x.role,x.version,x.ip+(x.service?' / '+x.service:'')].filter(Boolean).join(' · ')):esc([x.ip,x.os,(x.databases||[]).join(', ')].filter(Boolean).join(' · ')))+(cnt?' · '+cnt:'')+'</div>'
+        +(C.length?'<table class="ck">'+C.map(function(o){var c=o.c;return '<tr data-k="'+kind+'" data-i="'+i+'" data-j="'+o.j+'" tabindex="0"><td>'+st(c.status)+'</td><td><b>'+esc(c.check)+'</b><div class="muted">'+esc(c.area)+'</div></td><td>'+esc(c.value)+'</td></tr>';}).join('')+'</table>':'<p class="small" style="color:var(--ok);margin:0">All '+x.checks.length+' checks passed.</p>')+'</div>';}).join('');
+    return out||'<div class="empty">'+(L.length?'Nothing matches.':kind==='db'?'No monitored database - add one in Databases.':'No database server read.')+'</div>';}
+  function draw(){if(!REP){$('dbs').innerHTML='';$('srv').innerHTML='';$('rvc').hidden=true;return;}
+    $('dbc').textContent=REP.databases.length+'';$('svc').textContent=REP.servers.length+'';
+    $('dbs').innerHTML=boxes(REP.databases,'db');$('srv').innerHTML=boxes(REP.servers,'srv')+(REP.servers_error?'<p class="err small">Servers not read: '+esc(REP.servers_error)+'</p>':'');
+    $('rvc').hidden=!can('operator');
+    $('rv').innerHTML=REP.review?'<p>'+S.pill('signed off','ok')+' by <b>'+esc(REP.review.by)+'</b> '+esc(S.ago(REP.review.at))+(REP.review.note?' - '+esc(REP.review.note):'')+'</p>':'<div class="rv"><input id="rvn" placeholder="'+(REP.summary.fail?'What was done / who is on it (required: '+REP.summary.fail+' failed check(s))':'Note (optional)')+'"><button type="button" id="rvok">✔ Reviewed - sign off</button></div><p class="note">The DBA confirms the round was read and acted on. Recorded with your name and the time.</p>';}
+  function hist(){var H=(ST&&ST.history)||[];$('hist').innerHTML=H.length?'<table><thead><tr><th>Run</th><th>When</th><th>Result</th><th>Fail / warn / not checked</th><th>E-mail</th><th>Signed off</th></tr></thead><tbody>'+H.map(function(h){return '<tr data-rep="'+esc(h.id)+'" style="cursor:pointer"'+(REP&&REP.id===h.id?' class="on"':'')+'><td class="mono">'+esc(h.id)+'</td><td>'+esc(new Date(h.at).toLocaleString('en-GB'))+'<div class="small muted">'+(h.why==='schedule'?'scheduled':'by '+esc(h.by))+'</div></td><td>'+st(h.summary.status)+'</td><td>'+h.summary.fail+' / '+h.summary.warn+' / '+h.summary.nc+'</td><td>'+(h.mail?(h.mail.ok?'sent':'<span class="err" title="'+esc(h.mail.error||'')+'">not sent</span>'):'—')+'</td><td>'+(h.reviewed?esc(h.reviewed.by):'<span class="muted">no</span>')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No run yet.</div>';}
+  function setDraw(){var s=ST.settings,T=s.t;if(!can('admin')){$('set').innerHTML='<p>Runs '+(s.enabled?'at <b>'+esc(s.at)+'</b> Riyadh time on '+s.days.map(function(d){return DAYS[d];}).join(', '):'<b>off</b>')+'. '+(s.mail?'Mailed to the DBA recipients set on the Database Dashboard (Notifications).':'Not mailed.')+'</p>';return;}
+    var num=function(k,l){return '<label>'+esc(l)+'<input type="number" data-t="'+k+'" value="'+esc(T[k])+'"></label>';};
+    $('set').innerHTML='<div class="form"><label><input type="checkbox" id="s-en"'+(s.enabled?' checked':'')+'> Run every working day</label><label>At (Riyadh)<input id="s-at" value="'+esc(s.at)+'" placeholder="07:00"></label><div class="small">'+DAYS.map(function(d,i){return '<label style="display:inline-flex;gap:4px;margin-right:8px"><input type="checkbox" data-day="'+i+'"'+(s.days.indexOf(i)>=0?' checked':'')+'>'+d+'</label>';}).join('')+'</div><label><input type="checkbox" id="s-mail"'+(s.mail?' checked':'')+'> E-mail the report to the DBA recipients (Database Dashboard → Notifications)</label></div>'
+      +'<div class="form" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr))">'+num('ts_warn','Tablespace warn %')+num('ts_crit','Tablespace fail %')+num('fra_warn','FRA warn %')+num('fra_crit','FRA fail %')+num('asm_warn','ASM warn %')+num('asm_crit','ASM fail %')+num('dg_warn_s','Data Guard lag warn (s)')+num('dg_crit_s','Data Guard lag fail (s)')+num('backup_warn_h','Backup older than warn (h)')+num('backup_crit_h','Backup older than fail (h)')+num('sess_warn','Sessions warn %')+num('sess_crit','Sessions fail %')+num('invalid_warn','Invalid objects warn')+num('restart_h','Restart within (h) = warn')+'</div><p><button type="button" id="s-save">Save</button></p>';}
+  function openCheck(kind,i,j){var x=(kind==='db'?REP.databases:REP.servers)[i],c=x.checks[j];
+    Z.open((x.label||x.host)+(x.instance?' · '+x.instance:''),c.check,Z.kv([['Result',st(c.status)],['Area',esc(c.area)],['Value',esc(c.value||'—')]])+(c.detail?Z.sec('Evidence','<pre style="white-space:pre-wrap;font:12px Consolas,monospace;margin:0">'+esc(c.detail)+'</pre>'):'')+(c.fix?Z.sec('What to do',esc(c.fix)):'')
+      +'<p class="zd-dim">Read-only check by the platform at '+esc(new Date(REP.at).toLocaleString('en-GB'))+'. '+(kind==='db'?'<a href="db-dashboard.html">Database Dashboard</a> · <a href="db-performance.html">Performance</a> · <a href="db-sessions.html">Long-Running Queries</a>':'<a href="db-servers.html">Database Servers</a>')+'</p>');}
+  function load(id){return itam('GET','/db-morning').then(function(s){ST=s;REP=id?null:s.latest;return id?itam('GET','/db-morning/reports/'+encodeURIComponent(id)).then(function(r){REP=r;}):null;}).then(function(){tiles();draw();hist();setDraw();$('run').hidden=!can('operator');})
+    .catch(function(e){$('kp').innerHTML='<div class="card" style="grid-column:1/-1"><p class="err">'+esc(e.status===404?'The Morning Health Check needs the server update (IT Asset Management).':e.status===403?'Operators and administrators see the health check.':e.message)+'</p></div>';});}
+  function csv(){if(!REP)return;var q=function(v){v=v==null?'':String(v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+    var L=[['# Morning database health check',REP.id],['# ran',REP.at],['# signed off',REP.review?REP.review.by+' '+REP.review.at:'no'],[],['kind','name','instance','role','area','check','result','value','evidence','what to do']];
+    REP.databases.forEach(function(d){d.checks.forEach(function(c){L.push(['database',d.label,d.instance,d.role,c.area,c.check,LBL[c.status],c.value,c.detail,c.fix]);});});
+    REP.servers.forEach(function(v){v.checks.forEach(function(c){L.push(['server',v.host,'','',c.area,c.check,LBL[c.status],c.value,c.detail,c.fix]);});});
+    var b=new Blob([L.map(function(r){return r.map(q).join(',');}).join('\r\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='db-health-check-'+REP.day+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('tr[data-k]'))){openCheck(x.getAttribute('data-k'),+x.getAttribute('data-i'),+x.getAttribute('data-j'));return;}
+    if((x=t.closest('tr[data-rep]'))){load(x.getAttribute('data-rep'));window.scrollTo(0,0);return;}
+    if(t.id==='run'){t.disabled=true;t.textContent='Checking every database…';itam('POST','/db-morning/run',{}).then(function(){S.toast('Health check done');return load();}).catch(function(e){S.toast(e.message);}).then(function(){t.disabled=false;t.textContent='▶ Run now';});return;}
+    if(t.id==='rvok'){itam('POST','/db-morning/reports/'+encodeURIComponent(REP.id)+'/review',{note:$('rvn').value.trim()}).then(function(r){REP=r;S.toast('Signed off');return itam('GET','/db-morning').then(function(s){ST=s;tiles();draw();hist();});}).catch(function(e){S.toast(e.message);});return;}
+    if(t.id==='s-save'){var tt={};[].forEach.call(document.querySelectorAll('[data-t]'),function(i){tt[i.getAttribute('data-t')]=+i.value;});var days=[].filter.call(document.querySelectorAll('[data-day]'),function(i){return i.checked;}).map(function(i){return +i.getAttribute('data-day');});
+      itam('POST','/db-morning/settings',{enabled:$('s-en').checked,at:$('s-at').value.trim(),days:days,mail:$('s-mail').checked,t:tt}).then(function(){S.toast('Saved');load();}).catch(function(e){S.toast(e.message);});return;}
+    if(t.id==='csv'){csv();return;}if(t.id==='print'){window.print();return;}
+  });
+  document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;var x=e.target.closest&&e.target.closest('tr[data-k],tr[data-rep]');if(x)x.click();});
+  $('only').onchange=draw;$('q').addEventListener('input',draw);
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);ROLE=String(j.role||'').toLowerCase();ME=String(j.user||'');}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

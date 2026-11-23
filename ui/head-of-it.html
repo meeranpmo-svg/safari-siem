@@ -1,0 +1,189 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IT Command Center</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--info);border-radius:12px;padding:18px;margin:0 0 12px}
+.hero .txt{flex:1 1 380px;min-width:0}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--info);text-transform:uppercase}.hero h1{margin:6px 0;font-size:24px;color:var(--title)}.hero p{margin:0;color:var(--mute)}
+.live{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;border:1px solid rgba(63,185,80,.5);color:var(--ok);letter-spacing:.06em}.live[hidden]{display:none}
+.rings{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}.ring{width:120px;text-align:center}.ring svg{display:block;margin:0 auto}.ring .rl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-top:6px}.ring .rs{font-size:11px;color:var(--mute)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:24px;font-weight:700;color:var(--title)}.t .s{font-size:12px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.na .v{color:var(--mute);font-size:15px;font-weight:600}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{margin-left:auto;display:flex;gap:6px;align-items:center}
+button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 11px;cursor:pointer}button:hover{border-color:#4a5162}button.sm{padding:3px 9px;font-size:12px}
+button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}.tw{overflow-x:auto}
+.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.empty{color:var(--mute);padding:6px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}.err{color:var(--bad)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}
+.bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 56px;gap:8px;align-items:center;margin:5px 0;font-size:13px}.bar .tr{height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}.bar .fl{height:100%;border-radius:5px}.bar .n{text-align:right;font-variant-numeric:tabular-nums}
+.na{color:var(--mute);background:var(--raise);border:1px dashed var(--border);border-radius:9px;padding:10px;font-size:13px}
+.top{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin:0 0 8px}
+@media print{.top{display:none}body{background:#fff;color:#000}.card,.t,.hero{background:#fff;border-color:#ccc}}
+.sec{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:16px 0 8px}
+</style></head><body><main>
+<div class="top"><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<section class="hero"><div class="txt"><div class="eb">Head of IT · command center<span class="live" id="live" hidden>LIVE DATA</span></div><h1>Services, SLAs, problems, changes and renewals</h1>
+<p>Applications, infrastructure, the AI engineers' open problems and their SLA, changes, capacity and what expires next - read from Applications Manager, Server Availability, the duty desk, change plans and the asset register. A source that is not connected says so; nothing on this page is sample data.</p></div>
+<div class="rings" id="rings"></div></section>
+<div class="k" id="kk"><div class="empty">Loading…</div></div>
+<div class="sec">Services</div>
+<div class="g">
+  <div class="card"><h2>🧩 Business applications <span class="c"><button type="button" class="sm" data-go="apm.html">Open →</button></span></h2><div id="apps"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🚨 Open problems (AI engineers) <span class="c"><button type="button" class="sm" data-go="ai-team.html">Open →</button></span></h2><div id="prob"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>⏱️ SLA by engineer <span class="c muted">last 30 days</span></h2><div id="sla"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🌐 Hosts &amp; devices offline <span class="c"><button type="button" class="sm" data-go="server-availability.html">Open →</button></span></h2><div id="off"><div class="empty">Loading…</div></div></div>
+</div>
+<div class="sec">Change</div>
+<div class="g">
+  <div class="card"><h2>🗓️ Changes <span class="c"><button type="button" class="sm" data-go="network-engineer.html">Open →</button></span></h2><div id="chg"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🛢️ Databases <span class="c"><button type="button" class="sm" data-go="db-dashboard.html">Open →</button></span></h2><div id="db"><div class="empty">Loading…</div></div></div>
+</div>
+<div class="sec">Business requests to the IT teams</div>
+<div class="g">
+  <div class="card" style="grid-column:1/-1"><h2>🔁 Workflow Automation <span class="c"><button type="button" class="sm" data-go="workflow-automation.html#tab=queue">Team queue →</button> <button type="button" class="sm" data-go="workflow-automation.html">Open →</button></span></h2><div id="wf"><div class="empty">Loading…</div></div></div>
+</div>
+<div class="sec">Capacity, protection and renewals</div>
+<div class="g">
+  <div class="card"><h2>💾 Storage capacity <span class="c"><button type="button" class="sm" data-go="storage.html">Open →</button></span></h2><div id="sto"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🛟 Backups <span class="c"><button type="button" class="sm" data-go="backup.html">Open →</button></span></h2><div id="bk"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>📅 Expiring next <span class="c muted">certificates · licences · contracts · warranty</span></h2><div id="exp"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>⏳ End of life <span class="c"><button type="button" class="sm" data-go="lifecycle.html">Open →</button></span></h2><div id="eol"><div class="empty">Loading…</div></div></div>
+</div>
+<p class="note">Figures come from the SIEM (Applications Manager, Server Availability, the AI engineers' duty desk and its SLA - critical 24 h, high 72 h -, network and server change plans, the Oracle collector) and IT Asset Management (backups, Endpoint Central, storage, end of life, certificates, licences, support contracts, warranty). WAN link and firewall throughput are on the Network pages, compute utilisation on Capacity; trends appear on those pages once history has been collected.</p>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);}, DAY=864e5, NOW=function(){return Date.now();};
+  // every request is handled on the page (each card says why it has nothing): marked quiet for zyb-errors.js
+  function get(url){return new Promise(function(ok){var x=new XMLHttpRequest();x.zybQuiet=true;x.open('GET',url);x.withCredentials=true;x.timeout=60000;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }ok({status:x.status,json:j&&typeof j==='object'?j:null});};x.onerror=x.ontimeout=function(){ok({status:0,json:null});};x.send();});}
+  function why(r,what){return r.status===403?'needs a higher role to read '+what:r.status===404?what+' is not installed on the server':r.status===0?what+' did not answer':r.json&&r.json.error?String(r.json.error):!r.json?what+' did not answer with data (HTTP '+r.status+')':'';}
+  function na(t){return '<div class="na">'+esc(t)+'</div>';}
+  function n(v){return v==null||v===''||!isFinite(v)?null:Number(v);}
+  function pctTxt(v){return v==null?'–':(Math.round(v*10)/10)+'%';}
+  function cls(v,good,warn){return v==null?'na':v>=good?'ok':v>=warn?'warn':'bad';}
+  function col(c){return c==='ok'?'var(--ok)':c==='warn'?'var(--warn)':c==='bad'?'var(--bad)':'var(--mute)';}
+  function ring(v,label,sub,good,warn){var c=cls(v,good||99,warn||95),r=46,L=2*Math.PI*r,d=v==null?0:Math.max(0,Math.min(100,v))/100*L;
+    return '<div class="ring"><svg width="112" height="112" viewBox="0 0 112 112" role="img" aria-label="'+esc(label+': '+pctTxt(v))+'"><circle cx="56" cy="56" r="'+r+'" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>'
+      +(v==null?'':'<circle cx="56" cy="56" r="'+r+'" fill="none" stroke="'+col(c)+'" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+d.toFixed(1)+' '+L.toFixed(1)+'" transform="rotate(-90 56 56)"/>')
+      +'<text x="56" y="62" text-anchor="middle" font-size="'+(v==null?15:22)+'" font-weight="700" fill="'+(v==null?'#8C93A1':'#fff')+'">'+esc(v==null?'not measured':pctTxt(v))+'</text></svg><div class="rl">'+esc(label)+'</div><div class="rs">'+esc(sub||'')+'</div></div>';}
+  function tile(l,v,s,c,go){return '<button type="button" class="t '+(c||'')+'"'+(go?' data-go="'+esc(go)+'"':'')+'><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function bar(label,v,txt,c){return '<div class="bar"><span>'+esc(label)+'</span><span class="tr"><span class="fl" style="width:'+Math.max(0,Math.min(100,v||0))+'%;background:'+col(c)+'"></span></span><span class="n">'+esc(txt)+'</span></div>';}
+  function dt(t){try{var d=new Date(t);return isNaN(d)?'–':d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return '–';}}
+  function gb(b){return b==null?'–':b>=1e12?(b/1e12).toFixed(1)+' TB':Math.round(b/1e9)+' GB';}
+  function hrs(h){return h==null?'–':h>=48?Math.round(h/24)+' d':h>=1?Math.round(h*10)/10+' h':Math.round(h*60)+' min';}
+  function ms(v){if(v==null||v==='')return null;var t=typeof v==='number'?v:Date.parse(v);return isFinite(t)?t:null;}
+  var SEV={critical:4,high:3,medium:2,low:1};
+  function sevPill(s){return '<span class="pill '+(s==='critical'?'bad':s==='high'?'warn':'')+'">'+esc(s||'unknown')+'</span>';}
+
+  function apmOf(R){return R.apmStatus.json&&R.apmStatus.json.configured&&R.apmMon.json&&Array.isArray(R.apmMon.json.items)?R.apmMon.json.items.filter(function(m){return m.managed!==false;}):null;}
+  // SLA across the engineers: each engineer's own "x of y on time" (critical 24 h, high 72 h), summed - not an average of percentages
+  function slaOf(R){var E=R.kpis.json&&Array.isArray(R.kpis.json.engineers)?R.kpis.json.engineers:null;if(!E)return null;var ok=0,all=0,rows=[];
+    E.forEach(function(e){if(e.not_connected)return;var K={};(e.kpis||[]).forEach(function(k){K[k.id]=k;});var s=K.sla_pct,m=s&&/(\d+) of (\d+) on time/.exec(s.detail||'');if(m){ok+=+m[1];all+=+m[2];}
+      rows.push({name:e.name||e.engineer,sla:s?n(s.value):null,slaTxt:s?s.detail:'',fix:K.fix_h?n(K.fix_h.value):null,open:e.counts?e.counts.open:null,status:s?s.status:'na'});});
+    return {pct:all?ok/all*100:null,ok:ok,all:all,rows:rows,engineers:E.length};}
+  // change plans (network + server): waiting for a decision, approved and not applied, and the outcome of what was applied in 30 days
+  function chgOf(R){var L=[],failed=0;[['network',R.chN],['server',R.chS]].forEach(function(p){var it=p[1].json&&Array.isArray(p[1].json.items)?p[1].json.items:null;if(!it){failed++;return;}it.forEach(function(c){L.push({area:p[0],c:c});});});
+    if(failed===2)return null;var since=NOW()-30*DAY,done=L.filter(function(x){return (x.c.status==='applied'||x.c.status==='validated')&&(ms(x.c.applied_at)||0)>=since;}),bad=L.filter(function(x){var h=x.c.history||[],at=h.length?ms(h[h.length-1].at):ms(x.c.decided_at);return x.c.status==='execution-failed'&&(at||0)>=since;});
+    return {pending:L.filter(function(x){return x.c.status==='proposed';}),approved:L.filter(function(x){return x.c.status==='approved';}),done:done,failed:bad,rate:done.length+bad.length?done.length/(done.length+bad.length)*100:null,partial:failed===1};}
+
+  function draw(R){
+    var itamOk=R.itam.status===200&&R.itam.json, O=itamOk?R.itam.json:{}, itamWhy=itamOk?'':why(R.itam,'the IT Asset Management overview (install/add-infra-overview.sh)');
+    var AV=R.avail.json&&R.avail.json.summary?R.avail.json:null, ORA=R.ora.json&&Array.isArray(R.ora.json.instances)?R.ora.json:null, APM=apmOf(R), SLA=slaOf(R), CH=chgOf(R);
+    var DI=R.duty.json&&Array.isArray(R.duty.json.items)?R.duty.json.items:null, bk=O.backup&&O.backup.available?O.backup:null, pt=O.patch&&O.patch.available?O.patch:null;
+    var appUp=APM&&APM.length?APM.filter(function(m){return m.availability==='up';}).length:null, appPct=appUp==null?null:appUp/APM.length*100;
+    var avMon=AV?(AV.summary.online+AV.summary.offline):0, avPct=avMon?AV.summary.online/avMon*100:null;
+    $('rings').innerHTML=ring(appPct,'Service availability',APM?(APM.length?appUp+' of '+APM.length+' application monitors up':'no monitors'):'Applications Manager not connected')
+      +ring(avPct,'Hosts & devices',AV?(avMon?AV.summary.online+' of '+avMon+' reachable':'nothing monitored yet'):'Server Availability not answering')
+      +ring(SLA?SLA.pct:null,'SLA met',SLA?(SLA.all?SLA.ok+' of '+SLA.all+' serious problems on time':'no serious problem due in 30 days'):why(R.kpis,'the duty desk KPIs')||'duty desk not answering',95,85);
+    $('live').hidden=!(APM||AV||SLA||DI||CH||ORA||(O.register&&O.register.available));
+    // tiles
+    var open=DI?DI.filter(function(x){return !/^(resolved|closed|verified-fixed)/.test(x.status||'');}):null, serious=open?open.filter(function(x){return (SEV[x.severity]||0)>=3;}):null;
+    var fixAll=SLA?SLA.rows.filter(function(r){return r.fix!=null;}):[], fixMed=fixAll.length?fixAll.map(function(r){return r.fix;}).sort(function(a,b){return a-b;})[Math.floor((fixAll.length-1)/2)]:null;
+    var alarms=R.apmAl.json&&Array.isArray(R.apmAl.json.items)?R.apmAl.json.items.filter(function(a){return a.severity!=='clear';}):null;
+    $('kk').innerHTML=tile('Applications',APM?APM.length:'–',APM?(APM.length-appUp)+' down · '+(alarms?alarms.filter(function(a){return a.severity==='critical';}).length+' critical alarms':'alarms not read'):'Applications Manager not connected',APM?(APM.length-appUp?'bad':'ok'):'na','apm.html')
+      +tile('Open problems',open?open.length:'–',open?serious.length+' critical / high · '+serious.filter(function(x){return !x.owner;}).length+' unassigned':why(R.duty,'the duty desk'),open?(serious.length?'warn':'ok'):'na','ai-team.html')
+      +tile('SLA met',SLA&&SLA.pct!=null?pctTxt(SLA.pct):'–',SLA?(SLA.all?SLA.ok+' of '+SLA.all+' on time (30 d)':'nothing due in 30 days'):'duty desk KPIs not answering',SLA?cls(SLA.pct,95,85):'na')
+      +tile('Change success',CH&&CH.rate!=null?pctTxt(CH.rate):'–',CH?(CH.done.length+CH.failed.length?CH.done.length+' applied · '+CH.failed.length+' failed (30 d)':'no change applied in 30 days'):why(R.chN,'change plans'),CH?cls(CH.rate,95,85):'na','network-engineer.html')
+      +tile('Patch compliance',pt?pctTxt(n(pt.compliant_pct)):'–',pt?pt.compliant+' of '+pt.reported+' computers fully patched':(O.patch?O.patch.why:itamWhy||'not answering'),pt?cls(n(pt.compliant_pct),90,75):'na','manageengine.html')
+      +tile('Backup success',bk?pctTxt(n(bk.protected_pct)):'–',bk?bk.failed+' failed · '+bk.none+' with no backup':(O.backup?O.backup.why:itamWhy||'not answering'),bk?cls(n(bk.protected_pct),95,80):'na','backup.html')
+      +tile('Time to fix (median)',fixMed==null?'–':hrs(fixMed),SLA?(fixAll.length?'across '+fixAll.length+' engineers, detected → fixed':'nothing fixed in 30 days'):'duty desk KPIs not answering',fixMed==null?'na':'');
+    // applications
+    if(!APM)$('apps').innerHTML=na(R.apmStatus.json&&!R.apmStatus.json.configured?'Applications Manager is not connected - set it up under Connections & Setup (ManageEngine Applications Manager).':why(R.apmStatus,'Applications Manager')||'Applications Manager has not reported monitors yet.');
+    else if(!APM.length)$('apps').innerHTML=na('Applications Manager is connected but reports no managed monitors.');
+    else{var dn=APM.filter(function(m){return m.availability!=='up';});
+      $('apps').innerHTML=(dn.length?'<div class="tw"><table><thead><tr><th>Down</th><th>Type</th><th>Message</th></tr></thead><tbody>'+dn.slice(0,10).map(function(m){return '<tr><td><b>'+esc(m.name)+'</b><div class="muted">'+esc(m.host||'')+'</div></td><td class="muted">'+esc(m.type||'')+'</td><td class="muted">'+esc(m.message||m.availability)+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">All '+APM.length+' managed monitors are up.</div>')
+        +(alarms&&alarms.length?'<p class="note">'+esc(alarms.length+' active alarm(s): ')+alarms.slice(0,5).map(function(a){return esc(a.name+' - '+(a.attribute||a.message||a.severity));}).join('; ')+(alarms.length>5?'…':'')+'</p>':'');}
+    // open problems
+    if(!open)$('prob').innerHTML=na(why(R.duty,'the duty desk (SIEM)')||'The duty desk did not answer.');
+    else if(!open.length)$('prob').innerHTML='<div class="empty">No open problem on the AI engineers\' duty desk.</div>';
+    else{var srt=open.slice().sort(function(a,b){return (SEV[b.severity]||0)-(SEV[a.severity]||0)||(ms(a.detected_at||a.first_seen)||0)-(ms(b.detected_at||b.first_seen)||0);});
+      $('prob').innerHTML='<div class="tw"><table><thead><tr><th>Severity</th><th>Problem</th><th>Open for</th><th>Owner</th></tr></thead><tbody>'+srt.slice(0,10).map(function(x){var at=ms(x.detected_at||x.first_seen);return '<tr><td>'+sevPill(x.severity)+'</td><td><b>'+esc(x.title||x.key||'')+'</b><div class="muted">'+esc(x.engineer_name||x.engineer||'')+'</div></td><td>'+esc(at?hrs((NOW()-at)/36e5):'–')+'</td><td class="muted">'+esc(x.owner||'unassigned')+'</td></tr>';}).join('')+'</tbody></table></div>'+(open.length>10?'<p class="note">'+esc((open.length-10)+' more on the duty desk.')+'</p>':'');}
+    // SLA per engineer
+    if(!SLA)$('sla').innerHTML=na(why(R.kpis,'the duty desk KPIs (SIEM)')||'The duty desk KPIs did not answer.');
+    else if(!SLA.rows.length)$('sla').innerHTML=na('No engineer has a connected source yet - connect sources on Connections & Setup.');
+    else $('sla').innerHTML='<div class="tw"><table><thead><tr><th>Engineer</th><th>SLA met</th><th>Time to fix</th><th>Open</th></tr></thead><tbody>'+SLA.rows.map(function(r){return '<tr><td><b>'+esc(r.name)+'</b></td><td>'+(r.sla==null?'<span class="muted">not measured</span>':'<span class="pill '+esc(r.status)+'">'+esc(pctTxt(r.sla))+'</span>')+'<div class="muted">'+esc(r.slaTxt||'')+'</div></td><td>'+esc(hrs(r.fix))+'</td><td>'+esc(r.open==null?'–':r.open)+'</td></tr>';}).join('')+'</tbody></table></div>';
+    // offline
+    if(!AV)$('off').innerHTML=na(why(R.avail,'Server Availability (SIEM)')||'Server Availability has not answered.');
+    else{var L=(R.avail.json.items||[]).filter(function(i){return i.status==='offline';});$('off').innerHTML=!avMon?na('No host or device is monitored yet - add them on Server Availability.'):L.length?'<div class="tw"><table><thead><tr><th>Name</th><th>Address</th><th>Offline for</th></tr></thead><tbody>'+L.slice(0,12).map(function(i){return '<tr><td><b>'+esc(i.name)+'</b><div class="muted">'+esc(i.site||'')+'</div></td><td class="mono">'+esc(i.ip||'')+'</td><td>'+esc(i.duration_s==null?'–':hrs(i.duration_s/3600))+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">All '+avMon+' monitored hosts and devices are reachable.</div>';}
+    // changes
+    if(!CH)$('chg').innerHTML=na(why(R.chN,'change plans (SIEM)')||'Change plans did not answer.');
+    else{var row=function(x,when,who){return '<tr><td><span class="pill">'+esc(x.area)+'</span></td><td><b>'+esc(x.c.title||x.c.id)+'</b><div class="muted">'+esc(x.c.device||'')+'</div></td><td class="muted">'+esc(when)+'<div>'+esc(who||'')+'</div></td></tr>';};
+      var h='<div class="k" style="margin:0 0 8px">'+tile('Waiting for approval',CH.pending.length,'proposed, not decided',CH.pending.length?'warn':'')+tile('Approved, not applied',CH.approved.length,'',CH.approved.length?'warn':'')+tile('Failed (30 d)',CH.failed.length,'execution failed',CH.failed.length?'bad':'ok')+'</div>';
+      var show=CH.failed.map(function(x){return row(x,'failed','');}).concat(CH.pending.slice(0,6).map(function(x){return row(x,'waiting','proposed by '+(x.c.requested_by||x.c.by||''));}),CH.approved.slice(0,6).map(function(x){return row(x,'approved '+dt(x.c.decided_at),x.c.decided_by);}));
+      h+=show.length?'<div class="tw"><table><thead><tr><th>Area</th><th>Change</th><th>State</th></tr></thead><tbody>'+show.slice(0,12).join('')+'</tbody></table></div>':'<div class="empty">Nothing waiting and nothing failed.</div>';
+      if(CH.partial)h+='<p class="note">One of the change sources (network / server) did not answer; the figures cover the other.</p>';
+      $('chg').innerHTML=h;}
+    // databases
+    if(!ORA)$('db').innerHTML=na(why(R.ora,'the Oracle collector')||'No database reports yet.');
+    else if(!ORA.instances.length)$('db').innerHTML=na('No Oracle instance reports to the SIEM yet - connect databases on All Databases.');
+    else $('db').innerHTML='<div class="tw"><table><thead><tr><th>Instance</th><th>State</th><th>Issues</th></tr></thead><tbody>'+ORA.instances.slice(0,10).map(function(i){var st=i.state||(i.up?'up':'down'),is=(i.issues||[]);return '<tr><td><b>'+esc(i.instance)+'</b><div class="muted">'+esc(i.host||'')+'</div></td><td><span class="pill '+(i.stale?'warn':st==='up'?'ok':st==='down'?'bad':'warn')+'">'+esc(i.stale?'not reporting':st)+'</span></td><td class="muted">'+(is.length?is.slice(0,3).map(function(x){return esc(x.text||x);}).join('<br>'):'none')+'</td></tr>';}).join('')+'</tbody></table></div>';
+    // storage
+    var so=O.storage;if(!so||!so.available)$('sto').innerHTML=na(so?so.why:itamWhy||'not answering');
+    else $('sto').innerHTML=so.list.map(function(a){var c=a.used_pct==null?'na':a.used_pct>=90?'bad':a.used_pct>=80?'warn':'ok';return bar(a.name,a.used_pct,a.used_pct==null?'–':a.used_pct+'%',c);}).join('')+'<p class="note">'+esc(gb(so.used_bytes)+' of '+gb(so.size_bytes)+' used across '+so.read+' array(s)')+(so.failed_disks?' · <span class="err">'+esc(so.failed_disks)+' failed disk(s)</span>':'')+'. A capacity forecast needs history - see Storage.</p>';
+    // backups
+    if(!bk)$('bk').innerHTML=na(O.backup?O.backup.why:itamWhy||'not answering');
+    else $('bk').innerHTML=bar('Protected',n(bk.protected_pct),pctTxt(n(bk.protected_pct)),cls(n(bk.protected_pct),95,80))+'<p class="note">'+esc(bk.protected+' protected · '+bk.stale+' stale · '+bk.failed+' failed · '+bk.none+' with no backup'+(bk.exempt?' · '+bk.exempt+' exempt':'')+' of '+bk.assets+' servers in the register.')+'</p>';
+    // expiring next: certificates, licences, contracts, warranty - one list by date, 90 days
+    var X=[],src=[],lim=NOW()+90*DAY;
+    var CE=R.certs.json&&Array.isArray(R.certs.json.endpoints)?R.certs.json.endpoints:null;
+    if(CE)CE.forEach(function(e){if(e.days_left!=null&&e.days_left<=90)X.push({kind:'Certificate',name:e.label||(e.host+':'+e.port),who:e.owner||'',days:e.days_left});});else src.push('certificates: '+(why(R.certs,'Certificates')||'not answering'));
+    var LI=R.lic.json&&Array.isArray(R.lic.json.licences)?R.lic.json.licences:null;
+    if(LI)LI.forEach(function(l){var t=ms(l.expiry);if(t&&t<=lim)X.push({kind:'Licence',name:(l.publisher?l.publisher+' ':'')+(l.product||l.sku||''),who:'',days:Math.floor((t-NOW())/DAY)});});else src.push('licences: '+(why(R.lic,'Licences')||'not answering'));
+    var co=O.contracts;if(co&&co.available)co.renewing.forEach(function(c){X.push({kind:'Support contract',name:c.vendor+' '+(c.product||''),who:'',days:c.days_left});});else src.push('support contracts: '+(co?co.why:itamWhy||'not answering'));
+    var reg=O.register&&O.register.available?O.register:null;if(reg)reg.warranty.items.forEach(function(i){var t=ms(i.end);if(t)X.push({kind:'Warranty',name:i.name,who:i.type,days:Math.floor((t-NOW())/DAY)});});
+    X.sort(function(a,b){return (a.days==null?1e9:a.days)-(b.days==null?1e9:b.days);});
+    $('exp').innerHTML=(X.length?'<div class="tw"><table><thead><tr><th>What</th><th>Item</th><th>Ends</th></tr></thead><tbody>'+X.slice(0,12).map(function(x){return '<tr><td class="muted">'+esc(x.kind)+'</td><td><b>'+esc(x.name)+'</b><div class="muted">'+esc(x.who)+'</div></td><td><span class="pill '+(x.days==null?'':x.days<0?'bad':x.days<=30?'warn':'')+'">'+esc(x.days==null?'–':x.days<0?'expired '+(-x.days)+' d ago':'in '+x.days+' d')+'</span></td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">Nothing ends in the next 90 days in the sources that answered.</div>')
+      +(src.length?'<p class="note">Not included - '+src.map(esc).join(' · ')+'</p>':'');
+    // end of life
+    var lc=O.lifecycle&&O.lifecycle.available?O.lifecycle:null;
+    if(!lc)$('eol').innerHTML=na(O.lifecycle?O.lifecycle.why:itamWhy||'not answering');
+    else $('eol').innerHTML=lc.items.length?'<div class="tw"><table><thead><tr><th>Device</th><th>Product</th><th>End of support</th></tr></thead><tbody>'+lc.items.map(function(i){return '<tr><td><b>'+esc(i.name)+'</b><div class="muted">'+esc(i.type)+'</div></td><td class="muted">'+esc(i.product||'')+'</td><td><span class="pill '+(i.status==='eol'?'bad':'warn')+'">'+esc(i.status==='eol'?'past':i.days==null?'soon':'in '+i.days+' d')+'</span> '+esc(i.eol?dt(i.eol):'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">Nothing past or near end of support.</div>';
+    try{drawWf(R.wf);}catch(e){$('wf').innerHTML=na('Workflow Automation could not be drawn: '+(e&&e.message||e));}
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  // Workflow Automation (GET /api/itam/workflow/attention): what the CISO office, risk, audit, HR, GRC, governance and the DPO asked
+  // the IT teams for - each team's open / overdue / on time, and the requests that need the Head of IT, ranked with their points
+  function drawWf(r){if(!r.json||!r.json.summary){$('wf').innerHTML=na(why(r,'Workflow Automation')||'Workflow Automation did not answer');return;}
+    var w=r.json.summary,P=(r.json.priorities||[]).map(function(p){return {p:p,pts:p.why.reduce(function(n,q){return n+q[1];},0)};}).sort(function(a,b){return b.pts-a.pts;});
+    var t=function(v,l,c){return '<div style="min-width:120px"><div style="font-size:22px;font-weight:700'+(c?';color:var(--'+c+')':'')+'">'+esc(String(v))+'</div><div class="muted" style="font-size:11.5px">'+esc(l)+'</div></div>';};
+    var h='<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">'+t(w.all_overdue,'overdue across the IT teams',w.all_overdue?'bad':'')+t(w.approvals,'waiting for your approval',w.approvals?'warn':'')+t(w.queue_open,'open in your team queue')+t(w.overdue,'overdue in your queue',w.overdue?'bad':'')+t(w.at_risk,'likely to miss the SLA',w.at_risk?'warn':'')+t(w.to_accept,'results for you to accept')+'</div>';
+    h+=w.teams.length?'<div class="tw"><table><thead><tr><th>Team</th><th>Open</th><th>Overdue</th><th>On time</th></tr></thead><tbody>'+w.teams.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+esc(x.open)+'</td><td>'+(x.overdue?'<span class="pill bad">'+esc(x.overdue)+'</span>':'0')+'</td><td>'+(x.n?esc(x.on_time+' of '+x.n)+' <span class="muted">('+Math.round(x.rate*100)+' %)</span>':'<span class="muted">no history</span>')+'</td></tr>';}).join('')+'</tbody></table></div>':na('No request has reached an IT team yet.');
+    h+=P.length?'<div style="margin-top:10px">'+P.slice(0,8).map(function(x){return '<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span class="pill">'+esc(x.pts)+'</span><div><a href="'+esc(x.p.page)+'" style="color:var(--info)">'+esc(x.p.ref)+'</a> '+esc(x.p.text)+'<div class="muted" style="font-size:12px">'+esc(x.p.kind)+'</div></div></div>';}).join('')+'</div>':'';
+    if(w.recurring)h+='<div class="muted" style="font-size:12px;margin-top:8px">'+esc(w.recurring)+' request type(s) keep coming back - schedule them under Workflow Automation → Automation &amp; insights.</div>';
+    $('wf').innerHTML=h;}
+  var busy=false;
+  function load(){if(busy)return;busy=true;
+    var Q={itam:'/api/itam/infra-overview',certs:'/api/itam/certs',lic:'/api/itam/licences',avail:'/api/soc/netops/avail',ora:'/api/soc/db/oracle',apmStatus:'/api/soc/integrations/apm/status',apmMon:'/api/soc/integrations/apm/monitors',apmAl:'/api/soc/integrations/apm/alarms',
+      duty:'/api/soc/duty/items?status=open&limit=300',kpis:'/api/soc/duty/kpis?days=30',chN:'/api/soc/netops/changes',chS:'/api/soc/sysadmin/changes',wf:'/api/itam/workflow/attention'},K=Object.keys(Q);
+    Promise.all(K.map(function(k){return get(Q[k]);})).then(function(rs){busy=false;var R={};K.forEach(function(k,i){R[k]=rs[i];});
+      try{draw(R);}catch(e){$('kk').innerHTML=na('The page could not be drawn: '+(e&&e.message||e));}});}
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)location.href=b.getAttribute('data-go');});
+  $('refresh').addEventListener('click',load);
+  load();setInterval(function(){if(!document.hidden)load();},120000);
+})();
+</script>
+</body></html>

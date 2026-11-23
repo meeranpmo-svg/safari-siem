@@ -1,0 +1,133 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ITAM AI Findings</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- ITAM AI Findings over /api/itam/ai/findings/intel (read: priority with reasons, learning per kind, hotspots, trend),
+     /api/itam/ai/findings?status= (decided findings), POST /ai/findings/bulk and /ai/findings/:id/accept|dismiss (operator, a person,
+     audited), POST /ai/findings/regenerate, POST /ai/run/:feature + GET /ai/jobs/:id (the AI runs, budgeted on the server) and
+     GET /ai/refresh-plan. Findings are advisory: accepting or dismissing changes no asset. Model text is shown escaped, never as links. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:5px 11px;cursor:pointer}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn:disabled{opacity:.5}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:10px 14px;cursor:pointer;text-align:left;color:inherit;font:inherit}.t.on{outline:2px solid var(--acc)}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:22px;font-weight:800}.t .s{font-size:11px;color:var(--d-mute)}.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-bottom:12px}.card h2{margin:0 0 8px;font-size:14px}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}.tabs button{font:600 13px Inter,system-ui,sans-serif;background:transparent;color:var(--d-mute);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}.tabs button.on{color:var(--d-ink);background:var(--d-raise)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.inp{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:inherit}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--d-line);font-size:12.5px;vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase}
+tr.rw{cursor:pointer}tr.rw:hover{background:rgba(255,255,255,.03)}.tw{overflow:auto}
+.pill{display:inline-block;padding:0 7px;border-radius:999px;font-size:11px;font-weight:600;background:rgba(141,176,255,.16);color:var(--info);margin-right:3px;white-space:nowrap}.pill.bad{background:rgba(255,123,128,.16);color:var(--bad)}.pill.warn{background:rgba(245,181,68,.16);color:var(--warn)}.pill.ok{background:rgba(95,210,122,.16);color:var(--ok)}
+.pr{display:inline-block;width:36px;text-align:center;border-radius:6px;font-weight:800;font-size:12px;padding:1px 0}
+.empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad);font-size:13px;margin-top:6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+.drw{position:fixed;top:0;right:0;bottom:0;width:min(600px,100%);background:var(--d-panel);border-left:1px solid var(--d-line);padding:16px;overflow:auto;z-index:50;box-shadow:-10px 0 30px rgba(0,0,0,.4)}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:4px 10px;font-size:13px}.kv div:nth-child(odd){color:var(--d-mute)}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.why li{font-size:12.5px;margin:2px 0}.why b{display:inline-block;width:38px;text-align:right;margin-right:6px}
+.chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:6px}.chart .w{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}.chart .bs{display:flex;gap:2px;align-items:flex-end;height:96px}.chart .b{width:9px;border-radius:3px 3px 0 0}.chart .lb{font-size:10px;color:var(--d-mute)}
+pre.ai{white-space:pre-wrap;background:var(--d-raise);border:1px solid var(--d-line);border-radius:8px;padding:8px;font:12.5px/1.45 Inter,system-ui,sans-serif}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT assets · what needs a decision</div><h1>AI Findings</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn" id="b-regen">Recompute findings</button><button type="button" class="btn" id="rf">⟳</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div class="tabs" id="tabs"><button type="button" data-t="open" class="on">Priority queue</button><button type="button" data-t="learn">What people decided</button><button type="button" data-t="hot">Hotspots &amp; trend</button><button type="button" data-t="done">Decided</button><button type="button" data-t="ai">AI analysis</button></div>
+<section id="v-open"><div class="card"><div class="bar"><input class="inp" id="q" placeholder="Search title, asset, site, owner…" aria-label="Search" style="min-width:260px;flex:1"><select class="inp" id="fk" aria-label="Kind"><option value="">All kinds</option></select><select class="inp" id="fs" aria-label="Severity"><option value="">All severities</option><option>high</option><option>medium</option><option>low</option></select></div>
+  <div class="bar" id="bulk" hidden><b id="bulkn"></b><input class="inp" id="bk-r" placeholder="Reason (needed to dismiss)" style="min-width:260px"><button type="button" class="btn pri" id="bk-a">Accept selected</button><button type="button" class="btn" id="bk-d">Dismiss selected</button><button type="button" class="btn" id="bk-x">Clear</button></div>
+  <div class="tw" id="tbl"></div></div></section>
+<section id="v-learn" hidden><div class="card"><h2>Learning per kind</h2><p class="mut sm">From the decisions people made here. A kind dismissed 70 % of the time or more over 5 decisions is lowered in the queue, and a tuning suggestion is shown.</p><div class="tw" id="learn"></div></div></section>
+<section id="v-hot" hidden><div class="g2"><div class="card"><h2>Assets with the most open findings</h2><div id="h-a"></div></div><div class="card"><h2>Sites</h2><div id="h-s"></div></div><div class="card"><h2>Owners</h2><div id="h-o"></div></div></div>
+  <div class="card"><h2>Opened vs decided, 12 weeks</h2><div id="trend"></div></div></section>
+<section id="v-done" hidden><div class="card"><div class="bar"><select class="inp" id="ds" aria-label="Status"><option value="dismissed">Dismissed</option><option value="accepted">Accepted</option><option value="resolved">Resolved (condition gone)</option></select></div><div class="tw" id="done"></div></div></section>
+<section id="v-ai" hidden><div class="card"><h2>AI model</h2><div id="ai-st" class="mut">Loading…</div><div class="bar" style="margin-top:8px"><button type="button" class="btn" data-run="classify">Classify assets</button><button type="button" class="btn" data-run="relate">Find relationships</button><button type="button" class="btn" data-run="refresh">Build refresh plan</button><span class="sm mut" id="job"></span></div>
+  <p class="mut sm">Runs go through the server's AI budget and caps; results are advisory and labelled "AI — verify".</p></div>
+  <div class="card"><h2>Refresh plan (AI — verify)</h2><div id="plan"></div></div></section>
+<aside class="drw" id="drw" hidden></aside>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, TAB = 'open', SEL = {}, KP = '', CAN = true;
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var KIND = { not_seen: 'Not seen', shadow_it: 'Shadow IT', missing_owner: 'No owner', missing_location: 'No location', missing_warranty: 'No warranty', warranty_expired: 'Warranty expired', warranty_expiring: 'Warranty expiring', eol_passed: 'End of life passed', eol_expiring: 'End of life soon', licence_over: 'Licence over-used', licence_under: 'Licence under-used', licence_expiring: 'Licence expiring' };
+  var kn = function (k) { return KIND[k] || k; };
+  var sevp = function (s) { return '<span class="pill ' + (s === 'high' ? 'bad' : s === 'medium' ? 'warn' : '') + '">' + esc(s) + '</span>'; };
+  var prc = function (p) { var c = p >= 70 ? 'var(--bad)' : p >= 45 ? 'var(--warn)' : 'var(--info)'; return '<span class="pr" style="background:' + c + '22;color:' + c + '">' + esc(p) + '</span>'; };
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON: reported below */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && (j.message || j.error)) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  var why = function (e) { return e.status === 403 ? 'Operators and administrators decide findings (a person, not a service account).' : e.message; };
+
+  function kpis() { var k = V.kpis, T = [['', 'Open', k.open, 'needs a decision', ''], ['high', 'High severity', k.high, 'open', k.high ? 'bad' : ''], ['top', 'Top priority', k.top_priority, 'priority 70+', k.top_priority ? 'bad' : ''], ['aged', 'Open > 30 days', k.aged, 'ageing', k.aged ? 'warn' : ''],
+      ['rec', 'Came back', k.recurring, 'after resolved', k.recurring ? 'warn' : ''], ['noisy', 'Noisy rules', k.noisy_kinds, 'mostly dismissed', k.noisy_kinds ? 'warn' : ''], ['acc', 'Accepted', k.accepted, 'all time', ''], ['dis', 'Dismissed', k.dismissed, 'all time', '']];
+    $('kp').innerHTML = T.map(function (t) { return '<button type="button" class="t ' + t[4] + (KP === t[0] && t[0] ? ' on' : '') + '" data-kp="' + t[0] + '"><div class="l">' + esc(t[1]) + '</div><div class="v">' + esc(t[2]) + '</div><div class="s">' + esc(t[3]) + '</div></button>'; }).join(''); }
+  function rows() { var q = $('q').value.trim().toLowerCase(), fk = $('fk').value, fs = $('fs').value;
+    return V.open.filter(function (f) { if (fk && f.kind !== fk) return false; if (fs && f.severity !== fs) return false;
+      if (KP === 'high' && f.severity !== 'high') return false; if (KP === 'top' && f.priority < 70) return false; if (KP === 'aged' && f.age_days <= 30) return false; if (KP === 'rec' && !f.reopened_at) return false;
+      if (KP === 'noisy') { var k = V.kinds.find(function (x) { return x.kind === f.kind; }); if (!k || !k.tuning) return false; }
+      return !q || [f.title, f.asset_name, f.site, f.owner, kn(f.kind)].join(' ').toLowerCase().indexOf(q) >= 0; }); }
+  function table() { var R = rows();
+    if (!V.open.length) { $('tbl').innerHTML = '<div class="empty">No open findings. Findings are raised from the asset register and licences; connect discovery or import assets, then Recompute findings.</div>'; return; }
+    $('tbl').innerHTML = R.length ? '<table><thead><tr><th><input type="checkbox" id="sa" aria-label="Select all"></th><th>Priority</th><th>Finding</th><th>Kind</th><th>Severity</th><th>Asset</th><th>Site</th><th>Age</th><th>Fix in</th></tr></thead><tbody>' + R.slice(0, 500).map(function (f) {
+      return '<tr class="rw" data-id="' + esc(f.id) + '"><td><input type="checkbox" data-sel="' + esc(f.id) + '"' + (SEL[f.id] ? ' checked' : '') + ' aria-label="Select"></td><td>' + prc(f.priority) + '</td><td>' + esc(f.title) + (f.reopened_at ? ' <span class="pill warn">came back</span>' : '') + '</td><td>' + esc(kn(f.kind)) + '</td><td>' + sevp(f.severity) + '</td><td>' + esc(f.asset_name || '—') + '</td><td>' + esc(f.site || '—') + '</td><td>' + esc(f.age_days) + ' d</td><td>' + (f.fix ? '<a href="' + esc(f.fix.href) + '">' + esc(f.fix.label) + '</a>' : '—') + '</td></tr>'; }).join('') + '</tbody></table>' + (R.length > 500 ? '<div class="sm mut">First 500 of ' + R.length + ' - narrow the search.</div>' : '') : '<div class="empty">No finding matches the filter.</div>';
+    bulkBar(); }
+  function bulkBar() { var n = Object.keys(SEL).length; $('bulk').hidden = !n || !CAN; $('bulkn').textContent = n + ' selected'; }
+  function learn() { $('learn').innerHTML = V.kinds.length ? '<table><thead><tr><th>Kind</th><th>Open</th><th>Accepted</th><th>Dismissed</th><th>Resolved</th><th>Dismissal rate</th><th>Median days to decide</th><th>Top dismissal reasons</th><th>Suggestion</th></tr></thead><tbody>' + V.kinds.map(function (k) {
+      return '<tr><td>' + esc(kn(k.kind)) + '</td><td>' + k.open + '</td><td>' + k.accepted + '</td><td>' + k.dismissed + '</td><td>' + k.resolved + '</td><td>' + (k.dismissal_rate == null ? '<span class="mut">no decisions</span>' : esc(k.dismissal_rate) + ' %' + (k.learned ? '' : ' <span class="mut sm">(' + k.decided + ' decisions - too few to learn)</span>')) + '</td><td>' + (k.median_days_to_decide == null ? '—' : esc(k.median_days_to_decide)) + '</td><td>' + (k.top_reasons.map(function (r) { return esc(r.reason) + ' <span class="mut">×' + r.n + '</span>'; }).join('<br>') || '—') + '</td><td class="sm">' + (k.tuning ? '<span class="pill warn">noisy</span> ' + esc(k.tuning) : '—') + (k.fix ? '<br><a href="' + esc(k.fix.href) + '">Fix in ' + esc(k.fix.label) + '</a>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No findings yet, so nothing to learn from.</div>'; }
+  function list(L, lab) { return L.length ? '<table><tbody>' + L.map(function (x) { return '<tr><td>' + esc(lab(x)) + '</td><td style="text-align:right"><b>' + esc(x.n) + '</b></td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">None.</div>'; }
+  function hot() { $('h-a').innerHTML = list(V.hotspots.assets, function (x) { return (x.name || x.asset_id) + ' (worst priority ' + x.worst + ')'; }); $('h-s').innerHTML = list(V.hotspots.sites, function (x) { return x.value; }); $('h-o').innerHTML = list(V.hotspots.owners, function (x) { return x.value; });
+    var mx = Math.max.apply(null, V.trend.map(function (w) { return Math.max(w.opened, w.closed); }).concat([1]));
+    $('trend').innerHTML = V.trend.some(function (w) { return w.opened || w.closed; }) ? '<div class="chart" role="img" aria-label="Opened and decided per week">' + V.trend.map(function (w) { return '<div class="w" title="Week ending ' + esc(w.week_ending) + ': ' + w.opened + ' opened, ' + w.closed + ' decided"><div class="bs"><div class="b" style="height:' + Math.round(96 * w.opened / mx) + 'px;background:var(--warn)"></div><div class="b" style="height:' + Math.round(96 * w.closed / mx) + 'px;background:var(--ok)"></div></div><div class="lb">' + esc(w.week_ending.slice(5)) + '</div></div>'; }).join('') + '</div><div class="sm mut"><span style="color:var(--warn)">■</span> opened · <span style="color:var(--ok)">■</span> decided or resolved</div>' : '<div class="empty">No findings opened or decided in the last 12 weeks.</div>'; }
+  function done() { $('done').innerHTML = '<div class="empty">Loading…</div>'; var s = $('ds').value;
+    req('GET', '/ai/findings?status=' + encodeURIComponent(s)).then(function (j) { var L = j.findings || [];
+      $('done').innerHTML = L.length ? '<table><thead><tr><th>Finding</th><th>Kind</th><th>Severity</th><th>When</th><th>By</th><th>Reason</th><th></th></tr></thead><tbody>' + L.slice(0, 500).map(function (f) {
+        return '<tr><td>' + esc(f.title) + '</td><td>' + esc(kn(f.kind)) + '</td><td>' + sevp(f.severity) + '</td><td>' + esc(String(f[s + '_at'] || '').slice(0, 10)) + '</td><td>' + esc(f[s + '_by'] || (s === 'resolved' ? 'condition no longer holds' : '—')) + '</td><td>' + esc(f.reason || '—') + '</td><td>' + (s !== 'resolved' && CAN ? '<button type="button" class="btn" data-reopen="' + esc(f.id) + '">Reopen</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No ' + esc(s) + ' findings.</div>';
+    }, function (e) { $('done').innerHTML = '<div class="err">Could not read findings: ' + esc(e.message) + '</div>'; }); }
+  function ai() { req('GET', '/status').then(function (s) { var a = s.ai || {};
+      $('ai-st').innerHTML = a.state === 'ready' ? '<span class="pill ok">ready</span> ' + esc(a.provider || '') + ' ' + esc(a.model || '') + ' · ' + esc(a.calls_today) + ' of ' + esc(a.daily_cap) + ' calls today' : '<span class="pill warn">' + esc(a.state || 'not configured') + '</span> ' + esc(a.message || 'The AI provider is not configured. An administrator sets it in ITAM Settings; the findings and the learning above work without it.');
+      document.querySelectorAll('[data-run]').forEach(function (b) { b.disabled = a.state !== 'ready' || !CAN; }); }, function (e) { $('ai-st').innerHTML = '<span class="err">Could not read the AI status: ' + esc(e.message) + '</span>'; });
+    req('GET', '/ai/refresh-plan').then(function (p) { var I = p.items || [];
+      $('plan').innerHTML = (p.summary ? '<pre class="ai">' + esc(p.summary) + '</pre>' : '') + (I.length ? '<table><thead><tr><th>Asset</th><th>Action</th><th>When</th><th>Reason</th></tr></thead><tbody>' + I.map(function (x) { return '<tr><td>' + esc(x.asset_id) + '</td><td>' + esc(x.action) + '</td><td>' + esc(x.when) + '</td><td>' + esc(x.reason) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No refresh plan yet. Build one with the AI when the model is ready.</div>') + ((p.risks || []).length ? '<h2 style="margin-top:10px">Risks</h2><ul>' + p.risks.map(function (r) { return '<li>' + esc(typeof r === 'string' ? r : JSON.stringify(r)) + '</li>'; }).join('') + '</ul>' : '');
+    }, function (e) { $('plan').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }); }
+  function poll(id, n) { req('GET', '/ai/jobs/' + encodeURIComponent(id)).then(function (j) { $('job').textContent = 'Job ' + j.id + ': ' + j.status + (j.position ? ' (position ' + j.position + ')' : '') + (j.error ? ' - ' + j.error : '');
+      if ((j.status === 'queued' || j.status === 'running') && n < 120) setTimeout(function () { poll(id, n + 1); }, 3000); else { ai(); load(); } }, function (e) { $('job').textContent = 'Could not follow the job: ' + e.message; }); }
+  function drawer(id) { var f = V.open.find(function (x) { return x.id === id; }); if (!f) return; var d = $('drw');
+    d.innerHTML = '<div class="bar"><b style="font-size:16px">' + esc(f.title) + '</b><span class="sp"></span><button type="button" class="btn" id="d-x" aria-label="Close">✕</button></div><div class="kv"><div>Kind</div><div>' + esc(kn(f.kind)) + '</div><div>Severity</div><div>' + sevp(f.severity) + '</div><div>Asset</div><div>' + esc(f.asset_name || '—') + (f.asset_id ? ' <a href="inventory.html#asset=' + encodeURIComponent(f.asset_id) + '">open in Inventory</a>' : '') + '</div><div>Site / owner</div><div>' + esc(f.site || '—') + ' / ' + esc(f.owner || '—') + '</div><div>Open since</div><div>' + esc(String(f.created_at || '').slice(0, 10)) + ' (' + esc(f.age_days) + ' days)</div><div>Label</div><div><span class="pill">' + esc(f.ai_label || 'AI — verify') + '</span></div></div>' +
+      (f.detail ? '<p>' + esc(f.detail) + '</p>' : '') + '<h3 class="sm mut">Why priority ' + esc(f.priority) + '</h3><ul class="why">' + f.why.map(function (w) { return '<li><b style="color:' + (w.points < 0 ? 'var(--ok)' : 'var(--warn)') + '">' + (w.points > 0 ? '+' : '') + esc(w.points) + '</b>' + esc(w.why) + '</li>'; }).join('') + '</ul>' +
+      (f.evidence && Object.keys(f.evidence).length ? '<h3 class="sm mut">Evidence</h3><div class="kv">' + Object.keys(f.evidence).map(function (k) { var v = f.evidence[k]; return '<div>' + esc(k) + '</div><div>' + esc(typeof v === 'object' ? JSON.stringify(v) : v) + '</div>'; }).join('') + '</div>' : '') +
+      (f.fix ? '<p><a class="btn" href="' + esc(f.fix.href) + '">Fix in ' + esc(f.fix.label) + '</a></p>' : '') +
+      (CAN ? '<h3 class="sm mut">Decision</h3><input class="inp" id="d-r" placeholder="Reason (needed to dismiss)" style="width:100%"><div class="bar" style="margin-top:8px"><button type="button" class="btn pri" id="d-a">Accept</button><button type="button" class="btn" id="d-d">Dismiss</button></div><div class="err" id="d-e"></div><p class="sm mut">Accepting or dismissing records the decision and teaches the queue; it changes no asset.</p>' : '');
+    d.hidden = false; $('d-x').addEventListener('click', function () { d.hidden = true; });
+    if (CAN) { $('d-a').addEventListener('click', function () { decide([f.id], 'accepted', $('d-r').value, $('d-e')); }); $('d-d').addEventListener('click', function () { decide([f.id], 'dismissed', $('d-r').value, $('d-e')); }); } }
+  function decide(ids, status, reason, errEl) { if (status === 'dismissed' && !String(reason || '').trim()) { (errEl || { textContent: '' }).textContent = 'Say why - the learning reads the reason.'; if (!errEl) toast('Say why these findings are dismissed.'); return; }
+    var b = { ids: ids, status: status }; if (reason && reason.trim()) b.reason = reason.trim();
+    req('POST', '/ai/findings/bulk', b).then(function (r) { toast(r.updated + ' finding' + (r.updated === 1 ? '' : 's') + ' ' + (status === 'open' ? 'reopened' : status)); SEL = {}; $('drw').hidden = true; load(); if (TAB === 'done') done(); },
+      function (e) { if (e.status === 403) CAN = false; if (errEl) errEl.textContent = why(e); else toast(why(e)); }); }
+  function show() { ['open', 'learn', 'hot', 'done', 'ai'].forEach(function (t) { $('v-' + t).hidden = t !== TAB; }); document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-t') === TAB); });
+    if (TAB === 'done') done(); if (TAB === 'ai') ai(); }
+  function paint() { kpis(); table(); learn(); hot(); var ks = {}; V.open.forEach(function (f) { ks[f.kind] = 1; }); var cur = $('fk').value;
+    $('fk').innerHTML = '<option value="">All kinds</option>' + Object.keys(ks).sort().map(function (k) { return '<option value="' + esc(k) + '"' + (k === cur ? ' selected' : '') + '>' + esc(kn(k)) + '</option>'; }).join(''); $('up').textContent = 'Updated ' + new Date(V.at).toLocaleTimeString(); }
+  function load() { req('GET', '/ai/findings/intel').then(function (j) { V = j; paint(); }, function (e) { $('kp').innerHTML = '<div class="err">Could not read the findings: ' + esc(e.message) + (e.status === 0 ? ' - the ITAM engine is not reachable.' : '') + '</div>'; $('tbl').innerHTML = ''; }); }
+
+  $('tabs').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-t]'); if (!b) return; TAB = b.getAttribute('data-t'); show(); });
+  $('kp').addEventListener('click', function (ev) { var b = ev.target.closest('[data-kp]'); if (!b || !V) return; var k = b.getAttribute('data-kp'); if (k === 'acc' || k === 'dis') { TAB = 'done'; $('ds').value = k === 'acc' ? 'accepted' : 'dismissed'; show(); return; } KP = KP === k ? '' : k; TAB = 'open'; show(); kpis(); table(); });
+  ['q', 'fk', 'fs'].forEach(function (i) { $(i).addEventListener('input', function () { if (V) table(); }); });
+  $('tbl').addEventListener('click', function (ev) { var s = ev.target.closest('[data-sel]'); if (s) { if (s.checked) SEL[s.getAttribute('data-sel')] = 1; else delete SEL[s.getAttribute('data-sel')]; bulkBar(); return; }
+    if (ev.target.id === 'sa') { var on = ev.target.checked; rows().slice(0, 200).forEach(function (f) { if (on) SEL[f.id] = 1; else delete SEL[f.id]; }); table(); return; }
+    if (ev.target.closest('a')) return; var tr = ev.target.closest('tr.rw'); if (tr) drawer(tr.getAttribute('data-id')); });
+  $('bk-a').addEventListener('click', function () { decide(Object.keys(SEL), 'accepted', $('bk-r').value); });
+  $('bk-d').addEventListener('click', function () { decide(Object.keys(SEL), 'dismissed', $('bk-r').value); });
+  $('bk-x').addEventListener('click', function () { SEL = {}; table(); });
+  $('ds').addEventListener('change', done);
+  $('done').addEventListener('click', function (ev) { var b = ev.target.closest('[data-reopen]'); if (b) decide([b.getAttribute('data-reopen')], 'open', ''); });
+  document.querySelectorAll('[data-run]').forEach(function (b) { b.addEventListener('click', function () { var f = b.getAttribute('data-run'); $('job').textContent = 'Starting…';
+    req('POST', '/ai/run/' + f, {}).then(function (j) { poll(j.job_id, 0); }, function (e) { $('job').textContent = why(e); }); }); });
+  $('b-regen').addEventListener('click', function () { var b = $('b-regen'); b.disabled = true; req('POST', '/ai/findings/regenerate', {}).then(function (r) { toast('Recomputed: ' + r.created + ' new, ' + r.resolved + ' resolved, ' + r.total_open + ' open'); load(); }, function (e) { toast(why(e)); }).then(function () { b.disabled = false; }); });
+  $('rf').addEventListener('click', function () { load(); if (TAB === 'done') done(); if (TAB === 'ai') ai(); });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') $('drw').hidden = true; });
+  load();
+})();
+</script></body></html>

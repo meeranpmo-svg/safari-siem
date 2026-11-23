@@ -1,0 +1,51 @@
+[
+  {
+    "id": "SENTRA-WEB-001", "name": "Web scanning — many 404 responses from one source", "enabled": true, "severity": 2,
+    "mitre": ["T1595.003"], "sama": ["3.3.6", "3.3.13"], "tactic": "reconnaissance", "author":"Sentra SOC", "version": 1,
+    "description": "50 or more HTTP 404 responses to the same client IP within 2 minutes (content discovery / vulnerability scanning).",
+    "type": "threshold",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "web" }, { "field": "http_status", "op": "eq", "value": "404" } ] },
+    "group_by": ["src_ip"], "window_s": 120, "count": 50, "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "host", "user_agent", "url"]
+  },
+  {
+    "id": "SENTRA-WEB-002", "name": "SQL injection pattern in URL", "enabled": true, "severity": 3,
+    "mitre": ["T1190"], "sama": ["3.3.6", "3.3.13", "3.3.17"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "Request URL contains SQL injection syntax (UNION SELECT, boolean tautology, time-based sleep, information_schema …).",
+    "type": "single",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "web" },
+                        { "field": "url", "op": "re", "value": "union(\\s|\\+|%20)*(/\\*[^*]*\\*/)?(\\s|\\+|%20)*(all(\\s|\\+|%20)+)?select|information_schema|\\bsleep\\s*(\\(|%28)\\s*\\d|benchmark\\s*(\\(|%28)|waitfor(\\s|\\+|%20)+delay|pg_sleep|xp_cmdshell|@@version|load_file\\s*(\\(|%28)|into(\\s|\\+|%20)+(out|dump)file|('|%27)(\\s|\\+|%20)*(or|and)(\\s|\\+|%20)+('|%27)?\\d+('|%27)?(\\s|\\+|%20)*(=|%3d)|(\\s|\\+|%20)(or|and)(\\s|\\+|%20)+\\d+(\\s|\\+|%20)*(=|%3d)(\\s|\\+|%20)*\\d+|('|%27)(\\s|\\+|%20)*;?(\\s|\\+|%20)*(--|%2d%2d|%23)" } ] },
+    "group_by": ["src_ip", "host"], "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "host", "url", "http_status", "user_agent"]
+  },
+  {
+    "id": "SENTRA-WEB-003", "name": "Path traversal / local file inclusion in URL", "enabled": true, "severity": 3,
+    "mitre": ["T1190", "T1083"], "sama": ["3.3.6", "3.3.13", "3.3.17"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "Request URL contains ../ sequences (plain or encoded) or targets well-known OS files (/etc/passwd, win.ini).",
+    "type": "single",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "web" },
+                        { "field": "url", "op": "re", "value": "(\\.\\.|%2e%2e|%252e%252e|\\.%2e|%2e\\.)(/|\\\\|%2f|%5c|%252f|%255c)|/etc/(passwd|shadow|hosts|issue)|win\\.ini|boot\\.ini|/proc/self/(environ|cmdline)" } ] },
+    "group_by": ["src_ip", "host"], "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "host", "url", "http_status", "user_agent"]
+  },
+  {
+    "id": "SENTRA-WEB-004", "name": "Command injection / JNDI injection in URL", "enabled": true, "severity": 3,
+    "mitre": ["T1190", "T1059"], "sama": ["3.3.6", "3.3.13", "3.3.17"], "tactic": "initial-access", "author":"Sentra SOC", "version": 1,
+    "description": "Request URL chains shell commands (;id, |whoami, $(…), backticks), invokes a shell, or carries a Log4Shell ${jndi:} lookup.",
+    "type": "single",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "web" },
+                        { "field": "url", "op": "re", "value": "(;|%3b|\\||%7c|&&|%26%26|\\$\\(|%24%28|`|%60)(\\s|\\+|%20)*(cat|ls|id|whoami|uname|wget|curl|nc|ncat|bash|sh|powershell|cmd|ping|nslookup|echo|sleep)(\\s|\\+|%20|;|%3b|&|\\)|%29|`|%60|$)|/bin/(ba)?sh|cmd(\\.exe)?(\\s|\\+|%20)*/c|\\$\\{jndi:|%24%7bjndi|\\$\\{(lower|upper|env|sys):" } ] },
+    "group_by": ["src_ip", "host"], "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "host", "url", "http_status", "user_agent"]
+  },
+  {
+    "id": "SENTRA-WEB-005", "name": "Known attack tool user agent", "enabled": true, "severity": 2,
+    "mitre": ["T1595.002"], "sama": ["3.3.6", "3.3.13"], "tactic": "reconnaissance", "author":"Sentra SOC", "version": 1,
+    "description": "HTTP user agent of a scanner / exploitation tool (sqlmap, nikto, nuclei, gobuster, wpscan, masscan …).",
+    "type": "single",
+    "match": { "all": [ { "field": "category", "op": "eq", "value": "web" },
+                        { "field": "user_agent", "op": "re", "value": "sqlmap|nikto|nmap|masscan|zgrab|acunetix|nessus|openvas|wpscan|dirbuster|gobuster|feroxbuster|nuclei|wfuzz|ffuf|hydra|havij|netsparker|w3af|arachni|jaeles|commix|joomscan" } ] },
+    "group_by": ["src_ip"], "suppress_s": 3600,
+    "fields_in_alert": ["src_ip", "host", "user_agent", "url"]
+  }
+]

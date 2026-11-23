@@ -1,0 +1,84 @@
+// Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE.
+/* zyb-pricing.js - Pricing Adequacy page (pricing-adequacy.html). Reads /api/itam/pricing-adequacy. Actuarial records a review per
+ * line and period; a different person in Risk approves (four eyes). No inline handlers; every value escaped; requests zybQuiet. */
+(function () {
+  'use strict';
+  var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var $ = function (id) { return document.getElementById(id); };
+  var RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, ROLE = 'viewer', V = null, FLT = '', OK = null, EDIT = null;
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; } if (x.status >= 200 && x.status < 300 && j) return ok(j); bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('IT Asset Management is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.setAttribute('role', 'status'); d.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw'; d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 6000); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
+  var SC = { adequate: 'ok', watch: 'warn', inadequate: 'bad' };
+  var op = function () { return RANK[ROLE] >= RANK.operator; }, adm = function () { return ROLE === 'admin'; };
+  function num(n) { return n == null ? '—' : (Math.round(n * 10) / 10); }
+  function field(f) { var id = 'f-' + f[0], t = f[2] || 'text';
+    var inp = t === 'sel' ? '<select id="' + id + '">' + f[3].map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === f[4] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>' : '<input id="' + id + '" type="' + (t === 'num' ? 'number' : 'text') + '"' + (t === 'num' ? ' step="0.1"' : '') + ' value="' + esc(f[4] == null ? '' : f[4]) + '">';
+    return '<label for="' + id + '">' + esc(f[1]) + '</label><div>' + inp + (f[5] ? '<div class="muted small">' + esc(f[5]) + '</div>' : '') + '</div>'; }
+  function dlg(title, fields, extra, onOk, okText) { $('dlgt').textContent = title; $('dlgb').innerHTML = (extra || '') + '<div class="form">' + fields.map(field).join('') + '</div>'; OK = onOk; $('dlgok').textContent = okText || 'Save'; $('dlgok').hidden = false; $('dlg').showModal(); }
+  function val(n) { var el = $('f-' + n); return el ? el.value.trim() : ''; }
+
+  function load() { return req('GET', '/pricing-adequacy').then(function (v) { V = v; $('main').hidden = false; $('err').innerHTML = ''; draw(); }, function (e) { $('main').hidden = true;
+    $('err').innerHTML = '<div class="card"><p>' + esc(e.status === 403 ? 'Pricing figures are internal: operators (Actuarial) and administrators (Risk).' : e.status === 404 ? 'Pricing Adequacy is not installed yet - run the platform update.' : e.message) + '</p></div>'; }); }
+  function draw() { var v = V, k = v.kpis; $('newb').hidden = !op(); $('pdfc').hidden = !op();
+    $('kk').innerHTML = tile('Reviews', k.reviews, k.approved + ' approved, ' + k.draft + ' draft') + tile('Inadequate lines', k.inadequate, 'combined ratio too high', k.inadequate ? 'bad' : 'ok')
+      + tile('On watch', k.watch, 'combined ratio 100-105%', k.watch ? 'warn' : 'ok') + tile('Worst combined ratio', k.worst_combined == null ? '—' : num(k.worst_combined) + '%', 'across approved reviews', k.worst_combined > 105 ? 'bad' : k.worst_combined > 100 ? 'warn' : 'ok');
+    $('lines').innerHTML = v.lines.map(function (L) { var l = L.latest, t = L.trend;
+      return '<div class="card"><h2>' + esc(L.name) + ' <span class="c">' + (l ? esc(l.period) : 'no review yet') + '</span></h2>'
+        + (l ? '<div class="k" style="grid-template-columns:repeat(3,1fr)">' + tile('Combined ratio', num(l.combined_ratio) + '%', l.status, SC[l.status]) + tile('Loss ratio', num(l.ulr) + '%', 'target ' + num(l.target_loss_ratio) + '%', l.target_miss > 0 ? 'warn' : 'ok') + tile('Required rate', l.required_rate_change == null ? '—' : (l.required_rate_change > 0 ? '+' : '') + num(l.required_rate_change) + '%', 'to reach target', l.required_rate_change > 0 ? 'bad' : 'ok') + '</div>'
+          + '<div class="small">' + esc(l.status_why) + '</div>' : '<div class="empty">Record a review for ' + esc(L.name) + '.</div>')
+        + (L.benchmark ? '<div class="small muted" style="margin-top:6px">Solvency cross-check: net loss ratio ' + num(L.benchmark.net_loss_ratio) + '% (' + esc(L.benchmark.lob) + '). A recorded loss ratio well below this is a prompt to check pricing, not proof.</div>' : '')
+        + (t.measured ? (t.warning ? '<div class="small" style="color:var(--warn);margin-top:6px">⚠ ' + esc(t.warning) + '</div>' : '<div class="small muted" style="margin-top:6px">Combined ratio trend ' + (t.combined_slope_per_period > 0 ? '+' : '') + num(t.combined_slope_per_period) + ' pts/period over ' + t.points.length + ' periods.</div>') : '<div class="small muted" style="margin-top:6px">' + esc(t.why) + '</div>')
+        + '</div>'; }).join('');
+    var L = v.reviews.filter(function (r) { return !FLT || (FLT === 'draft' ? r.status_rec !== 'approved' : FLT === 'approved' ? r.status_rec === 'approved' : r.status === FLT && r.status_rec === 'approved'); });
+    $('rc').textContent = L.length + ' of ' + v.reviews.length;
+    $('reviews').innerHTML = L.length ? '<table><thead><tr><th>Period</th><th>Line</th><th>Combined</th><th>Loss ratio</th><th>Status</th><th>State</th><th></th></tr></thead><tbody>' + L.map(function (r) {
+      return '<tr><td>' + esc(r.period) + '</td><td>' + esc(r.line_name) + (r.sub_line ? ' · ' + esc(r.sub_line) : '') + '</td><td>' + num(r.combined_ratio) + '%</td><td>' + num(r.ulr) + '% / ' + num(r.target_loss_ratio) + '%</td><td>' + pill(r.status, SC[r.status]) + '</td><td>' + (r.approved_by ? pill('approved', 'ok') : pill('draft')) + '</td>'
+        + '<td><div class="acts">' + (op() && !r.approved_by ? '<button type="button" data-edit="' + esc(r.id) + '">Edit</button>' : '') + (adm() && !r.approved_by ? '<button type="button" data-appr="' + esc(r.id) + '">Approve</button>' : '') + (adm() && r.approved_by ? '<button type="button" data-reopen="' + esc(r.id) + '">Reopen</button>' : '') + '</div></td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No review.</div>';
+    $('note').textContent = v.note; $('up').textContent = 'Updated ' + String(v.generated_at).slice(11, 16) + ' UTC';
+  }
+  // ---- read figures from a report PDF (engine/pricing-pdf.js): proposals only; the review form is opened pre-filled with the source shown
+  var PX = null, SRC = null, FL = { nep: "Earned premium (SAR '000)", ulr: 'Ultimate loss ratio %', expense_ratio: 'Expense ratio %', commission_ratio: 'Commission ratio %', target_loss_ratio: 'Target loss ratio %', rate_change: 'Rate change %', exposure_growth: 'Exposure growth %', combined: 'Combined ratio % (cross-check)' };
+  function b64(f) { return new Promise(function (ok, bad) { var r = new FileReader(); r.onload = function () { ok(String(r.result).split(',')[1] || ''); }; r.onerror = function () { bad(new Error('the file could not be read')); }; r.readAsDataURL(f); }); }
+  function lineName(g) { var L = (V.lines || []).find(function (x) { return x.key === g.line; }); return (L ? L.name : g.line) + (g.sub_line ? ' · ' + g.sub_line : ' (whole line)'); }
+  function pdfDraw() { var X = PX; if (!X) { $('pdfr').innerHTML = ''; return; }
+    var h = '<div class="muted small">' + esc(X.filename) + ' · ' + esc(X.pages) + ' page(s) · fingerprint ' + esc(X.sha256) + ' · ' + esc(X.proposals) + ' figure(s) found</div>' + (X.warnings || []).concat(X.notes || []).map(function (n) { return '<div class="small" style="margin-top:4px">' + esc(n) + '</div>'; }).join('');
+    if (X.groups.length) h += '<table style="margin-top:8px"><thead><tr><th>Period</th><th>Line</th><th>Figures found</th><th>Not found</th><th></th></tr></thead><tbody>' + X.groups.map(function (g, i) {
+      return '<tr><td>' + esc(g.period || '—') + '</td><td>' + esc(lineName(g)) + '</td><td class="small">' + Object.keys(g.fields).map(function (k) { var c = g.fields[k]; return esc((FL[k] || k).replace(/ %| \(.*\)/g, '')) + ' ' + esc(c.map(function (x) { return x.value; }).join(' / ')) + (c.length > 1 ? ' ' + pill('choose', 'watch') : ''); }).join(' · ') + '</td><td class="small">' + esc(g.missing.map(function (k) { return (FL[k] || k).replace(/ %| \(.*\)/g, ''); }).join(', ') || '—') + '</td><td>' + (op() ? '<button type="button" data-pxg="' + i + '">Check and record</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>';
+    $('pdfr').innerHTML = h; }
+  function srcHtml(g) { return '<div class="small" style="margin:0 0 8px"><b>From the report</b> - check every value against the page before you record:</div>' + Object.keys(g.fields).map(function (k) { var c = g.fields[k];
+      return '<div class="small" style="margin:2px 0"><span class="muted">' + esc(FL[k] || k) + ':</span> ' + c.map(function (x) { return (k === 'combined' ? '<b>' + esc(x.value) + '</b>' : '<button type="button" class="sm" data-pxv="' + esc(k) + '" data-v="' + esc(x.value) + '">' + esc(x.value) + '</button>') + ' <span class="muted">p.' + esc(x.pages.join(', ')) + (x.table ? ' · ' + esc(x.table) : '') + (x.note ? ' · ' + esc(x.note) : '') + '</span>'; }).join(' &nbsp;or&nbsp; ') + '</div>'; }).join('')
+      + (g.missing.length ? '<div class="small" style="margin-top:4px">Not in the report - enter them: <b>' + esc(g.missing.map(function (k) { return FL[k] || k; }).join(', ')) + '</b></div>' : '') + (g.conflicts.length ? '<div class="small" style="margin-top:4px">' + pill('choose', 'watch') + ' the report prints more than one value for ' + esc(g.conflicts.map(function (k) { return FL[k] || k; }).join(', ')) + ' - pick the right one.</div>' : ''); }
+  function pdfUse(g) { var first = function (k) { return g.fields[k] && k !== 'combined' ? g.fields[k][0].value : undefined; };
+    SRC = { extract: PX.id, note: Object.keys(g.fields).map(function (k) { return k + ' p.' + g.fields[k][0].pages.join(','); }).join('; ').slice(0, 480) };
+    form({ period: g.period || '', line: g.line, sub_line: g.sub_line || '', nep: first('nep'), ulr: first('ulr'), expense_ratio: first('expense_ratio'), commission_ratio: first('commission_ratio'), target_loss_ratio: first('target_loss_ratio'), rate_change: first('rate_change'), exposure_growth: first('exposure_growth'), _src: srcHtml(g) }); }
+  function form(r) { r = r || {}; if (!r._src) SRC = null; var LN = (V.lines || []).map(function (L) { return [L.key, L.name]; });
+    var subs = function () { var L = (V.lines || []).find(function (x) { return x.key === (r.line || 'motor'); }); return [['', '(whole line)']].concat((L ? L.subs : []).map(function (s) { return [s, s]; })); };
+    EDIT = r.id || null;
+    dlg(r.id ? 'Edit review' : 'Record a pricing review', [['period', 'Period', 'text', '', r.period, 'year or quarter, e.g. 2026-Q1'], ['line', 'Line', 'sel', LN, r.line || 'motor'], ['sub_line', 'Sub-line', 'sel', subs(), r.sub_line || ''],
+      ['nep', 'Net earned premium', 'num', '', r.nep, 'SAR ’000'], ['ulr', 'Ultimate loss ratio %', 'num', '', r.ulr], ['expense_ratio', 'Expense ratio %', 'num', '', r.expense_ratio], ['commission_ratio', 'Commission ratio %', 'num', '', r.commission_ratio == null ? 0 : r.commission_ratio],
+      ['target_loss_ratio', 'Target loss ratio %', 'num', '', r.target_loss_ratio], ['rate_change', 'Rate change taken %', 'num', '', r.rate_change == null ? 0 : r.rate_change], ['exposure_growth', 'Exposure growth %', 'num', '', r.exposure_growth == null ? 0 : r.exposure_growth]],
+      (r._src || '') + '<p class="small">Combined ratio = loss ratio + expense + commission. The platform computes adequacy and the required rate change.</p>',
+      function () { var b = { period: val('period'), line: val('line'), sub_line: val('sub_line') || undefined, nep: Number(val('nep')), ulr: Number(val('ulr')), expense_ratio: Number(val('expense_ratio')), commission_ratio: Number(val('commission_ratio')) || 0, target_loss_ratio: Number(val('target_loss_ratio')), rate_change: Number(val('rate_change')) || 0, exposure_growth: Number(val('exposure_growth')) || 0 };
+        if (EDIT) b.id = EDIT; if (SRC && !EDIT) { b.source_extract = SRC.extract; b.source_note = SRC.note; } $('dlgok').disabled = true; req('POST', '/pricing-adequacy', b).then(function () { $('dlg').close(); toast('Saved (audited)'); load(); }, function (e) { toast(e.message); }).then(function () { $('dlgok').disabled = false; }); }, r.id ? 'Save' : 'Record');
+  }
+  document.addEventListener('click', function (ev) { var t = ev.target, x;
+    if (t.id === 'pdfgo') { var f = $('pdff').files && $('pdff').files[0]; if (!f) return toast('Choose the report PDF first'); if (!/\.pdf$/i.test(f.name)) return toast('A .pdf file'); if (f.size > 25 * 1024 * 1024) return toast('The PDF is over 25 MB');
+      t.disabled = true; $('pdfr').innerHTML = '<div class="muted small">Reading…</div>';
+      return b64(f).then(function (d) { return req('POST', '/pricing-adequacy/extract', { filename: f.name, data_b64: d }); }).then(function (X) { PX = X; pdfDraw(); }, function (e) { PX = null; $('pdfr').innerHTML = '<div class="small" style="color:var(--bad)">' + esc(e.message) + '</div>'; }).then(function () { t.disabled = false; }); }
+    if ((x = t.closest('[data-pxg]'))) return pdfUse(PX.groups[Number(x.getAttribute('data-pxg'))]);
+    if ((x = t.closest('[data-pxv]'))) { var el = $('f-' + x.getAttribute('data-pxv')); if (el) { el.value = x.getAttribute('data-v'); el.focus(); } return; }
+    if (t.id === 'newb') return form(null);
+    if ((x = t.closest('[data-edit]'))) return req('GET', '/pricing-adequacy/' + encodeURIComponent(x.getAttribute('data-edit'))).then(form, function (e) { toast(e.message); });
+    if ((x = t.closest('[data-appr]'))) return req('POST', '/pricing-adequacy/' + encodeURIComponent(x.getAttribute('data-appr')) + '/approve', {}).then(function () { toast('Approved (audited)'); load(); }, function (e) { toast(e.message); });
+    if ((x = t.closest('[data-reopen]'))) { var id = x.getAttribute('data-reopen'); return dlg('Reopen review', [['reason', 'Reason', 'text', '', '']], '<p class="small">Reopening lets Actuarial edit it again; it must be re-approved.</p>', function () { req('POST', '/pricing-adequacy/' + encodeURIComponent(id) + '/reopen', { reason: val('reason') }).then(function () { $('dlg').close(); toast('Reopened (audited)'); load(); }, function (e) { toast(e.message); }); }, 'Reopen'); }
+    if (t.id === 'dlgok' && OK) return OK(); if (t.id === 'dlgx') return $('dlg').close();
+    if (t.id === 'refresh') return load();
+    if (t.id === 'rhtml') return req('GET', '/pricing-adequacy/report?format=html').then(function (r) { var u = URL.createObjectURL(new Blob([r.html], { type: 'text/html' })); if (!window.open(u, '_blank', 'noopener')) toast('Allow pop-ups to open the report'); setTimeout(function () { URL.revokeObjectURL(u); }, 60000); toast('Recorded in the audit trail'); }, function (e) { toast(e.message); }); });
+  document.addEventListener('change', function (ev) { if (ev.target.id === 'f-line' && $('f-sub_line')) { var L = (V.lines || []).find(function (x) { return x.key === ev.target.value; }); $('f-sub_line').innerHTML = '<option value="">(whole line)</option>' + (L ? L.subs : []).map(function (s) { return '<option value="' + esc(s) + '">' + esc(s) + '</option>'; }).join(''); } });
+  $('flt').addEventListener('change', function () { FLT = $('flt').value; draw(); });
+  (function () { var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.zybQuiet = true; w.onload = function () { try { var j = JSON.parse(w.responseText), r = String(j.role || '').toLowerCase(); if (RANK[r] != null) ROLE = r; } catch (e) { /* viewer */ } load(); }; w.onerror = load; w.send(); })();
+})();

@@ -1,0 +1,261 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Capacity Planning</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-vmuse.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI",system-ui,sans-serif}[hidden]{display:none!important}
+main{max-width:1320px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:16px;margin:0 0 12px}.card h2{margin:0 0 4px;font-size:16px;color:var(--title)}.sub{color:var(--mute);font-size:12.5px;margin:0 0 10px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}.t{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:12px 14px}.t .l{color:var(--mute);font-size:12px}.t .v{font-size:22px;font-weight:600;color:var(--title)}.t .s{color:var(--mute);font-size:12px}
+.t.go{cursor:pointer;transition:border-color .12s}.t.go:hover,.t.go:focus-visible{border-color:#4a5162;outline:none}.t.go .l::after{content:" ›";opacity:.6}.t.go[aria-pressed="true"]{border-color:var(--info);box-shadow:0 0 0 1px var(--info) inset}
+button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 14px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}button:disabled{opacity:.5}
+button:focus-visible,input:focus-visible{outline:2px solid #fff;outline-offset:1px}
+input{font:14px "Segoe UI",system-ui,sans-serif;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}.n{text-align:right;white-space:nowrap}.tw{overflow-x:auto}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.bar{display:inline-block;width:70px;height:7px;border-radius:4px;background:rgba(255,255,255,.08);vertical-align:middle;margin-right:6px;overflow:hidden}.bar i{display:block;height:100%}
+.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}
+.rec{list-style:none;margin:0;padding:0}.rec li{padding:8px 10px;border:1px solid var(--edge);border-radius:8px;margin:0 0 6px;background:var(--raise)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--mute)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+@media print{body{background:#fff;color:#000}.card,.t{background:#fff;border-color:#ccc;break-inside:avoid}.top button,#set,.noprint{display:none!important}th,.muted,.sub,.t .l,.t .s{color:#444}.t .v,.card h2,.top h1{color:#000}td{border-color:#ddd}}
+.fbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px;padding:10px 12px;background:var(--panel);border:1px solid var(--edge);border-radius:12px}
+.fbar .chip{font-weight:600;padding:5px 12px;border-radius:16px}.fbar .chip.on{background:#1f6feb;border-color:#1f6feb;color:#fff}.fbar select{font:13px "Segoe UI",system-ui,sans-serif;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;max-width:240px}
+.fbar .lbl{color:var(--mute);font-size:12px}#plats .card.pick{cursor:pointer}#plats .card.sel{border-color:#1f6feb}
+.oph{font-size:14px;margin:16px 0 6px;color:var(--title)}#opdays{font:13px "Segoe UI",system-ui,sans-serif;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">VMware vCenter · Nutanix Prism</div><h1>Virtualization capacity planning</h1></div><span class="sp"></span><span class="muted" id="when"></span>
+  <button type="button" id="fetch" title="Read the CPU and memory in use from vCenter / Prism now">⚡ Fetch now</button><button type="button" id="run" hidden>⟳ Collect now</button><button type="button" id="csv">⬇ Export CSV</button><button type="button" id="print">🖨 Print / PDF</button></div>
+<div class="muted" id="live" style="font-size:12px;margin:-4px 0 10px"></div>
+<div class="fbar noprint" id="fbar" role="group" aria-label="Filter"></div>
+<div id="plats"></div>
+<div class="k" id="tiles"></div>
+<div class="card"><h2>What to do</h2><p class="sub">Read from the numbers below with your targets (Settings). Each line says why.</p><ul class="rec" id="recs"></ul></div>
+<div class="card"><h2>Clusters</h2><p class="sub" id="csub"></p><div class="tw" id="clusters"></div></div>
+<div class="card"><h2>Hosts</h2><div class="tw" id="hosts"></div></div>
+<div class="card"><h2>Storage</h2><p class="sub" id="ssub"></p><div class="tw" id="ds"></div></div>
+<div class="card" id="opc"><h2>Over-provisioning report <span class="muted" style="font-size:12.5px;font-weight:400" id="opsum"></span></h2>
+  <p class="sub" id="opbasis"></p>
+  <div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px"><span class="muted" style="font-size:12px">Usage history</span><select id="opdays" aria-label="Usage history"><option value="7">7 days</option><option value="14">14 days</option><option value="30" selected>30 days</option></select><button type="button" id="opcsv">⬇ Report (CSV)</button></div>
+  <div class="k" id="opk"></div>
+  <div class="sub" id="opfl" style="margin:0 0 6px"></div>
+  <h3 class="oph">CPU, memory and storage per cluster</h3><div class="tw" id="opcl"></div>
+  <h3 class="oph">Datastores (VMware) - provisioned against capacity</h3><div class="tw" id="opds"></div>
+  <h3 class="oph">VMs to right-size <span class="muted" id="opvc"></span></h3><div class="tw" id="opvm"></div>
+  <h3 class="oph">VMs short of CPU or memory</h3><div class="tw" id="opun"></div>
+  <p class="sub" id="opshort"></p></div>
+<div class="card"><h2>Powered-off VMs <span class="muted" style="font-size:12.5px;font-weight:400" id="offc"></span></h2><p class="sub">Their memory is not in use but their disks still take datastore space. Candidates to delete or archive after the owner confirms.</p><div class="tw" id="off"></div></div>
+<div class="card"><h2>Largest running VMs</h2><div class="tw" id="top"></div></div>
+<div class="card" id="set" hidden><h2>Targets</h2><p class="sub">Used for the headroom, "room for more VMs" and the forecast dates.</p>
+  <div class="grid"><label>vCPU per physical core (max)<input id="s_r" type="number" step="0.5" min="1" max="20"></label><label>CPU in use (max %)<input id="s_c" type="number" min="10" max="100"></label><label>Memory (max %)<input id="s_m" type="number" min="10" max="100"></label><label>Storage (max %)<input id="s_s" type="number" min="10" max="100"></label><label>Collect every (minutes)<input id="s_i" type="number" min="15" max="1440"></label><label>Live counters every (seconds, 0 = off)<input id="s_l" type="number" min="0" max="3600"></label>
+  <label style="flex-direction:row;align-items:center;gap:8px;margin-top:22px"><input type="checkbox" id="s_n" style="width:auto"> Keep one host in reserve (N+1)</label></div>
+  <div style="margin-top:10px"><button type="button" class="pri" id="s_save">Save targets</button></div></div>
+</main>
+<script src="vendor/zyb-live.js"></script>
+<script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);},R=null,RAW=null,ROLE='viewer',F={kind:'',pid:'',site:'',cluster:''};
+  var E=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=300000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management could not be reached'));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  var f=function(n,d){return n==null?'—':Number(n).toLocaleString(undefined,{maximumFractionDigits:d==null?0:d});};
+  function tb(g){return g==null?'—':g>=1024?f(g/1024,1)+' TB':f(g)+' GB';}
+  function bar(p,lim){if(p==null)return '<span class="muted">not reported</span>';var c=p>=lim?'#f85149':p>=lim*0.85?'#e3b341':'#3fb950';return '<span class="bar"><i style="width:'+Math.min(100,Math.max(2,p))+'%;background:'+c+'"></i></span>'+f(p,1)+'%';}
+  function ago(t){if(!t)return 'never';var m=(Date.now()-Date.parse(t))/60000;return m<2?'just now':m<120?Math.round(m)+' min ago':m<2880?Math.round(m/60)+' h ago':Math.round(m/1440)+' days ago';}
+  function fc(x,lim,what){if(!x)return '<span class="muted">—</span>';if(!x.days_of_history||x.days_of_history<14)return '<span class="muted">not enough history yet ('+(x.days_of_history||0)+' d)</span>';
+    var s=(x.per_month>0?'+':'')+f(x.per_month,1)+' pts / month';if(x.days_to_limit===0)return '<span class="pill bad">over '+lim+'% now</span>';if(x.days_to_limit==null)return '<span class="pill ok">flat / falling</span> <span class="muted">'+s+'</span>';
+    var d=new Date(Date.now()+x.days_to_limit*864e5).toISOString().slice(0,10);return '<span class="pill '+(x.days_to_limit<90?'bad':x.days_to_limit<180?'warn':'ok')+'">'+lim+'% by '+d+'</span> <span class="muted">'+s+(x.reliable?'':' · short history')+'</span>';}
+  // ---- one filter for the whole page: platform type (VMware / Nutanix), connection, site, cluster. Every tile, table,
+  // recommendation and the CSV are computed from the filtered rows, so the numbers always describe what is shown.
+  try{var sv=JSON.parse(localStorage.getItem('cap_filter')||'null');if(sv&&typeof sv==='object')['kind','pid','site','cluster'].forEach(function(k){if(typeof sv[k]==='string')F[k]=sv[k];});}catch(e){ /* browser storage blocked (private window): the page works without it */ }
+  (function(){var h=location.hash.replace(/^#/,'');if(!h)return;h.split('&').forEach(function(kv){var p=kv.split('=');if(p.length===2&&/^(kind|pid|site|cluster)$/.test(p[0]))F[p[0]]=decodeURIComponent(p[1]);});})();
+  var KIND=function(k){return k==='nutanix'?'nutanix':'vmware';};
+  function filtered(){return !!(F.kind||F.pid||F.site||F.cluster);}
+  function view(D){
+    var plats=D.platforms||[],byLabel={},byId={};plats.forEach(function(p){byLabel[p.label]=p;byId[p.id]=p;});
+    var okP=function(p){return !!p&&(!F.kind||KIND(p.kind)===F.kind)&&(!F.pid||p.id===F.pid)&&(!F.site||(p.site||'')===F.site);};
+    var okL=function(label){return okP(byLabel[label]);};
+    if(!filtered())return D;
+    var cl=function(name){return !F.cluster||name===F.cluster;};
+    var V=Object.assign({},D);
+    V.platforms=plats.filter(okP);
+    V.clusters=(D.clusters||[]).filter(function(c){return okL(c.platform)&&cl(c.name);});
+    V.hosts=(D.hosts||[]).filter(function(h){return okL(h.platform)&&cl(h.cluster);});
+    V.datastores=(D.datastores||[]).filter(function(d){return okL(d.platform);});   // a datastore is not tied to one cluster
+    var okV=function(v){return (v.pid&&byId[v.pid]?okP(byId[v.pid]):okL(v.platform))&&cl(v.cluster);};
+    if(Array.isArray(D.vms))V.vms=D.vms.filter(okV);
+    V.top_vms=(D.top_vms||[]).filter(okV);
+    V.vms_off=Array.isArray(D.vms)?V.vms.filter(function(v){return v.power!=='on';}).sort(function(a,b){return (b.mem_gb||0)-(a.mem_gb||0);}):(D.vms_off||[]).filter(okV);
+    var st={};Object.keys(D.storage_trend||{}).forEach(function(k){if(okL(k))st[k]=D.storage_trend[k];});V.storage_trend=st;
+    var S=function(L,k){return L.reduce(function(a,x){return a+(x[k]||0);},0);};
+    V.totals={clusters:V.clusters.length,hosts:V.hosts.length,vms:S(V.clusters,'vms'),vms_on:S(V.clusters,'vms_on'),cores:S(V.clusters,'cores'),vcpus:S(V.clusters,'vcpus'),mem_gb:S(V.clusters,'mem_gb'),vm_mem_gb:S(V.clusters,'vm_mem_gb'),
+      storage_gb:S(V.datastores,'capacity_gb')+S(V.clusters.filter(function(c){return c.kind==='nutanix'&&!V.datastores.some(function(d){return d.platform===c.platform;});}),'storage_gb'),storage_free_gb:S(V.datastores,'free_gb'),
+      reclaim_mem_gb:Math.round(S(V.vms_off,'mem_gb')),reclaim_disk_gb:S(V.vms_off,'disk_gb')};
+    return V;
+  }
+  function fdesc(){var p=(RAW.platforms||[]).filter(function(x){return x.id===F.pid;})[0];return [F.kind?(F.kind==='nutanix'?'Nutanix':'VMware'):'',p?p.label:'',F.site?'site '+F.site:'',F.cluster?'cluster '+F.cluster:''].filter(Boolean).join(' · ');}
+  function fbar(){
+    var P=RAW.platforms||[],cnt=function(k){return P.filter(function(p){return KIND(p.kind)===k;}).length;};
+    var inKind=P.filter(function(p){return !F.kind||KIND(p.kind)===F.kind;}),sites={};P.forEach(function(p){if(p.site)sites[p.site]=1;});
+    var cls={};(RAW.clusters||[]).forEach(function(c){var p=P.filter(function(x){return x.label===c.platform;})[0];if((!F.kind||(p&&KIND(p.kind)===F.kind))&&(!F.pid||(p&&p.id===F.pid))&&(!F.site||(p&&(p.site||'')===F.site)))cls[c.name]=1;});
+    var chip=function(k,t,n){return '<button type="button" class="chip'+(F.kind===k?' on':'')+'" data-fk="'+k+'">'+E(t)+(n!=null?' <span class="muted" style="font-weight:400">'+n+'</span>':'')+'</button>';};
+    var opt=function(v,t,cur){return '<option value="'+E(v)+'"'+(v===cur?' selected':'')+'>'+E(t)+'</option>';};
+    $('fbar').innerHTML='<span class="lbl">Show</span>'+chip('','All platforms',P.length)+chip('vmware','VMware',cnt('vmware'))+chip('nutanix','Nutanix',cnt('nutanix'))
+      +'<select id="f-pid" aria-label="Connection">'+opt('','Every connection',F.pid)+inKind.map(function(p){return opt(p.id,p.label+' ('+(p.kind==='nutanix'?'Nutanix':'VMware')+')',F.pid);}).join('')+'</select>'
+      +(Object.keys(sites).length?'<select id="f-site" aria-label="Site">'+opt('','Every site',F.site)+Object.keys(sites).sort().map(function(x){return opt(x,x,F.site);}).join('')+'</select>':'')
+      +'<select id="f-cl" aria-label="Cluster">'+opt('','Every cluster',F.cluster)+Object.keys(cls).sort().map(function(x){return opt(x,x,F.cluster);}).join('')+'</select>'
+      +(filtered()?'<span class="pill info" id="fdesc">'+E(fdesc())+'</span> <button type="button" id="f-clr">Clear</button>':'');
+  }
+  function setF(k,v){F[k]=v;if(k==='kind'){var p=(RAW.platforms||[]).filter(function(x){return x.id===F.pid;})[0];if(p&&v&&KIND(p.kind)!==v)F.pid='';F.cluster='';}if(k==='site'){var q=(RAW.platforms||[]).filter(function(x){return x.id===F.pid;})[0];if(q&&v&&(q.site||'')!==v)F.pid='';}if(k==='pid'||k==='site')F.cluster='';
+    try{localStorage.setItem('cap_filter',JSON.stringify(F));}catch(e){ /* browser storage blocked (private window): the page works without it */ }
+    var h=['kind','pid','site','cluster'].filter(function(x){return F[x];}).map(function(x){return x+'='+encodeURIComponent(F[x]);}).join('&');try{history.replaceState(null,'',h?'#'+h:location.pathname+location.search);}catch(e){ /* address bar not updated (sandboxed frame): the page works without it */ }
+    paint();}
+  function setData(r){var first=!RAW;RAW=r;if(first)opLoad();if(F.pid&&!(r.platforms||[]).some(function(p){return p.id===F.pid;}))F.pid='';paint();}
+  function paint(){R=view(RAW);fbar();draw();opDraw();}
+  $('fbar').addEventListener('click',function(e){var b=e.target.closest('[data-fk]');if(b){setF('kind',b.getAttribute('data-fk'));return;}if(e.target.id==='f-clr'){F={kind:'',pid:'',site:'',cluster:''};setF('kind','');}});
+  $('fbar').addEventListener('change',function(e){var id=e.target.id;if(id==='f-pid')setF('pid',e.target.value);else if(id==='f-site')setF('site',e.target.value);else if(id==='f-cl')setF('cluster',e.target.value);});
+  $('plats').addEventListener('click',function(e){var c=e.target.closest('[data-plat]');if(c&&!e.target.closest('a'))setF('pid',F.pid===c.getAttribute('data-plat')?'':c.getAttribute('data-plat'));});
+  // ---- Over-provisioning report (server: /virt/capacity/overprovisioning), filtered by the same bar as the rest of the page
+  var OPR=null, OPF='';   // OPF: the over-provisioning tile that filters the cluster / datastore tables
+  var OPACT=['cpu','mem','sto','vms','under','off'], OPHINT={cpu:'Show the clusters over the vCPU target',mem:'Show the clusters with memory over-committed',sto:'Show what is provisioned over 100%',vms:'Go to the VMs to right-size',under:'Go to the VMs short of CPU or memory',off:'Go to the powered-off VMs'};
+  function opGo(a){var tgt={cpu:'opcl',mem:'opcl',sto:'opcl',vms:'opvm',under:'opun',off:'off'}[a];OPF=OPF===a?'':a;opDraw();var el=$(tgt);if(el){var h=el.previousElementSibling&&el.previousElementSibling.tagName==='H3'?el.previousElementSibling:el.closest('.card');(h||el).scrollIntoView({behavior:'smooth',block:'start'});}}
+  function opLoad(){req('GET','/virt/capacity/overprovisioning?days='+encodeURIComponent($('opdays').value)).then(function(r){OPR=r;opDraw();}).catch(function(e){$('opk').innerHTML='';$('opcl').innerHTML='<p class="muted">'+(e.status===404?'The over-provisioning report needs the server update (IT Asset Management).':E(e.message))+'</p>';});}
+  function opView(){var D=OPR,P={};(D.platforms||[]).forEach(function(p){P[p.label]=p;});
+    var okL=function(label,cl){var p=P[label];return !!p&&(!F.kind||KIND(p.kind)===F.kind)&&(!F.pid||p.id===F.pid)&&(!F.site||(p.site||'')===F.site)&&(cl===undefined||!F.cluster||cl===F.cluster);};
+    var V={};['clusters','hosts','vms','under','short','off'].forEach(function(k){V[k]=(D[k]||[]).filter(function(x){return okL(x.platform,x.cluster);});});V.datastores=(D.datastores||[]).filter(function(x){return okL(x.platform);});return V;}
+  var opPill=function(l,t){return l==null?'<span class="muted">not reported</span>':'<span class="pill '+(l==='over'?'bad':l==='near'?'warn':'ok')+'">'+t+'</span>';};
+  function opDraw(){if(!OPR||!RAW)return;var V=opView(),b=OPR.basis,S=function(L,k){return L.reduce(function(a,x){return a+(x[k]||0);},0);};
+    $('opbasis').innerHTML='Targets: '+E(b.vcpu_ratio)+' vCPU per physical core, memory configured up to '+E(b.mem_max_pct)+'% of physical (over 100% = over-committed), storage provisioned up to 100% of capacity. Right-sizing uses the <b>95th percentile</b> of this server\'s hourly samples ('+E(OPR.days)+' days) so a short busy hour keeps what it needs: aim CPU ≤ '+E(b.cpu_target_pct)+'%, memory ≤ '+E(b.mem_target_pct)+'%, at most half of the current size in one step, and only with at least '+E(b.min_samples)+' samples. VMware "memory in use" is active guest memory and reads low - confirm in the guest before cutting memory. Nutanix guest memory needs NGT.';
+    var oc=V.clusters.filter(function(c){return c.cpu==='over';}).length,om=V.clusters.filter(function(c){return c.mem==='over';}).length,os=V.clusters.filter(function(c){return c.storage==='over';}).length+V.datastores.filter(function(d){return d.storage==='over';}).length;
+    var sv=S(V.vms,'save_vcpu'),sm=Math.round(S(V.vms,'save_mem_gb')),offm=Math.round(S(V.off,'mem_gb'));
+    $('opsum').textContent=filtered()?'· '+fdesc():'';
+    $('opk').innerHTML=[['Clusters over the vCPU target',f(oc),'of '+f(V.clusters.length),oc?'bad':''],['Clusters with memory over-committed',f(om),'configured > physical',om?'bad':''],['Storage over-provisioned',f(os),'clusters / datastores over 100%',os?'bad':''],['VMs to right-size',f(V.vms.length),f(sv)+' vCPU · '+tb(sm)+' RAM to give back',V.vms.length?'warn':''],['VMs short of resources',f(V.under.length),'p95 ≥ '+b.under_pct+'%',V.under.length?'warn':''],['Powered off',f(V.off.length),tb(offm)+' RAM still configured','']]
+      .map(function(x,i){var a=OPACT[i];return '<div class="t go" data-op="'+a+'" tabindex="0" role="button" aria-pressed="'+(OPF===a)+'" title="'+E(OPHINT[a])+'"><div class="l">'+E(x[0])+'</div><div class="v'+(x[3]==='bad'?' err':'')+'">'+x[1]+'</div><div class="s">'+E(x[2])+'</div></div>';}).join('');
+    $('opfl').innerHTML=OPF&&OPF!=='vms'&&OPF!=='under'&&OPF!=='off'?'Showing only the '+E({cpu:'clusters over the vCPU target',mem:'clusters with memory over-committed',sto:'clusters and datastores provisioned over 100%'}[OPF])+' · <a href="#" id="opall" style="color:var(--info)">show all</a>':'';
+    if(OPF==='cpu'||OPF==='mem'||OPF==='sto'){var dim={cpu:'cpu',mem:'mem',sto:'storage'}[OPF];V=Object.assign({},V,{clusters:V.clusters.filter(function(c){return c[dim]==='over';}),datastores:OPF==='sto'?V.datastores.filter(function(d){return d.storage==='over';}):V.datastores});}
+    $('opcl').innerHTML=V.clusters.length?'<table><thead><tr><th>Cluster</th><th class="n">vCPU / cores</th><th>vCPU per core</th><th class="n">with N+1</th><th class="n">Memory configured / physical</th><th>Memory</th><th class="n">Disks configured / storage</th><th>Storage</th></tr></thead><tbody>'+V.clusters.map(function(c){
+      return '<tr><td><b>'+E(c.cluster)+'</b><div class="muted" style="font-size:11.5px">'+E(c.platform)+' · '+(c.kind==='nutanix'?'Nutanix':'VMware')+'</div></td><td class="n">'+f(c.vcpus)+' / '+f(c.cores)+'</td><td>'+opPill(c.cpu,f(c.vcpu_ratio,2)+' : 1')+' <span class="muted">target '+E(c.vcpu_target)+'</span></td><td class="n">'+(c.n_plus_1&&c.vcpu_ratio_n1!=null?f(c.vcpu_ratio_n1,2)+' : 1':'—')+'</td><td class="n">'+tb(c.vm_mem_gb)+' / '+tb(c.mem_gb)+'</td><td>'+opPill(c.mem,f(c.mem_alloc_pct,0)+'%')+(c.mem_used_pct!=null?' <span class="muted">in use '+f(c.mem_used_pct,0)+'%</span>':'')+'</td><td class="n">'+(c.kind==='nutanix'?tb(c.disk_prov_gb)+' / '+tb(c.storage_gb):'<span class="muted">see datastores</span>')+'</td><td>'+(c.kind==='nutanix'?opPill(c.storage,f(c.storage_prov_pct,0)+'%'):'')+'</td></tr>';}).join('')+'</tbody></table>':'<p class="muted">No cluster in this filter.</p>';
+    $('opds').innerHTML=V.datastores.length?'<table><thead><tr><th>Datastore</th><th class="n">Capacity</th><th class="n">Provisioned</th><th>Provisioned %</th><th>Used</th></tr></thead><tbody>'+V.datastores.map(function(d){return '<tr><td><b>'+E(d.name)+'</b><div class="muted" style="font-size:11.5px">'+E(d.platform)+' · '+E(d.type||'')+'</div></td><td class="n">'+tb(d.capacity_gb)+'</td><td class="n">'+tb(d.provisioned_gb)+'</td><td>'+opPill(d.storage,d.provisioned_pct==null?'—':f(d.provisioned_pct,0)+'%')+'</td><td>'+bar(d.used_pct,RAW.settings.storage_max_pct)+'</td></tr>';}).join('')+'</tbody></table>':'<p class="muted">'+(F.kind==='nutanix'?'Nutanix storage is in the cluster table above.':'No datastore in this filter.')+'</p>';
+    $('opvc').textContent=V.vms.length?'· '+f(sv)+' vCPU, '+tb(sm)+' RAM':'';
+    $('opvm').innerHTML=V.vms.length?'<table><thead><tr><th>VM</th><th class="n">vCPU now → suggested</th><th class="n">CPU p95 / max</th><th class="n">Memory now → suggested</th><th class="n">Memory p95</th><th class="n">Samples</th></tr></thead><tbody>'+V.vms.slice(0,500).map(function(v){
+      return '<tr class="zd-click" data-vmk="'+E(v.pid+'|'+v.id)+'" tabindex="0"><td><b>'+E(v.name)+'</b><div class="muted" style="font-size:11.5px">'+E(v.platform)+(v.cluster?' · '+E(v.cluster):'')+'</div></td><td class="n">'+f(v.vcpus)+(v.vcpus_to?' → <b>'+f(v.vcpus_to)+'</b>':' <span class="muted">keep</span>')+'</td><td class="n">'+f(v.cpu_p95,1)+'% / '+f(v.cpu_max,1)+'%</td><td class="n">'+tb(v.mem_gb)+(v.mem_to?' → <b>'+tb(v.mem_to)+'</b>':' <span class="muted">keep</span>')+'</td><td class="n">'+(v.mem_p95==null?'—':f(v.mem_p95,1)+'%')+'</td><td class="n">'+f(v.samples)+' <span class="muted">('+f(v.history_days,0)+' d)</span></td></tr>';}).join('')+'</tbody></table>'+(V.vms.length>500?'<p class="muted">First 500 - the CSV has all.</p>':''):'<p class="muted">No running VM is oversized on the evidence held'+(V.short.length?' (some have too little history yet - below)':'')+'.</p>';
+    $('opun').innerHTML=V.under.length?'<table><thead><tr><th>VM</th><th class="n">vCPU</th><th class="n">CPU p95</th><th class="n">Memory</th><th class="n">Memory p95</th><th>Short of</th></tr></thead><tbody>'+V.under.map(function(v){return '<tr class="zd-click" data-vmk="'+E(v.pid+'|'+v.id)+'" tabindex="0"><td><b>'+E(v.name)+'</b><div class="muted" style="font-size:11.5px">'+E(v.platform)+'</div></td><td class="n">'+f(v.vcpus)+'</td><td class="n">'+f(v.cpu_p95,1)+'%</td><td class="n">'+tb(v.mem_gb)+'</td><td class="n">'+(v.mem_p95==null?'—':f(v.mem_p95,1)+'%')+'</td><td>'+(v.cpu_short?'<span class="pill warn">CPU</span> ':'')+(v.mem_short?'<span class="pill warn">memory</span>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<p class="muted">None.</p>';
+    $('opshort').textContent=V.short.length?V.short.length+' running VM(s) have fewer than '+b.min_samples+' hourly samples (or report no usage) and are not assessed yet - never shown as oversized. Usage is sampled every hour while a VM runs.':'';
+  }
+  function opCsv(){if(!OPR)return;var V=opView(),q=function(v){v=v==null?'':String(v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+    var L=[['# Over-provisioning report'],['# generated',OPR.at],['# filter',filtered()?fdesc():'all platforms'],['# usage history (days)',OPR.days],['# basis','p95 of hourly samples; CPU target '+OPR.basis.cpu_target_pct+'%, memory target '+OPR.basis.mem_target_pct+'%, min samples '+OPR.basis.min_samples+', max cut half per step; vCPU/core target '+OPR.basis.vcpu_ratio],[],
+      ['section','platform','cluster','name','vcpus','vcpus_suggested','cores','vcpu_per_core','cpu_p95_pct','cpu_max_pct','memory_gb','memory_suggested_gb','memory_physical_gb','memory_configured_pct','memory_p95_pct','storage_gb','provisioned_gb','provisioned_pct','status','samples']];
+    V.clusters.forEach(function(c){L.push(['cluster',c.platform,c.cluster,c.cluster,c.vcpus,'',c.cores,c.vcpu_ratio,'','',c.vm_mem_gb,'',c.mem_gb,c.mem_alloc_pct,'',c.storage_gb,c.disk_prov_gb,c.storage_prov_pct,'cpu '+c.cpu+' / memory '+c.mem+(c.storage?' / storage '+c.storage:''),'']);});
+    V.datastores.forEach(function(d){L.push(['datastore',d.platform,'',d.name,'','','','','','','','','','','',d.capacity_gb,d.provisioned_gb,d.provisioned_pct,d.storage||'','']);});
+    V.vms.forEach(function(v){L.push(['vm_rightsize',v.platform,v.cluster,v.name,v.vcpus,v.vcpus_to||v.vcpus,'','',v.cpu_p95,v.cpu_max,v.mem_gb,v.mem_to||v.mem_gb,'','',v.mem_p95,'','','','oversized',v.samples]);});
+    V.under.forEach(function(v){L.push(['vm_short',v.platform,v.cluster,v.name,v.vcpus,'','','',v.cpu_p95,v.cpu_max,v.mem_gb,'','','',v.mem_p95,'','','',(v.cpu_short?'cpu ':'')+(v.mem_short?'memory':''),v.samples]);});
+    V.off.forEach(function(v){L.push(['vm_powered_off',v.platform,v.cluster,v.name,v.vcpus,'','','','','',v.mem_gb,'','','','','',v.disk_prov_gb!=null?v.disk_prov_gb:v.disk_gb,'','powered off','']);});
+    var blob=new Blob([L.map(function(r){return r.map(q).join(',');}).join('\r\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='overprovisioning-'+(F.kind||'all')+'-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);}
+  $('opdays').onchange=opLoad;$('opcsv').onclick=opCsv;
+  function draw(){
+    var t=R.totals,st=R.settings;
+    var nw=window.zybVirtLive&&zybVirtLive.newest(R);   // a Fetch now counts: it re-reads the counters from the platform
+    $('when').textContent=nw?'updated '+ago(nw):'not collected yet';
+    $('when').title=(R.last_run?'Full collection (inventory, capacity, storage): '+new Date(R.last_run.at).toLocaleString('en-GB'):'No full collection yet')+(R.last_live&&R.last_live.at?'\nLive counters (CPU, memory, power): '+new Date(R.last_live.at).toLocaleString('en-GB'):'');
+    var PL=(RAW.platforms||[]).filter(function(p){return (!F.kind||KIND(p.kind)===F.kind)&&(!F.site||(p.site||'')===F.site);});
+    $('plats').innerHTML=PL.length?PL.map(function(p){return '<div class="card pick'+(F.pid===p.id?' sel':'')+'" data-plat="'+E(p.id)+'" title="Click to show only this connection" style="padding:10px 14px"><b>'+E(p.label)+'</b> <span class="muted">'+(p.kind==='nutanix'?'Nutanix Prism':p.kind==='esxi'?'VMware ESXi':'VMware vCenter')+(p.site?' · '+E(p.site):'')+'</span> '+(p.error?'<span class="pill bad" title="'+E(p.error)+'">last collection failed: '+E(p.error.slice(0,120))+'</span>':p.collected?'<span class="pill ok" title="'+E('Full collection '+ago(p.at)+(p.live_at?' · live counters '+ago(p.live_at):''))+'">updated '+E(ago((window.zybVirtLive&&zybVirtLive.newest(p))||p.at))+'</span>'+(p.live_at&&Date.parse(p.live_at)>Date.parse(p.at)?' <span class="muted" style="font-size:12px">inventory '+E(ago(p.at))+'</span>':'')+(p.live_error?' <span class="pill warn" title="'+E(p.live_error)+'">live fetch failed</span>':'')+(p.usage===false?' <span class="pill warn">Prism Central reports capacity but not usage - add the cluster (Prism Element) address on the Virtualization page for CPU / memory in use</span>':''):p.credentials_set?'<span class="pill warn">not collected yet</span>':'<span class="pill bad">no login saved</span>')+'</div>';}).join('')
+      :RAW.platforms.length?'<div class="card"><p class="muted">No connection of this type.</p></div>':'<div class="card"><h2>No platform connected</h2><p class="sub">Connect VMware vCenter or Nutanix Prism on the <a href="virtualization.html" style="color:var(--info)">Virtualization</a> page (a read-only account is enough); the capacity is collected from the same connection.</p></div>';
+    var tiles=[['Hosts',f(t.hosts),f(t.clusters)+' clusters'],['VMs running',f(t.vms_on),'of '+f(t.vms)+' VMs'],['vCPU / physical cores',t.cores?f(t.vcpus)+' / '+f(t.cores):'—',t.cores?f(t.vcpus/t.cores,2)+' : 1 (target '+st.vcpu_ratio+')':''],['Memory allocated',tb(t.vm_mem_gb),'of '+tb(t.mem_gb)+' physical'],['Storage free',tb(t.storage_free_gb),'of '+tb(t.storage_gb)],['Reclaimable (powered off)',tb(t.reclaim_mem_gb)+' RAM',tb(t.reclaim_disk_gb)+' disk']];
+    $('tiles').innerHTML=tiles.map(function(x,i){return '<div class="t go" data-tile="'+i+'" tabindex="0" role="button" title="Show the details"><div class="l">'+E(x[0])+'</div><div class="v">'+x[1]+'</div><div class="s">'+E(x[2])+'</div></div>';}).join('');
+    $('csub').innerHTML='Hosts in maintenance or disconnected are not counted as capacity. '+(st.n_plus_1?'<b>N+1</b>: the largest host is held in reserve for "room for more VMs".':'N+1 reserve is off.')+' Room is counted in VMs of the cluster\'s average running size.';
+    $('clusters').innerHTML=R.clusters.length?'<table><thead><tr><th>Cluster</th><th class="n">Hosts</th><th class="n">VMs</th><th>CPU in use</th><th>Memory in use</th><th class="n">Memory allocated</th><th class="n">vCPU : core</th><th>Storage</th><th>Room for more VMs</th><th>Memory forecast</th><th>Storage forecast</th></tr></thead><tbody>'+R.clusters.map(function(c){
+      var rm=c.room?'<b>'+f(Math.min(c.room.cpu,c.room.mem))+'</b> <span class="muted">limited by '+E(c.room.limit)+(c.avg_vm?' · avg VM '+f(c.avg_vm.vcpus,1)+' vCPU / '+f(c.avg_vm.mem_gb,1)+' GB':'')+'</span>':'<span class="muted">no running VMs</span>';
+      return '<tr><td><b>'+E(c.name)+'</b><div class="muted" style="font-size:11.5px">'+E(c.platform)+'</div></td><td class="n">'+f(c.hosts_up)+(c.hosts!==c.hosts_up?' <span class="muted">/ '+f(c.hosts)+'</span>':'')+'</td><td class="n">'+f(c.vms_on)+' <span class="muted">/ '+f(c.vms)+'</span></td><td>'+bar(c.cpu_used_pct,st.cpu_max_pct)+'<div class="muted" style="font-size:11.5px">'+f(c.cpu_ghz,1)+' GHz · '+f(c.cores)+' cores</div></td><td>'+bar(c.mem_used_pct,st.mem_max_pct)+'<div class="muted" style="font-size:11.5px">'+tb(c.mem_gb)+'</div></td><td class="n">'+tb(c.vm_mem_gb)+' <span class="muted">('+f(c.mem_alloc_pct,0)+'%)</span></td><td class="n">'+(c.vcpu_ratio==null?'—':'<span class="pill '+(c.vcpu_ratio>st.vcpu_ratio?'bad':c.vcpu_ratio>st.vcpu_ratio*0.85?'warn':'ok')+'">'+f(c.vcpu_ratio,2)+'</span>')+'</td><td>'+(c.storage_used_pct!=null?bar(c.storage_used_pct,st.storage_max_pct)+'<div class="muted" style="font-size:11.5px">'+tb(c.storage_gb)+'</div>':'<span class="muted">see Storage</span>')+'</td><td>'+rm+'</td><td>'+fc(c.forecast&&c.forecast.memory,st.mem_max_pct)+'</td><td>'+(c.forecast&&c.forecast.storage?fc(c.forecast.storage,st.storage_max_pct):'<span class="muted">—</span>')+'</td></tr>';}).join('')+'</tbody></table>':'<p class="muted">Nothing collected yet.</p>';
+    $('hosts').innerHTML=R.hosts.length?'<table><thead><tr><th>Host</th><th>Cluster</th><th>Hardware</th><th>CPU</th><th>CPU in use</th><th class="n">Memory</th><th>Memory in use</th><th class="n">VMs</th><th class="n">vCPU : core</th><th>Version</th><th>State</th></tr></thead><tbody>'+R.hosts.map(function(h){
+      return '<tr><td><b>'+E(h.name)+'</b></td><td>'+E(h.cluster)+'</td><td>'+E([h.vendor,h.model].filter(Boolean).join(' ')||'—')+(h.serial?'<div class="muted mono">'+E(h.serial)+'</div>':'')+'</td><td>'+(h.cores?E((h.sockets?h.sockets+' × ':'')+h.cores+' cores · '+f(h.cpu_ghz,1)+' GHz'):'—')+'<div class="muted" style="font-size:11.5px">'+E(h.cpu_model||'')+'</div></td><td>'+bar(h.cpu_used_pct,st.cpu_max_pct)+'</td><td class="n">'+tb(h.mem_gb)+'</td><td>'+bar(h.mem_used_pct,st.mem_max_pct)+'</td><td class="n">'+f(h.vms_on)+' <span class="muted">/ '+f(h.vms)+'</span></td><td class="n">'+f(h.vcpu_ratio,2)+'</td><td style="font-size:12px">'+E(h.version||'—')+'</td><td>'+(h.maintenance?'<span class="pill warn">maintenance</span>':h.state==='connected'?'<span class="pill ok">connected</span>':'<span class="pill bad">'+E(h.state)+'</span>')+'</td></tr>';}).join('')+'</tbody></table>':'<p class="muted">Nothing collected yet.</p>';
+    var trs=R.storage_trend||{};$('ssub').innerHTML=Object.keys(trs).map(function(k){return E(k)+' datastores together: '+fc(trs[k],st.storage_max_pct);}).join(' · ')||'Datastores (vCenter) and storage containers (Nutanix).';
+    $('ds').innerHTML=R.datastores.length?'<table><thead><tr><th>Datastore</th><th>Platform</th><th>Type</th><th class="n">Capacity</th><th class="n">Free</th><th>Used</th><th class="n">Provisioned</th></tr></thead><tbody>'+R.datastores.map(function(d){return '<tr><td><b>'+E(d.name)+'</b>'+(d.accessible?'':' <span class="pill bad">not accessible</span>')+'</td><td>'+E(d.platform)+'</td><td>'+E(d.type||'')+'</td><td class="n">'+tb(d.capacity_gb)+'</td><td class="n">'+tb(d.free_gb)+'</td><td>'+bar(d.used_pct,st.storage_max_pct)+'</td><td class="n">'+(d.provisioned_pct==null?'—':'<span class="pill '+(d.provisioned_pct>100?'bad':d.provisioned_pct>90?'warn':'')+'">'+f(d.provisioned_pct,0)+'%</span>')+'</td></tr>';}).join('')+'</tbody></table>':'<p class="muted">No datastores reported.</p>';
+    $('offc').textContent=R.vms_off.length?'· '+R.vms_off.length:'';
+    var vmT=function(L,off){return L.length?'<table><thead><tr><th>VM</th><th>Platform</th><th>Host</th><th>OS</th><th class="n">vCPU</th><th class="n">Memory</th><th class="n">Disk</th>'+(off?'':'<th>CPU in use</th><th>Memory in use</th>')+'</tr></thead><tbody>'+L.map(function(v){return '<tr class="zd-click" data-vmk="'+E(v.pid+'|'+v.id)+'" tabindex="0"><td><b>'+E(v.name)+'</b></td><td>'+E(v.platform)+'</td><td>'+E(v.host||'—')+'</td><td style="font-size:12px">'+E(v.guest_os||'—')+'</td><td class="n">'+f(v.vcpus)+'</td><td class="n">'+tb(v.mem_gb)+'</td><td class="n">'+tb(v.disk_gb)+'</td>'+(off?'':'<td>'+U.ubar(v.cpu_pct)+'</td><td>'+U.ubar(v.mem_used_pct)+'</td>')+'</tr>';}).join('')+'</tbody></table>':'<p class="muted">None.</p>';};
+    VMT=vmT;
+    $('off').innerHTML=vmT(R.vms_off,true);$('top').innerHTML=vmT(R.top_vms.slice(0,20),false);
+    recs();
+    if(ROLE==='admin'){$('set').hidden=false;$('run').hidden=false;$('s_r').value=st.vcpu_ratio;$('s_c').value=st.cpu_max_pct;$('s_m').value=st.mem_max_pct;$('s_s').value=st.storage_max_pct;$('s_i').value=st.interval_min;$('s_l').value=st.live_sec==null?60:st.live_sec;$('s_n').checked=st.n_plus_1;}
+  }
+  // ---- KPI tiles open their detail (zybDetail panel) ----
+  var U=window.zybVmUse, VMT=null;
+  function allVms(){return Array.isArray(R.vms)?R.vms:R.top_vms.concat(R.vms_off);}
+  function findVm(k){var p=String(k).split('|');return allVms().filter(function(v){return String(v.pid)===p[0]&&String(v.id)===p[1];})[0];}
+  function ptab(head,rows){return '<div class="zd-tw"><table><thead><tr>'+head.map(function(h){return '<th'+(/^(#|vCPU|Memory|Disk|Hosts|VMs|Cores|Free|Capacity|Ratio|Allocated|Physical)/.test(h)?' class="n"':'')+'>'+E(h)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';}
+  function vmRows(L,cols){return L.map(function(v){return '<tr class="zd-click" data-vmk="'+E(v.pid+'|'+v.id)+'" tabindex="0"><td><b>'+E(v.name)+'</b><div class="zd-dim" style="font-size:11.5px">'+E(v.platform)+(v.host?' · '+E(v.host):'')+'</div></td>'+cols.map(function(c){return '<td'+(c[1]?' class="n"':'')+'>'+c[0](v)+'</td>';}).join('')+'</tr>';});}
+  function tileOpen(i){
+    var Z=window.zybDetail,t=R.totals,st=R.settings,on=allVms().filter(function(v){return v.power==='on';}),h='';
+    var memT=function(v){return tb(v.mem_gb);},cpuT=function(v){return f(v.vcpus);};
+    if(i===0){
+      h=Z.kv([['Hosts',f(t.hosts)],['Clusters',f(t.clusters)],['In maintenance',f(R.hosts.filter(function(x){return x.maintenance;}).length)],['Not connected',f(R.hosts.filter(function(x){return !x.maintenance&&x.state!=='connected';}).length)]])
+        +Z.sec('Hosts by CPU in use',ptab(['Host','CPU in use','Memory in use','VMs','Cores'],R.hosts.slice().sort(function(a,b){return (b.cpu_used_pct||-1)-(a.cpu_used_pct||-1);}).map(function(x){return '<tr><td><b>'+E(x.name)+'</b><div class="zd-dim" style="font-size:11.5px">'+E(x.platform)+' · '+E(x.cluster||'')+(x.maintenance?' · maintenance':x.state!=='connected'?' · '+E(x.state):'')+'</div></td><td>'+U.ubar(x.cpu_used_pct)+'</td><td>'+U.ubar(x.mem_used_pct)+'</td><td class="n">'+f(x.vms_on)+' / '+f(x.vms)+'</td><td class="n">'+f(x.cores)+'</td></tr>';})));
+      Z.open('Capacity · Hosts',f(t.hosts)+' hosts',h);
+    } else if(i===1){
+      var busy=on.filter(function(v){return v.cpu_pct!=null;}).sort(function(a,b){return b.cpu_pct-a.cpu_pct;});
+      h=Z.kv([['Running',f(t.vms_on)],['Stopped',f(t.vms-t.vms_on)],['Usage reported for',f(busy.length)+' running VMs'],['Avg CPU in use',busy.length?f(busy.reduce(function(a,v){return a+v.cpu_pct;},0)/busy.length,1)+'%':'not reported']])
+        +Z.sec('How busy the running VMs are',U.dist(on.map(function(v){return v.cpu_pct;}),'CPU in use'))
+        +Z.sec('Running VMs - busiest first',ptab(['VM','CPU in use','Memory in use','vCPU'],vmRows((busy.length?busy.concat(on.filter(function(v){return v.cpu_pct==null;})):on).slice(0,300),[[function(v){return U.ubar(v.cpu_pct);}],[function(v){return U.ubar(v.mem_used_pct);}],[cpuT,1]]))+(on.length>300?'<p class="zd-dim">First 300 of '+on.length+'. Nutanix VMs: the full list is on the <a href="nutanix-vms.html">Nutanix VMs</a> page.</p>':''));
+      Z.open('Capacity · VMs running',f(t.vms_on)+' of '+f(t.vms)+' VMs running',h);
+    } else if(i===2){
+      h='<p>vCPU configured on running VMs against physical cores (hosts in maintenance not counted). Target: '+E(st.vcpu_ratio)+' vCPU per core.</p>'
+        +Z.sec('Per cluster',ptab(['Cluster','Ratio','vCPU','Cores','CPU in use'],R.clusters.map(function(c){return '<tr><td><b>'+E(c.name)+'</b><div class="zd-dim" style="font-size:11.5px">'+E(c.platform)+'</div></td><td class="n">'+(c.vcpu_ratio==null?'—':Z.pill(f(c.vcpu_ratio,2)+' : 1',c.vcpu_ratio>st.vcpu_ratio?'bad':c.vcpu_ratio>st.vcpu_ratio*0.85?'warn':'ok'))+'</td><td class="n">'+f(c.vcpus)+'</td><td class="n">'+f(c.cores)+'</td><td>'+U.ubar(c.cpu_used_pct)+'</td></tr>';})))
+        +Z.sec('Most vCPU - with how much they use',ptab(['VM','vCPU','CPU in use'],vmRows(on.slice().sort(function(a,b){return (b.vcpus||0)-(a.vcpus||0);}).slice(0,25),[[cpuT,1],[function(v){return U.ubar(v.cpu_pct);}]])))
+        +'<p class="zd-dim">Many vCPUs at a low CPU in use = right-sizing candidates; it lowers the ratio and the CPU ready time.</p>';
+      Z.open('Capacity · vCPU / physical cores',(t.cores?f(t.vcpus)+' / '+f(t.cores):'—'),h);
+    } else if(i===3){
+      h=Z.sec('Per cluster',ptab(['Cluster','Allocated','Physical','Memory in use'],R.clusters.map(function(c){return '<tr><td><b>'+E(c.name)+'</b><div class="zd-dim" style="font-size:11.5px">'+E(c.platform)+'</div></td><td class="n">'+tb(c.vm_mem_gb)+' ('+f(c.mem_alloc_pct,0)+'%)</td><td class="n">'+tb(c.mem_gb)+'</td><td>'+U.ubar(c.mem_used_pct)+'</td></tr>';})))
+        +Z.sec('Largest memory - with how much is in use',ptab(['VM','Memory','Memory in use'],vmRows(on.slice().sort(function(a,b){return (b.mem_gb||0)-(a.mem_gb||0);}).slice(0,25),[[memT,1],[function(v){return U.ubar(v.mem_used_pct);}]])));
+      Z.open('Capacity · Memory allocated',tb(t.vm_mem_gb)+' of '+tb(t.mem_gb),h);
+    } else if(i===4){
+      h=Z.sec('Datastores / containers - least free first',R.datastores.length?ptab(['Datastore','Free','Capacity','Used'],R.datastores.slice().sort(function(a,b){return (a.free_gb||0)-(b.free_gb||0);}).map(function(d){return '<tr><td><b>'+E(d.name)+'</b><div class="zd-dim" style="font-size:11.5px">'+E(d.platform)+' · '+E(d.type||'')+'</div></td><td class="n">'+tb(d.free_gb)+'</td><td class="n">'+tb(d.capacity_gb)+'</td><td>'+U.ubar(d.used_pct)+'</td></tr>';})):'<p class="zd-dim">No datastores reported.</p>')
+        +Z.sec('Nutanix clusters',ptab(['Cluster','Capacity','Used'],R.clusters.filter(function(c){return c.storage_gb!=null;}).map(function(c){return '<tr><td><b>'+E(c.name)+'</b></td><td class="n">'+tb(c.storage_gb)+'</td><td>'+U.ubar(c.storage_used_pct)+'</td></tr>';})));
+      Z.open('Capacity · Storage free',tb(t.storage_free_gb)+' of '+tb(t.storage_gb),h);
+    } else {
+      h='<p>Powered-off VMs: their memory is not in use, their disks still take space. Confirm with the owner before deleting or archiving.</p>'
+        +Z.sec('Powered-off VMs - largest first',ptab(['VM','Memory','Disk','vCPU'],vmRows(R.vms_off,[[memT,1],[function(v){return tb(v.disk_gb);},1],[cpuT,1]])));
+      Z.open('Capacity · Reclaimable',tb(t.reclaim_mem_gb)+' RAM · '+tb(t.reclaim_disk_gb)+' disk',h);
+    }
+  }
+  $('opk').addEventListener('click',function(e){var x=e.target.closest('[data-op]');if(x)opGo(x.getAttribute('data-op'));});
+  $('opk').addEventListener('keydown',function(e){var x=e.target.closest('[data-op]');if(x&&(e.key==='Enter'||e.key===' ')){e.preventDefault();opGo(x.getAttribute('data-op'));}});
+  $('opfl').addEventListener('click',function(e){if(e.target.id==='opall'){e.preventDefault();OPF='';opDraw();}});
+  $('tiles').addEventListener('click',function(e){var x=e.target.closest('[data-tile]');if(x&&R)tileOpen(+x.getAttribute('data-tile'));});
+  $('tiles').addEventListener('keydown',function(e){var x=e.target.closest('[data-tile]');if(x&&R&&(e.key==='Enter'||e.key===' ')){e.preventDefault();tileOpen(+x.getAttribute('data-tile'));}});
+  // a VM row anywhere (page or panel) opens its own utilisation graphs
+  document.addEventListener('click',function(e){var tr=e.target.closest('[data-vmk]');if(!tr||!R)return;var v=findVm(tr.getAttribute('data-vmk'));if(v)U.openVm(v);});
+  document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;var tr=e.target.closest&&e.target.closest('[data-vmk]');if(!tr||!R)return;var v=findVm(tr.getAttribute('data-vmk'));if(v)U.openVm(v);});
+  function recs(){
+    var st=R.settings,L=[];
+    R.clusters.forEach(function(c){
+      if(c.room&&Math.min(c.room.cpu,c.room.mem)===0)L.push(['bad','<b>'+E(c.name)+'</b>: no room for another average VM'+(c.n_plus_1?' while keeping one host in reserve':'')+' - limited by '+E(c.room.limit)+'. Add a host, or reclaim powered-off / oversized VMs.']);
+      else if(c.room&&Math.min(c.room.cpu,c.room.mem)<5)L.push(['warn','<b>'+E(c.name)+'</b>: room for only '+Math.min(c.room.cpu,c.room.mem)+' more average VMs ('+E(c.room.limit)+').']);
+      if(c.vcpu_ratio!=null&&c.vcpu_ratio>st.vcpu_ratio)L.push(['warn','<b>'+E(c.name)+'</b>: '+f(c.vcpu_ratio,2)+' vCPU per physical core, above the target '+st.vcpu_ratio+'. Expect CPU ready time; right-size VMs with many idle vCPUs.']);
+      if(c.mem_used_pct!=null&&c.mem_used_pct>=st.mem_max_pct)L.push(['bad','<b>'+E(c.name)+'</b>: memory in use '+f(c.mem_used_pct,1)+'% (target '+st.mem_max_pct+'%).']);
+      if(c.mem_alloc_pct!=null&&c.mem_alloc_pct>100)L.push(['warn','<b>'+E(c.name)+'</b>: running VMs are configured with '+f(c.mem_alloc_pct,0)+'% of physical memory (over-committed).']);
+      var m=c.forecast&&c.forecast.memory;if(m&&m.days_of_history>=14&&m.days_to_limit!=null&&m.days_to_limit<180)L.push([m.days_to_limit<90?'bad':'warn','<b>'+E(c.name)+'</b>: at the current trend memory reaches '+st.mem_max_pct+'% in about '+m.days_to_limit+' days'+(m.reliable?'':' (short history - check again)')+'.']);
+      if(!c.usage_reported)L.push(['info','<b>'+E(c.name)+'</b>: CPU / memory in use is not reported by this platform connection - the plan uses allocation only.']);
+    });
+    R.hosts.forEach(function(h){if(h.maintenance)L.push(['info','<b>'+E(h.name)+'</b> is in maintenance mode and not counted as capacity.']);else if(h.state!=='connected')L.push(['bad','<b>'+E(h.name)+'</b> is '+E(h.state)+' - not counted as capacity.']);});
+    R.datastores.forEach(function(d){if(d.used_pct!=null&&d.used_pct>=st.storage_max_pct)L.push(['bad','Datastore <b>'+E(d.name)+'</b> is '+f(d.used_pct,1)+'% full (target '+st.storage_max_pct+'%).']);else if(d.provisioned_pct!=null&&d.provisioned_pct>100)L.push(['warn','Datastore <b>'+E(d.name)+'</b> is thin-provisioned to '+f(d.provisioned_pct,0)+'% - it fills up if the VMs grow into their disks.']);});
+    if(R.totals.reclaim_mem_gb>0)L.push(['info',R.vms_off.length+' powered-off VMs hold '+tb(R.totals.reclaim_mem_gb)+' of configured memory and '+tb(R.totals.reclaim_disk_gb)+' of disk - confirm with the owners and remove or archive.']);
+    $('recs').innerHTML=L.length?L.map(function(x){return '<li><span class="pill '+x[0]+'">'+(x[0]==='bad'?'act':x[0]==='warn'?'watch':'note')+'</span> '+x[1]+'</li>';}).join(''):'<li class="muted">'+(R.clusters.length?'Every cluster'+(filtered()?' in this filter':'')+' is within the targets.':'Nothing to assess yet.')+'</li>';
+  }
+  function csv(){
+    var q=function(v){v=v==null?'':String(v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+    var L=[['# Virtualization capacity report'],['# generated',new Date().toISOString()],['# filter',filtered()?fdesc():'all platforms'],['# targets','vCPU/core '+R.settings.vcpu_ratio,'CPU '+R.settings.cpu_max_pct+'%','memory '+R.settings.mem_max_pct+'%','storage '+R.settings.storage_max_pct+'%','N+1 '+(R.settings.n_plus_1?'yes':'no')],[],
+      ['section','platform','cluster','name','hosts','vms_running','cores','vcpus','vcpu_per_core','cpu_ghz','cpu_used_pct','memory_gb','memory_used_pct','memory_allocated_gb','storage_gb','storage_used_pct','room_more_vms','room_limited_by','memory_days_to_limit']];
+    R.clusters.forEach(function(c){L.push(['cluster',c.platform,c.name,c.name,c.hosts_up,c.vms_on,c.cores,c.vcpus,c.vcpu_ratio,c.cpu_ghz,c.cpu_used_pct,c.mem_gb,c.mem_used_pct,c.vm_mem_gb,c.storage_gb,c.storage_used_pct,c.room?Math.min(c.room.cpu,c.room.mem):'',c.room?c.room.limit:'',c.forecast&&c.forecast.memory?c.forecast.memory.days_to_limit:'']);});
+    R.hosts.forEach(function(h){L.push(['host',h.platform,h.cluster,h.name,'',h.vms_on,h.cores,h.vcpus,h.vcpu_ratio,h.cpu_ghz,h.cpu_used_pct,h.mem_gb,h.mem_used_pct,h.vm_mem_gb,'','','','','']);});
+    R.datastores.forEach(function(d){L.push(['datastore',d.platform,'',d.name,'','','','','','','','','','',d.capacity_gb,d.used_pct,'','','']);});
+    R.vms_off.forEach(function(v){L.push(['vm_powered_off',v.platform,'',v.name,'','',v.vcpus,'','','','',v.mem_gb,'','',v.disk_gb,'','','','']);});
+    var blob=new Blob([L.map(function(r){return r.map(q).join(',');}).join('\r\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='capacity-'+(F.kind||'all')+'-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
+  }
+  function load(){req('GET','/virt/capacity').then(function(r){setData(r);var lv=$('live');if(lv)lv.textContent=zybVirtLive.line(r);}).catch(function(e){$('plats').innerHTML='<div class="card"><p class="err">'+(e.status===404?'The capacity add-on is not installed on this server yet - run the server update.':E(e.message))+'</p></div>';});}
+  $('csv').onclick=function(){if(R)csv();};$('print').onclick=function(){window.print();};
+  $('run').onclick=function(){var b=this;b.disabled=true;b.textContent='Collecting…';req('POST','/virt/capacity/run',{}).then(function(r){setData(r.report);opLoad();toast(r.results.map(function(x){return x.label+': '+(x.ok?x.hosts+' hosts, '+x.vms+' VMs':'failed - '+x.error);}).join(' · ')||'no platform connected');}).catch(function(e){toast(e.message);}).then(function(){b.disabled=false;b.textContent='⟳ Collect now';});};
+  $('s_save').onclick=function(){req('POST','/virt/capacity/settings',{vcpu_ratio:+$('s_r').value,cpu_max_pct:+$('s_c').value,mem_max_pct:+$('s_m').value,storage_max_pct:+$('s_s').value,interval_min:+$('s_i').value,live_sec:+$('s_l').value,n_plus_1:$('s_n').checked}).then(function(r){setData(r);toast('Targets saved');}).catch(function(e){toast(e.message);});};
+  $('fetch').onclick=function(){zybVirtLive.fetch(this,function(r){setData(r);var lv=$('live');if(lv)lv.textContent=zybVirtLive.line(r);});};
+  setInterval(function(){if(!document.hidden)load();},30000);setInterval(function(){if(!document.hidden)opLoad();},600000);   // live counters are read on the server every minute
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{ROLE=String(JSON.parse(w.responseText).role||'').toLowerCase();}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+})();
+</script></body></html>

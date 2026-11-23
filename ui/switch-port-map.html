@@ -1,0 +1,188 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Switch Port Map</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-xlsx.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1600px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.lay{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px}
+.sw{padding:10px;border:1px solid var(--d-line);border-radius:12px;margin-bottom:8px;cursor:pointer;background:var(--d-raise)}.sw:hover{border-color:#3a4258}.sw.sel{border-color:var(--d-acc);background:#172036}
+.bar{height:6px;border-radius:3px;background:#232837;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.v-ok{background:rgba(47,179,68,.15);color:#56d364}.v-bad{background:rgba(229,72,77,.2);color:#ff8a8e}.v-warn{background:rgba(245,159,0,.18);color:#f5b544}.v-mute{background:rgba(139,147,164,.16);color:#aab2c2}.v-info{background:rgba(91,141,239,.18);color:#8db0ff}
+.lens{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.lens button,.tabs button{background:transparent;border:1px solid var(--d-line);color:var(--d-mute);border-radius:999px;padding:5px 12px;font:600 12.5px Inter,sans-serif;cursor:pointer}.lens button[aria-pressed="true"],.tabs button[aria-selected="true"]{color:#fff;border-color:var(--d-acc);background:rgba(91,141,239,.2)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
+.face{overflow-x:auto;padding-bottom:6px}.face svg{display:block;max-width:none}
+.face .port{cursor:pointer}.face .port:hover rect.p{stroke:#fff;stroke-width:1.6}.face .port.on rect.p{stroke:#fff;stroke-width:2.2}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--d-mute);margin-top:8px}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12.8px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--d-line)}td{padding:7px 8px;border-bottom:1px solid #1b2030;vertical-align:top}
+tr.rk{cursor:pointer}tr.rk:hover td{background:#151924}
+.inp,select.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.det{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:10px}.det div{background:var(--d-raise);border:1px solid var(--d-line);border-radius:10px;padding:8px 10px}.det b{display:block;font-size:11px;color:var(--d-mute);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.ans{white-space:pre-wrap;background:#10131a;border:1px solid var(--d-line);border-radius:10px;padding:12px;margin-top:10px}
+.tip{position:fixed;z-index:50;background:#1d2430;border:1px solid #2e3747;border-radius:8px;padding:8px 10px;font-size:12px;pointer-events:none;max-width:320px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1100px){.lay{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network</div><h1>Switch Port Map</h1><div class="sm mute">Every port of every Cisco switch, read over a read-only SSH login: what is plugged in, which ports have a problem, and how full each switch is. Nothing on a switch is changed from here - a fix is a change plan another person approves.</div></div><div class="sp"></div>
+ <span class="sm mute" id="me"></span><button class="btn" id="xls" type="button"><i class="ti ti-file-spreadsheet"></i>Excel</button><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <section class="card"><div class="kpis" id="kpis"></div></section>
+ <section class="card" id="findcard" hidden><div class="row"><input class="inp" id="fq" style="max-width:420px" placeholder="Where is it plugged in? MAC, IP or host name"><button class="btn pri" type="button" id="fgo"><i class="ti ti-search"></i>Find</button></div><div id="fres"></div></section>
+ <div class="lay"><div id="list"></div><div id="sw"></div></div>
+</div>
+</main>
+<div class="tip" id="tip" hidden></div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var S=null, M=null, SEL='', PORT='', LENS='status', TAB='findings', ROLE='viewer', ANS=null, RANK={viewer:0,analyst:1,operator:2,admin:3};
+  var can=function(r){return (RANK[ROLE]||0)>=RANK[r];};
+  var TCOL={phone:'#22b8cf',ap:'#845ef7',printer:'#f59f00',camera:'#e64980',pc:'#4c8dff',server:'#12b886',switch:'#fab005',router:'#fd7e14',iot:'#94d82d',unknown:'#5c6370'};
+  var TNAME={phone:'IP phone',ap:'Access point',printer:'Printer',camera:'Camera',pc:'PC / laptop',server:'Server',switch:'Switch',router:'Router',iot:'IoT',unknown:'Unknown'};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: the status says enough */}if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function api(m,p,b){return req(m,'/api/soc/netops'+p,b);}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function sevPill(s){return pill(s,s==='critical'||s==='high'?'v-bad':s==='medium'?'v-warn':'v-mute');}
+  function when(t){return t?new Date(t).toLocaleString():'—';}
+  function vlanCol(v){if(v==='trunk')return '#fab005';var n=parseInt(v,10);if(!n)return '#5c6370';return 'hsl('+((n*67)%360)+',62%,52%)';}
+  function ports(){return M?[].concat.apply([],M.members.map(function(x){return x.ports;})).concat(M.other||[]):[];}
+  function findingsOf(p){return M.findings.filter(function(f){return f.port===p;});}
+  // ---------- load
+  function load(){$('err').hidden=true;return api('GET','/portmap').then(function(s){S=s;$('main').hidden=false;$('me').textContent=can('operator')?'Operator - read switches, confirm types, propose fixes':can('analyst')?'Analyst - MACs, IPs and host names visible':'Read-only - device addresses hidden (PDPL)';$('findcard').hidden=!can('analyst');
+      if(!SEL&&s.switches.length)SEL=(s.switches.find(function(x){return x.read_at;})||s.switches[0]).id;draw();return SEL?loadSw():null;})
+    .catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>The switch port map is not available</h2>'+note(e.status===404?'Not installed on the SIEM - run the update (update-platform.ps1).':e.message);});}
+  function loadSw(){$('sw').innerHTML=note('Loading…');return api('GET','/portmap/switch/'+encodeURIComponent(SEL)).then(function(m){M=m;drawSw();}).catch(function(e){$('sw').innerHTML=note(e.message);});}
+  function draw(){var t=S.totals;function kp(n,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    $('kpis').innerHTML=kp(t.read+' / '+t.switches,'switches read',t.read<t.switches?'#f5b544':'')+kp(t.ports,'ports')+kp(t.connected,'connected')+kp(t.unused,'unused 30+ days')+kp(t.err,'err-disabled',t.err?'#ff7b80':'')+kp(t.endpoints,'devices plugged in')+kp(t.high+' / '+t.findings,'high / all findings',t.high?'#ff7b80':'');
+    if(!S.switches.length){$('list').innerHTML=note('No Cisco IOS switch in the AI Network Engineer inventory. Add the switches there (Devices), store a read-only SSH login and trust the host key - the port map then reads them every '+S.thresholds.every_h+' hours.');$('sw').innerHTML='';return;}
+    $('list').innerHTML=S.switches.map(function(x){var c=x.counts,pct=c?Math.round(c.connected/Math.max(1,c.total)*100):0;
+      return '<div class="sw'+(x.id===SEL?' sel':'')+'" data-sw="'+esc(x.id)+'"><div class="row"><b>'+esc(x.name)+'</b><span class="sp"></span>'+(x.read_at?(x.high?pill(x.high+' high','v-bad'):x.findings?pill(x.findings,'v-warn'):pill('ok','v-ok')):pill('not read','v-mute'))+'</div>'
+        +'<div class="sm mute">'+esc(x.site||'')+(x.model?' · '+esc(x.model):'')+'</div>'
+        +(c?'<div class="sm">'+c.connected+' of '+c.total+' ports in use · '+c.unused+' unused'+(x.forecast&&x.forecast.days_to_full!=null?' · full in ~'+x.forecast.days_to_full+' days':'')+'</div><div class="bar"><i style="width:'+pct+'%;background:'+(pct>=90?'#e5484d':pct>=75?'#f59f00':'#2fb344')+'"></i></div>':'<div class="sm mute">'+esc(x.reason||'')+'</div>')+'</div>';}).join('');}
+  // ---------- the faceplate
+  function portColor(p){
+    if(LENS==='status')return p.status==='connected'?'#2fb344':p.status==='err-disabled'?'#e5484d':p.status==='disabled'?'#3a3f4b':p.unused_days>=M.thresholds.unused_days?'#262b36':'#4a5060';
+    if(LENS==='vlan')return vlanCol(p.vlan);
+    if(LENS==='type'){if(p.trunk)return '#fab005';var t=p.macs.length?(p.macs.length>M.thresholds.max_macs_access?'switch':((p.macs[0].type||{}).type||'unknown')):null;return t?TCOL[t]||TCOL.unknown:'#262b36';}
+    if(LENS==='util'){if(p.util==null)return '#262b36';return p.util>=90?'#e5484d':p.util>=70?'#f59f00':p.util>=30?'#4c8dff':'#2b5aa8';}
+    if(LENS==='poe'){if(!p.poe||!p.poe.watts)return '#262b36';return p.poe.watts>=25?'#e64980':p.poe.watts>=12?'#f59f00':'#22b8cf';}
+    var f=findingsOf(p.port);if(!f.length)return '#262b36';var s=f.map(function(x){return x.severity;});return s.indexOf('high')>=0||s.indexOf('critical')>=0?'#e5484d':s.indexOf('medium')>=0?'#f59f00':'#8b93a4';}
+  function face(m){
+    var main=m.ports.filter(function(p){return p.kind!=='uplink';}),up=m.ports.filter(function(p){return p.kind==='uplink';});
+    var W=30,H=24,G=5,x0=150,y0=18,cols=Math.ceil(main.length/2),groups=Math.ceil(cols/6);
+    var mainW=cols*(W+G)+Math.max(0,groups-1)*12,upCols=Math.ceil(up.length/2),width=x0+mainW+(up.length?24+upCols*(W+8):0)+24,h=2*H+G+40;
+    var s='<svg width="'+width+'" height="'+h+'" viewBox="0 0 '+width+' '+h+'" role="img" aria-label="Front panel of member '+m.member+'">'
+      +'<rect x="1" y="1" width="'+(width-2)+'" height="'+(h-2)+'" rx="8" fill="#1a1e27" stroke="#323848"/>'
+      +'<rect x="10" y="10" width="124" height="'+(h-20)+'" rx="6" fill="#11141b" stroke="#2a2f3c"/>'
+      +'<text x="20" y="30" fill="#8db0ff" font-size="11" font-weight="700" font-family="Inter,sans-serif">'+esc(M.device.name).slice(0,18)+'</text>'
+      +'<text x="20" y="46" fill="#8b93a4" font-size="10" font-family="Inter,sans-serif">'+esc(m.model||'Cisco switch').slice(0,20)+'</text>'
+      +'<text x="20" y="62" fill="#8b93a4" font-size="10" font-family="Inter,sans-serif">member '+m.member+'</text>'
+      +'<circle cx="122" cy="26" r="4" fill="#2fb344"/>';
+    function draw(p,x,y,w){var c=portColor(p),on=PORT===p.port,led=p.status==='connected'?'#56d364':p.status==='err-disabled'?'#ff5c61':'#2a2f3c';
+      return '<g class="port'+(on?' on':'')+'" data-port="'+esc(p.port)+'" tabindex="0" role="button" aria-label="'+esc(p.port+' '+p.status)+'"><rect class="p" x="'+x+'" y="'+y+'" width="'+w+'" height="'+H+'" rx="3" fill="'+c+'" stroke="#0b0d12"/>'
+        +'<rect x="'+(x+w/2-4)+'" y="'+(y+H-6)+'" width="8" height="4" rx="1" fill="#0b0d12" opacity=".55"/><circle cx="'+(x+4)+'" cy="'+(y+4)+'" r="2" fill="'+led+'"/></g>';}
+    main.forEach(function(p,i){var col=Math.floor(i/2),row=i%2,x=x0+col*(W+G)+Math.floor(col/6)*12,y=y0+row*(H+G);s+=draw(p,x,y,W);});
+    for(var g=0;g<groups;g++){var gx=x0+g*6*(W+G)+g*12;s+='<text x="'+(gx+2)+'" y="'+(y0+2*H+G+14)+'" fill="#5c6370" font-size="9" font-family="ui-monospace,monospace">'+(g*12+1)+'-'+Math.min(main.length,(g+1)*12)+'</text>';}
+    if(up.length){var ux=x0+mainW+24;s+='<rect x="'+(ux-8)+'" y="10" width="'+(upCols*(W+8)+8)+'" height="'+(h-20)+'" rx="5" fill="#141821" stroke="#2a2f3c"/>';
+      up.forEach(function(p,i){var col=Math.floor(i/2),row=i%2;s+=draw(p,ux+col*(W+8),y0+row*(H+G),W);});
+      s+='<text x="'+ux+'" y="'+(y0+2*H+G+14)+'" fill="#5c6370" font-size="9" font-family="ui-monospace,monospace">uplinks</text>';}
+    return s+'</svg>';}
+  function legend(){var L=LENS==='status'?[['#2fb344','connected'],['#4a5060','not connected'],['#262b36','unused '+M.thresholds.unused_days+'+ days'],['#3a3f4b','admin down'],['#e5484d','err-disabled']]
+      :LENS==='vlan'?Object.keys(ports().reduce(function(o,p){o[p.vlan]=1;return o;},{})).sort().map(function(v){var n=ports().find(function(p){return p.vlan===v;});return [vlanCol(v),v==='trunk'?'trunk':'VLAN '+v+(n&&n.vlan_name?' '+n.vlan_name:'')];})
+      :LENS==='type'?Object.keys(TCOL).map(function(k){return [TCOL[k],k==='switch'?'switch / several devices':TNAME[k]];}).concat([['#262b36','empty']])
+      :LENS==='util'?[['#2b5aa8','< 30%'],['#4c8dff','30-70%'],['#f59f00','70-90%'],['#e5484d','90%+'],['#262b36','no SNMP counters']]
+      :LENS==='poe'?[['#22b8cf','< 12 W'],['#f59f00','12-25 W'],['#e64980','25 W+'],['#262b36','no power']]:[['#e5484d','high'],['#f59f00','medium'],['#8b93a4','low'],['#262b36','none']];
+    return '<div class="legend">'+L.map(function(x){return '<span><i style="background:'+x[0]+'"></i>'+esc(x[1])+'</span>';}).join('')+'</div>';}
+  function drawSw(){var m=M,v=$('sw');
+    if(!m.read){v.innerHTML='<section class="card"><h2>'+esc(m.device.name)+' <span class="c">'+esc(m.device.ip)+'</span></h2>'+note(m.reason)+(can('operator')&&m.can_read?'<div class="row" style="margin-top:10px"><button class="btn pri" type="button" id="readnow"><i class="ti ti-download"></i>Read now</button></div>':'')+'</section>';return;}
+    var c=m.counts,L=[['status','Status'],['vlan','VLAN'],['type','Device type'],['util','Utilisation'],['poe','PoE'],['find','Findings']];
+    var h='<section class="card"><h2>'+esc(m.device.name)+' <span class="c">'+esc([m.device.ip,[m.device.model,m.device.version].filter(Boolean).join(' '),'read '+when(m.read.at)+' by '+m.read.by].filter(Boolean).join(' · '))+'</span><span class="sp"></span>'
+      +(can('operator')?'<button class="btn sm" type="button" id="readnow"><i class="ti ti-download"></i>Read now</button>':'')+'</h2>'
+      +'<div class="lens" role="group" aria-label="Colour the ports by">'+L.map(function(x){return '<button type="button" data-lens="'+x[0]+'" aria-pressed="'+(LENS===x[0])+'">'+esc(x[1])+'</button>';}).join('')+'</div>'
+      +'<div class="face">'+m.members.map(face).join('<div style="height:8px"></div>')+'</div>'+legend()
+      +(m.read.errors.length?'<div class="sm mute" style="margin-top:6px">Not read: '+esc(m.read.errors.join(' · '))+'</div>':'')
+      +'<div class="sm mute" style="margin-top:6px">'+c.connected+' of '+c.total+' in use · '+c.unused+' unused · '+c.trunks+' trunk(s) · '+c.endpoints+' device(s) · types: '+esc(m.ml.model)+(m.ml.oui.loaded?'':' · vendor names: IEEE OUI list not loaded on the SIEM ('+esc(m.ml.oui.file||'')+')')+'</div>'
+      +(PORT?portDetail():'<div class="sm mute" style="margin-top:8px">Click a port for what is plugged in.</div>')+'</section>';
+    var T=[['findings','Findings ('+m.findings.length+')'],['ports','All ports'],['capacity','Capacity'],['ai','AI port engineer']];
+    h+='<div class="tabs" role="tablist">'+T.map(function(t){return '<button type="button" role="tab" data-tab="'+t[0]+'" aria-selected="'+(TAB===t[0])+'">'+esc(t[1])+'</button>';}).join('')+'</div>';
+    h+=TAB==='findings'?findingsView():TAB==='ports'?portsView():TAB==='capacity'?capacityView():aiView();
+    v.innerHTML=h;}
+  function fixBtn(f){if(!f.fix||!can('operator'))return '';var lab=f.fix.type==='port-shutdown'?'Propose shutdown':f.fix.type==='port-enable'?'Propose enable':'Propose description';
+    return '<button class="btn sm" type="button" data-fix="'+esc(f.id)+'">'+esc(lab)+'</button>';}
+  function portDetail(){var p=ports().find(function(x){return x.port===PORT;});if(!p)return '';
+    var d='<div class="card" style="margin:12px 0 0;background:#0f1218"><h2>'+esc(p.port)+' <span class="c">'+esc(p.long)+'</span>'+pill(p.status,p.status==='connected'?'v-ok':p.status==='err-disabled'?'v-bad':'v-mute')+'</h2>'
+      +'<div class="det"><div><b>Description</b>'+esc(p.description||'—')+'</div><div><b>VLAN</b>'+esc(p.vlan)+(p.vlan_name?' '+esc(p.vlan_name):'')+'</div><div><b>Speed / duplex</b>'+esc(p.speed)+' / '+esc(p.duplex)+'</div><div><b>Media</b>'+esc(p.media||'—')+'</div>'
+      +'<div><b>Utilisation</b>'+(p.util==null?'no SNMP counters':esc(p.util)+'%')+(p.err_per_min!=null?' · '+esc(p.err_per_min)+' err/min':'')+'</div><div><b>PoE</b>'+(p.poe?esc(p.poe.watts)+' W '+esc(p.poe.device||''):'—')+'</div>'
+      +'<div><b>Neighbour</b>'+(p.neighbour?esc(p.neighbour.name||'(hidden)')+' <span class="sm mute">'+esc(p.neighbour.via)+' '+esc((p.neighbour.caps||[]).join(' '))+'</span>':'—')+'</div><div><b>Last up</b>'+(p.status==='connected'?'now':p.last_up?esc(when(p.last_up)):'not seen up since the first read')+'</div></div>';
+    if(!M.named)d+=note(p.mac_count?'Devices on this port are visible to analysts and above (MAC, IP and host names are personal data under PDPL).':'No device on this port.');
+    else if(p.macs.length)d+='<table><thead><tr><th>MAC</th><th>Type</th><th>Vendor</th><th>IP</th><th>Host</th><th>NAC</th><th>VLAN</th><th></th></tr></thead><tbody>'+p.macs.map(function(x){var t=x.type||{type:'unknown',confidence:0,by:'no signal'};
+      return '<tr><td class="mono">'+esc(x.mac)+'</td><td><span class="pill" style="background:'+(TCOL[t.type]||TCOL.unknown)+'33;color:'+(TCOL[t.type]||TCOL.unknown)+'">'+esc(TNAME[t.type]||t.type)+'</span> <span class="sm mute">'+esc(t.confidence)+'% · '+esc(t.by)+'</span></td><td>'+esc(x.vendor||'—')+'</td><td class="mono">'+esc(x.ip||'—')+'</td><td>'+esc(x.host||'—')+'</td><td>'+(x.nac?pill(x.nac,/unauth|reject|deny|block|unknown|unreg|quarant/i.test(x.nac)?'v-bad':'v-ok'):'—')+'</td><td>'+esc(x.vlan)+'</td>'
+        +'<td>'+(can('operator')?'<select class="inp" style="width:auto" data-label="'+esc(x.mac)+'" aria-label="Confirm the type of '+esc(x.mac)+'"><option value="">Confirm type…</option>'+Object.keys(TNAME).filter(function(k){return k!=='unknown';}).map(function(k){return '<option value="'+k+'">'+esc(TNAME[k])+'</option>';}).join('')+'</select>':'')+'</td></tr>';}).join('')+'</tbody></table>';
+    else d+=note('No device learned on this port.');
+    var f=findingsOf(p.port);if(f.length)d+='<div style="margin-top:10px">'+f.map(function(x){return '<div class="row" style="margin-bottom:6px">'+sevPill(x.severity)+' <b>'+esc(x.title)+'</b> '+fixBtn(x)+'<div class="sm mute" style="flex-basis:100%">'+esc(x.detail)+'</div></div>';}).join('')+'</div>';
+    return d+'</div>';}
+  function findingsView(){if(!M.findings.length)return note('No finding on this switch.');
+    return '<section class="card"><table><thead><tr><th>Severity</th><th>Port</th><th>Finding</th><th>What it means</th><th></th></tr></thead><tbody>'+M.findings.map(function(f){return '<tr class="rk" data-goport="'+esc(f.port)+'"><td>'+sevPill(f.severity)+'</td><td class="mono">'+esc(f.port)+'</td><td>'+esc(f.title)+'</td><td class="sm">'+esc(f.detail)+'</td><td>'+fixBtn(f)+'</td></tr>';}).join('')+'</tbody></table></section>';}
+  function portsView(){return '<section class="card"><table><thead><tr><th>Port</th><th>Status</th><th>VLAN</th><th>Speed</th><th>Description</th><th>Devices</th><th>Neighbour</th><th>Util</th><th>PoE</th></tr></thead><tbody>'+ports().map(function(p){
+      return '<tr class="rk" data-goport="'+esc(p.port)+'"><td class="mono">'+esc(p.port)+'</td><td>'+esc(p.status)+'</td><td>'+esc(p.vlan)+'</td><td>'+esc(p.speed)+' '+esc(p.duplex)+'</td><td>'+esc(p.description)+'</td><td>'+esc(p.mac_count)+'</td><td>'+(p.neighbour?esc(p.neighbour.name||'(hidden)'):'')+'</td><td>'+(p.util==null?'—':esc(p.util)+'%')+'</td><td>'+(p.poe&&p.poe.watts?esc(p.poe.watts)+' W':'')+'</td></tr>';}).join('')+'</tbody></table></section>';}
+  function capacityView(){var m=M,f=m.forecast,d=m.daily,c=m.counts;
+    var chart='';if(d.length>1){var W=640,H=140,mx=Math.max.apply(null,d.map(function(x){return x.total;}))||1,step=W/(d.length-1);
+      var pts=d.map(function(x,i){return (i*step).toFixed(1)+','+(H-x.used/mx*H).toFixed(1);}).join(' ');
+      chart='<svg viewBox="0 0 '+W+' '+(H+20)+'" width="100%" height="170" role="img" aria-label="Ports in use per day"><line x1="0" y1="0.5" x2="'+W+'" y2="0.5" stroke="#e5484d" stroke-dasharray="4 4"/><text x="4" y="12" fill="#ff8a8e" font-size="10">'+mx+' ports</text><polyline points="'+pts+'" fill="none" stroke="#5b8def" stroke-width="2"/>'
+        +'<text x="0" y="'+(H+16)+'" fill="#8b93a4" font-size="10">'+esc(d[0].day)+'</text><text x="'+W+'" y="'+(H+16)+'" fill="#8b93a4" font-size="10" text-anchor="end">'+esc(d[d.length-1].day)+'</text></svg>';}
+    var poe=m.poe.length?m.poe.map(function(x){var pct=x.available?Math.round(x.used/x.available*100):0;return '<div class="sm">Module '+x.module+': '+x.used+' of '+x.available+' W ('+pct+'%)</div><div class="bar"><i style="width:'+pct+'%;background:'+(pct>=m.thresholds.poe_warn_pct?'#e5484d':'#22b8cf')+'"></i></div>';}).join(''):note('No PoE on this switch, or "show power inline" was not readable.');
+    return '<div class="cols" style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px"><section class="card"><h2>Ports in use per day <span class="c">'+c.connected+' of '+c.total+' now</span></h2>'+(chart||note('One sample a day is kept; the chart appears after the second day.'))
+      +'<div class="sm" style="margin-top:8px">'+(f?(f.days_to_full!=null?'At the current rate (+'+f.per_month+' ports a month) this switch is full in about <b>'+f.days_to_full+' days</b> - from '+f.samples+' daily samples.':'Use is flat or falling ('+f.per_month+' ports a month) - no exhaustion in sight.'):'The forecast needs 7 daily samples.')+'</div>'
+      +'<div class="sm mute">'+c.unused+' port(s) unused for '+m.thresholds.unused_days+'+ days can be reused before buying a switch.</div></section><section class="card"><h2>PoE budget</h2>'+poe+'</section></div>';}
+  function aiView(){var a=S.ai||{};if(!a.enabled)return note('The AI port engineer is off: '+(a.reason||'not configured')+'. Everything else on this page works without it.');if(!can('analyst'))return note('The AI port engineer is for analysts and above.');
+    return '<section class="card"><h2>AI port engineer <span class="c">reads the port map; can propose one change per question, which another person approves</span></h2><div class="row"><input class="inp" id="aq" style="max-width:720px" placeholder="e.g. Which ports on this switch need attention, and why?"><button class="btn pri" type="button" id="ask">Ask</button></div>'
+      +(ANS?'<div class="ans">'+esc(ANS.answer)+'</div>'+(ANS.proposal?'<div class="note" style="margin-top:8px">Proposed change plan '+esc(ANS.proposal.plan)+': '+esc(ANS.proposal.title)+' - waiting for approval by another person (AI Network Engineer → Change plans).</div>':'')+(ANS.injection_signals&&ANS.injection_signals.length?'<div class="note" style="margin-top:8px">Some device text looked like instructions to the AI and was treated as data: '+esc(ANS.injection_signals.join(', '))+'.</div>':''):'')+'</section>';}
+  // ---------- Excel
+  function xls(){if(!M||!M.read)return toast('Open a switch that has been read');var P=ports(),by=ROLE;
+    var sheets=[{name:'Ports',columns:[{h:'Switch',w:18},{h:'Port',w:10},{h:'Interface',w:24},{h:'Status',w:12},{h:'VLAN',w:8},{h:'VLAN name',w:16},{h:'Speed',w:8},{h:'Duplex',w:8},{h:'Description',w:30},{h:'Devices',t:'n'},{h:'Neighbour',w:26},{h:'Util %',t:'n'},{h:'Err/min',t:'n'},{h:'PoE W',t:'n'},{h:'Unused days',t:'n'}],
+        rows:P.map(function(p){return [M.device.name,p.port,p.long,p.status,p.vlan,p.vlan_name,p.speed,p.duplex,p.description,p.mac_count,p.neighbour?p.neighbour.name:'',p.util,p.err_per_min,p.poe?p.poe.watts:null,p.unused_days];})},
+      {name:'Findings',columns:[{h:'Severity',w:10},{h:'Port',w:10},{h:'Finding',w:60},{h:'What it means',w:80}],rows:M.findings.map(function(f){return [f.severity,f.port,f.title,f.detail];})},
+      {name:'Capacity',columns:[{h:'Day',w:12},{h:'Ports in use',t:'n'},{h:'Ports',t:'n'}],rows:M.daily.map(function(x){return [x.day,x.used,x.total];})}];
+    if(M.named)sheets.splice(1,0,{name:'Devices',columns:[{h:'Port',w:10},{h:'MAC',w:16},{h:'Type',w:14},{h:'Confidence',t:'n'},{h:'Typed by',w:30},{h:'Vendor',w:28},{h:'IP',w:16},{h:'Host',w:22},{h:'NAC',w:14},{h:'VLAN',t:'n'}],
+      rows:[].concat.apply([],P.map(function(p){return p.macs.map(function(x){var t=x.type||{};return [p.port,x.mac,t.type||'unknown',t.confidence||null,t.by||'',x.vendor,x.ip,x.host,x.nac,x.vlan];});}))});
+    window.zybXlsx.download('switch-ports-'+M.device.name+'-'+new Date(M.read.at).toISOString().slice(0,10)+'.xlsx',sheets,{title:'Switch port map - '+M.device.name,filter:'read '+new Date(M.read.at).toISOString(),by:by,notes:M.named?'':'Devices on ports are omitted for viewers (PDPL).'});}
+  // ---------- events
+  var tip=$('tip');
+  document.addEventListener('mouseover',function(ev){var g=ev.target.closest&&ev.target.closest('.port');if(!g||!M){tip.hidden=true;return;}var p=ports().find(function(x){return x.port===g.dataset.port;});if(!p)return;
+    tip.innerHTML='<b>'+esc(p.port)+'</b> '+esc(p.status)+' · VLAN '+esc(p.vlan)+'<br>'+esc(p.description||'')+(p.mac_count?'<br>'+p.mac_count+' device(s)'+(p.macs[0]&&p.macs[0].type?' · '+esc(TNAME[p.macs[0].type.type]||''):''):'')+(p.neighbour&&p.neighbour.name?'<br>'+esc(p.neighbour.name):'')+(findingsOf(p.port).length?'<br>'+findingsOf(p.port).length+' finding(s)':'');tip.hidden=false;});
+  document.addEventListener('mousemove',function(ev){if(!tip.hidden){tip.style.left=(ev.clientX+14)+'px';tip.style.top=(ev.clientY+14)+'px';}});
+  document.addEventListener('keydown',function(ev){var g=ev.target.closest&&ev.target.closest('.port');if(g&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();PORT=g.dataset.port;drawSw();}});
+  document.addEventListener('change',function(ev){var s=ev.target;if(s.dataset&&s.dataset.label&&s.value){s.disabled=true;api('POST','/portmap/labels',{mac:s.dataset.label,type:s.value}).then(function(r){toast('Recorded: '+r.mac+' is a '+(TNAME[r.type]||r.type)+' ('+r.confirmed+' confirmed - the model learns from 8)');return loadSw();}).catch(function(e){s.disabled=false;toast(e.message);});}});
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-sw],[data-lens],[data-tab],[data-goport],[data-fix],.port,button[id]');if(!el)return;
+    if(el.dataset.sw){SEL=el.dataset.sw;PORT='';draw();return loadSw();}
+    if(el.dataset.lens){LENS=el.dataset.lens;return drawSw();}
+    if(el.dataset.tab){TAB=el.dataset.tab;return drawSw();}
+    if(el.classList.contains('port')){PORT=PORT===el.dataset.port?'':el.dataset.port;return drawSw();}
+    if(el.dataset.goport){PORT=el.dataset.goport;drawSw();window.scrollTo({top:0,behavior:'smooth'});return;}
+    if(el.dataset.fix){var f=M.findings.find(function(x){return x.id===el.dataset.fix;});if(!f)return;var b={device:M.device.id,port:f.port,type:f.fix.type,reason:f.title};
+      if(f.fix.type==='port-description'){var d=window.prompt('Port description (letters, digits, space _ . : / ( ) # -)',f.fix.description||'');if(d===null)return;b.description=d;}
+      el.disabled=true;return api('POST','/portmap/proposals',b).then(function(r){toast('Change plan '+r.plan+' proposed ('+r.title+') - another person approves it in AI Network Engineer → Change plans');}).catch(function(e){el.disabled=false;toast(e.message);});}
+    var id=el.id;
+    if(id==='refresh')return load();
+    if(id==='xls')return xls();
+    if(id==='readnow'){el.disabled=true;el.textContent='Reading…';return api('POST','/portmap/switch/'+encodeURIComponent(SEL)+'/read').then(function(r){toast('Read '+r.ports+' ports and '+r.macs+' devices');return load();}).catch(function(e){el.disabled=false;el.textContent='Read now';toast(e.message);});}
+    if(id==='fgo'){var q=$('fq').value.trim();if(q.length<3)return toast('Type at least 3 characters');return api('GET','/portmap/find?q='+encodeURIComponent(q)).then(function(r){
+      $('fres').innerHTML=r.results.length?'<table style="margin-top:10px"><thead><tr><th>Switch</th><th>Port</th><th>MAC</th><th>IP</th><th>Host / neighbour</th><th>VLAN</th><th>Read</th></tr></thead><tbody>'+r.results.map(function(x){return '<tr class="rk" data-sw="'+esc(x.device)+'"><td>'+esc(x.switch)+' <span class="sm mute">'+esc(x.site)+'</span></td><td class="mono">'+esc(x.port)+'</td><td class="mono">'+esc(x.mac||'')+'</td><td class="mono">'+esc(x.ip||'')+'</td><td>'+esc(x.host||x.neighbour||'')+'</td><td>'+esc(x.vlan==null?'':x.vlan)+'</td><td class="sm">'+esc(when(x.read_at))+'</td></tr>';}).join('')+'</tbody></table>':note('Not found on any switch read so far.');}).catch(function(e){toast(e.message);});}
+    if(id==='ask'){var aq=$('aq').value.trim();if(aq.length<3)return toast('Type a question');el.disabled=true;el.textContent='Thinking…';return api('POST','/portmap/ai/ask',{question:aq+(M?' (switch: '+M.device.id+')':'')}).then(function(r){ANS=r;drawSw();}).catch(function(e){el.disabled=false;el.textContent='Ask';toast(e.message);});}
+  });
+  req('GET','/dashboards/whoami.json').then(function(w){ROLE=String((w&&w.role)||'viewer').toLowerCase();}).catch(function(){ROLE='viewer';/* no identity: read-only */}).then(load);
+})();
+</script></body></html>

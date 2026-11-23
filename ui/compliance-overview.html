@@ -1,0 +1,67 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Compliance Overview</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-intel.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+#cp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:14px;margin:0 0 14px}@media(max-width:1100px){#cp{grid-template-columns:1fr}}
+.cpc{background:var(--zi-panel,#12151c);border:1px solid var(--zi-line,#232837);border-radius:14px;padding:14px;min-width:0}.cpc h3{margin:0 0 8px;font-size:14px}.cpc h3 span{font-weight:400;font-size:11.5px;color:#8b93a4;margin-left:6px}
+.cpm{color:#8b93a4;font-size:11.5px}.fwr{display:grid;grid-template-columns:150px 1fr 120px 70px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}.fwr:last-child{border:0}
+@media(max-width:700px){.fwr{grid-template-columns:1fr}}.stk{display:flex;height:12px;border-radius:6px;overflow:hidden;background:#232837}.stk i{display:block;height:100%}
+.mx{border-collapse:separate;border-spacing:3px;font-size:11.5px}.mx td,.mx th{text-align:center;padding:0}.mx td{width:46px;height:30px;border-radius:6px;font-weight:700}.mx th{font-weight:400;color:#8b93a4;padding:0 4px}
+.bk{display:grid;grid-template-columns:120px 1fr 60px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}.bk .t{height:9px;border-radius:5px;background:#232837;overflow:hidden}.bk .t i{display:block;height:100%;background:#6b7280}
+.lg span{display:inline-flex;gap:5px;align-items:center;margin-right:10px;font-size:11px;color:#8b93a4}.lg i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.mv{font-size:11px;font-weight:700;border-radius:999px;padding:1px 7px}.mv.up{background:rgba(47,179,68,.18);color:#5fd27a}.mv.dn{background:rgba(229,72,77,.18);color:#ff7b80}
+</style></head><body><main data-zyb-fluid>
+<div class="zi-top"><div><div class="zi-eb">Governance, risk &amp; compliance · executive summary</div><h1>Compliance Overview</h1><div class="zi-m zi-s">Every framework as its register measures it today, the ten work items that close the most, the risks above appetite, and how remediation is being delivered - side by side for management.</div></div><div class="zi-sp"></div><span class="zi-m zi-s" id="zi-asof"></span><button type="button" class="zi-btn" id="zi-refresh">Refresh</button></div>
+<section id="cp" aria-label="Compliance cockpit">
+ <div class="cpc"><h3>Readiness radar<span>fully met per framework · dashed = coverage (assessed share)</span></h3><div id="cp-radar"></div><div class="cpm" id="cp-ov"></div></div>
+ <div class="cpc"><h3>Frameworks<span>share of items fully · partly · not met · not assessed, 30-day movement, daily trend</span></h3><div class="lg"><span><i style="background:#2fb344"></i>fully</span><span><i style="background:#f5b544"></i>partly</span><span><i style="background:#e5484d"></i>not met</span><span><i style="background:#4a5162"></i>not assessed</span></div><div id="cp-fw"></div></div>
+ <div class="cpc"><h3>Shared work<span>open work items two frameworks have in common - one fix, both closed</span></h3><div id="cp-mx" style="overflow-x:auto"></div><div class="cpm" id="cp-mxw"></div></div>
+ <div class="cpc"><h3>Assessment backlog<span>items nobody has assessed yet - unknown, never compliant</span></h3><div id="cp-bk"></div><div class="cpm" id="cp-bkw"></div></div>
+</section>
+<section class="cpc" id="wfcard" hidden style="margin:0 0 14px"><h3>Evidence and requests to the IT teams<span>Workflow Automation - what audit, GRC and the DPO asked the network, server, DBA, security, identity, backup, endpoint and application teams for</span><a href="workflow-automation.html#tab=new" style="float:right;font-size:12px;color:#3987e5">New request</a></h3><div id="wf"></div></section>
+<div class="zi-banner bad" id="zi-err" hidden></div>
+<div id="zi-main" hidden><div class="zi-banner inf" id="zi-notes" hidden></div><div class="zi-card" id="zi-hero"></div><div class="zi-grid" id="zi-secs"></div><div id="zi-set"></div><div id="zi-ai"></div></div>
+<div id="zi-dlg" hidden><div id="zi-dlgb"></div></div>
+</main>
+<script>ZybIntel.mount({"api": "/api/itam", "path": "/overview-intel", "ask": "/overview-intel/ask", "aiTitle": "Board reporting advisor (AI)", "aiHint": "Summarise where we stand for the board, and the three decisions we need."});</script><script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);},E=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var COL={fully:'#2fb344',partially:'#f5b544',not:'#e5484d',not_assessed:'#4a5162'};
+  function spark(S){var p=(S||[]).filter(function(x){return x.value!=null;});if(p.length<2)return '<span class="cpm">trend after 2 days</span>';var w=120,h=26,mn=Math.min.apply(null,p.map(function(x){return x.value;})),mx=Math.max.apply(null,p.map(function(x){return x.value;})),rg=(mx-mn)||1;
+    return '<svg viewBox="0 0 '+w+' '+h+'" width="120" height="26" aria-hidden="true"><path fill="none" stroke="#3987e5" stroke-width="2" d="'+p.map(function(x,i){return (i?'L':'M')+(i*(w-4)/(p.length-1)+2).toFixed(1)+' '+(h-3-(x.value-mn)/rg*(h-6)).toFixed(1);}).join(' ')+'"/></svg>';}
+  function radar(F){var A=F.filter(function(f){return f.available;});if(A.length<3)return '<div class="cpm">The radar needs three installed frameworks.</div>';var cx=150,cy=135,R=105,n=A.length,pt=function(i,v){var a=-Math.PI/2+i*2*Math.PI/n;return [cx+Math.cos(a)*R*v/100,cy+Math.sin(a)*R*v/100];};
+    var g='';[25,50,75,100].forEach(function(l){g+='<polygon fill="none" stroke="rgba(255,255,255,.08)" points="'+A.map(function(f,i){return pt(i,l).join(',');}).join(' ')+'"/>';});
+    A.forEach(function(f,i){var e=pt(i,100),t=pt(i,120);g+='<line x1="'+cx+'" y1="'+cy+'" x2="'+e[0]+'" y2="'+e[1]+'" stroke="rgba(255,255,255,.08)"/><text x="'+t[0]+'" y="'+t[1]+'" fill="#c9d1d9" font-size="11" text-anchor="middle" dominant-baseline="middle">'+E(f.name)+'</text>';});
+    g+='<polygon fill="none" stroke="#8b93a4" stroke-dasharray="4 3" points="'+A.map(function(f,i){return pt(i,f.coverage||0).join(',');}).join(' ')+'"/>';
+    g+='<polygon fill="rgba(57,135,229,.28)" stroke="#3987e5" stroke-width="2" points="'+A.map(function(f,i){return pt(i,f.pct_fully||0).join(',');}).join(' ')+'"/>';
+    A.forEach(function(f,i){var q=pt(i,f.pct_fully||0);g+='<circle cx="'+q[0]+'" cy="'+q[1]+'" r="3.5" fill="#3987e5"><title>'+E(f.name+': '+(f.pct_fully==null?'not assessed':f.pct_fully+' % fully met')+', coverage '+(f.coverage==null?'—':f.coverage+' %'))+'</title></circle>';});
+    return '<svg viewBox="0 0 300 270" style="width:100%;max-width:420px;display:block;margin:auto" role="img" aria-label="Readiness radar">'+g+'</svg>';}
+  function draw(v){var V=v.visual;if(!V){$('cp').hidden=true;return;}
+    $('cp-radar').innerHTML=radar(V.frameworks);var o=V.overall;$('cp-ov').textContent=o.value==null?'Nothing assessed yet - no overall figure.':'Mean fully met: '+o.value+' %'+(o.move_30d!=null?' ('+(o.move_30d>=0?'+':'')+o.move_30d+' in 30 days)':'')+'.';
+    $('cp-fw').innerHTML=V.frameworks.map(function(f){if(!f.available)return '<div class="fwr"><b>'+E(f.name)+'</b><span class="cpm">'+E(f.reason)+'</span><span></span><span></span></div>';
+      var sh=f.shares,mv=f.move_30d==null?'':'<span class="mv '+(f.move_30d>=0?'up':'dn')+'">'+(f.move_30d>=0?'+':'')+E(f.move_30d)+' · 30 d</span>';
+      return '<div class="fwr" data-fw="'+E(f.id)+'"><div><b>'+E(f.name)+'</b><div class="cpm">'+E(f.items)+' items · '+E(f.gaps)+' gap(s) · coverage '+(f.coverage==null?'—':E(f.coverage)+'%')+'</div></div><div><div class="stk" title="'+E('fully '+sh.fully+'% · partly '+sh.partially+'% · not met '+sh.not+'% · not assessed '+sh.not_assessed+'%')+'">'+['fully','partially','not','not_assessed'].map(function(k){return sh[k]?'<i style="width:'+sh[k]+'%;background:'+COL[k]+'"></i>':'';}).join('')+'</div>'+(f.projection?'<div class="cpm" style="margin-top:3px">'+E(f.projection)+'</div>':'')+'</div><div>'+spark(f.series)+'</div><div style="text-align:right"><b style="font-size:16px">'+(f.pct_fully==null?'—':E(f.pct_fully)+'%')+'</b><div>'+mv+'</div></div></div>';}).join('');
+    var X=V.overlap,mx=1;X.matrix.forEach(function(r,i){r.forEach(function(c,j){if(i!==j&&c>mx)mx=c;});});
+    $('cp-mx').innerHTML='<table class="mx"><thead><tr><th></th>'+X.names.map(function(nm){return '<th>'+E(nm)+'</th>';}).join('')+'</tr></thead><tbody>'+X.matrix.map(function(r,i){return '<tr><th style="text-align:right">'+E(X.names[i])+'</th>'+r.map(function(c,j){var d=i===j;return '<td style="background:'+(d?'rgba(255,255,255,.06)':c?'rgba(57,135,229,'+(0.2+0.7*c/mx).toFixed(2)+')':'rgba(255,255,255,.03)')+'" title="'+E(d?X.names[i]+': '+c+' open item(s)':X.names[i]+' + '+X.names[j]+': '+c+' shared item(s)')+'">'+(c||'')+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';
+    $('cp-mxw').textContent=X.items?X.shared_items+' of '+X.items+' open work items close requirements in two or more frameworks - do those first.':'No open work item.';
+    var bm=Math.max.apply(null,[1].concat(V.backlog.map(function(b){return b.unknown;})));
+    $('cp-bk').innerHTML=V.backlog.length?V.backlog.map(function(b){return '<div class="bk"><b>'+E(b.name)+'</b><div class="t"><i style="width:'+(b.unknown/bm*100)+'%"></i></div><span>'+E(b.unknown)+' / '+E(b.items)+'</span></div>';}).join(''):'<div class="cpm">Every item of every installed framework has been assessed.</div>';
+    $('cp-bkw').textContent=V.backlog.length?'Assess '+V.backlog[0].name+' first: '+V.backlog[0].unknown+' item(s) are unknown.':'';}
+  // Workflow Automation (GET /api/itam/workflow/attention): the compliance evidence and requests with the IT teams, as this person sees them
+  (function(){var w=new XMLHttpRequest();w.open('GET','/api/itam/workflow/attention');w.withCredentials=true;w.zybQuiet=true;w.timeout=60000;
+    w.onload=function(){var j=null;try{j=JSON.parse(w.responseText);}catch(e){j=null;/* not JSON: said below */}
+      if(w.status===404){$('wfcard').hidden=true;return;}$('wfcard').hidden=false;
+      if(w.status!==200||!j||!j.summary){$('wf').innerHTML='<div class="cpm">Workflow Automation could not be read'+(j&&j.error?': '+E(j.error):' (HTTP '+w.status+')')+'.</div>';return;}
+      var s=j.summary,P=(j.priorities||[]).map(function(p){return {p:p,pts:p.why.reduce(function(n,q){return n+q[1];},0)};}).sort(function(a,b){return b.pts-a.pts;});
+      var done=s.teams.reduce(function(n,x){return n+x.n;},0),ont=s.teams.reduce(function(n,x){return n+x.on_time;},0);
+      var t=function(v,l,c){return '<div style="min-width:120px"><div style="font-size:20px;font-weight:700;color:'+(c||'inherit')+'">'+E(v)+'</div><div class="cpm">'+E(l)+'</div></div>';};
+      var h='<div style="display:flex;gap:18px;flex-wrap:wrap;margin:4px 0 10px">'+t(s.raised_open,'open with the IT teams')+t(s.raised_late,'late with the IT teams',s.raised_late?'#ff7b80':'')+t(s.to_accept,'results for you to accept',s.to_accept?'#f5b544':'')+t(s.approvals,'waiting for your approval',s.approvals?'#f5b544':'')+t(s.all_overdue,'overdue across the IT teams',s.all_overdue?'#ff7b80':'#5fd27a')+t(done?Math.round(ont/done*100)+' %':'—',done?'IT teams on time ('+ont+' of '+done+')':'on time - no history yet')+'</div>';
+      h+=P.length?P.slice(0,8).map(function(x){return '<a href="'+E(x.p.page)+'" style="display:flex;gap:10px;padding:6px 0;border-top:1px solid rgba(255,255,255,.05);color:inherit;text-decoration:none"><span class="mv '+(x.pts>=45?'dn':'')+'" style="'+(x.pts>=45?'':'background:rgba(245,181,68,.16);color:#f5b544')+'">'+E(x.pts)+'</span><span style="font-size:12.5px"><b>'+E(x.p.ref)+'</b> '+E(x.p.text)+'<span class="cpm" style="display:block">'+E(x.p.kind)+' · '+E(x.p.why.map(function(q){return q[0]+' +'+q[1];}).join(', '))+'</span></span></a>';}).join('')
+        :'<div class="cpm">Nothing late or waiting for you.'+(['audit','grc','dpo'].some(function(f){return s.functions.indexOf(f)>=0;})?'':' You are not listed under Audit, GRC &amp; compliance or the DPO in Workflow Automation → Settings, so only your own requests count.')+'</div>';
+      $('wf').innerHTML=h;};
+    w.onerror=w.ontimeout=function(){$('wfcard').hidden=false;$('wf').innerHTML='<div class="cpm">Workflow Automation did not answer.</div>';};w.send();})();
+  var x=new XMLHttpRequest();x.open('GET','/api/itam/overview-intel');x.withCredentials=true;x.zybQuiet=true;x.timeout=60000;
+  x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: the page's own error banner explains */}if(x.status===200&&j)draw(j);else $('cp').hidden=true;};
+  x.onerror=x.ontimeout=function(){$('cp').hidden=true;/* unreachable: the page's own error banner explains */};x.send();
+})();
+</script></body></html>

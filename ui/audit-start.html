@@ -1,0 +1,237 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Start an Audit</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:20px;font-weight:700;margin-top:3px}.t .s{font-size:11.5px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button:disabled{opacity:.5;cursor:default}
+button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button.dang{color:var(--bad)}button.sm{padding:4px 9px;font-size:12px}
+input,select,textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px}textarea{width:100%;min-height:70px;resize:vertical}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+tr[data-id]{cursor:pointer}tr[data-id]:hover td{background:rgba(255,255,255,.03)}
+.tw{overflow-x:auto;max-height:560px;overflow-y:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;border:1px solid var(--edge);color:var(--mute);margin:2px 4px 2px 0;white-space:nowrap}
+.s-open,.s-in_progress{color:var(--info);border-color:rgba(121,184,255,.45)}.s-awaiting_approval,.s-returned,.s-fulfilled{color:var(--warn);border-color:rgba(227,179,65,.45)}.s-closed{color:var(--ok);border-color:rgba(63,185,80,.45)}.s-rejected,.s-cancelled{color:var(--mute)}.late{color:var(--bad);border-color:rgba(255,123,114,.45)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button[aria-selected="true"]{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.cat{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.ci{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px;cursor:pointer;text-align:left;font-weight:400}.ci:hover,.ci.sel{border-color:#1f6feb}.ci b{display:block;color:var(--title);margin-bottom:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+label.f{display:block;font-size:12px;color:var(--mute);margin-top:8px}label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:3px}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--panel);border-left:1px solid var(--edge);box-shadow:-20px 0 60px rgba(0,0,0,.5);z-index:80;overflow:auto;padding:16px;display:none}.drawer.open{display:block}
+.drawer h3{margin:0 0 6px;color:var(--title);font-size:17px}.drawer h4{margin:14px 0 6px;font-size:13px;color:var(--title)}
+dl.kv{display:grid;grid-template-columns:140px 1fr;gap:4px 10px;margin:0;font-size:13px}dl.kv dt{color:var(--mute)}dl.kv dd{margin:0}
+.hist{font-size:12px;color:var(--mute);border-left:2px solid var(--edge);padding-left:10px}.hist div{margin:3px 0}
+.pre{white-space:pre-wrap;background:var(--raise);border:1px solid var(--edge);border-radius:8px;padding:8px 10px;font-size:13px}
+.dlg-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:90}.dlg-bg.open{display:flex}
+.dlg{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;max-width:560px;width:calc(100% - 32px);max-height:90vh;overflow:auto}.dlg h3{margin:0 0 10px;color:#fff;font-size:16px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.okb{border:1px solid rgba(63,185,80,.45);background:rgba(63,185,80,.07);border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:13px}
+.wiz{display:grid;grid-template-columns:270px minmax(0,1fr);gap:14px}@media(max-width:900px){.wiz{grid-template-columns:1fr}}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.steps button{width:100%;text-align:left;display:flex;gap:10px;align-items:flex-start;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:9px 10px;font-weight:500}
+.steps button[aria-current="step"]{border-color:#1f6feb;box-shadow:0 0 0 1px #1f6feb inset}
+.steps .n{flex:0 0 24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:#2a2f3a;color:var(--mute)}
+.steps .done .n{background:rgba(63,185,80,.2);color:var(--ok)}.steps .now .n{background:#1f6feb;color:#fff}
+.steps .t1{display:block;color:var(--title);font-size:13px}.steps .t2{display:block;font-size:11.5px;color:var(--mute);margin-top:2px}
+.teams{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}.teams button[aria-pressed="true"]{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.block{border:1px solid rgba(227,179,65,.45);background:rgba(227,179,65,.07);border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:13px}
+.gd{border-left:3px solid #1f6feb;padding:2px 0 2px 10px;margin:0 0 10px;color:var(--mute);font-size:13px}
+.res button{margin-right:4px}.res button.on{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.sugg{font-size:11.5px;color:var(--mute)}.sugg b{color:var(--text)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Audit · guided · plan → engagement → fieldwork → findings → report</div><h1>Start an Audit</h1></div><span class="sp" style="flex:1"></span><span class="muted" id="me"></span><button type="button" id="refresh">↻ Refresh</button></div>
+<div class="okb">A step-by-step path through a complete audit on the platform's audit engine: set up the team, approve the plan, open the engagement, test real records, write workpapers and findings, and sign and approve the report. Every step shows what is done and, when something blocks it, exactly why. The AI may suggest and draft; a named person decides every step, and every action is in the audit trail.</div>
+<div class="teams" role="group" aria-label="Audit team"><button type="button" data-team="ia" aria-pressed="true">IT Audit</button><button type="button" data-team="csa" aria-pressed="false">Cyber Security Audit (NCA ECC / SAMA CSF)</button><button type="button" data-team="iad" aria-pressed="false">Internal Audit (business processes)</button></div>
+<div class="wiz"><ol class="steps" id="steps"></ol><section id="panel"></section></div>
+</main>
+<div class="dlg-bg" id="dlgbg" role="dialog" aria-modal="true" aria-labelledby="dlgt"><div class="dlg"><h3 id="dlgt"></h3><div id="dlgb"></div><div class="bar" style="margin-top:12px;justify-content:flex-end"><button type="button" id="dlgno">Cancel</button><button type="button" class="pri" id="dlgok">OK</button></div></div></div>
+<script>
+(function(){'use strict';
+  var $=function(i){return document.getElementById(i);},esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,u);x.withCredentials=true;x.timeout=90000;x.zybQuiet=true;if(b!==undefined)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: the status explains */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||j.message))||('HTTP '+x.status)),{status:x.status}));};x.onerror=function(){bad(Object.assign(new Error('the server did not answer'),{status:0}));};x.ontimeout=x.onerror;x.send(b===undefined?null:JSON.stringify(b));});}
+  var TEAM='ia',api=function(m,p,b){return req(m,'/api/itam/'+TEAM+p,b);};
+  function toast(m){var t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove();},5000);}
+  var DLG=null;function ask(t,h,lab,fn){DLG=fn;$('dlgt').textContent=t;$('dlgb').innerHTML=h;$('dlgok').textContent=lab;$('dlgbg').classList.add('open');setTimeout(function(){var f=$('dlgb').querySelector('input,select,textarea');(f||$('dlgok')).focus();},30);}
+  $('dlgno').addEventListener('click',function(){$('dlgbg').classList.remove('open');DLG=null;});
+  $('dlgok').addEventListener('click',function(){var f=DLG;if(!f)return;if(f()===false)return;$('dlgbg').classList.remove('open');DLG=null;});
+  var fld=function(id,label,type,extra,val){return '<label class="f">'+esc(label)+(type==='textarea'?'<textarea id="'+id+'" maxlength="6000">'+esc(val||'')+'</textarea>':type==='select'?'<select id="'+id+'">'+extra+'</select>':'<input id="'+id+'" type="'+(type||'text')+'"'+(extra||'')+' value="'+esc(val||'')+'">')+'</label>';};
+  var val=function(id){var e=$(id);return e?String(e.value||'').trim():'';};
+  var when=function(x){return x?String(x).replace('T',' ').slice(0,16):'—';};
+  var st=function(s){return '<span class="pill s-'+esc(s)+'">'+esc(String(s).replace(/_/g,' '))+'</span>';};
+  var table=function(h,rows,none){return rows.length?'<div class="tw"><table><thead><tr>'+h.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':'<div class="empty">'+esc(none)+'</div>';};
+  // one POST helper: the refusal is shown to the auditor (the engine says why), then everything is re-read
+  function act(p,b,msg){return api('POST',p,b).then(function(r){toast(msg||'Done');return load().then(function(){return r;});},function(e){toast('Not done: '+e.message);return null; /* the reason is shown; nothing waits on it */});}
+
+  var S={me:'',profile:null,plans:[],engs:[],eng:null,areas:[],pops:[],ai:null,report:null,step:1,engId:null,err:null};
+  var YEAR=new Date().getUTCFullYear();
+  function load(){S.err=null;
+    return Promise.all([api('GET','/profile').catch(function(e){return {__e:e};}),api('GET','/plans').catch(function(){return [];}),api('GET','/engagements').catch(function(){return [];}),api('GET','/areas').catch(function(){return [];}),api('GET','/populations').catch(function(){return [];}),api('GET','/ai/status').catch(function(){return null;})])
+      .then(function(r){if(r[0]&&r[0].__e){S.err=r[0].__e;S.profile=null;}else S.profile=r[0];S.plans=r[1]||[];S.engs=r[2]||[];S.areas=r[3]||[];S.pops=r[4]||[];S.ai=r[5];
+        if(!S.engId){var open=S.engs.filter(function(e){return ['planning','fieldwork','draft_report'].indexOf(e.state)>=0;});if(open.length)S.engId=open[0].id;}
+        if(!S.engId)return null;return Promise.all([api('GET','/engagements/'+encodeURIComponent(S.engId)),api('GET','/engagements/'+encodeURIComponent(S.engId)+'/report').catch(function(){return null;})]).then(function(x){S.eng=x[0];S.report=x[1];},function(){S.eng=null;S.report=null;S.engId=null;});})
+      .then(function(){if(!S.engId){S.eng=null;S.report=null;}draw();});}
+
+  // ---------- step status (done / what blocks it)
+  function status(){var P=S.profile,E=S.eng,plan=S.plans.filter(function(p){return p.year===YEAR;})[0];
+    var items=E?[].concat.apply([],(E.samples||[]).map(function(s){return s.items;})):[],open=items.filter(function(i){return !i.result;});
+    var wp=E?E.workpapers||[]:[],fin=E?E.findings||[]:[],R=S.report||{},ix=E?['planning','fieldwork','draft_report','final'].indexOf(E.state):-1;
+    return [
+      {t:'Audit team',d:P&&P.head_of_audit&&(P.auditors||[]).length?'Head of Audit '+P.head_of_audit+' · '+P.auditors.length+' auditor(s)':'Head of Audit and auditors not set',done:!!(P&&P.head_of_audit&&(P.auditors||[]).length)},
+      {t:'Annual audit plan',d:plan?YEAR+' plan '+plan.state.replace(/_/g,' '):'no '+YEAR+' plan yet (recommended, not required)',done:!!(plan&&plan.state==='approved'),optional:true},
+      {t:'Open the engagement',d:E?E.id+' · '+E.title:'no engagement chosen',done:!!E},
+      {t:'Previous reports · fieldwork',d:E?(ix>=1?'fieldwork started '+when(E.fieldwork_at):E.prior_ok?'previous report on file - start fieldwork':'upload the previous audit report'):'—',done:ix>=1},
+      {t:'Test samples',d:E?(E.samples||[]).length+' sample(s) · '+(items.length-open.length)+' / '+items.length+' item(s) concluded':'—',done:!!E&&(E.samples||[]).length>0&&!open.length},
+      {t:'Workpapers',d:E?wp.length+' workpaper(s) · '+wp.filter(function(w){return w.state==='reviewed';}).length+' reviewed':'—',done:!!E&&wp.length>0&&wp.every(function(w){return w.state==='reviewed';})},
+      {t:'Findings',d:E?fin.length+' finding(s) · '+fin.filter(function(f){return f.state==='draft';}).length+' still draft':'—',done:!!E&&ix>=1&&!fin.some(function(f){return f.state==='draft';}),optional:true},
+      {t:'Report: sign and approve',d:E?(E.state==='final'?'final - approved':R.signed_by?'signed by '+R.signed_by+' - waiting for the Head of Audit':ix===2?'report being drafted':'after fieldwork'):'—',done:!!E&&E.state==='final'}];}
+  function draw(){var L=status();if(!S.step){S.step=1;}
+    $('steps').innerHTML=L.map(function(s,i){var n=i+1,cls=s.done?'done':(n===S.step?'now':'');return '<li class="'+cls+'"><button type="button" data-step="'+n+'"'+(n===S.step?' aria-current="step"':'')+'><span class="n">'+(s.done?'✓':n)+'</span><span><span class="t1">'+esc(s.t)+(s.optional?' <span class="muted" style="font-weight:400">(optional)</span>':'')+'</span><span class="t2">'+esc(s.d)+'</span></span></button></li>';}).join('');
+    var h=S.err?'<div class="block">'+esc(S.err.status===403?'Audit records name people and weaknesses: they open for operators and administrators only (PDPL). Ask an administrator for the operator role in Identity & Sign-in → Users.':S.err.status===404?'The audit engine is not installed on this server - run the update.':S.err.message)+'</div>':'';
+    $('panel').innerHTML=h+(S.err?'':[p1,p2,p3,p4,p5,p6,p7,p8][S.step-1](L));
+    var nx=$('nextstep');if(nx)nx.hidden=!L[S.step-1].done&&!L[S.step-1].optional;}
+  var next=function(lbl){return '<div class="bar" style="margin-top:12px"><button type="button" class="pri" id="nextstep" data-go="'+(S.step+1)+'">'+esc(lbl||'Next step →')+'</button></div>';};
+  var card=function(t,c,h){return '<div class="card"><h2 style="margin:0'+(h?' 0 10px':'')+'">'+esc(t)+(c?' <span class="muted" style="font-weight:400;font-size:12px">'+esc(c)+'</span>':'')+'</h2>'+(h||'')+'</div>';};
+  var needEng=function(){return '<div class="block">Open or choose an engagement first (step 3).</div><div class="bar"><button type="button" data-step="3">Go to step 3</button></div>';};
+  var eid=function(){return '/engagements/'+encodeURIComponent(S.eng.id);};
+
+  // 1 team
+  function p1(L){var P=S.profile||{};
+    return card('1 · Audit team','an administrator names them once')+'<div class="gd">The Head of Audit approves the plan, reviews work and approves the report; it must be a different person from whoever prepares them. Auditors are the people who may lead or work an engagement. Accounts themselves are created in Identity & Sign-in → Users (operator role).</div>'
+      +'<div class="card">'+fld('p-head','Head of Audit (user name)','text','',P.head_of_audit)+fld('p-aud','Auditors (user names, comma separated)','text','',(P.auditors||[]).join(', '))+fld('p-n','Engagements per year','number',' min="1" max="50"',P.engagements_per_year||4)
+      +'<div class="bar" style="margin-top:10px"><button type="button" class="pri" id="p-save">Save the team</button><span class="muted">administrators only</span></div></div>'+(L[0].done?next():'');}
+  // 2 plan
+  function p2(){var plan=S.plans.filter(function(p){return p.year===YEAR;})[0];var h=card('2 · Annual audit plan '+YEAR,'risk-based, every score explained · approved by the Head of Audit');
+    h+='<div class="gd">The AI proposes the plan from the audit universe, the risk register, failed control tests, NCA ECC gaps, overdue findings and when each area was last audited. You choose what is included; the Head of Audit approves it (never the person who prepared it). You may also start an engagement without a plan.</div>';
+    if(!plan)h+='<div class="bar"><button type="button" class="pri" data-pa="propose">Propose the '+YEAR+' plan</button></div>';
+    else{h+='<div class="bar">'+st(plan.state)+' <span class="muted">prepared by '+esc(plan.prepared_by||'—')+'</span>'+(plan.state==='draft'?'<button type="button" data-pa="propose">Re-propose</button><button type="button" class="pri" data-pa="submit">Submit to the Head of Audit</button>':'')+(plan.state==='submitted'?'<button type="button" class="pri" data-pa="approve">Approve</button><button type="button" class="dang" data-pa="reject">Reject…</button>':'')+'</div>';
+      h+=table(['Area','Score','Why','Included','Quarter','Days'],(plan.items||[]).slice().sort(function(a,b){return b.score-a.score;}).map(function(i){return '<tr><td><b>'+esc(i.name)+'</b></td><td>'+esc(i.score)+' <span class="pill">'+esc(i.band)+'</span></td><td class="sugg">'+(i.why||[]).map(function(w){return '+'+esc(w.points)+' '+esc(w.text);}).join('<br>')+'</td><td>'+(i.include?'✓':'')+'</td><td>'+esc(i.quarter||'')+'</td><td>'+esc(i.days||'')+'</td></tr>';}),'No areas.');}
+    return h+next(plan&&plan.state==='approved'?'Next: open the engagement →':'Skip to the engagement →');}
+  // 3 engagement
+  function p3(){var A=S.areas,P=S.profile||{},plan=S.plans.filter(function(p){return p.year===YEAR&&p.state==='approved';})[0];
+    var list=table(['Engagement','Area','State','Lead','Report due',''],S.engs.map(function(e){return '<tr><td><b>'+esc(e.title)+'</b><div class="sugg">'+esc(e.id)+'</div></td><td>'+esc(e.area_name||e.area)+'</td><td>'+st(e.state)+'</td><td>'+esc(e.lead)+'</td><td>'+esc(e.report_due)+'</td><td>'+(S.engId===e.id?'<b>working on this</b>':'<button type="button" class="sm" data-pick="'+esc(e.id)+'">Work on this</button>')+'</td></tr>';}),'No engagements yet - open one below.');
+    var aud=(P.auditors||[]);
+    var form='<div class="grid2"><div>'+fld('e-title','Title','text',' maxlength="200" placeholder="Leavers access removal 2026"')+fld('e-area','Audit area','select',A.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>';}).join(''))
+      +(plan?fld('e-plan','From the approved '+YEAR+' plan (optional)','select','<option value="">— not from the plan —</option>'+(plan.items||[]).filter(function(i){return i.include;}).map(function(i){return '<option value="'+esc(plan.id+':'+i.area)+'">'+esc(i.name+' ('+(i.quarter||'')+')')+'</option>';}).join('')):'')
+      +fld('e-dept','Department being audited')+fld('e-owner','Owner in that department (user name) - never on the audit team')+fld('e-lead','Lead auditor','select',aud.map(function(u){return '<option>'+esc(u)+'</option>';}).join(''))
+      +'<label class="f">Team (other auditors)<span style="display:block;margin-top:4px">'+aud.map(function(u){return '<label style="display:inline-flex;gap:4px;margin-right:12px;color:var(--text)"><input type="checkbox" data-team-m="'+esc(u)+'" style="width:auto">'+esc(u)+'</label>';}).join('')+'</span></label></div><div>'
+      +fld('e-obj','Objectives (one per line)','textarea')+fld('e-scope','Scope','textarea')+fld('e-crit','Criteria (policy, NCA ECC / SAMA CSF control, ISO clause…)','textarea')
+      +'<div class="grid2">'+fld('e-start','Start','date')+fld('e-fw','Fieldwork ends','date')+'</div>'+fld('e-due','Report due','date')+'</div></div><div class="bar" style="margin-top:10px"><button type="button" class="pri" id="e-create">Open the engagement</button></div>';
+    return card('3 · Engagement','what is audited, by whom, against what, by when')+'<div class="gd">The lead must be one of the named auditors; the owner of the audited area can never be on the team (independence). Objectives and scope are needed before fieldwork can start.</div>'+card('Engagements','',list)+(aud.length?card('Open a new engagement','',form):'<div class="block">Name the auditors in step 1 first.</div>')+(S.eng?next():'');}
+  // 4 fieldwork
+  function p4(){if(!S.eng)return needEng();var E=S.eng;
+    return card('4 · Start fieldwork',E.id+' · '+E.title)+'<dl class="kv"><dt>Area</dt><dd>'+esc(E.area_name||E.area)+'</dd><dt>Audited</dt><dd>'+esc(E.auditee_dept)+' · owner '+esc(E.auditee_owner)+'</dd><dt>Lead / team</dt><dd>'+esc(E.lead)+(E.team.length?' · '+esc(E.team.join(', ')):'')+'</dd><dt>Objectives</dt><dd>'+esc((E.objectives||[]).join(' · ')||'—')+'</dd><dt>Scope</dt><dd>'+esc(E.scope||'—')+'</dd><dt>Criteria</dt><dd>'+esc(E.criteria||'—')+'</dd><dt>Dates</dt><dd>'+esc(E.start+' → fieldwork ends '+E.fieldwork_end+' → report due '+E.report_due)+'</dd><dt>State</dt><dd>'+st(E.state)+(E.overdue?' <span class="pill late">overdue</span>':'')+'</dd></dl>'
+      +priorH(E)
+      +(E.state==='planning'?'<div class="gd" style="margin-top:10px">Starting fieldwork records the date; samples are drawn and tested from then on. Only the lead (or the Head of Audit) starts it'+(E.prior_ok?'.':', once the previous audit report is on file (or there was none).')+'</div><div class="bar"><button type="button" class="pri" id="adv-fw"'+(E.prior_ok?'':' disabled')+'>Start fieldwork</button></div>':next());}
+  // previous audit reports of the area and the follow-up of their open findings
+  var SRC={internal:'internal audit',external:'external auditor',regulator:'regulator'},FUL={resolved:'resolved',repeat:'repeat finding',not_tested:'not tested'};
+  function priorH(E){var P=E.prior||[],h='<div class="card" id="prior"><h3 style="margin:0 0 6px">Previous audit reports · '+esc(E.area_name||E.area)+'</h3>';
+    if(P.length)h+=table(['Report','Date','By','Opinion','Findings',''],P.map(function(r){return '<tr><td>'+esc(r.title)+'<div class="muted">'+esc(r.id+' · '+r.filename)+'</div></td><td>'+esc(r.report_date)+'</td><td>'+esc(SRC[r.source]||r.source)+(r.auditor?'<div class="muted">'+esc(r.auditor)+'</div>':'')+'</td><td>'+esc(r.opinion||'—')+'</td><td>'+esc(r.findings)+(r.open_findings?' <span class="pill late">'+esc(r.open_findings)+' open</span>':'')+'</td><td><button type="button" class="sm" data-pdl="'+esc(r.id)+'">Download</button></td></tr>';}),'');
+    else if(E.prior_none)h+='<div class="okb">No previous audit of this area - recorded by '+esc(E.prior_none.by)+' '+esc(when(E.prior_none.at))+': '+esc(E.prior_none.note)+'</div>';
+    else h+='<div class="block">An audit starts from what the last audit found. Upload the previous audit report of this area (internal, external or the regulator\'s) - or, if this area was never audited, record that.</div>';
+    if(E.state==='planning'||E.state==='fieldwork')h+='<details'+(P.length||E.prior_none?'':' open')+' style="margin-top:8px"><summary>Upload a previous audit report</summary><div class="grid2">'+fld('pr-title','Report title','text',' maxlength="200"')+fld('pr-year','Audit year','number',' min="2000" max="2100"',String(YEAR-1))+fld('pr-date','Report date','date')
+      +fld('pr-src','Audited by','select','<option value="internal">Internal audit</option><option value="external">External auditor</option><option value="regulator">Regulator (SAMA / IA / NCA)</option>')+fld('pr-aud','Auditor / firm (optional)','text',' maxlength="120"')+fld('pr-op','Overall opinion (optional)','text',' maxlength="200"')
+      +fld('pr-file','The report (.pdf .docx .doc .xlsx .csv)','file',' accept=".pdf,.docx,.doc,.xlsx,.csv"')+fld('pr-ff','Its findings list (optional .xlsx / .csv)','file',' accept=".xlsx,.csv"')+'</div><p class="muted" style="font-size:12px">The findings are read from the report when it is a spreadsheet, else from the findings list: columns named like Ref, Finding / Observation, Rating, Status, Recommendation, Owner, Due. Open findings must be followed up in this audit. The file is kept on the server only.</p><div class="bar"><button type="button" class="pri" id="pr-up">Upload</button>'
+      +(!P.length&&!E.prior_none&&E.state==='planning'?'<button type="button" id="pr-none">No previous audit of this area</button>':'')+'</div></details>';
+    var F=E.follow_up||[];if(F.length){var left=F.filter(function(x){return !x.result;}).length;
+      h+='<h3 style="margin:12px 0 6px">Follow-up of the previous findings <span class="muted" style="font-weight:400">'+(left?esc(left)+' to do - needed before the report':'all followed up')+'</span></h3>'+table(['Ref','Finding','Rating','Then','Result',''],F.map(function(x){return '<tr><td class="mono">'+esc(x.ref)+'</td><td>'+esc(x.title)+(x.recommendation?'<div class="muted">'+esc(x.recommendation)+'</div>':'')+'</td><td>'+esc(x.rating||'—')+'</td><td>'+esc(x.status_then)+'</td><td>'+(x.result?st(FUL[x.result]||x.result)+'<div class="muted">'+esc(x.by)+(x.note?': '+esc(x.note):'')+'</div>':'<span class="muted">—</span>')+'</td><td>'+(E.state==='fieldwork'||E.state==='draft_report'?['resolved','repeat','not_tested'].map(function(r){return '<button type="button" class="sm" data-fu="'+esc(x.key)+'" data-fur="'+r+'">'+esc(FUL[r])+'</button>';}).join(' '):'')+'</td></tr>';}),'');}
+    return h+'</div>';}
+  function b64f(f){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'');};r.onerror=function(){bad(new Error('the file could not be read'));};r.readAsDataURL(f);});}
+  // 5 sampling
+  function p5(){if(!S.eng)return needEng();var E=S.eng;if(E.state==='planning')return '<div class="block">Start fieldwork first (step 4).</div><div class="bar"><button type="button" data-step="4">Go to step 4</button></div>';
+    var mine=S.pops.filter(function(p){return p.area===E.area;}),others=S.pops.filter(function(p){return p.area!==E.area;});
+    var opt=function(p){return '<option value="'+esc(p.id)+'">'+esc(p.name+' - '+p.size+' record(s)')+'</option>';};
+    var h=card('5 · Test samples','drawn from real records · the seed is kept so anyone can re-draw the same sample')+'<div class="gd">Pick the population, draw a random sample, then conclude every item: pass, exception or not applicable. The platform runs its automated tests on each item as a <b>suggestion</b> - you decide.</div>';
+    if(E.state==='fieldwork')h+='<div class="card"><div class="grid2"><div>'+fld('s-pop','Population','select',(mine.length?'<optgroup label="For this area">'+mine.map(opt).join('')+'</optgroup>':'')+(others.length?'<optgroup label="Other">'+others.map(opt).join('')+'</optgroup>':''))+fld('s-size','Sample size','number',' min="1" max="60"','10')+'</div><div>'+fld('s-from','Records from (optional)','date')+fld('s-to','Records to (optional)','date')+'</div></div><div class="bar" style="margin-top:10px"><button type="button" class="pri" id="s-draw">Draw the sample</button></div></div>';
+    (E.samples||[]).forEach(function(s){var open=s.items.filter(function(i){return !i.result;}).length;
+      h+=card(s.id+' · '+s.population_name,s.size+' of '+s.population_size+' · '+s.method+' · seed '+s.seed+' · '+(open?open+' to conclude':'all concluded'),table(['Record','Suggested by the platform','Your conclusion'],s.items.map(function(i){
+        return '<tr><td><b>'+esc(i.label||i.ref)+'</b><div class="sugg">'+esc(i.ref)+'</div></td><td class="sugg">'+(i.suggested||[]).map(function(x){return (x.ok===true?'<span style="color:var(--ok)">✓</span> ':x.ok===false?'<span style="color:var(--bad)">✗</span> ':'? ')+'<b>'+esc(x.test)+'</b>';}).join('<br>')+'</td><td class="res">'
+          +(E.state==='fieldwork'?['pass','exception','na'].map(function(r){return '<button type="button" class="sm'+(i.result===r?' on':'')+'" data-res="'+r+'" data-s="'+esc(s.id)+'" data-ref="'+esc(i.ref)+'">'+(r==='na'?'n/a':r)+'</button>';}).join(''):st(i.result||'open'))+(i.note?'<div class="sugg">'+esc(i.note)+'</div>':'')+(i.by?'<div class="sugg">'+esc(i.by)+'</div>':'')+'</td></tr>';}),'Empty sample.'));});
+    return h+next();}
+  // 6 workpapers
+  function p6(){if(!S.eng)return needEng();var E=S.eng,w=E.workpapers||[];
+    var h=card('6 · Workpapers','procedure → conclusion → independent review')+'<div class="gd">A workpaper records a test procedure, the sample it used and your conclusion. The lead or the Head of Audit reviews it - never the person who prepared it. Every workpaper must be reviewed before the report.</div>';
+    if(['planning','fieldwork'].indexOf(E.state)>=0)h+='<div class="card">'+fld('w-title','Title','text',' maxlength="200" placeholder="Leaver accounts disabled on the last day"')+fld('w-obj','Objective','textarea')+fld('w-proc','Procedure performed','textarea')+fld('w-smp','Sample used (optional)','select','<option value="">— none —</option>'+(E.samples||[]).map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.id+' · '+s.population_name)+'</option>';}).join(''))+'<div class="bar" style="margin-top:10px"><button type="button" class="pri" id="w-add">Add workpaper</button></div></div>';
+    h+=table(['Workpaper','State','Conclusion','Prepared / reviewed',''],w.map(function(x){var b='';
+      if(x.state==='open'||x.state==='draft'||x.state==='returned')b='<button type="button" class="sm pri" data-wc="'+esc(x.id)+'">Conclude…</button>';
+      if(x.state==='concluded')b='<button type="button" class="sm pri" data-wr="accept" data-id="'+esc(x.id)+'">Accept review</button> <button type="button" class="sm" data-wr="return" data-id="'+esc(x.id)+'">Return…</button>';
+      return '<tr><td><b>'+esc(x.title)+'</b><div class="sugg">'+esc(x.id)+(x.sample?' · '+esc(x.sample):'')+'</div></td><td>'+st(x.state)+'</td><td>'+esc(x.conclusion?x.conclusion.replace(/_/g,' '):'—')+(x.summary?'<div class="sugg">'+esc(x.summary)+'</div>':'')+'</td><td class="sugg">'+esc(x.prepared_by)+(x.reviewed_by?' · reviewed by '+esc(x.reviewed_by):'')+'</td><td>'+b+'</td></tr>';}),'No workpapers yet.');
+    return h+next();}
+  // 7 findings
+  function p7(){if(!S.eng)return needEng();var E=S.eng,f=E.findings||[],ex=[];(E.samples||[]).forEach(function(s){s.items.forEach(function(i){if(i.result==='exception')ex.push({ref:s.id+'/'+i.ref,label:i.label||i.ref});});});
+    var h=card('7 · Findings','condition · criteria · cause · effect · recommendation')+'<div class="gd">Raise a finding for each weakness - the sample exceptions are listed to link. Each finding goes to the owner in the audited department (never an auditor), who answers with an action plan. Draft findings must be issued or withdrawn before the report is signed.</div>';
+    if(['fieldwork','draft_report'].indexOf(E.state)>=0)h+='<div class="card"><div class="grid2"><div>'+fld('f-title','Title','text',' maxlength="200"')+fld('f-cond','Condition (what was found)','textarea')+fld('f-crit','Criteria (what should be)','textarea',null,E.criteria)+fld('f-cause','Cause','textarea')+'</div><div>'+fld('f-eff','Effect (the risk)','textarea')+fld('f-rec','Recommendation','textarea')+fld('f-rate','Rating','select','<option>high</option><option selected>medium</option><option>low</option>')+fld('f-owner','Owner (user name, audited department)','text','',E.auditee_owner)
+      +(ex.length?'<label class="f">Sample exceptions it covers<span style="display:block;margin-top:4px">'+ex.map(function(x){return '<label style="display:flex;gap:6px;color:var(--text)"><input type="checkbox" data-fx="'+esc(x.ref)+'" style="width:auto">'+esc(x.label)+' <span class="sugg">'+esc(x.ref)+'</span></label>';}).join('')+'</span></label>':'')+'</div></div><div class="bar" style="margin-top:10px"><button type="button" class="pri" id="f-add">Raise the finding</button></div></div>';
+    h+=table(['Finding','Rating','State','Owner',''],f.map(function(x){return '<tr><td><b>'+esc(x.title)+'</b><div class="sugg">'+esc(x.id)+'</div></td><td>'+esc(x.rating)+'</td><td>'+st(x.state)+'</td><td>'+esc(x.owner)+'</td><td>'+(x.state==='draft'?'<button type="button" class="sm pri" data-fi="issue" data-id="'+esc(x.id)+'">Issue</button> <button type="button" class="sm" data-fi="withdraw" data-id="'+esc(x.id)+'">Withdraw</button>':'')+'</td></tr>';}),'No findings - fine if the controls worked.');
+    return h+next();}
+  // 8 report
+  function p8(){if(!S.eng)return needEng();var E=S.eng,R=S.report||{};
+    var h=card('8 · Report','assembled from the records · signed by the lead · approved by the Head of Audit');
+    if(E.state==='fieldwork')h+='<div class="gd">Moving to the report needs at least one workpaper, every workpaper reviewed and every sample item concluded. If anything is missing the engine says exactly what.</div><div class="bar"><button type="button" class="pri" id="adv-rep">Finish fieldwork - draft the report</button></div>';
+    if(E.state==='planning')h+='<div class="block">Fieldwork has not started (step 4).</div>';
+    if(E.state==='draft_report'){h+='<div class="gd">A person writes the executive summary (the AI may draft it; the draft stays marked as the AI\'s until you save it as yours). Then the lead signs, and the Head of Audit approves - the report is then final, frozen and hashed.</div>'
+      +fld('r-sum','Executive summary','textarea',null,R.executive_summary||'')+'<div class="bar" style="margin-top:8px"><button type="button" class="pri" id="r-save">Save summary</button>'+(S.ai&&S.ai.enabled?'<button type="button" id="r-ai">AI: draft a summary</button>':'<span class="sugg">'+esc(S.ai&&S.ai.reason?'AI draft unavailable: '+S.ai.reason:'')+'</span>')+'</div>'
+      +(R.ai_draft&&R.ai_draft.text?'<div class="card" style="margin-top:10px"><h2>AI draft <span class="muted" style="font-weight:400;font-size:12px">not yours until you save it</span></h2><div class="pre" id="r-aitext">'+esc(R.ai_draft.text)+'</div><div class="bar" style="margin-top:8px"><button type="button" id="r-adopt">Put the draft in the summary box</button></div></div>':'')
+      +'<div class="bar" style="margin-top:12px"><button type="button" class="pri" id="r-sign"'+(R.signed_by?' disabled':'')+'>'+(R.signed_by?'Signed by '+esc(R.signed_by):'Sign (lead auditor)')+'</button><button type="button" class="pri" id="r-appr">Approve (Head of Audit)</button></div>';}
+    if(E.state==='final')h+='<div class="okb">Final - approved'+(R.approved_by?' by '+esc(R.approved_by):'')+(R.hash?' · fingerprint <span class="mono">'+esc(String(R.hash).slice(0,16))+'…</span>':'')+'. Follow up the findings with the owners on the audit team page → Findings.</div>';
+    if(R.engagement)h+=card('Report preview',R.opinion?'opinion: '+R.opinion:'','<dl class="kv"><dt>Objectives</dt><dd>'+esc((R.objectives||[]).join(' · '))+'</dd><dt>Scope</dt><dd>'+esc(R.scope||'')+'</dd><dt>Work performed</dt><dd>'+esc((R.work_performed||[]).length)+' workpaper(s)</dd><dt>Sampling</dt><dd>'+(R.sampling||[]).map(function(s){return esc(s.population+': '+s.size+' of '+s.population_size+', '+s.exceptions+' exception(s)');}).join('<br>')+'</dd><dt>Findings</dt><dd>'+esc((R.counts||{}).high||0)+' high · '+esc((R.counts||{}).medium||0)+' medium · '+esc((R.counts||{}).low||0)+' low</dd></dl>'+(R.executive_summary?'<h4>Executive summary</h4><div class="pre">'+esc(R.executive_summary)+'</div>':''));
+    return h;}
+
+  // ---------- events
+  $('steps').addEventListener('click',function(e){var b=e.target.closest('[data-step]');if(b){S.step=Number(b.getAttribute('data-step'));draw();}});
+  document.querySelector('.teams').addEventListener('click',function(e){var b=e.target.closest('[data-team]');if(!b)return;TEAM=b.getAttribute('data-team');S.engId=null;S.step=1;Array.prototype.forEach.call(document.querySelectorAll('[data-team]'),function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});location.hash='team='+TEAM;load();});
+  $('panel').addEventListener('click',function(e){var t=e.target,b;
+    if((b=t.closest('[data-step]'))){S.step=Number(b.getAttribute('data-step'));draw();return;}
+    if((b=t.closest('[data-go]'))){S.step=Number(b.getAttribute('data-go'));draw();window.scrollTo(0,0);return;}
+    if(t.id==='p-save'){var aud=val('p-aud').split(/[,;\s]+/).filter(Boolean);if(!val('p-head')||!aud.length){toast('The Head of Audit and at least one auditor are needed.');return;}act('/profile',{head_of_audit:val('p-head'),auditors:aud,engagements_per_year:Number(val('p-n')||4)},'Audit team saved');return;}
+    if((b=t.closest('[data-pa]'))){var a=b.getAttribute('data-pa'),plan=S.plans.filter(function(p){return p.year===YEAR;})[0];
+      if(a==='propose')act('/plans/propose',{year:YEAR},'Plan proposed - review it, then submit');
+      else if(a==='submit')act('/plans/'+encodeURIComponent(plan.id)+'/submit',{},'Submitted to the Head of Audit');
+      else if(a==='approve')act('/plans/'+encodeURIComponent(plan.id)+'/decide',{decision:'approve'},'Plan approved');
+      else if(a==='reject')ask('Reject the plan',fld('d-note','Reason','textarea'),'Reject',function(){if(!val('d-note')){toast('Reason: needed.');return false;}act('/plans/'+encodeURIComponent(plan.id)+'/decide',{decision:'reject',note:val('d-note')},'Plan returned');});return;}
+    if((b=t.closest('[data-pick]'))){S.engId=b.getAttribute('data-pick');location.hash='team='+TEAM+'&eng='+S.engId;load().then(function(){S.step=4;draw();});return;}
+    if(t.id==='e-create'){var team=Array.prototype.filter.call(document.querySelectorAll('[data-team-m]:checked'),function(x){return x.getAttribute('data-team-m')!==val('e-lead');}).map(function(x){return x.getAttribute('data-team-m');});
+      var body={title:val('e-title'),area:val('e-area'),auditee_dept:val('e-dept'),auditee_owner:val('e-owner'),lead:val('e-lead'),team:team,objectives:val('e-obj').split(/\n+/).map(function(x){return x.trim();}).filter(Boolean),scope:val('e-scope'),criteria:val('e-crit'),start:val('e-start'),fieldwork_end:val('e-fw'),report_due:val('e-due')};
+      if(val('e-plan'))body.plan_item=val('e-plan');
+      var miss=[['title','Title'],['auditee_dept','Department'],['auditee_owner','Owner'],['start','Start'],['fieldwork_end','Fieldwork ends'],['report_due','Report due']].filter(function(k){return !body[k[0]];}).map(function(k){return k[1];});if(miss.length){toast('Needed: '+miss.join(', '));return;}
+      api('POST','/engagements',body).then(function(r){S.engId=r.id;location.hash='team='+TEAM+'&eng='+r.id;toast(r.id+' opened');return load();}).then(function(){if(S.eng){S.step=4;draw();}},function(er){toast('Not done: '+er.message);});return;}
+    if(t.id==='pr-up'){var f=$('pr-file')&&$('pr-file').files[0],ff=$('pr-ff')&&$('pr-ff').files[0],miss=[['pr-title','Report title'],['pr-year','Audit year'],['pr-date','Report date']].filter(function(k){return !val(k[0]);}).map(function(k){return k[1];});
+      if(!f)miss.push('the report file');if(miss.length){toast('Needed: '+miss.join(', '));return;}if(f.size>25*1024*1024){toast('The report is over 25 MB.');return;}
+      Promise.all([b64f(f),ff?b64f(ff):Promise.resolve(null)]).then(function(d){var b={area:S.eng.area,title:val('pr-title'),year:Number(val('pr-year')),report_date:val('pr-date'),source:val('pr-src'),auditor:val('pr-aud'),opinion:val('pr-op'),filename:f.name,data_b64:d[0]};if(ff){b.findings_filename=ff.name;b.findings_b64=d[1];}
+        return act('/prior',b,'Previous report uploaded');}).catch(function(e2){toast(e2.message);});return;}
+    if(t.id==='pr-none'){ask('No previous audit of this area',fld('d-note','Why there is no previous report (e.g. first audit of this area, new process)','textarea'),'Record',function(){if(!val('d-note')){toast('A note is needed.');return false;}act(eid()+'/prior-none',{note:val('d-note')},'Recorded - you can start fieldwork');});return;}
+    if((b=t.closest('[data-pdl]'))){var pid=b.getAttribute('data-pdl');api('GET','/prior/'+encodeURIComponent(pid)+'/file').then(function(r){var bin=atob(r.data_b64),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([u],{type:'application/octet-stream'}));a.download=r.filename;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);},function(e2){toast('Not downloaded: '+e2.message);});return;}
+    if((b=t.closest('[data-fu]'))){var key=b.getAttribute('data-fu'),res=b.getAttribute('data-fur');if(res==='resolved'){act(eid()+'/follow-up',{key:key,result:res},'Follow-up recorded');return;}
+      ask(res==='repeat'?'Repeat finding':'Not tested',fld('d-note',res==='repeat'?'What was found (raise it again as a finding in step 7)':'Why it was not tested','textarea'),'Record',function(){if(!val('d-note')){toast('A note is needed.');return false;}act(eid()+'/follow-up',{key:key,result:res,note:val('d-note')},'Follow-up recorded');});return;}
+    if(t.id==='adv-fw'){act(eid()+'/advance',{to:'fieldwork'},'Fieldwork started').then(function(r){if(r){S.step=5;draw();}});return;}
+    if(t.id==='adv-rep'){act(eid()+'/advance',{to:'draft_report'},'Report drafting started');return;}
+    if(t.id==='s-draw'){var sb={population:val('s-pop'),size:Number(val('s-size')||0),method:'random'};if(val('s-from'))sb.from=val('s-from');if(val('s-to'))sb.to=val('s-to');act(eid()+'/samples',sb,'Sample drawn');return;}
+    if((b=t.closest('[data-res]'))){var r=b.getAttribute('data-res'),sid=b.getAttribute('data-s'),ref=b.getAttribute('data-ref');
+      var go=function(note){var o={result:r};if(note)o.note=note;act('/samples/'+encodeURIComponent(sid)+'/items/'+encodeURIComponent(ref),o,'Item concluded: '+r);};
+      if(r==='pass')go();else ask((r==='exception'?'Exception':'Not applicable')+' - '+ref,fld('d-note',r==='exception'?'What was wrong (it becomes the evidence for a finding)':'Why it does not apply','textarea'),'Save',function(){go(val('d-note'));});return;}
+    if(t.id==='w-add'){if(!val('w-title')||!val('w-obj')||!val('w-proc')){toast('Title, objective and procedure are needed.');return;}var wb={title:val('w-title'),objective:val('w-obj'),procedure:val('w-proc')};if(val('w-smp'))wb.sample=val('w-smp');act(eid()+'/workpapers',wb,'Workpaper added');return;}
+    if((b=t.closest('[data-wc]'))){var wid=b.getAttribute('data-wc');ask('Conclude '+wid,fld('d-c','Conclusion','select','<option value="effective">Effective</option><option value="partially_effective">Partially effective</option><option value="ineffective">Ineffective</option>')+fld('d-s','Summary of what the test showed','textarea'),'Conclude',function(){if(!val('d-s')){toast('Summary: needed.');return false;}act('/workpapers/'+encodeURIComponent(wid)+'/conclude',{conclusion:val('d-c'),summary:val('d-s')},'Concluded - waiting for review');});return;}
+    if((b=t.closest('[data-wr]'))){var d=b.getAttribute('data-wr'),rid=b.getAttribute('data-id');if(d==='accept')act('/workpapers/'+encodeURIComponent(rid)+'/review',{decision:'accept'},'Review accepted');
+      else ask('Return '+rid,fld('d-note','What needs more work','textarea'),'Return',function(){if(!val('d-note')){toast('A note is needed to return it.');return false;}act('/workpapers/'+encodeURIComponent(rid)+'/review',{decision:'return',note:val('d-note')},'Returned to the preparer');});return;}
+    if(t.id==='f-add'){var fb={title:val('f-title'),condition:val('f-cond'),criteria:val('f-crit'),cause:val('f-cause'),effect:val('f-eff'),recommendation:val('f-rec'),rating:val('f-rate'),owner:val('f-owner'),samples:Array.prototype.map.call(document.querySelectorAll('[data-fx]:checked'),function(x){return x.getAttribute('data-fx');})};
+      var fm=['title','condition','criteria','cause','effect','recommendation','owner'].filter(function(k){return !fb[k];});if(fm.length){toast('Needed: '+fm.join(', '));return;}act(eid()+'/findings',fb,'Finding raised as a draft - issue it when ready');return;}
+    if((b=t.closest('[data-fi]'))){act('/findings/'+encodeURIComponent(b.getAttribute('data-id'))+'/'+b.getAttribute('data-fi'),{},'Finding '+(b.getAttribute('data-fi')==='issue'?'issued to the owner':'withdrawn'));return;}
+    if(t.id==='r-save'){if(val('r-sum').length<20){toast('Write at least a few sentences (20+ characters).');return;}act(eid()+'/report/summary',{summary:val('r-sum')},'Summary saved');return;}
+    if(t.id==='r-ai'){t.disabled=true;t.textContent='Drafting…';act(eid()+'/report/ai-draft',{},'AI draft ready - read it, edit it, save it as yours');return;}
+    if(t.id==='r-adopt'){var tx=$('r-aitext');if(tx)$('r-sum').value=tx.textContent;toast('Draft copied - edit it, then Save summary');return;}
+    if(t.id==='r-sign'){act(eid()+'/report/sign',{},'Report signed - the Head of Audit approves it');return;}
+    if(t.id==='r-appr'){act(eid()+'/report/approve',{},'Report approved - final');return;}
+  });
+  $('refresh').addEventListener('click',load);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')$('dlgbg').classList.remove('open');});
+  var m=(location.hash||'').match(/team=(ia|csa|iad)\b/),me2=(location.hash||'').match(/eng=([A-Za-z0-9-]+)/);
+  if(m){TEAM=m[1];Array.prototype.forEach.call(document.querySelectorAll('[data-team]'),function(x){x.setAttribute('aria-pressed',x.getAttribute('data-team')===TEAM?'true':'false');});}
+  if(me2)S.engId=me2[1];
+  req('GET','/api/itam/roles/me').then(function(r){S.me=(r&&r.user)||'';$('me').textContent=S.me;},function(){ /* the name is only shown; the engine decides */ });
+  load().then(function(){var L=status();for(var i=0;i<L.length;i++){if(!L[i].done&&!L[i].optional){S.step=i+1;break;}if(i===L.length-1)S.step=8;}draw();});
+})();
+</script></body></html>

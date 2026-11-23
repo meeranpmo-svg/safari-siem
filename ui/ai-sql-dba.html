@@ -1,0 +1,59 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Database Administrator</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-teamviz.js"></script>
+<style>
+:root{--tblr-border-color:#252933;--tblr-secondary:#8C93A1;color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:22px;color:var(--title)}.sub{color:var(--mute);font-size:13px}.sp{flex:1}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:16px;margin:0 0 12px;min-width:0}.card h2{margin:0 0 12px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:0 0 12px}.kpi{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:12px 14px}.kpi .v{font-size:24px;font-weight:800}.kpi .l{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.empty{color:var(--mute);padding:12px 0}
+.p{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}.ok{background:rgba(63,185,80,.15);color:var(--ok)}.warn{background:rgba(227,179,65,.15);color:var(--warn)}.bad{background:rgba(255,123,114,.16);color:var(--bad)}.mut{background:rgba(140,147,161,.16);color:#a3a9b5}
+a.lk{color:var(--info);text-decoration:none;font-weight:600}
+.banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
+</style>
+<style>.ask{display:flex;gap:8px;flex-wrap:wrap}.ask textarea{flex:1;min-width:260px;min-height:64px;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font:13px "Segoe UI",system-ui,sans-serif}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn.pri{background:#2f6fd0;border-color:#2f6fd0;color:#fff}
+.ans{white-space:pre-wrap;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:12px;margin-top:10px;font-size:13px}.steps{font-size:12px;color:var(--mute);margin-top:6px}</style></head><body><main>
+<div class="top"><div><div class="eb">AI &amp; Automation · database</div><h1>AI Database Administrator</h1><div class="sub">SQL Server · PostgreSQL · MySQL - patrols every server the database inventory reads, opens a work item per problem with the DBA's exact next step, and verifies the fix with a fresh read</div></div><span class="sp"></span><a class="lk" href="databases.html#inv">Databases →</a>&nbsp;&nbsp;<a class="lk" href="ai-dba.html">AI Oracle DBA →</a></div>
+<div class="banner">The AI Database Administrator recommends; a DBA decides and applies. It never connects to a database to change one: the platform reads with read-only logins, and every fix is a statement for a person to review and run. A server it cannot read is a work item, never a pass.</div>
+<section class="card" id="ov"><h2>Overview <span class="c">live - the AI Database Administrator and every server it looks after</span><span class="sp"></span><span class="c" id="ovc"></span></h2><div id="floor"><div class="empty">Loading…</div></div></section>
+<section data-zyb-duty="sqldba" data-api="/api/itam"></section>
+<section class="kpis" id="kpis"></section>
+<section class="card"><h2>What it found <span class="c" id="gen"></span></h2><div class="tw"><table><thead><tr><th>Severity</th><th>Server</th><th>Problem</th><th>DBA's next step</th></tr></thead><tbody id="fnd"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody></table></div></section>
+<section class="card" id="askc"><h2>Ask the AI Database Administrator <span class="c" id="ais"></span></h2>
+ <div class="ask"><textarea id="q" maxlength="4000" placeholder="For example: why is ArchiveSyn offline, and what should the DBA check first?" aria-label="Question"></textarea><button type="button" class="btn pri" id="go">Ask</button></div>
+ <div id="out"></div></section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, TV=window.zybTeamViz, $=function(id){return document.getElementById(id);};
+  var SEVK={critical:'bad',high:'bad',medium:'warn',low:'mut'};
+  function pill(t,k){return '<span class="p '+esc(k)+'">'+esc(t)+'</span>';}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=240000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function load(){
+    if(TV&&TV.dbEstate)TV.dbEstate($('floor'),$('ovc'));
+    req('GET','/sqldba').then(function(v){
+      function k(val,l,c){return '<div class="kpi"><div class="v" style="color:'+(c||'inherit')+'">'+esc(val)+'</div><div class="l">'+esc(l)+'</div></div>';}
+      var errs=v.servers.filter(function(s){return s.error;}).length, hi=v.findings.filter(function(f){return f.severity==='high'||f.severity==='critical';}).length;
+      $('kpis').innerHTML=k(v.servers.length,'Servers')+k(errs,'Cannot be read',errs?'var(--bad)':'')+k(v.findings.length,'Problems',v.findings.length?'var(--warn)':'')+k(hi,'High',hi?'var(--bad)':'')+k(v.servers.reduce(function(t,s){return t+(s.databases||0);},0),'Databases');
+      $('gen').textContent='updated '+new Date(v.generated_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      $('fnd').innerHTML=v.findings.length?v.findings.map(function(f){return '<tr><td>'+pill(f.severity,SEVK[f.severity]||'mut')+'</td><td>'+esc(f.target.name)+'</td><td>'+esc(f.title)+'<div class="muted" style="font-size:12px">'+esc((f.evidence||[]).join(' · '))+'</div></td><td style="max-width:520px">'+esc(f.recommendation)+'</td></tr>';}).join('')
+        :'<tr><td colspan="4" class="empty">'+(v.connected?'No problem found on the last read.':'No SQL Server, PostgreSQL or MySQL server is read yet. Add a read-only login on the Databases page (＋ Add database) or in Asset Discovery.')+'</td></tr>';
+      $('ais').textContent=v.ai.enabled?'Claude '+v.ai.model+' · read-only tools':'AI analysis off - '+v.ai.reason;$('go').disabled=!v.ai.enabled;
+    },function(e){var m=e.status===403?'The AI Database Administrator is for operators and administrators (database names and findings).':e.status===404?'Not installed yet - run the platform update (update-platform.ps1).':e.message;
+      $('fnd').innerHTML='<tr><td colspan="4" class="empty">'+esc(m)+'</td></tr>';$('kpis').innerHTML='';$('ais').textContent='';$('go').disabled=true;});
+  }
+  $('go').addEventListener('click',function(){var q=$('q').value.trim(),b=this;if(q.length<3){$('out').innerHTML='<div class="ans">Type a question first.</div>';return;}
+    b.disabled=true;$('out').innerHTML='<div class="ans muted">Investigating with read-only tools…</div>';
+    req('POST','/sqldba/ai/ask',{question:q}).then(function(r){
+      $('out').innerHTML='<div class="ans">'+esc(r.answer)+'</div><div class="steps">'+esc(r.model)+' · '+r.steps.length+' read-only look-up(s): '+esc(r.steps.map(function(s){return s.tool+(s.ok?'':' (refused)');}).join(', '))+(r.injection_signals&&r.injection_signals.length?' · ⚠ text in the database data looked like instructions to the AI - it was treated as data':'')+'</div>';
+    },function(e){$('out').innerHTML='<div class="ans">'+esc(e.message)+'</div>';}).then(function(){b.disabled=false;});});
+  load();setInterval(function(){var zd=document.getElementById('zd');if(!document.hidden&&(!zd||zd.hidden))load();},60000);
+})();
+</script>
+<script src="vendor/zyb-duty.js" defer></script></body></html>

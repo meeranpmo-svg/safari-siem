@@ -1,0 +1,230 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DR &amp; BCM Drills</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}.t.acc .v{color:var(--acc)}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}.btn{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn.sm{padding:4px 9px;font-size:12px}
+input,select,textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}textarea{width:100%;resize:vertical}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.pl-planned{background:rgba(121,184,255,.14);color:var(--info)}.pl-in-progress{background:rgba(227,179,65,.15);color:var(--warn)}.pl-completed{background:rgba(63,185,80,.14);color:var(--ok)}.pl-cancelled{background:rgba(140,147,161,.16);color:var(--mute)}
+.rs-pass{background:rgba(63,185,80,.14);color:var(--ok)}.rs-partial{background:rgba(227,179,65,.15);color:var(--warn)}.rs-fail{background:rgba(255,123,114,.15);color:var(--bad)}
+.st{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}.st.ok{background:var(--ok)}.st.warn{background:var(--warn)}.st.bad{background:var(--bad)}.st.mut{background:#6b7280}
+.met-ok{color:var(--ok);font-weight:700}.met-bad{color:var(--bad);font-weight:700}.met-na{color:var(--mute)}
+.rowc{cursor:pointer}.rowc:hover{background:rgba(255,255,255,.04)}
+.flt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.tag{display:inline-block;padding:1px 7px;border-radius:5px;font-size:10.5px;background:var(--raise);border:1px solid var(--border);color:var(--mute);margin:0 4px 3px 0}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+@media print{.top button,.flt{display:none}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Governance · GRC · SAMA recoverability</div><h1>DR &amp; BCM Drills</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" class="btn" id="report">📄 Evidence report</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="banner">SAMA CSF requires business-continuity and disaster-recovery to be <b>tested regularly</b> and the results evidenced. These are the drills your team recorded — scope, RTO/RPO targets vs. achieved, result, findings and remediation. A system with <b>no completed drill, or one past its cadence, is flagged overdue</b>. RTO/RPO that was not recorded stays “not recorded”, never counted as met. Framework alignment is indicative — confirm the exact clause against the SAMA Cyber Security Framework in force.</div>
+<div class="k" id="kk"></div>
+<div class="g2">
+  <div class="card"><h2>Recoverability by system <span class="c">last test · cadence · RTO/RPO</span></h2><div class="tw" id="systems"><div class="empty">Loading…</div></div>
+    <p class="note">One row per system in scope. “Overdue” = never tested, or the last completed drill is older than its cadence.</p></div>
+  <div class="card"><h2>Upcoming scheduled drills</h2><div class="tw" id="upcoming"><div class="empty">Loading…</div></div>
+    <p class="note">Planned drills with a future scheduled date. Record the outcome once a drill has run.</p></div>
+</div>
+<div class="card"><h2>Drills <span class="c" id="drillc"></span><span style="margin-left:auto;display:flex;gap:6px" id="tools"></span></h2>
+  <div class="flt"><input id="q" placeholder="Search drill, system, owner…" style="flex:1;min-width:200px">
+    <select id="fsys"><option value="">All systems</option></select>
+    <select id="ftype"><option value="">All types</option></select>
+    <select id="fstat"><option value="">All statuses</option><option value="planned">Planned</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>
+    <select id="fres"><option value="">All results</option><option value="pass">Pass</option><option value="partial">Partial</option><option value="fail">Fail</option></select></div>
+  <div class="tw" id="drills"><div class="empty">Loading…</div></div></div>
+<input type="file" id="evfile" accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.txt,.csv,.xlsx" hidden>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', LIST=[], SYS=[], SUM=null, TYPES=[], REFS=[], UPLOAD_FOR='';
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=60000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):(m==='POST'?'{}':null));});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4200);}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function statPill(s){return '<span class="pill pl-'+esc(s)+'">'+esc(String(s).replace('-',' '))+'</span>';}
+  function resPill(r){return r?'<span class="pill rs-'+esc(r)+'">'+esc(String(r).toUpperCase())+'</span>':'<span class="muted">—</span>';}
+  var TLBL={failover:'Failover',restore:'Restore',"backup-restore":'Backup restore',tabletop:'Tabletop',"full-dr":'Full DR',component:'Component'};
+  function tLabel(t){return TLBL[t]||t;}
+  function mins(n){if(n==null||n==='')return '<span class="met-na">not recorded</span>';n=Number(n);if(n>=60){var h=Math.floor(n/60),m=n%60;return esc(h+'h'+(m?(' '+m+'m'):''));}return esc(n+' min');}
+  function metCell(met){if(met==null)return '<span class="met-na">—</span>';return met?'<span class="met-ok">met</span>':'<span class="met-bad">missed</span>';}
+
+  function load(){
+    Promise.all([req('GET','/grc/drills'),req('GET','/grc/drills/summary'),req('GET','/grc/drills/systems')]).then(function(R){
+      LIST=(R[0]&&R[0].items)||[];TYPES=(R[0]&&R[0].types)||[];REFS=(R[0]&&R[0].sama_refs)||[];
+      SUM=R[1]||{};SYS=(R[2]&&R[2].systems)||[];
+      fillSelects();drawSummary();drawSystems();drawUpcoming();drawDrills();drawTools();
+      $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    }).catch(function(e){$('kk').innerHTML='<p class="err">'+esc(e.status===404?'IT Asset Management does not have the DR-drill module yet — run the engine update.':e.message)+'</p>';});
+  }
+  function fillSelects(){
+    var sys={},opt='<option value="">All systems</option>';LIST.forEach(function(d){if(d.system&&!sys[d.system]){sys[d.system]=1;opt+='<option value="'+esc(d.system)+'">'+esc(d.system)+'</option>';}});$('fsys').innerHTML=opt;
+    $('ftype').innerHTML='<option value="">All types</option>'+TYPES.map(function(t){return '<option value="'+esc(t)+'">'+esc(tLabel(t))+'</option>';}).join('');
+  }
+  function drawSummary(){var st=SUM.by_status||{},rs=SUM.by_result||{},rto=SUM.rto||{},rpo=SUM.rpo||{},sy=SUM.systems||{};
+    $('kk').innerHTML=tile('Drills',SUM.total||0,(st.completed||0)+' completed · '+(st.planned||0)+' planned','info')
+      +tile('Systems tested',(sy.tested||0)+'/'+(sy.total||0),(sy.overdue||0)+' overdue',(sy.overdue)?'bad':'ok')
+      +tile('Pass',rs.pass||0,'drills passed','ok')
+      +tile('Partial / Fail',(rs.partial||0)+' / '+(rs.fail||0),'with findings',(rs.fail)?'bad':(rs.partial)?'warn':'ok')
+      +tile('RTO met',rto.pct==null?'n/a':rto.pct+'%',(rto.met||0)+'/'+(rto.measured||0)+' measured',(rto.pct==null?'':rto.pct>=80?'ok':rto.pct>=50?'warn':'bad'))
+      +tile('RPO met',rpo.pct==null?'n/a':rpo.pct+'%',(rpo.met||0)+'/'+(rpo.measured||0)+' measured',(rpo.pct==null?'':rpo.pct>=80?'ok':rpo.pct>=50?'warn':'bad'))
+      +tile('Awaiting sign-off',SUM.awaiting_signoff||0,'completed, not signed',(SUM.awaiting_signoff)?'warn':'ok');
+  }
+  function drawSystems(){
+    if(!SYS.length){$('systems').innerHTML='<div class="empty">No systems in scope yet. Plan a drill to add one.</div>';return;}
+    $('systems').innerHTML='<table><thead><tr><th>System</th><th>Last test</th><th>Result</th><th>RTO</th><th>RPO</th><th>Status</th></tr></thead><tbody>'
+      +SYS.map(function(s){var dot=s.overdue?'bad':(s.last_result==='fail'?'bad':s.last_result==='partial'?'warn':'ok');
+        return '<tr'+(s.last?' class="rowc" data-id="'+esc(s.last.id)+'"':'')+'><td><span class="st '+dot+'"></span>'+esc(s.system)+'</td>'
+          +'<td>'+(s.last?esc(s.last.executed||'')+' <span class="muted">'+esc(tLabel(s.last.type))+'</span>':'<span class="muted">never tested</span>')+'</td>'
+          +'<td>'+resPill(s.last_result)+'</td><td>'+metCell(s.rto_met)+'</td><td>'+metCell(s.rpo_met)+'</td>'
+          +'<td>'+(s.overdue?'<span class="pill rs-fail">OVERDUE</span>':'<span class="pill rs-pass">current</span>')+(s.signed_off?' <span class="st ok" title="signed off"></span>':'')+'</td></tr>';}).join('')+'</tbody></table>';
+  }
+  function drawUpcoming(){var u=(SUM&&SUM.upcoming)||[];
+    $('upcoming').innerHTML=u.length?'<table><thead><tr><th>Scheduled</th><th>Drill</th><th>System</th><th>Type</th></tr></thead><tbody>'
+      +u.map(function(d){return '<tr class="rowc" data-id="'+esc(d.id)+'"><td class="mono">'+esc(d.scheduled||'')+'</td><td>'+esc(d.title)+'</td><td>'+esc(d.system)+'</td><td>'+esc(tLabel(d.type))+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No drills scheduled ahead. '+(can('operator')?'Use “Plan a drill”.':'')+'</div>';
+  }
+  function drawTools(){$('tools').innerHTML=(can('operator')?'<button class="btn sm" id="newdrill">＋ Plan a drill</button>':'');if($('newdrill'))$('newdrill').onclick=function(){openEdit(null);};}
+  function drawDrills(){
+    var q=$('q').value.trim().toLowerCase(),fs=$('fsys').value,ft=$('ftype').value,fst=$('fstat').value,fr=$('fres').value;
+    var rows=LIST.filter(function(d){if(fs&&d.system!==fs)return false;if(ft&&d.type!==ft)return false;if(fst&&d.status!==fst)return false;if(fr&&d.result!==fr)return false;
+      return !q||[d.id,d.title,d.system,d.owner,d.type].join(' ').toLowerCase().indexOf(q)>=0;});
+    $('drillc').textContent=rows.length+' of '+LIST.length;
+    $('drills').innerHTML=rows.length?'<table><thead><tr><th>ID</th><th>Drill</th><th>System</th><th>Type</th><th>When</th><th>Status</th><th>Result</th><th>Sign-off</th></tr></thead><tbody>'
+      +rows.map(function(d){return '<tr class="rowc" data-id="'+esc(d.id)+'"><td class="mono">'+esc(d.id)+'</td><td>'+esc(d.title)+'</td><td>'+esc(d.system||'')+'</td><td>'+esc(tLabel(d.type))+'</td>'
+        +'<td class="mono">'+esc(d.executed||d.scheduled||'')+'</td><td>'+statPill(d.status)+'</td><td>'+resPill(d.result)+'</td>'
+        +'<td>'+(d.signoff&&d.signoff.by?('<span class="st '+(d.signoff.independent===false?'warn':'ok')+'" title="'+(d.signoff.independent===false?'not independent':'signed off')+'"></span>'+esc(d.signoff.by)):(d.status==='completed'?'<span class="muted">awaiting</span>':'<span class="muted">—</span>'))+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No drills match the filter.</div>';
+  }
+
+  function open(id){req('GET','/grc/drills/'+encodeURIComponent(id)).then(function(d){
+    var m=d.met||{};
+    var body=Z.kv([['Drill',esc(d.id)],['System / service',esc(d.system||'—')],['Type',esc(tLabel(d.type))],['Status',statPill(d.status)],['Result',resPill(d.result)],
+      ['Scheduled',esc(d.scheduled||'—')],['Executed',esc(d.executed||'—')],['Cadence',esc((d.frequency_months||0)+' months')],['Owner',esc(d.owner||'—')],['Participants',esc(d.participants||'—')],
+      ['SAMA alignment',esc((d.sama_ref||'')+(d.sama_area?(' · '+d.sama_area):''))||'<span class="muted">—</span>']]);
+    body+=Z.sec('Recovery objectives','<table><thead><tr><th></th><th>Target</th><th>Achieved</th><th></th></tr></thead><tbody>'
+      +'<tr><td><b>RTO</b></td><td>'+mins(d.rto_target_min)+'</td><td>'+mins(d.rto_actual_min)+'</td><td>'+metCell(m.rto)+'</td></tr>'
+      +'<tr><td><b>RPO</b></td><td>'+mins(d.rpo_target_min)+'</td><td>'+mins(d.rpo_actual_min)+'</td><td>'+metCell(m.rpo)+'</td></tr></tbody></table>');
+    if(d.objective)body+=Z.sec('Objective','<p>'+esc(d.objective)+'</p>');
+    if(d.scope_detail)body+=Z.sec('Scope','<p>'+esc(d.scope_detail)+'</p>');
+    if(d.result_summary)body+=Z.sec('Result summary','<p>'+esc(d.result_summary)+'</p>');
+    if((d.findings||[]).length)body+=Z.sec('Findings / gaps','<ul style="margin:0;padding-left:18px">'+d.findings.map(function(x,i){return '<li>'+esc(x)+(can('operator')?' '+'<a class="btn sm" style="text-decoration:none" href="grc-workspace.html#actions?new=1&amp;source=drill&amp;ref='+encodeURIComponent(d.id+'#'+(i+1))+'&amp;title='+encodeURIComponent(x)+'&amp;framework=SAMA%20CSF">＋ action</a>':'')+'</li>';}).join('')+'</ul>');
+    if((d.actions||[]).length)body+=Z.sec('Remediation actions','<ul style="margin:0;padding-left:18px">'+d.actions.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>');
+    body+=Z.sec('Evidence',(d.has_evidence?('<p><span class="mono" title="'+esc((d.evidence&&d.evidence.sha256)||'')+'">'+esc(d.evidence.filename)+'</span>'+(d.evidence.stored==='inline'?' <a href="#" data-dl="'+esc(d.id)+'">↓ download</a>':' <span class="muted">(by reference)</span>')+'</p>'):'<p class="muted">No evidence attached.</p>')
+      +(can('operator')?'<button class="btn sm" data-up="'+esc(d.id)+'">⬆ Attach evidence</button>':''));
+    body+=Z.sec('Sign-off',(d.signoff&&d.signoff.by?('<p><b>'+esc(d.signoff.by)+'</b> · '+new Date(d.signoff.at).toLocaleDateString('en-GB')+(d.signoff.independent===false?' <span class="met-bad">(not independent)</span>':d.signoff.independent?' <span class="met-ok">(independent)</span>':'')+'<br><span class="muted">'+esc(d.signoff.note||'')+'</span></p>'):'<p class="muted">Not signed off'+(d.status==='completed'?' yet.':' (record the result first).')+'</p>'));
+    // actions
+    var actions='';
+    if(can('operator')){
+      actions+='<button class="btn" data-edit="'+esc(d.id)+'">✎ Edit plan</button> ';
+      if(d.status!=='cancelled')actions+='<button class="btn pri" data-result="'+esc(d.id)+'">'+(d.status==='completed'?'Update result':'Record result')+'</button> ';
+      if(d.status==='planned')actions+='<button class="btn" data-cancel="'+esc(d.id)+'">Cancel</button> ';
+    }
+    if(can('admin')&&d.status==='completed')actions+='<button class="btn" data-signoff="'+esc(d.id)+'">✔ Sign off</button> ';
+    if(can('admin'))actions+='<button class="btn" data-del="'+esc(d.id)+'">✕ Delete</button>';
+    if(actions)body+='<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">'+actions+'</div>';
+    body+='<p class="note">Four-eyes: a completed drill should be signed off by someone other than whoever ran it.</p>';
+    Z.open('DR drill '+d.id,d.title,body);
+  }).catch(function(e){toast(e.message);});}
+
+  function openEdit(d){
+    var refOpts=REFS.map(function(r){return '<option value="'+esc(r.ref)+'" data-area="'+esc(r.area)+'">'+esc(r.ref+' — '+r.area)+'</option>';}).join('');
+    var typeOpts=TYPES.map(function(t){return '<option value="'+esc(t)+'"'+(d&&d.type===t?' selected':'')+'>'+esc(tLabel(t))+'</option>';}).join('');
+    d=d||{};
+    var body='<div style="display:grid;gap:8px">'
+      +'<label>Title<input id="e-t" value="'+esc(d.title||'')+'" style="width:100%"></label>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap"><label style="flex:1;min-width:150px">System / service<input id="e-sys" value="'+esc(d.system||'')+'" style="width:100%"></label>'
+        +'<label style="flex:1;min-width:120px">Type<select id="e-type" style="width:100%">'+typeOpts+'</select></label></div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap"><label style="flex:1;min-width:120px">Scheduled date<input id="e-sch" type="date" value="'+esc(d.scheduled||'')+'" style="width:100%"></label>'
+        +'<label style="flex:1;min-width:100px">Cadence (months)<input id="e-freq" type="number" min="0" max="60" value="'+esc(d.frequency_months!=null?d.frequency_months:12)+'" style="width:100%"></label>'
+        +'<label style="flex:1;min-width:120px">Owner<input id="e-own" value="'+esc(d.owner||'')+'" style="width:100%"></label></div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap"><label style="flex:1;min-width:120px">RTO target (min)<input id="e-rto" type="number" min="0" value="'+esc(d.rto_target_min!=null?d.rto_target_min:'')+'" style="width:100%"></label>'
+        +'<label style="flex:1;min-width:120px">RPO target (min)<input id="e-rpo" type="number" min="0" value="'+esc(d.rpo_target_min!=null?d.rpo_target_min:'')+'" style="width:100%"></label></div>'
+      +'<label>SAMA alignment (indicative)<select id="e-ref" style="width:100%"><option value="">— none —</option>'+refOpts+'</select></label>'
+      +'<label>Participants<input id="e-part" value="'+esc(d.participants||'')+'" style="width:100%"></label>'
+      +'<label>Objective<textarea id="e-obj" rows="2" style="width:100%">'+esc(d.objective||'')+'</textarea></label>'
+      +'<label>Scope detail<textarea id="e-scope" rows="2" style="width:100%">'+esc(d.scope_detail||'')+'</textarea></label>'
+      +'<div><button class="btn pri" id="e-save">Save drill</button></div></div>';
+    Z.open(d.id?'Edit drill '+d.id:'Plan a DR drill',d.title||'New drill',body);
+    if(d.sama_ref){var sel=$('e-ref');if(sel)sel.value=d.sama_ref;}
+    $('e-save').onclick=function(){
+      var ref=$('e-ref'),area=ref&&ref.selectedOptions[0]?ref.selectedOptions[0].getAttribute('data-area'):'';
+      var p={title:$('e-t').value,system:$('e-sys').value,type:$('e-type').value,scheduled:$('e-sch').value,frequency_months:$('e-freq').value,owner:$('e-own').value,
+        rto_target_min:$('e-rto').value,rpo_target_min:$('e-rpo').value,sama_ref:ref?ref.value:'',sama_area:area||'',participants:$('e-part').value,objective:$('e-obj').value,scope_detail:$('e-scope').value};
+      if(!p.title.trim()){toast('Title required');return;}if(!p.system.trim()){toast('System in scope required');return;}
+      var url=d.id?'/grc/drills/'+encodeURIComponent(d.id):'/grc/drills';$('e-save').disabled=true;
+      req('POST',url,p).then(function(){toast('Saved');Z.close();load();}).catch(function(e){$('e-save').disabled=false;toast(e.message);});
+    };
+  }
+  function openResult(d){
+    var body='<div style="display:grid;gap:8px">'
+      +'<label>Result<select id="r-res" style="width:100%"><option value="pass"'+(d.result==='pass'?' selected':'')+'>Pass — objectives met</option><option value="partial"'+(d.result==='partial'?' selected':'')+'>Partial — met with findings</option><option value="fail"'+(d.result==='fail'?' selected':'')+'>Fail — objectives not met</option></select></label>'
+      +'<label>Executed date<input id="r-exec" type="date" value="'+esc(d.executed||new Date().toISOString().slice(0,10))+'" style="width:100%"></label>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap"><label style="flex:1;min-width:140px">RTO achieved (min)'+(d.rto_target_min!=null?' <span class="muted">target '+d.rto_target_min+'</span>':'')+'<input id="r-rto" type="number" min="0" value="'+esc(d.rto_actual_min!=null?d.rto_actual_min:'')+'" style="width:100%"></label>'
+        +'<label style="flex:1;min-width:140px">RPO achieved (min)'+(d.rpo_target_min!=null?' <span class="muted">target '+d.rpo_target_min+'</span>':'')+'<input id="r-rpo" type="number" min="0" value="'+esc(d.rpo_actual_min!=null?d.rpo_actual_min:'')+'" style="width:100%"></label></div>'
+      +'<label>Result summary<textarea id="r-sum" rows="3" style="width:100%">'+esc(d.result_summary||'')+'</textarea></label>'
+      +'<label>Findings / gaps (one per line)<textarea id="r-find" rows="4" style="width:100%">'+esc((d.findings||[]).join('\n'))+'</textarea></label>'
+      +'<label>Remediation actions (one per line)<textarea id="r-act" rows="3" style="width:100%">'+esc((d.actions||[]).join('\n'))+'</textarea></label>'
+      +'<div><button class="btn pri" id="r-save">Save result</button> <span class="muted">a new result clears any prior sign-off</span></div></div>';
+    Z.open('Record result · '+d.id,d.title,body);
+    $('r-save').onclick=function(){var p={result:$('r-res').value,executed:$('r-exec').value,rto_actual_min:$('r-rto').value,rpo_actual_min:$('r-rpo').value,summary:$('r-sum').value,findings:$('r-find').value,actions:$('r-act').value};
+      $('r-save').disabled=true;req('POST','/grc/drills/'+encodeURIComponent(d.id)+'/result',p).then(function(){toast('Result recorded');Z.close();load();}).catch(function(e){$('r-save').disabled=false;toast(e.message);});};
+  }
+  function openSignoff(d){
+    var body='<div style="display:grid;gap:8px"><p class="muted">Confirm you have reviewed the drill evidence and accept the outcome. For four-eyes, this should be someone other than '+esc(d.executed_by||'the person who ran it')+'.</p>'
+      +'<label>Sign-off note<textarea id="s-note" rows="3" style="width:100%"></textarea></label>'
+      +'<div><button class="btn pri" id="s-go">Sign off</button></div></div>';
+    Z.open('Sign off · '+d.id,d.title,body);
+    $('s-go').onclick=function(){$('s-go').disabled=true;req('POST','/grc/drills/'+encodeURIComponent(d.id)+'/signoff',{note:$('s-note').value}).then(function(){toast('Signed off');Z.close();load();}).catch(function(e){$('s-go').disabled=false;toast(e.message);});};
+  }
+  function uploadEv(id){UPLOAD_FOR=id;$('evfile').value='';$('evfile').click();}
+  $('evfile').onchange=function(){var f=this.files&&this.files[0];if(!f||!UPLOAD_FOR)return;if(f.size>8*1024*1024){toast('File too large (max ~8 MB)');return;}
+    var fr=new FileReader();fr.onload=function(){var buf=fr.result;crypto.subtle.digest('SHA-256',buf).then(function(h){var sha=[].map.call(new Uint8Array(h),function(b){return b.toString(16).padStart(2,'0');}).join('');
+      var bytes=new Uint8Array(buf),bin='';for(var i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);var b64=btoa(bin);
+      req('POST','/grc/drills/'+encodeURIComponent(UPLOAD_FOR)+'/upload',{filename:f.name,size:f.size,sha256:sha,content_b64:b64}).then(function(){toast('Evidence attached');var id=UPLOAD_FOR;Z.close();open(id);load();}).catch(function(e){toast(e.message);});});};fr.readAsArrayBuffer(f);};
+  function downloadEv(id){req('GET','/grc/drills/'+encodeURIComponent(id)+'/document').then(function(r){var bin=atob(r.content_b64),bytes=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([bytes]));var a=document.createElement('a');a.href=url;a.download=r.filename||'evidence';a.click();setTimeout(function(){URL.revokeObjectURL(url);},2000);}).catch(function(e){toast(e.message);});}
+
+  function openReport(){req('GET','/grc/drills/report').then(function(r){
+    var w=window.open('','_blank');if(!w){toast('Allow pop-ups to open the report');return;}
+    var e=function(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});};
+    var s=r.summary||{},st=s.by_status||{},rs=s.by_result||{},rto=s.rto||{},rpo=s.rpo||{},sy=s.systems||{};
+    var sysRows=(r.systems||[]).map(function(x){return '<tr><td>'+e(x.system)+'</td><td>'+(x.last?e(x.last.executed)+' ('+e(x.last.type)+')':'never')+'</td><td>'+e(x.last_result||'—')+'</td><td>'+(x.rto_met==null?'—':x.rto_met?'met':'missed')+'</td><td>'+(x.rpo_met==null?'—':x.rpo_met?'met':'missed')+'</td><td>'+(x.overdue?'OVERDUE':'current')+'</td></tr>';}).join('');
+    var drRows=(r.drills||[]).map(function(d){return '<tr><td>'+e(d.id)+'</td><td>'+e(d.title)+'</td><td>'+e(d.system)+'</td><td>'+e(d.type)+'</td><td>'+e(d.executed||d.scheduled||'')+'</td><td>'+e(d.status)+'</td><td>'+e(d.result||'—')+'</td><td>'+e(d.signoff&&d.signoff.by||'—')+'</td><td>'+e((d.findings||[]).join('; '))+'</td></tr>';}).join('');
+    w.document.write('<!doctype html><title>DR &amp; BCM drill evidence report</title><style>body{font:13px Segoe UI,sans-serif;margin:32px;color:#111}h1{font-size:20px}h2{font-size:15px;margin-top:22px}table{border-collapse:collapse;width:100%;font-size:12px;margin-top:8px}th,td{border:1px solid #ccc;padding:5px 7px;text-align:left}th{background:#f3f3f3}</style>'
+      +'<h1>DR &amp; BCM drill evidence report</h1><p>'+e(r.org||ZYB_ORG.short)+' · '+e(r.framework||'')+' · generated '+e(new Date(r.generated||Date.now()).toISOString())+'</p>'
+      +'<p><b>'+e(s.total||0)+' drills</b> — '+e(st.completed||0)+' completed, '+e(st.planned||0)+' planned. Systems: '+e(sy.tested||0)+'/'+e(sy.total||0)+' tested, '+e(sy.overdue||0)+' overdue. '
+      +'Results: '+e(rs.pass||0)+' pass, '+e(rs.partial||0)+' partial, '+e(rs.fail||0)+' fail. RTO met '+(rto.pct==null?'n/a':e(rto.pct)+'%')+', RPO met '+(rpo.pct==null?'n/a':e(rpo.pct)+'%')+'.</p>'
+      +'<p style="color:#666;font-size:11px">Framework alignment is indicative — confirm against the SAMA Cyber Security Framework in force.</p>'
+      +'<h2>Recoverability by system</h2><table><thead><tr><th>System</th><th>Last test</th><th>Result</th><th>RTO</th><th>RPO</th><th>Status</th></tr></thead><tbody>'+sysRows+'</tbody></table>'
+      +'<h2>All drills</h2><table><thead><tr><th>ID</th><th>Drill</th><th>System</th><th>Type</th><th>When</th><th>Status</th><th>Result</th><th>Signed off</th><th>Findings</th></tr></thead><tbody>'+drRows+'</tbody></table>'
+      );w.document.close();
+    setTimeout(function(){ try { w.focus(); w.print(); } catch (e) { /* element already gone: nothing to focus */ } },300); // from here, not a script in the report: the strict CSP covers the popup too
+  }).catch(function(e){toast(e.message);});}
+
+  ['q','fsys','ftype','fstat','fres'].forEach(function(id){$(id).addEventListener('input',drawDrills);$(id).addEventListener('change',drawDrills);});
+  document.addEventListener('click',function(e){var t=e.target;
+    var ed=t.closest&&t.closest('[data-edit]');if(ed){req('GET','/grc/drills/'+encodeURIComponent(ed.getAttribute('data-edit'))).then(openEdit).catch(function(er){toast(er.message);});return;}
+    var rr=t.closest&&t.closest('[data-result]');if(rr){req('GET','/grc/drills/'+encodeURIComponent(rr.getAttribute('data-result'))).then(openResult).catch(function(er){toast(er.message);});return;}
+    var so=t.closest&&t.closest('[data-signoff]');if(so){req('GET','/grc/drills/'+encodeURIComponent(so.getAttribute('data-signoff'))).then(openSignoff).catch(function(er){toast(er.message);});return;}
+    var cx=t.closest&&t.closest('[data-cancel]');if(cx){if(confirm('Cancel this planned drill?'))req('POST','/grc/drills/'+encodeURIComponent(cx.getAttribute('data-cancel'))+'/cancel',{}).then(function(){toast('Cancelled');Z.close();load();}).catch(function(er){toast(er.message);});return;}
+    var up=t.closest&&t.closest('[data-up]');if(up){uploadEv(up.getAttribute('data-up'));return;}
+    var dl=t.closest&&t.closest('[data-dl]');if(dl){e.preventDefault();downloadEv(dl.getAttribute('data-dl'));return;}
+    var del=t.closest&&t.closest('[data-del]');if(del){if(confirm('Delete this drill record? This cannot be undone.'))req('POST','/grc/drills/'+encodeURIComponent(del.getAttribute('data-del'))+'/delete',{}).then(function(){toast('Deleted');Z.close();load();}).catch(function(er){toast(er.message);});return;}
+    var row=t.closest&&t.closest('.rowc');if(row&&row.getAttribute('data-id'))open(row.getAttribute('data-id'));
+  });
+  $('refresh').onclick=load;$('report').onclick=openReport;
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+})();
+</script></body></html>

@@ -1,0 +1,120 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PDPL Control Monitor</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--bg:#0b0e14;--pn:#121722;--rs:#18202d;--ln:#232c3c;--tx:#e8ecf3;--mu:#8c95a8;--fail:#e5484d;--pass:#2fb344;--nm:#5b6478;--ac:#14b8a6}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 60px}
+.top{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}.top h1{margin:0;font-size:26px}.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:7px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.btn:hover{border-color:#3a4560}.btn.pri{background:var(--ac);border-color:var(--ac);color:#04201c}.btn:disabled{opacity:.5;cursor:default}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}.k{background:var(--pn);border:1px solid var(--ln);border-radius:12px;padding:10px 14px}.k .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}.k .l{font-size:12px;color:var(--mu)}.k.r .v{color:#ff7b80}.k.g .v{color:#56d364}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:14px}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:14px 16px;min-width:0;margin-bottom:14px}.g2 .card{margin-bottom:0}.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hb{display:grid;grid-template-columns:minmax(0,1fr) 52px;gap:8px;align-items:center;font-size:13px;margin-bottom:7px}.hb .b{height:8px;border-radius:5px;background:#232c3c;overflow:hidden;display:flex}.hb .b i{display:block;height:100%}.hb .n{text-align:right;font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mu);font-weight:600;font-size:12px;padding:7px;border-bottom:1px solid var(--ln);white-space:nowrap}td{padding:7px;border-bottom:1px solid #1a2130;vertical-align:top}
+.cell{width:26px;height:22px;border-radius:5px;border:0;cursor:pointer;font:700 11px Inter,system-ui,sans-serif;color:#fff}.c-pass{background:var(--pass)}.c-fail{background:var(--fail)}.c-not_measured{background:var(--nm)}.c-na{background:#1b2230;color:var(--mu)}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:4px;background:rgba(163,113,247,.18);color:#c6a6ff}.tag.d{background:rgba(229,72,77,.18);color:#ff7b80}
+.flt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}.inp{background:#0b0e14;color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:7px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif;min-width:0}
+.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:12px;margin-bottom:12px}
+.empty{color:var(--mu);padding:20px;text-align:center;border:1px dashed var(--ln);border-radius:12px}
+.note{font-size:12px;color:var(--mu);border-left:3px solid var(--ac);padding:6px 10px;background:rgba(20,184,166,.06);border-radius:0 8px 8px 0;margin:8px 0}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mu)}.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.ack{border:1px solid var(--ln);border-radius:10px;padding:10px 12px;margin-bottom:8px}.ack p{margin:6px 0;font-size:13px;color:#c9d1de;white-space:pre-wrap}
+.drawer{position:fixed;top:0;right:0;width:min(460px,100vw);height:100vh;background:#101520;border-left:1px solid var(--ln);z-index:9000;padding:16px;overflow:auto;box-shadow:-10px 0 30px rgba(0,0,0,.4)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999}
+svg text{fill:var(--mu);font-size:10px}
+@media (max-width:1000px){.g2{grid-template-columns:1fr}}
+</style></head><body><main>
+<div class="top"><div><h1><i class="ti ti-shield-check" style="color:#14b8a6"></i> PDPL Control Monitor</h1><div class="mu sm">Every system that holds personal data, tested continuously against what the platform already reads - the asset register, Asset Coverage and the PDPL registers - with drift alerts, remediation in GRC, staff acknowledgement of the PDPL policies and an evidence pack for the auditor.</div></div><span class="sp"></span><button type="button" class="btn" id="pack" hidden><i class="ti ti-file-certificate"></i>Evidence pack</button><button type="button" class="btn pri" id="run" hidden><i class="ti ti-player-play"></i>Run now</button><button type="button" class="btn" id="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button></div>
+<div id="err"></div>
+<div class="kpis" id="kpis"></div>
+<div class="card" id="mycard" hidden><h2><i class="ti ti-signature"></i>Policies I am asked to acknowledge</h2><div id="mine"></div></div>
+<div class="g2"><div class="card"><h2><i class="ti ti-chart-line"></i>Score over time <span class="sm mu" id="trendnote" style="font-weight:400"></span></h2><div id="trend"></div></div><div class="card"><h2><i class="ti ti-list-check"></i>Pass rate by control</h2><div id="bytest"></div></div></div>
+<div id="work" hidden>
+ <div class="card"><h2><i class="ti ti-alert-triangle" style="color:#ff7b80"></i>Drift since the previous run</h2><div id="drift"></div></div>
+ <div class="card"><h2><i class="ti ti-database"></i>Systems holding personal data <span class="sm mu" id="cnt" style="font-weight:400"></span></h2>
+  <div class="flt"><input class="inp" id="q" placeholder="Search system or asset" style="flex:1;min-width:200px" aria-label="Search"><label class="sm"><input type="checkbox" id="ffail"> failing only</label><label class="sm"><input type="checkbox" id="fsens"> sensitive data only</label><div class="lg"><span style="--c:var(--pass)">pass</span><span style="--c:var(--fail)">fail</span><span style="--c:var(--nm)">not measured</span><span style="--c:#1b2230">n/a</span></div></div>
+  <div class="tw" id="matrix"></div><div id="covnote"></div></div>
+ <div class="card"><h2><i class="ti ti-users"></i>Policy acknowledgement campaigns</h2><div id="camps"></div>
+  <details id="newcamp" hidden style="margin-top:10px"><summary class="sm" style="cursor:pointer">Start a campaign (administrator or the DPO)</summary>
+   <div id="polnote"></div><div class="flt" style="margin-top:8px"><select class="inp" id="cpol" aria-label="Policy" style="min-width:260px"></select><input class="inp" id="cdue" type="date" aria-label="Due date"><input class="inp" id="cnote" placeholder="Note to staff (optional)" style="flex:1;min-width:200px" aria-label="Note"></div>
+   <textarea class="inp" id="caud" rows="3" style="width:100%" placeholder="User names who must acknowledge - one per line or comma separated" aria-label="Audience"></textarea>
+   <div style="margin-top:8px"><button type="button" class="btn pri" id="cstart"><i class="ti ti-send"></i>Start campaign</button></div></details></div>
+</div>
+<div class="empty" id="viewer" hidden>The systems, their evidence and the campaigns are shown to operators and administrators. The score and trend above are for everyone.</div>
+<div class="drawer" id="drawer" hidden role="dialog" aria-label="Test detail"></div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer',ME='',V=null,T=null;
+  var COLS=['M01','M02','M03','M04','M05','M06','M07','M08','M09','M10','M11'];
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var title=function(id){var t=(V.tests||[]).find(function(x){return x.id===id;});return t?t.title:id;};
+  function kpis(){var s=V.now||V.last_run||{},lr=V.last_run;
+    var sys=V.systems||[];
+    $('kpis').innerHTML=[[s.score==null?'—':s.score+'%','control score',s.score>=90?'g':s.score!=null&&s.score<70?'r':''],[s.pass==null?'—':s.pass,'tests passing','g'],[s.fail==null?'—':s.fail,'tests failing','r'],[s.not_measured==null?'—':s.not_measured,'not measured',''],
+      [V.systems?sys.length:'—','systems with personal data',''],[V.systems?sys.filter(function(x){return x.sensitive;}).length:'—','hold sensitive data',''],[lr?lr.drift:'—','drifted last run',lr&&lr.drift?'r':''],[lr?esc(lr.at.slice(0,16).replace('T',' ')):'never','last run','']]
+      .map(function(x){return '<div class="k '+x[2]+'"><div class="v">'+esc(String(x[0]))+'</div><div class="l">'+esc(x[1])+'</div></div>';}).join('');}
+  function trend(){var t=V.trend,p=t.points;$('trendnote').textContent=t.slope_per_week==null?t.note:(t.note+' · '+(t.slope_per_week>0?'+':'')+t.slope_per_week+' points a week'+(t.days_to_full?' · full in about '+t.days_to_full+' days at this rate':''));
+    if(!p.length){$('trend').innerHTML='<div class="sm mu">No run yet - the monitor runs every 6 hours, or press Run now.</div>';return;}
+    var W=600,H=140,x=function(i){return 30+(p.length<2?W/2:i*(W-40)/(p.length-1));},y=function(v){return 10+(100-v)*(H-30)/100;};
+    var line=p.map(function(q,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(q.score).toFixed(1);}).join(' ');
+    $('trend').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="'+H+'" role="img" aria-label="Control score per run">'+[0,50,100].map(function(v){return '<line x1="30" x2="'+(W-10)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#232c3c"/><text x="4" y="'+(y(v)+3)+'">'+v+'</text>';}).join('')
+      +'<path d="'+line+'" fill="none" stroke="#14b8a6" stroke-width="2"/>'+p.map(function(q,i){return '<circle cx="'+x(i)+'" cy="'+y(q.score)+'" r="3" fill="#14b8a6"><title>'+esc(q.at.slice(0,16).replace('T',' ')+' - '+q.score+'%')+'</title></circle>';}).join('')+'</svg>';}
+  function bytest(){var B=V.by_test;if(!B){$('bytest').innerHTML='<div class="sm mu">'+V.tests.map(function(t){return esc(t.id+' '+t.title+' ('+t.ref+')');}).join('<br>')+'</div>';return;}
+    $('bytest').innerHTML=B.map(function(t){var n=t.pass+t.fail+t.not_measured||1;return '<div class="hb"><div><div class="sm">'+esc(t.id+' · '+t.title)+' <span class="mu">'+esc(t.ref)+'</span></div><div class="b"><i style="width:'+(100*t.pass/n)+'%;background:var(--pass)"></i><i style="width:'+(100*t.fail/n)+'%;background:var(--fail)"></i><i style="width:'+(100*t.not_measured/n)+'%;background:var(--nm)"></i></div></div><div class="n">'+(t.score==null?'—':t.score+'%')+'</div></div>';}).join('');}
+  function drift(){var D=V.drift||[],F=V.fixed||[],name=function(k){if(k==='P01')return 'Staff acknowledgement';var s=(V.systems||[]).find(function(x){return k.indexOf(x.id+':')===0;});return (s?s.name:k.split(':')[0])+' - '+title(k.split(':')[1]);};
+    $('drift').innerHTML=(D.length?'<div class="sm" style="margin-bottom:6px"><b style="color:#ff7b80">Failing now, passed before:</b></div>'+D.map(function(k){return '<div class="sm">• '+esc(name(k))+' <button type="button" class="btn" data-open="'+esc(k)+'" style="padding:2px 8px">Open</button></div>';}).join(''):'<div class="sm mu">No control went from pass to fail in the last run.</div>')
+      +(F.length?'<div class="sm" style="margin-top:8px"><b style="color:#56d364">Fixed:</b> '+F.map(function(k){return esc(name(k));}).join(' · ')+'</div>':'');}
+  function matrix(){var q=$('q').value.trim().toLowerCase(),ff=$('ffail').checked,fs=$('fsens').checked,inG={};(V.in_grc||[]).forEach(function(k){inG[k]=1;});
+    var R=V.systems.filter(function(s){if(fs&&!s.sensitive)return false;if(ff&&!s.fail)return false;return !q||(s.name+' '+(s.asset?s.asset.name:'')).toLowerCase().indexOf(q)>=0;});
+    $('cnt').textContent=R.length+' of '+V.systems.length;
+    $('matrix').innerHTML=V.systems.length?(R.length?'<table><thead><tr><th>System</th><th>Asset</th><th>Score</th>'+COLS.map(function(c){return '<th title="'+esc(title(c))+'">'+c+'</th>';}).join('')+'</tr></thead><tbody>'+R.map(function(s){
+      return '<tr><td><b>'+esc(s.name)+'</b>'+(s.sensitive?'<span class="tag">SENSITIVE</span>':'')+'<div class="sm mu">'+esc(s.categories.join(', '))+' · from '+esc(s.from.join(' + '))+'</div></td><td class="sm">'+(s.asset?esc(s.asset.name):'<span style="color:#ff7b80">not linked</span>')+'</td><td>'+(s.score==null?'—':s.score+'%')+'</td>'
+        +COLS.map(function(c){var t=s.tests[c]||{state:'na'},k=s.id+':'+c;return '<td><button type="button" class="cell c-'+esc(t.state)+'" data-open="'+esc(k)+'" aria-label="'+esc(c+' '+t.state)+'">'+(inG[k]?'G':t.state==='pass'?'✓':t.state==='fail'?'✗':t.state==='na'?'':'?')+'</button></td>';}).join('')+'</tr>';}).join('')+'</tbody></table>':'<div class="empty">No system matches.</div>')
+      :'<div class="empty">No system is known to hold personal data yet. Record processing activities with their systems (PDPL → RoPA) or run the personal-data discovery (PDPL → Data Catalog) - the monitor tests what they name.</div>';
+    $('covnote').innerHTML=(V.coverage_error?'<div class="note">Asset Coverage: '+esc(V.coverage_error)+' - controls M06-M10 read as not measured until it answers.</div>':'')+'<div class="note">'+esc(V.note)+' G = a remediation action is open in GRC.</div>';}
+  function openKey(k){var d=$('drawer'),t,s,label;
+    if(k==='P01'){t=V.programme.P01;label='Staff acknowledged the PDPL policies';}else{s=V.systems.find(function(x){return k.indexOf(x.id+':')===0;});var c=k.split(':')[1];t=s&&s.tests[c];label=(s?s.name:'')+' - '+c+' '+title(c);}
+    if(!t)return;var inG=(V.in_grc||[]).indexOf(k)>=0,can=RANK[ROLE]>=2;
+    d.innerHTML='<div style="display:flex;align-items:center;gap:8px"><h2 style="margin:0;font-size:16px;flex:1">'+esc(label)+'</h2><button type="button" class="btn" id="dclose" aria-label="Close"><i class="ti ti-x"></i></button></div>'
+      +'<p><span class="cell c-'+esc(t.state)+'" style="display:inline-block;width:auto;padding:3px 8px">'+esc(t.state.replace('_',' '))+'</span></p><div class="sm mu">Evidence</div><p>'+esc(t.evidence)+'</p>'
+      +(s&&s.asset?'<div class="sm mu">Asset</div><p>'+esc(s.asset.name+' ('+s.asset.id+') - '+s.asset.how)+'</p>':'')
+      +(s?'<div class="sm mu">Processing activities</div><p>'+esc(s.ropa.join(', ')||'from discovery only')+'</p>':'')
+      +(t.state==='fail'&&can?(inG?'<div class="note">A remediation action is already open in GRC.</div>':'<button type="button" class="btn pri" data-grc="'+esc(k)+'"><i class="ti ti-clipboard-plus"></i>Send to GRC as an action</button>'):'')
+      +(s&&k.split(':')[1]==='M01'&&can?'<div style="margin-top:14px" class="sm mu">Link this system to its asset (exact id from the register)</div><div class="flt"><input class="inp" id="lasset" placeholder="Asset id" value="'+esc(s.asset?s.asset.id:'')+'" aria-label="Asset id"><button type="button" class="btn" data-map="'+esc(s.id)+'">Link</button>'+(s.asset&&/linked by/.test(s.asset.how)?'<button type="button" class="btn" data-unmap="'+esc(s.id)+'">Unlink</button>':'')+'</div>':'');
+    d.hidden=false;}
+  function mine(){return req('GET','/pdpl/monitor/my').then(function(r){var I=r.items||[];$('mycard').hidden=!I.length;
+    $('mine').innerHTML=I.map(function(c){return '<div class="ack"><b>'+esc(c.title)+'</b> <span class="mu sm">'+esc(c.policy+' v'+c.version+' · due '+c.due)+'</span>'+(c.purpose?'<p>'+esc(c.purpose)+'</p>':'')+(c.note?'<div class="sm mu">'+esc(c.note)+'</div>':'')
+      +(c.acknowledged_at?'<div class="sm" style="color:#56d364;margin-top:6px"><i class="ti ti-check"></i> Acknowledged '+esc(c.acknowledged_at.slice(0,10))+'</div>':'<div class="flt" style="margin-top:8px"><label class="sm"><input type="checkbox" data-read="'+esc(c.id)+'"> I have read and understood this policy and will follow it</label><button type="button" class="btn pri" data-ack="'+esc(c.id)+'" data-ver="'+esc(c.version)+'" disabled>Acknowledge</button></div>')+'</div>';}).join('');},function(){$('mycard').hidden=true;/* an older engine without /my: nothing to acknowledge */});}
+  function camps(){return req('GET','/pdpl/monitor/campaigns').then(function(r){var I=r.items;
+    $('camps').innerHTML=I.length?'<div class="tw"><table><thead><tr><th>Policy</th><th>Due</th><th>Acknowledged</th><th>Pending</th><th></th></tr></thead><tbody>'+I.map(function(c){return '<tr><td><b>'+esc(c.title)+'</b><div class="sm mu">'+esc(c.policy+' v'+c.version+' · '+c.status+' · started by '+c.created_by)+'</div></td><td>'+esc(c.due)+(c.overdue_count?'<span class="tag d">'+c.overdue_count+' overdue</span>':'')+'</td><td style="min-width:140px"><div class="hb"><div class="b"><i style="width:'+c.pct+'%;background:var(--pass)"></i></div><div class="n">'+c.pct+'%</div></div><div class="sm mu">'+c.acked_count+' of '+c.audience_count+'</div></td><td class="sm">'+esc(c.pending.slice(0,12).join(', '))+(c.pending.length>12?' …':'')+'</td><td>'+(c.status==='open'?'<button type="button" class="btn" data-close="'+esc(c.id)+'">Close</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No acknowledgement campaign yet. Staff confirming they read the PDPL policies is evidence auditors ask for (Art. 19, IR Art. 23).</div>';},function(e){$('camps').innerHTML='<div class="err sm">'+esc(e.message)+'</div>';});}
+  function policies(){if($('cpol').options.length)return;req('GET','/pdpl/monitor/policies').then(function(r){$('cpol').innerHTML=(r.items||[]).map(function(p){return '<option value="'+esc(p.id)+'">'+esc((p.pdpl?'★ ':'')+p.id+' - '+p.title+' v'+p.version+(p.source==='approved draft'?' (approved draft)':''))+'</option>';}).join('');
+    $('polnote').innerHTML=r.note?'<div class="note">'+esc(r.note)+' <a href="pdpl-policies.html" style="color:#5eead4">Open PDPL Policies</a></div>':'';},function(){$('cpol').innerHTML='<option value="">GRC register not reachable</option>';});}
+  function draw(){kpis();trend();bytest();var w=!!V.systems;$('work').hidden=!w;$('viewer').hidden=w;$('run').hidden=!w;$('pack').hidden=!w;if(!w)return;drift();matrix();camps();$('newcamp').hidden=false;policies();}
+  function load(){return req('GET','/pdpl/monitor').then(function(v){$('err').innerHTML='';V=v;draw();},function(e){$('err').innerHTML='<div class="err"><b>The PDPL Control Monitor could not load.</b> '+esc(e.message)+(e.status===404?' - update IT Asset Management (engine/pdpl-monitor.js).':'')+'</div>';});}
+  function after(p,msg){return p.then(function(r){toast(msg);$('drawer').hidden=true;return load().then(function(){return r;});},function(e){toast(e.message);});}
+  document.addEventListener('change',function(ev){var c=ev.target.closest('[data-read]');if(c){var b=document.querySelector('[data-ack="'+c.getAttribute('data-read')+'"]');if(b)b.disabled=!c.checked;}});
+  document.addEventListener('click',function(ev){var b=ev.target.closest('button');if(!b)return;
+    if(b.id==='refresh'){load();mine();return;}
+    if(b.id==='dclose'){$('drawer').hidden=true;return;}
+    if(b.id==='run'){b.disabled=true;after(req('POST','/pdpl/monitor/run',{}),'Run complete').then(function(){b.disabled=false;});return;}
+    if(b.id==='pack'){req('GET','/pdpl/monitor/pack').then(function(r){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(r,null,2)],{type:'application/json'}));a.download='pdpl-evidence-pack-'+r.generated_at.slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();toast('Evidence pack '+r.pack_sha256.slice(0,12)+'…');},function(e){toast(e.message);});return;}
+    if(b.hasAttribute('data-open')){openKey(b.getAttribute('data-open'));return;}
+    if(b.hasAttribute('data-grc')){after(req('POST','/pdpl/monitor/grc',{key:b.getAttribute('data-grc')}),'Action raised in GRC');return;}
+    if(b.hasAttribute('data-map')){var a=$('lasset').value.trim();if(!a){toast('Enter the asset id');return;}after(req('POST','/pdpl/monitor/map',{system:b.getAttribute('data-map'),asset_id:a}),'Linked to '+a);return;}
+    if(b.hasAttribute('data-unmap')){after(req('POST','/pdpl/monitor/map',{system:b.getAttribute('data-unmap'),remove:true}),'Link removed');return;}
+    if(b.hasAttribute('data-ack')){req('POST','/pdpl/monitor/campaigns/'+encodeURIComponent(b.getAttribute('data-ack'))+'/ack',{version:b.getAttribute('data-ver')}).then(function(){toast('Acknowledged - thank you');mine();if(V&&V.systems)load();},function(e){toast(e.message);});return;}
+    if(b.hasAttribute('data-close')){after(req('POST','/pdpl/monitor/campaigns/'+encodeURIComponent(b.getAttribute('data-close'))+'/close',{}),'Campaign closed');return;}
+    if(b.id==='cstart'){var aud=$('caud').value.split(/[\s,;]+/).map(function(x){return x.trim();}).filter(Boolean);if(!aud.length){toast('Name the people who must acknowledge');return;}if(!$('cdue').value){toast('Choose a due date');return;}
+      var body={policy:$('cpol').value,audience:aud,due:$('cdue').value};if($('cnote').value.trim())body.note=$('cnote').value.trim();
+      after(req('POST','/pdpl/monitor/campaigns',body),'Campaign started for '+aud.length+' people').then(function(r){if(r){$('caud').value='';mine();}});}
+  });
+  $('q').addEventListener('input',function(){clearTimeout(T);T=setTimeout(matrix,200);});['ffail','fsens'].forEach(function(id){$(id).addEventListener('change',matrix);});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),r=String(j.role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;ME=String(j.user||'');}catch(e){/* not signed in: viewer */}load();mine();};w.onerror=function(){load();mine();};w.send();
+})();
+</script></body></html>

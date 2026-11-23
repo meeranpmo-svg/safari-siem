@@ -1,0 +1,108 @@
+diff --git a/engine/findings.js b/engine/findings.js
+index 85e56c6..36a0d85 100644
+--- a/engine/findings.js
++++ b/engine/findings.js
+@@ -10,28 +10,14 @@ const AI_LABEL = 'AI — verify';
+ const DAY = 86400000;
+ const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
+ 
+-function createFindings({ store, audit, settings, assets, getLicences }) {
+-  const col = store.collection('findings');
+-  const mkId = () => `fnd_${crypto.randomBytes(6).toString('hex')}`;
+-  // other engine modules (Asset Discovery: rogue devices, silent SIEM sources) contribute deterministic findings through
+-  // providers: fn() → [{key, kind, severity, asset_id?, title, detail, evidence, label?}]. They take part in
+-  // regenerate() (so they are not "resolved" by it) and can be refreshed on their own with syncKinds().
+-  const providers = [];
+-  function addProvider(fn) { if (typeof fn === 'function') providers.push(fn); }
+-  function fromProviders(kinds) {
+-    const out = [];
+-    for (const p of providers) { let list = []; try { list = p() || []; } catch { list = []; } for (const f of list) if (!kinds || kinds.includes(f.kind)) out.push(f); }
+-    return out;
+-  }
+-
+-  function daysUntil(iso) { const t = Date.parse(iso); return Number.isFinite(t) ? Math.round((t - Date.now()) / DAY) : null; }
+-  function daysSince(iso) { const t = Date.parse(iso); return Number.isFinite(t) ? Math.round((Date.now() - t) / DAY) : null; }
+-
+-  // compute the current set of findings as {key, kind, severity, asset_id?, licence_id?, title, detail, evidence}
+-  function compute() {
+-    const st = settings.get();
++// the built-in rules, pure, over what was read (the Python twin pyengine/asset_rules.py findings() answers the same, step 6b)
++//   inp = {assets, licences, settings: {not_seen_days, expiry_window_days}, now}
++function findingsCore(inp) {
++    const st = inp.settings, now = inp.now;
++    const daysUntil = (iso) => { const x = Date.parse(iso); return Number.isFinite(x) ? Math.round((x - now) / DAY) : null; };
++    const daysSince = (iso) => { const x = Date.parse(iso); return Number.isFinite(x) ? Math.round((now - x) / DAY) : null; };
+     const notSeen = st.not_seen_days; const win = st.expiry_window_days;
+-    const live = assets.all().filter((a) => a.status !== 'disposed' && a.status !== 'retired');
++    const live = inp.assets.filter((a) => a.status !== 'disposed' && a.status !== 'retired');
+     const out = [];
+     const add = (f) => out.push(f);
+     for (const a of live) {
+@@ -67,14 +53,42 @@ function createFindings({ store, audit, settings, assets, getLicences }) {
+     }
+     // licence over/under deployment
+     const rolled = rollup(live);
+-    for (const lic of (getLicences ? getLicences() : [])) {
++    for (const lic of inp.licences || []) {
+       const comp = licenceCompliance(lic, rolled);
+       if (comp.compliance === 'over') add({ key: `licence_over:${lic.id}`, kind: 'licence_over', severity: 'high', licence_id: lic.id, title: `Licence over-deployed: ${lic.product}`, detail: `${comp.used} installs against ${lic.seats} seats (over by ${comp.delta}). True-up or reclaim installs.`, evidence: { seats: lic.seats, used: comp.used, delta: comp.delta, products: comp.products } });
+       else if (comp.compliance === 'under' && comp.delta <= -1) add({ key: `licence_under:${lic.id}`, kind: 'licence_under', severity: 'low', licence_id: lic.id, title: `Unused licence seats: ${lic.product}`, detail: `${comp.used} of ${lic.seats} seats used (${-comp.delta} spare). Consider reclaim at renewal.`, evidence: { seats: lic.seats, used: comp.used, delta: comp.delta } });
+       if (lic.expiry) { const du = daysUntil(lic.expiry); if (du !== null && du <= win) add({ key: `licence_expiring:${lic.id}`, kind: 'licence_expiring', severity: du < 0 ? 'high' : 'low', licence_id: lic.id, title: `Licence ${du < 0 ? 'expired' : 'expiring'}: ${lic.product}`, detail: `Licence ${du < 0 ? 'expired' : 'expires'} ${lic.expiry.slice(0, 10)}.`, evidence: { expiry: lic.expiry, days: du } }); }
+     }
+-    for (const f of fromProviders(null)) out.push(f);
+     return out;
++}
++
++function createFindings({ store, audit, settings, assets, getLicences, python }) {
++  const col = store.collection('findings');
++  const mkId = () => `fnd_${crypto.randomBytes(6).toString('hex')}`;
++  // other engine modules (Asset Discovery: rogue devices, silent SIEM sources) contribute deterministic findings through
++  // providers: fn() → [{key, kind, severity, asset_id?, title, detail, evidence, label?}]. They take part in
++  // regenerate() (so they are not "resolved" by it) and can be refreshed on their own with syncKinds().
++  const providers = [];
++  function addProvider(fn) { if (typeof fn === 'function') providers.push(fn); }
++  function fromProviders(kinds) {
++    const out = [];
++    for (const p of providers) { let list = []; try { list = p() || []; } catch { list = []; } for (const f of list) if (!kinds || kinds.includes(f.kind)) out.push(f); }
++    return out;
++  }
++
++  // compute the current set of findings as {key, kind, severity, asset_id?, licence_id?, title, detail, evidence}
++  const inputs = () => ({ assets: assets.all(), licences: getLicences ? getLicences() : [], settings: settings.get(), now: Date.now() });
++  function compute() { return findingsCore(inputs()).concat(fromProviders(null)); }
++  // the same, with the built-in rules run in Python (pyengine/asset_rules.py; a missing or failing Python → Node.js)
++  const py = (() => { try { return python === false ? null : require('./pyengine').createPyEngine({ python: python || undefined, timeoutMs: 5 * 60000 }); } catch (e) { return null; } })();
++  const slim = (a) => { const r = {}; for (const k of ['id', 'name', 'asset_tag', 'status', 'type', 'last_seen', 'networked', 'owner', 'custodian', 'site', 'location', 'warranty', 'eol', 'mgmt_ip', 'software']) if (a[k] !== undefined) r[k] = a[k]; if (Array.isArray(a.sources)) r.sources = a.sources.map((x) => ({ source: x && x.source })); return r; };
++  async function computeAsync() {
++    const inp = inputs();
++    if (py) {
++      const r = await py.call('rules.findings', Object.assign({}, inp, { assets: inp.assets.map(slim) }));
++      if (r && Array.isArray(r.findings)) return r.findings.concat(fromProviders(null));
++    }
++    return findingsCore(inp).concat(fromProviders(null));
+   }
+ 
+   // refresh only the findings of the given kinds from the providers (no audit noise unless something opened/closed)
+@@ -104,8 +118,15 @@ function createFindings({ store, audit, settings, assets, getLicences }) {
+ 
+   // regenerate: upsert computed findings, preserving accepted/dismissed status by key; close findings whose
+   // condition no longer holds (status 'resolved' — kept for the trail, not deleted).
++  // asynchronous now (the rules may run in Python); the hourly timer in main.js calls it inside a plain try/catch, so a
++  // failure is caught and logged here - it can never become an unhandled rejection that stops the engine
+   function regenerate(who) {
+-    const computed = compute();
++    const p = regenerateNow(who);
++    p.catch((e) => { try { console.error('findings: regenerate failed', e && e.message); } catch (x) { /* no console */ } });
++    return p;
++  }
++  async function regenerateNow(who) {
++    const computed = await computeAsync();
+     const byKey = new Map(computed.map((f) => [f.key, f]));
+     const now = new Date().toISOString();
+     const existing = col.all();
+@@ -164,4 +185,4 @@ function createFindings({ store, audit, settings, assets, getLicences }) {
+   return { compute, regenerate, syncKinds, addProvider, upsertAi, list, get, setStatus, summary, AI_LABEL };
+ }
+ 
+-module.exports = { createFindings, AI_LABEL };
++module.exports = { createFindings, findingsCore, AI_LABEL };

@@ -1,0 +1,69 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Endpoint &amp; Mobile Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Endpoint & Mobile Management over /api/itam/mdm/devices: the managed estate exactly as the MDM (ManageEngine Mobile Device Manager
+     Plus) reports it - by platform and ownership, devices that stopped checking in. Read only; operators and above (device names and
+     e-mail addresses are personal data). No compliance verdict is shown because this read does not carry one - none is inferred. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;text-decoration:none;display:inline-flex;gap:6px;align-items:center}.btn:hover{border-color:#3a4258}.btn:disabled{opacity:.5}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px 14px;text-align:left;color:inherit;cursor:pointer}.t.on{outline:2px solid var(--acc)}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:28px;font-weight:800;line-height:1.1}.t .s{font-size:11.5px;color:var(--d-mute)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:14px;margin-bottom:12px}.card h2{margin:0 0 10px;font-size:15px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.row{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}.row .n{width:120px}.row .b{flex:1;height:9px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden}.row .b i{display:block;height:100%;background:var(--acc)}.row .c{width:50px;text-align:right}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);font-size:13px}th{color:var(--d-mute);font-weight:600;font-size:11.5px;text-transform:uppercase}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600}.pill.ok{background:rgba(95,210,122,.16);color:var(--ok)}.pill.warn{background:rgba(245,181,68,.16);color:var(--warn)}.pill.mute{background:rgba(139,147,164,.16);color:var(--d-mute)}
+.fil{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.fil input{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:5px 9px;font:inherit;min-width:240px}
+.empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+a.lk{color:var(--info)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">User desktops · ManageEngine Mobile Device Manager Plus · read only</div><h1>Endpoint &amp; Mobile Management</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn" id="rf" hidden>⟳ Read the MDM now</button></div>
+<div id="banner"></div>
+<div class="k" id="kp"></div>
+<div id="body"><div class="card"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, F = '', Q = '';
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 4500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json'); x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } if (x.status >= 200 && x.status < 300) ok(j || {}); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); }; x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('the platform is not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  function ago(v) { if (!v) return 'never'; var s = (Date.now() - Date.parse(v)) / 1000; return s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : Math.round(s / 86400) + ' d ago'; }
+  function load() {
+    return req('GET', '/mdm/devices').then(function (v) { V = v; draw(); }).catch(function (e) {
+      $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + (e.status === 403 ? 'Endpoint and mobile devices name their users (personal data): operators and administrators only.' : e.status === 404 ? 'Endpoint & Mobile Management is not on this platform yet — run the update.' : esc(e.message)) + '</div></div>';
+    });
+  }
+  function bars(o) { var ks = Object.keys(o).sort(function (a, b) { return o[b] - o[a]; }), mx = Math.max.apply(null, ks.map(function (k) { return o[k]; }).concat([1])); return ks.length ? ks.map(function (k) { return '<div class="row"><span class="n">' + esc(k) + '</span><span class="b"><i style="width:' + (o[k] / mx * 100) + '%"></i></span><span class="c">' + o[k] + '</span></div>'; }).join('') : '<div class="empty">No device.</div>'; }
+  function draw() {
+    $('rf').hidden = !V.configured;
+    $('up').textContent = V.read_at ? 'read ' + ago(V.read_at) : '';
+    if (!V.configured) { $('kp').innerHTML = ''; $('banner').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(V.reason) + '</div><p><a class="btn" href="hr-offboarding.html">HR Offboarding → MDM</a></p></div>'; return; }
+    $('banner').innerHTML = V.error ? '<div class="card"><div class="err">The MDM did not answer: ' + esc(V.error) + '</div><div class="mut sm">Showing the last good read' + (V.read_at ? ' (' + esc(ago(V.read_at)) + ')' : '') + '.</div></div>' : (V.truncated ? '<div class="card"><div class="mut sm">The MDM has more devices than one read takes (10,000); the first ones are shown.</div></div>' : '');
+    var k = V.kpis, T = function (f, l, v, s, cls) { return '<button type="button" class="t ' + (cls || '') + (F === f ? ' on' : '') + '" data-f="' + f + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s) + '</div></button>'; };
+    $('kp').innerHTML = T('', 'Managed devices', k.devices, k.total_reported != null && k.total_reported !== k.devices ? 'MDM reports ' + k.total_reported : 'as the MDM reports them', 'ok')
+      + T('company', 'Company-owned', k.company, 'fully managed', '') + T('personal', 'Personal (BYOD)', k.personal, 'container only — personal data never read', '')
+      + T('stale', 'Not checking in', k.stale, 'over ' + V.stale_days + ' days, or never', k.stale ? 'warn' : 'ok') + T('nouser', 'No user assigned', k.no_user, 'cannot be tied to a person', k.no_user ? 'warn' : 'ok');
+    var L = V.devices.filter(function (d) {
+      if (F === 'company' && d.owner_type !== 'company') return false; if (F === 'personal' && d.owner_type !== 'personal') return false; if (F === 'stale' && !d.stale) return false; if (F === 'nouser' && d.upn) return false;
+      return !Q || (d.name + ' ' + d.upn + ' ' + d.serial + ' ' + d.model + ' ' + d.os).toLowerCase().indexOf(Q) >= 0;
+    });
+    $('body').innerHTML = '<div class="g2"><div class="card"><h2>By platform</h2>' + bars(V.by_os) + '</div><div class="card"><h2>By ownership</h2>' + bars(V.by_owner) + '</div></div>'
+      + '<div class="card"><h2>Devices <span class="mut sm">' + L.length + ' of ' + V.devices.length + '</span></h2><div class="fil"><input type="search" id="q" placeholder="Search device, user, serial, model…" value="' + esc(Q) + '"></div>'
+      + (L.length ? '<table><thead><tr><th>Device</th><th>Platform</th><th>Owner</th><th>User</th><th>Serial</th><th>Last check-in</th></tr></thead><tbody>' + L.slice(0, 1000).map(function (d) {
+        return '<tr><td><b>' + esc(d.name || d.id) + '</b><div class="mut sm">' + esc(d.model || '') + '</div></td><td>' + esc(d.os) + (d.os_version ? ' <span class="mut sm">' + esc(d.os_version) + '</span>' : '') + '</td><td>' + esc(d.owner_type) + '</td><td>' + esc(d.upn || '—') + '</td><td class="sm">' + esc(d.serial || '—') + '</td><td>' + (d.stale ? '<span class="pill warn">' + esc(d.age_days == null ? 'never' : d.age_days + ' d ago') + '</span>' : '<span class="pill ok">' + esc(d.age_days + ' d ago') + '</span>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No device matches.</div>')
+      + '</div><p class="mut sm">' + esc(V.note) + '</p>';
+  }
+  document.addEventListener('click', function (ev) { var b = ev.target.closest('[data-f]'); if (b) { F = F === b.getAttribute('data-f') ? '' : b.getAttribute('data-f'); draw(); } });
+  document.addEventListener('input', function (e) { if (e.target.id !== 'q') return; Q = e.target.value.trim().toLowerCase(); var p = e.target.selectionStart; draw(); var q = $('q'); if (q) { q.focus(); try { q.setSelectionRange(p, p); } catch (er) { /* not a text field */ } } });
+  $('rf').addEventListener('click', function () { var b = $('rf'); b.disabled = true; req('POST', '/mdm/devices/refresh', {}).then(function (v) { V = v; draw(); toast('Read from the MDM'); }).catch(function (e) { toast(e.message); }).then(function () { b.disabled = false; }); });
+  load();
+})();
+</script></body></html>

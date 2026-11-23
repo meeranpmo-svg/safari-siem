@@ -1,0 +1,92 @@
+// Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE.
+'use strict';
+// Browser test for the organisation's sector profile (brand/brand.json: modules_off, pages_off, frameworks) and the brand
+// itself on the home page: what the brand setting switches off is gone from the menu and the page registry for EVERY role
+// (administrators included), opening such a page says why, a module comes back when an administrator adds it in Modules &
+// Solutions, a page in pages_off stays off, and everything else stays. The other page tests run with nothing switched off
+// (tools/run-tests.sh), so this test builds its own page copy of the REAL brand setting. Stub APIs, synthetic data only.
+// Run: PLAYWRIGHT=/opt/node22/lib/node_modules/playwright node sector-profile.test.js
+const http = require('http'), fs = require('fs'), os = require('os'), path = require('path'), { execFileSync } = require('child_process');
+const ZYB_ORG = require('../../brand/index');
+const ROOT = path.resolve(__dirname, '../..'), DASH = path.join(ROOT, 'ui');
+let n = 0, bad = 0;
+const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
+
+(async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sector-')), ORGJS = path.join(tmp, 'zyb-org.js');
+  execFileSync(process.execPath, [path.join(ROOT, 'tools/brand/apply-brand.js'), '--ui-out', ORGJS]);
+  let ROLE = 'admin', ORGMODS = null;
+  const srv = http.createServer((req, res) => {
+    const u = decodeURIComponent(req.url.split('?')[0]), json = (c, o) => { res.writeHead(c, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)); };
+    if (u === '/dashboards/whoami.json' || u === '/auth/whoami') return json(200, { user: 'admin.syn', role: ROLE });
+    if (u === '/auth/org') return ORGMODS ? json(200, { modules: ORGMODS, updated: new Date().toISOString() }) : json(200, {});
+    if (u.startsWith('/api/') || u.startsWith('/auth/')) return json(404, { error: 'not in this test' });
+    const rel = u === '/' ? '/index.html' : u.replace(/^\/dashboards\//, '/');
+    const f = rel === '/vendor/zyb-org.js' ? ORGJS : path.join(DASH, rel);
+    if (f !== ORGJS && !f.startsWith(DASH)) { res.writeHead(403); return res.end(); }
+    fs.readFile(f, (e, d) => { if (e) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': u.endsWith('.js') ? 'application/javascript' : u.endsWith('.css') ? 'text/css' : 'text/html' }); res.end(d); });
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const base = 'http://127.0.0.1:' + srv.address().port + '/dashboards/';
+  const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
+  const browser = await chromium.launch(), errs = [];
+  const open = async (file) => { const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 } }), page = await ctx.newPage(); page.on('pageerror', (e) => errs.push(file + ': ' + e.message)); await page.goto(base + file); await page.waitForFunction(() => window.ZybModules && window.ZYB_ORG); await page.waitForTimeout(700); return page; };
+  const offOf = (page, files) => page.evaluate((fs_) => fs_.map((f) => window.ZybModules.off(f)), files);
+
+  // ---- the brand setting has a profile to test at all
+  ok(ZYB_ORG.modules_off.length > 0 && ZYB_ORG.frameworks.length > 0, 'the brand setting names the frameworks and what is switched off');
+
+  for (const role of ['admin', 'operator', 'viewer']) {
+    ROLE = role; ORGMODS = null;
+    const page = await open('index.html');
+    const reg = await page.evaluate(() => ({ byMod: window.ZybModules.CAT.map((m) => [m[0], window.ZybModules.pagesOf(m[0]).map((p) => p.h)]), nav: window.ZYB_NAV.map((a) => [a.id, a.pages.map((p) => p.h)]) }));
+    const listed = new Set(reg.nav.flatMap((a) => a[1]));
+    // every page of a switched-off module, and every page in pages_off, is out of the registry the menu, search and home page use
+    const offPages = reg.byMod.filter((m) => ZYB_ORG.modules_off.includes(m[0])).flatMap((m) => m[1]).concat(ZYB_ORG.pages_off.map((k) => k + '.html'));
+    ok(offPages.length >= ZYB_ORG.pages_off.length && offPages.every((h) => !listed.has(h)), role + ': no switched-off page is left in the page registry: ' + offPages.filter((h) => listed.has(h)).join(', '));
+    ok((await offOf(page, offPages)).every(Boolean), role + ': every switched-off page reports off');
+    // the frameworks and the estate that DO apply stay
+    const keep = ['nca-ecc.html', 'iso27001.html', 'pdpl-dashboard.html', 'ndmo.html', 'virtualization.html', 'exchange-hybrid.html', 'network-map.html', 'soc-overview.html', 'risk-studio.html'];
+    ok((await offOf(page, keep)).every((x) => !x) && keep.every((h) => listed.has(h)), role + ': the pages that apply are still there');
+    // the menu drawn on the page offers none of them
+    const links = await page.evaluate(() => [...document.querySelectorAll('#zyb-side a[href], [data-zyb-href]')].filter((a) => (a.closest('li') || a).style.display !== 'none').map((a) => (a.getAttribute('data-zyb-href') || a.getAttribute('href') || '').split(/[?#]/)[0].split('/').pop()));
+    ok(links.length > 20 && offPages.every((h) => !links.includes(h)), role + ': the menu has no link to a switched-off page (' + links.length + ' links)');
+    // tiles and links inside the page: none to a switched-off page is visible
+    const shown = await page.evaluate(() => [...document.querySelectorAll('main a[href]')].filter((a) => a.offsetParent !== null).map((a) => (a.getAttribute('href') || '').split(/[?#]/)[0].split('/').pop()));
+    ok(offPages.every((h) => !shown.includes(h)), role + ': the home page shows no tile or link to a switched-off page: ' + offPages.filter((h) => shown.includes(h)).join(', '));
+    await page.context().close();
+  }
+
+  // ---- opening a switched-off page directly says why (administrator too)
+  ROLE = 'admin'; ORGMODS = null;
+  const firstOff = ZYB_ORG.pages_off[0] + '.html';
+  let p = await open(firstOff);
+  ok(await p.evaluate(() => !!document.querySelector('[data-zyb-sub-blocked]') && /Not used in this organisation/.test(document.body.textContent)), 'a switched-off page opened directly says it is not used in this organisation');
+  await p.context().close();
+
+  // ---- an administrator adds a module back in Modules & Solutions: its pages return; pages_off stays off
+  const mod = ZYB_ORG.modules_off[0];
+  p = await open('index.html');
+  const all = await p.evaluate(() => window.ZybModules.CAT.map((m) => m[0])), modPages = await p.evaluate((id) => window.ZybModules.pagesOf(id).map((x) => x.h), mod);
+  await p.context().close();
+  ORGMODS = all.filter((id) => !ZYB_ORG.modules_off.includes(id) || id === mod);
+  p = await open('index.html');
+  const back = modPages.filter((h) => !ZYB_ORG.pages_off.includes(h.replace(/\.html$/, '')));
+  ok(back.length > 0 && (await offOf(p, back)).every((x) => !x), 'a module an administrator added back is on again: ' + mod + ' (' + back.length + ' pages)');
+  ok((await offOf(p, ZYB_ORG.pages_off.map((k) => k + '.html'))).every(Boolean), 'pages in pages_off stay off');
+  ok((await offOf(p, (await p.evaluate((ids) => ids.flatMap((id) => window.ZybModules.pagesOf(id).map((x) => x.h)), ZYB_ORG.modules_off.filter((id) => id !== mod))))).every(Boolean), 'the other switched-off modules stay off');
+
+  // ---- the brand on the home page: name, logo and frameworks come from the setting; no token is left on the page
+  const home = await p.evaluate(() => ({ org: document.getElementById('orglogo') && (document.querySelector('#orglogo img') || {}).alt, foot: document.querySelector('footer').textContent, text: document.body.innerText, title: document.title, regs: document.getElementById('regs').getAttribute('aria-label') || '', look: document.documentElement.classList.contains('org-brand') }));
+  ok(home.org === ZYB_ORG.name, 'the company logo carries the company name: ' + home.org);
+  ok(home.foot.includes(ZYB_ORG.name), 'the footer names the company');
+  ok(!/\{\{org\./.test(home.text + home.title), 'no brand token is left on the page');
+  ok(/NCA/.test(home.regs) === ZYB_ORG.frameworks.includes('nca') && /SAMA/.test(home.regs) === ZYB_ORG.frameworks.includes('sama') && /Insurance/.test(home.regs) === ZYB_ORG.frameworks.includes('ia'), 'the frameworks shown are the ones in the brand setting: ' + home.regs);
+  ok(home.look === (ZYB_ORG.company_look !== false), 'the company look is ' + (ZYB_ORG.company_look !== false ? 'on' : 'off') + ' by default');
+  await p.context().close();
+
+  ok(errs.length === 0, 'no page errors: ' + errs.join(' | '));
+  await browser.close(); srv.close(); fs.rmSync(tmp, { recursive: true, force: true });
+  console.log(bad ? 'FAILED ' + (n - bad) + '/' + n + ' checks' : 'ALL ' + n + ' checks passed');
+  process.exit(bad ? 1 : 0);
+})().catch((e) => { console.error(e); process.exit(1); });

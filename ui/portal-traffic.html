@@ -1,0 +1,75 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Portal Traffic</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px}.g2>.card{margin:0}
+.bars{display:flex;align-items:flex-end;gap:1px;height:140px;border-bottom:1px solid var(--edge)}.bars i{flex:1;display:flex;flex-direction:column-reverse;min-width:1px;height:100%;cursor:default}
+.bars b{display:block}.c2{background:#3fb950}.c3{background:#2f81f7}.c4{background:#d29922}.c5{background:#f85149}
+.lat{display:flex;align-items:flex-end;gap:1px;height:90px;border-bottom:1px solid var(--edge)}.lat i{flex:1;background:#a371f7;min-width:1px}.lat i.slow{background:#f85149}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:6px}.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.lg .l2:before{background:#3fb950}.lg .l3:before{background:#2f81f7}.lg .l4:before{background:#d29922}.lg .l5:before{background:#f85149}
+.rbar{height:6px;border-radius:3px;background:rgba(255,255,255,.07);min-width:60px}.rbar i{display:block;height:100%;border-radius:3px;background:#2f81f7}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Applications · customer portal</div><h1>Portal Traffic</h1><div class="muted small">What the portal's web server actually served, from its access logs in the SIEM: requests, visitors, server errors, request time, the pages people use and the ones that fail, and where visitors come from</div></div>
+<div class="sp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="site" aria-label="Web site"><option value="">Loading…</option></select><select id="hours" aria-label="Period"><option value="24">Last 24 hours</option><option value="168">Last 7 days</option><option value="720">Last 30 days</option></select><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div></div>
+<div class="banner" id="nc" hidden></div>
+<div class="k" id="kk"></div>
+<div class="g2">
+<div class="card"><h2>Requests by status <span class="c" id="bk"></span></h2><div class="bars" id="bars"></div><div class="lg"><span class="l2">2xx</span><span class="l3">3xx</span><span class="l4">4xx</span><span class="l5">5xx</span></div></div>
+<div class="card"><h2>95th percentile of request time <span class="c">red = 3 s or more</span></h2><div id="latw"><div class="lat" id="lat"></div></div><p class="note" id="latnote"></p></div>
+</div>
+<div class="g2" style="margin-top:12px">
+<div class="card"><h2>Top 10 requested pages</h2><div class="tw" id="pages"></div></div>
+<div class="card"><h2>Top 10 error paths <span class="c">4xx / 5xx</span></h2><div class="tw" id="errs"></div></div>
+</div>
+<div class="g2" style="margin-top:12px">
+<div class="card"><h2>Visitors by country <span class="c">as the firewall logged each client IP</span></h2><div class="tw" id="ctry"></div></div>
+<div class="card"><h2>Requests per HTTP status</h2><div class="tw" id="codes"></div></div>
+</div>
+<div class="card" style="margin-top:12px" id="ipcard"><h2>Top 10 IPs causing errors <span class="c">operators and administrators - customer IPs are personal data</span></h2><div class="tw" id="ips"></div></div>
+<p class="note" id="note"></p>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc,esc=Z.esc,$=function(i){return document.getElementById(i);};
+  var by=function(n){return n>=1e9?Math.round(n/1e8)/10+' GB':n>=1e6?Math.round(n/1e5)/10+' MB':n>=1e3?Math.round(n/100)/10+' KB':n+' B';};
+  var sec=function(s){return s==null?'–':s>=1?Math.round(s*100)/100+' s':Math.round(s*1000)+' ms';};
+  var tm=function(t,h){var d=new Date(t);return h>24?d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});};
+  function why(e){return e.status===404?'Portal traffic is not installed on the SIEM yet - run the update.':e.message;}
+  function q(){var s=$('site').value;return '/web/traffic?hours='+$('hours').value+(s?'&site='+encodeURIComponent(s):'');}
+  function sites(list){var cur=$('site').value||(location.hash||'').slice(1);
+    $('site').innerHTML=list.length?list.map(function(s){return '<option value="'+esc(s.site)+'">'+esc(s.site)+' ('+Z.n(s.requests)+')</option>';}).join(''):'<option value="">no web server log yet</option>';
+    if(cur&&list.some(function(s){return s.site===cur;}))$('site').value=cur;}
+  function empty(msg){['bars','lat','pages','errs','ctry','codes','ips'].forEach(function(id){$(id).innerHTML=id==='bars'||id==='lat'?'':'<div class="empty">'+esc(msg)+'</div>';});$('kk').innerHTML='';}
+  function draw(v){
+    sites(v.sites||[]);
+    if(!v.site){$('nc').hidden=false;$('nc').textContent=(v.sites||[]).length?'Choose the portal site above.':'No web server access log has reached the SIEM. Send the portal\'s nginx (or Apache) access log to the SIEM by syslog - add $request_time to the log_format to see request time - and this page fills in.';empty('No data yet.');return;}
+    $('nc').hidden=true;var T=v.totals;
+    $('kk').innerHTML=Z.tile('Requests',Z.n(T.requests),'')+Z.tile('Unique visitors',Z.n(T.visitors),'client IPs')+Z.tile('Visitors now',Z.n(T.visitors_5min),'last 5 minutes')
+      +Z.tile('Answered without server error',T.ok_pct==null?'–':T.ok_pct+' %','',T.ok_pct!=null&&T.ok_pct<99?'bad':T.ok_pct!=null&&T.ok_pct<99.9?'warn':'ok')
+      +Z.tile('Server errors (5xx)',Z.n(T.s5),'',T.s5?'warn':'ok')+Z.tile('Client errors (4xx)',Z.n(T.s4),'')+Z.tile('95th pct request time',v.latency?sec(v.latency.p95_s):'not in log','',v.latency&&v.latency.p95_s>=3?'bad':'')+Z.tile('Bytes sent',by(T.bytes),'');
+    var S=v.series,mx=Math.max(1,Math.max.apply(null,S.map(function(x){return x.s2+x.s3+x.s4+x.s5;})));
+    $('bk').textContent=v.bucket_ms>=21600000?'6-hour buckets':v.bucket_ms>=3600000?'hourly':'15-minute buckets';
+    $('bars').innerHTML=S.map(function(x){var t=x.s2+x.s3+x.s4+x.s5,f=function(n,c){return n?'<b class="'+c+'" style="height:'+(n/mx*100)+'%"></b>':'';};
+      return '<i title="'+esc(tm(x.t,v.hours)+': '+t+' requests · 2xx '+x.s2+' · 3xx '+x.s3+' · 4xx '+x.s4+' · 5xx '+x.s5)+'">'+f(x.s2,'c2')+f(x.s3,'c3')+f(x.s4,'c4')+f(x.s5,'c5')+'</i>';}).join('');
+    if(v.latency){var lm=Math.max(0.001,Math.max.apply(null,S.map(function(x){return x.p95_s||0;})));
+      $('lat').innerHTML=S.map(function(x){return '<i class="'+(x.p95_s>=3?'slow':'')+'" style="height:'+((x.p95_s||0)/lm*100)+'%" title="'+esc(tm(x.t,v.hours)+': p95 '+sec(x.p95_s))+'"></i>';}).join('');
+      $('latnote').textContent='Median '+sec(v.latency.p50_s)+' · 95th percentile '+sec(v.latency.p95_s)+' · slowest '+sec(v.latency.max_s)+' (from '+Z.n(v.latency.measured)+' requests that carry their request time).';}
+    else{$('lat').innerHTML='';$('latnote').textContent='The web server\'s log format does not include the request time. Add $request_time to the nginx log_format (or %D to Apache\'s) to see how long pages take.';}
+    var pm=Math.max(1,(v.pages[0]||{}).requests||1);
+    $('pages').innerHTML=v.pages.length?'<table><thead><tr><th>Page</th><th>Requests</th><th></th><th>Visitors</th><th>Server errors</th></tr></thead><tbody>'+v.pages.map(function(p){return '<tr><td class="mono">'+esc(p.path)+'</td><td>'+Z.n(p.requests)+'</td><td><div class="rbar"><i style="width:'+(p.requests/pm*100)+'%"></i></div></td><td>'+Z.n(p.visitors)+'</td><td>'+(p.server_errors?Z.pill(Z.n(p.server_errors),'bad'):'0')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No request in this period.</div>';
+    $('errs').innerHTML=v.error_paths.length?'<table><thead><tr><th>Path</th><th>4xx</th><th>5xx</th><th>Codes</th></tr></thead><tbody>'+v.error_paths.map(function(p){return '<tr><td class="mono">'+esc(p.path)+'</td><td>'+Z.n(p.e4)+'</td><td>'+(p.e5?Z.pill(Z.n(p.e5),'bad'):'0')+'</td><td class="small">'+esc(p.codes.join(', '))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No error in this period.</div>';
+    var cm=Math.max(1,(v.countries[0]||{}).visitors||1),ns=v.not_seen_by_firewall||{visitors:0,requests:0};
+    $('ctry').innerHTML=(v.countries.length?'<table><thead><tr><th>Country</th><th>Visitors</th><th></th><th>Requests</th></tr></thead><tbody>'+v.countries.slice(0,15).map(function(c){return '<tr><td>'+esc(c.name)+'</td><td>'+Z.n(c.visitors)+'</td><td><div class="rbar"><i style="width:'+(c.visitors/cm*100)+'%"></i></div></td><td>'+Z.n(c.requests)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">The firewall logs do not name a country for these visitors yet.</div>')
+      +(ns.visitors?'<p class="note">'+Z.n(ns.visitors)+' visitor IP(s) ('+Z.n(ns.requests)+' requests) were not seen by the firewall - counted here, not guessed.</p>':'');
+    var tc=Math.max(1,T.requests);
+    $('codes').innerHTML=v.codes.length?'<table><thead><tr><th>Status</th><th>Requests</th><th>Share</th></tr></thead><tbody>'+v.codes.map(function(c){var k=c.code.charAt(0);return '<tr><td>'+Z.pill(c.code,k==='5'?'bad':k==='4'?'warn':k==='2'?'ok':'')+'</td><td>'+Z.n(c.n)+'</td><td>'+(Math.round(c.n/tc*1000)/10)+' %</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No request in this period.</div>';
+    $('ipcard').hidden=v.error_ips===null;
+    if(v.error_ips)$('ips').innerHTML=v.error_ips.length?'<table><thead><tr><th>Client IP</th><th>Country (firewall)</th><th>4xx</th><th>5xx</th><th>Requests</th></tr></thead><tbody>'+v.error_ips.map(function(x){return '<tr><td class="mono">'+esc(x.ip)+'</td><td>'+esc(x.country||'not seen by the firewall')+'</td><td>'+Z.n(x.e4)+'</td><td>'+Z.n(x.e5)+'</td><td>'+Z.n(x.requests)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No client caused errors in this period.</div>';
+    $('note').textContent=v.note||'';$('up').textContent='updated '+new Date().toLocaleTimeString();}
+  function load(){Z.req('GET',q()).then(function(v){if(!v.site&&v.sites&&v.sites.length&&!$('site').value){sites(v.sites);return load();}draw(v);},function(e){$('nc').hidden=false;$('nc').textContent=why(e);empty(why(e));});}
+  $('site').addEventListener('change',function(){location.hash=$('site').value;load();});
+  $('hours').addEventListener('change',load);$('refresh').addEventListener('click',load);
+  Z.ready(load);var t=setInterval(function(){if(!document.hidden)load();},120000);window.addEventListener('pagehide',function(){clearInterval(t);});
+})();
+</script></body></html>

@@ -1,0 +1,62 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Audit Log</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--accent:#D7262D}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:22px;font-weight:700;margin-top:2px}.t.bad .v{color:#ff7b72}
+.f{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}.f input,.f select{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px;font:13px "Segoe UI",system-ui,sans-serif}.f input[type=search]{flex:1;min-width:200px}
+button{font:600 12.5px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(255,255,255,.035)}.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.bad{background:rgba(248,81,73,.18);color:#ff7b72}.pill.warn{background:rgba(227,179,65,.16);color:#e3b341}.pill.info{background:rgba(88,166,255,.15);color:#79b8ff}
+.err{color:#ff7b72}.empty{color:var(--mute);padding:12px 0}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security · SIEM and portal</div><h1>Audit Log</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="csv">Export CSV</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="k" id="kpi"></div>
+<div class="card">
+  <div class="f"><input type="search" id="q" placeholder="Search user, action, item, IP or details" aria-label="Search">
+    <select id="act" aria-label="Activity"><option value="">All activity</option><option value="access.denied">Access denied</option><option value="netops">AI Network Engineer</option><option value="onboard">Onboarding / log sources</option><option value="case">Cases</option><option value="alert">Alerts</option><option value="rule">Detection rules</option><option value="ui.menu">Menu changes</option><option value="compliance">Compliance</option></select>
+    <select id="who" aria-label="User"><option value="">All users</option></select>
+    <select id="days" aria-label="Period"><option value="1">Last 24 hours</option><option value="7" selected>Last 7 days</option><option value="30">Last 30 days</option><option value="0">Everything loaded</option></select></div>
+  <div class="tw" id="tbl"><div class="empty">Loading…</div></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, ALL=[], VIEW=[];
+  var $=function(id){return document.getElementById(id);};
+  var SENS=/^(access\.denied|netops\.device\.credentials|onboard\.source\.(rotate|revoke|remove|delete)|netops\.change\.(approved|rejected)|ui\.menu\.order|rule\.(delete|disable))/;
+  function load(){var x=new XMLHttpRequest();x.open('GET','/api/soc/audit?limit=1000');x.withCredentials=true;x.timeout=20000;
+    x.onload=function(){if(x.status===403){$('tbl').innerHTML='<p class="err">The audit log is available to administrators only.</p>';return;}if(x.status!==200){$('tbl').innerHTML='<p class="err">Cannot load the audit log (HTTP '+x.status+').</p>';return;}
+      try{ALL=(JSON.parse(x.responseText).items||[]).slice().sort(function(a,b){return (b.at||0)-(a.at||0);});}catch(e){ALL=[];}
+      var users={};ALL.forEach(function(e){if(e.by)users[e.by]=1;});var cur=$('who').value;$('who').innerHTML='<option value="">All users</option>'+Object.keys(users).sort().map(function(u){return '<option'+(u===cur?' selected':'')+'>'+esc(u)+'</option>';}).join('');
+      $('up').textContent='updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});draw();};
+    x.onerror=x.ontimeout=function(){$('tbl').innerHTML='<p class="err">The SIEM API is not reachable.</p>';};x.send();}
+  function when(t){var d=new Date(t);return d.toLocaleDateString([], {day:'2-digit',month:'short'})+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+  function detailText(d){try{var s=JSON.stringify(d||{});return s==='{}'?'':s;}catch(e){return '';}}
+  function draw(){
+    var q=$('q').value.toLowerCase().trim(),a=$('act').value,w=$('who').value,days=+$('days').value,since=days?Date.now()-days*864e5:0;
+    VIEW=ALL.filter(function(e){if(since&&(e.at||0)<since)return false;if(a&&String(e.action||'').indexOf(a)!==0)return false;if(w&&e.by!==w)return false;
+      if(q&&[e.by,e.role,e.ip,e.action,e.target,detailText(e.detail)].join(' ').toLowerCase().indexOf(q)<0)return false;return true;});
+    var day=ALL.filter(function(e){return (e.at||0)>=Date.now()-864e5;}),den=day.filter(function(e){return e.action==='access.denied';}).length,sens=day.filter(function(e){return SENS.test(e.action||'');}).length,users={};day.forEach(function(e){if(e.by)users[e.by]=1;});
+    $('kpi').innerHTML='<div class="t"><div class="l">Actions, 24 h</div><div class="v">'+day.length+'</div></div><div class="t'+(den?' bad':'')+'"><div class="l">Access denied, 24 h</div><div class="v">'+den+'</div></div><div class="t"><div class="l">Sensitive changes, 24 h</div><div class="v">'+sens+'</div></div><div class="t"><div class="l">Active users, 24 h</div><div class="v">'+Object.keys(users).length+'</div></div>';
+    $('tbl').innerHTML=VIEW.length?'<table><thead><tr><th>When</th><th>User</th><th>Role</th><th>From</th><th>Action</th><th>Item</th><th>Details</th></tr></thead><tbody>'+VIEW.slice(0,500).map(function(e,i){var act=String(e.action||''),cls=act==='access.denied'?'bad':SENS.test(act)?'warn':'info';
+      return '<tr data-i="'+i+'" tabindex="0"><td class="muted" style="white-space:nowrap">'+when(e.at)+'</td><td>'+esc(e.by||'–')+'</td><td class="muted">'+esc(e.role||'')+'</td><td class="mono">'+esc(e.ip||'')+'</td><td><span class="pill '+cls+'">'+esc(act)+'</span></td><td>'+esc(e.target||'')+'</td><td class="muted mono">'+esc(detailText(e.detail).slice(0,120))+'</td></tr>';}).join('')+'</tbody></table>'+(VIEW.length>500?'<p class="muted">Showing the newest 500 of '+VIEW.length+'; narrow the filters or export CSV.</p>':''):'<div class="empty">No matching activity.</div>';}
+  $('tbl').addEventListener('click',function(ev){var r=ev.target.closest('tr[data-i]');if(!r)return;var e=VIEW[+r.getAttribute('data-i')];
+    Z.open('Audit entry',String(e.action||''),Z.kv([['When',new Date(e.at).toLocaleString()],['User',esc(e.by||'–')],['Role',esc(e.role||'')],['From',esc(e.ip||'')],['Item',esc(e.target||'')],['Action',esc(e.action||'')]])+Z.sec('Details','<pre style="white-space:pre-wrap;font:12.5px Consolas,monospace">'+esc(JSON.stringify(e.detail||{},null,2))+'</pre>')
+      +'<p><button type="button" id="sameuser">All activity by this user</button></p>');
+    $('sameuser').onclick=function(){$('who').value=e.by||'';$('act').value='';$('q').value='';Z.close();draw();};});
+  $('tbl').addEventListener('keydown',function(ev){if(ev.key==='Enter'&&ev.target.matches('tr[data-i]'))ev.target.click();});
+  ['q','act','who','days'].forEach(function(id){$(id).addEventListener(id==='q'?'input':'change',draw);});
+  $('refresh').onclick=load;
+  $('csv').onclick=function(){var rows=[['time','user','role','ip','action','item','details']].concat(VIEW.map(function(e){return [new Date(e.at).toISOString(),e.by||'',e.role||'',e.ip||'',e.action||'',e.target||'',detailText(e.detail)];}));
+    var csv=rows.map(function(r){return r.map(function(c){c=String(c);if(/^[=+\-@\t\r]/.test(c))c="'"+c;return '"'+c.replace(/"/g,'""')+'"';}).join(',');}).join('\r\n');
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'}));a.download='audit-log-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);};
+  load();setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script>
+</body></html>

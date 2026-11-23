@@ -1,0 +1,183 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ManageEngine Automation</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI",system-ui,sans-serif}
+main{max-width:1240px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:16px;margin:0 0 12px}.card h2{margin:0 0 4px;font-size:16px;color:var(--title)}.sub{color:var(--mute);font-size:12.5px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--mute)}label b{color:var(--text);font-weight:600}
+input,select,textarea{font:14px "Segoe UI",system-ui,sans-serif;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;min-width:0}textarea{min-height:80px}
+button{font:600 13.5px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 14px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}button.dan{border-color:rgba(248,81,73,.6);color:var(--bad)}button:disabled{opacity:.5;cursor:default}button.sm{padding:3px 10px;font-size:12px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.tabs{display:flex;border-bottom:1px solid var(--edge);margin:0 0 12px;flex-wrap:wrap}.tabs button{background:none;border:1px solid transparent;border-bottom:2px solid transparent;border-radius:0;padding:9px 16px;color:var(--mute)}.tabs button.on{color:var(--title);border-bottom-color:#3fb950}
+.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{border:1px solid var(--edge);background:var(--raise);border-radius:10px;padding:8px 12px;font-size:12.5px;min-width:150px}.chip b{display:block;font-size:13.5px;color:var(--title)}
+.chip[data-go]{cursor:pointer;text-align:left;font:inherit;color:inherit}.chip[data-go]:hover,.chip[data-go]:focus-visible{border-color:#4a5162;outline:none}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}.tw{overflow-x:auto}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}a{color:var(--info)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:8vh 16px;overflow:auto}.dlg{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;width:min(560px,100%)}
+.note{border:1px solid var(--edge);border-radius:8px;padding:8px 12px;font-size:12.5px;color:var(--mute);background:var(--raise);margin:8px 0}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT service automation</div><h1>ManageEngine: Endpoint Central &amp; ServiceDesk Plus</h1></div><span class="sp"></span><button type="button" id="refresh" class="sm">⟳ Refresh</button></div>
+<div id="denied" class="card" hidden><h2>Operators and administrators only</h2><p class="sub">Tickets and computers name people and devices.</p></div>
+<div id="missing" class="card" hidden><h2>Not installed on this server yet</h2><p class="sub">Run the server update (update-all); it installs the ManageEngine add-on of IT Asset Management.</p></div>
+<div id="app" hidden>
+  <div class="chips" id="chips" style="margin-bottom:12px"></div>
+  <div class="tabs" role="tablist"><button type="button" data-t="approvals" class="on">Waiting for approval</button><button type="button" data-t="tickets">Tickets</button><button type="button" data-t="ec">Endpoint Central computers</button><button type="button" data-t="settings">Settings</button></div>
+  <div data-p="approvals"></div>
+  <div data-p="tickets" hidden></div>
+  <div data-p="ec" hidden></div>
+  <div data-p="settings" hidden></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);},API='/api/itam/me',ROLE='viewer',USER='',ST=null,TK=[],AC=[],PC=[],ASSETS=[],TAB='approvals',TF='open';
+  var E=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p.indexOf('/api/')===0?p:API+p);x.withCredentials=true;x.timeout=120000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status,j:j}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management could not be reached'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  var admin=function(){return ROLE==='admin';};
+  function when(v){var t=typeof v==='number'?v:Date.parse(v||'');if(!isFinite(t)||!t)return '—';var d=(Date.now()-t)/60000;return d<1?'just now':d<60?Math.round(d)+' min ago':d<1440?Math.round(d/60)+' h ago':Math.round(d/1440)+' d ago';}
+  var TPILL={pending:'<span class="pill warn">waiting for approval</span>',sending:'<span class="pill info">opening…</span>',open:'<span class="pill info">open</span>',failed:'<span class="pill bad">failed to open</span>',closed:'<span class="pill ok">closed</span>',rejected:'<span class="pill">rejected</span>'};
+  var APILL={pending:'<span class="pill warn">waiting for approval</span>',running:'<span class="pill info">sending…</span>',done:'<span class="pill ok">sent</span>',failed:'<span class="pill bad">failed</span>',rejected:'<span class="pill">rejected</span>'};
+  function ruleName(r){return r==='manual'?'by hand':ST&&ST.rule_labels[r]?ST.rule_labels[r].replace(/ \(days\)| within| for| at least|,.*$/g,''):r;}
+  function ask(title,label,cb,extra){var o=document.createElement('div');o.className='ov';o.innerHTML='<div class="dlg" role="dialog" aria-modal="true"><h2 style="margin:0 0 8px">'+E(title)+'</h2>'+(extra||'')+'<label><b>'+E(label)+'</b><textarea id="askv"></textarea></label><div class="row"><span class="sp"></span><button type="button" id="askno">Cancel</button><button type="button" class="pri" id="askok">OK</button></div><div id="askerr" class="err"></div></div>';
+    document.body.appendChild(o);var close=function(){o.remove();};$('askno').onclick=close;o.onclick=function(e){if(e.target===o)close();};$('askv').focus();
+    $('askok').onclick=function(){var v=$('askv').value.trim();if(v.length<3){$('askerr').textContent='Please fill this in.';return;}this.disabled=true;cb(v,o).then(close).catch(function(e){$('askok').disabled=false;$('askerr').textContent=e.message;});};}
+
+  // ---- data ----
+  function load(){
+    return req('GET','/status').then(function(s){ST=s;if(s.you&&s.you.role){ROLE=String(s.you.role).toLowerCase();USER=s.you.user||USER;}return Promise.all([req('GET','/tickets?status=all'),req('GET','/actions'),req('GET','/ec/computers')]);})
+      .then(function(r){TK=r[0].tickets||[];AC=r[1].actions||[];PC=r[2].computers||[];$('app').hidden=false;paint();})
+      .catch(function(e){if(e.status===404){$('missing').hidden=false;$('app').hidden=true;}else if(e.status===403){$('denied').hidden=false;$('app').hidden=true;}else toast(e.message);});
+  }
+  function chips(){
+    var ec=ST.ec,sd=ST.sdp,ls=ec.last_sync,pend=TK.filter(function(t){return t.status==='pending';}).length+AC.filter(function(a){return a.status==='pending';}).length;
+    var c1=!ec.base_url?'<span class="pill">not set up</span>':ls&&ls.ok?'<span class="pill ok">synced '+E(when(ls.at))+'</span>':ls?'<span class="pill bad" title="'+E(ls.error||'')+'">sync failed</span>':'<span class="pill warn">not synced yet</span>';
+    var c2=!sd.base_url?'<span class="pill">not set up</span>':sd.last_test&&!sd.last_test.ok?'<span class="pill bad" title="'+E(sd.last_test.message)+'">test failed</span>':'<span class="pill ok">connected</span>';
+    // every tile opens what it counts: computers, the desk (or its settings while not set up), approvals, failed tickets
+    var ch=function(go,t,b,sub,tip){return '<button type="button" class="chip" data-go="'+go+'" title="'+E(tip)+'">'+E(t)+'<b>'+b+'</b><span class="muted">'+sub+'</span></button>';};
+    $('chips').innerHTML=ch(ec.base_url?'ec':'settings','Endpoint Central',c1,E(ST.computers)+' computers',ec.base_url?'Show the computers':'Set up Endpoint Central')
+      +ch(sd.base_url?'desk':'settings','ServiceDesk Plus',c2,E(ST.tickets.open||0)+' open tickets',sd.base_url?'Show the tickets open in the desk':'Set up ServiceDesk Plus')
+      +ch('approvals','Waiting for approval',pend,'tickets and actions','Show what waits for approval')
+      +ch('failed','Failed to open',E(ST.tickets.failed||0),'tickets to send again','Show the tickets that could not be opened');
+    document.querySelector('[data-t=approvals]').textContent='Waiting for approval'+(pend?' ('+pend+')':'');
+  }
+  function paint(){chips();if(TAB==='approvals')approvals();if(TAB==='tickets')tickets();if(TAB==='ec')ecView();if(TAB==='settings')settings();}
+
+  // ---- approvals ----
+  function tRow(t,acts){
+    return '<tr><td class="muted" style="white-space:nowrap">'+E(when(t.requested_at))+'</td><td><b>'+E(t.title)+'</b>'+(t.description?'<div class="muted" style="font-size:12px;max-width:520px">'+E(String(t.description).slice(0,240))+'</div>':'')+'</td><td>'+E(t.asset_name||'—')+'</td><td>'+E(ruleName(t.rule))+'<div class="muted" style="font-size:11.5px">by '+E(t.requested_by)+'</div></td><td>'+E(t.priority||'')+'</td>'
+      +'<td>'+(TPILL[t.status]||E(t.status))+(t.sdp_id?' <a href="'+E(t.sdp_url)+'" target="_blank" rel="noopener noreferrer">#'+E(t.sdp_id)+'</a>':'')+(t.sdp_status&&t.status!=='closed'?'<div class="muted" style="font-size:11.5px">desk: '+E(t.sdp_status)+'</div>':'')+(t.error?'<div class="err" style="font-size:11.5px">'+E(t.error)+'</div>':'')+(t.reason?'<div class="muted" style="font-size:11.5px">'+E(t.rejected_by)+': '+E(t.reason)+'</div>':'')+(t.approved_by?'<div class="muted" style="font-size:11.5px">approved by '+E(t.approved_by)+'</div>':'')+'</td>'
+      +'<td style="white-space:nowrap">'+(acts?acts(t):'')+'</td></tr>';
+  }
+  function tActs(t){
+    if(t.status==='pending')return (t.requested_by!==USER?'<button type="button" class="pri sm" data-tap="'+E(t.id)+'">Approve &amp; open</button> ':'<span class="muted" style="font-size:11.5px">needs a second person </span>')+'<button type="button" class="sm dan" data-trj="'+E(t.id)+'">Reject</button>';
+    if(t.status==='failed')return '<button type="button" class="sm" data-trt="'+E(t.id)+'">Send again</button> <button type="button" class="sm dan" data-trj="'+E(t.id)+'">Reject</button>';
+    return '';
+  }
+  function aRow(a){
+    return '<tr><td class="muted" style="white-space:nowrap">'+E(when(a.requested_at))+'</td><td><b>'+E(a.label)+'</b>'+(a.patch_ids?'<div class="muted mono">patches '+E(a.patch_ids.join(', '))+'</div>':'')+'</td><td>'+E(a.names.join(', '))+'</td><td>'+E(a.reason)+'<div class="muted" style="font-size:11.5px">by '+E(a.requested_by)+'</div></td><td>'+(APILL[a.status]||E(a.status))+(a.approved_by?'<div class="muted" style="font-size:11.5px">approved by '+E(a.approved_by)+'</div>':'')+(a.result?'<div class="muted" style="font-size:11.5px">'+E(a.result)+'</div>':'')+(a.reject_reason?'<div class="muted" style="font-size:11.5px">'+E(a.rejected_by)+': '+E(a.reject_reason)+'</div>':'')+'</td>'
+      +'<td style="white-space:nowrap">'+(a.status==='pending'?((admin()||(window.zybApproves&&window.zybApproves('eng:desktop')))&&String(a.requested_by||'').toLowerCase()!==String(USER||'').toLowerCase()?'<button type="button" class="pri sm" data-aap="'+E(a.id)+'">Approve &amp; send</button> ':'<span class="muted" style="font-size:11.5px">'+(a.requested_by===USER?'needs another admin ':'admin approves ')+'</span>')+'<button type="button" class="sm dan" data-arj="'+E(a.id)+'">Reject</button>':'')+'</td></tr>';
+  }
+  function approvals(){
+    var pt=TK.filter(function(t){return t.status==='pending';}),pa=AC.filter(function(a){return a.status==='pending';});
+    document.querySelector('[data-p=approvals]').innerHTML='<div class="card"><h2>Tickets waiting for approval</h2><p class="sub">Approving opens the ticket in ServiceDesk Plus. A ticket someone asked for is approved by a second person. Rejecting needs a reason, and the same condition stays quiet for 30 days.</p>'
+      +(pt.length?'<div class="tw"><table><thead><tr><th>Raised</th><th>Ticket</th><th>Asset</th><th>Why</th><th>Priority</th><th>Status</th><th></th></tr></thead><tbody>'+pt.map(function(t){return tRow(t,tActs);}).join('')+'</tbody></table></div>':'<p class="muted">Nothing waiting.</p>')+'</div>'
+      +'<div class="card"><h2>Endpoint Central actions waiting for approval</h2><p class="sub">An administrator who did not ask for the action approves it (four eyes); only then is it sent to Endpoint Central. The result is added to the linked ticket as a note.</p>'
+      +(pa.length?'<div class="tw"><table><thead><tr><th>Asked</th><th>Action</th><th>Computers</th><th>Reason</th><th>Status</th><th></th></tr></thead><tbody>'+pa.map(aRow).join('')+'</tbody></table></div>':'<p class="muted">Nothing waiting.</p>')+'</div>';
+  }
+
+  // ---- tickets ----
+  function tickets(){
+    var L=TK.filter(function(t){return TF==='all'||(TF==='open'?['pending','sending','open','failed'].indexOf(t.status)>=0:TF==='desk'?t.status==='open':t.status===TF);});
+    document.querySelector('[data-p=tickets]').innerHTML='<div class="card"><div class="row" style="margin:0 0 10px"><h2 style="margin:0">Tickets</h2><span class="sp"></span><select id="tf"><option value="open">Not closed</option><option value="all">All</option><option value="pending">Waiting for approval</option><option value="desk">Open in the desk</option><option value="failed">Failed to open</option><option value="closed">Closed</option><option value="rejected">Rejected</option></select><button type="button" class="pri" id="tnew">+ New ticket</button>'+(admin()?'<button type="button" id="rrun">Run the rules now</button>':'')+'</div>'
+      +'<div id="tform"></div>'
+      +(L.length?'<div class="tw"><table><thead><tr><th>Raised</th><th>Ticket</th><th>Asset</th><th>Why</th><th>Priority</th><th>Status</th><th></th></tr></thead><tbody>'+L.map(function(t){return tRow(t,tActs);}).join('')+'</tbody></table></div>':'<p class="muted">No tickets'+(TF!=='all'?' with this status':'')+'.</p>')
+      +'<p class="muted" style="font-size:12px;margin-top:8px">Open tickets are re-read from ServiceDesk Plus every '+E(ST.sdp.poll_min||10)+' minutes; a ticket resolved or closed there is closed here.</p></div>';
+    $('tf').value=TF;$('tf').onchange=function(){TF=this.value;tickets();};
+    $('tnew').onclick=newTicket;if($('rrun'))$('rrun').onclick=function(){this.disabled=true;req('POST','/rules/run',{}).then(function(r){toast(r.rules.skipped||(r.rules.raised+' new ticket(s)'+(r.rules.held_back?', '+r.rules.held_back+' held back by the per-run limit':'')));return load();}).catch(function(e){toast(e.message);});};
+  }
+  function newTicket(){
+    var f=$('tform');if(f.innerHTML){f.innerHTML='';return;}
+    f.innerHTML='<div class="note"><div class="grid"><label><b>Title *</b><input id="nt_t" maxlength="250"></label><label><b>Asset</b><input id="nt_a" list="nt_al" placeholder="type a name"><datalist id="nt_al"></datalist></label><label><b>Priority</b><select id="nt_p">'+ST.priorities.map(function(p){return '<option'+(p===ST.manual_priority?' selected':'')+'>'+E(p)+'</option>';}).join('')+'</select></label></div><label style="margin-top:8px"><b>Description</b><textarea id="nt_d"></textarea></label><div class="row"><button type="button" class="pri" id="nt_go">Ask for approval</button><button type="button" id="nt_x">Cancel</button><span class="muted">A second person approves it before it opens in ServiceDesk Plus.</span></div><div id="nt_e" class="err"></div></div>';
+    var fill=function(){$('nt_al').innerHTML=ASSETS.map(function(a){return '<option value="'+E(a.name||a.asset_tag||a.id)+'">';}).join('');};
+    if(ASSETS.length)fill();else req('GET','/api/itam/assets?limit=5000').then(function(j){ASSETS=j.assets||[];fill();}).catch(function(){ /* a background refresh: the panel keeps its last state and the next refresh retries */ });
+    $('nt_x').onclick=function(){f.innerHTML='';};
+    $('nt_go').onclick=function(){var nm=$('nt_a').value.trim(),a=nm?ASSETS.filter(function(x){return (x.name||x.asset_tag||x.id)===nm;})[0]:null;if(nm&&!a){$('nt_e').textContent='Pick the asset from the list (or leave it empty).';return;}
+      this.disabled=true;req('POST','/tickets',{title:$('nt_t').value,description:$('nt_d').value,asset_id:a?a.id:undefined,priority:$('nt_p').value}).then(function(){toast('Ticket waiting for approval');f.innerHTML='';return load();}).catch(function(e){$('nt_go').disabled=false;$('nt_e').textContent=e.message;});};
+  }
+
+  // ---- Endpoint Central ----
+  function ecView(){
+    var ls=ST.ec.last_sync,openT=TK.filter(function(t){return t.status==='open'||t.status==='pending';});
+    var H={healthy:'<span class="pill ok">healthy</span>',vulnerable:'<span class="pill warn">vulnerable</span>','highly vulnerable':'<span class="pill bad">highly vulnerable</span>'};
+    document.querySelector('[data-p=ec]').innerHTML='<div class="card"><div class="row" style="margin:0 0 6px"><h2 style="margin:0">Endpoint Central computers</h2><span class="sp"></span>'+(admin()?'<button type="button" id="ecsync">⟳ Sync now</button>':'')+'</div>'
+      +'<p class="sub">Read every '+E(ST.ec.interval_min||60)+' minutes'+(ls?' · last '+E(when(ls.at))+(ls.ok?' · '+E(ls.computers)+' computers'+(ls.added?', '+E(ls.added)+' new in IT Asset Management':''):' · <span class="err">'+E(ls.error)+'</span>'):'')+(ls&&ls.patch_error?' · <span class="err">patch health not read: '+E(ls.patch_error)+'</span>':'')+'. New computers are added to IT Asset Management'+(ST.ec.auto_add===false?' only after approval in Asset Discovery':' automatically')+'.</p>'
+      +(PC.length?'<div class="row" style="margin:0 0 8px"><span class="muted" id="ecsel">0 selected</span><span class="sp"></span><select id="ecact">'+Object.keys(ST.actions).map(function(k){return '<option value="'+E(k)+'">'+E(ST.actions[k].label)+'</option>';}).join('')+'</select><button type="button" id="ecreq" disabled>Ask for approval…</button></div>'
+        +'<div class="tw"><table><thead><tr><th><input type="checkbox" id="ecall" aria-label="Select all"></th><th>Computer</th><th>IP</th><th>OS</th><th>Agent last contact</th><th>Status</th><th>Patch health</th><th>Missing (critical)</th><th>In IT Asset Management</th></tr></thead><tbody>'
+        +PC.map(function(c){return '<tr'+(c.gone_since?' style="opacity:.5" title="no longer reported by Endpoint Central"':'')+'><td><input type="checkbox" class="ecc" value="'+E(c.id)+'"></td><td><b>'+E(c.name)+'</b>'+(c.domain?'<div class="muted" style="font-size:11.5px">'+E(c.domain)+'</div>':'')+'</td><td class="mono">'+E(c.ip||'—')+'</td><td>'+E(c.os||'—')+'</td><td>'+E(when(c.last_contact))+'</td><td>'+(c.live==='live'?'<span class="pill ok">live</span>':c.live==='down'?'<span class="pill bad">down</span>':'<span class="pill">unknown</span>')+'</td><td>'+(H[c.health]||'<span class="muted">'+E(c.health||'not reported')+'</span>')+'</td><td>'+(c.missing==null?'—':E(c.missing)+(c.critical!=null?' ('+E(c.critical)+')':''))+'</td><td>'+(c.asset_id?E(c.asset_name||'yes'):'<span class="muted">not yet</span>')+'</td></tr>';}).join('')+'</tbody></table></div>'
+        :'<p class="muted">'+(ST.ec.base_url?'Nothing read yet - run Sync now, or check the connection under Settings.':'Endpoint Central is not set up - add it under Settings.')+'</p>')+'</div>';
+    if($('ecsync'))$('ecsync').onclick=function(){this.disabled=true;this.textContent='Syncing…';req('POST','/ec/sync',{}).then(function(r){toast(r.sync.ok?r.sync.computers+' computers read':'Sync failed: '+r.sync.error);return load();}).catch(function(e){toast(e.message);load();});};
+    var sel=function(){var n=document.querySelectorAll('.ecc:checked').length;$('ecsel').textContent=n+' selected';$('ecreq').disabled=!n;};
+    if(PC.length){[].forEach.call(document.querySelectorAll('.ecc'),function(c){c.onchange=sel;});$('ecall').onchange=function(){var on=this.checked;[].forEach.call(document.querySelectorAll('.ecc'),function(c){c.checked=on;});sel();};
+      $('ecreq').onclick=function(){var ids=[].map.call(document.querySelectorAll('.ecc:checked'),function(c){return c.value;}),act=$('ecact').value,def=ST.actions[act];
+        var extra=(def.needs_patches?'<label style="margin-bottom:8px"><b>Patch IDs *</b><input id="askp" placeholder="104821, 104822"><span>From Endpoint Central → Patch Mgmt → Missing Patches (the Patch ID column).</span></label>':'')
+          +'<label style="margin-bottom:8px"><b>Link to ticket (optional)</b><select id="askt"><option value="">None</option>'+openT.map(function(t){return '<option value="'+E(t.id)+'">'+E((t.sdp_id?'#'+t.sdp_id+' ':'')+t.title)+'</option>';}).join('')+'</select></label>'
+          +'<p class="muted" style="margin:0 0 8px">'+E(def.label)+' on '+ids.length+' computer(s). An administrator other than you approves it before it is sent.</p>';
+        ask(def.label,'Reason *',function(v){return req('POST','/actions',{action:act,resource_ids:ids,reason:v,patch_ids:$('askp')?$('askp').value:undefined,ticket_id:$('askt').value||undefined}).then(function(){toast('Waiting for an administrator to approve');return load();});},extra);};}
+  }
+
+  // ---- settings ----
+  function sysBlock(k,x,label,keyLabel,ph){
+    var pres=x.presented;
+    return '<div class="card"><h2>'+E(label)+'</h2><p class="sub">'+(k==='ec'?'Read-only: computers, agents and patch health. Actions are sent only after a second administrator approves them. API key: Endpoint Central → Admin → API Explorer → generate the key for a technician with read access (plus the patch / inventory scan roles if actions will be used).':'Tickets are opened as the technician who owns the key. Technician key: ServiceDesk Plus → Personalize → API key (or Admin → Technicians → Generate API Key).')+'</p>'
+      +'<div class="grid"><label><b>Server address *</b><input id="'+k+'_u" dir="ltr" placeholder="'+E(ph)+'" value="'+E(x.base_url||'')+'"></label><label><b>'+E(keyLabel)+(x.key_set?'':' *')+'</b><input id="'+k+'_k" type="password" autocomplete="new-password" placeholder="'+(x.key_set?'stored - leave empty to keep':'')+'"></label><label><b>CA certificate file (optional)</b><input id="'+k+'_ca" dir="ltr" placeholder="/etc/ssl/certs/corp-ca.pem" value="'+E(x.ca_file||'')+'"></label>'
+      +(k==='ec'?'<label><b>Read every (minutes)</b><input id="ec_i" type="number" min="15" max="1440" value="'+E(x.interval_min||60)+'"></label><label><b>Site for new computers</b><select id="ec_s"><option value="">—</option>'+(ST.sites||[]).map(function(s){return '<option'+(s===x.site?' selected':'')+'>'+E(s)+'</option>';}).join('')+'</select></label><label class="row" style="flex-direction:row;align-items:center;margin:0"><input type="checkbox" id="ec_a"'+(x.auto_add!==false?' checked':'')+'> <span>Add new computers to IT Asset Management automatically</span></label>'
+        :'<label><b>Requester (e-mail or name, optional)</b><input id="sdp_r" value="'+E(x.requester||'')+('" placeholder="itam-automation@' + ZYB_ORG.domain + '"></label><label><b>Re-read open tickets every (minutes)</b><input id="sdp_p" type="number" min="5" max="240" value="')+E(x.poll_min||10)+'"></label>')+'</div>'
+      +'<div class="row"><button type="button" data-test="'+k+'"'+(x.base_url&&x.key_set?'':' disabled title="save the address and key first"')+'>Test connection</button>'+(x.last_test?(x.last_test.ok?'<span class="pill ok">'+E(x.last_test.message)+'</span>':'<span class="pill bad">'+E(x.last_test.message)+'</span>')+' <span class="muted">'+E(when(x.last_test.at))+'</span>':'')+(x.tls_fingerprint?' <span class="pill info" title="'+E(x.tls_fingerprint)+'">certificate pinned</span>':'')+'</div>'
+      +(pres?'<div class="note" style="border-color:var(--warn)"><b>The server presented a certificate this platform does not trust.</b><div class="mono" style="margin:4px 0">'+E(pres.subject)+'<br>issued by '+E(pres.issuer)+'<br>valid until '+E(pres.valid_to)+'<br>SHA-256 '+E(pres.fingerprint256)+'</div>Compare the fingerprint with the server (browser → certificate details) before trusting it. <button type="button" class="sm" data-pin="'+k+'" data-fp="'+E(pres.fingerprint256)+'">Trust and pin this certificate</button></div>':'')+'</div>';
+  }
+  function settings(){
+    var P=document.querySelector('[data-p=settings]');
+    if(!admin()){P.innerHTML='<div class="card"><h2>Settings</h2><p class="sub">Only administrators change the connections and rules. You are signed in as <b>'+E(USER||'?')+'</b> with the role <b>'+E(ROLE||'unknown')+'</b> - an administrator of the portal can give you the admin role (portal → Users), or sign in with an admin account.</p></div>';return;}
+    var R=ST.rules;
+    P.innerHTML=sysBlock('ec',ST.ec,'Endpoint Central','API key',('https://ec01.' + ZYB_ORG.domain + ':8383'))+sysBlock('sdp',ST.sdp,'ServiceDesk Plus','Technician key',('https://servicedesk.' + ZYB_ORG.domain + ':8080'))
+      +'<div class="card"><h2>Ticket rules</h2><p class="sub">Each rule opens one ticket per device and condition - never a second while one is open; after the ticket is closed in the desk the same condition may open a new one 7 days later. "Wait for approval" puts the ticket in the approval list first.</p><div class="tw"><table><thead><tr><th>On</th><th>Rule</th><th>Value</th><th>When it fires</th><th>Priority</th><th>Group (desk)</th><th>Category (desk)</th></tr></thead><tbody>'
+      +Object.keys(R).map(function(k){var r=R[k];return '<tr><td><input type="checkbox" data-rk="'+k+'" data-f="enabled"'+(r.enabled?' checked':'')+' aria-label="'+E(ST.rule_labels[k])+'"></td><td>'+E(ST.rule_labels[k])+'</td><td><input type="number" data-rk="'+k+'" data-f="param" value="'+E(r.param)+'" style="width:80px"></td><td><select data-rk="'+k+'" data-f="mode"><option value="approve"'+(r.mode==='approve'?' selected':'')+'>Wait for approval</option><option value="auto"'+(r.mode==='auto'?' selected':'')+'>Open automatically</option></select></td><td><select data-rk="'+k+'" data-f="priority">'+ST.priorities.map(function(p){return '<option'+(p===r.priority?' selected':'')+'>'+E(p)+'</option>';}).join('')+'</select></td><td><input data-rk="'+k+'" data-f="group" value="'+E(r.group)+'" placeholder="e.g. Desktop Support" style="width:150px"></td><td><input data-rk="'+k+'" data-f="category" value="'+E(r.category)+'" style="width:130px"></td></tr>';}).join('')
+      +'</tbody></table></div><div class="grid" style="margin-top:10px"><label><b>Priority of tickets made by hand</b><select id="mp">'+ST.priorities.map(function(p){return '<option'+(p===ST.manual_priority?' selected':'')+'>'+E(p)+'</option>';}).join('')+'</select></label><label><b>At most new tickets per run</b><input id="mx" type="number" min="1" max="200" value="'+E(ST.max_per_run)+'"></label></div>'
+      +'<p class="muted" style="font-size:12px">Group and category must exist in ServiceDesk Plus with exactly that name, or the desk refuses the ticket (it then shows as "failed to open" with the desk\'s message).</p></div>'
+      +'<div class="row" style="margin-bottom:24px"><button type="button" class="pri" id="save">Save settings</button><span id="serr" class="err"></span></div>';
+    $('save').onclick=function(){
+      var rules={};[].forEach.call(document.querySelectorAll('[data-rk]'),function(el){var k=el.getAttribute('data-rk'),f=el.getAttribute('data-f');rules[k]=rules[k]||{};rules[k][f]=el.type==='checkbox'?el.checked:f==='param'?Number(el.value):el.value;});
+      var ec={base_url:$('ec_u').value.trim(),ca_file:$('ec_ca').value.trim(),interval_min:Number($('ec_i').value),site:$('ec_s').value,auto_add:$('ec_a').checked},sdp={base_url:$('sdp_u').value.trim(),ca_file:$('sdp_ca').value.trim(),requester:$('sdp_r').value.trim(),poll_min:Number($('sdp_p').value)};
+      if($('ec_k').value)ec.api_key=$('ec_k').value;if($('sdp_k').value)sdp.technician_key=$('sdp_k').value;
+      var b=this;b.disabled=true;$('serr').textContent='';
+      req('POST','/config',{ec:ec,sdp:sdp,rules:rules,manual_priority:$('mp').value,max_per_run:Number($('mx').value)}).then(function(s){ST=s;b.disabled=false;toast('Settings saved');paint();}).catch(function(e){b.disabled=false;$('serr').textContent=e.message;});
+    };
+    [].forEach.call(P.querySelectorAll('[data-test]'),function(b){b.onclick=function(){b.disabled=true;b.textContent='Testing…';req('POST','/test',{system:b.getAttribute('data-test')}).then(function(r){ST=r.status;toast(r.result.message);paint();}).catch(function(e){toast(e.message);paint();});};});
+    [].forEach.call(P.querySelectorAll('[data-pin]'),function(b){b.onclick=function(){req('POST','/pin',{system:b.getAttribute('data-pin'),fingerprint:b.getAttribute('data-fp')}).then(function(s){ST=s;toast('Certificate pinned - run Test again');paint();}).catch(function(e){toast(e.message);});};});
+  }
+
+  // ---- buttons in the lists ----
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('[data-tap],[data-trj],[data-trt],[data-aap],[data-arj]');if(!b)return;
+    var id;
+    if((id=b.getAttribute('data-tap'))){b.disabled=true;req('POST','/tickets/'+encodeURIComponent(id)+'/approve',{}).then(function(r){toast(r.ticket.status==='open'?'Opened in ServiceDesk Plus as #'+r.ticket.sdp_id:'Not opened: '+(r.ticket.error||r.ticket.status));return load();}).catch(function(er){b.disabled=false;toast(er.message);});}
+    else if((id=b.getAttribute('data-trt'))){b.disabled=true;req('POST','/tickets/'+encodeURIComponent(id)+'/retry',{}).then(function(r){toast(r.ticket.status==='open'?'Opened as #'+r.ticket.sdp_id:'Still not opened: '+(r.ticket.error||''));return load();}).catch(function(er){b.disabled=false;toast(er.message);});}
+    else if((id=b.getAttribute('data-trj'))){ask('Reject ticket','Reason *',function(v){return req('POST','/tickets/'+encodeURIComponent(id)+'/reject',{reason:v}).then(load);});}
+    else if((id=b.getAttribute('data-aap'))){b.disabled=true;req('POST','/actions/'+encodeURIComponent(id)+'/approve',{}).then(function(r){toast(r.action.status==='done'?'Sent to Endpoint Central':'Failed: '+r.action.result);return load();}).catch(function(er){b.disabled=false;toast(er.message);});}
+    else if((id=b.getAttribute('data-arj'))){ask('Reject action','Reason *',function(v){return req('POST','/actions/'+encodeURIComponent(id)+'/reject',{reason:v}).then(load);});}
+  });
+  $('chips').addEventListener('click',function(e){var c=e.target.closest('[data-go]');if(!c)return;var g=c.getAttribute('data-go'),t=g==='desk'||g==='failed'?'tickets':g;
+    if(g==='desk')TF='desk';if(g==='failed')TF='failed';var b=document.querySelector('[data-t="'+t+'"]');if(b)b.click();if(t==='tickets'&&$('tf')){$('tf').value=TF;tickets();}
+    var pane=document.querySelector('[data-p="'+t+'"]');if(pane)pane.scrollIntoView({behavior:'smooth',block:'start'});});
+  [].forEach.call(document.querySelectorAll('[data-t]'),function(b){b.onclick=function(){TAB=b.getAttribute('data-t');[].forEach.call(document.querySelectorAll('[data-t]'),function(x){x.classList.toggle('on',x===b);});[].forEach.call(document.querySelectorAll('[data-p]'),function(p){p.hidden=p.getAttribute('data-p')!==TAB;});paint();};});
+  $('refresh').onclick=load;
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);ROLE=String(j.role||'').toLowerCase();USER=j.user||j.name||'';}catch(e){ /* not JSON: treated as no data */ }start();};w.onerror=start;w.send();
+  function start(){if(ROLE&&ROLE!=='admin'&&ROLE!=='operator'){$('denied').hidden=false;return;}load();setInterval(function(){if(!document.querySelector('.ov')&&!(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)))load();},60000);}
+})();
+</script></body></html>

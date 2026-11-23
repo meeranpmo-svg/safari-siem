@@ -1,0 +1,131 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SOC Console</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-autorefresh.js"></script><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-copilot.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def;--ok:#56d364;--warn:#f5b544;--bad:#ff8a8e}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1700px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}.mono{font-family:Consolas,ui-monospace,monospace;font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:14px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.kpi .s{font-size:11.5px;color:var(--d-mute)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;min-width:0;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}.card h2 a{margin-left:auto;font-size:12px;color:#8db0ff;text-decoration:none}
+.hs{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12.5px}.hs .sc{align-self:start;font-weight:800;border-radius:8px;text-align:center;padding:4px 0;color:#fff}.hs .w{color:#8b93a4;font-size:11.5px}.st-quiet{background:#b02a3e}.st-loud{background:#c4511f}.st-new{background:#2f5fb3}.st-learning,.st-normal{background:#3a4560}
+.g2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px}.g3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.mag{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;color:#fff;font-weight:800}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.s4{background:rgba(229,72,77,.22);color:var(--bad)}.s3{background:rgba(245,99,0,.2);color:#ff9b5c}.s2{background:rgba(245,159,0,.18);color:var(--warn)}.s1,.s0{background:rgba(139,147,164,.16);color:#aab2c2}
+.st-active{background:rgba(47,179,68,.15);color:var(--ok)}.st-delayed{background:rgba(245,159,0,.18);color:var(--warn)}.st-disconnected{background:rgba(229,72,77,.22);color:var(--bad)}.st-retired{background:rgba(139,147,164,.16);color:#aab2c2}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px;border-bottom:1px solid var(--d-line)}td{padding:7px 6px;border-bottom:1px solid #1b2030;vertical-align:top}td.n{text-align:right;font-variant-numeric:tabular-nums}
+.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bar{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px}.bar b{flex:0 0 160px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bar i{display:block;height:9px;border-radius:5px;background:#5b8def}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.tw{overflow-x:auto}svg.w{width:100%;height:130px;display:block}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1100px){.g2,.g3{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){main{padding:12px 12px 40px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}table{display:block;overflow-x:auto}.top h1{font-size:20px}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security Operations · offenses · agents · file integrity · ingest</div><h1>SOC Console</h1><div class="sm mute">The SOC's working console from the SIEM's own stores: offenses ranked by explainable priority (magnitude 1-10), the ATT&amp;CK tactics in play, events per minute against the hour's normal, every agent's heartbeat and version, file and registry changes on the watched paths, and the live event stream.</div></div><div class="sp"></div>
+ <a class="btn" href="soc-sources.html"><i class="ti ti-plug-connected"></i>Log sources</a><a class="btn" href="soc-lr.html"><i class="ti ti-scale"></i>Parallel run vs LogRhythm</a><span class="acts"></span></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <div class="kpis" id="kpis"></div>
+ <div id="intel" hidden>
+  <div class="g3">
+   <section class="card"><h2><i class="ti ti-radar"></i>Hosts needing attention <span class="c">offenses + file changes + agent, every part named</span><span id="cpb"></span></h2><div id="hosts"></div></section>
+   <section class="card"><h2><i class="ti ti-plug-connected"></i>Log source health <span class="c">last hour against the same hour on 7 days</span></h2><div id="srch"></div></section>
+  </div>
+  <div class="g3">
+   <section class="card"><h2><i class="ti ti-file-alert"></i>Riskiest file changes <span class="c">24 h · scored 0-100</span></h2><div id="fimr"></div></section>
+   <section class="card"><h2><i class="ti ti-heart-broken"></i>Flapping agents <span class="c">3+ heartbeat gaps in 24 h</span></h2><div id="flap"></div></section>
+  </div>
+  <div class="sm mute" id="inote" style="margin:0 0 14px"></div>
+ </div>
+ <div class="g2">
+  <section class="card"><h2><i class="ti ti-flame"></i>Offenses <span class="c">open alerts by priority · magnitude = priority ÷ 10, every point explained on hover</span><a href="soc-alerts.html">Alert queue →</a></h2><div class="tw" id="off"></div></section>
+  <div>
+   <section class="card"><h2><i class="ti ti-activity"></i>Ingest <span class="c">events per minute, last hour</span></h2><div id="ing"></div></section>
+   <section class="card"><h2><i class="ti ti-target-arrow"></i>ATT&amp;CK tactics <span class="c">in the open offenses</span></h2><div id="tac"></div></section>
+  </div>
+ </div>
+ <section class="card" id="agcard"><h2><i class="ti ti-heartbeat"></i>Agents <span class="c" id="agc"></span></h2><div class="tw" id="ag"></div></section>
+ <div class="g3">
+  <section class="card" id="fimcard"><h2><i class="ti ti-file-alert"></i>File integrity <span class="c">changes on the watched paths · last 24 h</span></h2><div id="fim"></div><div id="watch"></div></section>
+  <section class="card" id="livecard"><h2><i class="ti ti-list-details"></i>Live events <span class="c">the latest 25</span></h2><div class="tw" id="live"></div></section>
+ </div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var ROLE='viewer',RANK={viewer:0,analyst:1,operator:2,admin:3},can=function(r){return (RANK[ROLE]||0)>=RANK[r];},SEV=['info','low','medium','high','critical'];
+  var O=null,Q=null,A=null,F=null,LV=null;
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,/^\/dashboards\//.test(u)?u:'/api/soc'+u);x.withCredentials=true;x.timeout=90000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('The SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function magCol(m){return m>=8?'#e5484d':m>=6?'#f56300':m>=4?'#f59f00':'#3d63b5';}
+  function ago(m){return m<60?m+' min':m<2880?Math.round(m/60)+' h':Math.round(m/1440)+' d';}
+  function drawKpis(){var a=O.agents&&O.agents.summary,g=O.ingest||{},f=O.fim||{},items=(Q&&Q.items)||[];
+    function k(n,l,s,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n==null?'—':n)+'</div><div class="l">'+esc(l)+'</div>'+(s?'<div class="s">'+esc(s)+'</div>':'')+'</div>';}
+    var crit=items.filter(function(x){return x.severity>=4;}).length;
+    $('kpis').innerHTML=k(Q?Q.total:null,'open offenses',Q?(Q.bands['act-now']||0)+' act now':'')+k(Q?crit:null,'critical','',crit?'var(--bad)':'')
+      +k(g.error?null:g.per_minute,'events / min',g.error?g.error:g.median!=null?'normal '+Math.round(g.median):'',g.quiet?'var(--bad)':'')
+      +k(a?a.active+' / '+a.total:null,'agents active',a&&O.agents.newest_version?'newest v'+O.agents.newest_version:(O.agents.error||''))
+      +k(a?a.disconnected:null,'agents disconnected',a&&a.outdated?a.outdated+' outdated':'',a&&a.disconnected?'var(--bad)':'')
+      +k(f.error?null:f.changes,'watched-file changes',f.error?f.error:(f.coverage_hosts!=null?f.coverage_hosts+' host(s) send file events':''),f.changes?'var(--warn)':'');}
+  function drawOff(){if(!Q){$('off').innerHTML=note('Reading the alert queue…');return;}var L=Q.items||[];
+    $('off').innerHTML=L.length?'<table><thead><tr><th>Mag</th><th>Offense</th><th>Severity</th><th>Entities</th><th class="n">Events</th><th>Status</th><th></th></tr></thead><tbody>'+L.slice(0,15).map(function(a){var m=Math.max(1,Math.min(10,Math.ceil((a.priority||0)/10))),why=(a.why||[]).filter(function(x){return x.points;}).map(function(x){return (x.points>0?'+':'')+x.points+' '+x.factor;}).join('\n');
+      return '<tr><td title="'+esc('priority '+a.priority+'\n'+why)+'"><span class="mag" style="background:'+magCol(m)+'">'+m+'</span></td><td><b>'+esc(a.rule_name)+'</b><div class="sm mute">'+esc(a.id)+(a.mitre&&a.mitre.length?' · '+esc(a.mitre.slice(0,3).join(', ')):'')+'</div></td><td><span class="pill s'+esc(a.severity)+'">'+esc(SEV[a.severity]||a.severity)+'</span></td><td class="sm">'+esc((a.entities||[]).slice(0,3).join(' · '))+'</td><td class="n">'+esc(a.count||1)+'</td><td class="sm">'+esc(a.status)+(a.assignee?'<div class="mute">'+esc(a.assignee)+'</div>':'')+'</td>'
+        +'<td class="row"><a class="btn sm" href="soc-alerts.html?id='+encodeURIComponent(a.id)+'">Open</a>'+(can('analyst')?'<a class="btn sm" href="ai-soc-analyst.html?kind=alert&amp;id='+encodeURIComponent(a.id)+'">AI</a>':'')+'</td></tr>';}).join('')+'</tbody></table>':note('No open offense.');
+    var T={};L.forEach(function(a){(a.tactics||(a.tactic?[a.tactic]:[])).concat([]).forEach(function(t){T[t]=(T[t]||0)+1;});});var keys=Object.keys(T).sort(function(x,y){return T[y]-T[x];}),mx=keys.length?T[keys[0]]:1;
+    $('tac').innerHTML=keys.length?keys.slice(0,10).map(function(k){return '<div class="bar"><b title="'+esc(k)+'">'+esc(k)+'</b><i style="width:'+Math.max(4,T[k]/mx*100*0.6)+'%"></i><span>'+esc(T[k])+'</span></div>';}).join(''):note('No ATT&CK tactic on the open offenses.');}
+  function drawIng(){var g=O.ingest||{};if(g.error){$('ing').innerHTML=note(g.error);return;}var s=g.series||[],mx=Math.max.apply(null,s.map(function(x){return x.n;}).concat([1])),W=600,Hh=110;
+    var pts=s.map(function(x,i){return (i*W/Math.max(1,s.length-1)).toFixed(1)+','+(Hh-x.n/mx*(Hh-8)).toFixed(1);}).join(' ');
+    $('ing').innerHTML='<svg class="w" viewBox="0 0 '+W+' '+Hh+'" preserveAspectRatio="none" role="img" aria-label="events per minute"><polyline fill="none" stroke="#5b8def" stroke-width="2" points="'+pts+'"/>'+(g.median?'<line x1="0" x2="'+W+'" y1="'+(Hh-g.median/mx*(Hh-8)).toFixed(1)+'" y2="'+(Hh-g.median/mx*(Hh-8)).toFixed(1)+'" stroke="#8b93a4" stroke-dasharray="4 4"/>':'')+'</svg>'
+      +'<div class="sm"><b>'+esc(g.per_minute)+'</b> events in the last full minute · normal '+esc(Math.round(g.median||0))+(g.z!=null?' · z '+esc(g.z):'')+' — '+esc(g.note)+'</div>'
+      +((g.sources||[]).length?'<div class="sm mute" style="margin-top:4px">'+(g.sources||[]).slice(0,6).map(function(x){return esc(x.source)+' '+esc(x.events);}).join(' · ')+'</div>':'');}
+  function drawAg(){if(!can('analyst')){$('agcard').hidden=true;return;}if(!A){$('ag').innerHTML=note('Reading the agents…');return;}if(A.error){$('ag').innerHTML=note(A.error);return;}
+    var s=A.summary;$('agc').textContent=s.active+' active · '+s.delayed+' delayed · '+s.disconnected+' disconnected · '+s.outdated+' outdated · '+s.degraded+' degraded'+(s.retired?' · '+s.retired+' retired':'');
+    $('ag').innerHTML=A.agents.length?'<table><thead><tr><th>Host</th><th>Status</th><th>Last heartbeat</th><th>Version</th><th>Queue</th><th></th></tr></thead><tbody>'+A.agents.map(function(a){
+      return '<tr><td><b>'+esc(a.host)+'</b></td><td><span class="pill st-'+esc(a.status)+'">'+esc(a.status)+'</span>'+(a.retired?'<div class="sm mute">'+esc(a.retired.by)+': '+esc(a.retired.reason)+'</div>':'')+'</td><td class="sm">'+esc(ago(a.minutes_ago))+' ago</td>'
+        +'<td class="sm">'+(a.version?esc('v'+a.version)+(a.outdated?' <span class="pill s2">behind v'+esc(A.newest_version)+'</span>':''):'<span class="mute">not in the last 30 min</span>')+'</td><td class="sm">'+(a.degraded?'<span class="pill s3">degraded</span> ':'')+(a.queue_files!=null?esc(a.queue_files)+' file(s)':'')+'</td>'
+        +'<td>'+(can('operator')?(a.status==='retired'?'<button class="btn sm" type="button" data-restore="'+esc(a.host)+'">Restore</button>':a.status==='disconnected'?'<button class="btn sm" type="button" data-retire="'+esc(a.host)+'">Retire…</button>':''):'')+'</td></tr>';}).join('')+'</tbody></table>'+(A.truncated?'<div class="sm mute">Showing 200 agents.</div>':'')+'<div class="sm mute" style="margin-top:6px">'+esc(A.note)+'</div>'
+      :note(('No agent has reported in the last 7 days. Install the ' + ZYB_ORG.short + ' agent on the servers and desktops (Connections & Setup → Windows agent).'));}
+  function drawFim(){if(!can('analyst')){$('fimcard').hidden=true;return;}if(!F){$('fim').innerHTML=note('Reading file changes…');return;}if(F.error){$('fim').innerHTML=note(F.error);return;}
+    $('fim').innerHTML=(F.changes.length?'<div class="tw"><table><thead><tr><th>Host</th><th>Path</th><th>By</th><th class="n">Changes</th><th>Last</th></tr></thead><tbody>'+F.changes.slice(0,50).map(function(c){return '<tr><td><b>'+esc(c.host)+'</b></td><td class="mono" style="word-break:break-all">'+esc(c.path)+(c.techniques.length?' <span class="pill s2">'+esc(c.techniques.join(', '))+'</span>':'')+'<div class="sm mute">watched: '+esc(c.watched)+'</div></td><td class="sm">'+esc(String(c.process).split(/[\\/]/).pop())+(c.user?'<div class="mute">'+esc(c.user)+'</div>':'')+'</td><td class="n">'+esc(c.count)+'</td><td class="sm">'+esc(String(c.last).slice(0,16).replace('T',' '))+'</td></tr>';}).join('')+'</tbody></table></div>':note('No change logged on a watched path in the last '+F.hours+' h.'))
+      +'<div class="sm mute" style="margin-top:6px">Coverage: '+esc(F.coverage.hosts)+' host(s) send file / registry events. '+esc(F.note)+'</div>';
+    $('watch').innerHTML='<details style="margin-top:8px"><summary class="sm">Watched paths ('+esc(F.watched.length)+')</summary>'+(can('admin')?'<textarea class="inp mono" id="wl" rows="8" style="width:100%;margin-top:6px" aria-label="Watched paths, one per line">'+esc(F.watched.join('\n'))+'</textarea><button class="btn sm pri" type="button" id="wsave">Save watched paths</button>':'<div class="mono sm" style="margin-top:6px">'+F.watched.map(esc).join('<br>')+'</div>')+'</details>';}
+  function drawLive(){if(!can('analyst')){$('livecard').hidden=true;return;}if(!LV){$('live').innerHTML=note('Reading events…');return;}if(LV.error){$('live').innerHTML=note(LV.error);return;}var L=LV.events||[];
+    $('live').innerHTML=L.length?'<table><thead><tr><th>Time</th><th>Source</th><th>Host</th><th>Event</th></tr></thead><tbody>'+L.map(function(e){return '<tr><td class="sm">'+esc(String(e.ts).slice(11,19))+'</td><td class="sm">'+esc(e.src_type)+'</td><td class="sm">'+esc(e.host)+'</td><td class="sm">'+(e.severity>=3?'<span class="pill s'+esc(e.severity)+'">'+esc(SEV[e.severity])+'</span> ':'')+esc(e.action)+' <span class="mute">'+esc(String(e.message||'').slice(0,140))+'</span></td></tr>';}).join('')+'</tbody></table>':note('No event in the last 24 hours.');}
+
+  // ---- intel (GET /soc/console/intel, analysts and above)
+  var I=null;
+  function sc(v){return v>=70?'#e5484d':v>=50?'#f56300':v>=30?'#f59f00':'#3d63b5';}
+  function drawIntel(){if(!can('analyst')||!I){return;}$('intel').hidden=false;
+    if(I.error){$('hosts').innerHTML=note(I.status===404?'The console statistics arrive with the SIEM update - run update-all.ps1.':I.error);return;}
+    $('hosts').innerHTML=I.hosts.length?I.hosts.map(function(h){return '<div class="hs"><div class="sc" style="background:'+sc(h.score)+'">'+esc(h.score)+'</div><div><b>'+esc(h.host)+'</b>'+(h.signals>1?' <span class="pill s3">'+esc(h.signals)+' kinds of signal</span>':'')+h.why.map(function(w){return '<div class="w">+'+esc(w.points)+' '+esc(w.factor)+': '+esc(w.reason)+'</div>';}).join('')+'</div></div>';}).join(''):note('No host has an open offense, a risky file change or an agent problem.');
+    var S=I.sources;$('srch').innerHTML=S.error?note(S.error):S.length?S.slice(0,12).map(function(x){return '<div class="hs"><div class="sc st-'+esc(x.state)+'" style="font-size:10px;font-weight:700">'+esc(x.state)+'</div><div><b>'+esc(x.source)+'</b> <span class="mute sm">'+esc(x.last_hour)+' / usual '+esc(x.usual)+'</span><div class="w">'+esc(x.why)+'</div></div></div>';}).join(''):note('No log source sent events in 8 days.');
+    var F=I.fim;$('fimr').innerHTML=F.error?note(F.error):F.length?F.slice(0,10).map(function(c){return '<div class="hs"><div class="sc" style="background:'+sc(c.risk)+'">'+esc(c.risk)+'</div><div><b>'+esc(c.host)+'</b> <span class="mono sm" style="word-break:break-all">'+esc(c.path)+'</span>'+c.risk_why.map(function(w){return '<div class="w">+'+esc(w.points)+' '+esc(w.factor)+': '+esc(w.reason)+'</div>';}).join('')+'</div></div>';}).join(''):note('No change on a watched path in 24 hours.');
+    var B=I.stability;$('flap').innerHTML=B.error?note(B.error):B.length?B.map(function(x){return '<div class="hs"><div class="sc" style="background:#c4511f">'+esc(x.gaps)+'</div><div><b>'+esc(x.host)+'</b><div class="w">'+esc(x.why)+'</div></div></div>';}).join(''):note('No agent dropped its heartbeat three times in 24 hours.');
+    $('inote').textContent=I.note;
+    var cp=window.zybCopilot&&window.zybCopilot.ready&&window.zybCopilot.ready();$('cpb').innerHTML=cp&&I.hosts.length?' <button type="button" class="btn sm pri" id="askhosts">✦ Ask the Copilot</button>':'';}
+  function draw(){drawIntel();drawKpis();drawOff();drawIng();drawAg();drawFim();drawLive();}
+  function load(){$('err').hidden=true;var side=function(p,set){return req('GET',p).then(set,function(e){set({error:e.message});});};
+    return req('GET','/soc/console').then(function(o){O=o;$('main').hidden=false;draw();
+      var jobs=[side('/soc/queue?status=open&limit=50',function(q){Q=q.error?{items:[],total:0,bands:{}}:q;})];
+      if(can('analyst'))jobs.push(req('GET','/soc/console/intel').then(function(i){I=i;},function(e){I={error:e.message,status:e.status};}),side('/soc/console/agents',function(a){A=a;}),side('/soc/console/fim?hours=24',function(f){F=f;}),side('/soc/console/live',function(l){LV=l;}));
+      return Promise.all(jobs).then(function(){draw();setTimeout(function(){if(I)drawIntel();},1500);});})
+    .catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML=note(e.status===404?'The SOC Console arrives with the SIEM update - run update-platform.ps1.':e.message);});}
+  document.addEventListener('click',function(ev){var el=ev.target.closest('button');if(!el)return;
+    if(el.id==='askhosts'){if(!window.zybCopilot.ask('Which of these hosts should an analyst look at first, and what should they check on each: '+I.hosts.slice(0,5).map(function(h){return h.host+' ('+h.why.map(function(w){return w.factor;}).join(', ')+')';}).join('; ')+'? Use the alerts and events, cite ids.'))toast('The SOC Copilot is busy or not available');return;}
+    if(el.dataset.retire){var why=prompt('Why is the agent on '+el.dataset.retire+' gone on purpose? (e.g. server decommissioned, change reference)');if(!why)return;req('POST','/soc/console/agents/retire',{host:el.dataset.retire,reason:why}).then(function(){toast('Retired');return load();}).catch(function(e){toast(e.message);});return;}
+    if(el.dataset.restore){var r2=prompt('Why restore '+el.dataset.restore+'?');if(!r2)return;req('POST','/soc/console/agents/restore',{host:el.dataset.restore,reason:r2}).then(function(){toast('Restored');return load();}).catch(function(e){toast(e.message);});return;}
+    if(el.id==='wsave'){var paths=$('wl').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);el.disabled=true;req('POST','/soc/console/fim/watch',{paths:paths}).then(function(){toast('Watched paths saved');return load();}).catch(function(e){el.disabled=false;toast(e.message);});}});
+  req('GET','/dashboards/whoami.json').then(function(w){ROLE=(w&&w.role)||'viewer';}).catch(function(){ROLE='viewer';/* no identity: least privilege */}).then(function(){return load();}).then(function(){if(window.zybAutoRefresh)window.zybAutoRefresh({load:load,every:30,into:document.querySelector('.acts')});});
+})();
+</script></body></html>

@@ -1,0 +1,81 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pipeline Health</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-secops.css"><script src="vendor/zyb-soc.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+.ph-ban{display:flex;gap:14px;align-items:center;padding:16px 18px;border-radius:14px;border:1px solid var(--so-line);background:var(--so-panel);margin-bottom:12px}
+.ph-dot{width:18px;height:18px;border-radius:50%;flex:0 0 18px}.ph-ban b{font-size:20px}.ph-ban .w{color:var(--so-mute);font-size:13px;margin-top:2px}
+.st-healthy{background:#2ea043}.st-degraded{background:#d29922}.st-failing,.st-stale{background:#e5484d}.st-off,.st-waiting,.st-not_installed{background:#6e7681}
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:stretch}
+.stg{border:1px solid var(--so-line);border-radius:12px;padding:12px;position:relative;background:var(--so-panel)}.stg .h{font-weight:700}.stg .ms{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.stg.ok{border-color:#2ea04388}.stg.bad{border-color:#e5484d;box-shadow:0 0 0 1px #e5484d inset}.stg .d{font-size:12px;color:var(--so-mute);margin-top:4px}
+.hist{display:flex;flex-wrap:wrap;gap:3px}.hist i{display:block;width:12px;height:18px;border-radius:3px}.hist i.ok{background:#2ea043}.hist i.bad{background:#e5484d}
+.chain li{margin:6px 0;font-size:13px}.chain a{color:var(--so-acc)}
+@media(max-width:800px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head><body><main class="so">
+<div class="so-head"><div><div class="eb">SIEM platform · end-to-end assurance</div><h1>Pipeline Health</h1></div><span class="sp"></span>
+ <span class="so-chip" id="up">loading…</span><button type="button" class="so-btn" id="refresh" aria-label="Refresh">⟳ Refresh</button><button type="button" class="so-btn pri" id="runnow" hidden>▶ Run the canary now</button></div>
+<div id="err"></div>
+<div class="ph-ban" id="ban" role="status"><span class="ph-dot st-waiting" id="dot"></span><div><b id="stt">Reading…</b><div class="w" id="why"></div></div></div>
+<div class="so-kpis" id="kpis"></div>
+<div class="so-grid">
+ <section class="so-p w12"><h2>Latest canary run <span class="c" id="lrun"></span></h2><div class="flow" id="flow"></div><p class="so-note" id="covers"></p></section>
+</div>
+<div class="so-grid">
+ <section class="so-p w6"><h2>Last 24 hours <span class="c">one square per run · red = a stage failed</span></h2><div class="hist" id="hist" role="img"></div><p class="so-note" id="histn"></p></section>
+ <section class="so-p w6"><h2>Independent watcher <span class="c">IT Asset Management reads this every 5 minutes</span></h2><div id="watch"></div></section>
+</div>
+<div class="so-grid">
+ <section class="so-p w6"><h2>Pipeline stages <span class="c">live counters since the engine started</span></h2><div class="so-tw" id="stages" style="overflow-x:auto"></div></section>
+ <section class="so-p w6"><h2>The assurance chain <span class="c">each link and where it is checked</span></h2><ol class="chain">
+  <li><b>Every asset sends logs</b> - assets that should log against what arrives: <a href="log-assurance.html">Log Flow Assurance</a></li>
+  <li><b>Every source keeps sending</b> - silent / never received, and the "log source went silent" rule: <a href="soc-sources.html">Log Sources</a></li>
+  <li><b>The SIEM reads, analyses and alerts</b> - this page: the canary through parse, pipeline, detection, alert and store</li>
+  <li><b>The rules would catch an attack</b> - rule health and safe synthetic attack runs: <a href="detection-validation.html">Detection Validation</a></li>
+  <li><b>Someone is told</b> - a failure here becomes a platform incident with on-call and escalation: <a href="notify-center.html">Notification &amp; Escalation</a></li></ol></section>
+</div>
+<section class="so-p w12" id="setw" hidden><h2>Canary settings <span class="c">administrators</span></h2>
+ <form id="setf" class="so-form"><div class="so-fil" style="margin:0"><label><span><input type="checkbox" name="enabled"> Canary on</span></label>
+  <label>Every (minutes)<input name="every_min" type="number" min="5" max="60" required></label><label>Alert must arrive within (seconds)<input name="alert_within_s" type="number" min="60" max="900" required></label>
+  <button type="submit" class="so-btn pri">Save</button></div><span class="so-err" data-msg></span></form></section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,esc=S.esc,$=function(i){return document.getElementById(i);},V=null;
+  var LBL={healthy:'Healthy - logs are read, analysed and alerted on',degraded:'Degraded - a run failed in the last 24 hours',failing:'Failing - the SIEM is not completing its own test',stale:'Canary stopped - the SIEM is not running its own test',off:'Canary switched off',waiting:'Waiting for the first run',not_installed:'Not installed yet'};
+  var STG={parse:['Parse','the parser turns the line into an event'],pipeline:['Pipeline','enrich, sources, detect, store, tail'],alert:['Alert','rule SENTRA-OPS-900 raises an alert'],store:['Store','the event is searchable in the store']};
+  function ms(v){return v==null?'—':v<1000?Math.round(v)+' ms':(Math.round(v/100)/10)+' s';}
+  function kpi(l,v,s,cls){return '<div class="so-kpi '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function itam(){return new Promise(function(ok){var x=new XMLHttpRequest();x.open('GET','/api/itam/pipeline-health');x.withCredentials=true;x.zybQuiet=true;x.timeout=30000;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as not available */}ok(x.status===200&&j?j:{error:x.status===404?'The watcher arrives with the IT Asset Management update.':'The watcher could not be read (HTTP '+x.status+').'});};
+    x.onerror=x.ontimeout=function(){ok({error:'IT Asset Management is not reachable.'});};x.send(null);});}
+  function draw(){var v=V;
+    $('dot').className='ph-dot st-'+v.status;$('stt').textContent=LBL[v.status]||v.status;$('why').textContent=v.why||'';
+    var d=v.day,l=v.latency;
+    $('kpis').innerHTML=kpi('Runs passed (24 h)',d.success_pct==null?'—':d.success_pct+'%',d.ok+' of '+d.runs+' runs',d.failed?'crit':d.runs?'ok':'')+kpi('Alert within',ms(l.alert_p50_ms),'median · 95%: '+ms(l.alert_p95_ms))+kpi('Searchable within',ms(l.store_p50_ms),'median · 95%: '+ms(l.store_p95_ms))
+      +kpi('Events per second',v.intake&&v.intake.eps_1m!=null?v.intake.eps_1m:'—','last minute, every source')+kpi('Checked every',v.settings.every_min+' min','alert must arrive within '+v.settings.alert_within_s+' s');
+    var r=v.last;$('lrun').textContent=r?r.id+' · '+S.dt(r.at)+' · '+(r.ok?'passed':'FAILED at '+r.failed_stage)+' · by '+r.by:'no run yet';
+    $('flow').innerHTML=['parse','pipeline','alert','store'].map(function(k){var x=r&&r.stages.find(function(y){return y.stage===k;});var cls=!x?'':x.ok?'ok':'bad';
+      return '<div class="stg '+cls+'"><div class="h">'+(x?(x.ok?'✔ ':'✖ '):'')+esc(STG[k][0])+'</div><div class="ms">'+(x?ms(x.ms):'—')+'</div><div class="d">'+esc(x&&x.detail?x.detail:STG[k][1])+'</div></div>';}).join('');
+    $('covers').textContent='Covers: '+v.covers;
+    var H=v.history.slice().reverse();$('hist').setAttribute('aria-label',H.length+' runs, '+H.filter(function(x){return !x.ok;}).length+' failed');
+    $('hist').innerHTML=H.length?H.map(function(x){return '<i class="'+(x.ok?'ok':'bad')+'" title="'+esc(S.dt(x.at)+' · '+(x.ok?'passed in '+ms(x.total_ms):'failed at '+x.failed_stage))+'"></i>';}).join(''):'<span class="so-why">No run yet.</span>';
+    $('histn').textContent=d.runs?d.failed+' failed of '+d.runs+' in 24 hours.':'';
+    var P=v.intake?v.intake.stages:[];$('stages').innerHTML=P.length?'<table class="so-t"><thead><tr><th>Stage</th><th>Events</th><th>Errors</th><th>Average</th><th>Last error</th></tr></thead><tbody>'+P.map(function(x){return '<tr><td><b>'+esc(x.name)+'</b></td><td>'+S.n(x.calls)+'</td><td>'+(x.errors?'<span class="so-tag crit">'+S.n(x.errors)+'</span>':'0')+'</td><td>'+(x.avg_us==null?'—':esc(x.avg_us)+' µs')+'</td><td class="so-why" style="white-space:normal">'+esc(x.last_error||'')+'</td></tr>';}).join('')+'</tbody></table>':'<p class="so-empty">No stage counters.</p>';
+    $('runnow').hidden=!S.can('operator');
+    if(S.can('admin')){$('setw').hidden=false;var f=$('setf').elements;f.enabled.checked=!!v.settings.enabled;f.every_min.value=v.settings.every_min;f.alert_within_s.value=v.settings.alert_within_s;}}
+  function drawWatch(w){
+    $('watch').innerHTML=w.error?'<p class="so-err">'+esc(w.error)+'</p>':'<dl class="so-kv"><div><dt>Last read</dt><dd>'+esc(w.at?S.dt(w.at):'not yet')+'</dd></div><div><dt>SIEM answering</dt><dd>'+(w.reachable===false?'<span class="so-tag crit">no - '+esc(w.consecutive_failures)+' failed read(s)</span>':w.reachable?'<span class="so-tag ok">yes</span>':'—')+'</dd></div><div><dt>Last good read</dt><dd>'+esc(w.last_ok_at?S.dt(w.last_ok_at):'—')+'</dd></div></dl>'
+      +(w.signals.length?'<div class="so-why">Raised as platform incidents</div><ul class="so-list">'+w.signals.map(function(x){return '<li><span class="so-tag '+(x.severity>=4?'crit':'warn')+'">'+(x.severity>=4?'critical':'warning')+'</span><span class="grow" style="white-space:normal"><b>'+esc(x.title)+'</b><div class="so-why" style="white-space:normal">'+esc(x.text)+'</div></span></li>';}).join('')+'</ul>':'<p class="so-why">Nothing raised: the watcher sees a healthy pipeline.</p>')
+      +'<p class="so-note">'+esc(w.note)+'</p>';}
+  function load(){itam().then(drawWatch);
+    return S.req('GET','/ops/pipeline').then(function(v){V=v;$('err').innerHTML='';draw();$('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});},
+      function(e){$('dot').className='ph-dot st-failing';$('stt').textContent=e.status===404?LBL.not_installed:'The SIEM did not answer';$('why').textContent=e.status===404?'The pipeline canary arrives with the SIEM update - run update-all.ps1.':'GET /api/soc/ops/pipeline: '+e.message+' - check the sentra-siem service. The independent watcher below raises this as a platform incident.';$('up').textContent='not loaded';});}
+  document.addEventListener('click',function(ev){var t=ev.target;
+    if(t.closest('#refresh')){load();return;}
+    if(t.id==='runnow'){t.disabled=true;t.textContent='Running… (up to a few minutes)';S.req('POST','/ops/pipeline/run',{}).then(function(r){S.toast(r.ok?'Canary passed every stage':'Canary FAILED at '+r.failed_stage+': '+r.why);},function(e){S.toast(e.message);}).then(function(){t.disabled=false;t.textContent='▶ Run the canary now';load();});}});
+  document.addEventListener('submit',function(ev){if(ev.target.id!=='setf')return;ev.preventDefault();var f=ev.target.elements;
+    S.req('PUT','/ops/pipeline/settings',{enabled:f.enabled.checked,every_min:+f.every_min.value,alert_within_s:+f.alert_within_s.value}).then(function(){S.toast('Saved');load();},function(e){ev.target.querySelector('[data-msg]').textContent=e.message;});});
+  S.ready(load);
+  setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script></body></html>

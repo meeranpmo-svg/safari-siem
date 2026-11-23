@@ -1,0 +1,67 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Audit Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-assist.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script><script src="vendor/zyb-levels.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.hero{background:radial-gradient(1200px 300px at 10% -40%,rgba(57,135,229,.22),transparent),radial-gradient(800px 260px at 95% 120%,rgba(168,85,247,.16),transparent),var(--tblr-bg-surface);border:1px solid var(--tblr-border-color);border-radius:14px}
+.gauge{position:relative;width:190px;height:190px;margin:auto}.gauge svg{width:100%;height:100%}.gauge .gv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}.gauge .gv b{font-size:44px;line-height:1;font-weight:800}
+.ix{display:grid;grid-template-columns:1fr 64px;gap:4px 10px;align-items:center;font-size:12.5px}.ix .bx{height:8px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden}.ix .bx span{display:block;height:100%}
+.fw{border-left:4px solid #6b7280;height:100%}.fw.s-compliant{border-left-color:#0ca30c}.fw.s-partial{border-left-color:#fab219}.fw.s-gaps{border-left-color:#d03b3b}.fw.s-not_assessed,.fw.s-not_available{border-left-color:#6b7280}
+.score{font-size:30px;font-weight:800;line-height:1}.stack{display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.07);margin:8px 0 4px}.stack span{display:block;height:100%}
+.spark{width:100%;height:36px;display:block}
+.bi{border-left:4px solid #6b7280;padding:7px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,.02)}.bi.s-high{border-left-color:#d03b3b}.bi.s-medium{border-left-color:#fab219}.bi.s-low{border-left-color:#3987e5}
+.pr{display:inline-flex;align-items:center;gap:6px;font-size:11px}.pr i{display:inline-block;width:60px;height:5px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;font-style:normal}.pr i b{display:block;height:100%;background:linear-gradient(90deg,#fab219,#d03b3b)}
+.mx td,.mx th{text-align:center;font-size:12px;padding:6px 8px}.mx td:first-child,.mx th:first-child{text-align:left}.mx .c{border-radius:6px;padding:4px 0;font-weight:700}
+.dl{display:grid;grid-template-columns:1fr 1fr 44px;gap:6px 10px;align-items:center;font-size:12.5px}.dl .bx{height:8px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden}.dl .bx span{display:block;height:100%;background:#0ca30c}
+.legend span{display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:11.5px;color:var(--tblr-secondary)}.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Audit · Overview</div><h2 class="page-title">Audit Dashboard</h2></div>
+ <div class="col-auto ms-auto d-flex gap-2"><span class="mut align-self-center" id="up"></span><button type="button" class="btn" id="csv"><i class="ti ti-download me-1"></i>Export CSV</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>For internal and external auditors and the Audit Committee: where {{org.short}} stands on <b>PDPL</b>, <b>NCA ECC</b>, <b>NDMO</b>, the <b>SAMA Cyber Security Framework</b>, the <b>Insurance Authority</b> checklist and <b>ISO 27001</b>, with an <b>assurance index</b> whose every point is itemised, the movement of each framework from its daily history, what needs an auditor first (ranked), the audit teams' delivery and the analytics log. Scores are each module's indicative figure - <b>not a regulator's assessment</b>; a framework nobody assessed reads <b>not assessed</b>, never compliant.</div></div></div>
+<section class="hero p-3 mb-3" id="hero"><div class="row g-3 align-items-center">
+ <div class="col-lg-3 text-center"><div class="gauge" id="gauge"></div><div class="mut mt-1" id="gwhy"></div></div>
+ <div class="col-lg-4"><div class="au-lbl mb-2">What makes up the index</div><div class="ix" id="ix"></div><div class="mut mt-2" id="proj"></div></div>
+ <div class="col-lg-5"><div class="au-lbl mb-1">Assurance index · daily history</div><div style="position:relative;height:170px"><canvas id="c-ix"></canvas></div></div>
+</div></section>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div class="d-flex align-items-center justify-content-between mb-2"><h3 class="mb-0">Frameworks</h3><div class="legend"><span><i style="background:#0ca30c"></i>compliant / verified</span><span><i style="background:#fab219"></i>partial</span><span><i style="background:#d03b3b"></i>gap</span><span><i style="background:#6b7280"></i>not assessed / to confirm</span></div></div>
+<div class="row g-3 mb-3" id="fws"><div class="col-12 text-secondary">Loading…</div></div>
+<div class="row g-3 mb-3">
+ <div class="col-lg-7"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-alert-triangle me-1"></i>Needs attention · ranked</h3><div class="card-actions mut">severity, days overdue and running legal clocks</div></div><div class="card-body" id="att"><span class="text-secondary">Loading…</span></div></section></div>
+ <div class="col-lg-5 d-flex flex-column gap-3">
+  <section class="card"><div class="card-header"><h3 class="card-title"><i class="ti ti-grid-dots me-1"></i>Coverage matrix</h3></div><div class="table-responsive" id="mx"></div></section>
+  <section class="card"><div class="card-header"><h3 class="card-title"><i class="ti ti-target-arrow me-1"></i>Audit teams · findings on track</h3></div><div class="card-body" id="dlv"></div></section>
+  <section class="card"><div class="card-header"><h3 class="card-title"><i class="ti ti-chart-dots-3 me-1"></i>Audit analytics</h3><div class="card-actions"><a class="btn btn-sm btn-ghost-secondary" href="audit-analytics.html">Open the workbench</a></div></div><div class="card-body" id="an"></div></section>
+ </div>
+</div>
+<div class="row g-3 mb-3">
+ <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-robot me-1"></i>AI audit programmes</h3></div><div id="prog"><div class="card-body text-secondary">Loading…</div></div></section></div>
+ <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-sparkles me-1"></i>Audit advisor (AI)</h3><div class="card-actions mut" id="ais"></div></div><div class="card-body"><div class="mut mb-2">Answers only from this dashboard's records, read-only. It proposes priorities; auditors decide, conclude and sign.</div><form id="af"><textarea class="form-control" id="af-q" rows="2" maxlength="2000" placeholder="What should the Audit Committee see first this quarter, and why?"></textarea><button type="submit" class="btn btn-primary mt-2">Ask</button></form><div class="mt-3" id="aa"></div></div></section></div>
+</div>
+<section class="card mb-3" id="wfcard" hidden><div class="card-header"><h3 class="card-title"><i class="ti ti-route me-1"></i>Evidence requested from the IT teams</h3><div class="card-actions"><span class="mut me-2">Workflow Automation - PBC evidence and reports audit asked the IT teams for</span><a class="btn btn-sm btn-ghost-secondary" href="workflow-automation.html#tab=new">New request</a> <a class="btn btn-sm btn-ghost-secondary" href="workflow-automation.html#tab=mine">My requests</a></div></div><div class="card-body" id="wf"></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-building me-1"></i>Departments keeping up their framework obligations</h3><div class="card-actions"><a class="btn btn-sm btn-ghost-secondary" href="dept-checklist.html">Open the department checklist</a></div></div><div class="card-body" id="depts"><span class="text-secondary">Loading…</span></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-users-group me-1"></i>Audit teams</h3></div><div class="table-responsive" id="teams"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="note"></div></section>
+</div></main>
+<script src="vendor/zyb-auditdash.js"></script>
+<script>
+// Workflow Automation (GET /api/itam/workflow/attention): the evidence and reports audit asked the IT teams for, as this person sees them
+(function(){'use strict';
+  var $=function(i){return document.getElementById(i);},E=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var w=new XMLHttpRequest();w.open('GET','/api/itam/workflow/attention');w.withCredentials=true;w.zybQuiet=true;w.timeout=60000;
+  w.onload=function(){var j=null;try{j=JSON.parse(w.responseText);}catch(e){j=null;/* not JSON: said below */}
+    if(w.status===404){$('wfcard').hidden=true;return;}$('wfcard').hidden=false;
+    if(w.status!==200||!j||!j.summary){$('wf').innerHTML='<div class="text-secondary">Workflow Automation could not be read'+(j&&j.error?': '+E(j.error):' (HTTP '+w.status+')')+'.</div>';return;}
+    var s=j.summary,P=(j.priorities||[]).map(function(p){return {p:p,pts:p.why.reduce(function(n,q){return n+q[1];},0)};}).sort(function(a,b){return b.pts-a.pts;});
+    var done=s.teams.reduce(function(n,x){return n+x.n;},0),ont=s.teams.reduce(function(n,x){return n+x.on_time;},0);
+    var t=function(v,l,c){return '<div style="min-width:120px"><div class="h2 mb-0'+(c?' text-'+c:'')+'">'+E(v)+'</div><div class="text-secondary small">'+E(l)+'</div></div>';};
+    var h='<div class="d-flex flex-wrap gap-4 mb-3">'+t(s.raised_open,'open with the IT teams')+t(s.raised_late,'late with the IT teams',s.raised_late?'danger':'')+t(s.to_accept,'results for you to accept',s.to_accept?'warning':'')+t(s.approvals,'waiting for your approval',s.approvals?'warning':'')+t(s.all_overdue,'overdue across the IT teams',s.all_overdue?'danger':'success')+t(done?Math.round(ont/done*100)+' %':'—',done?'IT teams on time ('+ont+' of '+done+')':'on time - no history yet')+'</div>';
+    h+=P.length?'<div class="list-group list-group-flush">'+P.slice(0,8).map(function(x){return '<a class="list-group-item list-group-item-action d-flex gap-3 px-0" href="'+E(x.p.page)+'"><span class="badge '+(x.pts>=45?'bg-red-lt':'bg-yellow-lt')+'">'+E(x.pts)+'</span><span><b>'+E(x.p.ref)+'</b> '+E(x.p.text)+'<span class="d-block text-secondary small">'+E(x.p.kind)+' · '+E(x.p.why.map(function(q){return q[0]+' +'+q[1];}).join(', '))+'</span></span></a>';}).join('')+'</div>'
+      :'<div class="text-secondary">Nothing late or waiting for you.'+(s.functions.indexOf('audit')<0?' You are not listed under Audit in Workflow Automation → Settings, so only your own requests count.':'')+'</div>';
+    $('wf').innerHTML=h;};
+  w.onerror=w.ontimeout=function(){$('wfcard').hidden=false;$('wf').innerHTML='<div class="text-secondary">Workflow Automation did not answer.</div>';};w.send();
+})();
+</script></body></html>

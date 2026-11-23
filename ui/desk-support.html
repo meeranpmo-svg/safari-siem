@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Desktop Support</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:24px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#238636;border-color:#238636;color:#fff}button.sm{padding:3px 9px;font-size:12px}
+select,input,textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08)}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;align-items:end;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:12px;margin:10px 0}.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.tabs{display:flex;gap:6px;margin:0 0 12px;border-bottom:1px solid var(--edge);flex-wrap:wrap}.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 14px;font-size:14px;color:var(--mute)}.tabs button.on{color:var(--title);border-bottom-color:#3fb950}
+.banner{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.3);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--info);margin:0 0 12px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.sev{font-weight:700}.sev.Urgent{color:#ff5b6b}.sev.High{color:var(--bad)}.sev.Medium{color:var(--warn)}.sev.Low{color:var(--info)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT service management · automation</div><h1>AI Desktop Support Engineer</h1></div><span class="sp"></span><span id="mode"></span><span class="muted" id="up"></span><button type="button" id="scan" hidden>▶ Run triage now</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div data-zyb-duty="desktop" data-api="/api/itam"></div>
+<div class="banner">Automates ServiceDesk Plus: sets priority, assigns the technician / group, moves status and posts a first response — and monitors desktops from Endpoint Central. In <b>suggest</b> mode it proposes; in <b>auto</b> it applies. Patch installs change devices, so they stay <b>approval-gated</b> (four-eyes) unless an admin arms auto-approval.</div>
+<div class="k" id="kk"></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="triage" class="on">🎫 Ticket triage</button><button type="button" role="tab" data-tab="desktops">🖥️ Desktops</button><button type="button" role="tab" data-tab="patch">🩹 Patching</button><button type="button" role="tab" data-tab="set" hidden>⚙️ Settings</button></div>
+
+<div id="tab-triage"><div class="card"><h2>Triage queue <span class="c" id="tqc"></span></h2><div class="tw" id="triage"><div class="empty">Loading…</div></div>
+  <p class="note">In suggest mode these are proposals — click Apply to write them to ServiceDesk Plus. In auto mode they are applied automatically and listed here as they happen.</p></div></div>
+<div id="tab-desktops" hidden><div class="card"><h2>Desktop health <span class="c" id="dhc"></span></h2>
+  <div style="margin-bottom:8px"><input type="search" id="dq" placeholder="Search computer, user…" style="width:100%;max-width:320px"></div>
+  <div class="tw" id="desktops"><div class="empty">Loading…</div></div>
+  <p class="note">From the Endpoint Central computers ManageEngine syncs. “Needs patch” = at least the configured number of missing critical patches.</p></div></div>
+<div id="tab-patch" hidden><div class="card"><h2>Patch requests <span class="c" id="pc"></span></h2><div class="tw" id="patch"><div class="empty">—</div></div>
+  <p class="note">Installing patches changes the device, so a request needs a second person to approve (four-eyes) before Endpoint Central is told to install.</p></div></div>
+<div id="tab-set" hidden><div class="card"><h2>Settings</h2><div id="setbody"><p class="muted">Only administrators change these.</p></div></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', V=null, TAB='triage';
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function dt(t){try{return t?new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';}catch(e){return t||'';}}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function modePill(m){return '<span class="pill '+(m==='auto'?'ok':m==='suggest'?'warn':'')+'">mode: '+esc(m)+'</span>';}
+
+  function draw(){
+    var st=V.status||{}, me=st.configured||{}, d=st.desktops;
+    $('mode').innerHTML=modePill(st.mode||'off')+(st.patch_mode&&st.patch_mode!=='off'?' <span class="pill warn">patch: '+esc(st.patch_mode)+'</span>':'');
+    if(!me.sdp&&!me.ec){$('kk').innerHTML='<div class="t" style="grid-column:1/-1"><div class="s">ManageEngine is not connected yet. Set up ServiceDesk Plus and Endpoint Central on the <a href="manageengine.html" style="color:var(--info)">ManageEngine</a> page — the AI Desktop Support engineer reuses those connections.</div></div>';}
+    else $('kk').innerHTML=tile('Triage mode',(st.mode||'off').toUpperCase(),st.technicians+' technicians',st.mode==='auto'?'ok':st.mode==='suggest'?'warn':'')
+      +tile('Proposed',st.proposed||0,'awaiting apply',st.proposed?'warn':'ok')
+      +tile('Applied',st.applied||0,'triaged tickets','info')
+      +tile('Desktops',d?d.total:'—',d?(d.healthy+' healthy'):'EC not connected',d&&d.total?'info':'')
+      +tile('Need patching',d?d.needs_patch:'—','critical patches missing',(d&&d.needs_patch)?'bad':'ok')
+      +tile('Offline agents',d?d.offline:'—','not reporting',(d&&d.offline)?'warn':'ok');
+    $('scan').hidden=!can('admin')||!me.sdp;
+    drawTriage();drawDesktops();drawPatch();
+    document.querySelector('[data-tab=set]').hidden=!can('admin');
+    if(can('admin'))drawSettings();
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  function drawTriage(){
+    var L=V.triage||[];$('tqc').textContent=L.length?L.length+' proposed':'';
+    $('triage').innerHTML=L.length?'<table><thead><tr><th>Ticket</th><th>Subject</th><th>Priority</th><th>Group</th><th>Technician</th><th>Status</th><th></th></tr></thead><tbody>'+L.map(function(p){var pr=p.proposed||{};
+      return '<tr><td class="mono">#'+esc(p.request_id)+'</td><td>'+esc(p.subject)+'<div class="muted" style="font-size:11px">'+esc(p.requester||'')+'</div></td><td><span class="sev '+esc(pr.priority)+'">'+esc(pr.priority)+'</span></td><td>'+esc(pr.group||'')+'</td><td>'+esc(pr.technician||'—')+'</td><td>'+esc(pr.status||'')+'</td><td>'+(can('operator')?'<button type="button" class="sm" data-apply="'+esc(p.request_id)+'">Apply</button>':'')+'</td></tr>';
+    }).join('')+'</tbody></table>':'<div class="empty">'+((V.status&&V.status.mode==='off')?'Triage is off. Turn it on in Settings (suggest or auto).':'No tickets waiting for triage.')+'</div>';
+  }
+  function drawDesktops(){
+    var dd=V.desktops||{},L=(dd.items||[]),q=$('dq').value.trim().toLowerCase();
+    var nc=dd.not_connected?'<div class="empty" style="margin-bottom:8px">Endpoint Central is not connected in ManageEngine - the desktops below come from the asset register and have no agent to report health or patches.</div>':'';
+    if(dd.not_connected&&!L.length){$('desktops').innerHTML='<div class="empty">Endpoint Central is not connected in ManageEngine, and the asset register holds no user desktop or laptop yet.</div>';$('dhc').textContent='';return;}
+    L=L.filter(function(i){return !q||[i.name,i.user,i.os,i.ip,i.branch].join(' ').toLowerCase().indexOf(q)>=0;});
+    var na=L.filter(function(i){return i.source==='asset register';}).length;$('dhc').textContent=L.length+' computers'+(na?' · '+na+' from the asset register with no Endpoint Central agent':'');
+    $('desktops').innerHTML=nc+(L.length?'<table><thead><tr><th>Computer</th><th>User</th><th>OS</th><th>Status</th><th>Issues</th><th>Last seen</th><th></th></tr></thead><tbody>'+L.slice(0,500).map(function(i){
+      var stp=i.worst==='high'?'<span class="pill bad">attention</span>':i.worst==='medium'?'<span class="pill warn">watch</span>':'<span class="pill ok">ok</span>';
+      return '<tr><td><b>'+esc(i.name)+'</b> <span class="muted mono">'+esc(i.ip||'')+'</span>'+(i.source==='asset register'?' <span class="pill warn">no agent</span>':'')+'</td><td>'+esc(i.user||'')+'</td><td class="small">'+esc(i.os||'')+'</td><td>'+stp+'</td><td style="font-size:12px">'+esc((i.issues||[]).join('; ')||'—')+'</td><td class="muted" style="font-size:11.5px">'+esc(dt(i.last_contact))+'</td><td>'+(i.source==='asset register'?'<a class="sm" href="inventory.html#asset='+encodeURIComponent(i.asset_id)+'">Asset</a>':can('operator')&&i.critical>0?'<button type="button" class="sm" data-patchreq="'+esc(i.resource_id)+'">Patch…</button>':'')+'</td></tr>';
+    }).join('')+'</tbody></table>':'<div class="empty">No computers.</div>');
+  }
+  function drawPatch(){
+    var L=V.patch_proposals||[];$('pc').textContent=L.length?L.length:'';
+    $('patch').innerHTML=L.length?'<table><thead><tr><th>Computer</th><th>Critical missing</th><th>State</th><th>Requested by</th><th>Approved by</th><th></th></tr></thead><tbody>'+L.map(function(p){
+      var stp=p.state==='deploying'?'<span class="pill ok">deploying</span>':p.state==='requested'?'<span class="pill warn">awaiting approval</span>':p.state==='failed'?'<span class="pill bad">failed</span>':'<span class="pill">'+esc(p.state)+'</span>';
+      return '<tr><td><b>'+esc(p.name||p.resource_id)+'</b></td><td>'+esc(p.critical==null?'—':p.critical)+'</td><td>'+stp+(p.error?' <span class="muted">'+esc(p.error)+'</span>':'')+'</td><td>'+esc(p.requested_by||'')+'</td><td>'+esc(p.approved_by||'—')+'</td><td>'+(p.state==='requested'&&/^(duty|system):/i.test(p.requested_by||'')?(can('operator')?'<button type="button" class="sm" data-patchadopt="'+esc(p.id)+'" title="Raised by the AI engineer: a person takes it over, then a different administrator approves">Take over</button>':''):((can('admin')||(window.zybApproves&&window.zybApproves('eng:desktop')))&&p.state==='requested'?'<button type="button" class="sm pri" data-patchok="'+esc(p.id)+'">Approve &amp; install</button>':''))+'</td></tr>';
+    }).join('')+'</tbody></table>':'<div class="empty">No patch requests. Open a computer with missing critical patches on the Desktops tab to request an install.</div>';
+  }
+  function drawSettings(){
+    var c=V.config||{};
+    var techs=(c.technicians||[]).map(function(t){return (t.name||'')+(t.email?' <'+t.email+'>':'')+(t.skills&&t.skills.length?' ['+t.skills.join(',')+']':'');}).join('\n');
+    $('setbody').innerHTML='<div class="form"><label>Triage mode<select id="s-mode"><option value="off">Off</option><option value="suggest">Suggest</option><option value="auto">Auto (apply)</option></select></label>'
+      +'<label>Acknowledge status<input id="s-ack" value="'+esc(c.ack_status||'In Progress')+'"></label><label>Max tickets per run<input id="s-max" type="number" min="1" max="200" value="'+esc(c.max_per_run||25)+'"></label></div>'
+      +'<label class="muted" style="font-size:12px;display:block;margin:6px 0 4px">Technicians — one per line: <b>Name &lt;email&gt; [skill,skill]</b> (skills match ticket keywords; otherwise round-robin)</label>'
+      +'<textarea id="s-techs" rows="4" style="width:100%" placeholder="Net Tech <net@corp> [network,vpn]">'+esc(techs)+'</textarea>'
+      +'<label class="muted" style="font-size:12px;display:block;margin:10px 0 4px">First-response note posted to the requester</label><textarea id="s-fr" rows="2" style="width:100%">'+esc(c.first_response||'')+'</textarea>'
+      +'<div class="form" style="margin-top:12px"><label>Patch mode<select id="p-mode"><option value="off">Off</option><option value="suggest">Suggest</option><option value="auto">Auto</option></select></label>'
+      +'<label>Min critical patches to flag<input id="p-min" type="number" min="1" max="99" value="'+esc((c.patch&&c.patch.min_critical)||1)+'"></label>'
+      +'<label style="display:flex;align-items:center;gap:6px;grid-column:span 2"><input type="checkbox" id="p-auto" '+((c.patch&&c.patch.auto_approve)?'checked':'')+'> Auto-approve patch installs (skips four-eyes — changes devices automatically)</label></div>'
+      +'<button type="button" class="pri" id="desk-save">Save</button>';
+    var mm=$('s-mode');if(mm)mm.value=c.mode||'off';var pm=$('p-mode');if(pm)pm.value=(c.patch&&c.patch.mode)||'off';
+  }
+  function parseTechs(txt){return txt.split('\n').map(function(l){l=l.trim();if(!l)return null;var m=l.match(/^([^<\[]+?)\s*(?:<([^>]+)>)?\s*(?:\[([^\]]*)\])?$/);if(!m)return {name:l};return {name:(m[1]||'').trim(),email:(m[2]||'').trim(),skills:(m[3]||'').split(',').map(function(s){return s.trim();}).filter(Boolean)};}).filter(Boolean);}
+
+  function show(tab){TAB=tab;[].forEach.call(document.querySelectorAll('[role=tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===tab);});[].forEach.call(document.querySelectorAll('[id^=tab-]'),function(p){p.hidden=p.id!=='tab-'+tab;});}
+  function load(){return req('GET','/me/desk').then(function(r){V=r;draw();}).catch(function(e){$('triage').innerHTML='<p class="err">'+esc(e.status===404?'IT Asset Management on the server does not have AI Desktop Support yet — run the update (update-all.ps1).':e.status===403?'Operators and administrators can see this.':e.message)+'</p>';});}
+  document.querySelector('.tabs').addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(b)show(b.getAttribute('data-tab'));});
+  $('dq').addEventListener('input',drawDesktops);
+  document.addEventListener('click',function(e){var t=e.target,x;
+    if(t.id==='scan'){t.disabled=true;t.textContent='Running…';req('POST','/me/desk/scan',{}).then(function(r){toast((r.mode==='auto'?'Triaged '+r.triaged:'Proposed '+r.proposed)+(r.failed&&r.failed.length?', '+r.failed.length+' failed':''));load();}).catch(function(er){toast(er.message);}).then(function(){t.disabled=false;t.textContent='▶ Run triage now';});return;}
+    if((x=t.closest('[data-apply]'))){x.disabled=true;req('POST','/me/desk/triage/'+encodeURIComponent(x.getAttribute('data-apply'))+'/apply',{}).then(function(){toast('Applied to ServiceDesk Plus');load();}).catch(function(er){x.disabled=false;toast(er.message);});return;}
+    if((x=t.closest('[data-patchreq]'))){if(!confirm('Request a patch install for this computer? It will need a second person to approve.'))return;req('POST','/me/desk/patch/'+encodeURIComponent(x.getAttribute('data-patchreq'))+'/request',{}).then(function(){toast('Patch install requested — see the Patching tab');show('patch');load();}).catch(function(er){toast(er.message);});return;}
+    if((x=t.closest('[data-patchadopt]'))){if(!confirm('Take over this patch request? You become the requester; a different administrator must approve it.'))return;req('POST','/me/desk/patch/'+encodeURIComponent(x.getAttribute('data-patchadopt'))+'/endorse',{}).then(function(){toast('Taken over - a different administrator approves it now');load();}).catch(function(er){toast(er.message);});return;}
+    if((x=t.closest('[data-patchok]'))){if(!confirm('Approve and tell Endpoint Central to install patches on this computer?'))return;x.disabled=true;req('POST','/me/desk/patch/'+encodeURIComponent(x.getAttribute('data-patchok'))+'/approve',{}).then(function(r){toast(r.state==='deploying'?'Approved — install requested':'Failed: '+(r.error||''));load();}).catch(function(er){x.disabled=false;toast(er.message);});return;}
+    if(t.id==='desk-save'){var b={mode:$('s-mode').value,ack_status:$('s-ack').value.trim(),max_per_run:+$('s-max').value||25,technicians:parseTechs($('s-techs').value),first_response:$('s-fr').value.trim(),patch:{mode:$('p-mode').value,min_critical:+$('p-min').value||1,auto_approve:$('p-auto').checked}};
+      req('POST','/me/desk/config',b).then(function(){toast('Saved');load();}).catch(function(er){toast(er.message);});return;}
+  });
+  $('refresh').onclick=load;
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden&&TAB!=='set')load();},60000);
+})();
+</script><script src="vendor/zyb-duty.js" defer></script></body></html>

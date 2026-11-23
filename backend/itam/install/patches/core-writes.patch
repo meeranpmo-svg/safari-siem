@@ -1,0 +1,59 @@
+--- a/engine/routes.js	2026-10-19 19:14:59.306057106 +0000
++++ b/engine/routes.js	2026-10-19 19:14:59.307733436 +0000
+@@ -19,6 +19,12 @@
+   // the human asset writes decided in Python, committed here (engine/assets-write.js, step 9d); Node.js decides when off
+   const AW = (() => { try { return require('./assets-write').createAssetsWrite(app); } catch (e) { return null; } })();
+   app.assetsWriteStats = () => (AW ? AW.stats() : null);
++  // licences, stocktake, finding accept / dismiss and CMDB links decided in Python too (engine/py-writer.js, step 9e);
++  // writes.engine = "node" turns it off. Settings, credentials and agent tokens always stay here (they carry secrets)
++  const CW = (() => { try { return require('./py-writer').createPyWriter(app, { off: ((app.config && app.config.writes) || {}).engine === 'node' }); } catch (e) { return null; } })();
++  const cw = (op, spec, who, node) => (CW ? CW.write(op, spec, who, node) : node());
++  const rid = (p, n) => () => `${p}_${require('node:crypto').randomBytes(n).toString('hex')}`;
++  app.coreWriteStats = () => (CW ? CW.stats() : null);
+ 
+   // ---- health / status --------------------------------------------------------------------------------------------
+   srv.route('GET', '/health', () => ({ ok: true, service: 'sentra-itam', version: VERSION, uptime_s: Math.round((Date.now() - started) / 1000) }));
+@@ -99,8 +105,8 @@
+   // ---- software + licences ----------------------------------------------------------------------------------------
+   srv.route('GET', '/software', async () => { const p = PY && await PY.software(); if (p) return { software: p.software }; const { rollup } = require('./model/software'); return { software: rollup(assets.all().filter((a) => a.status !== 'disposed')) }; });
+   srv.route('GET', '/licences', async () => { const p = PY && await PY.licences(); return p ? { licences: p.licences } : { licences: licences.complianceView() }; });
+-  srv.route('POST', '/licences', (ctx) => { ctx.need('operator'); return { licence: licences.upsert(ctx.body, ctx.who) }; });
+-  srv.route('POST', '/licences/:id/retire', (ctx) => { ctx.need('operator'); return licences.retire(ctx.params.id, ctx.who, ctx.body.reason); });
++  srv.route('POST', '/licences', (ctx) => { ctx.need('operator'); return cw('licences.save', { own: ['licences'], newId: ctx.body.id ? undefined : rid('lic', 5), extra: { body: ctx.body } }, ctx.who, () => ({ licence: licences.upsert(ctx.body, ctx.who) })); });
++  srv.route('POST', '/licences/:id/retire', (ctx) => { ctx.need('operator'); return cw('licences.retire', { own: ['licences'], extra: { id: ctx.params.id, reason: ctx.body.reason } }, ctx.who, () => licences.retire(ctx.params.id, ctx.who, ctx.body.reason)); });
+ 
+   // ---- CMDB -------------------------------------------------------------------------------------------------------
+   srv.route('GET', '/cmdb', async (ctx) => {
+@@ -108,7 +114,7 @@
+     if (ctx.query.asset) return { graph: assets.relationshipsFor(ctx.query.asset, { confirmedOnly: ctx.query.confirmed === '1' }) };
+     return { relationships: assets.allRelationships().map((r) => { const { key, ...rest } = r; return rest; }) };
+   });
+-  srv.route('POST', '/cmdb', (ctx) => { ctx.need('operator'); return { relationship: assets.addRelationship(ctx.body, ctx.who, { source: 'manual', autoConfirm: ctx.body.confirm !== false }) }; });
++  srv.route('POST', '/cmdb', (ctx) => { ctx.need('operator'); return cw('cmdb.add', { reads: ['relationships'], own: ['relationships'], newId: rid('rel', 5), extra: { body: ctx.body } }, ctx.who, () => ({ relationship: assets.addRelationship(ctx.body, ctx.who, { source: 'manual', autoConfirm: ctx.body.confirm !== false }) })); });
+ 
+   // ---- discovery --------------------------------------------------------------------------------------------------
+   srv.route('GET', '/discovery', () => ({ runs: ingest.runSummaries(), unmatched: ingest.discoveredList() }));
+@@ -124,9 +130,9 @@
+   // ---- stocktake --------------------------------------------------------------------------------------------------
+   srv.route('GET', '/stocktake', () => ({ stocktakes: stocktake.list() }));
+   srv.route('GET', '/stocktake/:id', (ctx) => { const r = stocktake.get(ctx.params.id); if (!r) throw bad('stocktake not found', 404); return r; });
+-  srv.route('POST', '/stocktake', (ctx) => { ctx.need('admin'); return stocktake.open(ctx.body, ctx.who); });
+-  srv.route('POST', '/stocktake/:id/scan', (ctx) => { ctx.need('operator'); return stocktake.scan(ctx.params.id, ctx.body, ctx.who); });
+-  srv.route('POST', '/stocktake/:id/close', (ctx) => { ctx.need('admin'); return stocktake.close(ctx.params.id, ctx.who); });
++  srv.route('POST', '/stocktake', (ctx) => { ctx.need('admin'); return cw('stocktake.open', { reads: ['assets'], own: ['stocktakes'], newId: rid('stk', 5), extra: { body: ctx.body } }, ctx.who, () => stocktake.open(ctx.body, ctx.who)); });
++  srv.route('POST', '/stocktake/:id/scan', (ctx) => { ctx.need('operator'); return cw('stocktake.scan', { reads: ['assets'], own: ['stocktakes'], extra: { id: ctx.params.id, body: ctx.body } }, ctx.who, () => stocktake.scan(ctx.params.id, ctx.body, ctx.who)); });
++  srv.route('POST', '/stocktake/:id/close', (ctx) => { ctx.need('admin'); return cw('stocktake.close', { own: ['stocktakes'], extra: { id: ctx.params.id } }, ctx.who, () => stocktake.close(ctx.params.id, ctx.who)); });
+ 
+   // ---- AI findings + runs -----------------------------------------------------------------------------------------
+   srv.route('GET', '/ai/findings', (ctx) => {
+@@ -135,8 +141,8 @@
+     return { findings: list, summary: findings.summary() };
+   });
+   srv.route('POST', '/ai/findings/regenerate', (ctx) => { ctx.need('operator'); return findings.regenerate(ctx.who); });
+-  srv.route('POST', '/ai/findings/:id/accept', (ctx) => { ctx.need('operator'); return { finding: findings.setStatus(ctx.params.id, 'accepted', ctx.who, ctx.body.reason) }; });
+-  srv.route('POST', '/ai/findings/:id/dismiss', (ctx) => { ctx.need('operator'); return { finding: findings.setStatus(ctx.params.id, 'dismissed', ctx.who, ctx.body.reason) }; });
++  srv.route('POST', '/ai/findings/:id/accept', (ctx) => { ctx.need('operator'); return cw('findings.status', { own: ['findings'], extra: { id: ctx.params.id, status: 'accepted', reason: ctx.body.reason } }, ctx.who, () => ({ finding: findings.setStatus(ctx.params.id, 'accepted', ctx.who, ctx.body.reason) })); });
++  srv.route('POST', '/ai/findings/:id/dismiss', (ctx) => { ctx.need('operator'); return cw('findings.status', { own: ['findings'], extra: { id: ctx.params.id, status: 'dismissed', reason: ctx.body.reason } }, ctx.who, () => ({ finding: findings.setStatus(ctx.params.id, 'dismissed', ctx.who, ctx.body.reason) })); });
+   srv.route('POST', '/ai/run/:feature', async (ctx) => {
+     ctx.need('operator');
+     const feature = ctx.params.feature;

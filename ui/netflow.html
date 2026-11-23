@@ -1,0 +1,369 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NetFlow Analytics</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-secops.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- NetFlow Analytics over /api/soc/netflow/* (sentra-siem engine/soc/flow-analytics-routes.js): NetFlow v5 / v9, IPFIX and sFlow from
+     the exporters on the allow-list. Live traffic and interface utilisation (the SNMP poller's link speed), applications /
+     protocols / DSCP, conversations (analyst and above), IP groups with usage billing from the administrator's rate, alarms with
+     notification templates, forecast and capacity, hour-of-week patterns, security detections, exporters and settings.
+     Nothing on this page is invented: no data = the page says what to configure; no speed = no utilisation; no rate = no bill. -->
+<style>
+.nf-in{background:var(--so-panel2);color:var(--so-ink);border:1px solid var(--so-line);border-radius:8px;padding:6px 9px;font-size:12.5px;font-family:inherit}
+textarea.nf-in{min-height:58px;width:100%;box-sizing:border-box}
+.nf-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}.nf-row label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--so-mute)}
+.nf-heat{display:grid;grid-template-columns:44px repeat(24,minmax(14px,1fr));gap:2px;font-size:10.5px;color:var(--so-mute);align-items:center}
+.nf-heat i{display:block;height:16px;border-radius:3px;background:var(--so-acc)}.nf-heat .na{background:rgba(142,142,142,.12)}
+.nf-setup{border:1px dashed var(--so-warn);border-radius:12px;padding:14px 16px;margin-bottom:12px;background:var(--so-panel)}
+.nf-setup ol{margin:6px 0 8px 18px;padding:0;font-size:12.5px}.nf-setup li{margin:3px 0}
+.nf-pre{white-space:pre-wrap;font:12px/1.45 ui-monospace,Consolas,monospace;background:var(--so-panel2);border:1px solid var(--so-line);border-radius:8px;padding:8px;color:var(--so-ink);margin:6px 0 0}
+.nf-del{background:none;border:1px solid var(--so-line);color:var(--so-crit);border-radius:6px;font-size:11px;padding:2px 7px;cursor:pointer}
+.nf-lnk{background:none;border:0;color:var(--so-acc);cursor:pointer;font-size:12px;padding:0}
+</style></head><body><main class="so">
+<div class="so-head"><div><div class="eb">Network · Traffic analytics · NetFlow v5 / v9 · IPFIX · sFlow</div><h1>NetFlow Analytics</h1></div><span class="sp"></span>
+ <span class="so-chip" id="up">loading…</span><a class="so-btn" href="network-flows.html">Network Flows</a><button type="button" class="so-btn" id="refresh" aria-label="Refresh">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="setup"></div>
+<div class="so-kpis" id="kpis"></div>
+<div class="so-tabs" role="tablist">
+ <button type="button" role="tab" data-tab="live" aria-selected="true">Live traffic</button><button type="button" role="tab" data-tab="apps">Applications</button><button type="button" role="tab" data-tab="conv">Conversations</button>
+ <button type="button" role="tab" data-tab="groups">Groups &amp; billing</button><button type="button" role="tab" data-tab="alarms">Alarms</button><button type="button" role="tab" data-tab="fc">Forecast &amp; capacity</button>
+ <button type="button" role="tab" data-tab="pat">Patterns</button><button type="button" role="tab" data-tab="sec">Security</button><button type="button" role="tab" data-tab="set">Exporters &amp; settings</button>
+</div>
+
+<div id="tab-live"><div class="so-fil"><select id="lv-range" aria-label="Time range"><option value="live">Last 60 minutes (live)</option><option value="360">6 hours</option><option value="1440">24 hours</option><option value="10080">7 days</option><option value="43200">30 days</option></select></div>
+ <div class="so-grid"><section class="so-p w12"><h2>All traffic <span class="c" id="lv-sub">Mbps per minute, from the exporters on the allow-list</span></h2><div class="so-ch"><canvas id="c-live"></canvas></div></section>
+ <section class="so-p w12"><h2>Interfaces <span class="c">in / out and utilisation of the link speed the SNMP poller reports (or set on the exporter) - click one for its history</span></h2><div class="so-tw" id="lv-if"><div class="so-empty">Loading…</div></div></section>
+ <section class="so-p w12" id="lv-selp" hidden><h2 id="lv-sel">Interface</h2><div class="so-ch"><canvas id="c-if"></canvas></div></section></div></div>
+
+<div id="tab-apps" hidden><div class="so-fil"><select id="ap-by" aria-label="Group by"><option value="app">Applications</option><option value="proto">Protocols</option><option value="dscp">DSCP (QoS)</option><option value="port">Service ports</option><option value="exporter">Exporters</option></select>
+ <select id="ap-range" aria-label="Time range"><option value="60">1 hour</option><option value="360">6 hours</option><option value="1440">24 hours</option><option value="10080">7 days</option><option value="43200">30 days</option></select></div>
+ <div class="so-grid"><section class="so-p w12"><h2>Top 6 over time <span class="c">Mbps</span></h2><div class="so-ch"><canvas id="c-apps"></canvas></div></section>
+ <section class="so-p w12"><h2>Ranking</h2><div class="so-tw" id="ap-list"><div class="so-empty">Loading…</div></div><p class="so-note">Applications: the custom table first (Exporters &amp; settings), then the name the exporter sent (NBAR2 / IPFIX), then well-known ports. "Unclassified" keeps the protocol and port - never a guess.</p></section></div></div>
+
+<div id="tab-conv" hidden><div class="so-fil"><select id="cv-by" aria-label="View"><option value="src">Top sources</option><option value="dst">Top destinations</option><option value="conv">Conversations</option></select>
+ <select id="cv-range" aria-label="Time range"><option value="60">1 hour</option><option value="360">6 hours</option><option value="1440">24 hours</option><option value="10080">7 days</option></select><select id="cv-group" aria-label="IP group"><option value="">All addresses</option></select></div>
+ <div class="so-tw" id="cv-list"><div class="so-empty">Loading…</div></div><p class="so-note">Addresses name hosts and people's PCs: analysts and above only, and every view is written to the audit log.</p></div>
+
+<div id="tab-groups" hidden><div class="so-grid">
+ <section class="so-p w12"><h2>Usage by IP group <span class="c">departments and sites an administrator defines by address range</span><select id="g-range" aria-label="Time range" class="nf-in" style="margin-left:auto"><option value="1440">24 hours</option><option value="10080">7 days</option><option value="43200">30 days</option></select></h2>
+  <div class="so-ch short"><canvas id="c-groups"></canvas></div><div class="so-tw" id="g-use" style="margin-top:10px"><div class="so-empty">Loading…</div></div></section>
+ <section class="so-p w12"><h2>Monthly bill <span class="c">GB × the rate per GB an administrator set - a group without a rate is not billed</span></h2>
+  <div class="nf-row"><label>Month<input type="month" id="b-month" class="nf-in"></label><button type="button" class="so-btn" id="b-load">Show bill</button></div><div id="b-bill" style="margin-top:10px"></div></section>
+ <section class="so-p w12" id="g-edit"></section></div></div>
+
+<div id="tab-alarms" hidden><div class="so-grid">
+ <section class="so-p w12"><h2>Alarms <span class="c">per interface, IP group, application or all traffic - raised into the SIEM alert queue and e-mailed with a template</span></h2><div class="so-tw" id="al-list"><div class="so-empty">Loading…</div></div><div id="al-form"></div></section>
+ <section class="so-p w6"><h2>Recent alarm events</h2><div class="so-tw" id="al-ev"></div></section>
+ <section class="so-p w6"><h2>Notification templates</h2><div id="tp-list"></div><div id="tp-form"></div></section></div></div>
+
+<div id="tab-fc" hidden><div class="so-grid"><section class="so-p w12"><h2>Capacity forecast <span class="c">daily peak per interface; when 80 % and 100 % are reached (least squares and Holt)</span></h2><div class="so-tw" id="fc-list"><div class="so-empty">Loading…</div></div><p class="so-note" id="fc-note"></p></section>
+ <section class="so-p w12" id="fc-selp" hidden><h2 id="fc-sel">Interface</h2><div class="so-ch"><canvas id="c-fc"></canvas></div></section></div></div>
+
+<div id="tab-pat" hidden><div class="so-fil"><select id="p-target" aria-label="Traffic"><option value="">All traffic</option></select><select id="p-weeks" aria-label="Baseline weeks"><option value="4">4-week baseline</option><option value="8">8-week baseline</option><option value="2">2-week baseline</option></select></div>
+ <div class="so-grid"><section class="so-p w12"><h2>Usual traffic by hour of the week <span class="c">darker = more bytes; local time</span></h2><div id="p-heat"><div class="so-empty">Loading…</div></div></section>
+ <section class="so-p w12"><h2>Deviations in the last 7 days</h2><div class="so-tw" id="p-dev"></div><p class="so-note" id="p-note"></p></section></div></div>
+
+<div id="tab-sec" hidden><div class="so-kpis" id="sec-kpis"></div><div class="so-tw" id="sec-list"><div class="so-empty">Loading…</div></div><p class="so-note" id="sec-note"></p><div id="sec-form"></div></div>
+
+<div id="tab-set" hidden><div class="so-grid">
+ <section class="so-p w12"><h2>Exporters <span class="c">the allow-list: flows from any other address are counted and dropped</span></h2><div class="so-tw" id="x-list"><div class="so-empty">Loading…</div></div><div id="x-form"></div></section>
+ <section class="so-p w6"><h2>Senders not on the allow-list</h2><div id="x-unknown"></div></section>
+ <section class="so-p w6"><h2>Listeners</h2><div id="s-view"></div></section>
+ <section class="so-p w12"><h2>Custom applications <span class="c">a name for ports / address ranges, used before the exporter's own name and well-known ports</span></h2><div class="so-tw" id="a-list"></div><div id="a-form"></div></section></div></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var S = window.zybSoc, C = window.zybCharts, esc = S.esc, $ = function (i) { return document.getElementById(i); };
+  var ST = null, TAB = 'live', LOADED = {}, IFS = [], FC = [], GROUPS = [], TPL = [];
+  var TABS = ['live', 'apps', 'conv', 'groups', 'alarms', 'fc', 'pat', 'sec', 'set'];
+  function fb(n) { n = +n || 0; var u = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'], i = 0; while (n >= 1000 && i < u.length - 1) { n /= 1000; i++; } return (Math.round(n * 10) / 10) + ' ' + u[i]; }
+  function fm(v) { if (v == null) return '–'; v = +v; return v >= 1000 ? (Math.round(v / 10) / 100) + ' Gbps' : (Math.round(v * 100) / 100) + ' Mbps'; }
+  function util(p) { if (p == null) return '<span class="so-why">no link speed</span>'; var c = p >= 90 ? 'var(--so-crit)' : p >= 70 ? 'var(--so-warn)' : 'var(--so-ok)'; return esc(p) + ' %<div class="so-bar" style="width:110px"><span style="width:' + Math.min(100, Math.max(0, +p)) + '%;background:' + c + '"></span></div>'; }
+  function kpi(l, v, s, cls, tab) { return '<button type="button" class="so-kpi ' + (cls || '') + '" data-go="' + esc(tab || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s || '') + '</div></button>'; }
+  function table(head, rows, empty) { return rows.length ? '<table class="so-t"><thead><tr>' + head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>' : '<div class="so-empty">' + esc(empty) + '</div>'; }
+  function hhmm(t) { var d = new Date(t); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function lbl(t, range) { var d = new Date(t); return range >= 1440 ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' ' + hhmm(t) : hhmm(t); }
+  function fail(el, e, what) { $(el).innerHTML = e.status === 503 ? '<div class="so-empty">' + esc(e.message) + '</div>' : S.errHtml(e, what || 'NetFlow Analytics'); }
+  function ifName(x) { return (x.exporter_name || x.exporter) + ' · ' + (x.if_name || 'ifIndex ' + x.if_index); }
+
+  // ---------------------------------------------------------------- status, KPIs, setup
+  function loadStatus() {
+    return S.req('GET', '/netflow/status').then(function (s) {
+      ST = s; $('err').innerHTML = '';
+      var c = s.collector, on = s.collector.running;
+      $('up').innerHTML = '<i></i>' + esc(on ? (s.receiving ? 'receiving flows' : 'listening, no flows yet') : s.settings.enabled ? 'listeners not running' : 'collector off');
+      $('up').className = 'so-chip ' + (on && s.receiving ? 'on' : 'off');
+      $('setup').innerHTML = s.todo.length ? '<div class="nf-setup"><b>To see traffic here:</b><ol>' + s.todo.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>'
+        + (S.can('admin') ? '<button type="button" class="so-btn pri" data-go="set">Exporters &amp; settings</button>' : '<span class="so-why">An administrator does this in Exporters &amp; settings.</span>') + '</div>' : '';
+      var rx = s.exporters.filter(function (e) { return e.last_seen && Date.now() - e.last_seen < 300000; }).length;
+      $('kpis').innerHTML = kpi('Exporters receiving', rx + ' / ' + s.exporters.length, 'on the allow-list, last 5 min', rx ? 'ok' : s.exporters.length ? 'warn' : '', 'set')
+        + kpi('Flow records', S.n(c.counters.records), 'decoded since the engine started', '', 'live')
+        + kpi('Dropped senders', S.n(c.counters.rejected_unknown), 'datagrams from addresses not on the allow-list', c.counters.rejected_unknown ? 'warn' : '', 'set')
+        + kpi('Malformed', S.n(c.counters.malformed), 'datagrams refused by the decoders', c.counters.malformed ? 'warn' : '', 'set')
+        + kpi('Alarms', S.n(s.alarms), 'rules', '', 'alarms') + kpi('IP groups', S.n(s.groups), 'departments / sites', '', 'groups');
+    }).catch(function (e) { $('up').textContent = 'not loaded'; $('err').innerHTML = e.status === 404 ? '<div class="nf-setup">NetFlow Analytics is not on this SIEM yet - run the SIEM update.</div>' : S.errHtml(e, 'NetFlow Analytics'); });
+  }
+
+  // ---------------------------------------------------------------- live traffic / interfaces
+  function loadLive() {
+    var r = $('lv-range').value;
+    if (r === 'live') return S.req('GET', '/netflow/live').then(function (v) {
+      $('lv-sub').textContent = 'Mbps per minute, last 60 minutes from memory';
+      if (v.minutes.length) C.area($('c-live'), v.minutes.map(function (m) { return hhmm(m.t); }), [{ label: 'All traffic (Mbps)', data: v.minutes.map(function (m) { return m.mbps; }), color: 'acc' }], { title: 'Traffic per minute' });
+      else C.empty($('c-live'), v.running ? 'Listening - no flow received in the last hour from an exporter on the allow-list.' : 'The flow collector is not running - enable it in Exporters & settings.');
+      drawIfs(v.interfaces.map(function (x) { return { exporter: x.exporter, exporter_name: x.exporter_name, if_index: x.if_index, if_name: x.if_name, speed_mbps: x.speed_mbps, in_a: x.in_mbps, out_a: x.out_mbps, ui: x.util_in, uo: x.util_out }; }), 'last minute');
+    }).catch(function (e) { fail('lv-if', e); });
+    return S.req('GET', '/netflow/interfaces?range=' + encodeURIComponent(r)).then(function (v) {
+      $('lv-sub').textContent = 'average Mbps per ' + Math.round(v.step_s / 60) + ' min';
+      if (v.has_data) C.area($('c-live'), v.times.map(function (t) { return lbl(t, v.range); }), [{ label: 'All traffic (Mbps)', data: v.total_mbps, color: 'acc' }], { title: 'Traffic' });
+      else C.empty($('c-live'), 'No flow records in this period.');
+      drawIfs(v.interfaces.map(function (x) { return { exporter: x.exporter, exporter_name: x.exporter_name, if_index: x.if_index, if_name: x.if_name, speed_mbps: x.speed_mbps, speed_source: x.speed_source, in_a: x.in_peak_mbps, out_a: x.out_peak_mbps, ui: x.util_in_peak, uo: x.util_out_peak, bi: x.in_bytes, bo: x.out_bytes }; }), 'peak minute');
+    }).catch(function (e) { fail('lv-if', e); C.empty($('c-live'), 'Not loaded.'); });
+  }
+  function drawIfs(rows, what) {
+    IFS = rows; fillTargets();
+    $('lv-if').innerHTML = table(['Interface', 'Speed', 'In (' + what + ')', 'Out (' + what + ')', 'Utilisation in', 'Utilisation out'], rows.map(function (x) {
+      return '<tr class="r" tabindex="0" data-if="' + esc(x.exporter + '#' + x.if_index) + '"><td><b>' + esc(ifName(x)) + '</b>' + (x.bi != null ? '<div class="so-why">' + esc(fb(x.bi)) + ' in · ' + esc(fb(x.bo)) + ' out</div>' : '') + '</td><td>' + (x.speed_mbps ? esc(fm(x.speed_mbps)) + (x.speed_source ? '<div class="so-why">' + esc(x.speed_source) + '</div>' : '') : '<span class="so-why">unknown</span>') + '</td><td>' + esc(fm(x.in_a)) + '</td><td>' + esc(fm(x.out_a)) + '</td><td>' + util(x.ui) + '</td><td>' + util(x.uo) + '</td></tr>';
+    }), 'No interface traffic yet - flow records name the interfaces (ifIndex) they crossed.');
+  }
+  function loadIf(key) {
+    var p = key.split('#'), r = $('lv-range').value === 'live' ? '60' : $('lv-range').value;
+    $('lv-selp').hidden = false;
+    return S.req('GET', '/netflow/interfaces?range=' + r + '&exporter=' + encodeURIComponent(p[0]) + '&if=' + encodeURIComponent(p[1])).then(function (v) {
+      var x = IFS.filter(function (i) { return i.exporter + '#' + i.if_index === key; })[0] || { exporter: p[0], if_index: p[1] };
+      $('lv-sel').textContent = ifName(x) + (v.selected.speed_mbps ? ' · ' + fm(v.selected.speed_mbps) : ' · link speed unknown');
+      C.area($('c-if'), v.times.map(function (t) { return lbl(t, v.range); }), [{ label: 'In (Mbps)', data: v.selected.in_mbps, color: 'teal' }, { label: 'Out (Mbps)', data: v.selected.out_mbps, color: 'purple' }], { title: 'Interface traffic' });
+    }).catch(function (e) { $('lv-sel').textContent = e.message; });
+  }
+
+  // ---------------------------------------------------------------- applications / protocols / DSCP
+  function loadApps() {
+    return S.req('GET', '/netflow/top?by=' + encodeURIComponent($('ap-by').value) + '&range=' + encodeURIComponent($('ap-range').value)).then(function (v) {
+      if (v.series.length) C.area($('c-apps'), v.times.map(function (t) { return lbl(t, v.range); }), v.series.map(function (s) { return { label: s.label, data: s.mbps, fill: false }; }), { title: 'Top over time' });
+      else C.empty($('c-apps'), 'No flow records in this period.');
+      $('ap-list').innerHTML = table(['Name', 'Bytes', 'Share', 'Average', 'Packets', 'Flows'], v.rows.map(function (r) {
+        return '<tr><td><b>' + esc(r.label) + '</b></td><td>' + esc(fb(r.bytes)) + '</td><td>' + esc(r.share) + ' %<div class="so-bar" style="width:110px"><span style="width:' + Math.min(100, r.share) + '%;background:var(--so-acc)"></span></div></td><td>' + esc(fm(r.avg_mbps)) + '</td><td>' + esc(S.n(r.packets)) + '</td><td>' + esc(S.n(r.flows)) + '</td></tr>'; }), 'No flow records in this period.');
+    }).catch(function (e) { fail('ap-list', e); C.empty($('c-apps'), 'Not loaded.'); });
+  }
+
+  // ---------------------------------------------------------------- conversations (analyst+)
+  function loadConv() {
+    if (!S.can('analyst')) { $('cv-list').innerHTML = '<div class="so-empty">Your role cannot see addresses - analysts and above see top talkers and conversations.</div>'; return Promise.resolve(); }
+    var q = '/netflow/talkers?by=' + encodeURIComponent($('cv-by').value) + '&range=' + encodeURIComponent($('cv-range').value) + ($('cv-group').value ? '&group=' + encodeURIComponent($('cv-group').value) : '');
+    return S.req('GET', q).then(function (v) {
+      $('cv-list').innerHTML = v.by === 'conv'
+        ? table(['Source', 'Destination', 'Application', 'Service', 'Bytes', 'Flows'], v.rows.map(function (r) { return '<tr><td><b>' + esc(r.src) + '</b><div class="so-why">' + esc(r.src_group) + '</div></td><td><b>' + esc(r.dst) + '</b><div class="so-why">' + esc(r.dst_group) + '</div></td><td>' + esc(r.app || 'unclassified') + '</td><td>' + esc(r.proto + (r.port ? '/' + r.port : '')) + '</td><td>' + esc(fb(r.bytes)) + '</td><td>' + esc(S.n(r.flows)) + '</td></tr>'; }), 'No conversation in this period.')
+        : table(['Address', 'Where', 'Bytes', 'Flows', 'Peers', 'Applications'], v.rows.map(function (r) { return '<tr><td><b>' + esc(r.ip) + '</b></td><td>' + esc(r.group) + '</td><td>' + esc(fb(r.bytes)) + '</td><td>' + esc(S.n(r.flows)) + '</td><td>' + esc(S.n(r.peers)) + '</td><td>' + r.apps.map(function (a) { return '<span class="so-tag">' + esc(a) + '</span>'; }).join('') + '</td></tr>'; }), 'No traffic in this period.');
+    }).catch(function (e) { fail('cv-list', e); });
+  }
+
+  // ---------------------------------------------------------------- groups & billing
+  function loadGroups() {
+    return S.req('GET', '/netflow/groups?range=' + encodeURIComponent($('g-range').value)).then(function (v) {
+      GROUPS = v.groups; fillGroups();
+      if (v.groups.length) C.bars($('c-groups'), v.groups.map(function (g) { return g.name; }), [{ label: 'Download (GB)', data: v.groups.map(function (g) { return Math.round(g.in_bytes / 1e7) / 100; }), color: 'teal' }, { label: 'Upload (GB)', data: v.groups.map(function (g) { return Math.round(g.out_bytes / 1e7) / 100; }), color: 'purple' }], { stacked: true, title: 'Traffic by IP group' });
+      else C.empty($('c-groups'), 'No IP group yet - an administrator defines departments and sites by address range below.');
+      $('g-use').innerHTML = table(['Group', 'Ranges', 'Download', 'Upload', 'Addresses seen', 'Top applications', 'Rate per GB', ''], v.groups.map(function (g) {
+        return '<tr><td><b>' + esc(g.name) + '</b><div class="so-why">' + esc(g.kind) + '</div></td><td>' + g.cidrs.map(function (c) { return '<span class="so-tag">' + esc(c) + '</span>'; }).join('') + '</td><td>' + esc(fb(g.in_bytes)) + '</td><td>' + esc(fb(g.out_bytes)) + '</td><td>' + esc(S.n(g.addresses)) + '</td><td>' + g.apps.map(function (a) { return '<span class="so-tag">' + esc(a.app) + '</span>'; }).join('') + '</td><td>' + (g.rate_per_gb == null ? '<span class="so-why">not set</span>' : esc(g.rate_per_gb + ' ' + g.currency)) + '</td><td>'
+          + (S.can('admin') ? '<button type="button" class="nf-lnk" data-edit-grp="' + esc(g.id) + '">Edit</button> <button type="button" class="nf-del" data-del-grp="' + esc(g.id) + '">Delete</button>' : '') + '</td></tr>'; }), 'No IP group defined.')
+        + '<p class="so-note">' + esc(v.note) + (v.unassigned_private_bytes ? ' Internal traffic outside every group: ' + fb(v.unassigned_private_bytes) + '.' : '') + '</p>';
+      drawGroupForm();
+    }).catch(function (e) { fail('g-use', e); C.empty($('c-groups'), 'Not loaded.'); drawGroupForm(); });
+  }
+  function drawGroupForm(g) {
+    g = g || {};
+    $('g-edit').innerHTML = S.can('admin') ? '<h2>' + (g.id ? 'Edit group' : 'Add a group') + ' <span class="c">written to the audit log</span></h2><input type="hidden" id="g-id" value="' + esc(g.id || '') + '"><div class="nf-row">'
+      + '<label>Name<input id="g-name" class="nf-in" maxlength="80" value="' + esc(g.name || '') + '"></label><label>Kind<select id="g-kind" class="nf-in"><option value="department">Department</option><option value="site">Site</option><option value="other">Other</option></select></label>'
+      + '<label>Rate per GB (empty = not billed)<input id="g-rate" class="nf-in" type="number" min="0" step="0.01" value="' + esc(g.rate_per_gb == null ? '' : g.rate_per_gb) + '"></label><label>Currency<input id="g-cur" class="nf-in" maxlength="3" size="4" value="' + esc(g.currency || 'SAR') + '"></label></div>'
+      + '<label class="so-why" style="display:block;margin-top:8px">Address ranges (CIDR), one per line<textarea id="g-cidrs" class="nf-in">' + esc((g.cidrs || []).join('\n')) + '</textarea></label><p><button type="button" class="so-btn pri" id="g-save">Save group</button>' + (g.id ? ' <button type="button" class="so-btn" id="g-new">New group</button>' : '') + '</p>'
+      : '<p class="so-note">An administrator defines IP groups and their rates.</p>';
+    if ($('g-kind')) $('g-kind').value = g.kind || 'department';
+  }
+  function loadBill() {
+    if (!S.can('operator')) { $('b-bill').innerHTML = '<div class="so-empty">Bills are shown to operators and administrators.</div>'; return Promise.resolve(); }
+    var m = $('b-month').value;
+    return S.req('GET', '/netflow/billing' + (m ? '?month=' + encodeURIComponent(m) : '')).then(function (v) {
+      $('b-bill').innerHTML = '<div class="so-tw">' + table(['Group', 'Download', 'Upload', 'GB', 'Rate per GB', 'Amount'], v.lines.map(function (l) {
+        return '<tr><td><b>' + esc(l.name) + '</b></td><td>' + esc(fb(l.in_bytes)) + '</td><td>' + esc(fb(l.out_bytes)) + '</td><td>' + esc(l.gb) + '</td><td>' + (l.rate_per_gb == null ? '<span class="so-why">not set</span>' : esc(l.rate_per_gb + ' ' + l.currency)) + '</td><td>' + (l.amount == null ? '<span class="so-why">' + esc(l.note) + '</span>' : '<b>' + esc(l.amount.toFixed(2) + ' ' + l.currency) + '</b>') + '</td></tr>'; }), 'No IP group defined - nothing to bill.') + '</div>'
+        + '<p class="so-note"><b>' + esc(v.month) + (v.partial ? ' (month to date)' : '') + '</b>' + (v.total != null ? ' · total ' + esc(v.total.toFixed(2) + ' ' + v.currency) : v.mixed_currencies ? ' · groups use different currencies: no single total' : '') + '. ' + esc(v.note) + '</p>';
+    }).catch(function (e) { fail('b-bill', e); });
+  }
+
+  // ---------------------------------------------------------------- alarms & templates
+  function loadAlarms() {
+    return S.req('GET', '/netflow/alarms').then(function (v) {
+      TPL = v.templates;
+      $('al-list').innerHTML = table(['Alarm', 'Watches', 'Condition', 'State', 'Notify', ''], v.alarms.map(function (a) {
+        return '<tr><td><b>' + esc(a.name) + '</b>' + (a.enabled ? '' : ' <span class="so-tag">off</span>') + '</td><td>' + esc(a.scope) + (a.target ? ': ' + esc(a.target) : '') + '</td><td>' + esc(a.metric + ' ' + a.dir + ' ≥ ' + a.threshold + ' for ' + a.for_min + ' min') + '</td><td>'
+          + (a.active ? '<span class="so-tag crit">raised</span>' : a.why ? '<span class="so-why">' + esc(a.why) + '</span>' : '<span class="so-tag ok">normal</span>') + (a.last_value != null ? '<div class="so-why">last ' + esc(a.last_value) + '</div>' : '') + '</td><td>' + esc(a.recipients.length + ' recipient(s)') + '</td><td>'
+          + (S.can('operator') ? '<button type="button" class="nf-del" data-del-al="' + esc(a.id) + '">Delete</button>' : '') + '</td></tr>'; }), 'No alarm yet.');
+      $('al-ev').innerHTML = table(['When', 'Alarm', 'State', 'Value', 'E-mail'], v.events.slice(0, 50).map(function (e) {
+        return '<tr><td>' + esc(S.dt(e.at)) + '</td><td><b>' + esc(e.name) + '</b>' + (e.talker ? '<div class="so-why">' + esc(e.talker) + '</div>' : '') + '</td><td>' + (e.state === 'raised' ? '<span class="so-tag crit">raised</span>' : '<span class="so-tag ok">cleared</span>') + '</td><td>' + esc(e.value) + '</td><td class="so-why">' + esc(e.notified) + '</td></tr>'; }), 'No alarm has been raised.');
+      $('tp-list').innerHTML = '<ul class="so-list">' + v.templates.map(function (t) { return '<li><span class="grow"><b>' + esc(t.name) + '</b> · ' + esc(t.subject) + '</span>' + (S.can('operator') && t.id !== 'default' ? '<button type="button" class="nf-lnk" data-edit-tp="' + esc(t.id) + '">Edit</button> <button type="button" class="nf-del" data-del-tp="' + esc(t.id) + '">Delete</button>' : '') + '</li>'; }).join('') + '</ul>'
+        + '<p class="so-note">Placeholders: ' + v.placeholders.map(function (p) { return '<code>{{' + esc(p) + '}}</code>'; }).join(' ') + ' - values are escaped in the e-mail.</p>';
+      drawAlarmForm(); drawTplForm();
+    }).catch(function (e) { fail('al-list', e); });
+  }
+  function opts(list, sel) { return list.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === sel ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join(''); }
+  function drawAlarmForm() {
+    if (!S.can('operator')) { $('al-form').innerHTML = '<p class="so-note">Operators and administrators add alarms.</p>'; return; }
+    $('al-form').innerHTML = '<h2 style="margin-top:12px">Add an alarm</h2><div class="nf-row"><label>Name<input id="al-name" class="nf-in" maxlength="80"></label>'
+      + '<label>Scope<select id="al-scope" class="nf-in">' + opts([['interface', 'Interface'], ['group', 'IP group'], ['application', 'Application'], ['total', 'All traffic']]) + '</select></label>'
+      + '<label>Target<input id="al-target" class="nf-in" placeholder="exporter IP#ifIndex, group id or application" list="al-targets"><datalist id="al-targets"></datalist></label>'
+      + '<label>Metric<select id="al-metric" class="nf-in">' + opts([['util_pct', 'Utilisation %'], ['mbps', 'Mbps'], ['volume_mb', 'Volume MB in the window'], ['new_top_talker', 'New top talker (top N)']]) + '</select></label>'
+      + '<label>Direction<select id="al-dir" class="nf-in">' + opts([['both', 'In or out'], ['in', 'In'], ['out', 'Out']]) + '</select></label><label>Threshold<input id="al-th" class="nf-in" type="number" min="0" step="any"></label>'
+      + '<label>For (minutes)<input id="al-for" class="nf-in" type="number" min="1" max="60" value="3"></label><label>Severity<select id="al-sev" class="nf-in">' + opts([['medium', 'Medium'], ['low', 'Low'], ['high', 'High'], ['critical', 'Critical']]) + '</select></label>'
+      + '<label>Template<select id="al-tpl" class="nf-in">' + opts(TPL.map(function (t) { return [t.id, t.name]; })) + '</select></label></div>'
+      + '<label class="so-why" style="display:block;margin-top:8px">E-mail recipients, one per line (empty = alert queue only)<textarea id="al-rcpt" class="nf-in"></textarea></label><p><button type="button" class="so-btn pri" id="al-save">Save alarm</button></p>';
+    $('al-targets').innerHTML = IFS.map(function (x) { return '<option value="' + esc(x.exporter + '#' + x.if_index) + '">' + esc(ifName(x)) + '</option>'; }).join('') + GROUPS.map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>'; }).join('');
+  }
+  function drawTplForm(t) {
+    t = t || {};
+    $('tp-form').innerHTML = S.can('operator') ? '<h2 style="margin-top:10px">' + (t.id ? 'Edit template' : 'New template') + '</h2><input type="hidden" id="tp-id" value="' + esc(t.id || '') + '"><div class="so-form"><label>Name<input id="tp-name" class="nf-in" maxlength="80" value="' + esc(t.name || '') + '"></label>'
+      + '<label>Subject<input id="tp-subj" class="nf-in" maxlength="200" value="' + esc(t.subject || '') + '"></label><label>Body<textarea id="tp-body" class="nf-in" maxlength="4000">' + esc(t.body || '') + '</textarea></label></div>'
+      + '<p><button type="button" class="so-btn pri" id="tp-save">Save template</button> <button type="button" class="so-btn" id="tp-prev">Preview</button></p><pre class="nf-pre" id="tp-out" hidden></pre>' : '';
+  }
+
+  // ---------------------------------------------------------------- forecast & capacity
+  function loadFc() {
+    return S.req('GET', '/netflow/forecast').then(function (v) {
+      FC = v.items; $('fc-note').textContent = v.note;
+      var days = function (o) { if (!o) return '–'; var a = o.linear == null ? 'not growing' : o.linear === 0 ? 'now' : o.linear + ' days', b = o.holt == null ? 'not growing' : o.holt === 0 ? 'now' : o.holt + ' days'; return esc(a) + '<div class="so-why">Holt: ' + esc(b) + '</div>'; };
+      $('fc-list').innerHTML = table(['Interface', 'Direction', 'Latest daily peak', 'Trend per day', '80 %', '100 %'], v.items.map(function (x, i) {
+        var f = x.forecast;
+        return '<tr class="r" tabindex="0" data-fc="' + i + '"><td><b>' + esc(ifName(x)) + '</b><div class="so-why">' + esc(x.speed_note) + '</div></td><td>' + esc(x.dir) + '</td>'
+          + (f.enough ? '<td>' + esc(f.current_peak + ' ' + x.unit) + '</td><td>' + esc((f.slope_per_day > 0 ? '+' : '') + f.slope_per_day + ' ' + x.unit) + '</td><td>' + (x.unit === '%' ? days(f.to80) : '<span class="so-why">needs the link speed</span>') + '</td><td>' + (x.unit === '%' ? days(f.to100) : '–') + '</td>'
+            : '<td colspan="4"><span class="so-why">' + esc(f.note) + '</span></td>') + '</tr>'; }), 'No interface history yet - the forecast needs ' + v.min_days + ' days of flow records per interface.');
+    }).catch(function (e) { fail('fc-list', e); });
+  }
+  function showFc(i) {
+    var x = FC[i]; if (!x) return; $('fc-selp').hidden = false; $('fc-sel').textContent = ifName(x) + ' · ' + x.dir + ' · daily peak (' + x.unit + ')';
+    var labels = x.points.map(function (p) { return new Date(p.day).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }); }), sets = [{ label: 'Daily peak', data: x.points.map(function (p) { return p.v; }), color: 'acc' }];
+    var f = x.forecast;
+    if (f.enough && f.intercept != null) { var d0 = x.points[0].day; sets.push({ label: 'Linear trend', data: x.points.map(function (p) { return Math.round((f.intercept + f.slope_per_day * (p.day - d0) / 86400000) * 100) / 100; }), color: 'warn', fill: false }); }
+    if (x.unit === '%') sets.push({ label: '80 %', data: x.points.map(function () { return 80; }), color: 'crit', fill: false });
+    C.area($('c-fc'), labels, sets, { title: 'Daily peak and trend' });
+  }
+
+  // ---------------------------------------------------------------- patterns
+  function fillTargets() {
+    var cur = $('p-target').value;
+    $('p-target').innerHTML = '<option value="">All traffic</option>' + IFS.map(function (x) { return '<option value="' + esc(x.exporter + '#' + x.if_index) + '">' + esc(ifName(x)) + '</option>'; }).join('');
+    $('p-target').value = cur;
+  }
+  function loadPat() {
+    var t = $('p-target').value, q = '/netflow/patterns?weeks=' + encodeURIComponent($('p-weeks').value);
+    if (t) { var p = t.split('#'); q += '&exporter=' + encodeURIComponent(p[0]) + '&if=' + encodeURIComponent(p[1]); }
+    return S.req('GET', q).then(function (v) {
+      $('p-note').textContent = v.note;
+      var mx = Math.max.apply(null, v.baseline.map(function (x) { return x || 0; }).concat([1])), days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], h = '<div class="nf-heat"><span></span>';
+      for (var k = 0; k < 24; k++) h += '<span>' + (k % 3 ? '' : k) + '</span>';
+      for (var d = 0; d < 7; d++) { h += '<span>' + days[d] + '</span>'; for (var hr = 0; hr < 24; hr++) { var b = v.baseline[d * 24 + hr]; h += b == null ? '<i class="na" title="no history"></i>' : '<i title="' + esc(days[d] + ' ' + hr + ':00 usual ' + fb(b)) + '" style="opacity:' + (0.12 + 0.88 * b / mx).toFixed(2) + '"></i>'; } }
+      $('p-heat').innerHTML = h + '</div>' + (v.enough ? '' : '<p class="so-note"><b>' + esc(v.note) + '</b></p>');
+      $('p-dev').innerHTML = v.enough ? table(['Hour', 'Bytes', 'Usual', 'Deviation (z)'], v.deviations.map(function (x) { return '<tr><td>' + esc(S.dt(x.t)) + '</td><td>' + esc(fb(x.bytes)) + '</td><td>' + esc(fb(x.usual)) + '</td><td><span class="so-tag ' + (x.z > 0 ? 'warn' : '') + '">' + esc((x.z > 0 ? '+' : '') + x.z) + '</span></td></tr>'; }), 'No hour of the last 7 days departed from its usual (|z| ≥ 3).')
+        : '<div class="so-empty">' + esc(v.note) + '</div>';
+    }).catch(function (e) { fail('p-heat', e); });
+  }
+
+  // ---------------------------------------------------------------- security
+  var KIND = { 'port-scan': 'Port scans', 'host-sweep': 'Host sweeps', 'outbound-volume': 'Unusual outbound volume', 'intel-ip': 'Known-bad addresses' };
+  function loadSec() {
+    if (!S.can('analyst')) { $('sec-list').innerHTML = '<div class="so-empty">Detections name addresses - analysts and above see them.</div>'; $('sec-kpis').innerHTML = ''; return Promise.resolve(); }
+    return S.req('GET', '/netflow/security').then(function (v) {
+      $('sec-kpis').innerHTML = Object.keys(KIND).map(function (k) { return kpi(KIND[k], S.n(v.counts[k] || 0), 'kept detections', v.counts[k] ? (k === 'intel-ip' ? 'crit' : 'warn') : 'ok', 'sec'); }).join('')
+        + kpi('Hosts with a baseline', S.n(v.sensor.learnt_sources), 'outbound volume learnt', '', 'sec');
+      $('sec-list').innerHTML = table(['When', 'Detection', 'What was seen', 'Exporter'], v.items.map(function (d) { return '<tr><td>' + esc(S.dt(d.at)) + '</td><td>' + S.sev(d.severity) + esc(KIND[d.kind] || d.kind) + '</td><td>' + esc(d.summary) + '</td><td>' + esc(d.exporter || '') + '</td></tr>'; }), 'No detection from the flow records. Each one also goes to the SIEM alert queue.');
+      $('sec-note').textContent = v.note + (v.sensor.intel_loaded ? '' : ' No threat-intel list is loaded in the SIEM.');
+      var d = v.detection;
+      $('sec-form').innerHTML = S.can('admin') ? '<section class="so-p w12" style="margin-top:12px"><h2>Detection settings <span class="c">written to the audit log</span></h2><div class="nf-row">'
+        + '<label><span><input type="checkbox" id="d-en"' + (d.enabled ? ' checked' : '') + '> Detections on</span></label><label><span><input type="checkbox" id="d-intel"' + (d.intel ? ' checked' : '') + '> Threat-intel addresses</span></label>'
+        + '<label>Port scan: ports to one host in a minute<input id="d-scan" class="nf-in" type="number" min="10" value="' + esc(d.scan_ports) + '"></label><label>Host sweep: hosts on one port in a minute<input id="d-sweep" class="nf-in" type="number" min="10" value="' + esc(d.sweep_hosts) + '"></label>'
+        + '<label>Outbound: at least MB in a minute<input id="d-out" class="nf-in" type="number" min="1" value="' + esc(d.outbound_mb) + '"></label><label>and times the host\'s usual<input id="d-fac" class="nf-in" type="number" min="2" value="' + esc(d.outbound_factor) + '"></label>'
+        + '<label>Learning (active minutes)<input id="d-learn" class="nf-in" type="number" min="10" value="' + esc(d.learn_minutes) + '"></label></div>'
+        + '<label class="so-why" style="display:block;margin-top:8px">Excluded sources (vulnerability scanners, monitoring), one CIDR per line<textarea id="d-excl" class="nf-in">' + esc((d.exclude || []).join('\n')) + '</textarea></label><p><button type="button" class="so-btn pri" id="d-save">Save detection settings</button></p></section>' : '';
+    }).catch(function (e) { fail('sec-list', e); });
+  }
+
+  // ---------------------------------------------------------------- exporters & settings
+  function loadSet() {
+    var p1 = loadStatus().then(function () {
+      if (!ST) return;
+      var adm = S.can('admin');
+      $('x-list').innerHTML = table(['Exporter', 'Received', 'Formats', 'Sampling', 'Templates', 'Problems', ''], ST.exporters.map(function (e) {
+        var v = Object.keys(e.versions || {}).map(function (k) { return k === 'sflow5' ? 'sFlow v5' : k === '10' ? 'IPFIX' : 'NetFlow v' + k; });
+        var prob = [e.errors ? e.errors + ' malformed' : '', e.no_template ? e.no_template + ' sets before their template' : '', e.invalid ? e.invalid + ' impossible records' : ''].filter(Boolean);
+        return '<tr><td><b>' + esc(e.name || e.ip) + '</b><div class="so-why">' + esc(e.ip) + (e.from === 'config.json' ? ' · config.json' : '') + '</div></td><td>' + (e.last_seen ? esc(S.ago(e.last_seen)) + '<div class="so-why">' + esc(S.n(e.records)) + ' records · ' + esc(fb(e.bytes)) + '</div>' : '<span class="so-why">nothing yet</span>') + '</td><td>' + esc(v.join(', ') || '–') + '</td>'
+          + '<td>' + (e.sampling_set ? esc('1:' + e.sampling_set + ' (set)') : e.sampling_seen ? esc('1:' + e.sampling_seen + ' (announced)') : '<span class="so-why">1:1 / not announced</span>') + '</td><td>' + esc(e.templates) + '</td><td>' + (prob.length ? '<span class="so-why">' + esc(prob.join(' · ')) + (e.last_error ? '<br>' + esc(e.last_error) : '') + '</span>' : '<span class="so-tag ok">none</span>') + '</td><td>'
+          + (adm && e.from !== 'config.json' ? '<button type="button" class="nf-del" data-del-exp="' + esc(e.id) + '">Remove</button>' : '') + '</td></tr>'; }), 'No exporter on the allow-list.');
+      $('x-form').innerHTML = adm ? '<h2 style="margin-top:12px">Add or change an exporter <span class="c">written to the audit log</span></h2><div class="nf-row"><label>IP address<input id="x-ip" class="nf-in" maxlength="39"></label><label>Name<input id="x-name" class="nf-in" maxlength="80"></label>'
+        + '<label>Sampling 1:N (empty = as announced)<input id="x-samp" class="nf-in" type="number" min="1"></label></div><label class="so-why" style="display:block;margin-top:8px">Interface speeds when the SNMP poller does not report them: ifIndex=Mbps name, one per line<textarea id="x-speeds" class="nf-in" placeholder="3=1000 wan1"></textarea></label><p><button type="button" class="so-btn pri" id="x-save">Save exporter</button></p>'
+        : '<p class="so-note">An administrator keeps the exporter allow-list.</p>';
+      $('x-unknown').innerHTML = ST.unknown_senders.length ? '<ul class="so-list">' + ST.unknown_senders.map(function (u) { return '<li><span class="grow"><b>' + esc(u.ip) + '</b> · ' + esc(S.n(u.datagrams)) + ' datagrams dropped · last ' + esc(S.ago(u.last_seen)) + '</span>' + (adm ? '<button type="button" class="nf-lnk" data-add-exp="' + esc(u.ip) + '">Add to the allow-list</button>' : '') + '</li>'; }).join('') + '</ul>' : '<div class="so-empty">None - every datagram came from an exporter on the allow-list.</div>';
+      var s = ST.settings, c = ST.collector, L = Object.keys(c.listeners);
+      $('s-view').innerHTML = '<ul class="so-list"><li><span class="grow">Collector</span><b>' + esc(c.running ? 'running' : s.enabled ? 'enabled, not running' : 'off') + '</b></li>' + (L.length ? L.map(function (k) { return '<li><span class="grow">' + esc(k) + '</span><span class="n">UDP ' + esc(c.listeners[k].host + ':' + c.listeners[k].port) + '</span></li>'; }).join('') : '')
+        + c.listen_errors.map(function (x) { return '<li><span class="grow so-err">' + esc(x.listener + ' UDP ' + x.port + ': ' + x.error) + '</span></li>'; }).join('') + '<li><span class="grow">Raw records kept per exporter per minute</span><span class="n">' + esc(s.raw_per_minute) + '</span></li><li><span class="grow">Template expiry</span><span class="n">' + esc(s.template_ttl_s) + ' s</span></li></ul>'
+        + (adm ? '<div class="nf-row" style="margin-top:8px"><label><span><input type="checkbox" id="s-en"' + (s.enabled ? ' checked' : '') + '> Listen for flows</span></label><label>NetFlow UDP<input id="s-nf" class="nf-in" type="number" value="' + esc(s.ports.netflow) + '"></label><label>IPFIX UDP<input id="s-ipfix" class="nf-in" type="number" value="' + esc(s.ports.ipfix) + '"></label>'
+          + '<label>sFlow UDP<input id="s-sflow" class="nf-in" type="number" value="' + esc(s.ports.sflow) + '"></label><label>Raw per minute<input id="s-raw" class="nf-in" type="number" min="0" max="5000" value="' + esc(s.raw_per_minute) + '"></label></div><p><button type="button" class="so-btn pri" id="s-save">Save and restart listeners</button></p>' : '');
+    });
+    var p2 = S.req('GET', '/netflow/apps').then(function (v) {
+      var adm = S.can('admin');
+      $('a-list').innerHTML = table(['Application', 'Protocol', 'Ports', 'Address ranges', ''], v.apps.map(function (a) { return '<tr><td><b>' + esc(a.name) + '</b></td><td>' + esc(a.proto) + '</td><td>' + a.ports.map(function (p) { return '<span class="so-tag">' + esc(p[0] === p[1] ? p[0] : p[0] + '-' + p[1]) + '</span>'; }).join('') + '</td><td>' + a.cidrs.map(function (c) { return '<span class="so-tag">' + esc(c) + '</span>'; }).join('') + '</td><td>' + (adm ? '<button type="button" class="nf-del" data-del-app="' + esc(a.id) + '">Delete</button>' : '') + '</td></tr>'; }), 'No custom application - well-known ports and the exporters\' own names are used.');
+      $('a-form').innerHTML = adm ? '<div class="nf-row" style="margin-top:10px"><label>Name<input id="a-name" class="nf-in" maxlength="60"></label><label>Protocol<select id="a-proto" class="nf-in"><option value="tcp">TCP</option><option value="udp">UDP</option><option value="any">Any</option></select></label><label>Ports (8443, 9000-9010)<input id="a-ports" class="nf-in"></label><label>Address ranges (CIDR, comma)<input id="a-cidrs" class="nf-in"></label><button type="button" class="so-btn pri" id="a-save">Add application</button></div>' : '';
+    }).catch(function (e) { fail('a-list', e); });
+    return Promise.all([p1, p2]);
+  }
+
+  // ---------------------------------------------------------------- wiring
+  var LOAD = { live: loadLive, apps: loadApps, conv: loadConv, groups: function () { return Promise.all([loadGroups(), loadBill()]); }, alarms: loadAlarms, fc: loadFc, pat: loadPat, sec: loadSec, set: loadSet };
+  function show(t) {
+    if (TABS.indexOf(t) < 0) t = 'live';
+    TAB = t; [].forEach.call(document.querySelectorAll('[data-tab]'), function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === t)); });
+    TABS.forEach(function (k) { $('tab-' + k).hidden = k !== t; });
+    try { history.replaceState(null, '', '#' + t); } catch (e) { /* file: URL - the tab still shows */ }
+    if (!LOADED[t]) { LOADED[t] = true; LOAD[t](); }
+  }
+  function fillGroups() { var cur = $('cv-group').value; $('cv-group').innerHTML = '<option value="">All addresses</option>' + GROUPS.map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>'; }).join(''); $('cv-group').value = cur; }
+  function lines(id) { return ($(id).value || '').split(/[\n,]/).map(function (x) { return x.trim(); }).filter(Boolean); }
+  function post(m, p, b, okMsg, after) { return S.req(m, p, b).then(function () { S.toast(okMsg); after(); }).catch(function (e) { S.toast(e.message); }); }
+  function numOrNull(id) { var v = $(id).value.trim(); return v === '' ? undefined : Number(v); }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target, x;
+    if ((x = t.closest('[data-tab]'))) { show(x.getAttribute('data-tab')); return; }
+    if ((x = t.closest('[data-go]'))) { if (x.getAttribute('data-go')) show(x.getAttribute('data-go')); return; }
+    if ((x = t.closest('[data-if]'))) { loadIf(x.getAttribute('data-if')); return; }
+    if ((x = t.closest('[data-fc]'))) { showFc(+x.getAttribute('data-fc')); return; }
+    if ((x = t.closest('[data-edit-grp]'))) { drawGroupForm(GROUPS.filter(function (g) { return g.id === x.getAttribute('data-edit-grp'); })[0]); $('g-edit').scrollIntoView({ behavior: 'smooth' }); return; }
+    if ((x = t.closest('[data-del-grp]'))) { post('DELETE', '/netflow/groups/' + encodeURIComponent(x.getAttribute('data-del-grp')), null, 'Group deleted', loadGroups); return; }
+    if ((x = t.closest('[data-del-al]'))) { post('DELETE', '/netflow/alarms/' + encodeURIComponent(x.getAttribute('data-del-al')), null, 'Alarm deleted', loadAlarms); return; }
+    if ((x = t.closest('[data-del-tp]'))) { post('DELETE', '/netflow/templates/' + encodeURIComponent(x.getAttribute('data-del-tp')), null, 'Template deleted', loadAlarms); return; }
+    if ((x = t.closest('[data-edit-tp]'))) { drawTplForm(TPL.filter(function (p) { return p.id === x.getAttribute('data-edit-tp'); })[0]); return; }
+    if ((x = t.closest('[data-del-exp]'))) { post('DELETE', '/netflow/exporters/' + encodeURIComponent(x.getAttribute('data-del-exp')), null, 'Exporter removed from the allow-list', loadSet); return; }
+    if ((x = t.closest('[data-del-app]'))) { post('DELETE', '/netflow/apps/' + encodeURIComponent(x.getAttribute('data-del-app')), null, 'Application deleted', loadSet); return; }
+    if ((x = t.closest('[data-add-exp]'))) { $('x-ip').value = x.getAttribute('data-add-exp'); $('x-name').focus(); return; }
+    if (t.closest('#g-save')) { var b = { name: $('g-name').value, kind: $('g-kind').value, cidrs: lines('g-cidrs'), currency: $('g-cur').value.trim().toUpperCase() }; if ($('g-id').value) b.id = $('g-id').value; var r = numOrNull('g-rate'); if (r !== undefined) b.rate_per_gb = r;
+      post('POST', '/netflow/groups', b, 'Group saved', function () { drawGroupForm(); loadGroups(); loadBill(); }); return; }
+    if (t.closest('#g-new')) { drawGroupForm(); return; }
+    if (t.closest('#b-load')) { loadBill(); return; }
+    if (t.closest('#al-save')) { var a = { name: $('al-name').value, scope: $('al-scope').value, metric: $('al-metric').value, dir: $('al-dir').value, threshold: numOrNull('al-th'), for_min: numOrNull('al-for'), severity: $('al-sev').value, template_id: $('al-tpl').value, recipients: lines('al-rcpt') };
+      if ($('al-target').value.trim()) a.target = $('al-target').value.trim(); post('POST', '/netflow/alarms', a, 'Alarm saved', loadAlarms); return; }
+    if (t.closest('#tp-save')) { var tp = { name: $('tp-name').value, subject: $('tp-subj').value, body: $('tp-body').value }; if ($('tp-id').value) tp.id = $('tp-id').value; post('POST', '/netflow/templates', tp, 'Template saved', loadAlarms); return; }
+    if (t.closest('#tp-prev')) { S.req('POST', '/netflow/templates/preview', { subject: $('tp-subj').value, body: $('tp-body').value }).then(function (v) { var o = $('tp-out'); o.hidden = false; o.textContent = 'Subject: ' + v.subject + '\n\n' + v.text; }).catch(function (e) { S.toast(e.message); }); return; }
+    if (t.closest('#d-save')) { post('POST', '/netflow/detection', { enabled: $('d-en').checked, intel: $('d-intel').checked, scan_ports: numOrNull('d-scan'), sweep_hosts: numOrNull('d-sweep'), outbound_mb: numOrNull('d-out'), outbound_factor: numOrNull('d-fac'), learn_minutes: numOrNull('d-learn'), exclude: lines('d-excl') }, 'Detection settings saved', loadSec); return; }
+    if (t.closest('#x-save')) { var sp = lines('x-speeds').map(function (l) { var m = /^(\d+)\s*=\s*([\d.]+)\s*(.*)$/.exec(l); return m ? { if_index: +m[1], mbps: +m[2], name: m[3] || undefined } : { if_index: l }; });
+      var e2 = { ip: $('x-ip').value.trim(), name: $('x-name').value, sampling: numOrNull('x-samp'), if_speeds: sp }; post('POST', '/netflow/exporters', e2, 'Exporter saved', loadSet); return; }
+    if (t.closest('#a-save')) { post('POST', '/netflow/apps', { name: $('a-name').value, proto: $('a-proto').value, ports: lines('a-ports'), cidrs: lines('a-cidrs') }, 'Application added', loadSet); return; }
+    if (t.closest('#s-save')) { post('POST', '/netflow/settings', { enabled: $('s-en').checked, ports: { netflow: numOrNull('s-nf') || 0, ipfix: numOrNull('s-ipfix') || 0, sflow: numOrNull('s-sflow') || 0 }, raw_per_minute: numOrNull('s-raw') }, 'Settings saved', loadSet); return; }
+  });
+  document.addEventListener('keydown', function (ev) { if (ev.key !== 'Enter') return; var x = ev.target.closest && ev.target.closest('[data-if],[data-fc]'); if (x) { ev.preventDefault(); x.click(); } });
+  $('lv-range').addEventListener('change', loadLive);
+  $('ap-by').addEventListener('change', loadApps); $('ap-range').addEventListener('change', loadApps);
+  ['cv-by', 'cv-range', 'cv-group'].forEach(function (i) { $(i).addEventListener('change', loadConv); });
+  $('g-range').addEventListener('change', loadGroups);
+  $('p-target').addEventListener('change', loadPat); $('p-weeks').addEventListener('change', loadPat);
+  $('refresh').addEventListener('click', function () { loadStatus(); LOADED = {}; LOADED[TAB] = true; LOAD[TAB](); });
+  S.ready(function () {
+    var h = (location.hash || '').slice(1);
+    loadStatus().then(function () { show(TABS.indexOf(h) >= 0 ? h : 'live'); });
+    setInterval(function () { if (!document.hidden && TAB === 'live' && $('lv-range').value === 'live') { loadStatus(); loadLive(); } }, 60000);
+  });
+})();
+</script></body></html>

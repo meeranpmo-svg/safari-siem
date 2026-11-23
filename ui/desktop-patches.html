@@ -1,0 +1,78 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Desktop Patch Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{font-weight:400;color:var(--mute);font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:24px;font-weight:700}.t.bad .v{color:var(--bad)}.t.ok .v{color:var(--ok)}.t.warn .v{color:var(--warn)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button:disabled{opacity:.5;cursor:default}
+select,input{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}.tw{overflow-x:auto}
+.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}
+.bar{height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden;min-width:80px}.bar i{display:block;height:100%}
+.dep{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.dep label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+</style></head><body><main>
+<div class="top"><div><div class="eb">User desktops · Endpoint Central · SAMA CSF 3.3.8 · NCA ECC 2-3</div><h1>Desktop Patch Management</h1></div><span class="sp"></span><a href="desktops.html"><button type="button">← User Desktops</button></a> <a href="desk-support.html"><button type="button">AI Desktop Support →</button></a></div>
+<p class="err" id="denied" hidden>Patch Management is for desktop engineers (operator) and administrators.</p>
+<div id="body">
+<div class="k" id="kk"></div>
+<div class="card"><h2>Compliance by branch <span class="c">desktops with patch data and no critical patch missing</span></h2><div class="tw" id="br"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Patches <span class="c" id="pc"></span></h2>
+  <div class="filters"><select id="fs" aria-label="Severity"><option value="">Every severity</option><option value="critical">Critical</option><option value="important">Important</option><option value="moderate">Moderate</option><option value="low">Low</option></select>
+    <label class="muted" style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="fm" checked> missing on at least one desktop</label>
+    <input type="search" id="q" placeholder="Patch name, KB or bulletin" aria-label="Search"></div>
+  <div class="tw" id="list"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Deploy or scan <span class="c">a request goes to Endpoint Central only after a different person approves it</span></h2>
+  <div class="dep"><label>Branch<select id="db"></select></label><label style="flex:1;min-width:240px">Reason (logged)<input id="dr" maxlength="500" placeholder="October cumulative update - critical"></label>
+    <button type="button" class="pri" id="dep" disabled>Deploy ticked patches</button><button type="button" id="scan">Patch scan the branch</button></div>
+  <div id="dout"></div>
+  <p class="note">Each request covers at most 200 computers (larger branches become several requests). Approve them in ManageEngine → Actions or on AI Desktop Support; the requester cannot approve their own request.</p></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var API='/api/itam', RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', P=null, B=[], SEL={};
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,API+p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){/* not JSON */}if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function tile(l,v,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div></div>';}
+  function col(v){return v==null?'var(--mute)':v>=90?'var(--ok)':v>=70?'var(--warn)':'var(--bad)';}
+  function sev(s){return '<span class="pill '+(s==='critical'?'bad':s==='important'?'warn':'')+'">'+esc(s||'unrated')+'</span>';}
+  function drawList(){
+    if(!P.available){$('list').innerHTML='<div class="empty">'+esc(P.reason||'Endpoint Central is not connected')+'</div>';return;}
+    var s=$('fs').value,m=$('fm').checked,q=$('q').value.trim().toLowerCase();
+    var R=(P.patches||[]).filter(function(p){return (!s||p.severity===s)&&(!m||(p.missing||0)>0)&&(!q||[p.name,p.bulletin,p.patch_id].join(' ').toLowerCase().indexOf(q)>=0);});
+    $('pc').textContent=R.length+' shown of '+(P.patches||[]).length;
+    $('list').innerHTML=R.length?'<table><thead><tr><th></th><th>Patch</th><th>Severity</th><th>Missing on</th><th>Installed on</th><th>Released</th></tr></thead><tbody>'+R.slice(0,1000).map(function(p){return '<tr><td><input type="checkbox" data-pid="'+esc(p.patch_id)+'"'+(SEL[p.patch_id]?' checked':'')+' aria-label="select '+esc(p.patch_id)+'"></td><td>'+esc(p.name||p.bulletin)+' <span class="muted mono">'+esc(p.patch_id)+(p.bulletin?' · '+esc(p.bulletin):'')+'</span>'+(p.reboot?' <span class="pill warn">reboot</span>':'')+'</td><td>'+sev(p.severity)+'</td><td>'+(p.missing==null?'–':(p.missing?'<b style="color:var(--bad)">'+p.missing+'</b>':'0'))+'</td><td>'+(p.installed==null?'–':p.installed)+'</td><td class="mono">'+(p.released?esc(new Date(p.released).toISOString().slice(0,10)):'–')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No patch matches. '+((P.patches||[]).length?'':'The patch list appears after the next Endpoint Central sync (ManageEngine → Sync now).')+'</div>';
+    $('dep').disabled=!Object.keys(SEL).length;
+  }
+  function load(){
+    req('GET','/desktops/patches').then(function(r){P=r;var c=r.counts||{};
+      $('kk').innerHTML=r.available?tile('Patches tracked',c.patches||0)+tile('Missing somewhere',c.missing||0,c.missing?'warn':'ok')+tile('Critical missing',c.critical_missing||0,c.critical_missing?'bad':'ok')+tile('Important missing',c.important_missing||0,c.important_missing?'warn':'ok'):'';
+      drawList();}).catch(function(e){$('list').innerHTML='<p class="err">'+esc(e.message)+'</p>';});
+    req('GET','/desktops').then(function(r){B=r.branches||[];
+      $('br').innerHTML=B.length?'<table><thead><tr><th>Branch</th><th>Desktops</th><th>Compliance</th><th>Critical patches missing</th><th>Agent offline</th><th>No agent</th></tr></thead><tbody>'+B.map(function(b){return '<tr><td><b>'+esc(b.branch)+'</b></td><td>'+b.desktops+'</td><td style="min-width:160px">'+(b.compliance_pct==null?'<span class="muted">not reported</span>':'<div style="display:flex;gap:8px;align-items:center"><div class="bar" style="flex:1"><i style="width:'+b.compliance_pct+'%;background:'+col(b.compliance_pct)+'"></i></div><b style="color:'+col(b.compliance_pct)+'">'+b.compliance_pct+'%</b></div>')+'</td><td>'+(b.critical_missing?'<span class="pill bad">'+b.critical_missing+'</span>':'0')+'</td><td>'+(b.agent_offline||0)+'</td><td>'+(b.agent_missing||0)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No desktop yet - connect Endpoint Central.</div>';
+      $('db').innerHTML=((r.my_branches||[]).length?'':'')+B.map(function(b){return '<option value="'+esc(b.branch)+'">'+esc(b.branch)+' ('+b.desktops+')</option>';}).join('');
+      if((r.my_branches||[]).length)$('db').value=r.my_branches[0];}).catch(function(e){$('br').innerHTML='<p class="err">'+esc(e.message)+'</p>';});
+  }
+  function send(kind){
+    var why=$('dr').value.trim(),br=$('db').value;if(why.length<5){toast('Give the reason (at least 5 characters)');return;}if(!br){toast('Choose a branch');return;}
+    var b={branch:br,reason:why};if(kind==='deploy')b.patch_ids=Object.keys(SEL);
+    req('POST','/desktops/patches/'+kind,b).then(function(r){
+      $('dout').innerHTML='<p>'+r.requests.length+' request(s) for '+r.computers+' computer(s)'+(r.without_agent?' - '+r.without_agent+' without an Endpoint Central agent left out':'')+': '+r.requests.map(function(x){return '<span class="mono">'+esc(x.id)+'</span>';}).join(', ')+'</p><p class="muted">'+esc(r.approval)+'</p>';
+      toast('Waiting for approval');}).catch(function(e){$('dout').innerHTML='<p class="err">'+esc(e.message)+'</p>';});
+  }
+  document.addEventListener('change',function(ev){var t=ev.target;if(t.getAttribute&&t.getAttribute('data-pid')){var id=t.getAttribute('data-pid');if(t.checked)SEL[id]=1;else delete SEL[id];$('dep').disabled=!Object.keys(SEL).length;}});
+  $('fs').addEventListener('change',drawList);$('fm').addEventListener('change',drawList);$('q').addEventListener('input',drawList);
+  $('dep').addEventListener('click',function(){send('deploy');});$('scan').addEventListener('click',function(){send('scan');});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){/* no role: viewer */}if(!can('operator')){$('denied').hidden=false;$('body').hidden=true;return;}load();};
+  w.onerror=function(){$('denied').hidden=false;$('body').hidden=true;};w.send();
+})();
+</script></body></html>

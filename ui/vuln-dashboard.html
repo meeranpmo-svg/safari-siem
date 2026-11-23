@@ -1,0 +1,106 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vulnerability &amp; Testing Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1600px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12.3px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.btn:hover{border-color:#3a4258}.btn.pri{background:#2b4b8f;border-color:#3d63b5}.btn.sm2{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:default}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:14px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.card h2 .c{font-weight:400;font-size:12px;color:var(--d-mute)}
+.card h3{margin:14px 0 6px;font-size:12px;color:var(--d-mute);text-transform:uppercase;letter-spacing:.05em}
+.hero{display:grid;grid-template-columns:240px 1fr;gap:14px}@media(max-width:1000px){.hero{grid-template-columns:1fr}}
+.ring{text-align:center}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px}
+.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:25px;font-weight:800}.kpi .l{font-size:12px;color:var(--d-mute)}.kpi.bad .n{color:var(--bad)}.kpi.warn .n{color:var(--warn)}.kpi.ok .n{color:var(--ok)}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}@media(max-width:1100px){.g2,.g3{grid-template-columns:1fr}}
+.apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.app{background:var(--d-raise);border:1px solid var(--d-line);border-left:4px solid #3a4258;border-radius:12px;padding:12px}.app.due{border-left-color:#f5b544}.app.hot{border-left-color:#e5484d}.app.okk{border-left-color:#2fb344}
+.app .nm{font-weight:800;font-size:15px}.riskbar{height:7px;background:#232837;border-radius:4px;overflow:hidden;margin:6px 0}.riskbar i{display:block;height:100%}
+.sevs{display:flex;gap:4px;margin-top:6px}.sevs span{flex:1;text-align:center;border-radius:6px;padding:3px 0;font-size:11.5px;font-weight:700;background:#232837}.sevs .c{background:rgba(180,35,24,.35)}.sevs .h{background:rgba(229,72,77,.25)}.sevs .m{background:rgba(245,159,0,.2)}.sevs .l{background:rgba(91,141,239,.15)}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:700;margin:1px 2px;white-space:nowrap}.v-bad{background:rgba(229,72,77,.15);color:var(--bad)}.v-crit{background:rgba(180,35,24,.35);color:#ffb3b5}.v-warn{background:rgba(245,159,0,.15);color:var(--warn)}.v-ok{background:rgba(47,179,68,.15);color:var(--ok)}.v-mute{background:#232837;color:var(--d-mute)}.v-info{background:rgba(91,141,239,.15);color:var(--info)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:12px;white-space:nowrap}
+tr[data-f]{cursor:pointer}tr[data-f]:hover td{background:rgba(255,255,255,.03)}
+.att{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--d-line);cursor:pointer}.att:last-child{border:0}.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.bad{background:var(--bad)}.dot.warn{background:var(--warn)}.dot.info{background:var(--info)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.chips button[aria-pressed="true"]{border-color:#3d63b5;background:rgba(61,99,181,.25)}
+.flow{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:8px;overflow-x:auto}.col{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:8px;min-height:90px}.col h4{margin:0 0 6px;font-size:11.5px;color:var(--d-mute);text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between}
+.eng{background:#0f131b;border:1px solid var(--d-line);border-radius:10px;padding:8px;margin-bottom:6px;cursor:pointer;font-size:12.5px}.eng:hover{border-color:#3d63b5}.eng b{display:block;font-size:13px}
+.heat{border-collapse:separate;border-spacing:3px}.heat td,.heat th{border:0;padding:0;text-align:center}.heat th{font-size:10.5px;padding:0 2px}.heat td.h{width:30px;height:22px;border-radius:5px}.heat td.nm{text-align:left;padding-right:8px;font-size:12.5px;white-space:nowrap}
+.hb-t{background:rgba(47,179,68,.55)}.hb-n{background:#2a2f3c}.hb-g{background:rgba(229,72,77,.45)}
+.hbar{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12.5px}.hbar .lb{width:46%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hbar .tr{flex:1;height:10px;background:#232837;border-radius:5px;overflow:hidden}.hbar .tr i{display:block;height:100%;background:#5b8def}
+input,select,textarea{background:#0d1017;color:inherit;border:1px solid var(--d-line);border-radius:8px;padding:7px 10px;font:inherit}textarea{width:100%;resize:vertical;font-size:13px}
+.frm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--d-mute)}
+.banner{border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px}.banner.bad{background:rgba(229,72,77,.12);border:1px solid #7a2b2e}.banner.inf{background:rgba(91,141,239,.08);border:1px solid #2b4a6b}
+pre.snip{background:#0d1017;border:1px solid var(--d-line);border-radius:8px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;font-size:12px;margin:6px 0}
+.ans{white-space:pre-wrap;border:1px solid var(--d-line);border-radius:10px;padding:12px;margin-top:10px;background:var(--d-raise)}
+.cov{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}.cov div{background:var(--d-raise);border:1px solid var(--d-line);border-radius:8px;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12.5px}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;z-index:95;overflow:auto}#dlg>div{background:var(--d-panel);border:1px solid var(--d-line);border-radius:14px;max-width:1100px;width:100%;padding:18px}
+.toast{position:fixed;right:18px;bottom:18px;background:#1d2330;border:1px solid #3a4258;border-radius:10px;padding:10px 14px;z-index:96;max-width:520px}
+.empty{color:var(--d-mute);padding:8px 0}
+.fws{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.fw{display:block;background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:12px;color:inherit;text-decoration:none}.fw:hover{border-color:#3d63b5}.fw .nm{font-weight:700}.fw .big{font-size:28px;font-weight:800}
+.stack{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#232837;margin-top:6px}.stack i{display:block;height:100%}.b-fully{background:#2fb344}.b-partially{background:#f5b544}.b-not{background:#e5484d}.b-not_assessed{background:#4a5162}
+.mx td.c{white-space:normal;min-width:120px}.mx tr.dis td{background:rgba(245,159,0,.06)}input[type=search]{min-width:260px}
+.spark{display:block;width:100%;height:70px}.ucid{font:700 12px ui-monospace,Consolas,monospace;color:var(--info)}tr[data-uc]{cursor:pointer}tr[data-uc]:hover td{background:rgba(255,255,255,.03)}.rate{display:flex;align-items:center;gap:6px}.rate .riskbar{width:80px;margin:0}
+.pil{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}.pc{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:12px;color:inherit;text-decoration:none;display:block}.pc:hover{border-color:#3d63b5}.pc .sc{font-size:30px;font-weight:800}.pc ul{margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--d-mute)}
+.mx td.n{text-align:center;font-weight:800;border-radius:6px}.pipe{display:flex;gap:8px;flex-wrap:wrap}.pipe a{flex:1;min-width:150px;background:var(--d-raise);border:1px solid var(--d-line);border-radius:10px;padding:8px 10px;color:inherit;text-decoration:none}.pipe a b{font-size:20px;display:block}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Pentest &amp; vulnerability management · overview</div><h1>Vulnerability &amp; Testing Dashboard</h1><div class="mute sm">Everything being tested, what it found, and whether the findings are actually being closed - live from the scanners (Greenbone, Tenable, FireCompass), the testing schedule, application penetration tests and code review.</div></div>
+<div class="sp"></div><span class="mute sm" id="asof"></span><button type="button" class="btn" id="refresh">Refresh</button></div>
+<div class="banner bad" id="err" hidden></div>
+<div id="main" hidden>
+<div class="card"><div class="hero"><div class="ring" id="ring"></div><div><div class="kpis" id="kpis"></div><div class="sm mute" id="iwhy" style="margin-top:8px"></div></div></div></div>
+<div class="card"><h2>Five pillars <span class="c">each scored from its own source, every deduction itemised · a pillar with nothing to measure is left out of the index, never counted as good · click to open</span></h2><div class="pil" id="pil"></div></div>
+<div class="g2">
+<div class="card"><h2>Needs attention <span class="c">most urgent first</span></h2><div id="att"></div></div>
+<div class="card"><h2>Open findings by source and severity</h2><div id="mx" style="overflow-x:auto"></div><h3>Testing pipeline</h3><div class="pipe" id="pipe"></div></div>
+</div>
+<div class="card"><h2>Top infrastructure vulnerabilities <span class="c">merged across the scanners, ranked by an explained priority (severity, internet exposure, exploit, business-critical asset, past SLA, confirmed twice)</span></h2><div id="top" style="overflow-x:auto"></div></div>
+<div class="g2">
+<div class="card"><h2>Learning <span class="c">daily snapshots of this dashboard</span></h2><div id="learn"></div></div>
+<div class="card"><h2>Testing advisor (AI) <span class="c">read-only: it reads the pillars, attention and learning - it cannot scan, approve or accept a risk</span></h2><div id="ai"></div></div>
+</div>
+<div class="sm mute">Scores are the platform's indicative figures from its own registers and scanners - not an external assessment. Related: <a href="vapt-center.html">VAPT Center</a> · <a href="vapt-studio.html">VAPT Studio</a> · <a href="vuln-scans.html">Vulnerability Scans</a> · <a href="pentest.html">Penetration testing &amp; schedule</a> · <a href="apppt.html">App Pen Testing</a> · <a href="appsec.html">AppSec &amp; Code Review</a></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer';
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=300000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){/* not JSON: reported below with the status */}if(x.status>=200&&x.status<300&&j!==null)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=function(){bad(new Error('IT Asset Management did not answer'));};x.ontimeout=function(){bad(new Error('IT Asset Management took too long to answer'));};x.send(b?JSON.stringify(b):null);});}
+  function fmt(t){return t?String(t).slice(0,16).replace('T',' '):'—';}
+  function kpi(l,v,cls,t){return '<div class="kpi '+(cls||'')+'" title="'+esc(t||'')+'"><div class="n">'+esc(String(v))+'</div><div class="l">'+esc(l)+'</div></div>';}
+  function col(p){return p==null?'#4a5162':p>=85?'#2fb344':p>=60?'#f5b544':'#e5484d';}
+  function ring(p){var r=52,c=2*Math.PI*r,v=p==null?0:p;return '<svg viewBox="0 0 130 130" width="170" height="170" role="img" aria-label="Testing posture"><circle cx="65" cy="65" r="'+r+'" fill="none" stroke="#232837" stroke-width="12"/><circle cx="65" cy="65" r="'+r+'" fill="none" stroke="'+col(p)+'" stroke-width="12" stroke-linecap="round" stroke-dasharray="'+(c*v/100).toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 65 65)"/><text x="65" y="66" text-anchor="middle" font-size="26" font-weight="800" fill="#e7eaf0">'+(p==null?'—':p)+'</text><text x="65" y="86" text-anchor="middle" font-size="9.5" fill="#8b93a4">testing posture</text></svg>';}
+  var V=null;
+  function load(){return req('GET','/vuln-dashboard').then(function(v){V=v;$('err').hidden=true;$('main').hidden=false;draw();$('asof').textContent='as of '+fmt(v.generated_at)+' UTC';})
+    .catch(function(e){$('err').hidden=false;$('main').hidden=true;$('err').textContent=e.status===404?'This platform does not have the Vulnerability & Testing Dashboard yet - run the update.':'Could not load the dashboard: '+e.message;});}
+  function draw(){var P=V.pillars,I=V.infra,mx=V.matrix,tot=function(k){return mx.reduce(function(t,m){return t+(m.counts[k]||0);},0);};
+    $('ring').innerHTML=ring(V.index);$('iwhy').textContent=V.index_why+'.';
+    var pe=V.pipeline.find(function(p){return /Risk acceptances/.test(p.label);});
+    $('kpis').innerHTML=kpi('Critical open',tot('critical'),tot('critical')?'bad':'ok','all sources')+kpi('High open',tot('high'),tot('high')?'warn':'ok')
+      +kpi('Internet-facing critical / high',I?I.external_high:'—',I&&I.external_high?'bad':'ok')+kpi('Past remediation SLA',P.remediation.available?P.remediation.measures.past_sla:'—',P.remediation.available&&P.remediation.measures.past_sla?'bad':'ok')
+      +kpi('Forecast SLA breaches · 14 d',I?I.forecast_breaches_14d:'—',I&&I.forecast_breaches_14d?'warn':'ok','at the fix rate of the last 30 days')+kpi('Assets out of testing policy',P.coverage.available?P.coverage.measures.out_of_policy:'—',P.coverage.available&&P.coverage.measures.out_of_policy?'warn':'ok')
+      +kpi('Release gates failing',P.code.available?P.code.measures.gates_failing:'—',P.code.available&&P.code.measures.gates_failing?'bad':'ok')+kpi('Risk acceptances waiting',pe?pe.n:'—',pe&&pe.n?'warn':'');
+    $('pil').innerHTML=Object.keys(P).map(function(k){var p=P[k];return '<a class="pc" href="'+esc(p.page)+'"><div class="sm mute">'+esc(p.name)+'</div>'+(p.available?'<div class="sc" style="color:'+col(p.score)+'">'+esc(p.score)+'</div><div class="riskbar"><i style="width:'+p.score+'%;background:'+col(p.score)+'"></i></div><ul>'+(p.deductions.length?p.deductions.map(function(d){return '<li>'+esc(d.what)+' <b>−'+esc(d.points)+'</b></li>';}).join(''):'<li>no deduction</li>')+'</ul>':'<div class="sc mute">—</div><div class="sm">'+esc(p.reason)+'</div>')+'</a>';}).join('');
+    $('att').innerHTML=!V.can_details?'<div class="empty">'+esc(V.details_note)+'</div>':V.attention.length?V.attention.map(function(a){return '<a class="att" href="'+esc(a.page)+'" style="color:inherit;text-decoration:none"><span class="dot '+(a.level==='bad'?'bad':'warn')+'"></span><div>'+esc(a.text)+'<div class="sm mute">'+esc((P[a.pillar]||{}).name||'')+'</div></div></a>';}).join(''):'<div class="empty">Nothing urgent in the sources that are connected.</div>';
+    var SV=['critical','high','medium','low'],SC={critical:'229,72,77',high:'245,140,60',medium:'245,181,68',low:'95,140,239'};
+    $('mx').innerHTML=mx.length?'<table class="mx"><thead><tr><th>Source</th>'+SV.map(function(k){return '<th style="text-align:center">'+k+'</th>';}).join('')+'</tr></thead><tbody>'+mx.map(function(m){return '<tr><td><a href="'+esc(m.page)+'">'+esc(m.source)+'</a></td>'+SV.map(function(k){var n=m.counts[k]||0;return '<td class="n" style="background:rgba('+SC[k]+','+(n?Math.min(0.85,0.18+n*0.08):0.04)+')">'+esc(n)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>':'<div class="empty">No finding source is available.</div>';
+    $('pipe').innerHTML=V.pipeline.map(function(p){return '<a href="'+esc(p.page)+'"><b>'+(p.n==null?'—':esc(p.n))+'</b><span class="sm mute">'+esc(p.label)+'</span></a>';}).join('');
+    $('top').innerHTML=!V.can_details?'<div class="empty">'+esc(V.details_note)+'</div>':I&&I.top.length?'<table><thead><tr><th>Vulnerability</th><th>Host</th><th>Severity</th><th>Priority</th><th>Seen by</th><th>SLA</th></tr></thead><tbody>'+I.top.map(function(f){return '<tr><td>'+esc(f.title)+'<div class="sm mute">'+f.why.map(esc).join(' · ')+'</div></td><td class="mono">'+esc(f.host)+(f.exposure==='external'?' <span class="pill v-bad">internet</span>':'')+'</td><td><span class="pill '+(f.severity==='critical'?'v-crit':f.severity==='high'?'v-bad':'v-warn')+'">'+esc(f.severity)+'</span>'+(f.cvss!=null?' <span class="sm mute">CVSS '+esc(f.cvss)+'</span>':'')+'</td><td><div class="rate"><div class="riskbar"><i style="width:'+f.priority+'%;background:'+col(100-f.priority)+'"></i></div><b>'+esc(f.priority)+'</b></div></td><td class="sm">'+esc((f.sources||[]).join(', '))+'</td><td>'+(f.sla_state==='breached'?'<span class="pill v-bad">past SLA</span>':f.sla_state==='due'?'<span class="pill v-warn">due ≤ 14 d</span>':'<span class="pill v-mute">'+esc(f.sla_state||'—')+'</span>')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(I?'No open infrastructure vulnerability.':esc(P.exposure.reason))+'</div>';
+    var L=V.learning,T=L.trend,nm={index:'Posture index',critical:'Open critical (infrastructure)'};Object.keys(P).forEach(function(k){nm[k]=P[k].name;});
+    $('learn').innerHTML='<div class="banner inf" style="margin-bottom:8px"><b>Days to clear critical and high:</b> '+(L.clear.days==null?'—':esc(L.clear.days))+' · <span class="sm">'+esc(L.clear.why)+'</span></div>'
+      +'<table><thead><tr><th>Measure</th><th>Trend a week</th></tr></thead><tbody>'+Object.keys(T).map(function(k){var t=T[k];return '<tr><td>'+esc(nm[k]||k)+'</td><td>'+(t.per_week==null?'<span class="sm mute">'+esc(t.why)+'</span>':'<span class="pill '+(t.direction==='improving'?'v-ok':t.direction==='worsening'?'v-bad':'v-mute')+'">'+esc(t.direction)+'</span> '+(t.per_week>0?'+':'')+esc(t.per_week))+'</td></tr>';}).join('')+'</tbody></table>'
+      +(L.unusual.length?'<h3>Unusual changes</h3>'+L.unusual.map(function(u){return '<div class="att"><span class="dot warn"></span><div><b>'+esc(nm[u.key]||u.key)+'</b> · '+esc(u.why)+'</div></div>';}).join(''):'<div class="sm mute" style="margin-top:6px">Unusual-change detection needs 8 daily snapshots ('+esc(L.snapshots)+' so far).</div>');
+    $('ai').innerHTML=RANK[ROLE]<RANK.operator?'<div class="empty">The advisor works for operators and administrators.</div>':!V.ai.enabled?'<div class="empty">Not available: '+esc(V.ai.reason)+'</div>':'<div class="frm"><input id="aiq" style="flex:1" maxlength="2000" placeholder="What should we fix and test first this month?"><button class="btn pri" type="button" id="aigo">Ask</button></div><div id="aiout"></div>';}
+  document.addEventListener('click',function(ev){var t=ev.target;
+    if(t.id==='aigo'){var q=$('aiq').value.trim(),out=$('aiout');if(q.length<5){out.innerHTML='<div class="empty">Ask a question (5 characters or more).</div>';return;}t.disabled=true;out.innerHTML='<div class="empty">The advisor is reading the testing programme…</div>';
+      req('POST','/vuln-dashboard/ask',{question:q}).then(function(r){out.innerHTML='<div class="ans">'+esc(r.answer)+'</div><div class="sm mute">'+esc(r.steps.length+' read(s) · '+r.model)+(r.injection_signals.length?' · instructions found in the findings were ignored':'')+'</div>';}).catch(function(e){out.innerHTML='<div class="banner bad">'+esc(e.message)+'</div>';}).then(function(){t.disabled=false;});return;}
+    if(t.id==='refresh')load();});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.withCredentials=true;w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText);if(RANK[j.role]!=null)ROLE=j.role;}catch(e){/* no identity: viewer, the server decides anyway */}load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

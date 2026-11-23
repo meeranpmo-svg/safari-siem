@@ -1,0 +1,44 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Audit Repository</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}.mono{font-family:ui-monospace,Consolas,monospace}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}[data-f]{cursor:pointer}[data-f][aria-pressed=true] .card{outline:1px solid #4299e1}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.act{border-left:4px solid #6b7280;padding:7px 10px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,.02);cursor:pointer}.act.p-hi{border-left-color:#d63939}.act.p-md{border-left-color:#f59f00}.act.p-lo{border-left-color:#4299e1}
+.hm td{text-align:center;min-width:64px}.hm .c{display:block;border-radius:6px;padding:6px 4px;cursor:pointer;background:rgba(66,153,225,.08)}.hm .c.o{background:rgba(245,159,0,.18)}.hm .c.r{box-shadow:inset 0 0 0 2px #d63939}.hm .c.n{background:transparent;cursor:default}
+.yb{display:flex;align-items:flex-end;gap:10px;height:130px}.yb div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}.yb i{display:block;width:70%;border-radius:4px 4px 0 0;background:#4299e1}.yb i.o{background:#f59f00}
+.cand{border:1px solid var(--tblr-border-color);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-3"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Audit &amp; Assurance</div><h2 class="page-title">Audit Repository - previous years</h2></div>
+ <div class="col-auto ms-auto d-flex gap-2"><span class="mut align-self-center" id="up"></span><button type="button" class="btn btn-primary" id="new"><i class="ti ti-file-plus me-1"></i>Record an audit report</button><button type="button" class="btn" id="xlsx"><i class="ti ti-file-spreadsheet me-1"></i>Export to Excel</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Every past audit and inspection in one place - <b>SAMA</b>, <b>Insurance Authority</b>, <b>NCA</b>, SDAIA, the external auditor, internal audit, certification bodies - year by year, with the report files and their findings. Import a management letter from <b>Excel</b>. A finding that looks like an earlier year's is <b>proposed as a repeat</b> with the reasons; a person confirms or rejects it. Report files stay <b>on this server</b> (never GitHub or an outside service). Every view, download, import and change is recorded.</div></div></div>
+<div id="err"></div>
+<div id="main" hidden>
+<div class="row row-cards mb-3" id="kpis"></div>
+<ul class="nav nav-tabs mb-3" role="tablist"><li class="nav-item"><a class="nav-link active" data-tab="ov" role="tab" href="#ov">Overview</a></li><li class="nav-item"><a class="nav-link" data-tab="fd" role="tab" href="#fd">Findings</a></li><li class="nav-item"><a class="nav-link" data-tab="rp" role="tab" href="#rp">Reports</a></li><li class="nav-item"><a class="nav-link" data-tab="ai" role="tab" href="#ai">Advisor (AI)</a></li></ul>
+<section id="t-ov">
+ <div class="row g-3 mb-3">
+  <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-list-check me-1"></i>What to do before the next audit</h3></div><div class="card-body" id="acts"></div></section></div>
+  <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-grid-dots me-1"></i>Findings by year and body</h3><div class="card-actions mut">orange = still open · red ring = repeats</div></div><div class="card-body table-responsive" id="hm"></div></section></div>
+ </div>
+ <div class="row g-3 mb-3">
+  <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-chart-bar me-1"></i>Year on year</h3></div><div class="card-body" id="yy"></div></section></div>
+  <div class="col-lg-6"><section class="card h-100"><div class="card-header"><h3 class="card-title"><i class="ti ti-repeat me-1"></i>Systemic areas <span class="mut">found in 3+ years</span></h3></div><div class="card-body" id="sys"></div></section></div>
+ </div>
+ <section class="card mb-3"><div class="card-header"><h3 class="card-title"><i class="ti ti-copy me-1"></i>Possible repeat findings <span class="mut">proposed - you decide</span></h3></div><div class="card-body" id="props"></div></section>
+</section>
+<section id="t-fd" hidden><section class="card mb-3"><div class="card-header flex-wrap gap-2"><h3 class="card-title">Findings</h3><div class="card-actions d-flex flex-wrap gap-2">
+ <select class="form-select form-select-sm" id="f-body" aria-label="Body"></select><select class="form-select form-select-sm" id="f-year" aria-label="Year"></select><select class="form-select form-select-sm" id="f-status" aria-label="Status"></select>
+ <input class="form-control form-control-sm" id="q" type="search" placeholder="Search title, ref, area, owner" aria-label="Search findings"></div></div><div class="card-body py-2 mut" id="fnote"></div><div class="table-responsive" id="fl"></div></section></section>
+<section id="t-rp" hidden><section class="card mb-3"><div class="card-header"><h3 class="card-title">Audit reports</h3></div><div class="table-responsive" id="rl"></div></section></section>
+<section id="t-ai" hidden><section class="card"><div class="card-header"><h3 class="card-title">Audit history advisor (AI)</h3><div class="card-actions mut" id="ais"></div></div><div class="card-body"><div class="mut mb-2">It reads the register - never the report files - and helps you prepare: what an inspector will ask, what is carried forward, which weaknesses keep coming back. It never confirms a repeat or closes a finding.</div><form id="af"><textarea class="form-control" id="af-q" rows="2" maxlength="2000" placeholder="What will SAMA ask about at the next inspection, given last years' findings?"></textarea><button type="submit" class="btn btn-primary mt-2">Ask</button></form><div class="mt-3" id="aa"></div></div></section></section>
+<p class="mut" id="note"></p>
+</div>
+<input type="file" id="upfile" hidden aria-label="Report file" accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.msg,.eml,.csv,.txt,.png,.jpg,.jpeg">
+<input type="file" id="impfile" hidden aria-label="Findings list" accept=".xlsx,.csv">
+</div></main>
+<script src="vendor/zyb-arepo.js"></script></body></html>

@@ -1,0 +1,142 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Baseline Hardening</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{font-weight:400;color:var(--mute);font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:24px;font-weight:700;margin:2px 0}.t .s{font-size:12px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.na .v{color:var(--mute);font-size:15px}.t.on{border-color:#79b8ff}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button.sm{padding:3px 9px;font-size:12px}button:disabled{opacity:.5;cursor:default}
+select,input{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+tbody tr.rw{cursor:pointer}tbody tr.rw:hover td{background:rgba(255,255,255,.035)}.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap;margin:1px 2px 1px 0}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}.pill.info{background:rgba(121,184,255,.14);color:var(--info)}
+.bar{height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden;min-width:70px}.bar i{display:block;height:100%}
+.plats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+pre.scr{background:#0b0c10;border:1px solid var(--border);border-radius:8px;padding:10px;max-height:360px;overflow:auto;font:12px Consolas,monospace;white-space:pre-wrap}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.sev{font-weight:700}.sev.critical,.sev.high{color:var(--bad)}.sev.medium{color:var(--warn)}.sev.low{color:var(--info)}
+@media print{.top button,.filters,select,input{display:none!important}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security · SAMA CSF 3.3.8 · NCA ECC 2-3 · CIS benchmarks</div><h1>Baseline Hardening</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <button type="button" id="csv">⬇ CSV</button><button type="button" id="print">🖨 Report</button><button type="button" id="scan" hidden>↻ Scan now</button></div>
+<div class="k" id="kk"></div>
+<div class="card"><h2>By platform <span class="c">CIS benchmark per platform; score = passed checks weighted by severity, settings not read are left out (never counted as passed)</span></h2><div class="plats" id="plats"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Most common failures <span class="c" id="tfc"></span></h2><div class="tw" id="top"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>All IT assets <span class="c" id="ac"></span></h2>
+  <div class="filters"><select id="fp" aria-label="Platform"><option value="">All platforms</option></select>
+    <select id="fs" aria-label="State"><option value="">Every state</option><option value="scanned">Scanned</option><option value="stale">Scan older than 7 days</option><option value="not_scanned">Not scanned</option><option value="fail">With failures</option></select>
+    <input type="search" id="q" placeholder="Search name or IP" aria-label="Search"></div>
+  <div class="tw" id="list"><div class="empty">Loading…</div></div>
+  <p class="note">Sources (all read-only): Windows Server / Windows 11 - the SIEM Windows agent's daily snapshot (agent 1.2+); Oracle Linux / Solaris - the platform's SSH read; Cisco - the running-config the SIEM captures; FortiGate - the SIEM network poller; Palo Alto - the running configuration the SIEM reads with its read-only API key (CIS PAN-OS); Active Directory / Exchange / IIS / Hyper-V - Windows agent 1.3 / 1.4; Oracle / SQL Server / PostgreSQL - fixed read-only queries with the login Asset Discovery proved; VMware ESXi - the vCenter / host connection (read-only vSphere properties); Nutanix - the Prism connection (cluster security configuration). A failed check comes with a fix and a rollback for a person to run in an approved change window: this page changes nothing on any device.</p></div>
+<div class="card"><h2>Trend <span class="c">one point per day</span></h2><div class="tw" id="trend"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', D=null, F={p:'',s:'',q:''}, CUR=null;
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  var PL={windows_server:'Windows Server',windows_client:'Windows 11 / 10',oracle_linux:'Oracle Linux',linux:'Linux',solaris:'Solaris',cisco:'Cisco switches / routers',network:'Network devices',fortigate:'FortiGate',paloalto:'Palo Alto','cisco-asa':'Cisco ASA',esxi:'VMware ESXi hosts',nutanix:'Nutanix hosts',hyperv:'Hyper-V hosts',domain_controller:'Active Directory (domain controllers)',exchange:'Exchange servers',proxmox:'Proxmox VE nodes',hypervisor:'Other hypervisors (not scanned yet)',unknown:'OS unknown'};
+  var ST={scanned:['scanned','ok'],stale:['scan older than 7 days','warn'],not_scanned:['not scanned','bad']};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function tile(l,v,s,cls,act){return '<button type="button" class="t '+(cls||'')+'"'+(act?' data-act="'+esc(act)+'"':'')+'><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function col(sc){return sc==null?'var(--mute)':sc>=85?'var(--ok)':sc>=60?'var(--warn)':'var(--bad)';}
+  function bar(sc){return sc==null?'<span class="muted">–</span>':'<div style="display:flex;gap:8px;align-items:center"><div class="bar" style="flex:1"><i style="width:'+sc+'%;background:'+col(sc)+'"></i></div><b style="color:'+col(sc)+'">'+sc+'%</b></div>';}
+  function pill(k,m){var x=(m||ST)[k]||[k,''];return '<span class="pill '+x[1]+'">'+esc(x[0])+'</span>';}
+  function when(t){if(!t)return '–';var d=new Date(t);return isNaN(d)?esc(String(t)):esc(d.toISOString().slice(0,16).replace('T',' '));}
+
+  function draw(){
+    var S=D.summary||{};
+    $('up').textContent='Read '+when(D.generated_at)+' UTC';
+    if(!S.assets){
+      $('kk').innerHTML='';$('plats').innerHTML='<div class="empty">No server, workstation or network device is in IT Asset Management yet. Add assets (Start here → Asset Discovery, or Add server) - the scan covers every one of them.</div>';
+      $('top').innerHTML='';$('list').innerHTML='';$('trend').innerHTML='';$('ac').textContent='';return;}
+    $('kk').innerHTML=tile('Baseline score',S.score==null?'not measured':S.score+'%','weighted by severity, scanned assets',S.score==null?'na':S.score>=85?'ok':S.score>=60?'warn':'bad','')
+      +tile('Coverage',(S.coverage_pct==null?0:S.coverage_pct)+'%',S.scanned+' of '+S.assets+' assets scanned',S.coverage_pct>=90?'ok':S.coverage_pct>=60?'warn':'bad','s:scanned')
+      +tile('Not scanned',S.not_scanned,'no source connected - each says what to connect',S.not_scanned?'bad':'ok','s:not_scanned')
+      +tile('Failed checks',S.fail,'across all scanned assets',S.fail?'warn':'ok','s:fail')
+      +tile('Critical / high failures',S.critical_fail,'fix first',S.critical_fail?'bad':'ok','s:fail')
+      +tile('Stale scans',S.stale,'older than 7 days',S.stale?'warn':'ok','s:stale');
+    var src=D.sources||{}, warn=[];
+    if(src.windows)warn.push('Windows snapshots: '+src.windows);if(src.network)warn.push('Network devices: '+src.network);
+    var by=S.by_platform||{};
+    $('plats').innerHTML=Object.keys(by).sort().map(function(k){var b=by[k];return '<button type="button" class="t'+(F.p===k?' on':'')+'" data-plat="'+esc(k)+'"><div class="l">'+esc(PL[k]||k)+'</div><div style="margin:6px 0">'+bar(b.score)+'</div><div class="s">'+b.scanned+' / '+b.assets+' scanned · '+b.fail+' failed checks</div></button>';}).join('')
+      +(warn.length?'<p class="err" style="grid-column:1/-1">'+warn.map(esc).join('<br>')+'</p>':'');
+    var T=S.top_failures||[];
+    $('tfc').textContent=T.length?'checks failing on the most assets':'';
+    $('top').innerHTML=T.length?'<table><thead><tr><th>Check</th><th>Severity</th><th>Assets failing</th></tr></thead><tbody>'+T.map(function(t){return '<tr><td><span class="mono muted">'+esc(t.id)+'</span> '+esc(t.title)+'</td><td><span class="sev '+esc(t.severity)+'">'+esc(t.severity)+'</span></td><td><b>'+t.assets+'</b></td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(S.scanned?'No failed check on the scanned assets.':'Nothing scanned yet - connect the sources listed on each asset below.')+'</div>';
+    var opts=Object.keys(by).sort();$('fp').innerHTML='<option value="">All platforms</option>'+opts.map(function(k){return '<option value="'+esc(k)+'"'+(F.p===k?' selected':'')+'>'+esc(PL[k]||k)+'</option>';}).join('');
+    list();
+    var H=D.trend||[];
+    $('trend').innerHTML=H.length?'<table><thead><tr><th>Day</th><th>Score</th><th>Coverage</th><th>Failed checks</th></tr></thead><tbody>'+H.slice(-30).reverse().map(function(h){return '<tr><td class="mono">'+esc(h.day)+'</td><td>'+bar(h.score)+'</td><td>'+(h.coverage_pct==null?'–':h.coverage_pct+'%')+'</td><td>'+(h.fail==null?'–':h.fail)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">The first point is kept after the first daily scan (or Scan now).</div>';
+  }
+  function rows(){var q=F.q.toLowerCase();return (D.assets||[]).filter(function(a){
+    if(F.p&&a.platform!==F.p)return false;
+    if(F.s==='fail'){if(!(a.counts&&a.counts.fail))return false;}else if(F.s&&a.state!==F.s)return false;
+    return !q||(a.name+' '+(a.ip||'')).toLowerCase().indexOf(q)>=0;});}
+  function list(){
+    var R=rows();$('ac').textContent=R.length+' of '+(D.assets||[]).length;
+    $('list').innerHTML=R.length?'<table><thead><tr><th>Asset</th><th>Platform</th><th>IP</th><th>State</th><th>Score</th><th>Passed</th><th>Failed</th><th>Not checked</th><th>Scanned at</th></tr></thead><tbody>'+R.map(function(a){var c=a.counts||{};return '<tr class="rw" tabindex="0" data-id="'+esc(a.id)+'"><td><b>'+esc(a.name)+'</b>'+(a.why?'<div class="muted" style="font-size:12px;max-width:520px">'+esc(a.why)+'</div>':'')+'</td><td>'+esc(PL[a.platform]||a.platform)+'</td><td class="mono">'+esc(a.ip||'–')+'</td><td>'+pill(a.state)+'</td><td style="min-width:130px">'+bar(a.score)+'</td><td>'+(c.pass||0)+'</td><td>'+(c.fail?'<b style="color:var(--bad)">'+c.fail+'</b>':'0')+(c.critical_fail?' <span class="pill bad">'+c.critical_fail+' high</span>':'')+'</td><td>'+(c.not_checked||0)+'</td><td class="mono">'+when(a.at)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No asset matches.</div>';
+  }
+  function detail(id){
+    var a=(D.assets||[]).filter(function(x){return x.id===id;})[0];if(!a)return;
+    if(a.state==='not_scanned'){Z.open('Not scanned',a.name,Z.kv([['Platform',esc(PL[a.platform]||a.platform)],['IP',esc(a.ip||'–')]])+Z.sec('What to connect','<p>'+esc(a.why||'')+'</p>'));return;}
+    if(!can('operator')){Z.open('Baseline hardening',a.name,Z.kv([['Platform',esc(PL[a.platform]||a.platform)],['Score',a.score==null?'–':a.score+'%'],['Failed',String((a.counts||{}).fail||0)]])+'<p class="muted">The checks show how this machine is defended, so only operators and administrators see them.</p>');return;}
+    Z.open('Baseline hardening',a.name,'<div class="empty">Loading…</div>');
+    req('GET','/api/itam/hardening/assets/'+encodeURIComponent(id)).then(function(x){CUR=x;drawDetail();}).catch(function(e){$('zd-b').innerHTML='<p class="err">'+esc(e.message)+'</p>';});
+  }
+  function drawDetail(){
+    var x=CUR, C=x.checks||[], g={fail:[],not_checked:[],pass:[]};C.forEach(function(c){(g[c.state]||(g[c.state]=[])).push(c);});
+    var SEVR={critical:0,high:1,medium:2,low:3};g.fail.sort(function(a,b){return SEVR[a.severity]-SEVR[b.severity];});
+    var head=Z.kv([['Platform',esc(PL[x.platform]||x.platform)],['IP',esc(x.ip||'–')],['Score',x.score==null?'–':x.score+'%'],['Scanned',when(x.at)+(x.state==='stale'?' <span class="pill warn">older than 7 days</span>':'')],['Benchmark',C.length?C.map(function(c){return c.cis.split(' - ')[0];}).filter(function(v,i,A){return A.indexOf(v)===i;}).map(esc).join('<br>'):'–']])+(x.partial?'<p class="muted">Only the databases on this machine were read - its operating system has no scan source yet.</p>':'');
+    var fail=g.fail.length?'<table><thead><tr><th></th><th>Check</th><th>Severity</th><th>Evidence</th></tr></thead><tbody>'+g.fail.map(function(c){return '<tr><td><input type="checkbox" data-ck="'+esc(c.id)+'" checked aria-label="include '+esc(c.id)+'"></td><td><span class="mono muted">'+esc(c.id)+'</span> '+esc(c.title)+'<div class="muted" style="font-size:11.5px">'+esc(c.cis)+' · '+c.refs.map(esc).join(' · ')+'</div></td><td><span class="sev '+esc(c.severity)+'">'+esc(c.severity)+'</span></td><td style="font-size:12px">'+esc(c.evidence)+'<div class="mono" style="margin-top:4px;color:var(--info)">'+esc(c.fix)+'</div></td></tr>';}).join('')+'</tbody></table><p><button type="button" class="pri" id="mkscr">Fix script for the ticked checks</button> <span class="muted">fixes first, every rollback after - review before running</span></p><div id="scr"></div>':'<p>No failed check.</p>';
+    var nc=g.not_checked.length?Z.tbl(['Check','Why not checked'],g.not_checked.map(function(c){return ['<span class="mono muted">'+esc(c.id)+'</span> '+esc(c.title),esc(c.evidence)];})):'<p class="muted">Every setting was read.</p>';
+    var ps=g.pass.length?Z.tbl(['Check','Evidence'],g.pass.map(function(c){return ['<span class="mono muted">'+esc(c.id)+'</span> '+esc(c.title),esc(c.evidence)];})):'';
+    $('zd-b').innerHTML=head+Z.sec('Failed · '+g.fail.length,fail)+Z.sec('Not checked · '+g.not_checked.length,nc)+(ps?Z.sec('Passed · '+g.pass.length,ps):'');
+  }
+  function mkScript(){
+    var ids=[].slice.call(document.querySelectorAll('[data-ck]')).filter(function(c){return c.checked;}).map(function(c){return c.getAttribute('data-ck');});
+    if(!ids.length){$('scr').innerHTML='<p class="err">Tick at least one failed check.</p>';return;}
+    var b=$('mkscr');b.disabled=true;
+    req('POST','/api/itam/hardening/script',{asset_id:CUR.id,checks:ids}).then(function(r){b.disabled=false;
+      $('scr').innerHTML='<pre class="scr" id="scrt"></pre><p><button type="button" id="scrc">Copy</button> <button type="button" id="scrd">Download</button></p>';$('scrt').textContent=r.script;$('scr').setAttribute('data-name',r.name);$('scr').setAttribute('data-ext',r.sql&&!r.os?'.sql':(CUR.kind==='windows'||CUR.kind==='esxi')&&!r.sql?'.ps1':'.txt');
+    }).catch(function(e){b.disabled=false;$('scr').innerHTML='<p class="err">'+esc(e.message)+'</p>';});
+  }
+  function dl(name,text,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);}
+  function csv(){
+    var q=function(v){v=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+    var L=['# Baseline hardening - exported '+new Date().toISOString()+' - filter: '+[F.p&&('platform '+F.p),F.s&&('state '+F.s),F.q&&('search "'+F.q+'"')].filter(Boolean).join(', ')||'none','Asset,Platform,IP,State,Score,Passed,Failed,High failures,Not checked,Scanned at,What to connect'];
+    rows().forEach(function(a){var c=a.counts||{};L.push([a.name,PL[a.platform]||a.platform,a.ip,a.state,a.score,c.pass,c.fail,c.critical_fail,c.not_checked,a.at,a.why].map(q).join(','));});
+    dl('baseline-hardening.csv',L.join('\r\n'),'text/csv');
+  }
+  function load(){
+    req('GET','/api/itam/hardening').then(function(j){D=j;draw();}).catch(function(e){
+      $('kk').innerHTML='';$('plats').innerHTML='<p class="err">The baseline scan did not answer: '+esc(e.message)+(e.status===404?' - run the update script on the server (IT Asset Management engine).':'')+'</p>';
+      ['top','list','trend'].forEach(function(k){$(k).innerHTML='';});});
+  }
+  document.addEventListener('click',function(e){
+    var t=e.target.closest&&e.target;if(!t)return;
+    var act=t.closest('[data-act]');if(act){var a=act.getAttribute('data-act');if(a.indexOf('s:')===0){F.s=F.s===a.slice(2)?'':a.slice(2);$('fs').value=F.s;list();$('list').scrollIntoView({behavior:'smooth'});}return;}
+    var pl=t.closest('[data-plat]');if(pl){F.p=F.p===pl.getAttribute('data-plat')?'':pl.getAttribute('data-plat');draw();return;}
+    var r=t.closest('tr.rw');if(r){detail(r.getAttribute('data-id'));return;}
+    if(t.closest('#mkscr')){mkScript();return;}
+    if(t.closest('#scrc')){var tx=$('scrt').textContent;if(navigator.clipboard)navigator.clipboard.writeText(tx).then(function(){toast('Copied');},function(){toast('Copy not allowed by the browser - use Download');});return;}
+    if(t.closest('#scrd')){dl('hardening-'+String($('scr').getAttribute('data-name')||'asset').replace(/[^A-Za-z0-9_.-]/g,'_')+($('scr').getAttribute('data-ext')||'.txt'),$('scrt').textContent,'text/plain');return;}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Enter'){var r=e.target.closest&&e.target.closest('tr.rw');if(r)detail(r.getAttribute('data-id'));}});
+  $('fp').addEventListener('change',function(){F.p=this.value;draw();});
+  $('fs').addEventListener('change',function(){F.s=this.value;list();});
+  $('q').addEventListener('input',function(){F.q=this.value;list();});
+  $('csv').addEventListener('click',csv);
+  $('print').addEventListener('click',function(){window.print();});
+  $('scan').addEventListener('click',function(){var b=this;b.disabled=true;req('POST','/api/itam/hardening/scan').then(function(r){b.disabled=false;var d=r&&r.databases;toast('Scanned again'+(d&&d.targets?' · databases read '+d.read+' of '+d.targets+(d.failed?' ('+d.failed+' failed - see the asset)':''):''));load();}).catch(function(e){b.disabled=false;toast(e.message);});});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){/* no role: viewer */}$('scan').hidden=!can('operator');load();};w.onerror=load;w.send();
+})();
+</script></body></html>

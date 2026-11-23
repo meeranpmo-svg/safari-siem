@@ -1,0 +1,55 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cross-Border Transfers</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+pre.letter{white-space:pre-wrap;font:13px/1.55 "Segoe UI",system-ui,sans-serif;background:rgba(255,255,255,.03);padding:12px;border-radius:8px}pre.letter[dir=rtl]{text-align:right}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">Cross-Border Transfers</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><button type="button" class="btn btn-primary" id="add"><i class="ti ti-plus me-1"></i>Add transfer</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Personal data leaves the Kingdom only for a permitted purpose (PDPL Art. 29) and on a basis: an SDAIA adequacy decision, appropriate safeguards (standard contractual clauses, binding common rules, certification, code of conduct) or an exemption. Safeguards, exemptions and continuous or large-scale sensitive transfers need a <b>transfer impact assessment</b> first (Cross-Border Transfer Regulation Art. 8): purpose, scope, safeguards, minimisation, impact on people and the measures that reduce it. A transfer must stop at once if the assessment shows high risk or the safeguards no longer hold. The assessment is scored in Python and signed by the DPO, who did not prepare it.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Transfers outside the Kingdom</h3></div><div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="note"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+
+  var V=null, REC={};
+  var BASES=[['adequacy','Adequacy decision (SDAIA list)'],['scc','Standard contractual clauses'],['bcr','Binding common rules'],['certification','Certification'],['code_of_conduct','Code of conduct'],['exemption_contract','Exemption: contract with the person'],['exemption_public','Exemption: public interest (public entity)'],['exemption_vital','Exemption: vital interest']];
+  var LV={low:'green',medium:'yellow',high:'red'};
+  function load(){return Promise.all([P.req('GET','/pdpl/transfers'),P.req('GET','/pdpl/records?kind=transfer')]).then(function(rr){V=rr[0];REC={};rr[1].records.forEach(function(t){REC[t.id]=t;});var t=V.transfers;
+    $('kpis').innerHTML=P.tile(t.length,'Transfers')+P.tile(t.filter(function(x){return x.gaps.length;}).length,'With gaps',t.some(function(x){return x.gaps.length;})?'text-red':'')+P.tile(t.filter(function(x){return x.tia.signed_by;}).length,'Assessment signed')+P.tile(t.filter(function(x){return x.sensitive;}).length,'Sensitive data');
+    $('list').innerHTML=P.table([['Transfer',function(x){return '<b>'+esc(x.name)+'</b><div class="mut">'+esc(x.id)+(x.ropa_id?' · '+esc(x.ropa_id):'')+'</div>';}],['Country',function(x){return esc(x.country);}],['Flow',function(x){return esc((x.flow_type||'—').replace('_',' '))+(x.data_form?'<div class="mut">'+esc(x.data_form)+'</div>':'');}],['Basis',function(x){return esc(x.basis||'—');}],
+      ['Assessment',function(x){return x.tia.level?P.badge(x.tia.level,LV[x.tia.level])+' '+esc(x.tia.outcome)+'<div class="mut">'+(x.tia.signed_by?'signed by '+esc(x.tia.signed_by):'prepared by '+esc(x.tia.prepared_by)+' - DPO to sign')+'</div>':P.badge('none','orange');}],
+      ['Gaps',function(x){return x.gaps.length?'<span class="small">'+esc(x.gaps.join('; '))+'</span>':P.badge('none','green');}]],t,function(x){return 'class="rowc" data-id="'+esc(x.id)+'"';},'No transfers recorded. Check the records of processing ("transferred outside the Kingdom") and the processors outside the Kingdom.');
+    $('note').textContent=V.note;}).catch(function(e){P.fail($('list'),e);});}
+  var FLOWF=[['flow_type','sel','Flow',0,[['reinsurance','Reinsurance treaty / facultative'],['retrocession','Retrocession'],['international_tpa','Overseas TPA / claims handler'],['medical_abroad','Treatment abroad (medical provider)'],['assistance','Travel / roadside assistance'],['group_service','Group / shared service'],['cloud_hosting','Cloud / hosting'],['other','Other']]],
+    ['counterparty','text','Recipient (reinsurer, TPA, provider)'],['data_form','sel','What is sent',0,[['aggregated','Aggregated (no individual)'],['pseudonymised','Pseudonymised bordereaux'],['identified','Identified records']]],['identified_why','text','If identified: why aggregated / pseudonymised is not enough']];
+  function open(x){var cur=(REC[x.id]||{}).tia||{}, a=cur.answers||{};
+    var h=Z.kv([['Country',esc(x.country)],['Flow',esc((x.flow_type||'not recorded').replace('_',' '))+(x.counterparty?' · '+esc(x.counterparty):'')],['What is sent',esc(x.data_form||'not recorded')],['Basis',esc(x.basis||'none')],['Sensitive',x.sensitive?'yes':'no'],['Large scale',x.large_scale?'yes':'no']]);
+    h+=Z.sec('Transfer impact assessment',(V.conditions_note?'<div class="alert alert-info small py-2">'+esc(V.conditions_note)+'</div>':'')+'<form id="tform">'+V.questions.map(function(q){return '<div class="mb-2"><label class="form-label small fw-semibold" for="t-'+esc(q.id)+'">'+esc(q.question)+'</label><select class="form-select form-select-sm" id="t-'+esc(q.id)+'" name="'+esc(q.id)+'"><option value="">- choose -</option>'+q.options.map(function(o){return '<option'+(a[q.id]===o?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select></div>';}).join('')
+      +'<div class="mb-2"><label class="form-label" for="t-notes">Risks and mitigations (what could happen to people, what reduces it)</label><textarea class="form-control" id="t-notes" name="notes" rows="3" maxlength="1000">'+esc(cur.notes||'')+'</textarea></div>'
+      +'<div class="d-flex gap-2 align-items-center"><button type="submit" class="btn btn-primary">Score</button>'+(x.tia.level&&!x.tia.signed_by?'<button type="button" class="btn btn-success" id="tsign">DPO sign</button>':'')+'<span class="small text-secondary" data-msg></span></div></form><div id="tres" class="mt-2"></div>');
+    h+=Z.sec('Edit the transfer',P.form('eform',[['name','text','Name'],['country','text','Country'],['basis','sel','Basis',0,BASES],['ropa_id','text','Processing activity (PD-ROPA-nnn)'],['sensitive','bool','Includes sensitive or credit data'],['large_scale','bool','Continuous or large scale']].concat(FLOWF),REC[x.id]||{},'Save'));
+    Z.open('Cross-border transfer',x.id+' · '+x.name,h+'<input type="hidden" id="tid" value="'+esc(x.id)+'">');if(cur.score&&$('tres'))show(cur.score);}
+  var CST={met:['met','green'],not_met:['not met','red'],unclear:['to decide','orange'],safeguards:['replaced by safeguards','azure'],disapplied:['does not apply (Art. 29(3))','purple']};
+  function conds(r){if(!r.conditions)return '';return '<div class="small fw-semibold mt-1">PDPL Art. 29 - purpose and conditions</div><table class="table table-sm small mb-2"><tbody>'+r.conditions.map(function(c){var s=CST[c.state]||[c.state,'secondary'];return '<tr data-cond="'+esc(c.id)+'"><td>'+esc(c.label)+'<div class="mut">'+esc(c.ref)+'</div></td><td>'+P.badge(s[0],s[1])+'</td><td class="mut">'+esc(c.why)+'</td></tr>';}).join('')+'</tbody></table>';}
+  function show(r){$('tres').innerHTML=conds(r)+'<div class="alert alert-'+(r.level==='high'?'danger':r.level==='medium'?'warning':'success')+'">Risk <b>'+esc(r.level)+'</b> (likelihood '+esc(r.likelihood)+', severity '+esc(r.severity)+') → <b>'+esc(r.outcome)+'</b></div>'+(r.required.length?'<div class="small fw-semibold">Required before the transfer</div><ul class="small">'+r.required.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>':'')+(r.why.length?'<ul class="small mut">'+r.why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>':'');}
+  $('add').addEventListener('click',function(){Z.open('Cross-border transfers','New transfer',P.form('nform',[['name','text','Name (e.g. reinsurer, cloud service)',1],['country','text','Country',1],['basis','sel','Basis',0,BASES],['ropa_id','text','Processing activity (PD-ROPA-nnn)'],['sensitive','bool','Includes sensitive or credit data'],['large_scale','bool','Continuous or large scale']].concat(FLOWF),{},'Add'));});
+  $('list').addEventListener('click',function(ev){var tr=ev.target.closest('tr[data-id]');if(!tr||!V)return;open(V.transfers.find(function(x){return x.id===tr.getAttribute('data-id');}));});
+  document.addEventListener('click',function(ev){if(!ev.target.closest('#tsign'))return;var id=$('tid').value;P.req('POST','/pdpl/transfers/'+encodeURIComponent(id)+'/tia/sign',{}).then(function(){P.toast(id+': assessment signed');if(Z.close)Z.close();load();}).catch(function(e){var fm=$('tform');if(fm)P.msg(fm,P.why(e));});});
+  document.addEventListener('submit',function(ev){var fm=ev.target;
+    if(fm.id==='tform'){ev.preventDefault();var answers={};V.questions.forEach(function(q){var v=fm.elements[q.id].value;if(v)answers[q.id]=v;});
+      P.req('POST','/pdpl/transfers/'+encodeURIComponent($('tid').value)+'/tia',{answers:answers,notes:fm.elements.notes.value}).then(function(r){show(r);load();}).catch(function(e){P.msg(fm,P.why(e));});}
+    if(fm.id==='nform'||fm.id==='eform'){ev.preventDefault();var b=P.body(fm);b.kind='transfer';if(fm.id==='eform')b.id=$('tid').value;
+      P.req('POST','/pdpl/records',b).then(function(r){P.toast('Saved '+r.id);if(Z.close)Z.close();load();}).catch(function(e){P.msg(fm,P.why(e));});}});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

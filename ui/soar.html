@@ -1,0 +1,109 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SOAR - Automated Response</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- SOAR - Automated Response over the SIEM (/api/soc/soc/soar, engine/soc/soar.js): open alerts matched to response playbooks with
+     an itemised confidence that learns from closed cases and from people's approval decisions; a person runs a playbook (a case
+     with pending response actions), a DIFFERENT person approves each action (/api/soc/approvals/:id/decide); an administrator may
+     let the engine propose runs automatically per playbook (it still only proposes); AI response brief per match (a draft). The
+     SIEM never executes a response action. -->
+<style>
+.sr-why{font-size:12px;display:flex;gap:6px;margin:1px 0}.sr-why b{min-width:30px;text-align:right}
+.sr-conf{font-size:24px;font-weight:800}.sr-bar{height:6px;background:rgba(127,127,127,.2);border-radius:3px;overflow:hidden;margin:3px 0 6px;width:120px}.sr-bar i{display:block;height:100%}
+.sr-card{border:1px solid var(--line,#232837);border-radius:12px;padding:12px;margin-bottom:10px}
+.sr-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}.sr-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.sr-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:8px}@media(max-width:1000px){.sr-g{grid-template-columns:1fr}}
+.sr-brief{background:rgba(127,127,127,.08);border-radius:8px;padding:8px;margin-top:8px;font-size:12.5px;white-space:pre-wrap}
+dialog{background:var(--panel,#12151c);color:inherit;border:1px solid var(--line,#232837);border-radius:12px;padding:16px;width:min(520px,94vw)}dialog::backdrop{background:rgba(0,0,0,.55)}
+dialog textarea{width:100%}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security operations · respond</div><h1>SOAR - Automated Response</h1></div><span class="sp"></span><span class="muted" id="up"></span><a href="soc-response.html" class="btn">Playbooks &amp; Approvals</a> <button type="button" id="refresh">⟳ Refresh</button></div>
+<div id="msg"></div>
+<div id="main" hidden>
+<p class="note" id="note"></p>
+<div class="k" id="kk"></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="match" class="on">⚡ Matches <span id="mc"></span></button><button type="button" role="tab" data-tab="wait">✅ Waiting for approval <span id="wc"></span></button><button type="button" role="tab" data-tab="runs">🗂️ Runs</button><button type="button" role="tab" data-tab="auto">⚙️ Playbooks &amp; automation</button><button type="button" role="tab" data-tab="learn">📈 Learning</button></div>
+<div id="tab-match"><div class="card"><h2>Open alerts a playbook fits <span class="c" id="mc2"></span></h2>
+  <div class="fil"><select id="f-pb"><option value="">All playbooks</option></select><select id="f-conf"><option value="0">Any confidence</option><option value="50">50+</option><option value="75">75+</option></select><input type="search" id="f-q" placeholder="Search entity, rule, playbook…"></div>
+  <div id="matches"></div>
+  <p class="note">Confidence is itemised: how well the playbook fits, severity, whether its actions have targets in the alerts, and what this SIEM learned from closed cases and approval decisions. Running a playbook opens a case; its response actions wait for a different person to approve them.</p></div></div>
+<div id="tab-wait" hidden><div class="card"><h2>Response actions from SOAR runs waiting for a decision</h2><div class="tw" id="wait"></div><p class="note">Approving records the decision in the case and the audit log; the action is carried out by the response agent or a person. The person who requested an action cannot decide it, and a service identity never does.</p></div></div>
+<div id="tab-runs" hidden><div class="card"><h2>Runs (last 50)</h2><div class="tw" id="runs"></div></div></div>
+<div id="tab-auto" hidden><div class="card"><h2>Automation <span class="c" id="ver"></span></h2><div id="auto"></div></div></div>
+<div id="tab-learn" hidden><div class="card"><h2>What SOAR learned</h2><div id="learn"></div></div></div>
+</div>
+<dialog id="dlg"><h3 id="dlg-t" style="margin-top:0"></h3><div id="dlg-b"></div><p class="err" id="dlg-e"></p><div style="display:flex;gap:6px;justify-content:flex-end"><button type="button" id="dlg-x">Cancel</button><button type="button" class="pri" id="dlg-ok">OK</button></div></dialog>
+</main>
+<script>
+(function () {
+  'use strict';
+  var S = window.zybSoc, esc = S.esc, $ = function (i) { return document.getElementById(i); }, V = null, DLG = null, BRIEF = {};
+  var show = S.tabs(['match', 'wait', 'runs', 'auto', 'learn']);
+  function dialog(t, html, fn) { $('dlg-t').textContent = t; $('dlg-b').innerHTML = html; $('dlg-e').textContent = ''; DLG = fn; $('dlg').showModal(); }
+  $('dlg-x').addEventListener('click', function () { $('dlg').close(); });
+  $('dlg-ok').addEventListener('click', function () { if (DLG) DLG(function (m) { $('dlg-e').textContent = m; }, function () { $('dlg').close(); }); });
+  var col = function (c) { return c >= 75 ? 'var(--ok,#5fd27a)' : c >= 50 ? 'var(--warn,#f5b544)' : 'var(--bad,#ff7b80)'; };
+  var tgt = function (t) { return [].concat(t || []).join(', '); };
+  var dt = function (t) { return t ? new Date(t).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '–'; };
+  function kpis() { var K = V.kpis, T = V.time_saved;
+    $('kk').innerHTML = S.tile('Matches', K.matches, K.alerts + ' open alert(s)', K.matches ? 'warn' : 'ok', 'tab:match') + S.tile('Auto-eligible', K.auto_eligible, V.config.auto ? 'automation on' : 'automation off', '', 'tab:auto')
+      + S.tile('Waiting for approval', K.pending, 'response actions', K.pending ? 'warn' : 'ok', 'tab:wait') + S.tile('Approved', K.approved, K.rejected + ' rejected', '', 'tab:runs')
+      + S.tile('Auto runs (24 h)', K.auto_runs_24h, K.playbooks_auto + ' playbook(s) automated', '', 'tab:runs')
+      + S.tile('Time to resolve', T.with_h != null ? T.with_h + ' h' : '–', T.with_h != null ? 'with a playbook · ' + T.without_h + ' h without' : T.note, '', 'tab:learn');
+    $('mc').innerHTML = K.matches ? S.pill(K.matches, 'warn') : ''; $('wc').innerHTML = K.pending ? S.pill(K.pending, 'warn') : ''; }
+  function matchCard(m) { var B = BRIEF[m.key];
+    return '<div class="sr-card" data-key="' + esc(m.key) + '"><div class="sr-row"><div><div class="sr-conf" style="color:' + col(m.confidence) + '">' + m.confidence + '</div><div class="sr-bar"><i style="width:' + m.confidence + '%;background:' + col(m.confidence) + '"></i></div><div class="muted small">confidence</div></div>'
+      + '<div style="flex:1;min-width:260px"><b>' + esc(m.playbook) + '</b> → <span class="mono">' + esc(m.entity) + '</span> ' + S.sev(m.severity) + (m.auto_eligible ? ' ' + S.pill('auto-eligible', 'info') : '')
+      + '<div class="muted small">' + m.count + ' alert(s) · last ' + dt(m.last) + ' · ' + esc(m.alerts.slice(0, 3).map(function (a) { return a.rule_name || a.rule_id; }).join(', ')) + '</div>'
+      + '<div class="sr-g"><div>' + m.why.map(function (w) { return '<div class="sr-why"><b style="color:' + (w.points < 0 ? 'var(--bad,#ff7b80)' : 'var(--ok,#5fd27a)') + '">' + (w.points > 0 ? '+' : '') + w.points + '</b><span>' + esc(w.why) + '</span></div>'; }).join('') + '</div>'
+      + '<div><div class="muted small">Response actions it will request (each needs approval)</div>' + (m.actions.length ? m.actions.map(function (a) { return '<div class="small">• ' + esc(a.title) + ' <span class="mono">' + esc(tgt(a.targets)) + '</span></div>'; }).join('') : '<div class="small muted">Manual steps only - no target for an automatable action in these alerts.</div>') + '</div></div>'
+      + (B ? '<div class="sr-brief"><b>AI brief</b> ' + S.pill(B.label || 'AI draft - verify', 'warn') + (B.matches_engine === false ? ' ' + S.pill('AI suggests another playbook: ' + B.playbook_id, 'warn') : '') + '\n' + esc(B.summary || B.note || '') + (B.actions && B.actions.length ? '\n' + B.actions.map(function (a) { return '• ' + a.action_id + ' → ' + a.target + (a.verified ? '' : '  [unverified: not in the alerts]') + ' - ' + a.why; }).map(esc).join('\n') : '') + (B.check_first && B.check_first.length ? '\nCheck first:\n' + B.check_first.map(function (c) { return '• ' + c; }).map(esc).join('\n') : '') + '</div>' : '')
+      + (S.can('operator') ? '<div class="sr-acts"><button type="button" class="pri" data-run="' + esc(m.key) + '">▶ Run playbook</button><button type="button" data-ask="' + esc(m.key) + '"' + (V.ai.enabled ? '' : ' disabled title="' + esc(V.ai.reason || 'AI off') + '"') + '>🤖 AI brief</button><button type="button" data-dis="' + esc(m.key) + '">Dismiss 24 h</button></div>' : '')
+      + '</div></div></div>'; }
+  function drawMatches() { var pb = $('f-pb').value, c = Number($('f-conf').value), q = $('f-q').value.toLowerCase();
+    var L = V.matches.filter(function (m) { return (!pb || m.playbook_id === pb) && m.confidence >= c && (!q || [m.entity, m.playbook, m.alerts.map(function (a) { return a.rule_name + ' ' + a.rule_id; }).join(' ')].join(' ').toLowerCase().indexOf(q) >= 0); });
+    $('mc2').textContent = L.length + ' shown';
+    $('matches').innerHTML = L.length ? L.map(matchCard).join('') : '<div class="empty">' + (V.matches.length ? 'No match for this filter.' : 'No open alert waits for a playbook. Alerts that a response playbook fits appear here as they are raised.') + '</div>'; }
+  function drawWait() { var L = V.pending;
+    $('wait').innerHTML = L.length ? '<table><thead><tr><th>Action</th><th>Targets</th><th>Playbook / entity</th><th>Case</th><th>Requested by</th><th></th></tr></thead><tbody>' + L.map(function (a) { var mine = a.requested_by && a.requested_by.toLowerCase() === S.user().toLowerCase();
+      return '<tr><td><b>' + esc(a.title) + '</b><div class="muted small mono">' + esc(a.action_id) + ' · ' + esc(a.id) + '</div></td><td class="mono small">' + esc(tgt(a.targets)) + '</td><td>' + esc(a.playbook) + '<div class="muted small">' + esc(a.entity) + '</div></td><td class="mono">' + esc(a.case_id) + '</td><td>' + esc(a.requested_by) + '</td><td>'
+        + (S.can('operator') ? (mine ? '<span class="muted small">you requested it - another person decides</span>' : '<button type="button" class="pri" data-dec="approved" data-id="' + esc(a.id) + '">Approve</button> <button type="button" data-dec="rejected" data-id="' + esc(a.id) + '">Reject</button>') : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">Nothing waits for a decision.</div>'; }
+  function drawRuns() { var L = V.runs;
+    $('runs').innerHTML = L.length ? '<table><thead><tr><th>When</th><th>Playbook</th><th>Entity</th><th>Confidence</th><th>Case</th><th>By</th><th>Actions</th></tr></thead><tbody>' + L.map(function (r) { var ap = r.approvals;
+      return '<tr><td class="small">' + dt(r.at) + '</td><td>' + esc(r.playbook) + '</td><td class="mono">' + esc(r.entity) + '</td><td>' + r.confidence + '</td><td class="mono">' + esc(r.case_id) + '</td><td>' + esc(r.by) + (r.auto ? ' ' + S.pill('auto', 'info') : '') + '</td><td class="small">' + (ap.length ? ap.map(function (a) { return esc(a.action_id) + ' ' + S.pill(a.status, a.status === 'approved' ? 'ok' : a.status === 'rejected' ? 'bad' : 'warn'); }).join('<br>') : '–') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No playbook has been run from SOAR yet.</div>'; }
+  function drawAuto() { var C = V.config, adm = S.can('admin'); $('ver').textContent = 'version ' + C.version + (C.by ? ' · ' + C.by : '');
+    $('auto').innerHTML = '<label class="small"><input type="checkbox" id="a-on"' + (C.auto ? ' checked' : '') + (adm ? '' : ' disabled') + '> Let SOAR propose playbook runs automatically (as <span class="mono">system:soar</span>, which can never approve) for the playbooks set to <b>propose</b> below</label>'
+      + '<table style="margin-top:8px"><thead><tr><th>Playbook</th><th>Response actions</th><th>Open matches</th><th>Mode</th><th>Min severity</th><th>Min confidence</th></tr></thead><tbody>' + V.playbooks.map(function (p) { var c = p.config, d = adm ? '' : ' disabled';
+        return '<tr><td><b>' + esc(p.name) + '</b><div class="muted small">' + esc(p.description || '') + '</div></td><td class="small">' + p.actions.map(function (a) { return esc(a.title); }).join('<br>') + '</td><td>' + p.open_matches + '</td>'
+          + '<td><select data-pm="' + esc(p.id) + '"' + d + '><option value="off"' + (c.mode === 'off' ? ' selected' : '') + '>off - a person runs it</option><option value="propose"' + (c.mode === 'propose' ? ' selected' : '') + '>propose automatically</option></select></td>'
+          + '<td><input type="number" min="0" max="4" style="width:60px" data-ps="' + esc(p.id) + '" value="' + c.min_severity + '"' + d + '></td><td><input type="number" min="50" max="100" style="width:70px" data-pc="' + esc(p.id) + '" value="' + c.min_confidence + '"' + d + '></td></tr>'; }).join('') + '</tbody></table>'
+      + (adm ? '<p><button type="button" class="pri" id="a-save">Save automation</button> <span class="err" id="a-err"></span></p>' : '<p class="muted small">Administrators change automation.</p>')
+      + '<p class="note">Automatic proposals open at most 5 cases per scan (every 2 minutes) and one per match. Every response action still waits for a person to approve it.</p>';
+    if (adm) $('a-save').addEventListener('click', function () { var b = { baseVersion: C.version, auto: $('a-on').checked, playbooks: {} };
+      V.playbooks.forEach(function (p) { b.playbooks[p.id] = { mode: document.querySelector('[data-pm="' + p.id + '"]').value, min_severity: Number(document.querySelector('[data-ps="' + p.id + '"]').value), min_confidence: Number(document.querySelector('[data-pc="' + p.id + '"]').value) }; });
+      S.req('PUT', '/soc/soar/config', b).then(function () { S.toast('Automation saved'); load(); }, function (e) { $('a-err').textContent = e.message; }); }); }
+  function drawLearn() { var Lr = V.learning;
+    $('learn').innerHTML = '<h3>Playbooks</h3><table><thead><tr><th>Playbook</th><th>Cases</th><th>Closed</th><th>True positive</th><th>False positive / benign</th><th>Learned TP rate</th><th>Median time to resolve</th></tr></thead><tbody>' + Lr.playbooks.map(function (p) { return '<tr><td>' + esc(p.name) + '</td><td>' + p.cases + '</td><td>' + p.closed + '</td><td>' + p.tp + '</td><td>' + p.fp + '</td><td>' + (p.tp_rate != null ? p.tp_rate + ' %' : '<span class="muted small">needs 3</span>') + '</td><td>' + (p.median_resolve_h != null ? p.median_resolve_h + ' h' : '–') + '</td></tr>'; }).join('') + '</tbody></table>'
+      + '<p class="muted small">Cases without a playbook: ' + Lr.without_playbook.closed + ' closed' + (Lr.without_playbook.median_resolve_h != null ? ', median ' + Lr.without_playbook.median_resolve_h + ' h to resolve' : '') + '.</p>'
+      + '<h3>Response actions</h3>' + (Lr.actions.length ? '<table><thead><tr><th>Action</th><th>Approved</th><th>Rejected</th><th>Waiting</th><th>Approval rate</th></tr></thead><tbody>' + Lr.actions.map(function (a) { return '<tr><td>' + esc(a.title) + '</td><td>' + a.approved + '</td><td>' + a.rejected + '</td><td>' + a.pending + '</td><td>' + (a.approval_rate != null ? a.approval_rate + ' %' : '<span class="muted small">needs 3</span>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No response action requested yet.</div>')
+      + '<p class="note">The learned rates feed each match\'s confidence. A playbook whose cases close as false positives, or whose actions people keep rejecting, loses confidence.</p>'; }
+  function paint() { $('note').textContent = V.note; kpis();
+    var sel = $('f-pb'), cur = sel.value; sel.innerHTML = '<option value="">All playbooks</option>' + V.playbooks.map(function (p) { return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('');
+    drawMatches(); drawWait(); drawRuns(); drawAuto(); drawLearn(); }
+  function load() { return S.req('GET', '/soc/soar').then(function (v) { V = v; $('main').hidden = false; $('msg').innerHTML = ''; paint(); $('up').textContent = 'updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); },
+    function (e) { $('main').hidden = true; $('msg').innerHTML = '<div class="card">' + S.errHtml(e, 'SOAR') + '</div>'; }); }
+  document.addEventListener('click', function (ev) { var x = ev.target.closest('button'); if (!x || !V) return;
+    if (x.hasAttribute('data-run')) { var k = x.getAttribute('data-run'), m = V.matches.find(function (y) { return y.key === k; });
+      dialog('Run ' + m.playbook, '<p>Opens a case for <b class="mono">' + esc(m.entity) + '</b> with ' + m.count + ' alert(s) and requests ' + m.actions.length + ' response action(s). Nothing is executed: a different person approves each action.</p>', function (err, done) { $('dlg-ok').disabled = true;
+        S.req('POST', '/soc/soar/matches/' + k + '/run', {}).then(function (r) { $('dlg-ok').disabled = false; done(); S.toast('Case ' + r.case_id + ' opened - ' + r.approvals.length + ' action(s) wait for approval'); load(); }, function (e) { $('dlg-ok').disabled = false; err(e.message); }); }); }
+    if (x.hasAttribute('data-dis')) { var k2 = x.getAttribute('data-dis');
+      dialog('Dismiss for 24 hours', '<label class="small">Reason (required)<textarea id="d-why" rows="3" maxlength="500"></textarea></label>', function (err, done) { var w = $('d-why').value.trim(); if (w.length < 3) return err('Give the reason.');
+        S.req('POST', '/soc/soar/matches/' + k2 + '/dismiss', { reason: w }).then(function () { done(); S.toast('Dismissed for 24 hours'); load(); }, function (e) { err(e.message); }); }); }
+    if (x.hasAttribute('data-ask')) { var k3 = x.getAttribute('data-ask'); x.disabled = true; x.textContent = '🤖 thinking…';
+      S.req('POST', '/soc/soar/matches/' + k3 + '/ask', {}).then(function (r) { BRIEF[k3] = r; drawMatches(); }, function (e) { S.toast(e.message); x.disabled = false; x.textContent = '🤖 AI brief'; }); }
+    if (x.hasAttribute('data-dec')) { var d = x.getAttribute('data-dec'), id = x.getAttribute('data-id');
+      dialog(d === 'approved' ? 'Approve the response action' : 'Reject the response action', '<label class="small">' + (d === 'approved' ? 'Comment (who carries it out, change ticket…)' : 'Reason (required)') + '<textarea id="d-cm" rows="3" maxlength="1000"></textarea></label>', function (err, done) { var cm = $('d-cm').value.trim(); if (d === 'rejected' && cm.length < 3) return err('Give the reason.');
+        S.req('POST', '/approvals/' + encodeURIComponent(id) + '/decide', { decision: d, comment: cm }).then(function () { done(); S.toast(d === 'approved' ? 'Approved - recorded in the case and the audit log' : 'Rejected - recorded'); load(); }, function (e) { err(e.message); }); }); }
+    var a = x.getAttribute('data-act'); if (a && a.indexOf('tab:') === 0) show(a.slice(4)); });
+  ['f-pb', 'f-conf'].forEach(function (i) { $(i).addEventListener('change', drawMatches); }); $('f-q').addEventListener('input', drawMatches); $('refresh').addEventListener('click', load);
+  S.ready(load); setInterval(function () { if (!document.hidden && !$('dlg').open) load(); }, 60000);
+})();
+</script></body></html>

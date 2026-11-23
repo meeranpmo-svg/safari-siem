@@ -1,0 +1,209 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Node Details</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+a.back{color:var(--info);text-decoration:none;font-weight:600}a.back:hover{text-decoration:underline}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:1100px){.grid3{grid-template-columns:repeat(2,1fr)}}@media(max-width:900px){.grid2{grid-template-columns:1fr}}@media(max-width:620px){.grid3{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:24px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button,select{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover,select:hover{border-color:#4a5162}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05)}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.pill.up{background:rgba(63,185,80,.15);color:var(--ok)}.pill.warning{background:rgba(227,179,65,.15);color:var(--warn)}.pill.critical{background:rgba(255,123,114,.15);color:var(--bad)}.pill.unknown,.pill.unpolled{background:rgba(140,147,161,.15);color:var(--mute)}
+.gauge{text-align:center}.gauge .lbl{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.gauge .big{font-size:26px;font-weight:800;margin-top:-6px}.gauge .sub{font-size:11px;color:var(--mute)}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}dl.kv dt{color:var(--mute)}dl.kv dd{margin:0;text-align:right;word-break:break-word}
+.stat3{display:flex;gap:8px;text-align:center}.stat3>div{flex:1;background:var(--raise);border:1px solid var(--edge);border-radius:9px;padding:8px 4px}.stat3 .n{font-size:20px;font-weight:800}.stat3 .l{font-size:10.5px;color:var(--mute);text-transform:uppercase}
+.util{height:14px;border-radius:4px;background:rgba(255,255,255,.08);position:relative;min-width:70px;overflow:hidden}.util i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.bar-ok{background:var(--ok)}.bar-warn{background:var(--warn)}.bar-bad{background:var(--bad)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.st-up{background:var(--ok)}.st-down,.st-critical{background:var(--bad)}.st-warning{background:var(--warn)}.st-unknown{background:#6b7280}
+.ni{background:var(--raise);border:1px dashed var(--border);border-radius:9px;padding:12px;color:var(--mute);font-size:12.5px}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-top:6px}.leg span{color:var(--mute)}.leg i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+@media print{.top button,.top select{display:none}body{background:#fff;color:#000}.card,.t,.stat3>div{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · node detail</div><h1 id="title">Node Details</h1></div>
+  <span class="pill unknown" id="statepill" hidden></span><span class="sp"></span>
+  <a class="back" href="npm-summary.html">← NPM Summary</a>
+  <select id="win" title="Trend window"><option value="1">1 h</option><option value="6">6 h</option><option value="24" selected>24 h</option><option value="168">7 d</option></select>
+  <span class="muted" id="up"></span><button type="button" id="fetch" title="Poll this node now">⚡ Fetch now</button><button type="button" id="print">🖨 Report</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="k" id="kk"></div>
+
+<div class="card"><h2>Vital stats <span class="c">latest poll</span></h2>
+  <div class="grid3" id="gauges"><div class="empty">Loading…</div></div>
+  <p class="note">CPU and memory come from the device's own counters over SNMP/API; response time and packet loss from ICMP reachability checks. A metric the device does not report shows “—”, never zero.</p></div>
+
+<div class="grid2">
+  <div class="card"><h2>Network latency &amp; packet loss <span class="c" id="latw"></span></h2><div id="latchart"><div class="empty">Loading…</div></div>
+    <div class="leg"><span><i style="background:var(--info)"></i>Response time (ms, left)</span><span><i style="background:var(--bad)"></i>Packet loss (%, right)</span></div></div>
+  <div class="card"><h2>CPU load — min / max / average <span class="c" id="cpuw"></span></h2><div id="cpustat"></div><div id="cpuchart"><div class="empty">Loading…</div></div></div>
+</div>
+
+<div class="grid2">
+  <div class="card"><h2>Memory utilization <span class="c" id="memw"></span></h2><div id="memchart"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>Node details</h2><div id="info"><div class="empty">Loading…</div></div></div>
+</div>
+
+<div class="card"><h2>Interfaces <span class="c" id="ifc"></span></h2><div class="tw" id="ifs"><div class="empty">Loading…</div></div>
+  <p class="note">Receive / transmit as a percent of the reported link speed, from the latest poll. Errors per minute are counter deltas; an impossible rate is dropped rather than alarmed.</p></div>
+
+<div class="card" id="sdwancard" hidden><h2>SD-WAN overlay paths <span class="c" id="pathc"></span></h2><div class="tw" id="paths"></div>
+  <p class="note">Per-tunnel health from the device's SD-WAN health checks (latency / jitter / loss). Shown only for devices that report overlay paths (e.g. FortiGate SD-WAN).</p></div>
+
+<div class="grid2">
+  <div class="card"><h2>Disk volumes</h2><div id="disk"></div></div>
+  <div class="card"><h2>Per-CPU load</h2><div id="percpu"></div></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer';
+  var ID=(new URLSearchParams(location.search)).get('id')||'';
+  var SNAP=null, HIST={};
+  function req(p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/soc/netops'+p);x.withCredentials=true;x.timeout=60000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('The AI Network Engineer service is not reachable'));};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4000);}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function fnum(v,d){return v==null?'—':(Math.round(v*(d?10:1))/(d?10:1));}
+
+  /* semicircle gauge: value on a 0..max scale, coloured by thresholds [warn,bad] (null => 0..100 pct) */
+  function gauge(label, value, unit, max, th){
+    var W=180,H=108,cx=90,cy=96,r=72;
+    function polar(deg){var a=(deg-180)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
+    function arc(d0,d1){var p0=polar(d0),p1=polar(d1),lg=(d1-d0)>180?1:0;return 'M'+p0[0].toFixed(1)+' '+p0[1].toFixed(1)+' A'+r+' '+r+' 0 '+lg+' 1 '+p1[0].toFixed(1)+' '+p1[1].toFixed(1);}
+    var has=value!=null, f=has?Math.max(0,Math.min(1,value/max)):0;
+    var col='var(--ok)'; if(has&&th){ if(value>=th[1])col='var(--bad)'; else if(value>=th[0])col='var(--warn)'; }
+    var big=has?(fnum(value, max<=10)+(unit?'':'')):'—';
+    return '<div class="gauge"><div class="lbl">'+esc(label)+'</div>'
+      +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:200px"><path d="'+arc(0,180)+'" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="13" stroke-linecap="round"/>'
+      +(has&&f>0?'<path d="'+arc(0,180*f)+'" fill="none" stroke="'+col+'" stroke-width="13" stroke-linecap="round"/>':'')
+      +'<text x="90" y="92" text-anchor="middle" font-size="26" font-weight="800" fill="'+(has?col:'var(--mute)')+'">'+esc(String(big))+'</text></svg>'
+      +'<div class="sub">'+(has?esc(unit||''):'not reported')+(has&&max?' · scale 0–'+max+(unit?' '+unit:''):'')+'</div></div>';
+  }
+
+  /* line chart over series {color, pts:[{x,y}], max}; two series share x-count, each own y-axis. pts already time-ordered. */
+  function lineChart(series, hoursLabel){
+    series=series.filter(function(s){return s&&s.pts&&s.pts.length;});
+    if(!series.length) return null;
+    var W=560,H=180,padL=4,padR=4,padT=10,padB=16, iw=W-padL-padR, ih=H-padT-padB;
+    var n=Math.max.apply(null,series.map(function(s){return s.pts.length;}));
+    function path(s){var mx=s.max||Math.max.apply(null,s.pts.map(function(p){return p.y;}))||1;
+      return s.pts.map(function(p,i){var x=padL+(n<=1?iw/2:i/(n-1)*iw),y=padT+ih-(Math.max(0,Math.min(mx,p.y))/mx)*ih;return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);}).join(' ');}
+    var grid='';for(var g=0;g<=4;g++){var y=padT+ih*g/4;grid+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" stroke="rgba(255,255,255,.05)"/>';}
+    var paths=series.map(function(s){var area='';
+      if(s.area){var mx=s.max||Math.max.apply(null,s.pts.map(function(p){return p.y;}))||1;var d=s.pts.map(function(p,i){var x=padL+(n<=1?iw/2:i/(n-1)*iw),y=padT+ih-(Math.max(0,Math.min(mx,p.y))/mx)*ih;return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);}).join(' ');
+        area='<path d="'+d+' L'+(padL+iw).toFixed(1)+' '+(padT+ih)+' L'+padL+' '+(padT+ih)+' Z" fill="'+s.color+'" fill-opacity="0.08"/>';}
+      return area+'<path d="'+path(s)+'" fill="none" stroke="'+s.color+'" stroke-width="2"/>';}).join('');
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%">'+grid+paths+'</svg>';
+  }
+
+  function seriesPts(items,fld){return (items||[]).map(function(r){return {x:r.t,y:r[fld]==null?0:Number(r[fld])};});}
+  function stat(items){var a=(items||[]).map(function(r){return Number(r.avg);}).filter(function(v){return !isNaN(v);});
+    var mx=(items||[]).map(function(r){return Number(r.max);}).filter(function(v){return !isNaN(v);});
+    if(!a.length)return null;return {min:Math.min.apply(null,a),max:Math.max.apply(null,mx.length?mx:a),avg:a.reduce(function(s,v){return s+v;},0)/a.length};}
+
+  function draw(){
+    var s=SNAP||{}, sys=s.system||{}, re=s.reach||{}, ifs=s.interfaces||[], paths=s.paths||[];
+    var st=deviceState(s);
+    $('title').textContent=(s.device&&s.device.name)||ID||'Node';
+    var sp=$('statepill'); sp.hidden=false; sp.className='pill '+st; sp.textContent=STL[st]||st;
+    document.title='Node — '+((s.device&&s.device.name)||ID);
+    $('kk').innerHTML=tile('Status',STL[st]||st,(s.device&&s.device.ip)||'',st==='up'?'ok':(st==='critical'?'bad':(st==='warning'?'warn':'')))
+      +tile('Response time',re.rtt_avg_ms!=null?fnum(re.rtt_avg_ms,true)+' ms':'—','ICMP avg',re.rtt_avg_ms>=150?'bad':(re.rtt_avg_ms>=50?'warn':(re.rtt_avg_ms!=null?'ok':'')))
+      +tile('Packet loss',re.loss_pct!=null?fnum(re.loss_pct,true)+' %':'—','',re.loss_pct>=5?'bad':(re.loss_pct>=1?'warn':(re.loss_pct!=null?'ok':'')))
+      +tile('CPU load',sys.cpu_pct!=null?fnum(sys.cpu_pct,true)+' %':'—','',sys.cpu_pct>=90?'bad':(sys.cpu_pct>=70?'warn':(sys.cpu_pct!=null?'ok':'')))
+      +tile('Memory',sys.mem_pct!=null?fnum(sys.mem_pct,true)+' %':'—','',sys.mem_pct>=90?'bad':(sys.mem_pct>=70?'warn':(sys.mem_pct!=null?'ok':'')))
+      +tile('Uptime',sys.uptime_s!=null?uptime(sys.uptime_s):'—','since last reboot','info');
+
+    $('gauges').innerHTML=gauge('CPU load',sys.cpu_pct,'%',100,[70,90])+gauge('Memory utilization',sys.mem_pct,'%',100,[70,90])
+      +gauge('Response time',re.rtt_avg_ms,'ms',200,[50,150])+gauge('Packet loss',re.loss_pct,'%',100,[1,5]);
+
+    // interfaces
+    $('ifc').textContent=ifs.length?ifs.length+' interface(s)':'';
+    $('ifs').innerHTML=ifs.length?'<table><thead><tr><th>Interface</th><th>Admin</th><th>Oper</th><th>Speed</th><th>Rx %</th><th>Tx %</th><th>Err/min</th></tr></thead><tbody>'
+      +ifs.map(function(i){return '<tr><td class="mono">'+esc(i.name)+(i.alias?' <span class="muted">'+esc(i.alias)+'</span>':'')+'</td><td>'+esc(i.admin||'—')+'</td><td><span class="dot st-'+(i.oper==='up'?'up':'down')+'"></span>'+esc(i.oper||'—')+'</td><td>'+(i.speed_mbps?esc(i.speed_mbps)+' Mbps':'—')+'</td><td>'+ubar(i.util_in)+'</td><td>'+ubar(i.util_out)+'</td><td>'+(i.err_per_min!=null?esc(String(Math.round(i.err_per_min))):'—')+'</td></tr>';}).join('')
+      +'</tbody></table>':'<div class="empty">No interfaces reported by the latest poll. Enable SNMP/API polling in the AI Network Engineer.</div>';
+
+    // SD-WAN paths (device-specific)
+    if(paths.length){ $('sdwancard').hidden=false; $('pathc').textContent=paths.length+' path(s)';
+      $('paths').innerHTML='<table><thead><tr><th>Health check</th><th>Member</th><th>Status</th><th>Latency</th><th>Jitter</th><th>Loss</th></tr></thead><tbody>'
+        +paths.map(function(p){var bad=(p.loss_pct>=5||p.latency_ms>=150||/down|dead|fail/i.test(p.status||''));return '<tr><td class="mono">'+esc(p.name)+'</td><td class="mono">'+esc(p.member)+'</td><td><span class="dot st-'+(bad?'critical':'up')+'"></span>'+esc(p.status||'—')+'</td><td>'+(p.latency_ms!=null?fnum(p.latency_ms,true)+' ms':'—')+'</td><td>'+(p.jitter_ms!=null?fnum(p.jitter_ms,true)+' ms':'—')+'</td><td>'+(p.loss_pct!=null?fnum(p.loss_pct,true)+' %':'—')+'</td></tr>';}).join('')
+        +'</tbody></table>'; } else { $('sdwancard').hidden=true; }
+
+    // node info
+    var d=s.device||{};
+    $('info').innerHTML='<dl class="kv">'
+      +row('Vendor',d.vendor)+row('IP address',d.ip)+row('Site',d.site)+row('Role',d.role)
+      +row('Model',sys.model)+row('Software',sys.version)+row('Serial',sys.serial)
+      +row('Sessions',sys.sessions!=null?Number(sys.sessions).toLocaleString('en-GB'):null)
+      +row('Last poll',s.at?new Date(s.at).toLocaleString('en-GB'):null)
+      +'<div><dt>Poll errors</dt><dd>'+((s.errors&&s.errors.length)?'<span class="err">'+esc(s.errors.join('; '))+'</span>':'none')+'</dd></div></dl>';
+
+    // honest not-collected panels
+    $('disk').innerHTML='<div class="ni">Disk volumes are <b>not reported</b> for this node. The network poller reads CPU, memory and interfaces over SNMP/API; it does not walk host storage (hrStorage). Disk capacity is available for servers covered by the AI Windows/Server administrator and for ClickHouse/VPS hosts on the System health page.</div>';
+    $('percpu').innerHTML='<div class="ni">Per-core load is <b>not reported</b>. The device exposes a single averaged CPU-load figure over SNMP/API (shown in the gauge above), not a per-processor breakdown, so individual cores cannot be charted without fabricating them.</div>';
+
+    drawHist();
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+
+  function drawHist(){
+    var canHist=RANK[ROLE]>=RANK.analyst, wl=$('win').value+' h'==='168 h'?'7 d':$('win').value+' h';
+    $('latw').textContent=canHist?wl:''; $('cpuw').textContent=canHist?wl:''; $('memw').textContent=canHist?wl:'';
+    if(!canHist){var m='<div class="empty">Trend history requires the <b>analyst</b> role or higher (it reads the time-series log store). The live gauges and tables above are available to all roles.</div>';
+      $('latchart').innerHTML=m;$('cpuchart').innerHTML='';$('cpustat').innerHTML=m;$('memchart').innerHTML='';return;}
+    // latency + loss
+    var lat=HIST.rtt_ms||[], loss=HIST.loss_pct||[];
+    var latSvg=lineChart([{color:'var(--info)',area:true,pts:seriesPts(lat,'avg')},{color:'var(--bad)',pts:seriesPts(loss,'avg'),max:Math.max(5,Math.max.apply(null,[0].concat((loss||[]).map(function(r){return Number(r.avg)||0;}))))}]);
+    $('latchart').innerHTML=latSvg||emptyHist();
+    // cpu
+    var cpu=HIST.cpu_pct||[], cst=stat(cpu);
+    $('cpustat').innerHTML=cst?'<div class="stat3"><div><div class="n" style="color:var(--ok)">'+fnum(cst.min,true)+'%</div><div class="l">Min</div></div><div><div class="n" style="color:var(--bad)">'+fnum(cst.max,true)+'%</div><div class="l">Max</div></div><div><div class="n" style="color:var(--info)">'+fnum(cst.avg,true)+'%</div><div class="l">Average</div></div></div>':'';
+    var cpuSvg=lineChart([{color:'var(--bad)',pts:seriesPts(cpu,'max'),max:100},{color:'var(--info)',area:true,pts:seriesPts(cpu,'avg'),max:100}]);
+    $('cpuchart').innerHTML=cpuSvg||emptyHist();
+    // mem
+    var mem=HIST.mem_pct||[];
+    var memSvg=lineChart([{color:'#a371f7',area:true,pts:seriesPts(mem,'avg'),max:100}]);
+    $('memchart').innerHTML=memSvg||emptyHist();
+  }
+  function emptyHist(){return '<div class="empty">No history retained yet for this metric. Buckets fill once the device has been polled over the selected window.</div>';}
+
+  function row(k,v){return '<div><dt>'+esc(k)+'</dt><dd>'+(v?esc(String(v)):'<span class="muted">—</span>')+'</dd></div>';}
+  function ubar(p){if(p==null)return '<span class="muted">—</span>';p=Math.round(p);var cls=p>=90?'bar-bad':p>=70?'bar-warn':'bar-ok';return '<div style="display:flex;align-items:center;gap:6px"><div class="util" style="flex:1"><i class="'+cls+'" style="width:'+Math.min(100,p)+'%"></i></div><span style="width:34px;text-align:right">'+p+'%</span></div>';}
+  function uptime(sec){sec=Number(sec)||0;var d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600);return d+'d '+h+'h';}
+  var STL={up:'Up',warning:'Warning',critical:'Critical',down:'Down',unknown:'Unknown',unpolled:'Not polled'};
+  function deviceState(s){ if(s.reach){ if(s.reach.received===0||s.reach.loss_pct===100)return 'critical'; if(s.reach.loss_pct>=5||(s.system&&(s.system.cpu_pct>=90||s.system.mem_pct>=90)))return 'warning'; return 'up'; }
+    if(s.system&&(s.system.cpu_pct!=null))return (s.system.cpu_pct>=90||s.system.mem_pct>=90)?'warning':'up'; return (s.at?'unknown':'unpolled'); }
+
+  function loadHist(){
+    if(RANK[ROLE]<RANK.analyst){HIST={};return Promise.resolve();}
+    var h=$('win').value, mets=['cpu_pct','mem_pct','rtt_ms','loss_pct'];
+    return Promise.all(mets.map(function(m){return req('/evidence/history?device='+encodeURIComponent(ID)+'&metric='+m+'&hours='+encodeURIComponent(h)).then(function(r){HIST[m]=r.items||[];}).catch(function(){HIST[m]=[];});}));
+  }
+  function load(){
+    if(!ID){$('gauges').innerHTML='<p class="err">No node id. Open this page from the NPM Summary tree.</p>';return;}
+    return req('/devices/'+encodeURIComponent(ID)).then(function(r){SNAP=Object.assign({},r.snapshot||{},{device:r.device||{}});return loadHist();}).then(draw)
+      .catch(function(e){$('gauges').innerHTML='<p class="err">'+esc(e.status===404?'Node not found. It may have been removed from the AI Network Engineer.':e.message)+'</p>';});
+  }
+  $('win').onchange=function(){loadHist().then(draw);};
+  $('refresh').onclick=load;$('print').onclick=function(){window.print();};
+  $('fetch').onclick=function(){if(ID)fetchNow(this,'/netops/devices/'+encodeURIComponent(ID)+'/poll',load);};
+  // Fetch now: ask the SIEM to read it now instead of waiting for the next round (operator or admin)
+  function fetchNow(btn,url,done){var l=btn.textContent;btn.disabled=true;btn.textContent='Fetching…';var x=new XMLHttpRequest();x.open('POST','/api/soc'+url);x.withCredentials=true;x.timeout=180000;x.setRequestHeader('Content-Type','application/json');
+    var end=function(m){btn.disabled=false;btn.textContent=l;if(m){var d=document.createElement('div');d.setAttribute('role','status');d.textContent=m;d.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;color:#ECEEF2;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw';document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}};
+    x.onload=function(){if(x.status===403)return end('Fetching now needs an operator or administrator.');if(x.status===404)return end('Not installed on the server yet - run the update (update-platform.ps1).');if(x.status<200||x.status>=300)return end('Fetch failed (HTTP '+x.status+')');end('Fetched '+new Date().toLocaleTimeString('en-GB'));done();};
+    x.onerror=x.ontimeout=function(){end('The SIEM is not reachable');};x.send('{}');}
+
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden)load();},30000);
+})();
+</script></body></html>

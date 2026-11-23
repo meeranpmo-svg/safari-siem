@@ -1,0 +1,839 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zyberon Sentra — IT Operations &amp; Cyber Security Automation &amp; Monitoring Platform</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-brand.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0F17;--top:#0E131D;--panel:#121826;--well:#0F1520;--edge:#1C2433;--border:#243046;--text:#E8ECF3;--title:#fff;--mute:#9AA6BA;--soft:#C9D2E0;--accent:#174081;--accent-t:rgba(23,64,129,.22);--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;min-height:100vh}
+a{color:inherit}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace}
+/* top bar: {{org.short}} logo on a white plate (the logo is dark colours), Zyberon as "powered by" */
+.top{background:var(--top);border-bottom:1px solid var(--edge)}
+.top .in{max-width:1400px;margin:0 auto;padding:12px 24px;display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.brand{display:flex;align-items:center;gap:14px;text-decoration:none;flex:0 0 auto}
+.plate{background:#fff;border-radius:10px;padding:6px 12px;display:inline-flex;align-items:center;min-height:46px}
+.plate img{height:34px;width:auto;display:block}.plate b{color:#0F2C5B;font-size:15px}
+.ttl{display:flex;flex-direction:column;border-left:1px solid var(--border);padding-left:14px}
+.ttl b{font-size:15px;color:var(--title)}.ttl span{font-size:12px;color:var(--mute)}
+.plate.zs{background:linear-gradient(135deg,#0b1f3a,#123b6b);border:1px solid #2b5c9a}.plate.zs b{color:#fff;font-size:16px;letter-spacing:.14em;font-weight:700}.plate.zs b i{font-style:normal;color:#5fb3ff}
+.ttl .org{display:flex;align-items:center;gap:6px}.ttl .org img{height:34px;width:auto;background:#fff;border-radius:6px;padding:2px 6px}
+/* Enterprise Risk & Compliance strip: live scores from Risk Command and the Audit Dashboard; nothing invented */
+.grc{margin:0 0 22px}.grc-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 10px}.grc-h b{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}.grc-h a{font-size:13px;color:var(--info);text-decoration:none}
+.grc-k{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}@media(max-width:1100px){.grc-k{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:640px){.grc-k{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.grc .st .bar{height:5px;border-radius:3px;background:var(--edge);overflow:hidden}.grc .st .bar i{display:block;height:100%;width:0;background:var(--c);transition:width .6s}
+.who{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.clock{font-weight:600;font-size:18px;color:var(--title);line-height:1.1;text-align:right}.clock small{display:block;font-size:11.5px;color:var(--mute);font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:9px;background:var(--panel);border:1px solid var(--border);font-size:12.5px}
+.badge i{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.pwr{display:inline-flex;align-items:center;gap:8px;padding-left:12px;border-left:1px solid var(--border);font-size:11px;color:var(--mute)}.pwr img{height:26px;width:auto;display:block}
+main{max-width:1400px;margin:0 auto;padding:28px 24px 40px}
+/* greeting */
+.hello{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin:0 0 22px}
+.eyebrow{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.tag{--c:#89ADE6;height:22px;padding:0 8px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c);letter-spacing:.03em}
+.greet{margin:6px 0 4px;font-size:30px;font-weight:700;color:var(--title);letter-spacing:-.01em;line-height:1.2}.greet b{color:var(--title)}
+.sub{margin:0;color:var(--mute);font-size:15px;max-width:760px}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.btn{height:44px;padding:0 16px;display:inline-flex;align-items:center;gap:8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);font:600 14px inherit;font-family:inherit;text-decoration:none;cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}.btn:hover{border-color:#3a4864}.btn.pri:hover{filter:brightness(1.1)}
+.btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+/* team switcher (administrators) */
+.teambar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 20px}.teambar[hidden]{display:none}
+.teambar>span{font-size:12.5px;color:var(--mute);margin-right:4px}
+.teambar a{--c:#8C93A1;height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;border:1px solid var(--border);color:var(--text);text-decoration:none;font-weight:500;font-size:13px}
+.teambar a::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.teambar a.on{background:color-mix(in srgb,var(--c) 18%,var(--panel));border-color:color-mix(in srgb,var(--c) 55%,transparent);font-weight:600}
+/* section headings */
+.sh{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:28px 0 12px}.sh h2{margin:0;font-size:12.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.sh .ln{flex:1;height:1px;background:var(--edge);min-width:20px}.sh a{color:var(--mute);font-size:12.5px;text-decoration:none}.sh a:hover{color:var(--text)}.sh .note{font-size:13px;color:var(--mute)}
+/* live status */
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+/* Today: ML on the platform's own history (Executive Dashboard, Live Status) + AI "what first" */
+.t2{display:grid;grid-template-columns:minmax(230px,280px) minmax(230px,280px) 1fr;gap:14px;margin-bottom:14px}@media(max-width:1100px){.t2{grid-template-columns:1fr 1fr}}@media(max-width:640px){.t2{grid-template-columns:1fr}}
+.t2c{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:16px 18px;color:var(--text);text-decoration:none;display:block}a.t2c:hover{border-color:var(--border)}
+.t2c .l{font-size:12.5px;color:var(--mute)}.t2c .big{display:flex;align-items:center;gap:14px;margin-top:8px}.t2c .big b{font:600 40px "IBM Plex Mono",ui-monospace,Consolas,monospace;color:var(--title);line-height:1}
+.t2c .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.t2c .meta span{border:1px solid var(--border);border-radius:999px;padding:2px 9px;font-size:11.5px;color:var(--soft)}
+.t2first{grid-row:span 2}.t2first ol{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}.t2first li a{display:grid;grid-template-columns:8px 1fr;gap:10px;text-decoration:none;color:var(--text);padding:8px 10px;border-radius:10px;background:var(--well);border:1px solid var(--edge)}
+.t2first li a:hover{border-color:var(--border)}.t2first li i{width:8px;border-radius:4px}.t2first li small{display:block;color:var(--mute);font-size:11.5px;margin-top:2px}
+.t2ai{grid-column:span 2}@media(max-width:640px){.t2ai{grid-column:auto}}.t2ai button{font:inherit;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:9px;padding:8px 14px;cursor:pointer}.t2ai button:disabled{opacity:.6}
+.t2ai .ans{white-space:pre-wrap;margin-top:10px;font-size:13px;line-height:1.55;border-top:1px solid var(--edge);padding-top:10px}
+.t2warn{background:rgba(229,72,77,.1);border:1px solid rgba(229,72,77,.45);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px}
+.st{--c:var(--mute);display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:14px;background:var(--panel);border:1px solid var(--edge);color:var(--text);text-decoration:none;transition:border-color .15s}
+.st[hidden]{display:none}
+.st .hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.st .l{font-size:13px;color:#B4BFD1;font-weight:500}
+.st .dot{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 18%,transparent)}
+.st .v{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace;font-size:28px;font-weight:600;color:var(--title);line-height:1.1}.st .v.na{font-family:inherit;font-size:15px;font-weight:600;color:var(--mute);padding:7px 0 4px}
+.st .s{font-size:12px;color:var(--mute)}
+.st:hover,.st:focus-visible{border-color:color-mix(in srgb,var(--c) 50%,var(--edge));outline:none}
+.st.ok{--c:var(--ok)}.st.warn{--c:var(--warn)}.st.bad{--c:var(--bad)}.st.info{--c:var(--info)}
+/* teams (Global Admin) */
+.socp[hidden]{display:none}.socp .row b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.socp .row span{font-size:12px;color:var(--mute)}.socp .row .sv{font-weight:600;color:var(--c,var(--mute))}#soc-note{margin-top:8px;font-size:12px;color:var(--mute)}
+.teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}.teams[hidden],.sh[hidden],.duo[hidden],.also[hidden]{display:none}
+.tm{--c:#8C93A1;display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:14px;background:var(--panel);border:1px solid var(--edge);text-decoration:none;color:var(--text)}
+.tm:hover,.tm:focus-visible{border-color:color-mix(in srgb,var(--c) 50%,var(--edge));outline:none}
+.tm .r{display:flex;align-items:center;gap:12px}.tm b{display:block;font-size:15px;color:var(--title)}.tm small{font-size:12px;color:var(--mute)}
+.tm .k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tm .k span{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;background:var(--well);font-size:11px;color:var(--mute)}.tm .k span b{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:15px}
+.tm .go{font-size:13px;font-weight:600;color:var(--c)}
+/* team view: AI engineers + queue */
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-top:14px}
+.box{display:flex;flex-direction:column;gap:10px;padding:18px 20px;border-radius:14px;background:var(--panel);border:1px solid var(--edge)}
+.box h3{margin:0;font-size:15px;color:var(--title)}.box .s{font-size:12px;color:var(--mute)}
+.row{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 14px;border-radius:10px;background:var(--well);text-decoration:none;color:var(--text)}
+.row b{flex:1;font-weight:600}.row span{font-size:12px;color:var(--mute)}.row:hover{background:#141c2b}
+/* quick actions */
+.quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.qa{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:56px;border-radius:12px;background:var(--panel);border:1px solid var(--edge);color:var(--text);text-decoration:none;transition:border-color .15s}
+.qa:hover,.qa:focus-visible{border-color:#3a4864;outline:none}.qa b{display:block;font-size:13.5px;color:var(--title)}.qa span{font-size:12px;color:var(--mute)}
+/* workspaces */
+.ws{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.wk{--c:#8C93A1;display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:14px;background:var(--panel);border:1px solid var(--edge);transition:border-color .15s}
+.wk:hover{border-color:color-mix(in srgb,var(--c) 45%,var(--edge))}
+.wk .hd{display:flex;align-items:center;gap:12px;background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.wk .hd b{display:block;font-size:15px;color:var(--title);line-height:1.3}.wk .hd span{font-size:12px;color:var(--mute)}
+.wk ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.wk li a{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px;padding:0 8px;margin:0 -8px;border-radius:7px;color:var(--soft);text-decoration:none;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wk li a::after{content:"›";color:#5E6B82;font-size:16px}
+.wk li a:hover,.wk li a:focus-visible{background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--title);outline:none}
+.wk .all{margin-top:auto;padding-top:12px;border:0;border-top:1px solid var(--edge);background:none;color:var(--c);font:600 13px inherit;font-family:inherit;text-align:left;cursor:pointer}
+.also{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;padding:14px 18px;border-radius:14px;background:var(--panel);border:1px solid var(--edge)}
+.also>span{font-size:13px;color:var(--mute);margin-right:4px}.also a{height:34px;padding:0 12px;display:inline-flex;align-items:center;border-radius:8px;border:1px solid var(--border);font-size:13px;text-decoration:none}
+.also a:hover{border-color:#3a4864}
+/* search + chips */
+.tools{position:sticky;top:52px;z-index:20;padding:12px 0;margin:0 0 6px;background:linear-gradient(var(--bg) 70%,transparent)}
+.search{position:relative;max-width:720px}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--mute);fill:none;stroke-width:2}
+.search input{width:100%;height:46px;padding:0 90px 0 44px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:15px inherit;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
+.search input:focus{border-color:#3a4864;box-shadow:0 0 0 4px rgba(255,255,255,.05)}
+.search kbd{position:absolute;right:12px;top:50%;transform:translateY(-50%);font:600 11px ui-monospace,Consolas,monospace;color:var(--mute);border:1px solid var(--border);border-radius:6px;padding:2px 7px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.chip{--c:#8C93A1;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border-radius:999px;border:1px solid var(--border);background:var(--panel);color:var(--text);font:500 13px inherit;font-family:inherit;cursor:pointer;transition:all .15s}
+.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.chip[data-f=""]::before,.chip[data-fwf=""]::before{display:none}
+.chip i{font-style:normal;color:var(--mute)}
+.chip:hover{border-color:#3a4864}
+.chip.on{background:color-mix(in srgb,var(--c) 18%,var(--panel));border-color:color-mix(in srgb,var(--c) 55%,transparent);font-weight:600}
+.chip[data-f=""].on,.chip[data-fwf=""].on{background:var(--accent);border-color:var(--accent);color:#fff}.chip[data-f=""].on i{color:#D4E0F3}
+/* recent */
+.recent{margin:16px 0 4px}.recent[hidden]{display:none}
+.recent h3{margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.rlist{display:flex;gap:8px;flex-wrap:wrap}
+.rlist a{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:9px;background:var(--panel);border:1px solid var(--edge);color:var(--text);text-decoration:none;font-size:13px}
+.rlist a::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c,#8C93A1)}
+.rlist a:hover{border-color:#3a4864}
+/* groups */
+.grp{margin:26px 0 0}
+.grp h2{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:16px;color:var(--title)}
+.grp h2 small{font-size:12px;color:var(--mute);font-weight:500;border:1px solid var(--border);border-radius:999px;padding:1px 9px}
+.grp h2 .ic{width:30px;height:30px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.ic{--c:#8C93A1;flex:0 0 auto;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 15%,transparent)}
+.ic svg{width:55%;height:55%;fill:none;stroke:var(--c);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dc{--c:#8C93A1;position:relative;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto 1fr auto;column-gap:12px;row-gap:3px;padding:14px 34px 14px 14px;border-radius:13px;
+  background:var(--panel);border:1px solid var(--edge);color:var(--text);text-decoration:none;overflow:hidden;transition:border-color .15s}
+.dc .ic{grid-row:1/4}
+.dc .fw{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.fwt{--c:#8C93A1;font:600 10.5px ui-monospace,Consolas,monospace;color:color-mix(in srgb,var(--c) 85%,#fff);background:color-mix(in srgb,var(--c) 12%,transparent);border:1px solid color-mix(in srgb,var(--c) 32%,transparent);border-radius:5px;padding:1px 5px;white-space:nowrap}
+.fwbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}.fwbar>span{color:var(--mute);font-size:12px;margin-right:2px}.fwbar a{color:var(--mute);font-size:12px;margin-left:6px}
+.chip.pend{opacity:.6;cursor:help}
+.dc b{font-size:14.5px;color:var(--title);line-height:1.3}
+.dc>span:not(.ic){color:var(--mute);font-size:12.5px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dc em{position:absolute;right:13px;top:14px;font-style:normal;color:var(--mute);opacity:0;transition:opacity .15s}
+.dc:hover,.dc:focus-visible{border-color:color-mix(in srgb,var(--c) 50%,var(--edge));outline:none}
+.dc:hover em,.dc:focus-visible em{opacity:1;color:var(--c)}
+.dc.sel{border-color:color-mix(in srgb,var(--c) 70%,var(--edge));box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 25%,transparent)}
+mark{background:color-mix(in srgb,#e3b341 35%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.none{display:none;text-align:center;color:var(--mute);padding:50px 10px;border:1px dashed var(--border);border-radius:14px;margin-top:20px}
+.foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-top:32px;padding-top:16px;border-top:1px solid var(--edge);font-size:12px;color:#8A96AB}
+.foot .z{display:inline-flex;align-items:center;gap:10px}.foot .z img{height:22px;width:auto;display:block}
+/* regulators whose frameworks the platform maps: small, together, bottom right; one click to the Compliance Map */
+.regs{margin-left:auto;display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:var(--mute)}.regs[hidden]{display:none}
+.regs .rl{font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.regs .rp{display:inline-flex;align-items:center;gap:14px;background:#fff;border-radius:8px;padding:6px 12px;border:1px solid transparent;transition:border-color .15s}
+.regs .rp img{height:26px;width:auto;display:block}.regs:hover .rp,.regs:focus-visible .rp{border-color:var(--accent);outline:none}
+@media(max-width:700px){.regs{margin-left:0}.regs .rp img{height:22px}}
+.hint kbd{font:600 11px ui-monospace,Consolas,monospace;border:1px solid var(--border);border-radius:5px;padding:1px 6px}
+@media(max-width:700px){.who{margin-left:0}.ttl{border-left:0;padding-left:0}.greet{font-size:24px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ===== Cyber Resilience Command (hero) - drawn from the Executive Dashboard and Live Status; nothing invented ===== */
+.cmd{position:relative;overflow:hidden;border:1px solid #1f2b44;border-radius:20px;margin:6px 0 14px;background:radial-gradient(900px 380px at 85% -10%,rgba(229,72,77,.16),transparent 60%),radial-gradient(700px 420px at 0% 110%,rgba(56,120,255,.16),transparent 60%),linear-gradient(135deg,#0d1424,#0a0f1a 60%,#0d1320)}
+.cmd canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.9}
+.cmd .in{position:relative;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);gap:22px;padding:26px 28px 24px}@media(max-width:1000px){.cmd .in{grid-template-columns:1fr}}
+.cmd .eb{display:flex;align-items:center;gap:10px;font:600 11.5px "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#9fb0cc}
+.cmd .eb i{width:8px;height:8px;border-radius:50%;background:#3fb950;box-shadow:0 0 0 0 rgba(63,185,80,.6);animation:cmdp 2.2s infinite}.cmd .eb i.off{background:#6e7681;animation:none}
+@keyframes cmdp{0%{box-shadow:0 0 0 0 rgba(63,185,80,.55)}70%{box-shadow:0 0 0 10px rgba(63,185,80,0)}100%{box-shadow:0 0 0 0 rgba(63,185,80,0)}}
+.cmd h1{margin:12px 0 8px;font:700 clamp(28px,3.6vw,44px)/1.08 "IBM Plex Sans",system-ui,sans-serif;color:#fff;letter-spacing:-.01em}.cmd h1 span{display:block;background:linear-gradient(90deg,#ff5a5f,#ff8a5b 45%,#ffb86b);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cmd .lead{max-width:640px;color:#b9c4d6;font-size:14.5px;margin:0 0 14px}
+.cmd .chips{display:flex;flex-wrap:wrap;gap:8px}.cmd .chips a,.cmd .chips span{display:inline-flex;align-items:center;gap:7px;border:1px solid #2a3a58;background:rgba(14,22,38,.7);border-radius:999px;padding:5px 12px;font-size:12.5px;color:#d7dfeb;text-decoration:none}
+.cmd .chips a:hover{border-color:#4a6aa0}.cmd .chips b{color:#fff}.cmd .chips .d{width:8px;height:8px;border-radius:50%;padding:0;border:0;flex:none;display:inline-block}
+.cmd .gx{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:center;background:rgba(10,16,28,.55);border:1px solid #22314d;border-radius:16px;padding:14px 16px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}@media(max-width:520px){.cmd .gx{grid-template-columns:1fr}}
+.cmd .gx a{color:inherit;text-decoration:none}.cmd .g svg{display:block;width:200px;height:200px;max-width:100%}
+.cmd .gt{font-size:12px;color:#9fb0cc}.cmd .gt b{display:block;color:#fff;font-size:14px;margin-bottom:2px}.cmd .spark svg{display:block;width:100%;height:96px}
+.cmd .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cmd .badges span{font-size:11.5px;border-radius:999px;padding:2px 9px;border:1px solid #2a3a58;color:#d7dfeb}
+.cmd .badges .up{border-color:#193C75;color:#76A3EA}.cmd .badges .dn{border-color:#7a2a2e;color:#ff9a9e}.cmd .badges .un{border-color:#7a5a1a;color:#f5c26b}
+.pil{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0 0 14px}@media(max-width:1100px){.pil{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pil a{display:block;text-decoration:none;color:var(--text);background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:12px 14px;position:relative;overflow:hidden}.pil a:hover{border-color:var(--border)}
+.pil .n{font-size:12.5px;color:var(--mute)}.pil .v{font:600 26px "IBM Plex Mono",ui-monospace,monospace;color:#fff;margin:4px 0 6px}.pil .v.na{font:500 13px "IBM Plex Sans",system-ui,sans-serif;color:var(--mute);margin:10px 0 10px}
+.pil .bar{height:6px;border-radius:4px;background:#1b2436;overflow:hidden}.pil .bar i{display:block;height:100%;border-radius:4px}.pil .s{font-size:11.5px;color:var(--mute);margin-top:6px}
+.kst{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:0 0 16px}
+.kst .k{background:var(--well);border:1px solid var(--edge);border-radius:12px;padding:10px 12px}.kst .k .l{font-size:11.5px;color:var(--mute);display:block;min-height:30px}.kst .k .v{font:600 22px "IBM Plex Mono",ui-monospace,monospace;color:#fff}
+.kst .k .b{display:inline-block;margin-top:4px;font-size:11px;border-radius:999px;padding:1px 8px;border:1px solid #2a3a58;color:#c9d2e0}.kst .k .b.up{color:#76A3EA;border-color:#193C75}.kst .k .b.dn{color:#ff9a9e;border-color:#7a2a2e}.kst .k .b.un{color:#f5c26b;border-color:#7a5a1a}
+.t2c .big b.txt{font:500 15px "IBM Plex Sans",system-ui,sans-serif;color:var(--mute)}
+@media(prefers-reduced-motion:reduce){.cmd .eb i{animation:none}}
+.plate.zs b{white-space:nowrap}.plate{flex:0 0 auto}
+.brandsw{cursor:pointer;color:var(--text);font:500 12.5px inherit;font-family:inherit}.brandsw i{width:26px;height:14px;border-radius:999px;background:var(--border);position:relative;flex:0 0 auto}
+.brandsw i:after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:#fff;transition:left .15s}
+.brandsw[aria-checked=true] i{background:#174081}.brandsw[aria-checked=true] i:after{left:14px}.brandsw:focus-visible{outline:2px solid #4472BB;outline-offset:2px}
+/* Platform intelligence: four tiles from the platform's own ML engines and one ranked list of signals; a premium finish (a hairline gold-to-green edge) shared with the sign-in page */
+.pi{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:14px;margin-bottom:18px}@media(max-width:1100px){.pi{grid-template-columns:1fr}}
+.pi-cap{font-size:12px;color:var(--mute)}.pi-sh h2:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#D9B95B;box-shadow:0 0 0 3px rgba(217,185,91,.18);margin-inline-end:9px;vertical-align:middle}
+.pi-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}@media(max-width:640px){.pi-tiles{grid-template-columns:1fr}}
+.pi-t,.pi-sig{position:relative;border-radius:16px;padding:16px 18px;color:var(--text);text-decoration:none;display:block;background:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.012)),var(--panel);box-shadow:0 14px 34px rgba(0,0,0,.22)}
+.pi-t:before,.pi-sig:before{content:"";position:absolute;inset:0;border-radius:16px;padding:1px;background:linear-gradient(140deg,rgba(217,185,91,.75),rgba(217,185,91,.12) 24%,rgba(68,114,187,.55) 55%,rgba(68,114,187,.10) 80%,rgba(217,185,91,.55));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);pointer-events:none}
+a.pi-t{transition:transform .18s,box-shadow .18s}a.pi-t:hover{transform:translateY(-2px);box-shadow:0 20px 44px rgba(0,0,0,.34)}
+.pi-t .l,.pi-sig .l{font-size:12.5px;color:var(--mute)}.pi-t .pr{display:flex;align-items:center;gap:14px;margin-top:10px}
+.pi-t .v{font:600 34px "IBM Plex Mono",ui-monospace,Consolas,monospace;color:var(--title);line-height:1}.pi-t .v.na{font:500 15px inherit;color:var(--mute)}.pi-t .v small{font-size:14px;color:var(--mute);font-weight:500}
+.pi-t .s{font-size:12.5px;color:var(--soft);margin-top:9px;line-height:1.45}.pi-t .go{position:absolute;top:14px;inset-inline-end:16px;font-size:12px;color:#D9B95B}
+.pi-t svg.ring{flex:0 0 auto}.pi-t.bad .v{color:#ff8a8a}.pi-t.warn .v{color:#f2c04d}
+.pi-sig ol{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.pi-sig li a{display:grid;grid-template-columns:8px 1fr;gap:10px;text-decoration:none;color:var(--text);padding:9px 11px;border-radius:10px;background:var(--well);border:1px solid var(--edge)}.pi-sig li a:hover{border-color:rgba(217,185,91,.5)}
+.pi-sig li i{width:8px;border-radius:4px;background:var(--mute)}.pi-sig li.bad i{background:#f25c5c}.pi-sig li.warn i{background:#f2c04d}.pi-sig li.ok i{background:var(--ok)}
+.pi-sig li small{display:block;color:var(--mute);font-size:11.5px;margin-top:2px}.pi-sig li b{font-weight:600}.pi-sig li em{font-style:normal;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#D9B95B;margin-inline-end:6px}
+</style>
+<style id="orgBrand" media="not all">
+/* ===== {{org.upper}} BRAND LAYER: one colour ({{org.short}} colours) on one deep canvas, like the sign-in page. Every
+   decorative category / team / framework colour becomes the brand colour; colour that MEANS something stays: severity, health
+   scores and status (ok / warn / bad). ===== */
+:root{--bg:#060B12;--top:#090E17;--panel:#0D131D;--well:#0A0F18;--edge:#161E2A;--border:#1F2A3B;--text:#E5E9F0;--title:#FFFFFF;--mute:#919CAD;--soft:#C4CBD7;
+  --brand:#0F2C5B;--accent:#174081;--accent-l:#4472BB;--accent-xl:#89ADE6;--accent-t:rgba(68,114,187,.14);--accent-b:rgba(68,114,187,.38)}
+body{background:radial-gradient(1100px 700px at 0% -10%,rgba(23,64,129,.20),transparent 60%),radial-gradient(900px 700px at 100% 0%,rgba(15,44,91,.18),transparent 60%),var(--bg) fixed;font-size:14.5px;-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1.2px);background-size:24px 24px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 70%);mask-image:linear-gradient(180deg,#000,transparent 70%)}
+.top,main,.foot{position:relative;z-index:1}
+.top{background:rgba(9,14,23,.86);border-bottom:1px solid var(--edge);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.top:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:linear-gradient(90deg,transparent,var(--accent) 25%,var(--accent-l) 60%,transparent)}
+.plate.zs{background:linear-gradient(135deg,#0C1F3E,#0F2C5B);border:1px solid #284A80;box-shadow:0 8px 24px rgba(0,0,0,.35)}.plate.zs b{letter-spacing:.18em}.plate.zs b i{color:var(--accent-xl)}
+.ttl b{font-size:15.5px;letter-spacing:-.005em}
+.badge{background:rgba(255,255,255,.03)}.badge i{background:var(--accent-l)}
+/* type scale: 34 / 20 / 15 / 13 / 12, one weight ladder */
+.greet{font-size:34px;letter-spacing:-.02em}
+.sub{font-size:15.5px;line-height:1.6}
+.eyebrow,.sh h2,.grc-h b{font-size:12px;letter-spacing:.14em;color:var(--accent-xl)}
+.tag{--c:var(--accent-xl)}
+.sh{margin:36px 0 14px}.sh .ln{background:linear-gradient(90deg,var(--edge),transparent)}
+.btn{border-radius:10px;border-color:var(--border)}.btn.pri{background:var(--accent);border-color:var(--accent);box-shadow:0 6px 18px rgba(23,64,129,.30)}.btn.pri:hover{filter:none;background:#1A4891}.btn:hover{border-color:var(--accent-b)}
+a.btn:not(.pri):hover{color:#fff}
+/* one colour for every category, team, workspace and framework marker (severity .sv keeps its meaning) */
+main [style*="--c:"]:not(.sv),.teambar a,.qa,.wk,.grp,.tm,.chip{--c:var(--accent-l)!important}
+.fwt{--c:var(--accent-xl)!important}
+/* cards: one surface, one border, one hover */
+.st,.wk,.tm,.qa,.dc,.t2c,.kst .k,.pil a,.socp>*{background:var(--panel);border-color:var(--edge)!important;border-radius:14px}
+.st:hover,.wk:hover,.tm:hover,.qa:hover,.dc:hover,.pil a:hover{border-color:var(--accent-b)!important;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.grc .st{background:linear-gradient(180deg,rgba(68,114,187,.06),transparent 55%),var(--panel)}
+.st .l{color:var(--soft)}
+/* the command hero: brand colour, not orange / blue */
+.cmd{background:radial-gradient(700px 360px at 85% 0%,rgba(68,114,187,.18),transparent 65%),linear-gradient(160deg,#0A111D,#090E17)!important;border-color:var(--border)!important}
+.cmd h1 span{background:linear-gradient(90deg,#FFFFFF,var(--accent-xl) 55%,var(--accent-l))!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important}
+.cmd .eb,.cmd .gt{color:var(--mute)!important}.cmd .lead{color:var(--soft)!important}
+.cmd .chips a,.cmd .chips span{border-color:var(--border)!important;background:rgba(9,14,23,.7)!important;color:var(--soft)!important}.cmd .chips a:hover{border-color:var(--accent-b)!important}
+.cmd .gx{background:rgba(8,13,21,.6)!important;border-color:var(--border)!important}
+.cmd .badges span,.kst .k .b{border-color:var(--border)}
+.pil .bar,.st .bar{background:var(--edge)!important}
+.foot{border-top:1px solid var(--edge)}
+/* the platform theme (vendor/zyb-vivid.css, blue accent) styles every page through --v-* / --m-* variables. On this page they are set
+   to the {{org.short}} blues for the content only - the header bar, the page and the footer; the menu keeps the platform look */
+html.zyb-modern:root body{background:radial-gradient(1100px 700px at 0% -10%,rgba(23,64,129,.20),transparent 60%),radial-gradient(900px 700px at 100% 0%,rgba(15,44,91,.16),transparent 60%),#060B12!important}
+html.zyb-modern .top,html.zyb-modern main,html.zyb-modern .foot{--v-bg:#060B12;--v-panel:#0D131D;--v-panel2:#101723;--v-input:#090E17;--v-line:#161E2A;--v-line2:#1F2A3B;--v-line3:#2A374C;
+  --v-acc:#174081;--v-acc-ink:#FFFFFF;--v-on:#101E34;--v-on-line:#284A80;--v-sub:#B4BCC9;--v-mute:#919CAD;--v-lbl:#8490A2;--v-ink:#E5E9F0;--v-ink2:#D1D7E1;
+  --m-bg:#060B12;--m-surf:#0D131D;--m-surf2:#101723;--m-surf3:#142032;--m-line:#161E2A;--m-line2:#1F2A3B;--m-mute:#919CAD;--m-ink2:#E5E9F0;--m-acc:#174081;--m-acc2:#174081;--m-acc-soft:rgba(23,64,129,.18);
+  --bg:#060B12;--top:#090E17;--panel:#0D131D;--well:#0A0F18;--edge:#161E2A;--border:#1F2A3B;--text:#E5E9F0;--title:#FFFFFF;--mute:#919CAD;--soft:#C4CBD7;--accent:#174081;--accent-t:rgba(68,114,187,.14)}
+html.zyb-modern main .btn.pri{background:#174081!important;border-color:#174081!important;color:#fff!important;box-shadow:0 6px 18px rgba(23,64,129,.30)}html.zyb-modern main .btn.pri:hover{background:#1A4891!important}
+/* equal-height cards in a row: the action line sits on the same baseline in every card */
+.teams .tm .go{margin-top:auto;padding-top:12px;border-top:1px solid var(--edge)}.tm .r .ic{flex:0 0 auto}
+.ic,.wk .ic,.tm .ic,.qa .ic{background:var(--accent-t)!important;color:var(--accent-xl)!important;box-shadow:inset 0 0 0 1px var(--accent-b)}
+/* header: one aligned row - brand, platform name, then the clock and badges on the right */
+@media(min-width:1100px){.top .in{flex-wrap:nowrap}.brand{flex:1 1 auto;min-width:0}.ttl{min-width:0}.ttl b{white-space:normal;line-height:1.3}.who{flex:0 0 auto;margin-left:16px}.pwr{display:none}}
+.clock{font-size:17px}.badge{height:32px}
+main .grc-h a,main .sh a,main a.more,main .tm .go,main .wk .all{color:var(--accent-xl)!important}main .grc-h a:hover,main .sh a:hover{color:#fff!important}
+</style>
+<script>/* Brand colours switch: Zyberon Sentra (default) or the organisation colours - saved with the other dashboard preferences */
+(function(){try{var p=JSON.parse(localStorage.getItem('zyb-dash-prefs')||'{}')||{};var d=!(window.ZYB_ORG&&window.ZYB_ORG.company_look===false);window.__orgBrand=p.brand==='org'||(p.brand!=='off'&&d);}catch(e){window.__orgBrand=!(window.ZYB_ORG&&window.ZYB_ORG.company_look===false);/* no storage: the default design */}
+if(window.__orgBrand){document.getElementById('orgBrand').media='all';document.documentElement.classList.add('org-brand');}})();</script>
+</head><body>
+<header class="top"><div class="in">
+  <a class="brand" href="index.html"><span class="plate zs" id="zsplate"><b>ZYBERON <i>SENTRA</i></b></span><span class="ttl"><b>IT Operations &amp; Cyber Security Automation &amp; Monitoring Platform</b><span class="org"><span id="orglogo">{{org.short}}</span><span>·</span><span id="teamlabel">Global Admin</span></span></span></a>
+  <div class="who"><div class="clock" id="clock">--:--<small>Riyadh</small></div><span class="badge"><i></i><span id="role">Signed in</span></span><span class="badge" id="count"></span><button type="button" class="badge brandsw" id="brandsw" data-zyb-brandsw role="switch" aria-checked="false" title="Brand colours: Zyberon Sentra or {{org.short}}"><i></i><span id="brandlbl">{{org.short}} colours</span></button><span class="pwr" id="pwr">Powered by <span id="mark"></span></span></div>
+</div></header>
+<main>
+<section class="hello">
+  <div>
+    <div class="eyebrow"><span class="tag" id="teamtag">Global Admin</span><span id="today"></span></div>
+    <p class="greet" id="greet">Welcome.</p>
+    <p class="sub" id="intro">The whole platform at a glance: every team, every workspace, every connection. Every figure is read live from its source; a source that is not connected says so.</p>
+  </div>
+  <div class="acts"><a class="btn pri" href="my-work.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Open My Work</a><a class="btn" id="cta" href="connections.html">Connections &amp; Setup</a></div>
+</section>
+<section class="grc" id="grc" aria-label="Enterprise risk and compliance">
+  <div class="grc-h"><b>Enterprise Risk &amp; Compliance</b><a href="compliance-overview.html">Compliance overview →</a></div>
+  <div class="grc-k">
+    <a class="st" id="grc-er" href="enterprise-risk.html"><span class="hd"><span class="l">Enterprise Risk</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">risk posture</span></a>
+    <a class="st" id="grc-sama" href="sama-audit.html"><span class="hd"><span class="l">SAMA Cyber Security Framework</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">SAMA CSF</span></a>
+    <a class="st" id="grc-nca-ecc" href="nca-ecc.html"><span class="hd"><span class="l">NCA ECC</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">Essential Cybersecurity Controls</span></a>
+    <a class="st" id="grc-pdpl" href="pdpl-dashboard.html"><span class="hd"><span class="l">PDPL</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">Personal Data Protection Law</span></a>
+    <a class="st" id="grc-ndmo" href="ndmo.html"><span class="hd"><span class="l">NDMO</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">data management</span></a>
+  </div>
+</section>
+<nav class="teambar" id="teambar" aria-label="Team home" hidden></nav>
+<section class="cmd" id="cmd" aria-label="Cyber resilience command">
+  <canvas id="cmdNet" aria-hidden="true"></canvas>
+  <div class="in">
+    <div>
+      <div class="eb"><i id="cmdPulse" class="off"></i><span>{{org.short}} · Cyber Resilience Command</span></div>
+      <h1>Cyber Resilience.<span>Engineered for what's next.</span></h1>
+      <p class="lead">One command center over the SOC, GRC, vulnerabilities and the whole estate. Every figure below is read live from its source and learned from the platform's own history; a source that is not connected says so.</p>
+      <div class="chips" id="cmdChips"><span>Loading the live picture…</span></div>
+    </div>
+    <div class="gx">
+      <a class="g" id="cmdGauge" href="executive-dashboard.html" aria-label="Executive health index"></a>
+      <div><div class="gt"><b>Executive health index</b><span id="cmdGrade">five pillars, weighted · withheld below three measured</span></div>
+        <div class="spark" id="cmdSpark" aria-label="Health index history and 30-day forecast"></div>
+        <div class="badges" id="cmdBadges"></div></div>
+    </div>
+  </div>
+</section>
+<div class="pil" id="cmdPillars" aria-label="Pillars"></div>
+<div class="kst" id="cmdKpis" aria-label="Key figures"></div>
+<div class="sh"><h2>Today</h2><span class="ln"></span><span class="note">machine learning on the platform's own history · AI picks what to do first</span></div>
+<div id="t2warn"></div>
+<section class="t2" id="t2" aria-label="Today">
+  <a class="t2c" id="t2-idx" href="executive-dashboard.html"><span class="l">Executive health index</span><div class="big"><b>…</b></div><div class="meta"></div></a>
+  <a class="t2c" id="t2-live" href="live-status.html"><span class="l">Data feeds live</span><div class="big"><b>…</b></div><div class="meta"></div></a>
+  <div class="t2c t2first" id="t2-first"><span class="l">Do these first - ranked from decisions waiting, risks, feeds down and what got worse</span><ol><li class="l">Loading…</li></ol></div>
+  <div class="t2c t2ai" id="t2-ai"><span class="l">AI: what should I do first today?</span><div class="meta"></div></div>
+</section>
+<div class="sh pi-sh"><h2>Platform intelligence</h2><span class="ln"></span><span class="pi-cap">machine learning on the platform's own records · what is coming, what waits for a person</span></div>
+<section class="pi" id="pi" aria-label="Platform intelligence">
+  <div class="pi-tiles" id="pi-tiles"><div class="pi-t"><span class="l">Loading…</span></div></div>
+  <div class="pi-sig" id="pi-sig"><span class="l">Signals - ranked across infrastructure, the AI engineers, AI governance and backup</span><ol><li class="l">Loading…</li></ol></div>
+</section>
+<div class="sh"><h2>Live status</h2><span class="ln"></span><a href="my-work.html">Open My Work →</a></div>
+<div class="status" id="status">
+  <a class="st" id="st-dec" href="my-work.html"><span class="hd"><span class="l">Waiting for a decision</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="s">approvals, fixes to apply, response actions</span></a>
+  <a class="st" id="st-prob" href="my-work.html"><span class="hd"><span class="l">Critical &amp; high problems</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="s">open, across every AI engineer</span></a>
+  <a class="st" id="st-srv" href="server-availability.html"><span class="hd"><span class="l">Servers online</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="s">Server Availability</span></a>
+  <a class="st" id="st-db" href="databases.html"><span class="hd"><span class="l">Databases monitored</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="s">read in the last pass</span></a>
+  <a class="st" id="st-ai" href="ai-team.html"><span class="hd"><span class="l">AI engineers on duty</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="s">AI Engineering Team</span></a>
+</div>
+<div class="sh" id="teams-h"><h2>Teams</h2><span class="ln"></span><span class="note">Each team lands on its own home page, set by its job role in Roles &amp; Functions.</span></div>
+<div class="teams" id="teams"></div>
+<div class="duo" id="duo" hidden>
+  <div class="box"><h3>Your AI engineers</h3><span class="s">Every action is approved by a named person on your team.</span><div id="engs"></div></div>
+  <div class="box"><h3>Your team's queue</h3><span class="s">Open items raised by your team's AI engineers.</span><div id="tq"></div></div>
+</div>
+<!-- SOC home: the SOC at a glance from the SIEM (/api/soc/soc/overview), shown on the Security Operations home only -->
+<section class="socp" id="socp" hidden>
+  <div class="sh"><h2>Security operations now</h2><span class="ln"></span><a href="soc-alerts.html">Open the Alert Queue →</a></div>
+  <div class="status" id="soc-k"></div>
+  <div class="duo">
+    <div class="box"><h3>Act now</h3><span class="s">The open alerts the SOC model ranks highest - priority, severity and what they touch.</span><div id="soc-act"></div></div>
+    <div class="box"><h3>Attacks and risky users</h3><span class="s">Correlated XDR incidents and the riskiest users and hosts (UEBA).</span><div id="soc-xu"></div></div>
+  </div>
+  <div class="s" id="soc-note"></div>
+</section>
+<div class="sh"><h2>Start here</h2><span class="ln"></span></div>
+<div class="quick" id="quick"></div>
+<div class="sh"><h2 id="ws-h">Workspaces</h2><span class="ln"></span><a href="#dir" id="toall">All dashboards ↓</a></div>
+<div class="ws" id="ws"></div>
+<div class="also" id="also" hidden></div>
+<div class="sh" id="dir"><h2>All dashboards</h2><span class="ln"></span></div>
+<div class="tools">
+  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Search all dashboards — e.g. SAMA, Data Guard, firewall, backup, M365…" autocomplete="off" aria-label="Search dashboards"><kbd>/</kbd></div>
+  <div class="chips" id="chips" role="toolbar" aria-label="Filter by area"></div>
+  <div class="fwbar" id="fwbar" role="toolbar" aria-label="Filter by compliance framework"></div>
+</div>
+<div class="recent" id="recent" hidden><h3>Recently opened</h3><div class="rlist" id="rlist"></div></div>
+<div id="groups">
+
+</div>
+<div class="none" id="none"><span id="nmsg">No dashboard matches “<span id="nq"></span>”.</span><span id="nfw" hidden></span></div>
+<p class="hint" style="text-align:center;color:var(--mute);font-size:12px;margin:26px 0 0"><kbd>/</kbd> search · <kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> open · <kbd>Ctrl</kbd>+<kbd>K</kbd> any page</p>
+<footer class="foot"><span class="z">Zyberon Sentra · IT Operations &amp; Cyber Security Automation &amp; Monitoring Platform · {{org.name}} · managed by <span id="zfoot">Zyberon</span></span><a class="regs" id="regs" href="compliance-map.html" hidden><span class="rl">Frameworks mapped</span><span class="rp" id="regp"></span></a></footer>
+</main>
+<script>
+(function(){
+  'use strict';
+  var N=window.ZYB_NAV||[],E=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var svg=function(a){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+a.icon+'</svg>';};
+  var total=0;N.forEach(function(a){total+=a.pages.length;});
+  document.getElementById('count').textContent=window.zybLang&&window.zybLang.lang==='ar'?total+' لوحة معلومات':total+' dashboards';
+  document.getElementById('chips').innerHTML='<button type="button" class="chip on" data-f="">All <i>'+total+'</i></button>'+N.map(function(a){return '<button type="button" class="chip" data-f="'+E(a.id)+'" style="--c:'+E(a.c)+'">'+E(a.name)+' <i>'+a.pages.length+'</i></button>';}).join('');
+  document.getElementById('groups').innerHTML=N.map(function(a){return '<section class="grp" data-sec="'+E(a.id)+'" style="--c:'+E(a.c)+'"><h2><span class="ic">'+svg(a)+'</span>'+E(a.name)+'<small>'+a.pages.length+'</small></h2><div class="grid">'
+    +a.pages.map(function(p){var tg=window.zybFwTags?window.zybFwTags(p.fw):[];
+      // framework chips: "SAMA 3.3.14 · 3.3.5"; the full domain names are in the tooltip, the codes are searchable
+      var fw=tg.map(function(t){return '<i class="fwt" style="--c:'+E(t.c)+'" title="'+E(t.codes.map(function(c){return t.short+' '+c[0]+' - '+c[1];}).join('\n'))+'">'+E(t.short+' '+t.codes.map(function(c){return c[0].replace(/^Art\. /,'');}).join(' · '))+'</i>';}).join('');
+      var fk=tg.map(function(t){return t.k+' '+t.short+' '+t.codes.map(function(c){return c[0];}).join(' ');}).join(' ');
+      return '<a class="dc" href="'+E(p.h)+'" data-cat="'+E(a.id)+'" data-fw="'+E(tg.map(function(t){return t.k;}).join(' '))+'" data-fk="'+E(fk)+'" style="--c:'+E(a.c)+'"><span class="ic">'+svg(a)+'</span><b>'+E(p.t)+'</b><span>'+E(p.d)+'</span>'+(fw?'<small class="fw">'+fw+'</small>':'')+'<em aria-hidden="true">→</em></a>';}).join('')+'</div></section>';}).join('');
+  var FW=window.ZYB_FW||{};
+  document.getElementById('fwbar').innerHTML='<span>Framework</span><button type="button" class="chip on" data-fwf="">Any</button>'+['sama','nca','pdpl','ia'].filter(function(k){return FW[k];}).map(function(k){var f=FW[k],n=0;N.forEach(function(a){a.pages.forEach(function(p){if(p.fw&&p.fw[k]&&p.fw[k].length)n++;});});
+    return f.pending?'<button type="button" class="chip pend" data-fwf="'+k+'" style="--c:'+E(f.c)+'" title="'+E(f.pending)+'">'+E(f.short)+' <i>pending</i></button>':'<button type="button" class="chip" data-fwf="'+k+'" style="--c:'+E(f.c)+'" title="'+E(f.name+(f.basis?' - '+f.basis:''))+'">'+E(f.short)+' <i>'+n+'</i></button>';}).join('')+'<a href="compliance-map.html">Compliance map →</a>';
+  if(!N.length)document.getElementById('groups').innerHTML='<div class="none" style="display:block">The dashboard list (vendor/zyb-nav.js) did not load — refresh, or run the dashboards install.</div>';
+  // logos: the real the organisation and Zyberon artwork (vendor/zyb-brand.js); without it, the names in text
+  var B=window.ZYB_BRAND||{},img=function(src,alt,h){var i=document.createElement('img');i.src=src;i.alt=alt;if(h)i.style.height=h+'px';return i;};
+  if(ZYB_ORG.logo){var pl=document.getElementById('orglogo');pl.textContent='';pl.appendChild(img(ZYB_ORG.logo,ZYB_ORG.name));}
+  // regulators (bottom right): the frameworks this platform maps evidence to - shown as coverage, not as an endorsement
+  // which ones: the frameworks in the brand setting (ZYB_ORG.frameworks); a regulator's mark where the platform has one, the name otherwise
+  var FW={nca:{name:'National Cybersecurity Authority (NCA)',fw:'NCA Essential Cybersecurity Controls'},iso27001:{name:'ISO/IEC 27001',fw:'ISO/IEC 27001'},pdpl:{name:'PDPL',fw:'Personal Data Protection Law (SDAIA)'},ndmo:{name:'NDMO',fw:'NDMO data management standards'},sama:{name:'SAMA',fw:'SAMA Cyber Security Framework'},ia:{name:'Insurance Authority',fw:'Insurance Authority requirements'}};
+  var regs=(ZYB_ORG.frameworks||[]).map(function(k){var m=(B.regulators||[]).filter(function(r){return r.k===k;})[0];return m||(FW[k]?{k:k,name:FW[k].name,fw:FW[k].fw}:null);}).filter(Boolean);
+  if(regs.length){var rp=document.getElementById('regp');regs.forEach(function(r){var i;if(r.src){i=img(r.src,r.name);}else{i=document.createElement('b');i.textContent=r.name;i.style.cssText='font:600 11px/1 system-ui,sans-serif;padding:5px 7px;border:1px solid var(--edge,#2a3345);border-radius:6px;white-space:nowrap';}i.title=r.fw;rp.appendChild(i);});
+    var rg=document.getElementById('regs');rg.title='Controls on this platform are mapped to: '+regs.map(function(r){return r.fw;}).join(', ')+' - open the Compliance Map';rg.setAttribute('aria-label','Frameworks mapped: '+regs.map(function(r){return r.name;}).join(', ')+'. Open the Compliance Map');rg.hidden=false;}
+  var zs=B.zyberonWhite||window.__zybLogo;
+  if(zs){var m=document.getElementById('mark');m.appendChild(img(zs,'Zyberon'));var zf=document.getElementById('zfoot');zf.textContent='';zf.appendChild(img(zs,'Zyberon'));}else document.getElementById('mark').textContent='Zyberon';
+})();
+</script>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var N=window.ZYB_NAV||[],E=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var svg=function(a){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+a.icon+'</svg>';};
+  var AREA={},PG={};N.forEach(function(a){AREA[a.id]=a;a.pages.forEach(function(p){PG[p.h]={a:a,p:p};});});
+  /* Team homes. A team = the workspaces it owns, the AI engineers (duty engine ids) whose items it answers for, its quick
+     actions and which live tiles mean something to it. Global Admin sees everything. Which home a person gets comes from
+     their job role (Roles & Functions, /api/itam/roles/me) - see teamOf(). */
+  var TEAMS={
+    all:{name:'Global Admin',c:'#89ADE6',intro:'The whole platform at a glance: every team, every workspace, every connection. Every figure is read live from its source; a source that is not connected says so.',
+      areas:null,eng:null,tiles:['st-dec','st-prob','st-srv','st-db','st-ai'],cta:['connections.html','Connections & Setup'],
+      quick:[['my-work.html','My Work','What needs you now'],['connections.html','Connections & Setup','Add and check data sources'],['user-management.html','User Management','Accounts, MFA, access review'],['roles.html','Roles & Functions','Job roles and which team home each person gets'],['db-morning.html','Morning Health Check','Every database and server, checked before 07:00'],['db-dashboard.html','Database Dashboard','Health, thresholds, DB alerts'],['databases.html','Databases','Every database, add one'],['domains.html','Domains & Hosting','Domains, DNS, certificates, where each site is hosted']]},
+    infra:{name:'IT Infrastructure',c:'#e3b341',icon:'srv',sub:'Servers · Databases · Networks · Storage & backup',intro:'Servers, databases, networks, storage and backup: what is down, slow or about to run out.',
+      areas:['srv','db','net','stor'],eng:['network','windows','virt','dba'],tiles:['st-dec','st-prob','st-srv','st-db','st-ai'],cta:['add-server.html','Add server / device'],
+      quick:[['server-availability.html','Server Availability','What is up and down'],['virtualization.html','Virtualization','VMware and Nutanix'],['capacity.html','Capacity Planning','What runs out, and when'],['db-morning.html','Morning Health Check','The daily DBA round, automated'],['db-dashboard.html','Database Dashboard','Tablespaces, backups, DB alerts'],['db-performance.html','Database Performance','Slow databases and top SQL'],['db-sessions.html','Long-Running Queries','Sessions holding up a database'],['sdwan.html','SD-WAN','Links and sites'],['npm-summary.html','NPM Summary','Network devices and interfaces'],['backup.html','Backup Coverage','What is and is not backed up'],['dr-replication.html','DR Replication','Replication to the DR site']],
+      also:['soc-live.html','reconcile.html','end-user-devices.html','live-compliance.html']},
+    cyber:{name:'Cyber Security',c:'#ff7b72',icon:'soc',sub:'SIEM · Incident response · Endpoint & email · Identity',intro:'Alerts, incidents and approvals across the SIEM, endpoints, email and identities.',
+      areas:['soc','pt','eps','usr'],eng:['security','siem','zscaler','ksc','pentest','ciso'],tiles:['st-dec','st-prob','st-ai'],cta:['soc-live.html','Open Live SIEM Stream'],
+      quick:[['soc-live.html','Live SIEM Stream','What is happening now, with AI / ML'],['soc-response.html','Playbooks & Approvals','Containment waiting for a decision'],['soc-xdr.html','XDR','Correlated attacks across sources'],['soc-ueba.html','User Behaviour (UEBA)','Unusual sign-ins and activity'],['email-security.html','Email Security','Phishing and quarantine'],['email-analysis.html','Phishing Analysis','Check a reported e-mail'],['dlp.html','Data Loss Prevention','What left, who, through which channel'],['detection-validation.html','Detection Validation','Which attacks we would catch'],['soc-intel.html','Threat Intel & After-hours','Indicators and out-of-hours activity']],
+      also:['sdwan.html','server-availability.html','grc-workspace.html','credential-security.html']},
+    app:{name:'Applications',c:'#f778ba',icon:'app',sub:'Business applications · Claims portal · App audit',intro:'Business applications and the claims portal: availability, performance and audit findings.',
+      areas:['app','db','usr'],eng:['apps','dba','exchange'],tiles:['st-dec','st-prob','st-db','st-ai'],cta:['applications.html','Open All Applications'],
+      quick:[['applications.html','All Applications','Every application and its health'],['apm.html','Applications Manager','ManageEngine monitors, alarms, maintenance'],['app-audit.html','Application Audit','Findings and evidence'],['apm-claims-portal.html','Claims Portal (APM)','Availability and response time'],['portal-traffic.html','Portal Traffic','Who uses the portal, and how'],['db-dashboard.html','Database Dashboard','Health and alerts of your databases'],['db-performance.html','Database Performance','The databases your applications use'],['support-contracts.html','Support Contracts','Vendor support and renewals']],
+      also:['server-availability.html','soc-live.html','support-contracts.html','live-compliance.html']},
+    soc:{name:'Security Operations (SOC)',soc:1,c:'#f85149',icon:'soc',sub:'Alert queue · Cases · Hunting · XDR · UEBA · Response',intro:'The SOC at work: alerts to triage, cases to investigate, correlated attacks, risky users and the response actions waiting for a decision.',
+      areas:['soc'],eng:['siem','security'],aipage:'ai-security-engineer.html',tiles:['st-dec','st-prob','st-ai'],cta:['soc-alerts.html','Open the Alert Queue'],
+      quick:[['soc-alerts.html','Alert Queue','Triage, assign and close'],['soc-cases.html','Investigations & Cases','Cases and their evidence'],['soc-hunt.html','Threat Hunting & Search','Hunt across every source'],['soc-xdr.html','XDR','One incident per attack'],['soc-ueba.html','User Behaviour (UEBA)','Unusual users and hosts'],['soc-response.html','Playbooks & Approvals','Containment waiting for a decision'],['incident-response.html','Incident Response Center','Major incidents end to end'],['soc-ti.html','Threat Intelligence','Indicators and sightings']],
+      also:['email-security.html','vapt-center.html','server-availability.html','soc-sources.html']},
+    risk:{name:'Risk & Compliance',c:'#3fb950',icon:'grc',sub:'Risk register · Compliance frameworks',intro:'Enterprise risk and regulatory compliance: the risk posture and appetite, SAMA / IA / NCA standing and what is due. Data privacy and audit have their own homes.',
+      areas:['grc','cmp'],eng:['ciso'],tiles:['st-dec','st-ai'],cta:['risk-command.html','Open the Risk Command Center'],
+      quick:[['my-workspace.html','My Workspace','Your brief, mail, meetings and actions'],['risk-command.html','Risk Command Center','Posture, heat map, appetite, Monte Carlo'],['risk-studio.html','Risk Register','Every risk with its evidence'],['grc-workspace.html','Risks & Actions','Treatment actions and owners'],['audit-dashboard.html','Audit Dashboard','Every framework and the assurance index'],['compliance-overview.html','Compliance Overview','SAMA, NCA ECC, ISO 27001, PDPL, NDMO'],['pdpl-studio.html','PDPL Studio','Personal data protection standing'],['report-center.html','Reporting Center','Committee and regulator reports']],
+      also:['audit-command.html','roadmap.html','dept-checklist.html','live-compliance.html']},
+    privacy:{name:'Data Privacy',c:'#2dd4bf',icon:'pdpl',sub:'PDPL · NDMO · Data subject requests · Breaches',intro:'Personal data protection and data management: PDPL standing, records of processing, data subject requests, breaches, transfers and NDMO.',
+      areas:['pdpl'],eng:['pdpl','ndmo'],tiles:['st-dec','st-ai'],cta:['pdpl-studio.html','Open PDPL Studio'],
+      quick:[['pdpl-dashboard.html','PDPL Dashboard','Standing against every article'],['pdpl-dsar.html','Data Subject Requests','Requests and their 30-day clock'],['pdpl-breach.html','Breaches','72-hour notification to SDAIA'],['pdpl-ropa.html','Records of Processing','What is processed, why, for how long'],['pdpl-dpia.html','Impact Assessments','DPIAs and their decisions'],['pdpl-transfers.html','Cross-Border Transfers','Where personal data goes outside KSA'],['pdpl-processors.html','Processors','Vendors that process personal data'],['pdpl-studio.html','PDPL Studio','The privacy programme in one place']],
+      also:['risk-command.html','audit-command.html','dlp.html','live-compliance.html']},
+    audit:{name:'Audit & Assurance',c:'#f59e0b',icon:'aud',sub:'Internal audit · IT & cyber audit · Findings & follow-up',intro:'Internal, IT and cyber audit: the audit plan, engagements, findings and their follow-up, and the evidence behind them.',
+      areas:['aud'],eng:['itaudit','cyberaudit'],tiles:['st-dec','st-ai'],cta:['audit-command.html','Open the Audit Command Center'],
+      quick:[['audit-command.html','Audit Command Center','Plan, engagements and findings'],['audit-dashboard.html','Audit Dashboard','Every framework and the assurance index'],['audit-team.html','Audit Team','IT and cyber auditors'],['audit-analytics.html','Audit Analytics','Tests over the full population'],['audit-ccm.html','Continuous Monitoring','Controls checked every day'],['audit-repo.html','Audit Reports','External and regulator reports'],['audit-log.html','Audit Log','Who did what, on every system']],
+      also:['risk-command.html','pdpl-studio.html','compliance-overview.html','live-compliance.html']},
+    /* Engineer homes: one engineer, one home. Their job roles open only these sections (Roles & Functions); a home with
+       fn:'<function>' lists exactly the pages that function opens (vendor/zyb-modules.js FN_PAGES), so the home and the
+       access can never disagree. */
+    pentest:{name:'Penetration Testing',eng1:1,c:'#f97316',icon:'pt',sub:'Scans · VAPT findings · App & mobile tests · Retests',intro:'Your penetration tests and vulnerability work: scans, VAPT findings, application and mobile tests, hardening and retests.',
+      areas:['pt'],eng:['pentest'],aipage:'pentest.html',tiles:['st-dec','st-prob','st-ai'],cta:['vapt-center.html','Open the VAPT Center'],
+      quick:[['vapt-center.html','VAPT Center','Findings, owners and retests'],['vuln-scans.html','Vulnerability Scans','Run and compare scans'],['vapt-studio.html','VAPT Studio','Greenbone, Tenable and FireCompass in one view'],['pentest.html','AI Penetration Testing Engineer','Engagements waiting for you'],['apppt.html','Application Pen Testing','Web application tests'],['hardening.html','Hardening','Baseline checks per server']],also:[]},
+    network:{name:'Network Engineering',eng1:1,c:'#58a6ff',icon:'net',sub:'Switches · Routers · SD-WAN · Wireless · IP plan',intro:'Your network: what is down or degraded, configuration, SD-WAN and branches, wireless, the IP plan and the AI Network Engineer’s proposals.',
+      areas:['net'],eng:['network'],aipage:'network-engineer.html',tiles:['st-dec','st-prob','st-ai'],cta:['network-dashboard.html','Open the Network Dashboard'],
+      quick:[['network-dashboard.html','Network Dashboard','Health of every device and link'],['network-engineer.html','AI Network Engineer','Proposals waiting for you'],['ncm.html','Configuration','Backups, changes and compliance'],['sdwan.html','SD-WAN','Links and sites'],['switch-port-map.html','Switch Port Map','Who is on which port'],['ipam.html','IP Address Management','Subnets and free addresses']],also:[]},
+    virt:{name:'Virtualization',eng1:1,c:'#a371f7',icon:'srv',fn:'virtualization',sub:'VMware vSphere · Nutanix · Capacity · Power control',intro:'Your virtual estate: hosts and VMs on VMware and Nutanix, capacity, power control, DR replication and the AI Virtualization Administrator’s proposals.',
+      eng:['virt'],aipage:'ai-virt-admin.html',tiles:['st-dec','st-prob','st-srv','st-ai'],cta:['virtualization.html','Open Virtualization'],
+      quick:[['virtualization.html','Virtualization','VMware and Nutanix'],['vsphere-studio.html','vSphere Studio','Clusters, hosts and VMs'],['nutanix-vms.html','Nutanix VMs','Utilisation per VM'],['capacity.html','Capacity Planning','What runs out, and when'],['virt-power.html','Power Control','Power actions with approval'],['ai-virt-admin.html','AI Virtualization Administrator','Proposals waiting for you']],also:[]},
+    windows:{name:'Windows Servers',eng1:1,c:'#3b82f6',icon:'srv',fn:'windows',sub:'Windows Server · Active Directory · Remote console',intro:'Your Windows estate: Windows servers, Active Directory, availability, capacity and the AI Windows Server Administrator’s proposals.',
+      eng:['windows'],aipage:'windows-admin.html',tiles:['st-dec','st-prob','st-srv','st-ai'],cta:['windows-servers.html','Open Windows Servers'],
+      quick:[['windows-servers.html','Windows Servers','Every Windows server'],['windows-admin.html','AI Windows Server Administrator','Proposals waiting for you'],['ad-exchange.html','Active Directory','Domain controllers and AD health'],['server-availability.html','Server Availability','What is up and down'],['remote-console.html','Remote Console','Just-in-time access, recorded']],also:[]},
+    exchange:{name:'Exchange & Mail',eng1:1,c:'#0ea5e9',icon:'eps',fn:'exchange',sub:'Exchange servers · Hybrid · Mail routing · Mail security',intro:'Your mail platform: Exchange servers, the hybrid migration, mail routing, the mail security gateway and the AI Exchange Server Administrator’s proposals.',
+      eng:['exchange'],aipage:'exchange-admin.html',tiles:['st-dec','st-prob','st-srv','st-ai'],cta:['exchange-servers.html','Open Exchange Servers'],
+      quick:[['exchange-servers.html','Exchange Servers','Every Exchange server'],['exchange-admin.html','AI Exchange Server Administrator','Proposals waiting for you'],['exchange-hybrid.html','Exchange Hybrid','Migration waves and readiness'],['email-route-map.html','Email Route Map','How mail flows in and out'],['email-security.html','Email Security','Phishing and quarantine'],['libraesva.html','Libraesva ESG','The mail security gateway']],also:[]},
+    backup:{name:'Backup & Storage',eng1:1,c:'#22c55e',icon:'stor',fn:'backup',sub:'Backup jobs · Storage arrays · DR replication · DR drills',intro:'Your backups and storage: backup jobs, storage arrays, DR replication and drills.',
+      eng:[],tiles:['st-srv'],cta:['backup.html','Open Backup'],
+      quick:[['backup.html','Backup','Jobs, failures and what is not protected'],['storage.html','Storage','Arrays, capacity and health'],['dr-replication.html','DR Replication','Main site to DR site'],['dr-drills.html','DR Drills','Tests and their results'],['dr-studio.html','DR Studio','Recovery plans']],also:[]}
+  };
+  var ROLE_TEAM={'pentest-engineer':'pentest','network-engineer':'network','virtualization-admin':'virt','windows-admin':'windows','exchange-admin':'exchange','backup-admin':'backup','dpo':'privacy','internal-auditor':'audit','risk-head':'risk','grc-officer':'risk','grc-analyst':'risk','network-admin':'infra','server-admin':'infra','infra-manager':'infra','infra-asst-manager':'infra','ciso':'cyber','cyber-security-admin':'cyber','soc-analyst':'soc','penetration-engineer':'cyber'};
+  // the team for a person: administrators get Global Admin; a built-in role by its id; a custom role named for applications
+  // ("Application Admin", "Apps Team") the Applications home; otherwise what the role manages. Nothing matched: Global.
+  function teamOf(me,gate){
+    var r=me&&me.role;if(gate==='admin'||(r&&r.base==='admin'))return 'all';if(!r)return 'all';
+    if(ROLE_TEAM[r.id])return ROLE_TEAM[r.id];
+    if(/\bapp(lication)?s?\b/i.test((r.name||'')+' '+(r.id||'')))return 'app';
+    var f=r.functions||{},m=function(k){return f[k]==='manage';};
+    // the SOC itself (alerts, incidents) without identity or vulnerability work: the SOC home; the wider security role: Cyber
+    if((m('soc')||m('incidents'))&&!m('identity')&&!m('vuln'))return 'soc';
+    if(m('soc')||m('incidents')||m('identity'))return 'cyber';
+    if(m('privacy'))return 'privacy';if(m('audit'))return 'audit';
+    if(m('servers')||m('network'))return 'infra';
+    // a custom role that manages only one engineer's slice gets that engineer's home
+    if(m('vuln'))return 'pentest';if(m('virtualization'))return 'virt';if(m('windows'))return 'windows';if(m('exchange'))return 'exchange';if(m('backup'))return 'backup';
+    return 'all';
+  }
+  var TEAM='all',CAN_SWITCH=true,ITEMS=null,ENGS=null;
+  function quick(T){$('quick').innerHTML=T.quick.filter(function(q){return PG[q[0]];}).map(function(q){var a=PG[q[0]].a;return '<a class="qa" href="'+E(q[0])+'" style="--c:'+E(a.c)+'"><span class="ic" style="--c:'+E(a.c)+'">'+svg(a)+'</span><span><b>'+E(q[1])+'</b><span>'+E(q[2])+'</span></span></a>';}).join('');}
+  function fnPages(T){var Z=window.ZybModules,L=(Z&&Z.FN_PAGES&&Z.FN_PAGES[T.fn])||[],by={},out=[];
+    L.forEach(function(k){var g=PG[k+'.html'];if(!g)return;if(!by[g.a.id]){by[g.a.id]={id:g.a.id,name:g.a.name,c:g.a.c,icon:g.a.icon,pages:[]};out.push(by[g.a.id]);}by[g.a.id].pages.push(g.p);});return out;}
+  function ws(T){var list=T.fn?fnPages(T):T.areas?T.areas.map(function(id){return AREA[id];}).filter(Boolean):N,full=!!(T.areas||T.fn);
+    $('ws-h').textContent=full?'Your workspaces':'Workspaces';
+    $('ws').innerHTML=list.map(function(a){var pp=full?a.pages:a.pages.slice(0,4);return '<section class="wk" data-ws="'+E(a.id)+'" style="--c:'+E(a.c)+'"><button type="button" class="hd" data-goto="'+E(a.id)+'" title="Show every '+E(a.name)+' dashboard"><span class="ic">'+svg(a)+'</span><span><b>'+E(a.name)+'</b><span>'+a.pages.length+' dashboard'+(a.pages.length===1?'':'s')+'</span></span></button>'
+      +'<ul>'+pp.map(function(p){return '<li><a href="'+E(p.h)+'" title="'+E(p.t)+'">'+E(p.s)+'</a></li>';}).join('')+'</ul>'+(a.pages.length>pp.length||!full?'<button type="button" class="all" data-goto="'+E(a.id)+'">All '+a.pages.length+' →</button>':'')+'</section>';}).join('');
+    var al=(T.also||[]).filter(function(h){return PG[h];});$('also').hidden=!al.length;
+    $('also').innerHTML=al.length?'<span>Also useful to your team:</span>'+al.map(function(h){return '<a href="'+E(h)+'">'+E(PG[h].p.s)+'</a>';}).join(''):'';}
+  function teamCards(){var keys=['infra','cyber','app','risk','privacy','audit'];
+    $('teams').innerHTML=keys.map(function(k){var T=TEAMS[k],a=AREA[T.icon]||{icon:''},pages=0;(T.areas||[]).forEach(function(id){if(AREA[id])pages+=AREA[id].pages.length;});
+      return '<a class="tm" href="?team='+k+'" data-team="'+k+'" style="--c:'+E(T.c)+'"><span class="r"><span class="ic" style="--c:'+E(T.c)+'">'+svg(a)+'</span><span><b>'+E(T.name)+'</b><small>'+E(T.sub)+'</small></span></span>'
+        +'<span class="k"><span>Workspaces<b>'+T.areas.length+'</b></span><span>Dashboards<b>'+pages+'</b></span><span>Open items<b data-open="'+k+'">—</b></span></span><span class="go">Open team home</span></a>';}).join('');
+    teamCounts();}
+  function teamBar(){if(!CAN_SWITCH){$('teambar').hidden=true;return;}
+    var chip=function(k){var T=TEAMS[k];return '<a href="'+(k==='all'?'index.html':'?team='+k)+'" data-team="'+k+'" class="'+(k===TEAM?'on':'')+'" style="--c:'+E(T.c)+'"'+(k===TEAM?' aria-current="page"':'')+'>'+E(k==='all'?'All teams':T.name)+'</a>';};
+    $('teambar').hidden=false;$('teambar').innerHTML='<span>View the home of:</span>'+['all','infra','cyber','soc','app','risk','privacy','audit'].map(chip).join('')
+      +'<span class="eng-l" style="flex-basis:100%;height:0"></span><span>Engineers:</span>'+['pentest','network','virt','windows','exchange','backup'].map(chip).join('');}
+  // ---- the SOC panel: read once when the SOC home opens; every figure from the SIEM, nothing derived here but labels
+  var SOCR=null,SEV=['info','low','medium','high','critical'],SEVC=['#8C93A1','#3fb950','#d29922','#f0883e','#f85149'];
+  function mins(m){return m==null?'not measured yet':m<60?m+' min':m<1440?Math.round(m/60*10)/10+' h':Math.round(m/1440*10)/10+' d';}
+  function socPanel(){var T=TEAMS[TEAM];$('socp').hidden=!T.soc;if(!T.soc)return;
+    if(!SOCR){$('soc-k').innerHTML='<a class="st" href="soc-overview.html"><span class="hd"><span class="l">SOC</span></span><span class="v na">Loading…</span><span class="s">reading the SIEM</span></a>';
+      get('/api/soc/soc/overview').then(function(r){SOCR=r;socDraw();});return;}
+    socDraw();}
+  function socDraw(){var r=SOCR,o=r&&r.j;
+    if(!r||r.s!==200||!o||!o.open){$('soc-k').innerHTML='<a class="st" href="soc-overview.html"><span class="hd"><span class="l">SOC</span></span><span class="v na">'+E(r?why(r):'not reachable')+'</span><span class="s">the SIEM did not answer the SOC overview - its alerts, cases and AI triage show here once it does</span></a>';
+      $('soc-act').innerHTML='<p class="s">Nothing to show until the SIEM answers.</p>';$('soc-xu').innerHTML='<p class="s">Nothing to show until the SIEM answers.</p>';$('soc-note').textContent='';return;}
+    var op=o.open,bs=op.by_severity||[],crit=bs[4]||0,high=bs[3]||0,act=(op.bands&&op.bands['act-now'])||0,ai=o.ai||{};
+    var tile=function(href,l,v,sub,cls){return '<a class="st '+(cls||'')+'" href="'+E(href)+'"><span class="hd"><span class="l">'+E(l)+'</span><span class="dot"></span></span><span class="v">'+E(v)+'</span><span class="s">'+E(sub)+'</span></a>';};
+    $('soc-k').innerHTML=
+      tile('soc-alerts.html?status=open','Open alerts',String(op.total||0),crit+' critical · '+high+' high',crit?'bad':high?'warn':'ok')
+      +tile('soc-alerts.html?label=act-now','Act now',String(act),act?'ranked act-now by the SOC model':'nothing ranked act-now',act?'bad':'ok')
+      +tile('soc-alerts.html?assignee=none','Unassigned',String(op.unassigned||0),'open alerts nobody owns',op.unassigned?'warn':'ok')
+      +tile('soc-alerts.html','New in 24 h',String(op.new_24h||0),'alerts raised since yesterday','info')
+      +tile('soc-overview.html','Time to acknowledge',mins(o.mtta_min),'median, last 7 days · to resolve: '+mins(o.mttr_min),'info')
+      +tile('soc-alerts.html?triage=draft','AI triage',String(ai.drafts||0)+' to review',ai.agreement_pct==null?'agreement shown after 3 closed triaged alerts':ai.agreement_pct+'% agreed with the analyst','info');
+    var A=o.act_now||[];
+    $('soc-act').innerHTML=A.length?A.map(function(x){var sv=Math.max(0,Math.min(4,x.severity||0));return '<a class="row" href="soc-alerts.html?id='+encodeURIComponent(x.id)+'"><b title="'+E(x.summary||'')+'">'+E(x.rule_name||x.id)+'</b><span>'+E((x.entities||[]).join(', '))+'</span><span class="sv" style="--c:'+SEVC[sv]+'">'+E(SEV[sv])+' · '+E(String(x.priority))+'</span></a>';}).join('')
+      :'<p class="s">No open alert is ranked act-now.</p>';
+    var X=(o.xdr&&o.xdr.top)||[],U=(o.ueba&&o.ueba.top)||[],h='';
+    h+=X.map(function(i){return '<a class="row" href="soc-xdr.html"><b>'+E(i.title||i.id)+'</b><span>'+E((i.domains||[]).join(' · '))+'</span><span class="sv">XDR · '+E(String(i.score))+'</span></a>';}).join('');
+    h+=U.map(function(e){return '<a class="row" href="soc-ueba.html?entity='+encodeURIComponent(e.id)+'"><b>'+E(e.name||e.id)+'</b><span>'+E(e.type||'')+(e.tier?' · '+E(e.tier):'')+'</span><span class="sv">risk '+E(String(e.score))+'</span></a>';}).join('');
+    var sc=o.sources_connected||{};
+    $('soc-xu').innerHTML=h||'<p class="s">'+(!sc.xdr&&!sc.ueba?'XDR and UEBA are not connected to the SIEM yet - Security Operations → XDR / User Behaviour.':'No correlated incident and no risky user or host right now.')+'</p>';
+    $('soc-note').textContent='Read from the SIEM'+(o.generated_at?' at '+new Date(o.generated_at).toLocaleTimeString():'')+(o.model&&o.model.alerts?' · the SOC model learned from '+o.model.alerts+' alerts over '+o.model.days+' days':'')+'.';}
+  function apply(team){TEAM=TEAMS[team]?team:'all';var T=TEAMS[TEAM],g=TEAM==='all';
+    $('teamlabel').textContent=g?'Global Admin':T.name+' team';$('teamtag').textContent=g?'Global Admin':T.name;$('teamtag').style.setProperty('--c',T.c);
+    $('intro').textContent=T.intro;$('cta').href=T.cta[0];$('cta').textContent=T.cta[1];
+    ['st-dec','st-prob','st-srv','st-db','st-ai'].forEach(function(id){$(id).hidden=T.tiles.indexOf(id)<0;});
+    $('teams-h').hidden=!g;$('teams').hidden=!g;$('duo').hidden=g;
+    quick(T);ws(T);if(g)teamCards();else $('teams').innerHTML='';teamBar();socPanel();
+    if(!T.areas){var c0=document.querySelector('.chip[data-f=""]');if(c0&&!c0.classList.contains('on'))c0.click();}
+    duty();}
+  // live status: each tile from its own source; a source that does not answer says so - never a made-up number
+  function get(u){return new Promise(function(ok){var r=new XMLHttpRequest();r.open('GET',u);r.withCredentials=true;r.timeout=15000;r.zybQuiet=true;r.onload=function(){var j=null;try{j=JSON.parse(r.responseText);}catch(e){ /* not JSON: treated as no data */ }ok({s:r.status,j:j});};r.onerror=r.ontimeout=function(){ok({s:0,j:null});};r.send();});}
+  function tileSet(id,v,sub,cls){var el=$(id);if(!el)return;var vv=el.querySelector('.v');vv.textContent=v;vv.classList.toggle('na',v==='—'||/not |no access/.test(v));if(sub!=null)el.querySelector('.s').textContent=sub;el.classList.remove('ok','warn','bad','info');if(cls)el.classList.add(cls);}
+  function why(r){return r.s===403||r.s===401?'no access':r.s===404?'not installed':'not reachable';}
+  // Enterprise Risk & Compliance strip: the risk posture (Risk Command) and the SAMA / NCA ECC / PDPL / NDMO scores (Audit Dashboard),
+  // read live; not assessed or not readable is said in words - never a 0 that reads as a score
+  function grcBar(id,v){var el=$(id);if(el){var b=el.querySelector('.bar i');if(b)b.style.width=(v==null?0:Math.max(2,Math.min(100,v)))+'%';}}
+  function grcTone(v){return v==null?'':v>=80?'ok':v>=60?'warn':'bad';}
+  function grcLoad(){
+    get('/api/itam/risk-command').then(function(r){var p=r.j&&r.j.posture;
+      if(r.s!==200||!p){tileSet('grc-er',why(r),'risk posture');grcBar('grc-er',null);return;}
+      if(p.value==null){tileSet('grc-er','not assessed','no risk in the register yet');grcBar('grc-er',null);return;}
+      tileSet('grc-er',p.value+' / 100','risk posture'+(r.j.kpis&&r.j.kpis.over_appetite?' · '+r.j.kpis.over_appetite+' above appetite':''),grcTone(p.value));grcBar('grc-er',p.value);});
+    get('/api/itam/audit-dashboard').then(function(r){var F={};((r.j&&r.j.frameworks)||[]).forEach(function(f){F[f.id]=f;});
+      var LBL={compliant:'compliant',partial:'partly compliant',gaps:'gaps open'};
+      ['sama','nca-ecc','pdpl','ndmo'].forEach(function(k){var id='grc-'+k,f=F[k];
+        if(r.s!==200){tileSet(id,why(r));grcBar(id,null);return;}
+        if(!f||f.available===false){tileSet(id,'not connected',f&&f.reason?String(f.reason).slice(0,60):'');grcBar(id,null);return;}
+        if(f.score==null){tileSet(id,'not assessed','no assessment yet');grcBar(id,null);return;}
+        tileSet(id,Math.round(f.score)+'%',LBL[f.status]||f.status||'',grcTone(f.score));grcBar(id,f.score);});});
+  }
+  grcLoad();
+  // Brand colours switch: Zyberon Sentra (the default design) or the organisation colours; saved with the dashboard preferences, which the
+  // sign-in page reads too
+  (function(){var b=$('brandsw');if(!b)return;var paint=function(){b.setAttribute('aria-checked',String(!!window.__orgBrand));};paint();
+    // one choice for the page and the menu: the menu's switch and this one both go through window.zybBrand (vendor/zyb-dash.js)
+    var apply=function(on){window.__orgBrand=!!on;var st=document.getElementById('orgBrand');if(st)st.media=on?'all':'not all';document.documentElement.classList.toggle('org-brand',!!on);paint();};
+    window.addEventListener('zyb-brand',function(e){apply(e.detail&&e.detail.on);});
+    b.addEventListener('click',function(){var on=!window.__orgBrand;if(window.zybBrand)window.zybBrand(on);else{apply(on);try{var p=JSON.parse(localStorage.getItem('zyb-dash-prefs')||'{}')||{};p.brand=on?'org':'off';localStorage.setItem('zyb-dash-prefs',JSON.stringify(p));}catch(e){/* no storage: applies to this visit only */}}});})();
+  // Today: the Executive Dashboard (index, ML trend / forecast / unusual day, ranked attention) and Live Status (feeds, learned rhythm)
+  (function today(){
+    var X=null,L=null,done=0,E2=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+    var safe=function(h){return /^[a-z0-9-]+\.html$/i.test(String(h||''))?h:'#';};
+    var col=function(p){return p==null?'#6e7681':p>=85?'#2fb344':p>=70?'#8db0ff':p>=50?'#f59f00':'#e5484d';};
+    var ring=function(p){var r=22,c=2*Math.PI*r,v=p==null?0:p;return '<svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="'+r+'" fill="none" stroke="#243046" stroke-width="6"/><circle cx="28" cy="28" r="'+r+'" fill="none" stroke="'+col(p)+'" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+(c*v/100)+' '+c+'" transform="rotate(-90 28 28)"/></svg>';};
+    function card(id,val,p,chips){var el=$(id);el.querySelector('.big').innerHTML=ring(p)+'<b'+(/^[0-9.–%-]+$/.test(String(val))?'':' class="txt"')+'>'+E2(val)+'</b>';el.querySelector('.meta').innerHTML=chips.filter(Boolean).map(function(c){return '<span>'+E2(c)+'</span>';}).join('');}
+    function paint(){if(++done<2)return;
+      window.__zybCmdData=[X,L];   /* the hero script below may load after these answers: it draws them when it arrives */
+      try{if(window.zybCmd)window.zybCmd(X,L);}catch(e){if(window.console)console.error('command hero',e);}   /* the hero must never stop the rest of Today */
+      if(X&&X.s===200&&X.j){var v=X.j,m=v.ml||{},t=m.trend;card('t2-idx',v.index==null?'–':v.index,v.index,[v.index==null?'withheld - '+v.withheld_why:v.grade,t?(t.verdict==='improving'?'▲ ':t.verdict==='worsening'?'▼ ':'▬ ')+t.verdict+' '+(t.per_week>0?'+':'')+t.per_week+'/week':'trend after 7 days',m.forecast_30d!=null?'≈ '+m.forecast_30d+' in 30 days':'',v.decisions_waiting+' decisions waiting']);}
+      else card('t2-idx',why(X||{s:0}),null,['Executive Dashboard']);
+      if(L&&L.s===200&&L.j){var w=L.j,c=w.counts;card('t2-live',w.live_pct==null?'–':w.live_pct+'%',w.live_pct,[c.live+' of '+(c.total-c.paused)+' live',c.silent?c.silent+' silent':'',c.late?c.late+' late (ML rhythm)':'',w.collector&&w.collector.quiet?'collectors quiet':'']);}
+      else card('t2-live',why(L||{s:0}),null,['Live Status']);
+      var warn=[];if(X&&X.j&&X.j.ml&&X.j.ml.unusual){var u=X.j.ml.unusual;warn.push('The health index is unusual today: '+u.today+' against a usual '+u.usual+'.');}
+      if(L&&L.j&&L.j.collector&&L.j.collector.quiet)warn.push('No event has reached the SIEM from any source recently - the collectors may be down.');
+      $('t2warn').innerHTML=warn.length?'<div class="t2warn" role="alert">'+warn.map(E2).join(' ')+'</div>':'';
+      var SW={critical:40,high:30,medium:18,low:8},COL={decision:'#5b8def',risk:'#e5484d',trend:'#f59f00',gap:'#6e7681',feed:'#f85149'},items=[];
+      if(X&&X.j)(X.j.attention||[]).forEach(function(a){items.push({score:a.score,title:a.title,why:a.why,link:a.link,c:COL[a.kind]||'#6e7681'});});
+      if(L&&L.j)(L.j.findings||[]).filter(function(f){return f.severity!=='low';}).forEach(function(f){items.push({score:SW[f.severity]||10,title:f.title,why:f.why,link:'live-status.html',c:COL.feed});});
+      items.sort(function(a,b){return b.score-a.score;});
+      $('t2-first').querySelector('ol').innerHTML=items.length?items.slice(0,7).map(function(i){return '<li><a href="'+safe(i.link)+'"><i style="background:'+i.c+'"></i><span>'+E2(i.title)+'<small>'+E2(i.why)+'</small></span></a></li>';}).join(''):'<li class="l">'+((X&&X.s===200)||(L&&L.s===200)?'Nothing is waiting - a quiet day.':'The Executive Dashboard and Live Status are not reachable yet.')+'</li>';
+      var ai=X&&X.j&&X.j.ai,box=$('t2-ai').querySelector('.meta');
+      if(!ai||!ai.enabled)box.innerHTML='<span>'+E2(ai?'AI off: '+ai.reason:'the AI brief comes with the Executive Dashboard')+'</span>';
+      else if(!ai.for_role)box.innerHTML='<span>for operators and administrators</span>';
+      else box.innerHTML='<button type="button" id="t2ask">Ask the AI</button>';}
+    get('/api/itam/exec-dashboard').then(function(r){X=r;paint();});get('/api/soc/collection/live').then(function(r){L=r;paint();});
+    document.addEventListener('click',function(ev){var b=ev.target.closest('#t2ask');if(!b)return;b.disabled=true;b.textContent='Thinking…';
+      var x=new XMLHttpRequest();x.open('POST','/api/itam/exec-dashboard/brief');x.withCredentials=true;x.zybQuiet=true;x.timeout=180000;x.setRequestHeader('Content-Type','application/json');
+      x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the status */}var el=$('t2-ai');var a=el.querySelector('.ans')||el.appendChild(Object.assign(document.createElement('div'),{className:'ans'}));
+        a.textContent=x.status===200&&j?j.answer:'The AI could not answer: '+((j&&j.error)||('HTTP '+x.status));b.disabled=false;b.textContent='Ask again';};
+      x.onerror=x.ontimeout=function(){b.disabled=false;b.textContent='Ask the AI';};
+      x.send(JSON.stringify({question:'What should I do first today? Give the five most important actions for today in order, each tied to a figure from the executive report, and say what is not measured.'}));});
+  })();
+  var SEV={critical:4,high:3},DUTY=null;
+  var isDec=function(x){return x.status==='awaiting-approval'||x.status==='approved';},isHigh=function(x){return (SEV[x.severity]||(typeof x.severity==='number'&&x.severity>=3))&&!isDec(x);};
+  function mine(x){var T=TEAMS[TEAM];return !T.eng||T.eng.indexOf(x.engineer||x.id)>=0;}
+  // decisions, problems and AI engineers, counted for the team in view (the duty engines tag each item with its engineer)
+  function duty(){if(!DUTY)return;var R=DUTY,T=TEAMS[TEAM],g=!T.eng;
+    var okI=R[0].s===200||R[1].s===200,items=[].concat((R[0].j&&R[0].j.items)||[],(R[1].j&&R[1].j.items)||[]);ITEMS=okI?items:null;   // not connected: the team cards keep —, never 0
+    if(!okI&&R[2].s!==200){tileSet('st-dec',why(R[0]),'AI engineers not connected');tileSet('st-prob',why(R[0]),'AI engineers not connected');}
+    else{var my=items.filter(mine);
+      // SOC approvals carry no engineer: they belong to the whole platform and to Cyber Security
+      var appr=(g||TEAM==='cyber'||TEAM==='soc')?((R[2].j&&R[2].j.items)||[]).filter(function(a){return a.status==='pending';}).length:0;
+      var dec=my.filter(isDec).length+appr,prob=my.filter(isHigh),crit=prob.filter(function(x){return x.severity==='critical'||x.severity===4;}).length;
+      tileSet('st-dec',String(dec),dec?(g?'approvals, fixes to apply, response actions':'for '+T.name):'nothing waiting',dec?'warn':'ok');
+      tileSet('st-prob',String(prob.length),prob.length?crit+' critical · '+(prob.length-crit)+' high':'none open',crit?'bad':prob.length?'warn':'ok');}
+    var e=[].concat((R[3].j&&R[3].j.engineers)||[],(R[4].j&&R[4].j.engineers)||[]);ENGS=e;
+    if(R[3].s!==200&&R[4].s!==200)tileSet('st-ai',why(R[4]),'AI Engineering Team');
+    else{var me=e.filter(mine),on=me.filter(function(x){return x.enabled!==false&&x.status!=='off';}).length;tileSet('st-ai',String(on),me.length?on+' of '+me.length+' active':'none set up','info');}
+    if(!g){var eh=e.filter(mine);
+      $('engs').innerHTML=eh.length?eh.map(function(x){var n=items.filter(function(i){return i.engineer===x.id&&isDec(i);}).length;return '<a class="row" href="'+E(T.aipage||'ai-team.html')+'"><b>'+E(x.name||x.id)+'</b><span>'+(x.enabled===false||x.status==='off'?'off':n+' waiting for approval')+'</span></a>';}).join('')
+        :'<p class="s">'+(R[3].s!==200&&R[4].s!==200?'The AI engineers are '+why(R[4])+'.':(T.eng.length?'None of this team’s AI engineers is set up yet.':'No AI engineer works on this area yet.'))+'</p>';
+      var my2=items.filter(mine);
+      $('tq').innerHTML=okI?[['Waiting for a decision',my2.filter(isDec).length],['Critical & high problems',my2.filter(isHigh).length],['Other open items',my2.filter(function(x){return !isDec(x)&&!isHigh(x);}).length]].map(function(q){return '<a class="row" href="my-work.html"><b>'+E(q[0])+'</b><span class="mono">'+q[1]+'</span></a>';}).join('')
+        :'<p class="s">The AI engineers are '+why(R[0])+', so there is no queue to show.</p>';}
+    teamCounts();}
+  function teamCounts(){if(!ITEMS)return;[].forEach.call(document.querySelectorAll('[data-open]'),function(b){var T=TEAMS[b.getAttribute('data-open')];b.textContent=String(ITEMS.filter(function(x){return T.eng.indexOf(x.engineer)>=0;}).length);});}
+  Promise.all([get('/api/itam/duty/items?status=open&limit=1000'),get('/api/soc/duty/items?status=open&limit=1000'),get('/api/soc/approvals'),get('/api/itam/duty/engineers'),get('/api/soc/duty/engineers')]).then(function(R){DUTY=R;duty();});
+  get('/api/soc/netops/avail').then(function(r){var S=r.j&&r.j.summary;if(r.s!==200||!S||S.total==null){tileSet('st-srv',r.s===200?'not reported':why(r),'Server Availability');return;}
+    tileSet('st-srv',(S.online||0)+' / '+S.total,S.offline?S.offline+' offline'+(S.unknown?' · '+S.unknown+' unknown':''):(S.unknown?S.unknown+' unknown':'all online'),S.offline?'bad':'ok');});
+  get('/api/itam/db-health').then(function(r){var L=r.j&&r.j.last;if(r.s!==200||!r.j){tileSet('st-db',why(r),'Databases');return;}
+    var n=(r.j.hosts||[]).length;if(!n){tileSet('st-db','0','no database connected yet - add one','info');return;}
+    tileSet('st-db',String(L?L.read||0:0)+' / '+n,L?(L.failed?L.failed+' could not be read':'all read')+(L.push_error?' · not reaching the SIEM':''):'not read yet',L&&(L.failed||L.push_error)?'warn':'ok');});
+  // the page opens as Global Admin and becomes the person's team home once their job role is known; an administrator
+  // may look at any team's home (?team=infra|cyber|app), everyone else sees their own
+  apply('all');
+  var WANT=(/[?&]team=(infra|cyber|soc|app|risk|privacy|audit|pentest|network|virt|windows|exchange|backup|all)\b/.exec(location.search)||[])[1];
+  Promise.all([get('/dashboards/whoami.json'),get('/api/itam/roles/me')]).then(function(R){
+    var j=R[0].j||{},gate=String(j.role||'').toLowerCase(),me=R[1].s===200?R[1].j:null,own=teamOf(me,gate);
+    CAN_SWITCH=own==='all';
+    apply(CAN_SWITCH&&WANT?WANT:own);
+  });
+  window.zybHomeTeams={TEAMS:TEAMS,teamOf:teamOf,apply:apply};
+})();
+</script>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var cards=[], secs=[];
+  var F='', FWF='', sel=-1;
+  // keep original text so search highlighting never loses content
+  // (re)collect the cards: the portal's own pages arrive a moment later and join the same search and filters
+  function prep(){cards=[].slice.call(document.querySelectorAll('.dc'));secs=[].slice.call(document.querySelectorAll('.grp'));
+    cards.forEach(function(c){if(c._k)return;c._t=c.querySelector('b').textContent;c._d=c.querySelector('span:not(.ic)').textContent;c._k=(c._t+' '+c._d+' '+c.getAttribute('href')+' '+(c.getAttribute('data-fk')||'')).toLowerCase();});}
+  prep();
+  // the portal's own pages (Home, SOC, Command Center views…), from the portal's menu
+  if(window.zybPortalNav)window.zybPortalNav(function(groups,href){
+    if(!groups||!groups.length||document.querySelector('[data-sec="portal"]'))return;
+    var E=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+    var ico='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
+    // the portal's own "AI & Automation" pages join our AI & Automation section: one place, not two
+    var aiGrid=document.querySelector('[data-sec="ai"] .grid');
+    if(aiGrid)groups=groups.filter(function(g){
+      if(!/^ai\s*(&|and)\s*automation$/i.test(g.name))return true;
+      g.items.forEach(function(it){aiGrid.insertAdjacentHTML('beforeend','<a class="dc" href="'+E(href(it.v))+'" data-cat="ai" style="--c:#a3e635"><span class="ic">'+ico+'</span><b>'+E(it.l)+'</b><span>AI &amp; Automation · opens in the portal</span><em aria-hidden="true">→</em></a>');});
+      var k=aiGrid.querySelectorAll('.dc').length,sm=document.querySelector('[data-sec="ai"] h2 small'),ch=document.querySelector('.chip[data-f="ai"] i');if(sm)sm.textContent=k;if(ch)ch.textContent=k;
+      return false;});
+    if(!groups.length){prep();run();return;}
+    var n=0;groups.forEach(function(g){n+=g.items.length;});
+    var sec=document.createElement('section');sec.className='grp';sec.setAttribute('data-sec','portal');sec.style.setProperty('--c','#8C93A1');
+    sec.innerHTML='<h2><span class="ic">'+ico+'</span>Portal pages<small>'+n+'</small></h2>'+groups.map(function(g){return '<h3 style="margin:14px 0 8px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)">'+E(g.name)+'</h3><div class="grid">'
+      +g.items.map(function(it){return '<a class="dc" href="'+E(href(it.v))+'" data-cat="portal" style="--c:#8C93A1"><span class="ic">'+ico+'</span><b>'+E(it.l)+'</b><span>'+E(g.name)+' · opens in the portal</span><em aria-hidden="true">→</em></a>';}).join('')+'</div>';}).join('');
+    $('groups').appendChild(sec);
+    var ch=document.createElement('button');ch.type='button';ch.className='chip';ch.setAttribute('data-f','portal');ch.style.setProperty('--c','#8C93A1');ch.innerHTML='Portal pages <i>'+n+'</i>';$('chips').appendChild(ch);
+    prep();run();
+  });
+  function hl(el,txt,q){el.textContent='';if(!q){el.textContent=txt;return;}var i=txt.toLowerCase().indexOf(q);if(i<0){el.textContent=txt;return;}
+    el.appendChild(document.createTextNode(txt.slice(0,i)));var m=document.createElement('mark');m.textContent=txt.slice(i,i+q.length);el.appendChild(m);el.appendChild(document.createTextNode(txt.slice(i+q.length)));}
+  function visible(){return cards.filter(function(c){return !c.hidden;});}
+  function run(){
+    var q=$('q').value.trim().toLowerCase(),words=q.split(/\s+/).filter(Boolean),n=0;
+    cards.forEach(function(c){var ok=(!F||c.getAttribute('data-cat')===F)&&(!FWF||(' '+(c.getAttribute('data-fw')||'')+' ').indexOf(' '+FWF+' ')>=0)&&words.every(function(w){return c._k.indexOf(w)>=0;});c.hidden=!ok;if(ok)n++;
+      hl(c.querySelector('b'),c._t,words[0]||'');hl(c.querySelector('span:not(.ic)'),c._d,words[0]||'');});
+    secs.forEach(function(s){s.hidden=!s.querySelector('.dc:not([hidden])');});
+    $('none').style.display=n?'none':'block';$('nq').textContent=$('q').value;
+    var fp=FWF&&window.ZYB_FW&&window.ZYB_FW[FWF]&&window.ZYB_FW[FWF].pending;$('nmsg').hidden=!!fp;$('nfw').hidden=!fp;if(fp)$('nfw').textContent=fp;
+    setSel(q?0:-1);
+  }
+  function setSel(i){var v=visible();cards.forEach(function(c){c.classList.remove('sel');});sel=v.length?Math.max(-1,Math.min(i,v.length-1)):-1;if(sel>=0){v[sel].classList.add('sel');v[sel].scrollIntoView({block:'nearest'});}}
+  $('q').addEventListener('input',run);
+  $('q').addEventListener('keydown',function(e){var v=visible();
+    if(e.key==='ArrowDown'){e.preventDefault();setSel(sel+1);}else if(e.key==='ArrowUp'){e.preventDefault();setSel(sel-1);}
+    else if(e.key==='Enter'&&sel>=0&&v[sel]){location.href=v[sel].getAttribute('href');}
+    else if(e.key==='Escape'){$('q').value='';run();}});
+  document.addEventListener('keydown',function(e){if(e.key==='/'&&document.activeElement!==$('q')&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName)){e.preventDefault();$('q').focus();}});
+  $('chips').addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;F=b.getAttribute('data-f');[].forEach.call(this.children,function(x){x.classList.toggle('on',x===b);});run();});
+  $('fwbar').addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;FWF=b.getAttribute('data-fwf');[].forEach.call(this.querySelectorAll('.chip'),function(x){x.classList.toggle('on',x===b);});run();});
+  // a workspace card filters the directory to its area (the cards are redrawn per team, so listen on the container)
+  $('ws').addEventListener('click',function(e){var b=e.target.closest('[data-goto]');if(!b)return;var c=document.querySelector('.chip[data-f="'+b.getAttribute('data-goto')+'"]');if(c)c.click();$('dir').scrollIntoView({behavior:'smooth',block:'start'});});
+  $('toall').addEventListener('click',function(e){e.preventDefault();var c=document.querySelector('.chip[data-f=""]');if(c)c.click();$('dir').scrollIntoView({behavior:'smooth',block:'start'});});
+  // Riyadh clock (UTC+3, no daylight saving) and greeting
+  function riyadh(){var d=new Date(Date.now()+3*3600000);return {h:d.getUTCHours(),m:d.getUTCMinutes(),d:d};}
+  function tick(){var r=riyadh(),p=function(n){return (n<10?'0':'')+n;},ar=document.documentElement.getAttribute('lang')==='ar',city=ar?'الرياض':'Riyadh',day=r.d.toLocaleDateString(ar?'ar-SA-u-ca-gregory-nu-latn':'en-GB',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});$('clock').innerHTML=p(r.h)+':'+p(r.m)+'<small>'+city+'</small>';$('today').textContent=day+' · '+city;}
+  tick();setInterval(tick,20000);
+  function greet(name){var h=riyadh().h,g=h<12?'Good morning':h<17?'Good afternoon':'Good evening';$('greet').innerHTML='';$('greet').appendChild(document.createTextNode(g+(name?', ':'.')));if(name){var b=document.createElement('b');b.textContent=name;$('greet').appendChild(b);$('greet').appendChild(document.createTextNode('.'));}}
+  greet('');
+  var x=new XMLHttpRequest();x.open('GET','/dashboards/whoami.json');x.onload=function(){try{var j=JSON.parse(x.responseText);var r=String(j.role||'').toLowerCase(),u=j.user||j.name||'';
+    if(r)$('role').textContent=(u?u+' · ':'')+r.charAt(0).toUpperCase()+r.slice(1);greet(j.name||j.user||'');}catch(e){ /* not JSON: treated as no data */ }};x.send();
+  // recently opened (this browser only — a convenience, recorded by zyb-dash.js on each page)
+  try{var rec=JSON.parse(localStorage.getItem('zyb-recent')||'[]')||[],byHref={};cards.forEach(function(c){byHref[c.getAttribute('href')]=c;});
+    rec=rec.filter(function(r){return byHref[r.h];}).slice(0,8);
+    if(rec.length){$('rlist').innerHTML='';rec.forEach(function(r){var c=byHref[r.h],a=document.createElement('a');a.href=r.h;a.textContent=c._t;a.style.setProperty('--c',c.style.getPropertyValue('--c'));$('rlist').appendChild(a);});$('recent').hidden=false;}}catch(e){ /* recently-opened list unreadable: the section stays hidden */ }
+})();
+</script><script>
+/* Cyber Resilience Command: the hero over the Executive Dashboard (index, pillars, 90-day history, ML trend / forecast /
+   unusual day, KPIs with their ML verdicts) and Live Status (feeds). Every value comes from those two answers; a source that
+   does not answer is said so, never filled in. Graphics are SVG / canvas, escaped text only. */
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var E=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var page=function(h){return /^[a-z0-9-]+\.html$/i.test(String(h||''))?h:'executive-dashboard.html';};
+  var col=function(p){return p==null?'#6e7681':p>=85?'#2fb344':p>=70?'#5b8def':p>=50?'#f59f00':'#e5484d';};
+  var why=function(r){return !r||!r.s?'not reachable':r.s===401||r.s===403?'no access':r.s===404?'not installed':'not reachable';};
+  function gauge(v,grade,fc){
+    var R=78,C=2*Math.PI*R,arc=0.78,len=C*arc,p=v==null?0:Math.max(0,Math.min(100,v)),c=col(v),rot=90+(360*(1-arc))/2,ticks='';
+    for(var i=0;i<=20;i++){var a=(rot+i*(360*arc)/20)*Math.PI/180,r1=94,r2=i%5?90:86;ticks+='<line x1="'+(100+r1*Math.cos(a)).toFixed(1)+'" y1="'+(100+r1*Math.sin(a)).toFixed(1)+'" x2="'+(100+r2*Math.cos(a)).toFixed(1)+'" y2="'+(100+r2*Math.sin(a)).toFixed(1)+'" stroke="#2c3a55" stroke-width="'+(i%5?1:2)+'"/>';}
+    var fm='';if(fc!=null&&v!=null){var fa=(rot+(Math.max(0,Math.min(100,fc))/100)*360*arc)*Math.PI/180;fm='<circle cx="'+(100+R*Math.cos(fa)).toFixed(1)+'" cy="'+(100+R*Math.sin(fa)).toFixed(1)+'" r="5" fill="#0b0f17" stroke="#ffd166" stroke-width="2"><title>30-day forecast '+E(fc)+'</title></circle>';}
+    return '<svg viewBox="0 0 200 200" role="img" aria-label="'+E(v==null?'health index not measured':'health index '+v+' of 100')+'"><defs><linearGradient id="cmdg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+c+'"/><stop offset="1" stop-color="#ffffff" stop-opacity=".85"/></linearGradient><filter id="cmdglow"><feGaussianBlur stdDeviation="3"/></filter></defs>'
+      +ticks+'<circle cx="100" cy="100" r="'+R+'" fill="none" stroke="#1b2538" stroke-width="12" stroke-linecap="round" stroke-dasharray="'+len.toFixed(1)+' '+C.toFixed(1)+'" transform="rotate('+rot+' 100 100)"/>'
+      +(v==null?'':'<circle cx="100" cy="100" r="'+R+'" fill="none" stroke="'+c+'" stroke-opacity=".35" stroke-width="14" filter="url(#cmdglow)" stroke-dasharray="'+(len*p/100).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate('+rot+' 100 100)"/><circle class="cmdarc" cx="100" cy="100" r="'+R+'" fill="none" stroke="url(#cmdg)" stroke-width="12" stroke-linecap="round" stroke-dasharray="'+(len*p/100).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate('+rot+' 100 100)"/>')
+      +fm+'<text x="100" y="'+(v==null?104:106)+'" text-anchor="middle" fill="#fff" font-family="IBM Plex Mono,ui-monospace,monospace" font-weight="600" font-size="'+(v==null?22:46)+'">'+(v==null?'not measured':E(v))+'</text>'
+      +'<text x="100" y="134" text-anchor="middle" fill="'+c+'" font-family="IBM Plex Sans,system-ui,sans-serif" font-size="13" font-weight="600" letter-spacing="1.5">'+E(String(grade||(v==null?'':'')).toUpperCase())+'</text></svg>';}
+  function spark(hist,fc){
+    var H=(hist||[]).filter(function(h){return h.index!=null;});
+    if(H.length<2)return '<p class="gt" style="margin:14px 0">'+(H.length?'The history starts today. The trend and the 30-day forecast appear after 7 days.':'No history yet: the index is recorded once a day when it can be measured.')+'</p>';
+    var W=360,Hh=96,n=H.length,fx=fc!=null?14:0,X=function(i){return 4+(W-8-fx*3)*i/(n-1);},Y=function(v){return 6+(Hh-14)*(1-v/100);};
+    var pts=H.map(function(h,i){return X(i).toFixed(1)+','+Y(h.index).toFixed(1);}),last=H[n-1];
+    var area='M'+X(0).toFixed(1)+','+(Hh-2)+' L'+pts.join(' L')+' L'+X(n-1).toFixed(1)+','+(Hh-2)+' Z',c=col(last.index);
+    var f=fc!=null?'<line x1="'+X(n-1).toFixed(1)+'" y1="'+Y(last.index).toFixed(1)+'" x2="'+(W-4)+'" y2="'+Y(fc).toFixed(1)+'" stroke="#ffd166" stroke-width="2" stroke-dasharray="4 4"/><circle cx="'+(W-4)+'" cy="'+Y(fc).toFixed(1)+'" r="3.5" fill="#ffd166"><title>30-day forecast '+E(fc)+'</title></circle>':'';
+    var grid=[25,50,75].map(function(g){return '<line x1="0" x2="'+W+'" y1="'+Y(g).toFixed(1)+'" y2="'+Y(g).toFixed(1)+'" stroke="#1d2840" stroke-dasharray="2 4"/>';}).join('');
+    return '<svg viewBox="0 0 '+W+' '+Hh+'" preserveAspectRatio="none" role="img" aria-label="'+E('health index over '+n+' days, now '+last.index+(fc!=null?', forecast '+fc+' in 30 days':''))+'"><defs><linearGradient id="cmda" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+c+'" stop-opacity=".45"/><stop offset="1" stop-color="'+c+'" stop-opacity="0"/></linearGradient></defs>'+grid
+      +'<path d="'+area+'" fill="url(#cmda)"/><polyline points="'+pts.join(' ')+'" fill="none" stroke="'+c+'" stroke-width="2"/>'+f+'<circle cx="'+X(n-1).toFixed(1)+'" cy="'+Y(last.index).toFixed(1)+'" r="3.5" fill="#fff"/></svg>';}
+  function pillars(v){
+    var ch=(v.ml&&v.ml.pillar_change)||{};
+    $('cmdPillars').innerHTML=(v.pillars||[]).map(function(p){var m=p.measured&&p.score!=null,d=ch[p.id];
+      return '<a href="'+E(page(p.page))+'" title="'+E(p.name+' - weight '+p.weight+'%')+'"><span class="n">'+E(p.name)+'</span>'
+        +(m?'<div class="v" style="color:'+col(p.score)+'">'+E(p.score)+'</div><div class="bar"><i style="width:'+Math.max(2,Math.min(100,p.score))+'%;background:linear-gradient(90deg,'+col(p.score)+',#ffffff55)"></i></div>'
+          +'<div class="s">weight '+E(p.weight)+'%'+(d!=null?' · '+(d>0?'▲ +':d<0?'▼ ':'▬ ')+E(d)+' in 7 days':'')+'</div>'
+          :'<div class="v na">not measured</div><div class="bar"></div><div class="s">'+E(p.why||'no source reporting')+'</div>')+'</a>';}).join('');}
+  function kpis(v){
+    var I={};(v.insights||[]).forEach(function(k){I[k.key]=k;});
+    var L=(v.kpis||[]).filter(function(k){return k.value!=null&&k.value!=='';}).sort(function(a,b){return (I[b.key]?1:0)-(I[a.key]?1:0);}).slice(0,10);
+    $('cmdKpis').innerHTML=L.map(function(k){var i=I[k.key],b='';
+      if(i){if(i.unusual)b='<span class="b un">unusual today</span>';else if(i.verdict==='improving')b='<span class="b up">▲ improving</span>';else if(i.verdict==='worsening')b='<span class="b dn">▼ worsening</span>';else b='<span class="b">▬ '+E(i.verdict)+'</span>';
+        if(i.forecast!=null)b+=' <span class="b">30 d: '+E(i.forecast)+E(k.unit||'')+'</span>';}
+      return '<div class="k"><span class="l">'+E(k.label)+'</span><span class="v">'+E(k.value)+E(k.unit||'')+'</span><br>'+b+'</div>';}).join('');}
+  window.zybCmd=function(X,Lv){
+    var ok=X&&X.s===200&&X.j,v=ok?X.j:null,m=(v&&v.ml)||{},chips=[];
+    $('cmdGauge').innerHTML=gauge(v?v.index:null,v?v.grade:'',m.forecast_30d);
+    $('cmdGrade').textContent=!v?'Executive Dashboard '+why(X):v.index==null?'withheld: '+(v.withheld_why||'not enough pillars measured'):v.measured+' of '+(v.pillars||[]).length+' pillars measured';
+    $('cmdSpark').innerHTML=v?spark(v.history,m.forecast_30d):'';
+    var bd=[];if(m.trend)bd.push('<span class="'+(m.trend.verdict==='improving'?'up':m.trend.verdict==='worsening'?'dn':'')+'">'+(m.trend.verdict==='improving'?'▲ ':m.trend.verdict==='worsening'?'▼ ':'▬ ')+E(m.trend.verdict)+' '+(m.trend.per_week>0?'+':'')+E(m.trend.per_week)+' / week</span>');
+    if(m.forecast_30d!=null)bd.push('<span>30-day forecast '+E(m.forecast_30d)+'</span>');if(m.unusual)bd.push('<span class="un">unusual today: '+E(m.unusual.today)+' vs usual '+E(m.unusual.usual)+'</span>');
+    if(v&&m.days!=null&&m.days<7)bd.push('<span>'+E(m.days)+' day(s) of history - ML from 7</span>');
+    $('cmdBadges').innerHTML=bd.join('');
+    if(v){pillars(v);kpis(v);}else{$('cmdPillars').innerHTML='';$('cmdKpis').innerHTML='';}
+    var lv=Lv&&Lv.s===200&&Lv.j;
+    chips.push(lv?'<a href="live-status.html"><span class="d" style="background:'+(lv.counts&&lv.counts.live?'#3fb950':'#e5484d')+'"></span><b>'+E(lv.counts?lv.counts.live:0)+' / '+E(lv.counts?(lv.counts.total-(lv.counts.paused||0)):0)+'</b> data feeds live</a>':'<a href="connections.html"><span class="d" style="background:#6e7681"></span>Data feeds: Live Status '+E(why(Lv))+'</a>');
+    if(v){chips.push('<a href="my-work.html"><span class="d" style="background:#5b8def"></span><b>'+E(v.decisions_waiting||0)+'</b> decisions waiting</a>');
+      if(v.risks)chips.push('<a href="risk-studio.html"><span class="d" style="background:#e5484d"></span><b>'+E(v.risks.high||0)+'</b> high risks · '+E(v.risks.over_appetite||0)+' over appetite</a>');}
+    else chips.push('<a href="connections.html">Connect the sources → Connections &amp; Setup</a>');
+    $('cmdChips').innerHTML=chips.join('');
+    $('cmdPulse').className=lv&&lv.counts&&lv.counts.live?'':'off';
+  };
+  if(window.__zybCmdData)try{window.zybCmd(window.__zybCmdData[0],window.__zybCmdData[1]);}catch(e){if(window.console)console.error('command hero',e);}
+  // the estate as a constellation: one node per menu section in its own colour, gently moving; still when motion is reduced
+  (function net(){
+    var c=$('cmdNet');if(!c||!c.getContext)return;var x=c.getContext('2d'),w=0,h=0,D=Math.min(2,window.devicePixelRatio||1);
+    var BG=['#4472BB','#89ADE6','#174081','#6FCF97'],A=(window.ZYB_NAV||[]).map(function(a,i){return {c:a.c||'#5b8def',g:BG[i%4],n:a.sn||a.name};});   /* the the organisation colourss when the brand switch is on */if(!A.length)return;
+    function size(){w=c.clientWidth;h=c.clientHeight;c.width=Math.max(1,w*D);c.height=Math.max(1,h*D);x.setTransform(D,0,0,D,0,0);}size();
+    var P=A.concat(A).map(function(a,i){return {x:w*(0.45+0.55*Math.random()),y:h*Math.random(),vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,c:a.c,g:a.g,r:i<A.length?2.6:1.4,t:Math.random()*6.28};});
+    function draw(){x.clearRect(0,0,w,h);
+      for(var i=0;i<P.length;i++){var a=P[i];for(var j=i+1;j<P.length;j++){var b=P[j],dx=a.x-b.x,dy=a.y-b.y,d=Math.sqrt(dx*dx+dy*dy);if(d<140){x.strokeStyle=(window.__orgBrand?'rgba(104,139,196,':'rgba(120,150,200,')+((1-d/140)*.22).toFixed(3)+')';x.lineWidth=1;x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke();}}}
+      for(var k=0;k<P.length;k++){var q=P[k],g=.55+.45*Math.sin(q.t);x.globalAlpha=.25*g;x.fillStyle=window.__orgBrand&&q.g?q.g:q.c;x.beginPath();x.arc(q.x,q.y,q.r*3.2,0,6.283);x.fill();x.globalAlpha=.9;x.beginPath();x.arc(q.x,q.y,q.r,0,6.283);x.fill();}x.globalAlpha=1;}
+    window.addEventListener('resize',size);
+    if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){draw();return;}
+    (function loop(){if(!document.body.contains(c))return;if(!document.hidden){for(var i=0;i<P.length;i++){var p=P[i];p.x+=p.vx;p.y+=p.vy;p.t+=.03;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;}draw();}requestAnimationFrame(loop);})();
+  })();
+})();
+</script>
+<script>
+/* Platform intelligence (home): tiles and ranked signals from the platform's own ML engines - Infrastructure Automation intelligence
+   (/api/itam/infra-intel), the AI engineers' team intelligence (/duty/intel in both engines), AI Governance (/api/itam/aigov-intel) and
+   the platform backup (/api/soc/platform/backup). Read-only. A source that does not answer says why and contributes no figure.
+   Every value is escaped; links are fixed page names, never taken from data. */
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var E=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  function get(u){return new Promise(function(ok){var r=new XMLHttpRequest();r.open('GET',u);r.withCredentials=true;r.timeout=20000;r.zybQuiet=true;r.onload=function(){var j=null;try{j=JSON.parse(r.responseText);}catch(e){ /* not JSON: treated as no data */ }ok({s:r.status,j:j});};r.onerror=r.ontimeout=function(){ok({s:0,j:null});};r.send();});}
+  function why(r){return r.s===403||r.s===401?'no access':r.s===404?'not installed':'not reachable';}
+  function good(r,f){return r&&r.s===200&&r.j&&f(r.j);}
+  function ring(v){var c=v>=80?'#3fb950':v>=60?'#f2c04d':'#f25c5c',C=2*Math.PI*20,o=C*(1-Math.max(0,Math.min(100,v))/100);
+    return '<svg class="ring" width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="20" fill="none" stroke="rgba(127,127,127,.22)" stroke-width="5"/><circle cx="26" cy="26" r="20" fill="none" stroke="'+c+'" stroke-width="5" stroke-linecap="round" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+o.toFixed(1)+'" transform="rotate(-90 26 26)"/></svg>';}
+  function tile(href,label,val,sub,cls,score){return '<a class="pi-t '+(cls||'')+'" href="'+href+'"><span class="l">'+E(label)+'</span><span class="go">→</span><div class="pr">'+(score!=null?ring(score):'')+'<span class="v'+(score==null&&!/\d/.test(String(val))?' na':'')+'">'+val+'</span></div><div class="s">'+E(sub)+'</div></a>';}
+  function kpi(v,label){var k=(v.kpis||[]).filter(function(x){return x.label===label;})[0];return k?k.value:null;}
+  function sec(v,id){return (v.sections||[]).filter(function(x){return x.id===id;})[0]||null;}
+  function agoH(t){var h=(Date.now()-Date.parse(t))/3600000;return h<1?'under an hour ago':h<48?Math.round(h)+' h ago':Math.round(h/24)+' days ago';}
+  function draw(R){
+    var T=[],S=[],sig=function(rank,cls,tag,title,sub,href){S.push({rank:rank,cls:cls,tag:tag,title:title,sub:sub,href:href});};
+    // infrastructure
+    var inf=R.infra;
+    if(good(inf,function(j){return j.ring&&j.ring.value!=null;})){var v=inf.j,n14=Number(kpi(v,'Full within 14 days'))||0,hr=Number(kpi(v,'High-risk targets'))||0;
+      T.push(tile('infra-ai.html','Infrastructure health',E(v.ring.value)+'<small> / 100</small>',n14?n14+' capacity limit(s) within 14 days · '+hr+' high-risk target(s)':hr?hr+' high-risk target(s)':'no capacity limit within 14 days',v.ring.value<60?'bad':v.ring.value<80?'warn':'',v.ring.value));
+      var fc=sec(v,'forecast');(fc&&fc.rows||[]).slice(0,3).forEach(function(r){var c=r.cells||[],full=c[5]&&typeof c[5]==='object'?c[5].text:c[5];if(full&&full!=='—')sig(c[5]&&c[5].tone==='bad'?90:60,c[5]&&c[5].tone==='bad'?'bad':'warn','Forecast',c[0]+': '+c[1]+' full '+full,c[2]+' now, '+c[3]+' a day - a projection from past pace','infra-ai.html');});
+      var ac=sec(v,'actions');if(ac&&ac.items&&ac.items[0]&&!S.length)sig(50,'warn','Infrastructure',ac.items[0].title,ac.items[0].sub,'infra-ai.html');
+    }else T.push(tile('infra-ai.html','Infrastructure health',E(inf.s===200?'not measured':why(inf)),inf.s===200?((inf.j&&inf.j.ring&&inf.j.ring.why)||'Infrastructure Automation has no target yet'):'Infrastructure Automation intelligence did not answer',''));
+    // AI engineers (both engines)
+    var D=[R.dutyI,R.dutyS].filter(function(r){return good(r,function(j){return Array.isArray(j.engineers)&&j.team;});});
+    if(D.length){var tw=0,tn=0,needs=[],over=0;D.forEach(function(r){r.j.engineers.forEach(function(e){if(e.trust!=null){var w=Math.max(1,e.open+e.resolved_30d);tw+=e.trust*w;tn+=w;}});needs=needs.concat(r.j.needs||[]);over+=r.j.team.over_sla||0;});
+      var tr=tn?Math.round(tw/tn):null;needs.sort(function(a,b){return b.score-a.score;});
+      T.push(tile('ai-team.html','AI engineers · trust',tr==null?'not measured':E(tr)+'<small> / 100</small>',needs.length+' item(s) waiting for a person · '+over+' past SLA'+(D.length<2?' · one side did not answer':''),tr!=null&&tr<60?'bad':needs.length?'warn':'',tr));
+      needs.slice(0,3).forEach(function(x){sig(70+Math.min(25,x.score),x.severity==='critical'?'bad':'warn','Needs you',x.title||x.id,(x.engineer_name||'')+' · '+x.why,'ai-team.html');});
+    }else T.push(tile('ai-team.html','AI engineers · trust',E(why(R.dutyI.s?R.dutyI:R.dutyS)),'the team intelligence did not answer',''));
+    // AI governance
+    var ag=R.aigov;
+    if(good(ag,function(j){return j.ring;})){var g=ag.j,paused=Number(kpi(g,'Paused'))||0,sh=kpi(g,'Shadow AI'),hi=Number(kpi(g,'High-risk agents'))||0,shn=Number(sh)||0;
+      T.push(tile('ai-governance.html','AI systems governed',g.ring.value==null?'not measured':E(g.ring.value)+'<small> %</small>',hi+' high-risk agent(s) · '+paused+' paused · shadow AI '+(sh==null||sh==='—'?'not measured':shn),hi||shn?'warn':'',g.ring.value));
+      if(paused)sig(65,'warn','AI governance',paused+' AI feature(s) paused','every call is refused until a second administrator approves the resume','ai-governance.html');
+      if(shn)sig(58,'warn','Shadow AI',shn+' unsanctioned AI product(s) on endpoints','found in the software inventory - record why each is allowed, or remove it','ai-governance.html');
+    }else T.push(tile('ai-governance.html','AI systems governed',E(why(ag)),'AI Governance did not answer',''));
+    // backup
+    var bk=R.backup;
+    if(good(bk,function(j){return 'status' in j;})){var st=bk.j.status,L=st&&st.last;
+      if(!st){T.push(tile('platform.html','Last good backup','none yet','no backup has run on this server','warn'));sig(88,'bad','Backup','No platform backup has run yet','run one from Admin Panel → Backup','platform.html');}
+      else{var stale=!st.last_ok_at||Date.now()-Date.parse(st.last_ok_at)>26*3600000,failed=L&&L.ok===false;
+        T.push(tile('platform.html','Last good backup',st.last_ok_at?E(agoH(st.last_ok_at)):'never',(L&&L.remote==='ok'?'copied off this server':(st.config&&st.config.remote)?'off-site copy '+(L&&L.remote==='failed'?'FAILED':'pending'):'kept on this server only')+' · '+(st.copies||0)+' kept',failed||stale?'bad':(L&&L.remote==='ok')?'':'warn'));
+        if(failed)sig(100,'bad','Backup','The last platform backup FAILED',(L.error||'see Platform Health & Backup'),'platform.html');
+        else if(stale)sig(95,'bad','Backup','No good backup in the last 26 hours','last good: '+(st.last_ok_at?agoH(st.last_ok_at):'never'),'platform.html');
+        else if(!(st.config&&st.config.remote))sig(40,'warn','Backup','Backups are kept on this server only','set a share or SFTP target so a copy leaves the server','platform.html');}
+    }else T.push(tile('platform.html','Last good backup',E(why(bk)),'the backup status did not answer',''));
+    $('pi-tiles').innerHTML=T.join('');
+    S.sort(function(a,b){return b.rank-a.rank;});
+    $('pi-sig').querySelector('ol').innerHTML=S.length?S.slice(0,6).map(function(x){return '<li class="'+x.cls+'"><a href="'+x.href+'"><i></i><span><em>'+E(x.tag)+'</em><b>'+E(x.title)+'</b><small>'+E(x.sub)+'</small></span></a></li>';}).join(''):'<li class="l">No signal needs attention from the sources that answered.</li>';
+  }
+  function load(){Promise.all([get('/api/itam/infra-intel'),get('/api/itam/duty/intel'),get('/api/soc/duty/intel'),get('/api/itam/aigov-intel'),get('/api/soc/platform/backup')]).then(function(r){if($('pi-tiles'))draw({infra:r[0],dutyI:r[1],dutyS:r[2],aigov:r[3],backup:r[4]});});}
+  load();setInterval(function(){if(!document.hidden)load();},120000);
+})();
+</script></body></html>

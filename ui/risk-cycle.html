@@ -1,0 +1,126 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Risk Assessment Cycle</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><link rel="stylesheet" href="vendor/zyb-riskprog.css"><script src="vendor/zyb-riskprog.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Risk Assessment Cycle (RCSA): the quarterly re-assessment that replaced the Excel round. Risk management opens a cycle; each risk
+     is re-assessed or confirmed unchanged (Business Risk's assess - the register is the record); a department is signed off by a
+     person who assessed none of its risks; the risk committee approves (not the opener, not a signer) or returns it with a reason;
+     approval freezes the cycle and it is compared with the previous one. API: /api/itam/brisk/cycles (engine/risk-programme.js). -->
+<style>
+.mv{font-weight:700}.mv.up{color:#ff7b72}.mv.down{color:#3fb950}.mv.same{color:var(--mu)}
+tr.it td:first-child{box-shadow:inset 3px 0 0 var(--rc,#3a4458)}html.zyb-rtl tr.it td:first-child{box-shadow:inset -3px 0 0 var(--rc,#3a4458)}
+.af{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,2fr) auto;gap:6px;align-items:end;padding:8px;background:#0e131c;border-radius:10px;margin-top:6px}@media(max-width:900px){.af{grid-template-columns:1fr 1fr}}
+.g3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:14px}@media(max-width:1100px){.g3{grid-template-columns:1fr 1fr}}@media(max-width:700px){.g3{grid-template-columns:1fr}}
+.g3 .card{margin:0}
+.pr{display:flex;gap:16px;align-items:center;flex-wrap:wrap}.pr svg{flex:none;width:140px;height:140px}
+.tl{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:12.5px;min-width:0}.tl li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:center;color:var(--mu)}.tl li i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:1px solid #34405a;font-style:normal}
+.tl li.done{color:#9be3a7}.tl li.done i{background:#1f4d2a;border-color:#2f6b3a;color:#9be3a7}.tl li.on{color:#fff;font-weight:600}.tl li.on i{background:var(--ac);border-color:var(--ac);color:#fff}
+.due{display:inline-block;margin-top:6px;font-size:12px;padding:2px 10px;border-radius:999px;border:1px solid var(--ln)}
+.mix .r{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;align-items:center;margin:8px 0;font-size:12.5px}.mix .bar{display:flex;height:20px;border-radius:7px;overflow:hidden;background:#1b2332}.mix .bar i{display:grid;place-items:center;height:100%;font-size:11px;font-weight:800;color:#0b0e14;font-style:normal;min-width:0;overflow:hidden}
+.lgd{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--mu);margin-top:6px}.lgd i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-inline-end:5px}
+.tx{display:grid;grid-template-columns:70px repeat(4,minmax(0,1fr));gap:4px;direction:ltr;font-size:11px}.tx .c{min-height:36px;border-radius:7px;display:grid;place-items:center;font-weight:800;font-size:14px;background:#161c28;color:#3a4458}
+.tx .c.s{background:#232b3b;color:#c7cedb}.tx .c.w{background:rgba(229,72,77,.22);color:#ffb3ae}.tx .c.b{background:rgba(47,179,68,.22);color:#9be3a7}.tx .ax{color:var(--mu);display:flex;align-items:center;justify-content:center}
+.dg{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.dc{background:#0f141e;border:1px solid var(--ln);border-radius:12px;padding:12px;display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:center}.dc.ok{border-color:#2f6b3a}.dc svg{width:64px;height:64px}
+.dc h3{margin:0;font-size:13.5px}.dc h3 a{color:var(--tx);text-decoration:none}.dc h3 a:hover{text-decoration:underline}.dc .m{font-size:12px;color:var(--mu);margin:2px 0 6px}
+.dv{display:grid;grid-template-columns:120px minmax(0,1fr) 40px;gap:8px;align-items:center;font-size:12.5px;padding:3px 0}.dv .tr{height:12px;border-radius:999px;background:#1b2332;overflow:hidden}.dv .tr i{display:block;height:100%}.dv b{text-align:end}
+.arr{color:var(--mu);margin:0 4px}
+</style></head><body><main>
+<section class="rp-hero"><div class="eb">Enterprise risk · assessment cycle</div><h1>Risk and control self-assessment</h1>
+ <p>Each quarter every open risk is re-assessed by its owner in the system - no spreadsheet round. Department heads sign their department off, the risk committee approves, and the quarter is frozen and compared with the last one.</p>
+ <div class="rp-top rp-noprint"><a class="btn" href="business-risk-register.html"><i class="ti ti-list-details"></i>Risk register</a><a class="btn" href="risk-reports.html"><i class="ti ti-report"></i>Reports</a><button type="button" class="btn" id="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button></div></section>
+<div id="err"></div>
+<div class="k" id="kk"></div>
+<div id="viz"></div>
+<div id="cur"></div>
+<div class="card" id="opencard" hidden><h2><i class="ti ti-player-play"></i>Open a cycle <span class="c">administrators - every open risk (or the departments chosen) is put on the list</span></h2>
+ <div class="form"><label class="f">Period<input class="inp" id="o-p" placeholder="2026-Q4" maxlength="7"></label><label class="f">Due date<input class="inp" id="o-d" type="date"></label><label class="f">Name (optional)<input class="inp" id="o-n" maxlength="120"></label>
+ <label class="f w">Departments (none chosen = all)<select class="inp" id="o-dep" multiple size="4"></select></label><div class="w"><button type="button" class="btn pri" id="o-go">Open the cycle</button></div></div></div>
+<div class="card"><h2><i class="ti ti-history"></i>Cycles</h2><div id="list" class="tw"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.ZRP,esc=Z.esc,$=Z.$,val=Z.val,L=[],DEPTS=[],C=null,FD='';
+  var LIK=['Unlikely','Rare','Possible','Likely','Almost certain'],IMP=['Negligible','Minor','Moderate','Significant','Major'],EXP=['Minor','Limited','Medium','Significant','Major'];
+  function tile(l,v,s,a){return '<div class="t" style="--a:'+a+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s)+'</div></div>';}
+  function steps(){ /* the steps are drawn in the Progress card (viz) */ }
+  function load(){return Z.req('GET','/brisk/cycles').then(function(j){L=j.cycles;DEPTS=j.departments;$('err').innerHTML='';
+      var want=decodeURIComponent((location.hash.match(/id=([^&]+)/)||[])[1]||''),pick=L.find(function(c){return c.id===want;})||L.find(function(c){return c.state==='open'||c.state==='review';})||L[0];
+      $('o-dep').innerHTML=DEPTS.map(function(d){return '<option>'+esc(d)+'</option>';}).join('');
+      $('opencard').hidden=!(Z.can('admin')&&!L.some(function(c){return c.state==='open'||c.state==='review';}));
+      list();return pick?Z.req('GET','/brisk/cycles/'+encodeURIComponent(pick.id)).then(function(c){C=c;draw();}):(C=null,draw());})
+    .catch(function(e){$('err').innerHTML='<div class="err">'+esc(e.message)+'</div>';});}
+  function list(){$('list').innerHTML=L.length?'<table><thead><tr><th>Cycle</th><th>Period</th><th>State</th><th>Progress</th><th>Opened</th><th>Decision</th></tr></thead><tbody>'+L.map(function(c){return '<tr><td><a href="#id='+encodeURIComponent(c.id)+'" style="color:var(--tx)"><b>'+esc(c.id)+'</b></a><div class="sm mu">'+esc(c.name)+'</div></td><td>'+esc(c.period)+'</td><td>'+Z.pill(c.state,c.state==='approved'?'#2fb344':c.state==='cancelled'?'#5b6478':'#f59f00')+'</td><td>'+Z.bar(c.progress.pct)+' <span class="sm">'+c.progress.submitted+'/'+c.progress.risks+'</span></td><td class="sm">'+esc(c.opened_by)+'<br><span class="mu">'+esc(String(c.opened_at).slice(0,10))+'</span></td><td class="sm">'+(c.decision?esc(c.decision.by)+'<br><span class="mu">'+esc(String(c.decision.at).slice(0,10))+'</span>':'-')+'</td></tr>';}).join('')+'</tbody></table>'
+    :'<div class="empty">No assessment cycle yet. '+(Z.can('admin')?'Open the first one above.':'An administrator opens the first one.')+'</div>';}
+  // ---------- graphics, all from the cycle's own records
+  var CN=['Class I','Class II','Class III','Class IV'];
+  if(window.zybLang)window.zybLang.extend({terms:{'Progress':'التقدم','Owners assess their risks':'المالكون يقيّمون مخاطرهم','Department heads sign off':'رؤساء الإدارات يعتمدون','Risk committee decides':'لجنة المخاطر تقرر','Frozen and compared':'مجمّدة ومقارنة','Residual class mix':'توزيع الفئات المتبقية','Start of cycle':'بداية الدورة','Now':'الآن','Approved':'معتمدة',
+    'What moved':'ما الذي تغيّر','worse':'أسوأ','same class':'الفئة نفسها','better':'أفضل','Departments':'الإدارات','sign-off: a person who assessed none of the department\'s risks':'الاعتماد: شخص لم يقيّم أياً من مخاطر الإدارة','Sign off':'اعتماد','ready to sign off':'جاهزة للاعتماد','assessing':'قيد التقييم',
+    'Compared with the start of this cycle':'مقارنة ببداية هذه الدورة','due today':'مستحقة اليوم','cancelled':'ملغاة','▲ higher':'▲ أعلى','▼ lower':'▼ أدنى','= same':'= نفسها','+ new':'+ جديدة','− left':'− خرجت','No risk changed class.':'لم يتغير تصنيف أي خطر.','Risk committee decision':'قرار لجنة المخاطر','Approve and freeze':'اعتماد وتجميد','Return for correction':'إعادة للتصحيح','Returned':'أُعيدت','Frozen':'مجمّدة','Risks to assess':'المخاطر المطلوب تقييمها','Assess':'تقييم','Change the assessment':'تعديل التقييم','Submit':'إرسال'},
+    patterns:[[/^(\d+) of (\d+) assessed$/,function(m){return m[1]+' من '+m[2]+' مقيَّمة';}],[/^(\d+) day\(s\) to the due date$/,function(m){return m[1]+' يوم حتى تاريخ الاستحقاق';}],[/^(\d+) day\(s\) overdue$/,function(m){return 'متأخرة '+m[1]+' يوم';}],[/^(\d+) assessed$/,function(m){return m[1]+' مقيَّمة';}],
+      [/^approved (\d{4}-\d\d-\d\d)$/,function(m){return 'اعتُمدت '+m[1];}],[/^✔ signed off by (.+)$/,function(m){return '✔ اعتمدها '+m[1];}],[/^Compared with (\S+)$/,function(m){return 'مقارنة مع '+m[1];}],[/^(\d+) of (\d+) done$/,function(m){return m[1]+' من '+m[2]+' منجزة';}]]});
+  function ring(pct,size,col,center,sub){var R=size/2-9,C=2*Math.PI*R,len=Math.max(0,Math.min(100,pct))/100*C,m=size/2;
+    return '<svg viewBox="0 0 '+size+' '+size+'" role="img" aria-label="'+esc(Math.round(pct)+' %')+'"><circle r="'+R+'" cx="'+m+'" cy="'+m+'" fill="none" stroke="#1b2332" stroke-width="12"/><circle r="'+R+'" cx="'+m+'" cy="'+m+'" fill="none" stroke="'+col+'" stroke-width="12" stroke-linecap="round" stroke-dasharray="'+len.toFixed(2)+' '+(C-len+0.01).toFixed(2)+'" transform="rotate(-90 '+m+' '+m+')"/>'
+      +'<text x="'+m+'" y="'+(sub?m+2:m+6)+'" text-anchor="middle" font-size="'+(size>100?26:15)+'" font-weight="800" fill="currentColor">'+esc(center)+'</text>'+(sub?'<text x="'+m+'" y="'+(m+20)+'" text-anchor="middle" font-size="11" fill="#8c95a8">'+esc(sub)+'</text>':'')+'</svg>';}
+  function daysTo(d){return Math.round((Date.parse(d+'T00:00:00Z')-Date.parse(new Date().toISOString().slice(0,10)+'T00:00:00Z'))/86400000);}
+  function mixBar(cnt,tot){return '<div class="bar">'+CN.map(function(c,i){var v=cnt[i];return v?'<i style="width:'+(v/tot*100).toFixed(1)+'%;background:'+Z.CLS[c]+'" title="'+esc(c+': '+v)+'">'+(v/tot>0.06?v:'')+'</i>':'';}).join('')+'</div>';}
+  function viz(c){var p=c.progress,I=c.items,done=I.filter(function(i){return i.after;}),cls=function(x){return x&&x.residual?x.residual-1:-1;};
+    var at=c.state==='approved'?4:c.state==='review'?2:p.signed?1:0,S=['Owners assess their risks','Department heads sign off','Risk committee decides','Frozen and compared'];
+    var dl=daysTo(c.due),dueTxt=c.state==='approved'?['approved '+String(c.decision.at).slice(0,10),'#2fb344']:c.state==='cancelled'?['cancelled','#5b6478']:dl<0?[(-dl)+' day(s) overdue','#e5484d']:dl===0?['due today','#f59f00']:[dl+' day(s) to the due date','#6366f1'];
+    var h='<div class="g3"><div class="card"><h2><i class="ti ti-progress-check"></i>Progress</h2><div class="pr">'+ring(p.pct,140,p.pct===100?'#2fb344':'#f97316',p.pct+'%',p.submitted+' of '+p.risks)
+      +'<div style="min-width:0"><ul class="tl">'+S.map(function(t,i){return '<li class="'+(i<at?'done':i===at?'on':'')+'"><i>'+(i<at?'✓':i+1)+'</i><span>'+esc(t)+'</span></li>';}).join('')+'</ul><span class="due" style="border-color:'+dueTxt[1]+';color:'+dueTxt[1]+'">'+esc(dueTxt[0])+'</span></div></div></div>';
+    // class mix: start of the cycle against the assessment so far
+    var b0=[0,0,0,0],b1=[0,0,0,0];I.forEach(function(i){var x=cls(i.before),y=cls(i.after||i.before);if(x>=0)b0[x]++;if(y>=0)b1[y]++;});var t0=Math.max(1,b0.reduce(function(a,v){return a+v;},0)),t1=Math.max(1,b1.reduce(function(a,v){return a+v;},0));
+    h+='<div class="card"><h2><i class="ti ti-chart-bar"></i>Residual class mix</h2><div class="mix"><div class="r"><span>Start of cycle</span>'+mixBar(b0,t0)+'</div><div class="r"><span>'+(c.state==='approved'?'Approved':'Now')+'</span>'+mixBar(b1,t1)+'</div></div>'
+      +'<div class="lgd">'+CN.map(function(cn,i){return '<span><i style="background:'+Z.CLS[cn]+'"></i>'+esc(cn)+' '+b0[i]+' → '+b1[i]+'</span>';}).join('')+'</div></div>';
+    // transitions: start class (rows) to assessed class (columns)
+    var T=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];done.forEach(function(i){var x=cls(i.before),y=cls(i.after);if(x>=0&&y>=0)T[x][y]++;});
+    var g='<div></div>'+['I','II','III','IV'].map(function(r){return '<div class="ax">→ '+r+'</div>';}).join('');
+    for(var x=0;x<4;x++){g+='<div class="ax" style="justify-content:flex-start">'+esc(CN[x])+'</div>';for(var y=0;y<4;y++){var v=T[x][y];g+='<div class="c'+(v?(x===y?' s':y>x?' w':' b'):'')+'" title="'+esc(CN[x]+' → '+CN[y]+': '+v)+'">'+(v||'·')+'</div>';}}
+    h+='<div class="card"><h2><i class="ti ti-arrows-exchange"></i>What moved <span class="c">'+done.length+' assessed</span></h2><div class="tx" role="img" aria-label="class transitions from the start of the cycle">'+g+'</div><div class="lgd"><span><i style="background:rgba(229,72,77,.5)"></i>worse</span><span><i style="background:#3a4458"></i>same class</span><span><i style="background:rgba(47,179,68,.5)"></i>better</span></div></div></div>';
+    return h;}
+  function draw(){steps(C);var c=C;
+    if(!c){$('kk').innerHTML=tile('Cycle','none','no cycle opened yet','#3a4258');$('viz').innerHTML='';$('cur').innerHTML='';return;}
+    var p=c.progress;
+    $('kk').innerHTML=tile('Cycle',c.period,c.state+' · due '+c.due,c.state==='approved'?'#2fb344':'#f97316')+tile('Assessed',p.pct+' %',p.submitted+' of '+p.risks+' risks',p.pct===100?'#2fb344':'#f59f00')+tile('Departments signed',p.signed+' / '+p.departments,'by a person who did not assess them',p.signed===p.departments?'#2fb344':'#6366f1')
+      +tile('Rated higher',p.up,'residual or inherent up',p.up?'#e5484d':'#3a4258')+tile('Rated lower',p.down,'improved this cycle',p.down?'#2fb344':'#3a4258')+tile('Unchanged',p.unchanged,'confirmed with a note','#5b6478')+(p.overdue?tile('Overdue',p.overdue,'not assessed by '+c.due,'#e5484d'):'');
+    $('viz').innerHTML=viz(c);
+    var h='';
+    // departments as cards: their own ring, movement, sign-off
+    h+='<div class="card"><h2><i class="ti ti-building"></i>Departments <span class="c">sign-off: a person who assessed none of the department\'s risks</span></h2><div class="dg">'
+      +c.by_department.map(function(d){var full=d.submitted===d.risks,pc=d.risks?Math.round(d.submitted/d.risks*100):0,I=c.items.filter(function(i){return i.department===d.department;}),up=I.filter(function(i){return i.movement==='up';}).length,dn=I.filter(function(i){return i.movement==='down';}).length;
+        return '<div class="dc'+(d.signed?' ok':'')+'">'+ring(pc,64,d.signed?'#2fb344':full?'#6366f1':'#f59f00',pc+'%')+'<div style="min-width:0"><h3><a href="#" data-dep="'+esc(d.department)+'">'+esc(d.department)+'</a></h3><div class="m"><span>'+d.submitted+' of '+d.risks+' assessed</span>'+(up?' · <span class="mv up">▲ '+up+'</span>':'')+(dn?' · <span class="mv down">▼ '+dn+'</span>':'')+'</div>'
+          +(d.signed?Z.pill('✔ signed off by '+d.signed.by,'#2fb344'):c.state==='open'&&full&&Z.can('operator')?'<button type="button" class="btn xs" data-sign="'+esc(d.department)+'"><i class="ti ti-signature"></i>Sign off</button>':Z.pill(full?'ready to sign off':'assessing','#5b6478'))+'</div></div>';}).join('')+'</div></div>';
+    // committee
+    if(c.state==='review')h+='<div class="card" style="border-color:#6b4b1c;background:linear-gradient(135deg,#1c1508,var(--pn))"><h2><i class="ti ti-gavel" style="color:#f59f00"></i>Risk committee decision</h2>'+(Z.can('admin')&&c.opened_by!==Z.me()&&!c.by_department.some(function(d){return d.signed&&d.signed.by===Z.me();})?'<div class="flt"><input class="inp" id="c-n" placeholder="Note (required to return)" maxlength="1000" style="flex:1;min-width:220px"><button type="button" class="btn pri" data-dec="approve">Approve and freeze</button><button type="button" class="btn" data-dec="return">Return for correction</button></div>':'<div class="sm mu">Every department is signed off. An administrator who did not open the cycle and signed no department off records the committee\'s decision.</div>')+'</div>';
+    if(c.returns&&c.returns.length)h+='<div class="card"><h2><i class="ti ti-arrow-back-up"></i>Returned</h2>'+c.returns.map(function(r){return '<div class="sm">'+esc(String(r.at).slice(0,10))+' by <b>'+esc(r.by)+'</b>: '+esc(r.note)+'</div>';}).join('')+'</div>';
+    if(c.snapshot)h+='<div class="card" style="border-color:#2f6b3a;background:linear-gradient(135deg,#0d1d12,var(--pn))"><h2><i class="ti ti-lock" style="color:#3fb950"></i>Frozen <span class="c">approved by '+esc(c.decision.by)+' on '+esc(String(c.decision.at).slice(0,10))+' · fingerprint '+esc(c.snapshot.fingerprint)+'</span></h2><div class="sm">'+c.snapshot.classes.map(function(n,i){return Z.cls(CN[i])+' '+n;}).join(' &nbsp; ')+'</div></div>';
+    // comparison: bars
+    var cp=c.compare,bar=function(l,v,t,col,k){return '<div class="dv"><span class="mv '+k+'">'+esc(l)+'</span><span class="tr"><i style="width:'+(t?v/t*100:0).toFixed(1)+'%;background:'+col+'"></i></span><b>'+v+'</b></div>';};
+    if(cp.previous){var S=cp.summary,tot=S.up+S.down+S.same+S['new']+S.left;
+      h+='<div class="card"><h2><i class="ti ti-arrows-diff"></i>Compared with '+esc(cp.previous.period)+' <span class="c">approved '+esc(String(cp.previous.approved_at).slice(0,10))+'</span></h2><div class="g2"><div>'+bar('▲ higher',S.up,tot,'#e5484d','up')+bar('▼ lower',S.down,tot,'#2fb344','down')+bar('= same',S.same,tot,'#5b6478','same')+bar('+ new',S['new'],tot,'#6366f1','')+bar('− left',S.left,tot,'#8c95a8','')+'</div>'
+        +'<div>'+(cp.rows.length?'<div class="tw"><table><thead><tr><th>Risk</th><th>'+esc(cp.previous.period)+'</th><th></th><th>Now</th></tr></thead><tbody>'+cp.rows.slice(0,40).map(function(r){return '<tr><td><b>'+esc(r.code)+'</b> '+esc(r.title)+'<div class="sm mu">'+esc(r.department)+'</div></td><td>'+Z.cls(r.previous)+'</td><td class="mv '+esc(r.change==='up'||r.change==='down'?r.change:'same')+'">'+esc(r.change==='up'?'▲':r.change==='down'?'▼':r.change==='new'?'+':'−')+'</td><td>'+Z.cls(r.now)+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No risk changed class.</div>')+'</div></div></div>';}
+    else h+='<div class="card"><h2><i class="ti ti-arrows-diff"></i>Compared with the start of this cycle</h2><div class="sm mu">'+esc(cp.note)+' - '+p.up+' higher, '+p.down+' lower so far.</div></div>';
+    // items
+    var deps=c.by_department.map(function(d){return d.department;}),I=c.items.filter(function(i){return !FD||i.department===FD;});
+    h+='<div class="card"><h2><i class="ti ti-clipboard-check"></i>Risks to assess <span class="c">'+I.filter(function(i){return i.state==='submitted';}).length+' of '+I.length+' done</span></h2><div class="flt" style="margin-bottom:8px"><select class="inp" id="fd" aria-label="Department"><option value="">All departments</option>'+Z.opts(deps,FD)+'</select><select class="inp" id="fs" aria-label="State"><option value="">Any state</option><option value="pending">Not assessed</option><option value="submitted">Assessed</option></select></div><div class="tw" id="items"></div></div>';
+    $('cur').innerHTML=h;items();}
+  function items(){var c=C,fs=val('fs'),I=c.items.filter(function(i){return (!FD||i.department===FD)&&(!fs||i.state===fs);}),open=c.state==='open',signed={};c.by_department.forEach(function(d){if(d.signed)signed[d.department]=1;});
+    $('items').innerHTML=I.length?'<table><thead><tr><th>Risk</th><th>Department / owner</th><th>Start of cycle</th><th>Assessed</th><th>Movement</th><th>By</th></tr></thead><tbody>'+I.map(function(i){var a=i.after,col=Z.CLS[(a||i.before)['class']]||'#3a4458';
+      return '<tr class="it" style="--rc:'+col+'"><td><b>'+esc(i.code)+'</b> '+esc(i.title)+(i.note?'<div class="sm mu">'+esc(i.note)+'</div>':'')
+        +(open&&!signed[i.department]&&Z.can('operator')?'<details><summary class="sm">'+(a?'Change the assessment':'Assess')+'</summary><div class="af" data-risk="'+esc(i.risk)+'"><label class="f">Likelihood<select class="inp" data-k="likelihood">'+Z.opts([1,2,3,4,5],(a||i.before).likelihood,function(x){return x+' '+LIK[x-1];})+'</select></label><label class="f">Impact<select class="inp" data-k="impact">'+Z.opts([1,2,3,4,5],(a||i.before).impact,function(x){return x+' '+IMP[x-1];})+'</select></label><label class="f">Exposure<select class="inp" data-k="exposure">'+Z.opts([1,2,3,4,5],(a||i.before).exposure||2,function(x){return EXP[x-1];})+'</select></label><label class="f">Unchanged<select class="inp" data-k="unchanged"><option value="">no - rated above</option><option value="1">yes - confirm as is</option></select></label><label class="f">Note (required)<input class="inp" data-k="note" maxlength="1000"></label><button type="button" class="btn pri xs" data-sub="'+esc(i.risk)+'">Submit</button></div></details>':'')+'</td>'
+        +'<td>'+esc(i.department)+'<div class="sm mu">'+esc(i.owner)+'</div></td><td>'+Z.cls(i.before['class'])+' <span class="sm mu">'+esc(i.before.label||'')+'</span></td><td>'+(a?Z.cls(a['class'])+' <span class="sm mu">'+esc(a.label||'')+'</span>'+(i.unchanged?' <span class="sm mu">(unchanged)</span>':''):'<span class="mu">not yet</span>')+'</td><td class="mv '+esc(i.movement||'')+'">'+esc(i.movement==='up'?'▲ higher':i.movement==='down'?'▼ lower':i.movement==='same'?'= same':'')+'</td><td class="sm">'+esc(i.by||'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No risk matches.</div>';}
+  function act(p,b,msg){return Z.req('POST',p,b).then(function(c){C=c;Z.toast(msg);return load();}).catch(function(e){Z.toast(e.message);});}
+  document.addEventListener('change',function(ev){if(ev.target.id==='fd'){FD=ev.target.value;items();}if(ev.target.id==='fs')items();});
+  document.addEventListener('click',function(ev){var t=ev.target.closest('#refresh,#o-go,[data-sub],[data-sign],[data-dec],[data-dep]');if(!t)return;
+    if(t.id==='refresh'){load();return;}
+    if(t.dataset.dep){ev.preventDefault();FD=t.dataset.dep;var s=$('fd');if(s)s.value=FD;items();$('items').scrollIntoView({block:'start'});return;}
+    if(t.id==='o-go'){var dep=[].slice.call($('o-dep').selectedOptions).map(function(o){return o.value;});Z.req('POST','/brisk/cycles',{period:val('o-p'),due:val('o-d'),name:val('o-n')||undefined,departments:dep.length?dep:undefined}).then(function(c){Z.toast('Cycle '+c.id+' opened: '+c.items.length+' risks');location.hash='id='+encodeURIComponent(c.id);load();}).catch(function(e){Z.toast(e.message);});return;}
+    if(t.dataset.sub){var box=t.closest('.af'),g=function(k){var e=box.querySelector('[data-k="'+k+'"]');return e?e.value.trim():'';},b={risk:t.dataset.sub,note:g('note')};
+      if(g('unchanged'))b.unchanged=true;else{b.likelihood=Number(g('likelihood'));b.impact=Number(g('impact'));b.exposure=Number(g('exposure'));}
+      act('/brisk/cycles/'+encodeURIComponent(C.id)+'/submit',b,'Assessment recorded in the register');return;}
+    if(t.dataset.sign){act('/brisk/cycles/'+encodeURIComponent(C.id)+'/signoff',{department:t.dataset.sign},t.dataset.sign+' signed off');return;}
+    if(t.dataset.dec){act('/brisk/cycles/'+encodeURIComponent(C.id)+'/decision',{decision:t.dataset.dec,note:val('c-n')||undefined},t.dataset.dec==='approve'?'Cycle approved and frozen':'Cycle returned');}});
+  window.addEventListener('hashchange',load);
+  Z.whoami(load);
+})();
+</script></body></html>

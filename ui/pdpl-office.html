@@ -1,0 +1,263 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Office</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.route svg{width:100%;max-width:1240px;margin:0 auto;height:auto;display:block}.route .st{cursor:pointer}.route .st:hover circle.ring,.route .st:focus circle.ring{stroke-width:5}
+.route .st text{fill:var(--tblr-body-color);font-size:13px}.route .st text.n{font-weight:800;font-size:18px;fill:#fff}.route .st text.p{fill:var(--tblr-secondary);font-size:11.5px}
+.legend span{display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:12px}.legend i{width:12px;height:12px;border-radius:50%;display:inline-block}
+.s-done{background:#2fb344}.s-active{background:#f59f00}.s-todo{background:#5a6a80}
+.step{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}.step .dot{width:12px;height:12px;border-radius:50%;margin-top:4px;flex:none}
+.tabs .btn{margin-right:4px}.cyc{display:flex;gap:8px;flex-wrap:wrap}.cyc .card{flex:1 1 180px}
+html[dir=rtl] .legend span{margin-right:0;margin-left:14px}html[dir=rtl] .tabs .btn{margin-right:0;margin-left:4px}.ltr{direction:ltr;unicode-bidi:embed;text-align:left}
+.orgbox{border:1px solid var(--tblr-border-color);border-radius:8px;padding:10px;height:100%}.gapname{color:var(--tblr-red)}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle" data-t>Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title" data-t>Privacy Office</h2></div>
+ <div class="col-auto ms-auto d-flex gap-2"><button type="button" class="btn" id="langbtn" title="Language / اللغة"><i class="ti ti-language me-1"></i><span id="langlbl" data-no-tr>العربية</span></button><button type="button" class="btn" id="runnow" hidden><i class="ti ti-refresh me-1"></i><span data-t>Route now</span></button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div data-t="intro">
+ PDPL is run here as its own organisation: the DPO, the privacy committee, an owner for each PDPL function, a data steward and a privacy champion in each department, and a data owner for each system. Every finding the PDPL registers raise, and every recurring duty that falls due, becomes a task for a named person, with a deadline. Overdue tasks go to the DPO, then to the committee chair. A task closes only when the registers show it is fixed: a task marked done is re-checked against the registers every 30 minutes, closed as verified when the finding is gone, and reopened and escalated when it is still there after the re-check period.</div></div></div>
+<div class="tabs mb-3" id="tabs" role="tablist">
+ <button type="button" class="btn btn-primary" data-tab="map" role="tab" data-t>Route map</button><button type="button" class="btn" data-tab="mine" role="tab" data-t>My tasks</button><button type="button" class="btn" data-tab="all" role="tab" hidden data-t>All tasks</button><button type="button" class="btn" data-tab="org" role="tab" hidden data-t>Organisation</button><button type="button" class="btn" data-tab="cal" role="tab" hidden data-t>Calendar</button><button type="button" class="btn" data-tab="cfg" role="tab" hidden data-t>Settings</button><button type="button" class="btn" data-tab="ntf" role="tab" hidden data-t>Notifications</button>
+</div>
+<section data-pane="map"><div class="row row-cards mb-3" id="mapk"></div>
+ <div class="card mb-3 route"><div class="card-header"><h3 class="card-title" data-t>PDPL implementation and maintenance - phase by phase</h3><div class="card-actions legend"><span><i class="s-done"></i><b class="fw-normal" data-t>done</b></span><span><i class="s-active"></i><b class="fw-normal" data-t>in progress</b></span><span><i class="s-todo"></i><b class="fw-normal" data-t>not started</b></span></div></div><div class="card-body" id="route"><div class="text-secondary" data-t>Loading…</div></div><div class="card-footer mut" id="routenote"></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title" data-t>Maintain - the yearly cycle once implemented</h3></div><div class="card-body"><div class="cyc" id="cycle"></div></div></div></section>
+<section data-pane="mine" hidden><div class="card mb-3"><div class="card-header"><h3 class="card-title" data-t>My PDPL tasks</h3><div class="card-actions mut" id="myroles"></div></div><div class="table-responsive" id="mylist"><div class="card-body text-secondary" data-t>Loading…</div></div></div></section>
+<section data-pane="all" hidden><div class="row row-cards mb-3" id="kpis"></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title" data-t>All tasks</h3><div class="card-actions d-flex gap-2"><select class="form-select form-select-sm w-auto" id="fstat" aria-label="Filter"><option value="open" data-t>Open</option><option value="overdue" data-t>Overdue</option><option value="escalated" data-t>Escalated</option><option value="claimed" data-t>Claimed - waiting for the registers</option><option value="verify_failed" data-t>Not confirmed by the re-check</option><option value="verified" data-t>Verified by re-test</option><option value="risk_accepted" data-t>Risk accepted</option><option value="unassigned" data-t>Unassigned</option><option value="closed" data-t>Closed</option><option value="" data-t>All</option></select></div></div><div class="table-responsive" id="alllist"></div></div></section>
+<section data-pane="org" hidden><div class="card mb-3"><div class="card-header"><h3 class="card-title" data-t>The privacy organisation</h3></div><div class="card-body" id="org"></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title" data-t>Gaps in the organisation</h3></div><div class="card-body" id="gaps"></div></div></section>
+<section data-pane="cal" hidden><div class="card mb-3"><div class="card-header"><h3 class="card-title" data-t>Recurring duties</h3></div><div class="table-responsive" id="cal"></div></div></section>
+<section data-pane="ntf" hidden>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title" data-t>E-mail and Teams (an administrator)</h3></div><div class="card-body" id="ntfbody"><div class="text-secondary" data-t>Loading…</div></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title" data-t>Contacts - work e-mail of each person (an administrator or the DPO)</h3></div><div class="card-body" id="ctbody"></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title" data-t>Outbox - what was sent</h3></div><div class="table-responsive" id="outbox"></div></div></section>
+<section data-pane="cfg" hidden><div class="card mb-3"><div class="card-header"><h3 class="card-title" data-t>Settings (an administrator or the DPO)</h3></div><div class="card-body" id="cfgbody"></div></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+  var V=null, M=null, TAB='map';
+  // the page follows the platform language (Customize -> Language, vendor/zyb-lang.js); the button here switches the same setting
+  var AR_ON=!!(window.zybLang&&window.zybLang.lang==='ar');
+  var TR={
+    'Governance, Risk & Compliance · Saudi PDPL (SDAIA)':'الحوكمة والمخاطر والامتثال · نظام حماية البيانات الشخصية (سدايا)','Privacy Office':'مكتب الخصوصية','Route now':'وجِّه المهام الآن',
+    intro:'يُدار نظام حماية البيانات الشخصية هنا بتنظيم خاص به: مسؤول حماية البيانات، ولجنة الخصوصية، ومالك لكل وظيفة من وظائف حماية البيانات، ومسؤول بيانات وسفير خصوصية في كل إدارة، ومالك بيانات لكل نظام. كل ملاحظة تُظهرها سجلات حماية البيانات، وكل مهمة دورية يحين موعدها، تصبح مهمة لشخص مسمّى بموعد محدد. المهام المتأخرة تُصعَّد إلى مسؤول حماية البيانات ثم إلى رئيس اللجنة. ولا تُغلق المهمة إلا عندما تُظهر السجلات أنها عولجت.',
+    'Route map':'خريطة الطريق','My tasks':'مهامي','All tasks':'كل المهام','Organisation':'التنظيم','Calendar':'التقويم','Settings':'الإعدادات','Notifications':'الإشعارات',
+    'PDPL implementation and maintenance - phase by phase':'تطبيق نظام حماية البيانات واستدامته - مرحلة بمرحلة','done':'مكتملة','in progress':'قيد التنفيذ','not started':'لم تبدأ','active':'قيد التنفيذ','todo':'لم تبدأ',
+    'Maintain - the yearly cycle once implemented':'الاستدامة - الدورة السنوية بعد التطبيق','My PDPL tasks':'مهامي في حماية البيانات','The privacy organisation':'تنظيم الخصوصية','Gaps in the organisation':'الثغرات في التنظيم',
+    'Recurring duties':'المهام الدورية','E-mail and Teams (an administrator)':'البريد الإلكتروني وTeams (مسؤول المنصة)','Contacts - work e-mail of each person (an administrator or the DPO)':'جهات الاتصال - البريد الوظيفي لكل شخص (مسؤول المنصة أو مسؤول حماية البيانات)',
+    'Outbox - what was sent':'صندوق الصادر - ما أُرسل','Settings (an administrator or the DPO)':'الإعدادات (مسؤول المنصة أو مسؤول حماية البيانات)','Loading…':'جارٍ التحميل…',
+    'Open':'مفتوحة','Overdue':'متأخرة','Escalated':'مُصعّدة','Claimed - waiting for the registers':'مُعلَنة منجزة - بانتظار السجلات','Risk accepted':'مخاطر مقبولة','Unassigned':'غير مُسندة','Closed':'مغلقة','All':'الكل',
+    'open':'مفتوحة','acknowledged':'تم الاطلاع','claimed - waiting for the registers':'مُعلَنة منجزة - بانتظار السجلات','risk accepted':'مخاطر مقبولة','closed':'مغلقة','overdue':'متأخرة','at the committee chair':'لدى رئيس اللجنة','at the DPO':'لدى مسؤول حماية البيانات',
+    'critical':'حرجة','high':'عالية','medium':'متوسطة','low':'منخفضة',
+    'Steps done':'الخطوات المكتملة','Phases complete':'المراحل المكتملة','Current phase':'المرحلة الحالية','Overdue tasks':'المهام المتأخرة','Maintain':'الاستدامة',
+    'Goal':'الهدف','Steps':'الخطوات','Open the page':'افتح الصفحة','Resources':'الموارد','planning estimate':'تقدير للتخطيط','Phase':'المرحلة','nobody yet':'لا أحد بعد',
+    'Task':'المهمة','Severity':'الأهمية','Assigned to':'المكلَّف','Due':'الموعد','Status':'الحالة','recurring duty':'مهمة دورية','finding':'ملاحظة','nobody':'غير مُسندة',
+    'Nothing waiting for you. Tasks reach you when a PDPL finding or a recurring duty is routed to you.':'لا شيء بانتظارك. تصلك المهام عندما تُوجَّه إليك ملاحظة أو مهمة دورية في حماية البيانات.','No task with this filter.':'لا توجد مهمة بهذا التصفية.',
+    'You hold no PDPL role yet':'ليس لديك دور في حماية البيانات بعد','Claimed - not yet confirmed':'مُعلَنة - لم تُؤكَّد بعد',
+    'Data Protection Officer':'مسؤول حماية البيانات','Privacy committee':'لجنة الخصوصية','none named':'لم يُسمَّ أحد','PDPL functions':'وظائف حماية البيانات','Departments':'الإدارات','Department':'الإدارة',
+    'Data steward':'مسؤول البيانات','Deputy':'النائب','Privacy champion':'سفير الخصوصية','Data owners per system':'مالكو البيانات لكل نظام','System':'النظام','Owner':'المالك',
+    'No department yet - name data stewards on the Programme page.':'لا توجد إدارات بعد - سمِّ مسؤولي البيانات في صفحة البرنامج.','No data owner named - tasks about a system go to its department or the DPO.':'لم يُسمَّ مالك بيانات - تذهب مهام النظام إلى إدارته أو إلى مسؤول حماية البيانات.',
+    'Every role is named.':'كل الأدوار مسمّاة.','Duty':'المهمة','due':'مستحقة','within 30 days':'خلال 30 يوماً','Who':'المكلَّف','No recurring duty yet.':'لا توجد مهام دورية بعد.',
+    'An administrator or the DPO sets the committee, the deputy DPO, data owners and deadlines.':'يحدد مسؤول المنصة أو مسؤول حماية البيانات اللجنة ونائب مسؤول حماية البيانات ومالكي البيانات والمواعيد.',
+    'Privacy committee chair (user name)':'رئيس لجنة الخصوصية (اسم المستخدم)','Committee members (comma separated user names)':'أعضاء اللجنة (أسماء المستخدمين مفصولة بفواصل)','Deputy DPO (user name)':'نائب مسؤول حماية البيانات (اسم المستخدم)',
+    'Data owners - one per line: system = user':'مالكو البيانات - سطر لكل نظام: النظام = المستخدم','Days to fix a critical finding':'أيام معالجة الملاحظة الحرجة','Days - high':'الأيام - عالية','Days - medium':'الأيام - متوسطة','Days - low':'الأيام - منخفضة',
+    'Days overdue before the committee chair is told':'أيام التأخر قبل إبلاغ رئيس اللجنة',
+    'Days a task marked done may still show in the registers before it is reopened (1-30)':'عدد الأيام التي قد تظهر فيها مهمة مُعلّمة كمنجزة في السجلات قبل إعادة فتحها (1-30)','Save settings':'حفظ الإعدادات',
+    'Requirement':'المتطلب','What to do':'المطلوب','Evidence':'الأدلة','History':'السجل','Acknowledge':'اطلعت عليها','Mark done':'تم الإنجاز','What was done (the task closes when the registers confirm it)':'ما الذي أُنجز (تُغلق المهمة عندما تؤكده السجلات)',
+    'Reassign (the DPO or an administrator)':'إعادة الإسناد (مسؤول حماية البيانات أو مسؤول المنصة)','To (user name)':'إلى (اسم المستخدم)','Reason':'السبب','New deadline':'موعد جديد','Reassign':'إعادة إسناد',
+    'Accept the risk (a committee member, not the assignee)':'قبول المخاطر (عضو في اللجنة غير المكلَّف)','Why the risk is accepted (at least 20 characters)':'سبب قبول المخاطر (20 حرفاً على الأقل)','Until (12 months at most)':'حتى (12 شهراً كحد أقصى)','Accept risk':'قبول المخاطر',
+    'As recorded (English)':'كما وردت في السجلات (بالإنجليزية)','Acknowledged':'تم تسجيل الاطلاع','Marked done - it closes when the registers confirm it':'سُجِّلت منجزة - تُغلق عندما تؤكدها السجلات','Notification settings saved':'حُفظت إعدادات الإشعارات','Settings saved':'حُفظت الإعدادات',
+    'Send e-mail':'إرسال البريد','Post to Teams':'النشر في Teams','SMTP relay host (e.g. the Exchange receive connector)':'خادم إرسال البريد SMTP (مثل موصّل الاستقبال في Exchange)','Port':'المنفذ','Require STARTTLS':'اشتراط STARTTLS','Implicit TLS (465)':'TLS مباشر (465)',
+    'Check the relay certificate':'التحقق من شهادة الخادم','Internal CA file on the server (PEM path, optional)':'ملف جهة الشهادات الداخلية على الخادم (مسار PEM، اختياري)','From address':'عنوان المرسل','From name':'اسم المرسل',
+    'SMTP user (empty for an anonymous internal relay)':'مستخدم SMTP (فارغ لخادم داخلي دون مصادقة)','SMTP password (leave empty to keep)':'كلمة مرور SMTP (اتركها فارغة للإبقاء عليها)','Clear the stored password':'مسح كلمة المرور المحفوظة',
+    'Teams channel webhook URL (Workflows: "Post to a channel when a webhook request is received"; leave empty to keep)':'رابط Webhook لقناة Teams (Workflows: "Post to a channel when a webhook request is received"؛ اتركه فارغاً للإبقاء عليه)','Clear the stored webhook':'مسح الرابط المحفوظ',
+    'Language of e-mails':'لغة البريد','Language of Teams messages':'لغة رسائل Teams','Arabic and English':'العربية والإنجليزية','Arabic':'العربية','English':'الإنجليزية','Same as e-mails':'مثل البريد',
+    'Daily summary hour (Riyadh, 0-23)':'ساعة الملخص اليومي (الرياض، 0-23)','Portal address used in links (https://…)':'عنوان البوابة المستخدم في الروابط (https://…)','Save':'حفظ','Send a test e-mail to me':'أرسل بريداً تجريبياً إليّ','Send a test to Teams':'أرسل رسالة تجريبية إلى Teams',
+    'An administrator sets the mail relay and the Teams webhook.':'يضبط مسؤول المنصة خادم البريد ورابط Teams.',
+    'New critical and high tasks e-mail the person they are routed to at once; escalations e-mail the DPO or the committee chair (copy to the assignee) and post to the Teams channel; every working day (Sun-Thu, Riyadh) each person with open tasks gets one summary. The password and the webhook are write-only and stored sealed.':'تُرسَل المهام الحرجة والعالية الجديدة بالبريد فوراً إلى الشخص الموجَّهة إليه؛ والتصعيدات تُرسَل إلى مسؤول حماية البيانات أو رئيس اللجنة (مع نسخة للمكلَّف) وتُنشر في قناة Teams؛ وكل يوم عمل (الأحد-الخميس، الرياض) يتلقى كل شخص لديه مهام مفتوحة ملخصاً واحداً. كلمة المرور والرابط يُكتبان ولا يُعرضان، ويُحفظان مشفَّرين.',
+    "One per line: user name = work e-mail, optionally = ar or = en for that person's language":'سطر لكل شخص: اسم المستخدم = البريد الوظيفي، واختيارياً = ar أو = en للغة ذلك الشخص','Save contacts':'حفظ جهات الاتصال',
+    'User':'المستخدم','E-mail':'البريد الإلكتروني','Language':'اللغة','office setting':'إعداد المكتب','No contact yet.':'لا توجد جهات اتصال بعد.','When':'الوقت','Channel':'القناة','Event':'الحدث','To':'إلى','Nothing sent yet.':'لم يُرسَل شيء بعد.',
+    'sent':'أُرسلت','queued':'في الانتظار','retry':'إعادة محاولة','failed':'فشلت','skipped':'تُخطّيت','email':'البريد','teams':'Teams','raised':'مهمة جديدة','escalated':'تصعيد','risk_expired':'انتهاء قبول المخاطر','digest':'الملخص اليومي','test':'تجربة',
+    'set':'محفوظ','not set':'غير محفوظ','on':'مفعّل','off':'معطّل'
+  };
+  function T(s){return AR_ON&&Object.prototype.hasOwnProperty.call(TR,s)?TR[s]:s;}
+  function A(o,f){return AR_ON&&o&&o[f+'_ar']?o[f+'_ar']:(o?o[f]:'');}
+  function N(n,en,ar){return AR_ON?ar.replace('{n}',n):en.replace('{n}',n);}
+  var bdi=function(v){return '<bdi>'+esc(v)+'</bdi>';};   // names and ids keep their own direction inside Arabic text
+  if(AR_ON){[].forEach.call(document.querySelectorAll('[data-t]'),function(el){var k=el.getAttribute('data-t')||el.textContent.replace(/\s+/g,' ').trim();if(Object.prototype.hasOwnProperty.call(TR,k))el.textContent=TR[k];});document.title=TR['Privacy Office'];}
+  $('langlbl').textContent=AR_ON?'English':'العربية';
+  $('langbtn').hidden=window.ZYB_ARABIC!==true;   // Arabic switched off for now (vendor/zyb-dash.js ARABIC_ON)
+  // roles and history come from the server in English; their fixed phrases are translated here
+  function roleT(r){if(!AR_ON)return r;var m;
+    if(r==='DPO')return 'مسؤول حماية البيانات';if(r==='Deputy DPO')return 'نائب مسؤول حماية البيانات';if(r==='Privacy committee chair')return 'رئيس لجنة الخصوصية';if(r==='Privacy committee member')return 'عضو لجنة الخصوصية';
+    if((m=/^(Owner|Deputy): (.+)$/.exec(r)))return (m[1]==='Owner'?'مالك: ':'نائب: ')+(FN[m[2]]||m[2]);
+    if((m=/^(data steward|deputy|champion) - (.+)$/.exec(r)))return ({'data steward':'مسؤول البيانات','deputy':'نائب مسؤول البيانات','champion':'سفير الخصوصية'})[m[1]]+' - '+m[2];
+    if((m=/^Data owner - (.+)$/.exec(r)))return 'مالك بيانات - '+m[1];return r;}
+  var FN={'Data inventory and mapping':'حصر البيانات وخرائطها','Processing approval and contracts':'اعتماد المعالجة والعقود','Data subject requests':'طلبات أصحاب البيانات','Security incident and breach response':'الاستجابة للحوادث وتسرّب البيانات','Staff training and awareness':'تدريب الموظفين والتوعية','SDAIA liaison and documentation':'التواصل مع سدايا والتوثيق'};
+  function histT(w){if(!AR_ON)return w;var m;
+    if(w==='raised')return 'أُنشئت';if(w==='acknowledged')return 'تم الاطلاع';
+    if((m=/^marked done: ([\s\S]*) - stays open until the registers confirm it$/.exec(w)))return 'سُجِّلت منجزة: '+m[1]+' - تبقى مفتوحة حتى تؤكدها السجلات';
+    if((m=/^reassigned from (\S+) to (\S+): ([\s\S]*)$/.exec(w)))return 'أُعيد إسنادها من '+m[1]+' إلى '+m[2]+': '+m[3];
+    if((m=/^deadline set to (.+)$/.exec(w)))return 'حُدِّد الموعد '+m[1];
+    if((m=/^risk accepted until (\S+): ([\s\S]*)$/.exec(w)))return 'قُبلت المخاطر حتى '+m[1]+': '+m[2];
+    if((m=/^overdue - escalated to the DPO (.+)$/.exec(w)))return 'متأخرة - صُعّدت إلى مسؤول حماية البيانات '+m[1];
+    if((m=/^escalated to the committee chair (.+)$/.exec(w)))return 'صُعّدت إلى رئيس اللجنة '+m[1];
+    if((m=/^closed - the registers no longer show it( \(confirms the claim by (.+)\))?$/.exec(w)))return 'أُغلقت - لم تعد السجلات تُظهرها'+(m[2]?' (تأكيد لما أعلنه '+m[2]+')':'');
+    if(/^reopened/.test(w))return 'أُعيد فتحها - أظهرتها السجلات مجدداً';
+    if((m=/^routed to (\S+) \((.+)\)$/.exec(w)))return 'وُجِّهت إلى '+m[1];
+    if((m=/^risk acceptance ended (\S+) - open again$/.exec(w)))return 'انتهى قبول المخاطر '+m[1]+' - مفتوحة مجدداً';return w;}
+  var ST={open:['open','secondary'],acknowledged:['acknowledged','blue'],claimed:['claimed - waiting for the registers','orange'],risk_accepted:['risk accepted','purple'],closed:['closed','green']};
+  var SEVC={critical:'red',high:'orange',medium:'yellow',low:'secondary'};
+  var COL={done:'#2fb344',active:'#f59f00',todo:'#5a6a80'};
+  function sev(t){return P.badge(T(t.severity),SEVC[t.severity]);}
+  function st(t){var x=ST[t.status]||[t.status,'secondary'];return P.badge(T(x[0]),x[1])+(t.overdue?' '+P.badge(T('overdue'),'red'):'')+(t.escalation?' '+P.badge(T(t.escalation===2?'at the committee chair':'at the DPO'),'red'):'')+vbadge(t);}
+  // the re-check of a "done": checking (with the re-checks so far), verified, or not confirmed (reopened)
+  var VS={checking:['being re-checked','orange'],verified:['verified by re-test','green'],failed:['not confirmed - reopened','red']};
+  function vbadge(t){var v=t.verification;if(!v||!VS[v.state]||(v.state==='checking'&&t.status!=='claimed')||(v.state==='failed'&&t.status==='closed'))return '';return ' '+P.badge(T(VS[v.state][0])+(v.state==='checking'?' · '+v.runs:''),VS[v.state][1]);}
+  function vsec(t){var v=t.verification;if(!v||!VS[v.state])return '';
+    var rows=[[T('Re-test'),P.badge(T(VS[v.state][0]),VS[v.state][1])],[T('Check'),'<span class="ltr">'+esc(v.check||'—')+'</span>'],[T('Marked done'),bdi(v.claimed_by||'—')+' · <span class="ltr">'+esc(P.dt(v.claim_at))+'</span>'],
+      [T('Re-checks'),esc(String(v.runs||0))+(v.last_check_at?' · '+esc(T('last'))+' <span class="ltr">'+esc(P.dt(v.last_check_at))+'</span>':'')+(v.last_result?' - '+esc(v.last_result):'')]];
+    if(v.state==='checking')rows.push([T('Reopened if still shown on'),'<span class="ltr">'+esc(P.dt(v.deadline))+'</span> ('+esc(String(v.days))+' '+esc(T('day(s)'))+')']);
+    if(v.state==='verified')rows.push([T('Evidence'),esc(v.evidence||'')]);
+    if(v.state==='failed')rows.push([T('Reopened'),'<span class="ltr">'+esc(P.dt(v.failed_at))+'</span>']);
+    return Z.sec(T('Verification'),Z.kv(rows));}
+  function show(tab){TAB=tab;[].forEach.call(document.querySelectorAll('[data-pane]'),function(s){s.hidden=s.getAttribute('data-pane')!==tab;});
+    [].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.className='btn'+(b.getAttribute('data-tab')===tab?' btn-primary':'');b.setAttribute('aria-selected',b.getAttribute('data-tab')===tab?'true':'false');});}
+  // the route: eight stations on a two-row serpentine, coloured by what the registers show; in Arabic it runs right to left
+  function route(rm){
+    var W=1000,H=330,pos=[],i;
+    for(i=0;i<rm.phases.length;i++){var row=i<4?0:1,col=row===0?i:7-i,x=110+col*260;pos.push([AR_ON?W-x:x,row===0?80:240]);}
+    var bend=AR_ON?-120:120;
+    var d='M'+pos[0][0]+' '+pos[0][1];
+    for(i=1;i<pos.length;i++){if(i===4)d+=' C'+(pos[3][0]+bend)+' '+pos[3][1]+' '+(pos[4][0]+bend)+' '+pos[4][1]+' '+pos[4][0]+' '+pos[4][1];else d+=' L'+pos[i][0]+' '+pos[i][1];}
+    var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(N(rm.progress,'PDPL route map: {n}% of the steps done','خريطة طريق حماية البيانات: اكتمل {n}% من الخطوات'))+'"><path d="'+d+'" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="10" stroke-linecap="round"/>';
+    var done=rm.phases.filter(function(p){return p.state==='done';}).length;
+    s+='<path d="'+d+'" fill="none" stroke="#2fb344" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="'+(done/rm.phases.length*100).toFixed(1)+' 100"/>';
+    rm.phases.forEach(function(p,k){var x=pos[k][0],y=pos[k][1],c=COL[p.state]||COL.todo,r=30,circ=2*Math.PI*(r+7);
+      var sub=AR_ON?(p.done+'/'+p.steps+' خطوات'+(p.open_tasks?' · '+p.open_tasks+' مهمة':'')+(p.overdue_tasks?' · '+p.overdue_tasks+' متأخرة':'')):(p.done+'/'+p.steps+' steps'+(p.open_tasks?' · '+p.open_tasks+' task(s)':'')+(p.overdue_tasks?' · '+p.overdue_tasks+' overdue':''));
+      s+='<g class="st" tabindex="0" role="button" data-phase="'+esc(p.phase)+'" aria-label="'+esc(T('Phase')+' '+p.phase+' '+A(p,'name')+': '+T(p.state))+'">'
+        +'<circle cx="'+x+'" cy="'+y+'" r="'+(r+7)+'" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="4"/>'
+        +'<circle class="ring" cx="'+x+'" cy="'+y+'" r="'+(r+7)+'" fill="none" stroke="'+c+'" stroke-width="4" stroke-dasharray="'+(circ*p.progress/100).toFixed(1)+' '+circ.toFixed(1)+'" transform="rotate(-90 '+x+' '+y+')"/>'
+        +'<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+c+'"/><text class="n" x="'+x+'" y="'+(y+6)+'" text-anchor="middle">'+esc(p.phase)+'</text>'
+        +'<text x="'+x+'" y="'+(y+(k<4?-50:58))+'" text-anchor="middle">'+esc(A(p,'name'))+'</text>'
+        +'<text class="p" x="'+x+'" y="'+(y+(k<4?-34:74))+'" text-anchor="middle">'+esc(sub)+'</text></g>';});
+    return s+'</svg>';
+  }
+  function drawMap(rm){
+    var cur=rm.phases.filter(function(p){return p.state!=='done';})[0];
+    $('mapk').innerHTML=P.tile(rm.progress+'%',T('Steps done'))+P.tile(rm.phases.filter(function(p){return p.state==='done';}).length+' / '+rm.phases.length,T('Phases complete'))+P.tile(cur?A(cur,'name'):T('Maintain'),T('Current phase'))+P.tile(rm.phases.reduce(function(a,p){return a+p.overdue_tasks;},0),T('Overdue tasks'),rm.phases.some(function(p){return p.overdue_tasks;})?'text-red':'');
+    $('route').innerHTML=route(rm);$('routenote').textContent=A(rm,'note');
+    $('cycle').innerHTML=rm.maintain.map(function(m){return '<div class="card card-sm"><div class="card-body"><div class="fw-bold">'+esc(A(m,'cadence'))+'</div><div class="small">'+esc(A(m,'what'))+'</div><div class="mut mt-1"><i class="ti ti-user"></i> '+esc(A(m,'who'))+'</div></div></div>';}).join('');}
+  function openPhase(n){var rm=(V||M).roadmap,p=rm.phases.filter(function(x){return String(x.phase)===String(n);})[0];if(!p)return;
+    var steps=rm.steps.filter(function(s){return s.phase===p.phase;});
+    var h=Z.sec(T('Goal'),esc(A(p,'goal'))+'<div class="mut mt-1">'+esc(A(p,'when'))+'</div>');
+    h+=Z.sec(T('Steps'),steps.map(function(s){return '<div class="step"><span class="dot s-'+esc(s.state)+'"></span><div><div>'+esc(A(s,'label'))+'</div><div class="mut">'+esc(A(s,'evidence'))+(s.open_findings?' · '+esc(N(s.open_findings,'{n} open finding(s)','{n} ملاحظة مفتوحة')):'')+'</div><a class="small" href="'+esc(s.page)+'">'+esc(T('Open the page'))+'</a></div></div>';}).join(''));
+    var res=AR_ON&&p.resources_ar?p.resources_ar:p.resources;
+    h+=Z.sec(T('Resources'),P.badge(T('planning estimate'),'secondary')+'<ul class="small mt-1 mb-0">'+res.map(function(r){return '<li>'+esc(r)+'</li>';}).join('')+'</ul>'+(V?orgFor(p):''));
+    Z.open(T('Phase')+' '+p.phase+' · '+T(p.state),A(p,'name'),h);}
+  function orgFor(p){var o=V.org,named=[];if(o.dpo)named.push((AR_ON?'مسؤول حماية البيانات: ':'DPO: ')+o.dpo);if(o.committee.chair)named.push((AR_ON?'رئيس اللجنة: ':'Committee chair: ')+o.committee.chair);
+    var stw=o.departments.filter(function(d){return d.data_steward;}).length;
+    return '<div class="mut mt-2">'+(AR_ON?'المسمَّون اليوم: ':'Named today: ')+esc(named.join(' · ')||T('nobody yet'))+' · '+esc(AR_ON?(stw+' من '+o.departments.length+' إدارات لها مسؤول بيانات'):(stw+' of '+o.departments.length+' departments with a data steward'))+'</div>';}
+  function tbl(rows,mineView){return P.table([[T('Task'),function(t){return '<b>'+esc(A(t,'title'))+'</b><div class="mut">'+bdi(t.id)+(t.requirement?' · '+esc(t.requirement):'')+(t.department?' · '+bdi(t.department):'')+' · '+esc(T(t.source==='duty'?'recurring duty':'finding'))+'</div>';}],
+      [T('Severity'),sev],[T('Assigned to'),function(t){return (t.assignee?bdi(t.assignee):esc(T('nobody')))+'<div class="mut">'+esc(A(t,'why')||'')+'</div>';}],
+      [T('Due'),function(t){return '<span class="ltr">'+esc(P.dt(t.due))+'</span>'+(t.escalated_to&&t.escalation?'<div class="mut">'+(AR_ON?'صُعّدت إلى ':'escalated to ')+bdi(t.escalated_to)+'</div>':'');}],[T('Status'),st],
+      ['',function(t){return '<button type="button" class="btn btn-sm" data-open="'+esc(t.id)+'">'+esc(AR_ON?'فتح':'Open')+'</button>';}]],rows,function(t){return 'data-id="'+esc(t.id)+'"';},mineView?T('Nothing waiting for you. Tasks reach you when a PDPL finding or a recurring duty is routed to you.'):T('No task with this filter.'));}
+  function drawMine(){$('myroles').textContent=M.roles.length?(AR_ON?'أدوارك: ':'Your roles: ')+M.roles.map(roleT).join(' · '):T('You hold no PDPL role yet');$('mylist').innerHTML=tbl(M.tasks,true);}
+  function drawAll(){var t=V.totals;$('kpis').innerHTML=P.tile(t.open,T('Open'))+P.tile(t.overdue,T('Overdue'),t.overdue?'text-red':'')+P.tile(t.escalated,T('Escalated'),t.escalated?'text-red':'')+P.tile(t.claimed,T('Claimed - not yet confirmed'))+P.tile(t.verified||0,T('Verified by re-test'),t.verified?'text-green':'')+P.tile(t.verify_failed||0,T('Not confirmed by the re-check'),t.verify_failed?'text-red':'')+P.tile(t.accepted,T('Risk accepted'))+P.tile(t.unassigned,T('Unassigned'),t.unassigned?'text-red':'');
+    var f=$('fstat').value,rows=V.tasks.filter(function(x){return f==='open'?x.status!=='closed':f==='overdue'?x.overdue:f==='escalated'?(x.status!=='closed'&&x.escalation):f==='unassigned'?(x.status!=='closed'&&!x.assignee):f==='verify_failed'?(x.status!=='closed'&&x.verification&&x.verification.state==='failed'):f==='verified'?(x.verification&&x.verification.state==='verified'):f?x.status===f:true;});
+    $('alllist').innerHTML=tbl(rows,false);}
+  var MISS={DPO:'لا يوجد مسؤول حماية بيانات',chair:'لا يوجد رئيس',owner:'لا يوجد مالك',steward:'لا يوجد مسؤول بيانات',champion:'لا يوجد سفير خصوصية'};
+  function who(u,role){return u?'<b>'+bdi(u)+'</b>':'<span class="gapname">'+esc(AR_ON?(MISS[role]||'لم يُسمَّ'):(role?'no '+role:'not named'))+'</span>';}
+  function drawOrg(){var o=V.org,dep=AR_ON?'النائب ':'deputy ';
+    var h='<div class="row g-3"><div class="col-md-4"><div class="orgbox"><div class="au-lbl">'+esc(T('Data Protection Officer'))+'</div>'+who(o.dpo,'DPO')+(o.dpo_deputy?'<div class="mut">'+dep+bdi(o.dpo_deputy)+'</div>':'')+'</div></div>'
+      +'<div class="col-md-8"><div class="orgbox"><div class="au-lbl">'+esc(T('Privacy committee'))+'</div>'+(AR_ON?'الرئيس ':'chair ')+who(o.committee.chair,'chair')+'<div class="mut">'+(AR_ON?'الأعضاء: ':'members: ')+esc(o.committee.members.join(', ')||T('none named'))+'</div></div></div></div>';
+    h+='<div class="au-lbl mt-3 mb-1">'+esc(T('PDPL functions'))+'</div><div class="row g-2">'+o.functions.map(function(f){return '<div class="col-md-4"><div class="orgbox"><div class="small">'+esc(A(f,'label'))+'</div>'+who(f.user,'owner')+(f.deputy?'<div class="mut">'+dep+bdi(f.deputy)+'</div>':'')+'</div></div>';}).join('')+'</div>';
+    h+='<div class="au-lbl mt-3 mb-1">'+esc(T('Departments'))+'</div>'+P.table([[T('Department'),function(d){return bdi(d.department);}],[T('Data steward'),function(d){return who(d.data_steward,'steward');}],[T('Deputy'),function(d){return d.deputy?bdi(d.deputy):'—';}],[T('Privacy champion'),function(d){return who(d.champion,'champion');}]],o.departments,null,T('No department yet - name data stewards on the Programme page.'));
+    h+='<div class="au-lbl mt-3 mb-1">'+esc(T('Data owners per system'))+'</div>'+P.table([[T('System'),function(x){return bdi(x.system);}],[T('Owner'),function(x){return bdi(x.user);}]],o.owners,null,T('No data owner named - tasks about a system go to its department or the DPO.'));
+    h+=AR_ON?'<p class="mut mt-2">يُسمّى مسؤولو البيانات وسفراء الخصوصية في صفحة <a href="pdpl-programme.html">البرنامج</a>، ومالكو الوظائف في <a href="pdpl-governance.html">الحوكمة</a>، ومسؤول حماية البيانات في ملف حماية البيانات؛ واللجنة ونائب مسؤول حماية البيانات ومالكو البيانات في الإعدادات.</p>'
+      :'<p class="mut mt-2">Stewards and champions are named on the <a href="pdpl-programme.html">Programme</a> page, function owners on <a href="pdpl-governance.html">Governance</a>, the DPO in the PDPL profile; the committee, deputy DPO and data owners in Settings.</p>';
+    var gaps=AR_ON&&V.gaps_ar?V.gaps_ar:V.gaps;
+    $('org').innerHTML=h;$('gaps').innerHTML=gaps.length?'<ul class="mb-0">'+gaps.map(function(g){return '<li>'+esc(g)+'</li>';}).join('')+'</ul>':'<span class="text-green">'+esc(T('Every role is named.'))+'</span>';}
+  function drawCal(){$('cal').innerHTML=P.table([[T('Duty'),function(c){return esc(A(c,'title'));}],[T('Due'),function(c){return '<span class="ltr">'+esc(P.dt(c.due).slice(0,10))+'</span>'+(c.overdue?' '+P.badge(T('due'),'red'):c.soon?' '+P.badge(T('within 30 days'),'orange'):'');}],[T('Who'),function(c){return c.assignee?bdi(c.assignee):esc(T('nobody'));}],[T('Department'),function(c){return c.department?bdi(c.department):'—';}]],V.calendar,null,T('No recurring duty yet.'));}
+  function drawCfg(){if(!V.can_configure){$('cfgbody').innerHTML='<p class="text-secondary mb-0">'+esc(T('An administrator or the DPO sets the committee, the deputy DPO, data owners and deadlines.'))+'</p>';return;}
+    var c=V.org.committee;
+    $('cfgbody').innerHTML=P.form('cfgform',[['chair','text',T('Privacy committee chair (user name)')],['members','list',T('Committee members (comma separated user names)')],['dpo_deputy','text',T('Deputy DPO (user name)')],['owners','area',T('Data owners - one per line: system = user')],
+      ['sla_critical','num',T('Days to fix a critical finding')],['sla_high','num',T('Days - high')],['sla_medium','num',T('Days - medium')],['sla_low','num',T('Days - low')],['escalate_days','num',T('Days overdue before the committee chair is told')],['verify_days','num',T('Days a task marked done may still show in the registers before it is reopened (1-30)')]],
+      {chair:c.chair,members:c.members,dpo_deputy:V.org.dpo_deputy,owners:V.org.owners.map(function(o){return o.system+' = '+o.user;}).join('\n'),sla_critical:V.sla_days.critical,sla_high:V.sla_days.high,sla_medium:V.sla_days.medium,sla_low:V.sla_days.low,escalate_days:V.escalate_days,verify_days:V.verify_days},T('Save settings'));}
+  function openTask(id){var t=(V&&V.tasks.filter(function(x){return x.id===id;})[0])||(M&&M.tasks.filter(function(x){return x.id===id;})[0]);if(!t)return;
+    var h=Z.kv([[T('Status'),st(t)],[T('Severity'),sev(t)],[T('Assigned to'),(t.assignee?bdi(t.assignee):esc(T('nobody')))+' <span class="mut">('+esc(A(t,'why')||'')+')</span>'],[T('Due'),'<span class="ltr">'+esc(P.dt(t.due))+'</span>'],[T('Requirement'),esc(t.requirement||'—')],[T('Department'),t.department?bdi(t.department):'—']]);
+    // the other language, for reference: Arabic under an English page, the recorded English under an Arabic one
+    if(!AR_ON&&t.title_ar&&window.ZYB_ARABIC===true)h+='<div class="mb-2" dir="rtl" lang="ar" style="text-align:right"><b>'+esc(t.title_ar)+'</b>'+(t.recommendation_ar?'<div class="small">'+esc(t.recommendation_ar)+'</div>':'')+'</div>';
+    if(AR_ON&&t.title_ar)h+='<div class="mb-2 ltr mut" lang="en"><div class="small">'+esc(T('As recorded (English)'))+'</div>'+esc(t.title)+(t.recommendation?'<div class="small">'+esc(t.recommendation)+'</div>':'')+'</div>';
+    var rec=A(t,'recommendation');if(rec)h+=Z.sec(T('What to do'),esc(rec));
+    if(t.evidence&&t.evidence.length)h+=Z.sec(T('Evidence'),'<ul class="small mb-0 ltr">'+t.evidence.map(function(e){return '<li>'+esc(e)+'</li>';}).join('')+'</ul>');
+    h+=vsec(t);
+    if(t.risk_reason)h+=Z.sec(T('Risk accepted'),bdi(t.risk_by)+(AR_ON?' حتى ':' until ')+esc(t.risk_until)+': '+esc(t.risk_reason));
+    h+=Z.sec(T('History'),(t.history||[]).slice().reverse().map(function(x){return '<div class="small"><span class="mut"><span class="ltr">'+esc(P.dt(x.at))+'</span> · '+bdi(x.by)+'</span> '+esc(histT(x.what))+'</div>';}).join('')||'—');
+    if(t.status!=='closed'){h+='<input type="hidden" id="tid" value="'+esc(t.id)+'"><div class="d-flex gap-2 flex-wrap mb-2"><button type="button" class="btn btn-sm" id="tack">'+esc(T('Acknowledge'))+'</button></div>';
+      h+=Z.sec(T('Mark done'),P.form('tdone',[['note','area',T('What was done (the task closes when the registers confirm it)'),1]],{},T('Mark done')));
+      if(V&&(V.is_dpo||me('admin')))h+=Z.sec(T('Reassign (the DPO or an administrator)'),P.form('treas',[['user','text',T('To (user name)'),1],['reason','text',T('Reason'),1],['due','date',T('New deadline')]],{},T('Reassign')));
+      if(t.severity!=='critical')h+=Z.sec(T('Accept the risk (a committee member, not the assignee)'),P.form('trisk',[['reason','area',T('Why the risk is accepted (at least 20 characters)'),1],['until','date',T('Until (12 months at most)'),1]],{},T('Accept risk')));}
+    Z.open(T('Privacy Office')+' · '+t.id,A(t,'title'),h);}
+  var ROLE=null;function me(r){return ROLE===r;}
+  function act(path,body,ok,fm){P.req('POST','/pdpl/office/tasks/'+encodeURIComponent($('tid').value)+path,body).then(function(){P.toast(ok);if(Z.close)Z.close();load();}).catch(function(e){if(fm)P.msg(fm,P.why(e));else P.toast(P.why(e));});}
+  document.addEventListener('click',function(ev){var b;
+    if((b=ev.target.closest('[data-tab]')))return show(b.getAttribute('data-tab'));
+    if((b=ev.target.closest('[data-phase]')))return openPhase(b.getAttribute('data-phase'));
+    if((b=ev.target.closest('[data-open]')))return openTask(b.getAttribute('data-open'));
+    if(ev.target.closest('#tack'))return act('/ack',{},T('Acknowledged'));
+    if((b=ev.target.closest('[data-ntest]'))){var ch=b.getAttribute('data-ntest');P.req('POST','/pdpl/office/notify/test',{channel:ch}).then(function(r){P.toast((AR_ON?'تجربة ':'Test ')+T(ch)+': '+T(r.status)+(r.error?' - '+r.error:''));loadNtf();}).catch(function(e){P.toast(P.why(e));});}});
+  document.addEventListener('keydown',function(ev){var b=ev.target.closest&&ev.target.closest('[data-phase]');if(b&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();openPhase(b.getAttribute('data-phase'));}});
+  // the language button: the platform-wide preference (zyb-dash-prefs.lang), then a reload so the menu and every page follow
+  $('langbtn').addEventListener('click',function(){var k='zyb-dash-prefs',p={};try{p=JSON.parse(localStorage.getItem(k)||'{}')||{};}catch(e){p={};/* unreadable preferences: start fresh */}
+    p.lang=AR_ON?'en':'ar';try{localStorage.setItem(k,JSON.stringify(p));}catch(e){P.toast('This browser does not keep the language setting (storage blocked).');return;}location.reload();});
+  document.addEventListener('submit',function(ev){var fm=ev.target,b;
+    if(fm.id==='tdone'){ev.preventDefault();act('/done',P.body(fm),T('Marked done - it closes when the registers confirm it'),fm);}
+    if(fm.id==='treas'){ev.preventDefault();b=P.body(fm);act('/reassign',b,(AR_ON?'أُعيد الإسناد إلى ':'Reassigned to ')+b.user,fm);}
+    if(fm.id==='trisk'){ev.preventDefault();act('/accept-risk',P.body(fm),AR_ON?'تم قبول المخاطر':'Risk accepted',fm);}
+    if(fm.id==='ntform'){ev.preventDefault();b=P.body(fm);var o={email_enabled:!!b.email_enabled,teams_enabled:!!b.teams_enabled,smtp:{}};
+      ['host','port','from','from_name','user','ca_file'].forEach(function(k){if(b[k]!==undefined&&b[k]!=='')o.smtp[k]=b[k];});o.smtp.starttls=!!b.starttls;o.smtp.tls=!!b.tls;o.smtp.reject_unauthorized=!!b.reject_unauthorized;
+      if(b.smtp_password)o.smtp_password=b.smtp_password;if(b.clear_smtp_password)o.clear_smtp_password=true;if(b.teams_webhook)o.teams_webhook=b.teams_webhook;if(b.clear_teams_webhook)o.clear_teams_webhook=true;
+      if(b.digest_hour!==undefined)o.digest_hour=b.digest_hour;if(b.portal_url)o.portal_url=b.portal_url;if(b.language)o.language=b.language;if(b.teams_language)o.teams_language=b.teams_language;
+      P.req('POST','/pdpl/office/notify',o).then(function(n){NT=n;drawNtf();P.toast(T('Notification settings saved'));}).catch(function(e){P.msg(fm,P.why(e));});}
+    if(fm.id==='ctform'){ev.preventDefault();var list=String(P.body(fm).contacts||'').split('\n').map(function(l){var m=l.split('=');if(m.length<2||m.length>3)return null;var c={user:m[0].trim(),email:m[1].trim()};if(m.length===3&&m[2].trim())c.lang=m[2].trim().toLowerCase();return c;}).filter(function(x){return x&&x.user&&x.email;});
+      P.req('POST','/pdpl/office/contacts',{contacts:list}).then(function(n){NT=n;drawNtf();P.toast(AR_ON?('حُفظت '+list.length+' جهة اتصال'):(list.length+' contact(s) saved'));}).catch(function(e){P.msg(fm,P.why(e));});}
+    if(fm.id==='cfgform'){ev.preventDefault();b=P.body(fm);var sla={};['critical','high','medium','low'].forEach(function(k){if(b['sla_'+k])sla[k]=b['sla_'+k];});
+      var owners=String(b.owners||'').split('\n').map(function(l){var m=l.split('=');return m.length===2?{system:m[0].trim(),user:m[1].trim()}:null;}).filter(function(x){return x&&x.system&&x.user;});
+      var out={committee:{chair:b.chair||null,members:b.members||[]},owners:owners,sla_days:sla};if(b.dpo_deputy)out.dpo_deputy=b.dpo_deputy;if(b.escalate_days)out.escalate_days=b.escalate_days;if(b.verify_days)out.verify_days=b.verify_days;
+      P.req('POST','/pdpl/office/config',out).then(function(){P.toast(T('Settings saved'));load();}).catch(function(e){P.msg(fm,P.why(e));});}});
+  $('fstat').addEventListener('change',function(){if(V)drawAll();});
+  $('runnow').addEventListener('click',function(){P.req('POST','/pdpl/office/run',{}).then(function(r){P.toast(AR_ON?(r.tasks+' مهمة مفتوحة، '+r.events+' تغيير'):(r.tasks+' open task(s), '+r.events+' change(s)'));load();}).catch(function(e){P.toast(P.why(e));});});
+  var NT=null, NST={sent:'green',queued:'secondary',retry:'orange',failed:'red',skipped:'secondary'};
+  function loadNtf(){return P.req('GET','/pdpl/office/notify').then(function(n){NT=n;drawNtf();}).catch(function(e){$('ntfbody').innerHTML='<div class="alert alert-warning mb-0">'+esc(P.why(e))+'</div>';});}
+  function drawNtf(){var n=NT,adm=me('admin'),s=n.smtp||{};
+    var onoff=function(v){return T(v?'on':'off');},setT=function(v){return T(v?'set':'not set');};
+    var h='<div class="d-flex gap-2 flex-wrap mb-2">'+P.badge((AR_ON?'البريد ':'e-mail ')+onoff(n.email_enabled),n.email_enabled?'green':'secondary')+P.badge('Teams '+onoff(n.teams_enabled),n.teams_enabled?'green':'secondary')+P.badge((AR_ON?'كلمة مرور SMTP ':'SMTP password ')+setT(n.smtp_password_set),n.smtp_password_set?'green':'secondary')+P.badge((AR_ON?'رابط Teams ':'Teams webhook ')+(n.teams_webhook_set?setT(true)+' ('+(n.teams_host||'')+')':setT(false)),n.teams_webhook_set?'green':'secondary')+'<span class="mut">'+(AR_ON?'الخزنة: ':'vault: ')+esc(n.vault)+'</span></div>'
+      +'<p class="mut">'+esc(T('New critical and high tasks e-mail the person they are routed to at once; escalations e-mail the DPO or the committee chair (copy to the assignee) and post to the Teams channel; every working day (Sun-Thu, Riyadh) each person with open tasks gets one summary. The password and the webhook are write-only and stored sealed.'))+'</p>';
+    if(!adm){$('ntfbody').innerHTML=h+'<p class="text-secondary mb-0">'+esc(T('An administrator sets the mail relay and the Teams webhook.'))+'</p>';}
+    else{var LG=[['both',T('Arabic and English')],['ar',T('Arabic')],['en',T('English')]];
+      $('ntfbody').innerHTML=h+P.form('ntform',(function(f){return window.ZYB_ARABIC===true?f:f.filter(function(x){return x[0]!=='language'&&x[0]!=='teams_language';});})([['email_enabled','bool',T('Send e-mail')],['teams_enabled','bool',T('Post to Teams')],['host','text',T('SMTP relay host (e.g. the Exchange receive connector)')],['port','num',T('Port')],['starttls','bool',T('Require STARTTLS')],['tls','bool',T('Implicit TLS (465)')],['reject_unauthorized','bool',T('Check the relay certificate')],['ca_file','text',T('Internal CA file on the server (PEM path, optional)')],
+        ['from','text',T('From address')],['from_name','text',T('From name')],['user','text',T('SMTP user (empty for an anonymous internal relay)')],['smtp_password','text',T('SMTP password (leave empty to keep)')],['clear_smtp_password','bool',T('Clear the stored password')],
+        ['teams_webhook','text',T('Teams channel webhook URL (Workflows: "Post to a channel when a webhook request is received"; leave empty to keep)')],['clear_teams_webhook','bool',T('Clear the stored webhook')],['language','sel',T('Language of e-mails'),0,LG],['teams_language','sel',T('Language of Teams messages'),0,[['',T('Same as e-mails')]].concat(LG)],['digest_hour','num',T('Daily summary hour (Riyadh, 0-23)')],['portal_url','text',T('Portal address used in links (https://…)')]]),
+        {email_enabled:n.email_enabled,teams_enabled:n.teams_enabled,host:s.host,port:s.port,starttls:s.starttls!==false,tls:!!s.tls,reject_unauthorized:s.reject_unauthorized!==false,ca_file:s.ca_file,from:s.from,from_name:s.from_name,user:s.user,digest_hour:n.digest_hour,portal_url:n.portal_url,language:n.language||'both',teams_language:n.teams_language||''},T('Save'))
+        +'<div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-sm" data-ntest="email">'+esc(T('Send a test e-mail to me'))+'</button><button type="button" class="btn btn-sm" data-ntest="teams">'+esc(T('Send a test to Teams'))+'</button></div>';
+      var pw=document.querySelector('#ntform [name="smtp_password"]');if(pw){pw.type='password';pw.autocomplete='new-password';}var wh=document.querySelector('#ntform [name="teams_webhook"]');if(wh){wh.type='password';wh.autocomplete='off';}}
+    $('ctbody').innerHTML=(adm||(V&&V.is_dpo))?P.form('ctform',[['contacts','area',window.ZYB_ARABIC===true?T("One per line: user name = work e-mail, optionally = ar or = en for that person's language"):T('One per line: user name = work e-mail')]],{contacts:(n.contacts||[]).map(function(c){return c.user+' = '+c.email+(c.lang?' = '+c.lang:'');}).join('\n')},T('Save contacts'))
+      :P.table([[T('User'),function(c){return bdi(c.user);}],[T('E-mail'),function(c){return bdi(c.email);}],[T('Language'),function(c){return esc(c.lang?T({ar:'Arabic',en:'English',both:'Arabic and English'}[c.lang]||c.lang):T('office setting'));}]],n.contacts,null,T('No contact yet.'));
+    $('outbox').innerHTML=P.table([[T('When'),function(m){return '<span class="ltr">'+esc(P.dt(m.at))+'</span>';}],[T('Channel'),function(m){return esc(T(m.channel));}],[T('Event'),function(m){return esc(T(m.event))+(m.task?' · '+bdi(m.task):'');}],[T('To'),function(m){return bdi((m.to||[]).join(', '));}],[T('Language'),function(m){return esc(m.lang?T({ar:'Arabic',en:'English',both:'Arabic and English'}[m.lang]||m.lang):'');}],[T('Status'),function(m){return P.badge(T(m.status),NST[m.status])+(m.error?'<div class="mut ltr">'+esc(m.error)+'</div>':'');}]],n.outbox,null,T('Nothing sent yet.'));}
+  function load(){
+    return P.req('GET','/pdpl/office/mine').then(function(m){M=m;drawMine();if(!V)drawMap(m.roadmap);
+      return P.req('GET','/pdpl/office').then(function(v){V=v;['all','org','cal','cfg','ntf'].forEach(function(t){document.querySelector('[data-tab="'+t+'"]').hidden=false;});$('runnow').hidden=false;
+        drawMap(v.roadmap);drawAll();drawOrg();drawCal();drawCfg();loadNtf();}).catch(function(e){if(e.status!==403)P.toast(P.why(e));/* a steward without the operator role sees the route map and their own tasks */});
+    }).catch(function(e){P.fail($('route'),e);P.fail($('mylist'),e);});}
+  show('map');
+  fetch('/dashboards/whoami.json',{credentials:'same-origin',zybQuiet:true}).then(function(r){return r.ok?r.json():null;}).then(function(w){ROLE=w&&w.role;}).catch(function(){ROLE=null;/* role unknown: the server still decides every action */}).then(load);
+})();
+</script></body></html>

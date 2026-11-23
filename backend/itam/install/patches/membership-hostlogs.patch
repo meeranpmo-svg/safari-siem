@@ -1,0 +1,11 @@
+--- a/engine/monitoring-membership.js	2026-10-13 20:20:53.440337415 +0000
++++ b/engine/monitoring-membership.js	2026-10-13 20:20:53.445362219 +0000
+@@ -59,6 +59,8 @@
+     if (lc.state === 'stopped' && !sourceOf(a)) return 'stopped';
+     if ((row && row.paused) || lc.state === 'paused') return 'paused';
+     if (!reachable) return 'unknown';
++    // matched on the host's own logs: authoritative even when the (shared) source as a whole is receiving
++    if (cov && cov.matched_by === 'host-logs') return cov.status === 'covered' ? 'covered' : 'silent';
+     if (row && row.state === 'never-seen') return row.auto_onboarded ? 'awaiting-config' : 'never-seen';
+     if (row && row.state === 'receiving') return 'covered';
+     if (row && row.state === 'silent') return 'silent';

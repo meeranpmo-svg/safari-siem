@@ -1,0 +1,90 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Change Log &amp; NOC↔SOC Correlation</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1680px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px;cursor:pointer}.kpi[aria-pressed="true"]{border-color:var(--d-acc)}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.inp,select.inp,textarea.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.r-high,.s-4{background:rgba(229,72,77,.22);color:#ff8a8e}.s-3{background:rgba(245,99,0,.2);color:#ff9b5c}.r-medium,.s-2{background:rgba(245,159,0,.18);color:#f5b544}.r-low,.s-1,.s-0{background:rgba(139,147,164,.16);color:#aab2c2}.ok{background:rgba(47,179,68,.15);color:#56d364}.bad{background:rgba(229,72,77,.18);color:#ff8a8e}.vio{background:rgba(124,77,255,.2);color:#b39bff}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px;border-bottom:1px solid var(--d-line)}td{padding:7px 6px;border-bottom:1px solid #1b2030;vertical-align:top}
+tr.ch{cursor:pointer}tr.ch:hover td{background:#151924}
+.tl{position:relative;margin:8px 0 4px;padding-left:18px;border-left:2px solid #2a3142}.tl div{position:relative;margin:6px 0;font-size:12.5px}.tl div::before{content:"";position:absolute;left:-24px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--c,#5b8def)}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.form label{font-size:11px;color:var(--d-mute);display:flex;flex-direction:column;gap:3px}.form .w2{grid-column:span 2}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:640px){main{padding:12px 12px 40px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.form{grid-template-columns:1fr}.form .w2{grid-column:auto}table{display:block;overflow-x:auto}.top h1{font-size:20px}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network &amp; Security Operations · Changes</div><h1>Change Log &amp; NOC↔SOC Correlation</h1><div class="sm mute">Every change made to {{org.short}}'s systems in one register - change plans the desks carried out, configuration changes found on devices, and changes people record here - with what the NOC and the SOC saw on the same system afterwards.</div></div><div class="sp"></div>
+ <a class="btn" href="ncm.html"><i class="ti ti-file-diff"></i>Configuration management</a><button class="btn pri" id="new" type="button" hidden><i class="ti ti-plus"></i>Record a change</button><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<section class="card"><div class="row"><select class="inp" id="days" aria-label="Period"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select>
+ <select class="inp" id="win" aria-label="Correlation window"><option value="4">Alerts within 4 h after</option><option value="24" selected>Alerts within 24 h after</option><option value="72">Alerts within 72 h after</option></select>
+ <select class="inp" id="src" aria-label="Source"><option value="">All sources</option></select><input class="inp" id="q" style="flex:1;min-width:200px" placeholder="Find a system, change or person" aria-label="Find"></div>
+ <div class="sm mute" id="srcinfo" style="margin-top:6px"></div></section>
+<section class="card" id="form" hidden><h2><i class="ti ti-pencil-plus"></i>Record a change <span class="c">a change made outside the change plans - an emergency fix, a vendor visit, an application release</span></h2>
+ <div class="form"><label class="w2">What changed<input class="inp" id="fwhat" maxlength="300"></label><label>System (host name, device or IP)<input class="inp" id="ftarget" maxlength="120"></label><label>When<input class="inp" id="fat" type="datetime-local"></label>
+ <label>Category<select class="inp" id="fcat"><option>network</option><option>server</option><option>security</option><option>application</option><option>database</option><option>identity</option><option>cloud</option><option>facility</option><option>other</option></select></label>
+ <label>Risk<select class="inp" id="frisk"><option>low</option><option selected>medium</option><option>high</option></select></label><label>Outcome<select class="inp" id="fout"><option value="done">done</option><option value="failed">failed</option><option value="rolled-back">rolled back</option></select></label><label>Ticket<input class="inp" id="fticket" maxlength="60"></label>
+ <label class="w2">Roll-back<input class="inp" id="froll" maxlength="2000"></label><label class="w2">Note<input class="inp" id="fnote" maxlength="1000"></label></div>
+ <div class="row" style="margin-top:10px"><button class="btn pri" id="fsave" type="button">Record</button><button class="btn" id="fcancel" type="button">Cancel</button><span class="sm" id="fmsg"></span></div></section>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden><section class="card"><div class="kpis" id="kpis"></div></section><section class="card" id="list"></section></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var V=null,KF='',OPEN='',ROLE='viewer';
+  var SEV=['info','low','medium','high','critical'];
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc/netops'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('The SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function when(t){return t?new Date(t).toLocaleString():'—';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function load(){$('err').hidden=true;return req('GET','/changelog?days='+$('days').value+'&window_h='+$('win').value).then(function(v){V=v;$('main').hidden=false;draw();}).catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>The change log is not available</h2>'+note(e.status===404?'It is not installed on the SIEM yet - run the update (update-platform.ps1).':e.message);});}
+  var KS=[['changes','changes',''],['with_alerts','followed by alerts','#ff9b5c'],['unauthorised','without a plan','#b39bff'],['failed','failed','#ff8a8e'],['high_risk','high risk','#ff8a8e'],['off_hours','outside working hours','#f5b544'],['noc_down_now','system down now','#ff8a8e'],['with_alerts_pct','% followed by alerts','']];
+  function match(c){if(KF==='with_alerts'&&!c.soc.alerts)return false;if(KF==='unauthorised'&&c.authorised)return false;if(KF==='failed'&&!c.failed)return false;if(KF==='high_risk'&&c.risk!=='high')return false;if(KF==='off_hours'&&!c.off_hours)return false;if(KF==='noc_down_now'&&!(c.noc&&c.noc.state==='down'))return false;
+    var s=$('src').value;if(s&&c.source!==s)return false;var q=$('q').value.trim().toLowerCase();return !q||(c.what+' '+c.target+' '+c.by+' '+c.id+' '+c.ticket).toLowerCase().indexOf(q)>=0;}
+  function draw(){var k=V.kpis;
+    $('kpis').innerHTML=KS.map(function(x){var v=k[x[0]];return '<div class="kpi" role="button" tabindex="0" data-k="'+x[0]+'" aria-pressed="'+(KF===x[0])+'"><div class="n" style="color:'+(v&&x[2]?x[2]:'inherit')+'">'+esc(String(v)+(x[0]==='with_alerts_pct'?'%':''))+'</div><div class="l">'+esc(x[1])+'</div></div>';}).join('');
+    var cur=$('src').value;$('src').innerHTML='<option value="">All sources</option>'+Object.keys(V.sources.by_source).map(function(s){return '<option value="'+esc(s)+'"'+(s===cur?' selected':'')+'>'+esc(s+' ('+V.sources.by_source[s]+')')+'</option>';}).join('');
+    $('srcinfo').textContent='Configuration changes: '+V.sources.ncm+' · SIEM alerts: '+V.sources.alerts+(V.private?' · alert details are for analysts and above':'');
+    var L=V.changes.filter(match),h='<h2><i class="ti ti-history"></i>Changes <span class="c">'+esc(V.note)+'</span></h2>';
+    if(!V.changes.length){$('list').innerHTML=h+note('No change was carried out or recorded in this period. Changes appear here when a change plan is applied on the network, server, Kaspersky or Zscaler desks, when Configuration management finds a changed configuration, or when someone records one.');return;}
+    if(!L.length){$('list').innerHTML=h+note('No change matches.');return;}
+    h+='<table><thead><tr><th>When</th><th>Change</th><th>System</th><th>Source</th><th>Risk</th><th>By</th><th>NOC now</th><th>SOC after</th></tr></thead><tbody>';
+    L.forEach(function(c){h+='<tr class="ch" data-c="'+esc(c.id)+'"><td class="sm">'+esc(when(c.at))+(c.off_hours?'<br>'+pill('off hours','r-medium'):'')+'</td><td><b>'+esc(c.what)+'</b><div class="sm mute">'+esc(c.id)+(c.ticket?' · '+esc(c.ticket):'')+'</div>'+(c.failed?pill(c.status||'failed','bad'):'')+(!c.authorised?' '+pill('no approved plan','vio'):'')+'</td><td>'+esc(c.target)+(c.ip?'<div class="sm mute">'+esc(c.ip)+'</div>':'')+'</td><td class="sm">'+esc(c.source)+'</td><td>'+pill(c.risk,'r-'+c.risk)+'</td><td class="sm">'+esc(c.by||'—')+(c.approved_by?'<div class="mute">approved '+esc(c.approved_by)+'</div>':'')+'</td>'
+      +'<td>'+(c.noc?pill(c.noc.state,c.noc.state==='down'?'bad':'ok'):'<span class="sm mute">not polled</span>')+'</td><td>'+(c.soc.alerts?pill(c.soc.alerts+' alert'+(c.soc.alerts>1?'s':'')+' · first '+c.soc.first_after_min+' min','s-'+c.soc.worst):'<span class="sm mute">none</span>')+'</td></tr>';
+      if(OPEN===c.id){h+='<tr><td colspan="8"><div class="tl"><div style="--c:#5b8def"><b>'+esc(when(c.at))+'</b> - change: '+esc(c.what)+' on '+esc(c.target)+(c.by?' by '+esc(c.by):'')+'</div>';
+        (c.soc.items||[]).forEach(function(a){h+='<div style="--c:'+(a.severity>=3?'#e5484d':'#f59f00')+'"><b>+'+esc(a.minutes_after)+' min</b> '+pill(SEV[a.severity]||a.severity,'s-'+a.severity)+' '+esc(a.rule)+' <span class="mute">'+esc(a.id)+'</span><div class="sm mute">'+esc(a.summary)+'</div></div>';});
+        if(c.soc.alerts&&!(c.soc.items||[]).length)h+='<div style="--c:#f59f00">'+esc(c.soc.alerts)+' alert(s) after the change - details are for analysts and above</div>';
+        if(!c.soc.alerts)h+='<div style="--c:#2fb344">No SIEM alert on this system within '+esc(V.window_h)+' h after the change</div>';
+        h+='</div>'+(c.rollback?'<div class="sm"><b>Roll-back:</b> '+esc(c.rollback)+'</div>':'')+(c.note?'<div class="sm"><b>Note:</b> '+esc(c.note)+'</div>':'')+(c.plan?'<div class="sm">Plan '+esc(c.plan.id)+' '+esc(c.plan.title||'')+'</div>':'')
+          +(c.soc.alerts?'<div class="row" style="margin-top:6px"><a class="btn sm" href="soc-alerts.html"><i class="ti ti-bell"></i>Open the alert queue</a></div>':'')+'</td></tr>';}});
+    $('list').innerHTML=h+'</tbody></table>';}
+  function local(dt){var d=new Date(dt.getTime()-dt.getTimezoneOffset()*60000);return d.toISOString().slice(0,16);}
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-k],[data-c],button[id]');if(!el)return;
+    if(el.dataset.k){KF=KF===el.dataset.k||el.dataset.k==='changes'||el.dataset.k==='with_alerts_pct'?'':el.dataset.k;draw();return;}
+    if(el.dataset.c){OPEN=OPEN===el.dataset.c?'':el.dataset.c;draw();return;}
+    if(el.id==='refresh'){load();return;}
+    if(el.id==='new'){$('form').hidden=false;$('fat').value=local(new Date());$('fwhat').focus();return;}
+    if(el.id==='fcancel'){$('form').hidden=true;return;}
+    if(el.id==='fsave'){var at=$('fat').value?new Date($('fat').value).toISOString():undefined,b={what:$('fwhat').value.trim(),target:$('ftarget').value.trim(),category:$('fcat').value,risk:$('frisk').value,outcome:$('fout').value,ticket:$('fticket').value.trim(),rollback:$('froll').value.trim(),note:$('fnote').value.trim()};if(at)b.at=at;
+      el.disabled=true;req('POST','/changelog',b).then(function(r){el.disabled=false;$('form').hidden=true;['fwhat','ftarget','fticket','froll','fnote'].forEach(function(i){$(i).value='';});toast('Recorded '+r.id+' - the alerts after it are lined up below');OPEN=r.id;return load();}).catch(function(e){el.disabled=false;$('fmsg').textContent=e.message;});}});
+  document.addEventListener('keydown',function(ev){var k=ev.target.closest&&ev.target.closest('[data-k]');if(k&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();k.click();}});
+  document.addEventListener('change',function(ev){if(ev.target.id==='days'||ev.target.id==='win')load();else if(ev.target.id==='src')draw();});
+  document.addEventListener('input',function(ev){if(ev.target.id==='q')draw();});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{ROLE=JSON.parse(w.responseText).role||'viewer';}catch(e){ROLE='viewer';/* unknown identity: least privilege */}$('new').hidden=!(ROLE==='operator'||ROLE==='admin');load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

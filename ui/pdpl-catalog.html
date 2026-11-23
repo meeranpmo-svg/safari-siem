@@ -1,0 +1,92 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Data Catalog</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.attr{cursor:pointer;border-left:3px solid var(--tblr-border-color)}.attr.sens{border-left-color:var(--tblr-red)}.attr.on{outline:1px solid var(--tblr-primary)}.attr .au-num{font-size:20px}
+.flow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}.flow span{padding:3px 8px;border-radius:12px;background:rgba(255,255,255,.05)}.flow i{color:var(--tblr-secondary)}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">Data Catalog</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><span class="mut" id="last"></span><button type="button" class="btn btn-primary" id="scan"><i class="ti ti-radar me-1"></i>Scan now</button><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>
+ <div class="flow mb-1"><span><i class="ti ti-database"></i> Data sources</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-radar"></i> Discovery</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-tags"></i> Classification</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-books"></i> Catalog</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-key"></i> Identifier columns</span><i class="ti ti-arrow-right"></i><span><i class="ti ti-user-search"></i> Find a person (data subject requests)</span></div>
+ Every Oracle, SQL Server and PostgreSQL database with a proven read-only login is scanned; SharePoint / OneDrive is read through Microsoft Graph and file shares by the Windows agent on the file server. For databases: column names, comments and row estimates from the dictionary; where the login may read a table, 50 values are tested on the platform server and only the number of matches is kept. <b>No personal data value is stored or shown.</b> An administrator confirms the identifier columns a person can be found by; the search itself runs from a verified data subject request.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<h3 class="mb-2">Attributes <span class="mut">click one to filter the columns</span></h3>
+<div class="row row-cards mb-3" id="attrs"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Data sources <span class="card-subtitle ms-2" id="covsum"></span></h3></div><div class="table-responsive" id="sources"><div class="card-body text-secondary">Loading…</div></div><div class="card-body small" id="notscanned" hidden></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Files with personal data <span class="card-subtitle ms-2" id="filesum"></span></h3><div class="card-actions d-flex gap-2"><select class="form-select form-select-sm w-auto" id="fexp" aria-label="Exposure"><option value="">Any exposure</option><option value="exposed">Exposed (anonymous / outside / everyone)</option><option value="anonymous">Anonymous link</option><option value="external">Shared outside</option><option value="everyone">Readable by everyone</option></select><select class="form-select form-select-sm w-auto" id="fsrc2" aria-label="File source"><option value="">All file sources</option></select></div></div>
+ <div class="card-body small" id="filesetup"></div><div class="table-responsive" id="files"></div></section>
+<section class="card mb-3" id="suggcard" hidden><div class="card-header"><h3 class="card-title">Suggested identifier columns</h3></div><div class="table-responsive" id="sugg"></div></section>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">Columns <span class="card-subtitle ms-2" id="colsum"></span></h3><div class="card-actions d-flex gap-2"><select class="form-select form-select-sm w-auto" id="fsrc" aria-label="Source"><option value="">All sources</option></select><input class="form-control form-control-sm w-auto" id="fq" placeholder="Search table / column" maxlength="80" aria-label="Search"></div></div><div class="table-responsive" id="cols"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+  var V=null, ATTR=null, ADMIN=false;
+  fetch('/dashboards/whoami.json',{credentials:'same-origin',zybQuiet:true}).then(function(r){return r.ok?r.json():null;}).then(function(w){ADMIN=!!(w&&w.role==='admin');if(V)draw();}).catch(function(){/* role unknown: admin buttons stay hidden; the server checks the role anyway */});
+  function load(){return P.req('GET','/pdpl/catalog').then(function(r){V=r;draw();}).catch(function(e){P.fail($('sources'),e);['attrs','cols','kpis'].forEach(function(id){$(id).innerHTML='';});});}
+  var ENG={sharepoint:'SharePoint',onedrive:'OneDrive',fileshare:'File share',oracle:'Oracle',mssql:'SQL Server',postgres:'PostgreSQL'};
+  var EXL={anonymous:['anonymous link','red'],external:['shared outside','red'],everyone:['everyone can read','orange'],organization:['whole organisation','yellow'],none:['not shared','green']};
+  function expo(e){if(!e)return '';var p=[];['anonymous','external','everyone'].forEach(function(k){if(e[k])p.push(P.badge(e[k]+' '+EXL[k][0],EXL[k][1]));});return p.length?'<div>'+p.join(' ')+'</div>':'';}
+  function exb(x){var v=EXL[x];return v?P.badge(v[0],v[1]):P.badge('sharing not read','secondary');}
+  function conf(c){return c.confirmed===true?P.badge('confirmed '+c.matched+'/'+c.sampled,'green'):c.confirmed===false?P.badge('values did not match','secondary'):P.badge('name only','orange');}
+  function draw(){var r=V,t=r.totals,cv=r.coverage;
+    $('last').textContent=r.last?'last scan '+P.dt(r.last.at)+' by '+r.last.by:'never scanned';
+    $('scan').hidden=!ADMIN;
+    $('kpis').innerHTML=P.tile(t.sources,'Data sources')+P.tile(t.columns,'Columns with personal data')+P.tile(t.files||0,'Files with personal data')+P.tile(t.exposed_files||0,'Exposed files',t.exposed_files?'text-red':'');
+    $('attrs').innerHTML=r.attributes.length?r.attributes.map(function(a){return '<div class="col-6 col-md-3 col-xl-2"><div class="card card-sm attr'+(a.sensitive?' sens':'')+(ATTR===a.kind?' on':'')+'" data-attr="'+esc(a.kind)+'" role="button" tabindex="0"><div class="card-body"><div class="au-num">'+esc(a.columns+(a.files||0))+'</div><div class="au-lbl">'+esc(a.attribute)+'</div><div class="mut">'+esc(a.columns)+' column(s) · '+esc(a.files||0)+' file(s) · '+esc(a.sources)+' source(s)'+(a.sensitive?' · sensitive':'')+'</div></div></div></div>';}).join('')
+      :'<div class="col-12 text-secondary">No personal data catalogued yet.</div>';
+    $('covsum').textContent=cv.scanned+' read · '+cv.failed+' failed · '+cv.targets+' with a read-only login';
+    $('sources').innerHTML=P.table([['Source',function(s){return '<b>'+esc(s.label)+'</b><div class="mut">'+esc(ENG[s.engine]||s.engine)+' · '+esc(s.host||'')+'</div>';}],['Last scan',function(s){return s.ok?esc(P.dt(s.at)):P.badge('not read','red')+'<div class="mut">'+esc(s.error)+'</div>';}],
+      ['Personal data',function(s){if(s.files!==undefined)return esc(s.files)+' file(s) of '+esc(s.files_seen==null?'?':s.files_seen)+' looked at'+(s.truncated?' <span class="mut">(budget reached - the rest next scan)</span>':'')+expo(s.exposure);return esc(s.columns)+' column(s) in '+esc(s.tables)+' table(s)'+(s.probe_denied?'<div class="mut">'+esc(s.probe_denied)+' table(s) the login may not read - named only</div>':'');}],['Categories',function(s){return s.categories.map(function(c){return P.badge(c,s.sensitive.indexOf(c)>=0?'red':'blue');}).join(' ');}],['Identifiers',function(s){if(s.files!==undefined)return '<span class="mut">files: not searched by identifier</span>';return s.identifiers?P.badge(s.identifiers+' confirmed','green'):P.badge('none','secondary');}]],r.sources,null,
+      'No database scanned yet. Register Oracle databases on the Databases page, or let Asset Discovery prove a read-only login on the SQL Server / PostgreSQL hosts (Connections & Setup), then Scan now.');
+    $('notscanned').hidden=!cv.not_scanned.length;$('notscanned').innerHTML=cv.not_scanned.length?'<b>Not scanned yet:</b> '+cv.not_scanned.map(function(x){return esc(x.host)+' ('+esc(x.engine)+')';}).join(', '):'';
+    $('suggcard').hidden=!r.suggestions.length;
+    $('sugg').innerHTML=P.table([['Source',function(x){return esc(x.source);}],['Column',function(x){return esc(x.table+'.'+x.column);}],['Looks like',function(x){return esc(x.id_type.replace('_',' '))+(x.confirmed?' '+P.badge('values match','green'):'');}],['',function(x){return ADMIN?'<button type="button" class="btn btn-sm" data-setid="'+esc(x.id)+'" data-type="'+esc(x.id_type)+'">Confirm as identifier</button>':'<span class="mut">an administrator confirms</span>';}]],r.suggestions);
+    var sel=$('fsrc'),cur=sel.value;sel.innerHTML='<option value="">All sources</option>'+r.sources.map(function(s){return '<option value="'+esc(s.db)+'">'+esc(s.label)+'</option>';}).join('');sel.value=cur;
+    var fsel=$('fsrc2'),fcur=fsel.value,fs=r.sources.filter(function(s){return s.files!==undefined;});fsel.innerHTML='<option value="">All file sources</option>'+fs.map(function(s){return '<option value="'+esc(s.db)+'">'+esc(s.label)+'</option>';}).join('');fsel.value=fcur;
+    var st=r.file_status||{},sp=st.sharepoint||{},msg=[];
+    if(!st.linked)msg.push('The SIEM link is not configured - SharePoint and file shares are read by the SIEM.');
+    else{
+      if(sp.running)msg.push('<b>SharePoint scan running</b> '+esc(sp.progress||''));
+      if(sp.last_error)msg.push('<span class="text-red">SharePoint: '+esc(sp.last_error)+'</span>');
+      if(sp.never&&!sp.running)msg.push('SharePoint / OneDrive has not been scanned. Grant the Microsoft 365 app <b>Sites.Read.All</b> (and Files.Read.All + User.Read.All for OneDrive) with admin consent, then Scan now. Weekly scans: SIEM config "m365": {"files": {"enabled": true}}.');
+      (sp.errors||[]).forEach(function(e){msg.push(esc(e));});
+      if(!st.file_servers)msg.push('No file server has sent a scan. On each file server set "FileScanPaths": ["auto"] (every SMB share) or the folders in the agent config (C:\\ProgramData\\SentraAgent\\config.json), with agent 1.5 - the first scan starts within a minute and runs in the background.');
+    }
+    $('filesetup').innerHTML=msg.map(function(m){return '<div class="mb-1">'+m+'</div>';}).join('');$('filesetup').hidden=!msg.length;
+    drawFiles();drawCols();}
+  function drawFiles(){var r=V,ex=$('fexp').value,src=$('fsrc2').value;
+    var rows=(r.files||[]).filter(function(f){return (!ATTR||f.kinds[ATTR]||f.name_kinds.indexOf(ATTR)>=0)&&(!src||f.db===src)&&(!ex||(ex==='exposed'?['anonymous','external','everyone'].indexOf(f.exposure)>=0:f.exposure===ex));});
+    $('filesum').textContent=rows.length+' of '+(r.files_total||0);
+    $('files').innerHTML=P.table([['Source',function(f){return esc(f.source)+'<div class="mut">'+esc(ENG[f.engine]||f.engine)+'</div>';}],['File',function(f){return '<b>'+esc(f.name)+'</b><div class="mut font-monospace">'+esc(f.path||'')+'</div>';}],
+      ['Holds',function(f){return f.attributes.map(function(a){return P.badge(a,f.sensitive?'red':'blue');}).join(' ')+'<div class="mut">'+(f.by==='content'?Object.keys(f.kinds).map(function(k){return esc(k.replace('_',' '))+' x'+esc(f.kinds[k]);}).join(', '):'by file name only')+'</div>';}],
+      ['Exposure',function(f){return exb(f.exposure);}],['Modified',function(f){return esc(f.modified?P.dt(f.modified):'—');}]],rows.slice(0,500),null,(r.files_total?'No file for this filter.':'No file with personal data found yet.'))
+      +(rows.length>500?'<div class="card-body mut">Showing the first 500 - narrow with the filters.</div>':'');}
+  function drawCols(){var r=V,src=$('fsrc').value,q=$('fq').value.trim().toLowerCase();
+    var rows=r.columns.filter(function(c){return (!ATTR||c.kind===ATTR)&&(!src||c.db===src)&&(!q||(c.table+'.'+c.column+' '+c.owner).toLowerCase().indexOf(q)>=0);});
+    $('colsum').textContent=rows.length+' of '+r.columns_total+(ATTR?' · '+(r.attributes.filter(function(a){return a.kind===ATTR;})[0]||{}).attribute:'');
+    var types=r.id_types;
+    $('cols').innerHTML=P.table([['Source',function(c){return esc(c.source)+'<div class="mut">'+esc(c.engine)+'</div>';}],['Table.column',function(c){return '<span class="font-monospace">'+esc(c.owner+'.'+c.table+'.'+c.column)+'</span><div class="mut">'+esc(c.type)+(c.rows!=null?' · ~'+esc(c.rows)+' rows':'')+'</div>';}],
+      ['Attribute',function(c){return P.badge(c.attribute,c.sensitive?'red':'blue')+'<div class="mut">by '+esc(c.by)+'</div>';}],['Classification',conf],
+      ['Identifier',function(c){if(c.identifier)return P.badge(c.identifier.replace('_',' '),'green')+(ADMIN?' <button type="button" class="btn btn-sm btn-ghost-secondary" data-rmid="'+esc(c.id)+'">remove</button>':'');
+        if(!ADMIN||c.confirmed===false)return '';return '<select class="form-select form-select-sm" data-pick="'+esc(c.id)+'" aria-label="Use as identifier"><option value="">use as identifier…</option>'+types.map(function(x){return '<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>';}).join('')+'</select>';}]],rows.slice(0,500),null,'No column for this filter.')
+      +(rows.length>500?'<div class="card-body mut">Showing the first 500 - narrow with the source, attribute or search.</div>':'');}
+  function setId(id,type,remove){P.req('POST','/pdpl/catalog/identifiers',remove?{column_id:id,remove:true}:{column_id:id,id_type:type}).then(function(){P.toast(remove?'Identifier removed':'Identifier confirmed');load();}).catch(function(e){P.toast(P.why(e));});}
+  document.addEventListener('click',function(ev){var a=ev.target.closest('[data-attr]');if(a){var k=a.getAttribute('data-attr');ATTR=ATTR===k?null:k;draw();return;}
+    var s=ev.target.closest('[data-setid]');if(s){setId(s.getAttribute('data-setid'),s.getAttribute('data-type'));return;}
+    var rm=ev.target.closest('[data-rmid]');if(rm)setId(rm.getAttribute('data-rmid'),null,true);});
+  document.addEventListener('keydown',function(ev){var a=ev.target.closest&&ev.target.closest('[data-attr]');if(a&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();a.click();}});
+  document.addEventListener('change',function(ev){var p=ev.target.closest('[data-pick]');if(p&&p.value)setId(p.getAttribute('data-pick'),p.value);});
+  $('fsrc').addEventListener('change',drawCols);$('fexp').addEventListener('change',drawFiles);$('fsrc2').addEventListener('change',drawFiles);$('fq').addEventListener('input',drawCols);
+  $('scan').addEventListener('click',function(){var b=$('scan');b.disabled=true;P.req('POST','/pdpl/discovery/run',{}).then(function(r){P.toast('Scanned '+r.databases.length+' database(s)'+(r.sharepoint&&(r.sharepoint.started||r.sharepoint.running)?' - SharePoint scan running in the SIEM':''));b.disabled=false;load();}).catch(function(e){b.disabled=false;P.toast(P.why(e));});});
+  $('refresh').addEventListener('click',function(){load();});
+  load();
+})();
+</script></body></html>

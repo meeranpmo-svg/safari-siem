@@ -1,0 +1,161 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Compliance Map</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.card h3{margin:14px 0 8px;font-size:13px;color:var(--title)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}
+.stmt{font-size:14.5px;line-height:1.6}.stmt p{margin:0 0 8px}.stmt .b{color:var(--title);font-weight:600}
+.chk{list-style:none;margin:0;padding:0}.chk li{padding:3px 0}.chk .y{color:var(--ok);font-weight:700}.chk .n{color:var(--bad);font-weight:700}
+.kv{display:grid;grid-template-columns:170px 1fr;gap:4px 10px;font-size:13px}.kv dt{color:var(--mute)}.kv dd{margin:0;overflow-wrap:anywhere}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+ul.plain{margin:0;padding-left:18px}ul.plain li{margin:3px 0}
+@media print{.top button,.noprint{display:none!important}body{background:#fff;color:#000}.card,.t{border-color:#bbb;background:#fff;break-inside:avoid}.banner{color:#000;background:#f3f6fa}.card h2,.t .v,.stmt .b{color:#000}.muted,.note,th{color:#444}}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--panel);color:var(--mute);border:1px solid var(--edge);border-radius:999px;padding:6px 13px;cursor:pointer}.tabs button.on{background:#e7eaf0;color:#0a0b0f;border-color:#e7eaf0}.tabs button i{font-style:normal;opacity:.7;margin-left:4px}
+select,input.in{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:13px}.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+[hidden]{display:none!important}
+.fwt{--c:#8C93A1;display:inline-block;font:600 11px ui-monospace,Consolas,monospace;color:color-mix(in srgb,var(--c) 85%,#fff);background:color-mix(in srgb,var(--c) 12%,transparent);border:1px solid color-mix(in srgb,var(--c) 32%,transparent);border-radius:5px;padding:1px 6px;margin:1px 3px 1px 0;white-space:nowrap}
+td.code{font-family:Consolas,monospace;white-space:nowrap}td a{color:var(--info);text-decoration:none}td a:hover{text-decoration:underline}
+.plist a{display:inline-block;margin:1px 10px 1px 0}
+.strip{display:flex;flex-wrap:wrap;gap:4px;direction:ltr}.strip a{display:grid;place-items:center;min-width:46px;height:30px;padding:0 5px;border-radius:7px;font:700 11px ui-monospace,Consolas,monospace;color:#0b0e14;text-decoration:none;transition:transform .15s}.strip a:hover{transform:translateY(-2px)}.strip .gh{width:100%;font-size:11.5px;color:var(--muted,#8b93a4);margin:6px 0 2px;font-family:inherit;font-weight:600}
+.dp{display:grid;grid-template-columns:30px 70px;gap:6px;align-items:center}.dp i{display:block;height:8px;border-radius:999px}.plist details{display:inline}.plist summary{display:inline;cursor:pointer;color:var(--muted,#8b93a4);font-size:12px;list-style:none}.plist summary::-webkit-details-marker{display:none}.plist details[open] summary{display:none}
+tr.jump td{background:rgba(121,184,255,.12)}
+tr.hit td{background:rgba(121,184,255,.09)}
+.bar{height:6px;border-radius:3px;background:var(--raise);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--c,#3fb950)}
+.sr{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:1000px){.sr{grid-template-columns:1fr}}
+.ri{display:block;padding:7px 9px;border-radius:8px;border:1px solid var(--edge);margin:0 0 6px;color:var(--text);text-decoration:none;background:var(--raise)}.ri:hover{border-color:#4a5162}.ri small{display:block;color:var(--mute);font-size:11.5px}
+mark{background:rgba(227,179,65,.35);color:#fff;border-radius:3px;padding:0 1px}
+.hm2{border-collapse:separate;border-spacing:3px}.hm2 td{text-align:center;border-radius:6px;font-weight:700;font-size:12px;padding:6px 8px;border:0}.hm2 th{font-weight:500;color:var(--mute);font-size:11.5px;padding:2px 6px;border:0;white-space:nowrap}.hm2 td.nm{text-align:left;font-weight:500;background:none}
+.dep{display:flex;align-items:flex-end;gap:10px;height:120px;margin:6px 0}.dep div{flex:1;text-align:center;font-size:11.5px;color:var(--mute)}.dep i{display:block;margin:0 auto 4px;width:70%;border-radius:6px 6px 0 0}.dep b{display:block;color:var(--title);font-size:14px}
+.sg{border-left:3px solid var(--acc);padding:4px 10px;margin:6px 0;font-size:12.5px}.sg small{color:var(--mute)}
+button.t{font:inherit;color:inherit;text-align:start;cursor:pointer;width:100%}button.t:hover,button.t:focus-visible{border-color:#4a5672;outline:none}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Governance, Risk &amp; Compliance · SAMA CSF · NCA ECC · PDPL · IA</div><h1>Compliance Map</h1></div><span class="sp"></span>
+  <button type="button" class="btn pri" id="xlsx">⬇ Excel report</button><button type="button" class="btn" id="print">🖨 Print / PDF</button></div>
+<div class="banner">Which dashboard gives <b>evidence or a control</b> for which framework domain. Each page in the menu carries this tag, and the same tags appear on the home page, in the breadcrumb and in search. A tag means the page <b>supports</b> that domain (it shows monitoring, records or decisions an auditor can look at); it is not a certification and does not say the control is effective. A domain with no page is either handled outside this platform or is a gap: record which in <a href="grc-workspace.html" style="color:inherit">Risks &amp; Actions</a>.</div>
+<div class="k" id="kk"></div>
+<div class="tabs" id="tabs"></div>
+<div class="ctl" id="ctl"><input class="in" id="q" type="search" placeholder="Search pages, domains or codes - 3.3.14, 2-12, Art. 19, firewall   (press /)" aria-label="Search pages, domains or codes" style="min-width:420px" autocomplete="off"><span class="muted" id="qn" style="font-size:12px;margin-left:8px"></span></div>
+<div id="body"></div>
+</main>
+<script src="vendor/zyb-xlsx.js"></script>
+<script>
+(function(){
+  'use strict';
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var $=function(id){return document.getElementById(id);};
+  var N=window.ZYB_NAV||[], F=window.ZYB_FW||{}, KEYS=['sama','nca','pdpl','ia'].filter(function(k){return F[k];});
+  var PAGES=[];N.forEach(function(a){a.pages.forEach(function(p){PAGES.push({a:a,p:p,fw:p.fw||{}});});});
+  var HIT=decodeURIComponent((location.hash||'').slice(1));
+  var TAB=HIT&&PAGES.some(function(x){return x.p.h===HIT;})?'pages':(KEYS[0]||'pages');
+  function pill(t,c){return '<span class="pill p-'+c+'">'+esc(t)+'</span>';}
+  function tag(k,codes){var f=F[k];return codes&&codes.length?'<span class="fwt" style="--c:'+esc(f.c)+'" title="'+esc(codes.map(function(c){return f.short+' '+c+' - '+(f.domains[c]||'');}).join('\n'))+'">'+esc(f.short+' '+codes.join(' · '))+'</span>':'';}
+  // domain -> pages that support it, in menu order
+  function cover(k){var f=F[k],out=[];Object.keys(f.domains).forEach(function(code){out.push({code:code,name:f.domains[code],pages:PAGES.filter(function(x){return (x.fw[k]||[]).indexOf(code)>=0;})});});return out;}
+  function stats(k){var c=cover(k),n=c.filter(function(d){return d.pages.length;}).length;return {total:c.length,covered:n,gaps:c.length-n,pages:PAGES.filter(function(x){return (x.fw[k]||[]).length;}).length};}
+  function tiles(){
+    $('kk').innerHTML=KEYS.map(function(k){var f=F[k];
+      if(f.pending)return '<button type="button" class="t warn" data-kt="'+esc(k)+'"><div class="l">'+esc(f.short)+'</div><div class="v">Pending</div><div class="s">framework document not provided yet</div></button>';
+      var s=stats(k),pc=s.total?Math.round(100*s.covered/s.total):0;
+      return '<button type="button" class="t '+(s.gaps?'':'ok')+'" data-kt="'+esc(k)+'" style="--c:'+esc(f.c)+'"><div class="l">'+esc(f.short)+' domains supported</div><div class="v">'+s.covered+' / '+s.total+'</div><div class="s">'+s.pages+' pages · '+(s.gaps?s.gaps+' with no page':'every domain has a page')+'</div><div class="bar"><i style="width:'+pc+'%;background:'+esc(f.c)+'"></i></div></button>';}).join('')
+      +'<button type="button" class="t info" data-kt="pages"><div class="l">Dashboards tagged</div><div class="v">'+PAGES.filter(function(x){return KEYS.some(function(k){return (x.fw[k]||[]).length;});}).length+' / '+PAGES.length+'</div><div class="s">across '+N.length+' menu areas</div></button>';
+  }
+  function tabs(){$('tabs').innerHTML=KEYS.map(function(k){return '<button type="button" data-t="'+k+'" class="'+(TAB===k?'on':'')+'">'+esc(F[k].short)+(F[k].pending?' (pending)':'')+'</button>';}).join('')+'<button type="button" data-t="pages" class="'+(TAB==='pages'?'on':'')+'">By page</button><button type="button" data-t="matrix" class="'+(TAB==='matrix'?'on':'')+'">Matrix</button>';}
+  function link(x){return '<a href="'+esc(x.p.h)+'" title="'+esc(x.a.name+' · '+x.p.t)+'">'+esc(x.p.s)+'</a>';}
+  // ---- search: an index built once (lower-cased text per page, every framework code), ranked, typo-tolerant, debounced
+  var STOP={the:1,and:1,of:1,to:1,a:1,in:1,for:1,with:1,on:1,by:1,is:1,are:1,its:1,every:1,from:1,or:1,be:1,as:1,that:1,this:1,each:1,not:1,it:1,an:1,at:1,per:1,no:1};
+  function words(t){return String(t||'').toLowerCase().replace(/[^a-z0-9\u0600-\u06ff.-]+/g,' ').split(' ').map(function(w){return w.replace(/^[.-]+|[.-]+$/g,'');}).filter(function(w){return w.length>1&&!STOP[w];});}
+  var IDX=PAGES.map(function(x){var title=(x.p.s+' '+x.p.t).toLowerCase();return {x:x,title:title,tw:words(title),all:(x.a.name+' '+x.p.s+' '+x.p.t+' '+x.p.h+' '+(x.p.d||'')).toLowerCase()};});
+  var nc=function(c){return String(c).toLowerCase().replace(/\s+/g,'').replace(/^art\.?/,'art.').replace(/^irart\.?/,'irart.');};
+  var CODES={};KEYS.forEach(function(k){Object.keys(F[k].domains||{}).forEach(function(c){(CODES[nc(c)]=CODES[nc(c)]||[]).push({k:k,code:c});});});
+  function lev1(a,b){if(Math.abs(a.length-b.length)>1)return false;var i=0,j=0,e=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue;}if(++e>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++;}}return e+(a.length-i)+(b.length-j)<=1;}
+  function search(q){q=String(q||'').trim();if(!q)return null;var code=CODES[nc(q)];
+    if(code){var pg=PAGES.filter(function(x){return code.some(function(c){return (x.fw[c.k]||[]).indexOf(c.code)>=0;});});
+      return {code:true,pages:pg.map(function(x){return {x:x,score:100,why:'tagged '+code.map(function(c){return F[c.k].short+' '+c.code;}).join(', ')};}),domains:code.map(function(c){return {k:c.k,code:c.code,name:F[c.k].domains[c.code],score:100};})};}
+    var T=words(q);if(!T.length)T=[q.toLowerCase()];
+    var pages=[];IDX.forEach(function(r){var sc=0,ok=T.every(function(t){var s=0;if(r.tw.indexOf(t)>=0)s=6;else if(r.tw.some(function(w){return w.indexOf(t)===0;}))s=4;else if(r.title.indexOf(t)>=0)s=3;else if(r.all.indexOf(t)>=0)s=1.5;else if(t.length>=4&&r.tw.some(function(w){return lev1(w,t);}))s=1;sc+=s;return s>0;});
+      if(ok)pages.push({x:r.x,score:sc});});
+    pages.sort(function(a,b){return b.score-a.score||a.x.p.s.localeCompare(b.x.p.s);});
+    var doms=[];KEYS.forEach(function(k){Object.keys(F[k].domains||{}).forEach(function(c){var nm=(c+' '+F[k].domains[c]).toLowerCase(),ws=words(nm);var sc=0,ok=T.every(function(t){var s=ws.indexOf(t)>=0?3:nm.indexOf(t)>=0?2:(t.length>=4&&ws.some(function(w){return lev1(w,t);}))?1:0;sc+=s;return s>0;});if(ok)doms.push({k:k,code:c,name:F[k].domains[c],score:sc});});});
+    doms.sort(function(a,b){return b.score-a.score;});return {pages:pages,domains:doms};}
+  function hl(text,q){var t=esc(text),T=words(q).filter(function(w){return w.length>1;});if(!T.length)return t;T.sort(function(a,b){return b.length-a.length;});
+    var re=new RegExp('('+T.map(function(w){return w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}).join('|')+')','gi');return t.replace(re,'<mark>$1</mark>');}
+  function drawSearch(q){var R=search(q);var dc=function(d){return d.pages=PAGES.filter(function(x){return (x.fw[d.k]||[]).indexOf(d.code)>=0;}),d;};
+    $('qn').textContent=R.pages.length+' page(s) · '+R.domains.length+' domain(s)'+(R.code?' · exact code':'');
+    $('body').innerHTML='<div class="sr"><div class="card"><h2>Domains<span class="c">'+R.domains.length+'</span></h2>'+(R.domains.length?R.domains.slice(0,40).map(dc).map(function(d){return '<a class="ri" href="#" data-dom="'+esc(d.k)+'"><b>'+esc(F[d.k].short+' '+d.code)+'</b> '+hl(d.name,q)+'<small>'+(d.pages.length?d.pages.length+' page(s): '+esc(d.pages.slice(0,4).map(function(x){return x.p.s;}).join(', '))+(d.pages.length>4?' …':''):'no page evidences it')+'</small></a>';}).join(''):'<p class="muted">No domain matches.</p>')+'</div>'
+      +'<div class="card"><h2>Dashboards<span class="c">'+R.pages.length+' - best match first</span></h2>'+(R.pages.length?R.pages.slice(0,60).map(function(r){var x=r.x;return '<a class="ri" href="'+esc(x.p.h)+'"><b>'+hl(x.p.s,q)+'</b> <span class="muted">'+esc(x.a.sn||x.a.name)+'</span><small>'+hl(x.p.t,q)+'</small><small>'+KEYS.map(function(k){return (x.fw[k]||[]).length?esc(F[k].short+' '+x.fw[k].join(' · ')):'';}).filter(Boolean).join('  ·  ')+'</small></a>';}).join('')+(R.pages.length>60?'<p class="muted">'+(R.pages.length-60)+' more - refine the search.</p>':''):'<p class="muted">No dashboard matches.</p>')+'</div></div>';}
+  // ---- ML: pages likely to evidence an uncovered domain (TF-IDF cosine over the page title + description; a suggestion, never a tag)
+  var DF={},VEC=null;function tfidf(){if(VEC)return VEC;IDX.forEach(function(r){var seen={};words(r.title+' '+(r.x.p.d||'')).forEach(function(w){if(!seen[w]){seen[w]=1;DF[w]=(DF[w]||0)+1;}});});
+    var n=IDX.length;VEC=IDX.map(function(r){var tf={};words(r.title+' '+r.title+' '+(r.x.p.d||'')).forEach(function(w){tf[w]=(tf[w]||0)+1;});var v={},nn=0;Object.keys(tf).forEach(function(w){v[w]=tf[w]*Math.log((n+1)/((DF[w]||0)+1));nn+=v[w]*v[w];});return {x:r.x,v:v,n:Math.sqrt(nn)||1};});return VEC;}
+  function suggest(k,code){var V=tfidf(),n=IDX.length,q={},qn=0;words(F[k].domains[code]).forEach(function(w){q[w]=(q[w]||0)+Math.log((n+1)/((DF[w]||0)+1));});Object.keys(q).forEach(function(w){qn+=q[w]*q[w];});qn=Math.sqrt(qn)||1;
+    return V.filter(function(d){return (d.x.fw[k]||[]).indexOf(code)<0;}).map(function(d){var dot=0;Object.keys(q).forEach(function(w){if(d.v[w])dot+=q[w]*d.v[w];});return {x:d.x,s:dot/(qn*d.n)};}).filter(function(r){return r.s>=0.08;}).sort(function(a,b){return b.s-a.s;}).slice(0,3);}
+  function insights(k,c){var b={0:0,1:0,2:0,4:0};c.forEach(function(d){var n=d.pages.length;b[n===0?0:n===1?1:n<=3?2:4]++;});var mx=Math.max(1,b[0],b[1],b[2],b[4]);
+    var bar=function(v,l,col){return '<div><b>'+v+'</b><i style="height:'+Math.max(4,v/mx*80)+'px;background:'+col+'"></i>'+l+'</div>';};
+    var gaps=c.filter(function(d){return !d.pages.length;}),fr=c.filter(function(d){return d.pages.length===1;});
+    return '<div class="g2"><div class="card"><h2>Evidence depth<span class="c">how many dashboards evidence each domain - one is fragile, none is a gap</span></h2><div class="dep">'+bar(b[0],'no page','var(--bad)')+bar(b[1],'1 page (fragile)','var(--warn)')+bar(b[2],'2-3 pages','#79b8ff')+bar(b[4],'4+ pages','var(--ok)')+'</div>'
+      +(fr.length?'<p class="note" style="margin:6px 0 0">Fragile: '+fr.slice(0,12).map(function(d){return '<b class="mono">'+esc(d.code)+'</b> ('+esc(d.pages[0].p.s)+')';}).join(', ')+(fr.length>12?' …':'')+'</p>':'')+'</div>'
+      +'<div class="card"><h2>Suggested evidence for uncovered domains<span class="c">text similarity (TF-IDF) between the domain and each dashboard - a suggestion for a person to check, never a tag</span></h2>'
+      +(gaps.length?gaps.slice(0,8).map(function(d){var S=suggest(k,d.code);return '<div class="sg"><b class="mono">'+esc(d.code)+'</b> '+esc(d.name)+'<br>'+(S.length?S.map(function(r){return '<a href="'+esc(r.x.p.h)+'">'+esc(r.x.p.s)+'</a> <small>'+Math.round(r.s*100)+'%</small>';}).join(' · '):'<small>no dashboard is close - met by a policy, a process or another system</small>')+'</div>';}).join(''):'<p class="muted">Every domain has at least one dashboard.</p>')+'</div></div>';}
+  function drawMatrix(){var mx=1,R=N.map(function(a){var row=KEYS.map(function(k){var pg=a.pages.filter(function(p){return ((p.fw||{})[k]||[]).length;}),dm={};pg.forEach(function(p){p.fw[k].forEach(function(c){dm[c]=1;});});var v={pages:pg.length,doms:Object.keys(dm).length};if(v.doms>mx)mx=v.doms;return v;});return {a:a,row:row};});
+    $('body').innerHTML='<div class="card"><h2>Menu areas × frameworks<span class="c">number = distinct domains the area evidences (pages tagged) - darker is more</span></h2><div class="tw"><table class="hm2"><thead><tr><th></th>'+KEYS.map(function(k){return '<th>'+esc(F[k].short)+'</th>';}).join('')+'</tr></thead><tbody>'
+      +R.map(function(r){return '<tr><td class="nm">'+esc(r.a.sn||r.a.name)+'</td>'+r.row.map(function(v,i){var c=F[KEYS[i]].c||'#79b8ff';return '<td style="background:color-mix(in srgb,'+esc(c)+' '+(v.doms?Math.round(15+70*v.doms/mx):4)+'%,transparent)" title="'+esc(r.a.name+' - '+F[KEYS[i]].short+': '+v.doms+' domain(s) over '+v.pages+' page(s)')+'">'+(v.doms||'')+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div></div>';}
+  function draw(){
+    tabs();var q=$('q').value.trim();$('qn').textContent='';
+    if(TAB==='pages')return drawPages();
+    if(q)return drawSearch(q);
+    if(TAB==='matrix')return drawMatrix();
+    var f=F[TAB];
+    if(f.pending){$('body').innerHTML='<div class="card"><h2>'+esc(f.name)+' '+pill('pending','warn')+'</h2><p>'+esc(f.pending)+'</p><p class="note">Once the document is provided, its domains are added to the registry (vendor/zyb-nav.js) and each page is tagged against them, the same way as SAMA, NCA and PDPL.</p></div>';return;}
+    var c=cover(TAB),gaps=c.filter(function(d){return !d.pages.length;});
+    // the depth colours of the chart above: none, one (fragile), two or three, four or more
+    var dcol=function(n){return n===0?'#f85149':n===1?'#e3b341':n<=3?'#79b8ff':'#3fb950';},rid=function(d){return 'd-'+TAB+'-'+String(d.code).replace(/[^A-Za-z0-9-]/g,'_');},mxp=Math.max.apply(null,[1].concat(c.map(function(d){return d.pages.length;})));
+    var strip='<div class="card"><h2>At a glance<span class="c">every domain, coloured by how many pages support it · click one to go to it</span></h2><div class="strip" role="group" aria-label="'+esc(f.name+' domains by depth')+'">'+c.map(function(d){return '<a href="#'+rid(d)+'" data-jump="'+rid(d)+'" style="background:'+dcol(d.pages.length)+'" title="'+esc(d.code+' '+d.name+': '+d.pages.length+' page(s)')+'">'+esc(d.code)+'</a>';}).join('')+'</div></div>';
+    var MORE=8;
+    $('body').innerHTML=insights(TAB,c)+strip+'<div class="card"><h2>'+esc(f.name)+'<span class="c">'+c.length+' domains · '+(c.length-gaps.length)+' supported by a page</span></h2>'+(f.basis?'<p class="note" style="margin:0 0 10px">'+esc(f.basis)+'</p>':'')+'<div class="tw"><table><thead><tr><th>Code</th><th>Domain</th><th>Pages that support it</th><th>Pages</th></tr></thead><tbody>'
+      +c.map(function(d){var P=d.pages,n=P.length;return '<tr id="'+rid(d)+'"><td class="code">'+esc(d.code)+'</td><td>'+esc(d.name)+'</td><td class="plist">'+(n?P.slice(0,MORE).map(link).join('')+(n>MORE?'<details><summary>+'+(n-MORE)+' more</summary>'+P.slice(MORE).map(link).join('')+'</details>':''):pill('no page','warn'))+'</td><td><div class="dp"><b>'+n+'</b><i style="width:'+Math.max(6,n/mxp*100).toFixed(1)+'%;background:'+dcol(n)+'" title="'+esc(n+' page(s)')+'"></i></div></td></tr>';}).join('')+'</tbody></table></div></div>'
+      +(gaps.length?'<div class="card"><h2>Domains with no page<span class="c">'+gaps.length+'</span></h2><ul class="plain">'+gaps.map(function(d){return '<li><b class="mono">'+esc(d.code)+'</b> '+esc(d.name)+'</li>';}).join('')+'</ul><p class="note">The platform does not monitor these. They are met by other means (a policy, a process, another system) or not applicable to the organisation, or they are a gap. Record which, with an owner, in Risks &amp; Actions.</p></div>':'');
+  }
+  function drawPages(){
+    var q=$('q').value.trim(),R=search(q),rows=R?R.pages.map(function(r){return r.x;}):PAGES;$('qn').textContent=R?rows.length+' page(s)'+(R.code?' · exact code':''):'';
+    $('body').innerHTML='<div class="card"><h2>Every dashboard and the frameworks it supports<span class="c">'+rows.length+' of '+PAGES.length+'</span></h2><div class="tw"><table><thead><tr><th>Area</th><th>Dashboard</th>'+KEYS.map(function(k){return '<th>'+esc(F[k].short)+'</th>';}).join('')+'</tr></thead><tbody>'
+      +rows.map(function(x){return '<tr'+(x.p.h===HIT?' class="hit" id="hit"':'')+'><td class="muted">'+esc(x.a.sn||x.a.name)+'</td><td><a href="'+esc(x.p.h)+'">'+esc(x.p.t)+'</a></td>'+KEYS.map(function(k){return '<td>'+(F[k].pending?'<span class="muted">pending</span>':(tag(k,x.fw[k])||'<span class="muted">—</span>'))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div></div>';
+    var h=$('hit');if(h&&!q)h.scrollIntoView({block:'center'});
+  }
+  // a tile opens what it counts: its framework's domains (or every page for "Dashboards tagged"), with the tab selected
+  $('kk').addEventListener('click',function(e){var b=e.target.closest('[data-kt]');if(!b)return;TAB=b.getAttribute('data-kt');$('q').value='';draw();var t=$('tabs');if(t)t.scrollIntoView({block:'start'});});
+  $('tabs').addEventListener('click',function(e){var b=e.target.closest('button[data-t]');if(!b)return;TAB=b.getAttribute('data-t');draw();});
+  $('q').addEventListener('input',draw);   // the index is built once: a search over every page takes well under a millisecond, so no debounce is needed
+  document.addEventListener('keydown',function(e){if(e.key==='/'&&document.activeElement!==$('q')&&!/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||'')){e.preventDefault();$('q').focus();}else if(e.key==='Escape'&&document.activeElement===$('q')){$('q').value='';draw();}});
+  // a cell of the strip: to its row, highlighted for a moment
+  $('body').addEventListener('click',function(e){var j=e.target.closest('[data-jump]');if(!j)return;e.preventDefault();var r=document.getElementById(j.getAttribute('data-jump'));if(!r)return;r.scrollIntoView({behavior:'smooth',block:'center'});r.classList.add('jump');setTimeout(function(){r.classList.remove('jump');},1800);});
+  $('body').addEventListener('click',function(e){var a=e.target.closest('[data-dom]');if(!a)return;e.preventDefault();TAB=a.getAttribute('data-dom');$('q').value='';draw();});
+  window.addEventListener('hashchange',function(){HIT=decodeURIComponent((location.hash||'').slice(1));if(PAGES.some(function(x){return x.p.h===HIT;})){TAB='pages';$('q').value='';draw();}});
+  $('print').addEventListener('click',function(){window.print();});
+  $('xlsx').addEventListener('click',function(){
+    if(!window.zybXlsx){alert('The Excel writer (vendor/zyb-xlsx.js) did not load.');return;}
+    var sheets=[{name:'Summary',columns:[{h:'Framework',w:52},{h:'Domains',w:10},{h:'Supported by a page',w:12},{h:'No page',w:10},{h:'Pages tagged',w:10},{h:'Note',w:70}],
+      rows:KEYS.map(function(k){var f=F[k];if(f.pending)return [f.name,'','','','',f.pending];var s=stats(k);return [f.name,s.total,s.covered,s.gaps,s.pages,'A tag means the page gives evidence or a control for the domain; it is not a certification.'];})}];
+    KEYS.forEach(function(k){var f=F[k];if(f.pending)return;
+      sheets.push({name:f.short,columns:[{h:'Code',w:12},{h:'Domain',w:60},{h:'Pages',w:8},{h:'Dashboards that support it',w:90},{h:'Status',w:12}],rows:cover(k).map(function(d){return [d.code,d.name,d.pages.length,d.pages.map(function(x){return x.p.t;}).join(' | '),d.pages.length?'supported':'no page'];})});});
+    sheets.push({name:'By page',columns:[{h:'Area',w:30},{h:'Dashboard',w:44},{h:'File',w:26}].concat(KEYS.map(function(k){return {h:F[k].short,w:k==='ia'?12:30};})),
+      rows:PAGES.map(function(x){return [x.a.name,x.p.t,x.p.h].concat(KEYS.map(function(k){return F[k].pending?'pending':(x.fw[k]||[]).join(', ');}));})});
+    zybXlsx.download('compliance-map-'+new Date().toISOString().slice(0,10)+'.xlsx',sheets,{title:'Compliance Map - SAMA CSF, NCA ECC, PDPL, IA',filter:'all dashboards',by:(ZYB_ORG.short + ' — IT Operations and Cyber Security Automation Platform')});
+  });
+  if(!N.length){$('body').innerHTML='<div class="card"><p class="err">The dashboard list (vendor/zyb-nav.js) did not load - refresh, or run the dashboards install.</p></div>';return;}
+  tiles();draw();
+})();
+</script>
+</body></html>

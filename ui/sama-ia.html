@@ -1,0 +1,176 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SAMA & IA Assessment</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-assist.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.hero{background:linear-gradient(135deg,rgba(57,135,229,.16),rgba(12,163,12,.06));border:1px solid var(--tblr-border-color);border-radius:12px;padding:16px}
+.hero .big{font-size:44px;font-weight:800;line-height:1}.ch{position:relative;height:190px}.ch-s{position:relative;height:150px}
+.pil{display:block;width:100%;text-align:left;border:1px solid var(--tblr-border-color);border-top-width:4px;border-radius:10px;padding:12px;background:transparent;color:inherit;height:100%}
+.pil:hover{background:rgba(255,255,255,.03)}.pil.on{box-shadow:0 0 0 1px #3987e5 inset}
+.pil.p-grc{border-top-color:#8b5cf6}.pil.p-hardening{border-top-color:#0ea5a4}.pil.p-pentest{border-top-color:#f97316}.pil.p-siem{border-top-color:#3987e5}.pil.p-ops{border-top-color:#64748b}
+.bar{height:8px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;display:flex}.bar i{display:block;height:100%}
+.b-ok{background:#0ca30c}.b-part{background:#e0a800}.b-not{background:#d03b3b}.b-na{background:#4b5563}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.sd{border:1px solid var(--tblr-border-color);border-radius:8px;padding:8px 10px;cursor:pointer;background:transparent;color:inherit;text-align:left;width:100%}
+.sd:hover{background:rgba(255,255,255,.035)}.sd .lv{font-size:20px;font-weight:800}
+.lv0{border-left:4px solid #d03b3b}.lv1{border-left:4px solid #f97316}.lv2{border-left:4px solid #e0a800}.lv3{border-left:4px solid #0ca30c}.lv4{border-left:4px solid #0ea5a4}.lv5{border-left:4px solid #3987e5}.lvn{border-left:4px solid #4b5563}
+.dots i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}.d-ok{background:#0ca30c}.d-gap{background:#d03b3b}.d-other{background:#6b7280}
+.why{overflow-wrap:anywhere;max-width:520px}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Audit · Regulators</div><h2 class="page-title">SAMA Cyber Security Framework &amp; Insurance Authority — automated assessment</h2></div>
+ <div class="col-auto ms-auto d-flex gap-2 flex-wrap"><span class="mut align-self-center" id="up"></span><button type="button" class="btn" id="csv"><i class="ti ti-download me-1"></i>Export CSV</button><button type="button" class="btn" id="g2g"><i class="ti ti-list-check me-1"></i>Gaps to GRC</button><button type="button" class="btn btn-primary" id="run"><i class="ti ti-player-play me-1"></i>Assess now</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Every SAMA CSF requirement is checked every day against its own evidence: <b>GRC</b> (policies, risk, attestations, control monitoring, audit findings), <b>Hardening</b> (baseline coverage, critical failures, patching), <b>Pentest / VAPT</b> (scans, test cadence, exposed services) and <b>SIEM logs</b> (log sources, monitoring, retention). A source that is not connected reads <b>not measured</b>, never a pass; an automated gap is never hidden by a confirmation. What needs a document is recorded by a person and approved by the CISO. Maturity levels and scores are <b>indicative, from this register</b> — not SAMA's or an auditor's rating.</div></div></div>
+<div id="err"></div>
+<div id="main" hidden>
+<div class="row row-cards mb-3">
+ <div class="col-lg-5"><div class="hero h-100"><div class="d-flex gap-3 align-items-center"><div class="ch-s flex-fill"><canvas id="c-ready"></canvas></div></div><div class="mt-2" id="hero"></div></div></div>
+ <div class="col-lg-7"><div class="row row-cards" id="kpis"></div></div>
+</div>
+<div class="row row-cards mb-3" id="pillars"></div>
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Domains</h3><span class="mut ms-2">fully · partially · not · not assessed</span></div><div class="card-body" id="doms"></div></div>
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">32 subdomains · indicative maturity</h3><span class="mut ms-2" id="lvl-key"></span></div><div class="card-body"><div class="grid" id="subs"></div></div></div>
+<ul class="nav nav-tabs mb-0" id="tabs" role="tablist">
+ <li class="nav-item"><button type="button" class="nav-link active" data-tab="reg">Requirements</button></li>
+ <li class="nav-item"><button type="button" class="nav-link" data-tab="cov">Coverage &amp; value</button></li>
+ <li class="nav-item"><button type="button" class="nav-link" data-tab="pri">Priorities (ML)</button></li>
+ <li class="nav-item"><button type="button" class="nav-link" data-tab="trend">Trend &amp; forecast</button></li>
+ <li class="nav-item"><button type="button" class="nav-link" data-tab="ia">Insurance Authority</button></li>
+ <li class="nav-item"><button type="button" class="nav-link" data-tab="rep">AI Assessor report</button></li>
+</ul>
+<div class="card mb-3" style="border-top-left-radius:0">
+ <div data-pane="reg"><div class="card-header"><div class="d-flex gap-2 flex-wrap w-100"><select class="form-select form-select-sm w-auto" id="f-p" aria-label="Pillar"><option value="">Every pillar</option></select><select class="form-select form-select-sm w-auto" id="f-r" aria-label="Result"><option value="">Every result</option><option value="gap">Gaps</option><option value="ok">Met / verified</option><option value="open">Not assessed yet</option><option value="pending">Waiting for approval</option></select><input class="form-control form-control-sm w-auto" id="f-q" placeholder="Search requirement or subdomain" maxlength="80"><span class="mut align-self-center" id="f-n"></span></div></div><div id="reg"></div></div>
+ <div data-pane="cov" hidden><div class="card-body"><div class="row row-cards mb-2" id="cov-k"></div><div class="mut" id="cov-n"></div></div>
+  <div class="card-body pt-0"><h4>Connect these sources to automate more</h4><div id="cov-c"></div></div>
+  <div class="card-body pt-0"><h4>Recommended to implement</h4><div class="mut mb-1">Requirements the platform cannot check yet, with what would make them automatic.</div></div><div id="cov-r"></div>
+  <div class="card-body"><h4>How the platform supports each subdomain</h4><div class="mut mb-1">The platform pages that run or evidence each SAMA subdomain (from the compliance tags in the menu), and how its requirements are verified.</div></div><div id="cov-s"></div></div>
+ <div data-pane="pri" hidden><div class="card-body mut">Ranked by severity × how far from met × (1 + the chance of a gap at the next run), +1 for a regression. The chance of a gap is learned from this register's own daily runs (a Beta(1,1) prior updated with the last 30); every factor is shown.</div><div id="pri"></div></div>
+ <div data-pane="trend" hidden><div class="card-body"><div class="ch"><canvas id="c-trend"></canvas></div><div class="mut mt-2" id="trend"></div></div></div>
+ <div data-pane="ia" hidden><div class="card-body" id="ia"></div><div id="iareg"></div></div>
+ <div data-pane="rep" hidden><div class="card-header"><span class="mut" id="ais"></span><div class="card-actions d-flex gap-2"><button type="button" class="btn btn-sm" id="rep-r"><i class="ti ti-file-text me-1"></i>Draft from the rules</button><button type="button" class="btn btn-sm btn-primary" id="rep-a" hidden><i class="ti ti-sparkles me-1"></i>Draft with the AI Assessor</button></div></div><div id="reps"></div></div>
+</div>
+</div>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, C=window.zybCharts, esc=P.esc, $=P.$;
+  var V=null, PIL='', REPS=[];
+  var RES={verified:['verified','green'],met:['met','green'],partial:['partial','yellow'],gap:['gap','red'],pending:['waiting for approval','orange'],not_measured:['not measured','secondary'],no_evidence:['no evidence yet','secondary'],not_applicable:['not applicable','secondary']};
+  var RS={draft:['draft - waiting for the CISO','orange'],approved:['approved','green'],rejected:['rejected','secondary']};
+  var OK={verified:1,met:1};
+  function bx(M,k){var x=M[k]||[k,'secondary'];return P.badge(x[0],x[1]);}
+  function dt(s){return s?String(s).slice(0,16).replace('T',' '):'—';}
+  function stack(pct){return '<div class="bar" title="fully '+pct.compliant+'% · partially '+pct.partially+'% · not '+pct.not+'% · not assessed '+pct.not_assessed+'%"><i class="b-ok" style="width:'+(+pct.compliant)+'%"></i><i class="b-part" style="width:'+(+pct.partially)+'%"></i><i class="b-not" style="width:'+(+pct.not)+'%"></i><i class="b-na" style="width:'+(+pct.not_assessed)+'%"></i></div>';}
+  function lvl(m){return m.level==null?'—':String(m.level);}
+  function load(){return P.req('GET','/sama-ia').then(function(v){V=v;$('err').innerHTML='';$('main').hidden=false;draw();}).catch(function(e){P.fail($('err'),e);$('up').textContent='not loaded';});}
+  function loadReps(){return P.req('GET','/sama-ia/reports').then(function(r){REPS=r||[];drawReps();}).catch(function(){REPS=null;drawReps();/* a viewer is not allowed the reports: the tab says so */});}
+  function draw(){var v=V,o=v.overall,r=v.readiness;
+    $('up').textContent='assessed '+dt(v.generated_at)+' UTC';
+    C.ring($('c-ready'),['Fully','Partially','Not','Not assessed'],[o.pct.compliant,o.pct.partially,o.pct.not,o.pct.not_assessed],['ok','yellow','crit','mute'],{v:(o.score==null?'—':o.score+'%'),l:'requirements met'},{title:'SAMA CSF readiness'});
+    $('hero').innerHTML='<div class="d-flex align-items-end gap-3"><div><div class="big">'+esc(r.at_target)+'<span class="mut" style="font-size:18px"> / '+esc(r.subdomains)+'</span></div><div class="au-lbl">subdomains at level '+esc(v.target_level)+' (SAMA\'s expectation)</div></div>'
+      +'<div class="mut">'+esc(r.below_target)+' below target · '+esc(r.not_assessed)+' not assessed'+(r.average_level!=null?' · average level '+esc(r.average_level):'')+'</div></div>'
+      +(v.decide.length?'<div class="alert alert-warning mt-2 mb-0 py-2">The CISO / an administrator decides whether '+v.decide.map(esc).join(' and ')+(' (payment systems, e-banking) apply to ' + ZYB_ORG.short + '.')+' <button type="button" class="btn btn-sm ms-2" id="appl">Decide…</button></div>':'');
+    var pr=v.priorities.length, rg=v.regressions.length;
+    $('kpis').innerHTML=P.tile((o.counts.compliant)+' / '+o.applicable,'Requirements met','text-green')+P.tile(o.counts.not,'Gaps',o.counts.not?'text-red':'text-green')+P.tile(o.counts.not_assessed,'Not assessed yet',o.counts.not_assessed?'text-orange':'')
+      +P.tile(rg,'Regressions since last run',rg?'text-red':'text-green')+P.tile(v.trend.forecast_30d==null?'—':v.trend.forecast_30d+'%','Forecast in 30 days','')+P.tile(v.trend.slope_per_30d==null?'—':(v.trend.slope_per_30d>0?'+':'')+v.trend.slope_per_30d,'Trend (points / 30 days)',v.trend.slope_per_30d>0?'text-green':v.trend.slope_per_30d<0?'text-red':'')
+      +P.tile(v.ia.levels.score==null?'—':v.ia.levels.score+'%','Insurance Authority view','')+P.tile(pr,'Open priorities',pr?'text-orange':'text-green');
+    $('pillars').innerHTML=v.pillars.map(function(p){var meas=p.automated?Math.round(100*p.connected/p.automated):0;
+      return '<div class="col-md-6 col-xl"><button type="button" class="pil p-'+esc(p.id)+(PIL===p.id?' on':'')+'" data-pil="'+esc(p.id)+'"><div class="d-flex justify-content-between"><b>'+esc(p.name)+'</b><span class="au-num" style="font-size:20px">'+esc(p.score==null?'—':p.score+'%')+'</span></div>'
+        +'<div class="mut mt-1">'+esc(p.requirements)+' requirement(s) · '+esc(p.automated)+' checked automatically</div><div class="mt-2 small"><span class="text-green">'+esc(p.ok)+' met</span> · <span class="text-red">'+esc(p.gaps)+' gap(s)</span> · <span class="mut">'+esc(p.not_assessed)+' not assessed</span></div>'
+        +'<div class="mut mt-1">evidence sources connected: '+esc(p.connected)+' / '+esc(p.automated)+' ('+esc(meas)+'%)</div></button></div>';}).join('');
+    $('doms').innerHTML=v.domains.map(function(d){return '<div class="mb-3"><div class="d-flex justify-content-between"><b>'+esc(d.id)+' '+esc(d.name)+'</b><span class="mut">'+esc(d.at_target)+' / '+esc(d.subdomains)+' subdomains at level '+esc(v.target_level)+' · '+esc(d.score==null?'—':d.score+'%')+'</span></div>'+stack(d.pct)+'<div class="mut mt-1">fully '+esc(d.pct.compliant)+'% · partially '+esc(d.pct.partially)+'% · not '+esc(d.pct.not)+'% · not assessed '+esc(d.pct.not_assessed)+'%</div></div>';}).join('');
+    $('lvl-key').textContent=Object.keys(v.levels).map(function(k){return k+' '+v.levels[k];}).join(' · ');
+    $('subs').innerHTML=v.subdomains.map(function(s){var m=s.maturity,ds='';Object.keys(s.pillars).forEach(function(k){var p=s.pillars[k];for(var i=0;i<p.ok;i++)ds+='<i class="d-ok"></i>';for(i=0;i<p.gap;i++)ds+='<i class="d-gap"></i>';for(i=0;i<p.other;i++)ds+='<i class="d-other"></i>';});
+      return '<button type="button" class="sd '+(m.level==null?'lvn':'lv'+m.level)+'" data-sd="'+esc(s.id)+'"><div class="d-flex justify-content-between"><span class="mut">'+esc(s.id)+'</span><span class="lv">'+esc(lvl(m))+'</span></div><div class="small">'+esc(s.name)+'</div><div class="dots mt-1">'+ds+'</div></button>';}).join('');
+    var sel=$('f-p');if(sel.options.length===1)v.pillars.forEach(function(p){var op=document.createElement('option');op.value=p.id;op.textContent=p.name;sel.appendChild(op);});sel.value=PIL;
+    drawReg();drawPri();drawTrend();drawIa();drawCov();
+    $('ais').textContent=v.ai&&v.ai.enabled?'The AI Assessor ('+v.ai.model+') reads the register with read-only tools and drafts; the CISO approves.':(v.ai?v.ai.reason:'');
+    $('rep-a').hidden=!(v.ai&&v.ai.enabled);
+  }
+  function filtered(){var p=$('f-p').value,r=$('f-r').value,q=$('f-q').value.trim().toLowerCase();
+    return V.requirements.filter(function(x){if(p&&x.pillar!==p)return false;
+      if(r==='gap'&&x.result!=='gap')return false;if(r==='ok'&&!OK[x.result])return false;if(r==='pending'&&x.result!=='pending')return false;if(r==='open'&&['not_measured','no_evidence'].indexOf(x.result)<0)return false;
+      return !q||(x.id+' '+x.title+' '+x.subdomain_name).toLowerCase().indexOf(q)>=0;});}
+  function regTable(rows,empty){return P.table([['Requirement',function(x){return '<b>'+esc(x.id)+'</b><div class="mut">'+esc(x.subdomain)+' '+esc(x.subdomain_name)+'</div>';}],['What SAMA expects',function(x){return '<div class="why small">'+esc(x.title)+'</div>';}],['Pillar',function(x){return esc(x.pillar_name)+(x.automated?' <i class="ti ti-robot mut" title="checked automatically"></i>':'');}],
+      ['Result',function(x){return bx(RES,x.result)+(x.conflict?' '+P.badge('conflicts with a confirmation','red'):'')+(x.history&&x.history.regression?' '+P.badge('regression','red'):'');}],['Evidence',function(x){return '<div class="why small mut">'+esc(x.why||'')+'</div>';}]],rows,function(x){return 'class="rowc" data-r="'+esc(x.id)+'"';},empty);}
+  function drawReg(){var rows=filtered();$('f-n').textContent=rows.length+' of '+V.requirements.length;$('reg').innerHTML=regTable(rows,'No requirement matches the filter.');}
+  function drawPri(){$('pri').innerHTML=P.table([['#',function(x){return esc(V.priorities.indexOf(x)+1);}],['Requirement',function(x){return '<b>'+esc(x.id)+'</b><div class="mut">'+esc(x.subdomain)+' · '+esc(x.pillar)+'</div>';}],['What to do',function(x){return '<div class="why small">'+esc(x.title)+'</div><div class="why mut">'+esc(x.action||'')+'</div>';}],
+      ['Result',function(x){return bx(RES,x.result);}],['Score',function(x){return '<b>'+esc(x.score)+'</b>';}],['Why it ranks here',function(x){return '<div class="why mut">'+x.why.map(esc).join(' · ')+'</div>';}]],V.priorities,function(x){return 'class="rowc" data-r="'+esc(x.id)+'"';},'Nothing open: every applicable requirement is met.');}
+  function drawTrend(){var H=V.history;
+    if(H.length>1)C.area($('c-trend'),H.map(function(x){return x.day.slice(5);}),[{label:'Requirements met (%)',data:H.map(function(x){return x.score;}),color:'ok'},{label:'Subdomains at level 3',data:H.map(function(x){return x.at_target;}),color:'acc'}],{title:'SAMA CSF assessment trend'});
+    else C.empty($('c-trend'),'The trend appears after the second daily assessment.');
+    $('trend').textContent=V.trend.note+(V.trend.forecast_30d!=null?' · forecast in 30 days: '+V.trend.forecast_30d+' % ('+(V.trend.slope_per_30d>0?'+':'')+V.trend.slope_per_30d+' points per 30 days)':'');}
+  function drawIa(){var I=V.ia;$('ia').innerHTML='<h3 class="mb-1">'+esc(I.name)+'</h3><div class="mut mb-2">Circular '+esc(I.circular)+'. '+esc(I.note)+'</div>'+stack(I.levels.pct)+'<div class="mut mt-1">'+esc(I.levels.score==null?'—':I.levels.score+'%')+' met · fully '+esc(I.levels.pct.compliant)+'% · partially '+esc(I.levels.pct.partially)+'% · not '+esc(I.levels.pct.not)+'% · not assessed '+esc(I.levels.pct.not_assessed)+'%</div>';
+    $('iareg').innerHTML=regTable(I.requirements,'No IA requirement.');}
+  function pagesFor(code){var out=[];(window.ZYB_NAV||[]).forEach(function(a){(a.pages||[]).forEach(function(pg){if(pg.fw&&(pg.fw.sama||[]).indexOf(code)>=0&&pg.h!=='sama-ia.html'&&!out.some(function(x){return x.h===pg.h;}))out.push(pg);});});return out;}
+  function drawCov(){var c=V.value;if(!c)return;
+    $('cov-k').innerHTML=P.tile(c.automated+' / '+c.requirements,'Verified automatically','text-green')+P.tile(c.automated_pct+'%','Automated share','')+P.tile(c.automated_connected+' / '+c.automated,'Automated checks with their source connected',c.automated_connected<c.automated?'text-orange':'text-green')
+      +P.tile(c.workflow,'Recorded by a person, approved by the CISO','')+P.tile(c.from_ecc,'Reused from NCA ECC (recorded once)','');
+    $('cov-n').textContent='Every automated check runs every day on the platform\'s own records and the SIEM; a check whose source is not connected reads not measured until it is connected.';
+    $('cov-c').innerHTML=c.connect.length?'<ul class="mb-0">'+c.connect.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>':'<span class="text-green">Every automated check has its source connected.</span>';
+    $('cov-r').innerHTML=P.table([['Requirement',function(x){return '<b>'+esc(x.id)+'</b><div class="mut">'+esc(x.subdomain)+'</div>';}],['What SAMA expects',function(x){return '<div class="why small">'+esc(x.title)+'</div>';}],['Today',function(x){return bx(RES,x.result);}],['Recommended implementation',function(x){return '<div class="why small">'+esc(x.recommend)+'</div>';}]],c.recommendations,function(x){return 'class="rowc" data-r="'+esc(x.id)+'"';},'Nothing to recommend: every requirement is automated or met.');
+    $('cov-s').innerHTML=P.table([['Subdomain',function(s){return '<b>'+esc(s.id)+'</b> '+esc(s.name);}],['How it is verified',function(s){var r=V.requirements.filter(function(x){return x.subdomain===s.id;}),a=r.filter(function(x){return x.automated;}).length;return esc(a)+' automated · '+esc(r.length-a)+' by a person';}],
+      ['Platform pages',function(s){var pg=pagesFor(s.id);return pg.length?pg.slice(0,8).map(function(x){return '<a href="'+esc(x.h)+'">'+esc(x.s)+'</a>';}).join(' · ')+(pg.length>8?' <span class="mut">+'+esc(pg.length-8)+'</span>':''):'<span class="text-orange">none yet</span>';}],['Level',function(s){return esc(lvl(s.maturity));}]],V.subdomains,null,'');
+  }
+  function drawReps(){if(REPS===null){$('reps').innerHTML='<div class="card-body mut">Reports are for operators and administrators.</div>';return;}
+    $('reps').innerHTML=P.table([['Report',function(d){return '<b>'+esc(d.id)+'</b><div class="mut">'+(d.source==='ai'?'AI Assessor · '+esc(d.tool_calls)+' tool call(s)':'from the rules')+'</div>';}],['Score at the time',function(d){return esc(d.figures.score==null?'—':d.figures.score+'%');}],['State',function(d){return bx(RS,d.state)+(d.decided_by?'<div class="mut">'+esc(d.decided_by)+'</div>':'');}],['Prepared',function(d){return '<span class="mut">'+esc(dt(d.at))+' for '+esc(d.requested_by)+'</span>';}]],REPS,function(d){return 'class="rowc" data-rep="'+esc(d.id)+'"';},'No report yet. Draft one from the rules, or with the AI Assessor when external AI is allowed.');}
+  function openReq(id){var x=V.requirements.concat(V.ia.requirements).filter(function(r){return r.id===id;})[0];if(!x)return;var h=x.history||{};
+    var html=Z.kv([['Subdomain',esc(x.subdomain)+' '+esc(x.subdomain_name)],['Pillar',esc(x.pillar_name)],['Severity',esc(x.severity)],['Result',bx(RES,x.result)],['Why',esc(x.why||'')],['Automated check',x.automated?esc(x.auto||''):'none - a person records it'],['Evidence a person shows',esc(x.evidence_hint)],['Also NCA ECC',esc(x.ecc||'—')+(x.via_ecc?' (approved there, counts here)':'')],['Platform pages',pagesFor(x.subdomain).slice(0,6).map(function(p){return '<a href="'+esc(p.h)+'">'+esc(p.s)+'</a>';}).join(' · ')||'—'],
+      ['History',esc(h.runs||0)+' run(s) · '+esc(h.gaps||0)+' gap(s) · chance of a gap next run '+esc(Math.round((h.p_gap||0)*100))+'%'+(h.flapping?' · flapping':'')]]);
+    if(x.recommend)html+='<div class="alert alert-info mt-2 mb-0"><b>Recommended implementation:</b> '+esc(x.recommend)+'</div>';
+    if(x.confirmation)html+='<div class="alert alert-secondary mt-2 mb-0">Recorded <b>'+esc(x.confirmation.status)+'</b> by '+esc(x.confirmation.by)+' '+esc(dt(x.confirmation.at))+(x.confirmation.approved_by?', approved by <b>'+esc(x.confirmation.approved_by)+'</b>':' - waiting for the CISO')+'<br>'+esc(x.confirmation.evidence||x.confirmation.note||'')+'</div>';
+    if(x.confirmation&&!x.confirmation.approved_by)html+='<form id="fdc" class="mt-2"><label class="form-label" for="fdc-n">Note (required to reject)</label><input class="form-control" id="fdc-n" maxlength="1000"><div class="text-red small mt-1" data-msg></div><div class="d-flex gap-2 mt-2"><button type="submit" class="btn btn-success" data-d="approve">Approve (CISO)</button><button type="submit" class="btn" data-d="reject">Reject</button></div></form>';
+    if(x.result!=='verified'&&x.result!=='not_applicable')html+='<form id="fc" class="mt-3"><h4>Record the evidence</h4><div class="row g-2"><div class="col-5"><label class="form-label" for="fc-s">Status</label><select class="form-select" id="fc-s"><option value="compliant">compliant</option><option value="partial">partial</option><option value="non_compliant">non compliant</option><option value="not_applicable">not applicable</option></select></div>'
+      +'<div class="col-7"><label class="form-label" for="fc-e">Evidence (document, report or record)</label><input class="form-control" id="fc-e" maxlength="500" placeholder="'+esc(x.evidence_hint)+'"></div></div><label class="form-label mt-2" for="fc-n">Note (required for non compliant / not applicable)</label><input class="form-control" id="fc-n" maxlength="1000"><div class="mut mt-1">The CISO named in the NCA ECC profile, or an administrator, approves - never the person who records it. An automated gap stays a gap.</div><div class="text-red small mt-1" data-msg></div><button type="submit" class="btn btn-primary mt-2">Record for approval</button></form>';
+    Z.open('SAMA CSF · '+x.subdomain+' '+x.subdomain_name,x.id,html);
+    var fc=document.getElementById('fc');if(fc)fc.addEventListener('submit',function(ev){ev.preventDefault();P.req('POST','/sama-ia/confirm',{id:id,status:document.getElementById('fc-s').value,evidence:document.getElementById('fc-e').value.trim(),note:document.getElementById('fc-n').value.trim()}).then(function(){Z.close();P.toast(id+' recorded - waiting for the CISO');load();}).catch(function(e){P.msg(fc,P.why(e));});});
+    var fd=document.getElementById('fdc');if(fd){var dec='approve';fd.addEventListener('click',function(ev){var b=ev.target.closest('[data-d]');if(b)dec=b.getAttribute('data-d');});
+      fd.addEventListener('submit',function(ev){ev.preventDefault();P.req('POST','/sama-ia/confirm/'+encodeURIComponent(id)+'/decide',{decision:dec,note:document.getElementById('fdc-n').value.trim()}).then(function(){Z.close();P.toast(id+(dec==='approve'?' approved':' rejected'));load();}).catch(function(e){P.msg(fd,P.why(e));});});}
+  }
+  function openSub(id){var s=V.subdomains.filter(function(x){return x.id===id;})[0];if(!s)return;var rows=V.requirements.filter(function(r){return r.subdomain===id;});
+    Z.open('SAMA CSF · '+V.domains.filter(function(d){return d.id===s.domain;})[0].name,s.id+' '+s.name,Z.kv([['Indicative level',esc(lvl(s.maturity))+' '+esc(s.maturity.name)],['Rule that decided it',esc(s.maturity.why)],['Target','level '+esc(V.target_level)+' (structured and formalized)'],['Score',esc(s.score==null?'—':s.score+'%')]])
+      +Z.sec('Requirements',Z.tbl(['Requirement','Pillar','Result','Evidence'],rows.map(function(r){return ['<b>'+esc(r.id)+'</b><div class="mut">'+esc(r.title)+'</div>',esc(r.pillar_name),bx(RES,r.result),'<span class="mut">'+esc(r.why||'')+'</span>'];}))));}
+  function openRep(id){var d=REPS.filter(function(x){return x.id===id;})[0];if(!d)return;
+    var h='<div class="mut mb-2">'+(d.source==='ai'?'Drafted by the AI Assessor from the register with read-only tools ('+esc(d.tool_calls)+' call(s)). The figures are the platform\'s, not the model\'s; check every sentence.':'Drafted by the rules from the register.')+(d.flags&&d.flags.length?' <b class="text-orange">'+d.flags.map(esc).join(' · ')+'</b>':'')+'</div>';
+    h+=Z.kv([['Score',esc(d.figures.score==null?'—':d.figures.score+'%')],['Subdomains at level '+esc(d.figures.target_level),esc(d.figures.readiness.at_target)+' / '+esc(d.figures.readiness.subdomains)],['State',bx(RS,d.state)]]);
+    h+=Z.sec('Executive summary','<p class="why">'+esc(d.executive_summary)+'</p>');
+    if(d.strengths&&d.strengths.length)h+=Z.sec('Strengths','<ul>'+d.strengths.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>');
+    h+=Z.sec('Key gaps',Z.tbl(['Requirement','Gap','Recommendation'],(d.key_gaps||[]).map(function(g){return ['<b>'+esc(g.id)+'</b>','<span class="why">'+esc(g.gap)+'</span>','<span class="why">'+esc(g.recommendation)+'</span>'];})));
+    h+=Z.sec('Roadmap',Z.tbl(['Horizon','Action','Requirement'],(d.roadmap||[]).map(function(x){return [esc(x.horizon),'<span class="why">'+esc(x.action)+'</span>',esc(x.requirement||'—')];})));
+    if(d.regulator_note)h+=Z.sec('Regulator',esc(d.regulator_note));
+    if(d.state==='draft')h+='<form id="fr" class="mt-2"><label class="form-label" for="fr-n">Note (required to reject)</label><input class="form-control" id="fr-n" maxlength="1000"><div class="mut mt-1">The CISO or an administrator who did not request it approves.</div><div class="text-red small mt-1" data-msg></div><div class="d-flex gap-2 mt-2"><button type="submit" class="btn btn-success" data-d="approve">Approve the report</button><button type="submit" class="btn" data-d="reject">Reject</button></div></form>';
+    Z.open('SAMA / IA assessment report',d.id,h);
+    var fr=document.getElementById('fr');if(fr){var dec='approve';fr.addEventListener('click',function(ev){var b=ev.target.closest('[data-d]');if(b)dec=b.getAttribute('data-d');});
+      fr.addEventListener('submit',function(ev){ev.preventDefault();P.req('POST','/sama-ia/reports/'+encodeURIComponent(id)+'/decide',{decision:dec,note:document.getElementById('fr-n').value.trim()}).then(function(){Z.close();P.toast(id+' '+(dec==='approve'?'approved':'rejected'));loadReps();}).catch(function(e){P.msg(fr,P.why(e));});});}
+  }
+  function openAppl(){var a=(V.profile&&V.profile.applicability)||{},n=(V.profile&&V.profile.applicability_note)||{};
+    var h='<form id="fa">'+['3.3.12','3.3.13'].map(function(k){var nm=V.subdomains.filter(function(s){return s.id===k;})[0].name;return '<div class="mb-3"><label class="form-label" for="fa-'+k.replace(/\./g,'_')+'">'+esc(k+' '+nm)+'</label><select class="form-select" id="fa-'+k.replace(/\./g,'_')+'"><option value="">not decided</option><option value="applies">applies</option><option value="not_applicable">does not apply</option></select><input class="form-control mt-1" id="fa-n-'+k.replace(/\./g,'_')+'" maxlength="500" placeholder="why it does not apply (at least 10 characters)"></div>';}).join('')
+      +'<div class="mut">Administrators only. The reason is kept and shown with the result.</div><div class="text-red small mt-1" data-msg></div><button type="submit" class="btn btn-primary mt-2">Save</button></form>';
+    Z.open('SAMA CSF','Applicability',h);
+    ['3.3.12','3.3.13'].forEach(function(k){var i=k.replace(/\./g,'_');document.getElementById('fa-'+i).value=a[k]||'';document.getElementById('fa-n-'+i).value=n[k]||'';});
+    var f=document.getElementById('fa');f.addEventListener('submit',function(ev){ev.preventDefault();var ap={},nt={};['3.3.12','3.3.13'].forEach(function(k){var i=k.replace(/\./g,'_'),v=document.getElementById('fa-'+i).value;if(v){ap[k]=v;nt[k]=document.getElementById('fa-n-'+i).value.trim();}});
+      P.req('POST','/sama-ia/profile',{applicability:ap,applicability_note:nt}).then(function(){Z.close();P.toast('Applicability saved');load();}).catch(function(e){P.msg(f,P.why(e));});});
+  }
+  function draft(ai,b){b.disabled=true;P.req('POST','/sama-ia/report',{use_ai:ai}).then(function(d){P.toast('Report '+d.id+' drafted');return loadReps().then(function(){openRep(d.id);});}).catch(function(e){P.toast(P.why(e));}).then(function(){b.disabled=false;});}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-pil]'))){var p=x.getAttribute('data-pil');PIL=PIL===p?'':p;draw();tab('reg');$('reg').scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if((x=t.closest('[data-sd]'))){openSub(x.getAttribute('data-sd'));return;}
+    if((x=t.closest('tr[data-r]'))){openReq(x.getAttribute('data-r'));return;}
+    if((x=t.closest('tr[data-rep]'))){openRep(x.getAttribute('data-rep'));return;}
+    if((x=t.closest('[data-tab]'))){tab(x.getAttribute('data-tab'));return;}
+    if(t.closest('#appl')){openAppl();return;}
+    if(t.closest('#rep-r')){draft(false,$('rep-r'));return;}
+    if(t.closest('#rep-a')){draft(true,$('rep-a'));return;}
+    if(t.closest('#run')){var b=$('run');b.disabled=true;P.req('POST','/sama-ia/run',{}).then(function(r){P.toast('Assessed: '+r.score+' % met, '+r.at_target+' subdomains at level 3'+(r.regressions.length?', '+r.regressions.length+' regression(s)':''));return load();}).catch(function(e){P.toast(P.why(e));}).then(function(){b.disabled=false;});return;}
+    if(t.closest('#g2g')){P.req('POST','/sama-ia/gaps-to-grc',{}).then(function(r){P.toast(r.created.length+' GRC action(s) created'+(r.skipped.length?', '+r.skipped.length+' already there':''));}).catch(function(e){P.toast(P.why(e));});return;}
+    if(t.closest('#csv')){P.req('GET','/sama-ia/export').then(function(r){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+r.csv],{type:'text/csv'}));a.download=r.filename;document.body.appendChild(a);a.click();a.remove();}).catch(function(e){P.toast(P.why(e));});}
+  });
+  function tab(k){[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.classList.toggle('active',b.getAttribute('data-tab')===k);});[].forEach.call(document.querySelectorAll('[data-pane]'),function(p){p.hidden=p.getAttribute('data-pane')!==k;});}
+  ['f-p','f-r'].forEach(function(id){$(id).addEventListener('change',function(){PIL=$('f-p').value;drawReg();});});
+  $('f-q').addEventListener('input',drawReg);
+  load();loadReps();
+})();
+</script></body></html>

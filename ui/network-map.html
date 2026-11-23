@@ -1,0 +1,159 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Intelligent Network Map</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1720px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tabs button{background:transparent;border:1px solid var(--d-line);color:var(--d-mute);border-radius:999px;padding:6px 14px;font:600 13px Inter,"Segoe UI",system-ui,sans-serif;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.tabs button[aria-selected="true"]{color:#fff;border-color:var(--d-acc);background:rgba(91,141,239,.2)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px}
+.mapwrap{position:relative;background:#0d1016;border:1px solid var(--d-line);border-radius:12px;overflow:hidden;height:640px}
+svg#map{width:100%;height:100%;display:block;cursor:grab;user-select:none}svg#map.drag{cursor:grabbing}
+.node{cursor:pointer}.node text{font:600 12px Inter,"Segoe UI",system-ui,sans-serif;fill:#e7eaf0;pointer-events:none}.node .sub{font-weight:400;font-size:10.5px;fill:#8b93a4}
+.node.sel rect.b{stroke:#8db0ff;stroke-width:3}.node.dim{opacity:.25}.lnk.dim{opacity:.12}.node.hit rect.b{stroke:#ff8a8e;stroke-width:3}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--d-mute);margin-top:8px}.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:5px}.legend b{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:middle;margin-right:5px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.v-critical{background:rgba(229,72,77,.22);color:#ff8a8e}.v-high{background:rgba(245,99,0,.2);color:#ff9b5c}.v-medium{background:rgba(245,159,0,.18);color:#f5b544}.v-low{background:rgba(139,147,164,.16);color:#aab2c2}.v-ok{background:rgba(47,179,68,.15);color:#56d364}
+.li{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-bottom:1px solid #1b2030;cursor:pointer;border-radius:8px}.li:hover{background:#151924}.li .b{flex:1;min-width:0}.li .t{font-weight:600;overflow-wrap:anywhere}.li .s{font-size:12px;color:var(--d-mute);overflow-wrap:anywhere}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px;border-bottom:1px solid var(--d-line)}td{padding:6px;border-bottom:1px solid #1b2030;vertical-align:top}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:12.5px}.kv div:nth-child(odd){color:var(--d-mute)}
+.inp,select.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hops{display:flex;flex-direction:column;gap:6px;margin-top:8px}.hop{background:var(--d-raise);border:1px solid var(--d-line);border-radius:10px;padding:7px 10px;font-size:12.5px}.hop.bad{border-color:#5a2a2d}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+.zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}
+@media(max-width:1200px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:640px){main{padding:12px 12px 40px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.mapwrap{height:440px}.kv{grid-template-columns:90px minmax(0,1fr)}table{display:block;overflow-x:auto}.top h1{font-size:20px}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · Maps &amp; architecture</div><h1>Intelligent Network Map</h1><div class="sm mute">{{org.short}}'s network as the switches report it over CDP / LLDP, with live state from the polls: what connects to what, which device is a single point of failure, what an outage cuts off, unmanaged devices and what changed.</div></div><div class="sp"></div>
+ <span class="sm mute" id="up"></span><button class="btn" id="snap" type="button" hidden><i class="ti ti-camera"></i>Record snapshot</button><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <section class="card"><div class="kpis" id="kpis"></div></section>
+ <div class="tabs" id="tabs" role="tablist"></div>
+ <div id="view"></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var V=null, TAB='map', SEL='', HIT=null, PATH=null, MOVED={}, VB=null, LAYER='all';
+  var SC={up:'#2fb344',degraded:'#f59f00',down:'#e5484d',unknown:'#5c6476','not polled':'#5c6476',unmanaged:'#7c4dff'};
+  var LC={up:'#2fb344',down:'#e5484d','not measured':'#4b5366'};
+  var ICON={firewall:'ti-flame',core:'ti-server-2',distribution:'ti-hierarchy',access:'ti-switch-horizontal',switch:'ti-switch-horizontal',router:'ti-router',ap:'ti-wifi'};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc/netops'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('The SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function when(t){return t?new Date(t).toLocaleString():'—';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function node(id){return V.nodes.find(function(n){return n.id===id;});}
+  function load(){$('err').hidden=true;return req('GET','/netmap').then(function(v){V=v;MOVED={};$('main').hidden=false;$('snap').hidden=!v.can.edit;draw();}).catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>The Intelligent Network Map is not available</h2>'+note(e.status===404?'It is not installed on the SIEM yet - run the update (update-platform.ps1).':e.message);});}
+  function draw(){var s=V.summary;function k(n,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    $('kpis').innerHTML=k(s.placed+' / '+s.devices,'devices on the map')+k(s.switches_read,'switches read')+k(s.links_confirmed+' / '+s.links,'links confirmed')+k(s.down,'devices down',s.down?'#ff7b80':'')+k(s.spof,'single points of failure',s.spof?'#ff9b5c':'')+k(s.unmanaged,'not in inventory',s.unmanaged?'#b39bff':'')+k(s.critical+s.high,'critical / high',(s.critical+s.high)?'#ff7b80':'')+k(s.endpoints,'endpoints seen');
+    $('up').textContent='Built '+when(V.at);
+    var nf=V.findings.length, nc=V.changes.items.length;
+    var T=[['map','topology-star-3','Map'],['findings','alert-triangle','Findings ('+nf+')'],['spof','target-arrow','Single points of failure ('+s.spof+')'],['changes','history','Changes ('+nc+')'],['placed','map-pin-off','Not on the map ('+V.not_placed.length+')']];
+    $('tabs').innerHTML=T.map(function(t){return '<button type="button" role="tab" data-tab="'+t[0]+'" aria-selected="'+(TAB===t[0])+'"><i class="ti ti-'+t[1]+'"></i>'+esc(t[2])+'</button>';}).join('');
+    var v=$('view');
+    if(!V.links.length&&TAB==='map'){v.innerHTML='<section class="card">'+note('No link discovered yet. The map is built from the CDP / LLDP neighbour tables the Switch Port Map reads from the Cisco switches (read-only SSH). Read the switches there, or wait for the scheduled read; devices in the network inventory are listed under "Not on the map" until a switch names them.')+'<div class="row" style="margin-top:10px"><a class="btn" href="switch-port-map.html"><i class="ti ti-plug-connected"></i>Switch Port Map</a></div></section>';return;}
+    v.innerHTML=TAB==='map'?mapView():TAB==='findings'?findingsView():TAB==='spof'?spofView():TAB==='changes'?changesView():placedView();
+    if(TAB==='map'){paint();side();}
+  }
+  // ---------- layout: layers top to bottom, nodes spread inside a layer; a saved or dragged position wins
+  function layout(){var W=1600,LH=150,by={};V.nodes.filter(function(n){return n.links>0;}).forEach(function(n){(by[n.layer]=by[n.layer]||[]).push(n);});var P={};
+    Object.keys(by).forEach(function(l){var L=by[l].sort(function(a,b){return (a.site+a.name).localeCompare(b.site+b.name);}),gap=W/(L.length+1);L.forEach(function(n,i){P[n.id]={x:Math.round(gap*(i+1)),y:70+Number(l)*LH};});});
+    V.nodes.forEach(function(n){if(!P[n.id])P[n.id]={x:0,y:0};if(n.pos)P[n.id]={x:n.pos.x,y:n.pos.y};if(MOVED[n.id])P[n.id]=MOVED[n.id];});return P;}
+  function mapView(){return '<div class="cols"><section class="card"><h2><i class="ti ti-topology-star-3"></i>Topology <span class="c">layers from the device role; click a device for detail, '+(V.can.edit?'drag to arrange, ':'')+'wheel to zoom</span></h2>'
+    +'<div class="row" style="margin-bottom:8px"><select class="inp" id="lay" style="max-width:240px" aria-label="Layer"><option value="all">All layers</option>'+V.layers.map(function(l,i){return '<option value="'+i+'"'+(String(i)===LAYER?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select>'
+    +'<input class="inp" id="q" style="max-width:240px" placeholder="Find a device" aria-label="Find a device">'
+    +(V.can.edit?'<button class="btn sm" type="button" id="savelay" disabled><i class="ti ti-device-floppy"></i>Save layout</button>'+(V.layout_saved?'<button class="btn sm" type="button" id="resetlay"><i class="ti ti-arrow-back-up"></i>Reset layout</button>':''):'')
+    +(HIT?'<span class="pill v-high">'+esc(HIT.label)+'</span><button class="btn sm" type="button" id="clearhit">Clear</button>':'')+'</div>'
+    +'<div class="mapwrap"><svg id="map" role="img" aria-label="Network topology"></svg><div class="zoom"><button class="btn sm" type="button" id="zin" aria-label="Zoom in">+</button><button class="btn sm" type="button" id="zout" aria-label="Zoom out">−</button><button class="btn sm" type="button" id="zfit" aria-label="Fit">⤢</button></div></div>'
+    +'<div class="legend"><span><b style="background:#2fb344"></b>up</span><span><b style="background:#f59f00"></b>degraded</span><span><b style="background:#e5484d"></b>down</span><span><b style="background:#5c6476"></b>unknown / not polled</span><span><b style="background:#7c4dff"></b>not in inventory</span><span><b style="border:2px solid #f59f00;background:none"></b>single point of failure</span><span><i style="background:#2fb344"></i>link up</span><span><i style="background:#e5484d"></i>link down</span><span><i style="background:repeating-linear-gradient(90deg,#4b5366 0 4px,transparent 4px 7px)"></i>not measured</span><span><i style="background:repeating-linear-gradient(90deg,#f59f00 0 4px,transparent 4px 7px)"></i>seen from one side</span></div>'
+    +'</section><section class="card" id="side"></section></div>';}
+  function paint(){var svg=$('map');if(!svg)return;var P=layout(),q=($('q')&&$('q').value||'').trim().toLowerCase();
+    var show=function(n){return n.links>0&&(LAYER==='all'||String(n.layer)===LAYER);};
+    var on=V.nodes.filter(show),xs=on.map(function(n){return P[n.id].x;}),ys=on.map(function(n){return P[n.id].y;});if(!xs.length){xs=[0];ys=[0];}
+    if(!VB)VB=[Math.min.apply(null,xs)-120,Math.min.apply(null,ys)-80,Math.max.apply(null,xs)-Math.min.apply(null,xs)+240,Math.max.apply(null,ys)-Math.min.apply(null,ys)+180];
+    svg.setAttribute('viewBox',VB.join(' '));
+    var h='';V.layers.forEach(function(l,i){var y=70+i*150;h+='<text x="'+(VB[0]+10)+'" y="'+(y-48)+'" fill="#4b5366" style="font:600 11px Inter,sans-serif;letter-spacing:.08em">'+esc(l.toUpperCase())+'</text>';});
+    var onPath={};if(PATH&&PATH.found)PATH.hops.forEach(function(x){onPath[x.link]=1;});
+    V.links.forEach(function(l){var a=P[l.a],b=P[l.b],na=node(l.a),nb=node(l.b);if(!show(na)&&!show(nb))return;var dim=HIT&&!(HIT.ids[l.a]&&HIT.ids[l.b]);
+      var col=l.one_sided?'#f59f00':LC[l.state],dash=l.state==='not measured'||l.one_sided?' stroke-dasharray="6 5"':'',w=onPath[l.id]?5:l.state==='down'?3:2;
+      h+='<g class="lnk'+(dim?' dim':'')+'"><line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+(onPath[l.id]?'#8db0ff':col)+'" stroke-width="'+w+'"'+dash+'><title>'+esc(nm(l.a)+' '+l.a_port+' ↔ '+nm(l.b)+' '+l.b_port+' · '+l.state+(l.util_pct!=null?' · '+l.util_pct+'% used':'')+(l.one_sided?' · seen from one side only':''))+'</title></line>'
+        +(l.a_port?'<text x="'+(a.x+(b.x-a.x)*0.18)+'" y="'+(a.y+(b.y-a.y)*0.18-4)+'" fill="#6b7385" style="font:10px ui-monospace,monospace">'+esc(l.a_port)+'</text>':'')+(l.b_port?'<text x="'+(a.x+(b.x-a.x)*0.82)+'" y="'+(a.y+(b.y-a.y)*0.82-4)+'" fill="#6b7385" style="font:10px ui-monospace,monospace">'+esc(l.b_port)+'</text>':'')+'</g>';});
+    V.nodes.forEach(function(n){if(!show(n))return;var p=P[n.id],c=SC[n.state]||'#5c6476',w=150,ht=46,match=q&&(n.name.toLowerCase().indexOf(q)>=0||(n.ip||'').indexOf(q)>=0);
+      var cls='node'+(SEL===n.id?' sel':'')+(HIT&&!HIT.ids[n.id]?' dim':'')+(HIT&&HIT.cut&&HIT.cut[n.id]?' hit':'')+(match?' sel':'');
+      h+='<g class="'+cls+'" data-node="'+esc(n.id)+'" transform="translate('+(p.x-w/2)+','+(p.y-ht/2)+')">'
+        +(n.spof?'<rect x="-4" y="-4" width="'+(w+8)+'" height="'+(ht+8)+'" rx="13" fill="none" stroke="#f59f00" stroke-width="2"/>':'')
+        +'<rect class="b" width="'+w+'" height="'+ht+'" rx="10" fill="#151a24" stroke="'+c+'" stroke-width="2"'+(n.managed?'':' stroke-dasharray="5 4"')+'/>'
+        +'<rect width="6" height="'+ht+'" rx="3" fill="'+c+'"/>'
+        +'<text x="14" y="19">'+esc(n.name.length>19?n.name.slice(0,18)+'…':n.name)+'</text><text class="sub" x="14" y="35">'+esc((n.managed?n.role:'not in inventory · '+n.role)+(n.endpoints.phones?' · '+n.endpoints.phones+' phones':''))+'</text><title>'+esc(n.name+' · '+n.state+' · '+n.why)+'</title></g>';});
+    svg.innerHTML=h;}
+  function nm(id){var n=node(id);return n?n.name:id;}
+  function side(){var el=$('side');if(!el)return;var n=node(SEL);
+    if(!n){el.innerHTML='<h2><i class="ti ti-info-circle"></i>Device</h2>'+note('Click a device on the map.')+pathBox();return;}
+    var L=V.links.filter(function(l){return l.a===n.id||l.b===n.id;}),F=V.findings.filter(function(f){return f.node===n.id;});
+    el.innerHTML='<h2>'+esc(n.name)+' '+pill(n.state,n.state==='up'?'v-ok':n.state==='down'?'v-critical':n.state==='degraded'?'v-medium':'v-low')+(n.spof?' '+pill('single point of failure','v-high'):'')+'</h2>'
+      +'<div class="kv"><div>Role</div><div>'+esc(n.role)+(n.layer_from?' <span class="mute">(from its neighbours)</span>':'')+'</div><div>Site</div><div>'+esc(n.site||'—')+'</div>'+(V.private?'':'<div>IP</div><div>'+esc(n.ip||'—')+'</div>')+'<div>Vendor</div><div>'+esc(n.vendor||n.platform||'—')+'</div><div>State</div><div>'+esc(n.why)+'</div>'
+      +(n.read?'<div>Neighbours read</div><div>'+esc(when(n.read.at))+' · '+esc(n.read.neighbours)+' neighbours · '+esc(n.read.macs)+' endpoints</div>':'')+'</div>'
+      +(F.length?'<h2 style="margin-top:12px">Findings</h2>'+F.map(fRow).join(''):'')
+      +'<h2 style="margin-top:12px">Links ('+L.length+')</h2><table><tbody>'+L.map(function(l){var me=l.a===n.id;return '<tr><td>'+esc(me?l.a_port:l.b_port)+'</td><td>'+esc(nm(me?l.b:l.a))+' '+esc(me?l.b_port:l.a_port)+'</td><td>'+pill(l.state,l.state==='up'?'v-ok':l.state==='down'?'v-critical':'v-low')+(l.one_sided?' '+pill('one side','v-medium'):'')+'</td></tr>';}).join('')+'</tbody></table>'
+      +(V.can.analyse?'<div class="row" style="margin-top:10px"><button class="btn pri sm" type="button" id="impact"><i class="ti ti-bolt"></i>What fails with it?</button><button class="btn sm" type="button" id="pfrom">Path from here</button></div><div id="impout"></div>':'')+pathBox();}
+  function pathBox(){if(!V.can.analyse)return '';var o=V.nodes.slice().sort(function(a,b){return a.name.localeCompare(b.name);}).map(function(n){return '<option value="'+esc(n.id)+'">'+esc(n.name)+'</option>';}).join('');
+    return '<h2 style="margin-top:14px"><i class="ti ti-route"></i>Path between two devices</h2><div class="row"><select class="inp" id="pf" aria-label="From">'+o+'</select><select class="inp" id="pt" aria-label="To">'+o+'</select><button class="btn sm" type="button" id="pgo">Trace</button></div><div id="pout">'+pathOut()+'</div>';}
+  function pathOut(){if(!PATH)return '';if(!PATH.found)return note(PATH.note);
+    return '<div class="sm" style="margin-top:8px">'+(PATH.healthy?pill('every hop is up or not measured','v-ok'):pill(PATH.problems.join('; '),'v-critical'))+'</div><div class="hops">'+PATH.hops.map(function(x){var bad=x.state==='down'||x.to_state==='down';return '<div class="hop'+(bad?' bad':'')+'">'+esc(x.from)+' <span class="mute">'+esc(x.from_port)+'</span> → '+esc(x.to)+' <span class="mute">'+esc(x.to_port)+'</span> · '+esc(x.state)+'</div>';}).join('')+'</div>';}
+  function fRow(f){return '<div class="li" data-fnode="'+esc(f.node||'')+'" data-flink="'+esc(f.link||'')+'"><div>'+pill(f.severity,'v-'+f.severity)+'</div><div class="b"><div class="t">'+esc(f.title)+'</div><div class="s">'+esc(f.why)+(f.cut_off&&f.cut_off.length?' · cut off: '+esc(f.cut_off.slice(0,12).join(', '))+(f.cut_off.length>12?' …':''):'')+'</div></div></div>';}
+  function findingsView(){return '<section class="card"><h2><i class="ti ti-alert-triangle"></i>Findings <span class="c">computed from the neighbour tables and the polls - click one to see it on the map</span></h2>'+(V.findings.length?V.findings.map(fRow).join(''):note('Nothing found: every device on the map answers, every link has a second path, and every neighbour is in the inventory.'))+'</section>';}
+  function spofView(){var S=V.findings.filter(function(f){return f.kind==='single-point';});return '<section class="card"><h2><i class="ti ti-target-arrow"></i>Single points of failure <span class="c">a device whose loss alone cuts devices off from the '+esc(V.roots.basis)+'</span></h2>'
+    +(S.length?'<table><thead><tr><th>Device</th><th>Cut off if it fails</th><th>Devices</th></tr></thead><tbody>'+S.map(function(f){return '<tr><td><a href="#" data-fnode="'+esc(f.node)+'">'+esc(nm(f.node))+'</a></td><td>'+esc(f.cut_off.length)+'</td><td class="sm">'+esc(f.cut_off.join(', '))+'</td></tr>';}).join('')+'</tbody></table>':note(V.roots.ids.length?'None: every device has a second path in what the switches report.':'Not computed: no edge or core device is on the map yet.'))
+    +'<div class="sm mute" style="margin-top:8px">A second path the switches do not report (CDP / LLDP off, or an unmanaged device in between) is not counted - see the one-sided links in Findings.</div></section>';}
+  function changesView(){var C=V.changes;return '<section class="card"><h2><i class="ti ti-history"></i>Changes since the last snapshot <span class="c">'+(C.since?'snapshot '+esc(when(C.since)):'no snapshot yet')+' · one is recorded every day</span></h2>'
+    +(!C.since?note('No snapshot recorded yet. '+(V.can.edit?'Press Record snapshot to start comparing.':'An operator records one, or the daily snapshot will.')):C.items.length?'<table><thead><tr><th>Change</th><th>What</th></tr></thead><tbody>'+C.items.map(function(c){return '<tr><td>'+pill(c.kind.replace('-',' '),/removed|gone/.test(c.kind)?'v-high':'v-low')+'</td><td>'+esc(c.what)+'</td></tr>';}).join('')+'</tbody></table>':note('No link or device changed since the snapshot.'))+'</section>';}
+  function placedView(){return '<section class="card"><h2><i class="ti ti-map-pin-off"></i>In the inventory, not on the map</h2>'+(V.not_placed.length?'<table><thead><tr><th>Device</th><th>Role</th><th>Why</th></tr></thead><tbody>'+V.not_placed.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+esc(x.role)+'</td><td class="sm">'+esc(x.why)+'</td></tr>';}).join('')+'</tbody></table>':note('Every inventory device is on the map.'))+'</section>';}
+  // ---------- interactions
+  function svgPt(ev){var s=$('map'),p=s.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;return p.matrixTransform(s.getScreenCTM().inverse());}
+  var DRAG=null;
+  document.addEventListener('mousedown',function(ev){var g=ev.target.closest&&ev.target.closest('#map .node');var s=$('map');if(!s||!s.contains(ev.target))return;
+    if(g&&V.can.edit){var P=layout(),id=g.dataset.node,pt=svgPt(ev);DRAG={id:id,dx:P[id].x-pt.x,dy:P[id].y-pt.y,moved:false};}
+    else if(!g){var pt0=svgPt(ev);DRAG={pan:true,x:pt0.x,y:pt0.y};s.classList.add('drag');}});
+  document.addEventListener('mousemove',function(ev){if(!DRAG)return;var pt=svgPt(ev);
+    if(DRAG.pan){VB[0]-=pt.x-DRAG.x;VB[1]-=pt.y-DRAG.y;$('map').setAttribute('viewBox',VB.join(' '));return;}
+    MOVED[DRAG.id]={x:Math.max(0,Math.round(pt.x+DRAG.dx)),y:Math.max(0,Math.round(pt.y+DRAG.dy))};DRAG.moved=true;paint();var b=$('savelay');if(b)b.disabled=false;});
+  document.addEventListener('mouseup',function(){if(DRAG&&DRAG.pan)$('map').classList.remove('drag');if(DRAG&&!DRAG.pan&&!DRAG.moved){SEL=DRAG.id;paint();side();}DRAG=null;});
+  document.addEventListener('wheel',function(ev){var s=$('map');if(!s||!s.contains(ev.target))return;ev.preventDefault();zoom(ev.deltaY>0?1.15:1/1.15);},{passive:false});
+  function zoom(f){var cx=VB[0]+VB[2]/2,cy=VB[1]+VB[3]/2;VB[2]*=f;VB[3]*=f;VB[0]=cx-VB[2]/2;VB[1]=cy-VB[3]/2;$('map').setAttribute('viewBox',VB.join(' '));}
+  document.addEventListener('input',function(ev){if(ev.target.id==='q')paint();});
+  document.addEventListener('change',function(ev){if(ev.target.id==='lay'){LAYER=ev.target.value;VB=null;paint();}});
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-tab],[data-fnode],button[id]');if(!el)return;
+    if(el.dataset.tab){TAB=el.dataset.tab;draw();return;}
+    if(el.dataset.fnode!==undefined){ev.preventDefault();var nid=el.dataset.fnode,lid=el.dataset.flink;if(!nid&&lid){var l=V.links.find(function(x){return x.id===lid;});nid=l?l.a:'';}
+      var f=V.findings.find(function(x){return x.node===nid||x.link===lid;});TAB='map';SEL=nid;HIT=null;
+      if(f&&f.cut_off&&f.cut_off.length){var ids={},cut={};V.nodes.forEach(function(n){if(f.cut_off.indexOf(n.name)>=0){ids[n.id]=1;cut[n.id]=1;}});ids[nid]=1;if(l){ids[l.a]=1;ids[l.b]=1;}HIT={label:f.cut_off.length+' cut off - '+f.title.slice(0,60),ids:ids,cut:cut};}
+      draw();return;}
+    if(el.id==='refresh'){VB=null;load();return;}
+    if(el.id==='zin'){zoom(1/1.25);return;}if(el.id==='zout'){zoom(1.25);return;}if(el.id==='zfit'){VB=null;paint();return;}
+    if(el.id==='clearhit'){HIT=null;draw();return;}
+    if(el.id==='impact'){el.disabled=true;req('GET','/netmap/impact/'+encodeURIComponent(SEL)).then(function(r){el.disabled=false;var ids={},cut={};r.cut_off.forEach(function(x){ids[x.id]=1;cut[x.id]=1;});ids[SEL]=1;
+      HIT=r.cut_off.length?{label:r.cut_off.length+' device'+(r.cut_off.length>1?'s':'')+' cut off if '+r.device+' fails',ids:ids,cut:cut}:null;draw();
+      $('impout').innerHTML=r.cut_off.length?'<div class="sm" style="margin-top:8px"><b>'+esc(r.cut_off.length)+'</b> lose their path if '+esc(r.device)+' fails: '+esc(r.cut_off.map(function(x){return x.name;}).join(', '))+'</div>':note(r.note||(r.root?r.device+' is where the map starts ('+r.basis+'); nothing below it has another way out.':'Nothing is cut off: every device has another path.'));}).catch(function(e){el.disabled=false;toast(e.message);});return;}
+    if(el.id==='pfrom'){var s=$('pf');if(s)s.value=SEL;return;}
+    if(el.id==='pgo'){var a=$('pf').value,b=$('pt').value;if(a===b){toast('Pick two different devices');return;}req('GET','/netmap/path?from='+encodeURIComponent(a)+'&to='+encodeURIComponent(b)).then(function(r){PATH=r;var o=$('pout');if(o)o.innerHTML=pathOut();paint();}).catch(function(e){toast(e.message);});return;}
+    if(el.id==='savelay'){var pos=Object.keys(MOVED).map(function(id){return {id:id,x:MOVED[id].x,y:MOVED[id].y};});if(!pos.length)return;el.disabled=true;req('POST','/netmap/layout',{positions:pos}).then(function(r){toast('Layout saved ('+r.saved+' moved)');return load();}).catch(function(e){el.disabled=false;toast(e.message);});return;}
+    if(el.id==='resetlay'){req('POST','/netmap/layout/reset',{}).then(function(){toast('Layout reset to the automatic layers');VB=null;return load();}).catch(function(e){toast(e.message);});return;}
+    if(el.id==='snap'){el.disabled=true;req('POST','/netmap/snapshot',{}).then(function(r){toast('Snapshot recorded: '+r.nodes+' devices, '+r.links+' links');el.disabled=false;return load();}).catch(function(e){el.disabled=false;toast(e.message);});return;}
+  });
+  load();
+})();
+</script></body></html>

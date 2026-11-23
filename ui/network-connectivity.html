@@ -1,0 +1,116 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connectivity Troubleshooter</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1320px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{font-weight:400;color:var(--mute);font-size:12px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;align-items:end}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+.svc{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}.svc button{min-width:150px;text-align:left}.svc button.on{border-color:#79b8ff;background:#16243a}.svc .s{display:block;font-weight:400;font-size:11.5px;color:var(--mute)}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button.sm{padding:3px 9px;font-size:12px}button:disabled{opacity:.5;cursor:default}
+select,input{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge)}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap;margin:1px 2px 1px 0}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}.pill.info{background:rgba(121,184,255,.14);color:var(--info)}
+.path{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}.hop{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 12px;min-width:150px}.hop b{display:block}.hop .s{font-size:12px;color:var(--mute)}.arr{align-self:center;color:var(--mute);padding:0 8px;font-size:18px}
+.summary{font-size:15px;padding:10px 12px;border-radius:9px;background:#16243a;border:1px solid #1f6feb55;margin:0 0 12px}
+.cause{border:1px solid var(--edge);border-radius:10px;padding:12px;margin:0 0 10px;background:var(--raise)}.cause h3{margin:0 0 6px;font-size:14.5px;color:var(--title)}.cause ul{margin:6px 0;padding-left:20px;font-size:12.5px}
+.step{border-top:1px solid var(--edge);margin-top:10px;padding-top:10px}.step .h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+pre.scr{background:#0b0c10;border:1px solid var(--border);border-radius:8px;padding:10px;max-height:300px;overflow:auto;font:12px Consolas,monospace;white-space:pre-wrap;margin:4px 0}
+details summary{cursor:pointer;color:var(--mute);font-size:12px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+.st-ok{color:var(--ok)}.st-warn{color:var(--warn)}.st-fail{color:var(--bad)}.st-skip{color:var(--mute)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · FortiGate users → Palo Alto data centre · SAMA CSF 3.3.8 · NCA ECC 2-5</div><h1>Connectivity Troubleshooter</h1></div><span class="sp"></span><span class="muted" id="up"></span></div>
+<div class="card" id="askc"><h2>What is failing? <span class="c">pick the service, narrow it to the users and the server if you know them, and run it while users see the problem</span></h2>
+  <div class="svc" id="svc">
+    <button type="button" data-svc="outlook" class="on">Outlook / Exchange<span class="s">disconnects, "Trying to connect", password prompts</span></button>
+    <button type="button" data-svc="rdp">Remote Desktop (RDP)<span class="s">sessions freeze or time out</span></button>
+    <button type="button" data-svc="ssh">SSH<span class="s">PuTTY / ssh sessions drop</span></button>
+    <button type="button" data-svc="custom">Another port<span class="s">any TCP service</span></button>
+  </div>
+  <div class="form">
+    <label>Users (IP or subnet)<input id="users" placeholder="10.20.0.0/16 - empty = all" autocomplete="off"></label>
+    <label>Server IP<input id="server" placeholder="10.0.10.21 - empty = all" autocomplete="off"></label>
+    <label id="portl" hidden>TCP port<input id="port" type="number" min="1" max="65535" placeholder="1521"></label>
+    <label>Look back<select id="min"><option value="30">30 minutes</option><option value="120" selected>2 hours</option><option value="480">8 hours</option><option value="1440">24 hours</option></select></label>
+    <label id="refl" hidden style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="refresh"> re-read the firewall settings now</label>
+    <div><button type="button" class="pri" id="go">Diagnose</button></div>
+  </div>
+  <p class="note">Read-only: the session logs both firewalls send to the SIEM, the firewalls' own settings (read with their read-only API keys every 6 hours, or now), and one TCP connection from the data centre to the server. Fixes are shown for a person to run, or proposed as a change plan that a different engineer approves - nothing is changed on any device from this page.</p>
+  <p class="err" id="denied" hidden>The diagnosis shows how the network is defended - analysts and above run it.</p>
+</div>
+<div id="out"></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', SVC='outlook', R=null;
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  var VEND={fortigate:['FortiGate','info'],paloalto:['Palo Alto','info'],routing:['Routing','warn'],client:['Clients / servers','ok'],server:['Server','ok']};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){/* not JSON: the status says enough */}if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function conf(c){return '<span class="pill '+(c==='high'?'bad':c==='medium'?'warn':'info')+'">'+esc(c)+' confidence</span>';}
+
+  function draw(){
+    var r=R, h='';
+    h+='<div class="summary" id="sum">'+esc(r.summary)+'</div>';
+    h+='<div class="card"><h2>Path <span class="c">'+esc(r.label)+' · TCP '+esc((r.ports||[]).join(', '))+' · last '+esc(String(r.minutes))+' min</span></h2><div class="path">'+(r.path||[]).map(function(p,i){return (i?'<span class="arr">→</span>':'')+'<div class="hop"><b>'+esc(p.hop)+'</b><span class="s">'+esc(p.detail||'')+'</span></div>';}).join('')+'</div></div>';
+    h+='<div class="card"><h2>Likely causes <span class="c">most likely first; each with its evidence and the fix per device</span></h2>';
+    if(!(r.causes||[]).length) h+='<div class="empty">No firewall-side cause found in the logs and the settings. Check the client (DNS, Outlook profile, VPN client), and the server itself.</div>';
+    (r.causes||[]).forEach(function(c,ci){
+      h+='<div class="cause" data-cause="'+esc(c.id)+'"><h3>'+c.rank+'. '+esc(c.title)+' '+conf(c.confidence)+'</h3><div>'+esc(c.explanation||'')+'</div>';
+      if((c.evidence||[]).length) h+='<ul>'+c.evidence.map(function(e){return '<li class="mono">'+esc(e)+'</li>';}).join('')+'</ul>';
+      (c.steps||[]).forEach(function(s,si){
+        var v=VEND[s.vendor]||[s.vendor,''];
+        h+='<div class="step"><div class="h"><span class="pill '+v[1]+'">'+esc(v[0])+'</span><b>'+esc(s.title)+'</b><span class="pill '+(s.risk==='high'?'bad':s.risk==='medium'?'warn':'ok')+'">'+esc(s.risk)+' risk</span><span class="sp"></span>'
+          +'<button type="button" class="sm" data-copy="'+ci+':'+si+'">Copy</button>'
+          +(s.device&&can('operator')&&s.commands.length?' <button type="button" class="sm" data-propose="'+ci+':'+si+'">Propose as change</button>':'')+'</div>'
+          +'<pre class="scr" id="cmd-'+ci+'-'+si+'"></pre>'
+          +((s.rollback||[]).length?'<details><summary>Rollback</summary><pre class="scr" id="rb-'+ci+'-'+si+'"></pre></details>':'')+'</div>';
+      });
+      h+='</div>';
+    });
+    h+='</div>';
+    h+='<div class="card"><h2>Checks <span class="c">in the order an engineer would look</span></h2><table><thead><tr><th>Check</th><th>Result</th><th>Evidence</th></tr></thead><tbody>'+(r.checks||[]).map(function(k){return '<tr><td>'+esc(k.name)+'</td><td class="st-'+esc(k.status)+'"><b>'+esc(k.status)+'</b> · '+esc(k.detail||'')+'</td><td class="mono">'+(k.evidence||[]).map(esc).join('<br>')+'</td></tr>';}).join('')+'</tbody></table>'
+      +'<p class="note">Firewalls in scope: '+(r.scope.firewalls||[]).map(function(f){return esc(f.name)+' ('+esc(f.vendor)+(f.facts_at?', settings read '+esc(new Date(f.facts_at).toISOString().slice(0,16).replace('T',' '))+' UTC':', settings not read yet')+')';}).join(', ')+'</p></div>';
+    $('out').innerHTML=h;
+    // commands go in as text, never as markup
+    (r.causes||[]).forEach(function(c,ci){(c.steps||[]).forEach(function(s,si){$('cmd-'+ci+'-'+si).textContent=s.commands.join('\n');var rb=$('rb-'+ci+'-'+si);if(rb)rb.textContent=s.rollback.join('\n');});});
+  }
+
+  function run(){
+    var b={service:SVC,minutes:+$('min').value};
+    if($('users').value.trim())b.users=$('users').value.trim();
+    if($('server').value.trim())b.server=$('server').value.trim();
+    if(SVC==='custom'){var p=+$('port').value;if(!(p>0&&p<65536)){toast('Enter the TCP port of the service');return;}b.port=p;}
+    if(can('operator')&&$('refresh').checked)b.refresh=true;
+    var g=$('go');g.disabled=true;g.textContent='Diagnosing…';$('out').innerHTML='<div class="card"><div class="empty">Reading the session logs and the firewall settings…</div></div>';
+    req('POST','/api/soc/netops/connectivity',b).then(function(r){g.disabled=false;g.textContent='Diagnose';R=r;$('up').textContent='Diagnosed '+new Date().toISOString().slice(11,16)+' UTC';draw();})
+      .catch(function(e){g.disabled=false;g.textContent='Diagnose';$('out').innerHTML='<div class="card"><p class="err">'+esc(e.message)+'</p>'+(e.status===404?'<p class="muted">The SIEM does not have the connectivity troubleshooter yet - run the update.</p>':'')+'</div>';});
+  }
+
+  function stepOf(k){var a=k.split(':');var c=R.causes[+a[0]];return {c:c,s:c.steps[+a[1]]};}
+  document.addEventListener('click',function(ev){
+    var t=ev.target; if(!t.closest)return;
+    var sv=t.closest('[data-svc]');
+    if(sv){SVC=sv.getAttribute('data-svc');[].forEach.call(document.querySelectorAll('[data-svc]'),function(x){x.classList.toggle('on',x===sv);});$('portl').hidden=SVC!=='custom';return;}
+    if(t.closest('#go')){run();return;}
+    var cp=t.closest('[data-copy]');
+    if(cp){var x=stepOf(cp.getAttribute('data-copy'));var tx=x.s.commands.join('\n')+(x.s.rollback.length?'\n\n# rollback\n'+x.s.rollback.join('\n'):'');if(navigator.clipboard)navigator.clipboard.writeText(tx).then(function(){toast('Copied');},function(){toast('Copy not allowed by the browser - select the text');});return;}
+    var pr=t.closest('[data-propose]');
+    if(pr){var y=stepOf(pr.getAttribute('data-propose'));pr.disabled=true;
+      req('POST','/api/soc/netops/changes',{device:y.s.device,title:(y.c.title+': '+y.s.title).slice(0,160),reason:('Connectivity Troubleshooter - '+R.label+(R.users?' users '+R.users:'')+(R.server?' server '+R.server:'')+'. Evidence: '+(y.c.evidence||[]).join('; ')).slice(0,2000),commands:y.s.commands,rollback:y.s.rollback,risk:y.s.risk})
+        .then(function(p){toast('Change plan '+p.id+' proposed - another engineer approves it in AI Network Engineer → Changes');pr.textContent='Proposed '+p.id;})
+        .catch(function(e){pr.disabled=false;toast('Not proposed: '+e.message);});
+      return;}
+  });
+  $('users').addEventListener('keydown',function(e){if(e.key==='Enter')run();});$('server').addEventListener('keydown',function(e){if(e.key==='Enter')run();});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){/* no role: viewer */}
+    $('refl').hidden=!can('operator');if(!can('analyst')){$('denied').hidden=false;$('go').disabled=true;}};
+  w.onerror=function(){$('denied').hidden=false;$('go').disabled=true;};w.send();
+})();
+</script></body></html>

@@ -1,0 +1,100 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Threats by Department</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;
+  --s4:#f85149;--s3:#ff9830;--s2:#e3b341;--s1:#58a6ff;--s0:#57606a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{margin-left:auto;font-weight:400;color:var(--mute);font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:22px;font-weight:700;margin-top:2px;overflow-wrap:anywhere}.t .s{font-size:11.5px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+button,select{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}
+select{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+button:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+tbody tr[data-d]{cursor:pointer}tbody tr[data-d]:hover td{background:rgba(255,255,255,.035)}.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.tw{overflow-x:auto}.muted{color:var(--mute)}.err{color:var(--bad)}.empty{color:var(--mute);padding:14px 0}
+.stack{display:flex;height:12px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.06);min-width:120px}.stack i{display:block;height:100%}
+.bars .row{display:grid;grid-template-columns:minmax(120px,220px) minmax(0,1fr) 70px;gap:10px;align-items:center;padding:5px 0;cursor:pointer;border-radius:6px}.bars .row:hover{background:rgba(255,255,255,.03)}.bars .row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bars .row .stack{height:16px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute)}.legend span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.sev{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:9px;white-space:nowrap}.sev.critical{background:rgba(248,81,73,.22);color:#ff7b72}.sev.high{background:rgba(255,152,48,.18);color:#ffab5e}.sev.medium{background:rgba(227,179,65,.16);color:#e3b341}.sev.low{background:rgba(88,166,255,.15);color:#79b8ff}.sev.info{background:rgba(255,255,255,.08);color:var(--mute)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap;margin:1px 2px 1px 0}
+.note{font-size:12.5px;color:var(--mute);margin:8px 0 0}.na td{color:var(--mute)}
+svg.sl{display:block}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid var(--border);border-radius:9px;padding:10px 14px;z-index:90}
+@media (max-width:700px){.bars .row{grid-template-columns:minmax(90px,130px) minmax(0,1fr) 54px}}
+</style></head><body><main>
+<p class="note" id="moved">This view now lives in <a href="soc-ueba.html?tab=dept">Security Operations → User Behaviour → By department</a>, next to the behaviour of the same users and hosts.</p>
+<div class="top"><div><div class="eb">Security operations · {{org.short}}</div><h1>Threats by Department</h1></div><span class="sp"></span>
+  <label class="muted" style="font-size:12px">Period <select id="days"><option value="1">24 hours</option><option value="7" selected>7 days</option><option value="30">30 days</option><option value="90">90 days</option></select></label>
+  <label class="muted" style="font-size:12px">Severity <select id="sev"><option value="0">All</option><option value="2">Medium and above</option><option value="3">High and above</option><option value="4">Critical only</option></select></label>
+  <button type="button" id="csv">CSV</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="k" id="kpis"></div>
+<div class="card"><h2>Risk by department<span class="c" id="barsnote"></span></h2><div class="legend" id="legend"></div><div class="bars" id="bars" style="margin-top:8px"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Departments<span class="c">click a department for its threats</span></h2><div class="tw" id="table"></div>
+  <p class="note">How alerts are matched to a department: the alert's account (or target account) → its <b>Department</b> in Active Directory; if the alert has only a computer, the account that last signed in to it interactively (last 14 days). Nothing is guessed — what cannot be matched is listed as <b>Not attributed</b> with the reason.
+  Risk = info 0 · low 1 · medium 3 · high 7 · critical 15 per alert; <b>per 100 users</b> divides by the department's enabled AD accounts so a large department does not look worse only because it is large.</p></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var API='/api/soc/threats/departments', ROLE='viewer', RANK={viewer:0,analyst:1,operator:2,admin:3}, R=null;
+  var SEV=['critical','high','medium','low','info'], SC={critical:'var(--s4)',high:'var(--s3)',medium:'var(--s2)',low:'var(--s1)',info:'var(--s0)'}, NONE='Not attributed';
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET',p);x.withCredentials=true;x.timeout=90000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('the SIEM is not reachable'));};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4000);}
+  function fmt(n){return n==null?'–':Number(n).toLocaleString();}
+  function tile(l,v,s,c){return '<div class="t '+(c||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function stack(sv,max,total){var t=0;SEV.forEach(function(k){t+=sv[k]||0;});var w=max?Math.max(2,total/max*100):0;
+    return '<div class="stack" style="width:'+w+'%" title="'+SEV.map(function(k){return k+' '+(sv[k]||0);}).join(' · ')+'">'+SEV.map(function(k){return sv[k]?'<i style="width:'+(sv[k]/t*100)+'%;background:'+SC[k]+'"></i>':'';}).join('')+'</div>';}
+  function spark(a){if(!a||!a.length)return '';var m=Math.max.apply(null,a)||1,w=84,h=22,st=a.length>1?w/(a.length-1):w;
+    var pts=a.map(function(v,i){return (i*st).toFixed(1)+','+(h-2-(v/m)*(h-4)).toFixed(1);}).join(' ');
+    return '<svg class="sl" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="alerts per day: '+a.join(', ')+'"><polyline points="'+pts+'" fill="none" stroke="var(--info)" stroke-width="1.6" stroke-linejoin="round"/></svg>';}
+  function q(){return '?days='+$('days').value+'&min_severity='+$('sev').value;}
+
+  function load(){$('bars').innerHTML='<div class="empty">Loading…</div>';
+    req(API+q()).then(function(r){R=r;draw();}).catch(function(e){$('kpis').innerHTML='';$('bars').innerHTML='<p class="err">'+esc(e.message)+'</p>';$('table').innerHTML='';});}
+  function draw(){var D=R.departments||[],real=D.filter(function(d){return d.department!==NONE;}),na=D.filter(function(d){return d.department===NONE;})[0];
+    var ch=0;D.forEach(function(d){ch+=(d.severity.critical||0)+(d.severity.high||0);});
+    var top=real[0], pct=R.total_alerts?Math.round(R.attributed/R.total_alerts*100):0, per=$('days').selectedOptions[0].textContent;
+    $('kpis').innerHTML=tile('Alerts',fmt(R.total_alerts),'last '+per)+tile('Critical + high',fmt(ch),'all departments',ch?'bad':'ok')
+      +tile('Departments affected',fmt(real.length),R.ad.users?fmt(R.ad.users)+' AD accounts':'no AD sync')+tile('Highest risk',top?top.department:'–',top?'risk '+top.risk+(top.risk_per_100_users!=null?' · '+top.risk_per_100_users+' per 100 users':''):'',top?'warn':'')
+      +tile('Matched to a department',pct+' %',fmt(R.not_attributed)+' not attributed',pct>=80?'ok':pct>=50?'warn':'bad');
+    $('legend').innerHTML=SEV.map(function(k){return '<span style="--c:'+SC[k]+'">'+k+'</span>';}).join('');
+    var max=0;D.forEach(function(d){max=Math.max(max,d.alerts);});
+    $('barsnote').textContent=R.ad.synced?'AD synced '+String(R.ad.synced).replace('T',' ').slice(0,16)+' UTC':'Active Directory sync not configured';
+    $('bars').innerHTML=D.length?D.slice(0,25).map(function(d){return '<div class="row" data-d="'+esc(d.department)+'" tabindex="0" role="button"><div class="nm'+(d.department===NONE?' muted':'')+'">'+esc(d.department)+'</div>'+stack(d.severity,max,d.alerts)+'<div class="n">'+fmt(d.alerts)+'</div></div>';}).join(''):'<div class="empty">No alerts in this period'+($('sev').value>0?' at this severity':'')+'.</div>';
+    $('table').innerHTML=D.length?'<table><thead><tr><th>Department</th><th class="n">Users (AD)</th><th class="n">Alerts</th><th class="n">Open</th><th class="n">Critical</th><th class="n">High</th><th class="n">Medium</th><th class="n">Low</th><th class="n">Risk</th><th class="n">per 100 users</th><th class="n">Users hit</th><th class="n">Hosts</th><th>Trend</th><th>Top threat</th></tr></thead><tbody>'
+      +D.map(function(d){var s=d.severity,tr=d.top_rules[0];return '<tr data-d="'+esc(d.department)+'" tabindex="0"'+(d.department===NONE?' class="na"':'')+'><td><b>'+esc(d.department)+'</b></td><td class="n">'+fmt(d.users_in_ad)+'</td><td class="n">'+fmt(d.alerts)+'</td><td class="n">'+fmt(d.open)+'</td><td class="n">'+(s.critical?'<span class="sev critical">'+s.critical+'</span>':'0')+'</td><td class="n">'+(s.high?'<span class="sev high">'+s.high+'</span>':'0')+'</td><td class="n">'+fmt(s.medium)+'</td><td class="n">'+fmt(s.low)+'</td><td class="n"><b>'+fmt(d.risk)+'</b></td><td class="n">'+(d.risk_per_100_users!=null?d.risk_per_100_users:'–')+'</td><td class="n">'+fmt(d.users_affected)+'</td><td class="n">'+fmt(d.hosts_affected)+'</td><td>'+spark(d.trend)+'</td><td>'+(tr?esc(tr.rule)+' <span class="muted">×'+tr.alerts+'</span>':'–')+'</td></tr>';}).join('')+'</tbody></table>':'';
+  }
+  function open(name){var d=(R.departments||[]).filter(function(x){return x.department===name;})[0];if(!d)return;
+    var via=Object.keys(d.attributed_via||{}).map(function(k){return esc(k)+' '+d.attributed_via[k];}).join(' · ');
+    var html=Z.kv([['Alerts',fmt(d.alerts)+' ('+fmt(d.open)+' open)'],['Severity',SEV.map(function(k){return d.severity[k]?'<span class="sev '+k+'">'+k+' '+d.severity[k]+'</span>':'';}).join(' ')||'–'],['Risk',fmt(d.risk)+(d.risk_per_100_users!=null?' · '+d.risk_per_100_users+' per 100 users ('+fmt(d.users_in_ad)+' enabled AD accounts)':'')],['Users / hosts affected',fmt(d.users_affected)+' / '+fmt(d.hosts_affected)],['Last alert',esc(d.last_alert?d.last_alert.replace('T',' ').slice(0,16)+' UTC':'–')]].concat(via?[['Matched by',via]]:[]))
+      +(d.not_attributed_reasons?Z.sec('Why these alerts have no department',Z.tbl(['Reason','Alerts','How to fix'],Object.keys(d.not_attributed_reasons).map(function(k){return [esc(k),fmt(d.not_attributed_reasons[k]),esc(FIX[k]||'')];}))):'')
+      +(d.top_rules.length?Z.sec('Top threats',Z.tbl(['Detection','Alerts','Worst'],d.top_rules.map(function(r){return [esc(r.rule),fmt(r.alerts),'<span class="sev '+r.max_severity+'">'+r.max_severity+'</span>'];}))):'')
+      +(d.tactics.length?Z.sec('ATT&CK tactics',d.tactics.map(function(t){return '<span class="pill">'+esc(t.tactic)+' · '+t.alerts+'</span>';}).join(' ')):'')
+      +(d.top_users?Z.sec('Most affected accounts',d.top_users.map(function(u){return '<span class="pill">'+esc(u)+'</span>';}).join(' ')||'–'):'')
+      +(can('analyst')?'<div id="dalerts"><p class="muted">Loading the alerts…</p></div>':'<p class="muted">The list of alerts names employees — it needs the analyst role.</p>');
+    Z.open('Department threats',name,html);
+    if(!can('analyst'))return;
+    req(API+'/'+encodeURIComponent(name)+q()).then(function(r){var el=$('dalerts');if(!el)return;var it=r.items||[];
+      el.innerHTML=it.length?Z.sec('Alerts ('+it.length+')',Z.tbl(['Time','Severity','Detection','Account','Host','Status'],it.slice(0,200).map(function(a){return [esc(String(a.ts_last||'').replace('T',' ').slice(0,16)),'<span class="sev '+a.severity+'">'+a.severity+'</span>',esc(a.rule)+(a.count>1?' <span class="muted">×'+a.count+'</span>':'')+(a.summary?'<div class="muted" style="font-size:12px">'+esc(a.summary)+'</div>':''),esc(a.user||'–')+(a.via==='host last logon'?' <span class="muted">(last sign-in)</span>':''),esc(a.host||'–'),esc(a.status||'')];}))):'<p class="muted">No alerts.</p>';
+    }).catch(function(e){var el=$('dalerts');if(el)el.innerHTML='<p class="err">'+esc(e.message)+'</p>';});}
+  var FIX={'no AD sync':'Configure the Active Directory sync in the SIEM (Identity settings).','account not in AD':'A local, cloud-only or external account — or the AD sync is out of date.','AD account has no department':'Fill in the Department attribute of these accounts in Active Directory; the next sync picks it up.',
+    'host with no recorded logon':'No interactive Windows sign-in (event 4624) from this computer in 14 days: a server, a non-domain device, or its Security log is not collected.','no user or host on the alert':'Network-level alerts (e.g. external scans) — they are not about a department.'};
+  function csv(){if(!R)return;var head=['department','users_in_ad','alerts','open','critical','high','medium','low','info','risk','risk_per_100_users','users_affected','hosts_affected','top_threat'];
+    var rows=(R.departments||[]).map(function(d){return [d.department,d.users_in_ad,d.alerts,d.open,d.severity.critical,d.severity.high,d.severity.medium,d.severity.low,d.severity.info,d.risk,d.risk_per_100_users,d.users_affected,d.hosts_affected,d.top_rules[0]?d.top_rules[0].rule:''];});
+    var esq=function(v){v=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    var meta=['# Threats by department · '+R.from+' to '+R.to+' · min severity '+$('sev').selectedOptions[0].textContent+' · exported '+new Date().toISOString()];
+    var t=meta.concat([head].concat(rows).map(function(r){return r.map(esq).join(',');})).join('\r\n');
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+t],{type:'text/csv'}));a.download='threats-by-department-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);toast('CSV downloaded');}
+  function onPick(e){var r=e.target.closest('[data-d]');if(r)open(r.getAttribute('data-d'));}
+  function onKey(e){if(e.key==='Enter'||e.key===' '){var r=e.target.closest('[data-d]');if(r){e.preventDefault();open(r.getAttribute('data-d'));}}}
+  ['bars','table'].forEach(function(id){$(id).addEventListener('click',onPick);$(id).addEventListener('keydown',onKey);});
+  $('days').onchange=$('sev').onchange=$('refresh').onclick=load;$('csv').onclick=csv;
+  var xr=new XMLHttpRequest();xr.open('GET','/dashboards/whoami.json');xr.onload=function(){try{var j=JSON.parse(xr.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};xr.onerror=load;xr.send();
+  setInterval(function(){if(!document.hidden)load();},300000);
+})();
+</script>
+</body></html>

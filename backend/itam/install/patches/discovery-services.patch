@@ -1,0 +1,205 @@
+diff -ru a/engine/discovery/classify.js b/engine/discovery/classify.js
+--- a/engine/discovery/classify.js	2026-10-12 13:49:21.970160646 +0000
++++ b/engine/discovery/classify.js	2026-10-12 13:49:21.976580203 +0000
+@@ -9,7 +9,7 @@
+ // The OUI and enterprise-number tables are deliberately SMALL (common vendors seen in Saudi enterprise networks) and
+ // marked "verify" — the authoritative lists are the IEEE MA-L registry and IANA Private Enterprise Numbers. An unknown
+ // prefix simply yields no vendor; it never fails a classification.
+-const TYPES = ['server', 'workstation', 'switch', 'router', 'firewall', 'ap', 'printer', 'phone', 'vm', 'cloud', 'unknown'];
++const TYPES = ['server', 'workstation', 'switch', 'router', 'firewall', 'ap', 'printer', 'phone', 'vm', 'cloud', 'storage', 'unknown'];
+ 
+ const OUI = {
+   // virtualisation / cloud
+@@ -49,6 +49,7 @@
+ };
+ // IANA Private Enterprise Numbers (sysObjectID 1.3.6.1.4.1.<n>…) — verify
+ const ENTERPRISE = {
++  116: 'Hitachi', 1139: 'Dell EMC', 12740: 'Dell EqualLogic', 34774: 'Huawei Storage', 37447: 'HPE Nimble Storage', 40482: 'Pure Storage',
+   9: 'Cisco', 11: 'HP', 43: '3Com', 171: 'D-Link', 207: 'Allied Telesis', 232: 'HP (Compaq)', 253: 'Xerox', 311: 'Microsoft',
+   318: 'APC (Schneider Electric)', 367: 'Ricoh', 641: 'Lexmark', 674: 'Dell', 789: 'NetApp', 1347: 'Kyocera', 1602: 'Canon',
+   1916: 'Extreme Networks', 2011: 'Huawei', 2021: 'Net-SNMP (Linux)', 2435: 'Brother', 2620: 'Check Point', 2636: 'Juniper Networks',
+@@ -73,6 +74,15 @@
+   [/Catalyst|C9[23]00|C29[67]0|C3[68]50|NX-OS|Nexus|ArubaOS-CX|ProCurve|Aruba.*Switch|JUNOS.*\bEX\d|Comware|\bswitch\b|GWN78/i, 'switch', 75, null],
+   [/Cisco IOS.*(ISR|ASR|C8[0-9]{2}|C19|C29[0-9]1|C39[0-9]{2}|C4[34]\d{2})|IOS-XR|RouterOS|EdgeOS|JUNOS.*\bMX\d|\brouter\b/i, 'router', 70, null],
+   [/LaserJet|JetDirect|OfficeJet|Ricoh|Xerox|Kyocera|ECOSYS|TASKalfa|Lexmark|Brother NC|bizhub|Konica|Epson|imageRUNNER|\bprinter\b|\bMFP\b/i, 'printer', 85, null],
++  // storage arrays and NAS (before the generic Linux / Windows rules: many run on them)
++  [/NetApp|Data ONTAP|\bONTAP\b/i, 'storage', 90, 'NetApp'],
++  [/PowerStore|Unity\s*(XT|\d)|VNX|Isilon|OneFS|PowerScale|Data ?Domain|DDOS|PowerVault|Compellent|SC Series|EqualLogic|PowerMax|VMAX/i, 'storage', 88, 'Dell EMC'],
++  [/3PAR|Primera|Alletra|Nimble|StoreOnce|StoreEasy|StoreVirtual|MSA \d{4}|StorageWorks/i, 'storage', 88, 'HPE'],
++  [/Pure Storage|Purity|FlashArray|FlashBlade/i, 'storage', 90, 'Pure Storage'],
++  [/Hitachi (VSP|Virtual Storage)|\bVSP\s*[EGF]\d/i, 'storage', 88, 'Hitachi'],
++  [/OceanStor|Dorado/i, 'storage', 88, 'Huawei'],
++  [/Synology|DiskStation|\bDSM\b/i, 'storage', 85, 'Synology'],
++  [/QNAP|\bQTS\b|QuTS/i, 'storage', 85, 'QNAP'],
+   [/VMware ESXi/i, 'server', 85, 'VMware'],
+   [/Windows.*Server|Server 20(08|12|16|19|22|25)/i, 'server', 70, 'Microsoft'],
+   [/Windows/i, 'workstation', 45, 'Microsoft'],
+@@ -117,6 +127,9 @@
+   if (x.vcenter && x.vcenter.kind === 'host') add('server', 90, 'vCenter ESXi host');
+   if (x.nutanix && x.nutanix.kind === 'vm') add('vm', 92, 'Nutanix virtual machine');
+   if (x.nutanix && x.nutanix.kind === 'host') { add('server', 90, 'Nutanix host'); vendor = vendor || 'Nutanix'; }
++  if (x.db && x.db.length) add('server', 70, 'database listener (' + x.db.map((d) => d.label + ' ' + d.port).join(', ') + ')');
++  if (x.unix && x.unix.os) { add('server', x.unix.confidence || 60, (x.unix.label || 'Unix server') + (x.unix.ssh_banner ? ' (' + x.unix.ssh_banner + ')' : '')); if (x.unix.os === 'solaris') vendor = vendor || 'Oracle'; }
++  if (x.storage && x.storage.protocols && x.storage.protocols.length) { const p = x.storage.protocols; add('storage', p.includes('ndmp') ? 75 : p.includes('iscsi') ? 65 : 30, 'storage protocols open (' + p.join(', ') + ')'); }
+   if (x.hyperv && x.hyperv.kind === 'vm') add('vm', 90, 'Hyper-V virtual machine');
+   if (x.hyperv && x.hyperv.kind === 'host') add('server', 85, 'Hyper-V host');
+   if (x.cucm) { add('phone', 95, 'registered in CUCM'); vendor = vendor || 'Cisco'; }
+@@ -128,7 +141,7 @@
+   const d = String(dev.sys_descr || '');
+   for (const [re, t, s, v] of DESCR_RULES) if (d && re.test(d)) { add(t, s, `sysDescr matches ${re.source.split('|')[0].replace(/\\b/g, '')}`); if (v && !vendor) vendor = v; break; }
+   const ent = enterpriseVendor(dev.sys_object_id);
+-  if (ent) { vendor = vendor || ent; reasons.push(`sysObjectID enterprise → ${ent}`); if (/^\.?1\.3\.6\.1\.4\.1\.12356\.101\b/.test(dev.sys_object_id || '')) add('firewall', 85, 'FortiGate sysObjectID'); if (ent === 'Palo Alto Networks') add('firewall', 85, 'Palo Alto sysObjectID'); }
++  if (ent) { vendor = vendor || ent; reasons.push(`sysObjectID enterprise → ${ent}`); if (/^\.?1\.3\.6\.1\.4\.1\.12356\.101\b/.test(dev.sys_object_id || '')) add('firewall', 85, 'FortiGate sysObjectID'); if (ent === 'Palo Alto Networks') add('firewall', 85, 'Palo Alto sysObjectID'); if (/NetApp|Dell EMC|EqualLogic|Huawei Storage|Nimble|Pure Storage|Synology|QNAP/.test(ent)) add('storage', 80, `${ent} sysObjectID`); }
+   const ports = new Set(dev.open_ports || []);
+   if (ports.has(3389) || ports.has(135) || ports.has(445) || ports.has(5985)) add(/server/i.test(dev.os || '') ? 'server' : 'workstation', 40, 'Windows service ports open');
+   if (ports.has(22) && !ports.has(3389) && !ports.has(445)) add('server', 35, 'SSH open (no Windows ports)');
+@@ -153,6 +166,6 @@
+ }
+ 
+ // discovery class → ITAM asset type
+-const ITAM_TYPE = { server: 'server', workstation: 'workstation', switch: 'network', router: 'network', firewall: 'network', ap: 'network', printer: 'printer', phone: 'phone', vm: 'vm', cloud: 'vm', unknown: 'other' };
++const ITAM_TYPE = { storage: 'storage', server: 'server', workstation: 'workstation', switch: 'network', router: 'network', firewall: 'network', ap: 'network', printer: 'printer', phone: 'phone', vm: 'vm', cloud: 'vm', unknown: 'other' };
+ 
+ module.exports = { classify, ouiVendor, enterpriseVendor, osFrom, OUI, ENTERPRISE, TYPES, ITAM_TYPE, hex12 };
+diff -ru a/engine/discovery/devices.js b/engine/discovery/devices.js
+--- a/engine/discovery/devices.js	2026-10-12 13:49:21.985910649 +0000
++++ b/engine/discovery/devices.js	2026-10-12 13:49:21.988259213 +0000
+@@ -18,7 +18,7 @@
+ const str = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max);
+ const macFmt = (m) => { const h = hex12(m); return h && /[1-9a-f]/.test(h) && h !== 'ffffffffffff' ? h.match(/.{2}/g).join(':') : null; };
+ // which method's value wins for descriptive fields (higher = more authoritative)
+-const RANK = { cucm: 9, vcenter: 9, nutanix: 9, hyperv: 8, azure: 9, aws: 9, ad: 7, snmp: 6, sweep: 3, arp: 2 };
++const RANK = { cucm: 9, vcenter: 9, nutanix: 9, unix: 5, db: 4, storage: 4, hyperv: 8, azure: 9, aws: 9, ad: 7, snmp: 6, sweep: 3, arp: 2 };
+ 
+ function createDevices({ store, assets, ingest, audit, config }) {
+   const col = store.collection('disc_devices');
+diff -ru a/engine/discovery/index.js b/engine/discovery/index.js
+--- a/engine/discovery/index.js	2026-10-12 13:49:21.988259213 +0000
++++ b/engine/discovery/index.js	2026-10-12 13:49:21.994021580 +0000
+@@ -85,7 +85,7 @@
+     const am = scopesM.allowedMethods(s, settings().methods);
+     const running = [...active.values()].find((x) => x.run.scope_id === s.id);
+     return Object.assign({}, s, {
+-      gate: { open: gate, required: ['sweep', 'snmp'].some((k) => s.methods[k] && s.methods[k].enabled), stale: !!(s.checklist && !gate), checklist: s.checklist || null },
++      gate: { open: gate, required: scopesM.ACTIVE.some((k) => s.methods[k] && s.methods[k].enabled), stale: !!(s.checklist && !gate), checklist: s.checklist || null },
+       allowed_methods: am.run, blocked_methods: am.blocked, schedule_label: sched.label(s.schedule), running_run_id: running ? running.run.id : null,
+     });
+   }
+@@ -482,7 +482,7 @@
+     const last = finished[0] || null;
+     const rogue = rogueDevices();
+     const scopes = scopesCol.all((s) => s.status !== 'archived');
+-    const pending = scopes.filter((s) => ['sweep', 'snmp'].some((k) => s.methods[k] && s.methods[k].enabled) && !scopesM.gateOpen(s));
++    const pending = scopes.filter((s) => scopesM.ACTIVE.some((k) => s.methods[k] && s.methods[k].enabled) && !scopesM.gateOpen(s));
+     return {
+       assets: { total: live.length, connected: connected.length, not_connected: live.length - connected.length, silent: connected.filter((a) => a.siem.alert).length },
+       devices: { total: all.length, by_status: byStatus, by_type: byType, by_site: bySite },
+diff -ru a/engine/discovery/routes.js b/engine/discovery/routes.js
+--- a/engine/discovery/routes.js	2026-10-12 13:49:21.976580203 +0000
++++ b/engine/discovery/routes.js	2026-10-12 13:49:21.983825685 +0000
+@@ -11,7 +11,7 @@
+ 
+   // dashboard + configuration (read: everyone)
+   srv.route('GET', `${P}/dashboard`, () => D.dashboard());
+-  srv.route('GET', `${P}/methods`, () => ({ settings: D.settings(), active: ['sweep', 'snmp'], passive: ['arp', 'ad', 'vcenter', 'nutanix', 'hyperv', 'cucm', 'azure', 'aws'], credential_kinds: D.credentialKinds(), sites: D.sites() }));
++  srv.route('GET', `${P}/methods`, () => ({ settings: D.settings(), active: ['sweep', 'snmp', 'db', 'unix', 'storage'], passive: ['arp', 'ad', 'vcenter', 'nutanix', 'hyperv', 'cucm', 'azure', 'aws'], credential_kinds: D.credentialKinds(), sites: D.sites() }));
+   srv.route('POST', `${P}/methods`, (ctx) => { admin(ctx); return { settings: D.updateSettings(ctx.body, ctx.who) }; });
+ 
+   // scopes
+diff -ru a/engine/discovery/runner.js b/engine/discovery/runner.js
+--- a/engine/discovery/runner.js	2026-10-12 13:49:21.964859464 +0000
++++ b/engine/discovery/runner.js	2026-10-12 13:49:21.970160646 +0000
+@@ -10,6 +10,7 @@
+ const sched = require('./schedule');
+ const sweep = require('./methods/sweep');
+ const snmpM = require('./methods/snmp');
++const svcM = require('./methods/services');
+ const adM = require('./methods/ad');
+ const vcM = require('./methods/vcenter');
+ const ntxM = require('./methods/nutanix');
+@@ -147,7 +148,7 @@
+   }
+ 
+   // ---------------- active (safety gate already checked by the caller) ----------------
+-  const active = allowed.filter((x) => x === 'sweep' || x === 'snmp');
++  const active = allowed.filter((x) => x === 'sweep' || x === 'snmp' || x === 'db' || x === 'unix' || x === 'storage');
+   if (!active.length || stop()) return;
+   const hosts = ip4.expand(scope.targets, scope.exclusions, { max: (ctx.config.discovery && ctx.config.discovery.max_hosts_per_scope) || 4096 }).map(ip4.ipStr);
+   run.progress = { hosts_total: hosts.length, hosts_done: 0, alive: 0, phase: 'ping', started_at: new Date().toISOString() };
+@@ -177,7 +178,8 @@
+   try {
+     for (const id of snmpCreds) opened.set(id, vault.open(id));
+     const t0 = Date.now();
+-    let tcpUp = 0; let snmpUp = 0;
++    let tcpUp = 0; let snmpUp = 0; let dbHosts = 0; let dbListeners = 0; let unixHosts = 0; let storHosts = 0;
++    const useDb = allowed.includes('db'), useUnix = allowed.includes('unix'), useStor = allowed.includes('storage'), probeOpt = { connect: deps.connect, banner: deps.banner, timeout_ms: ctx.config.discovery.tcp_timeout_ms };
+     run.progress.phase = 'probe';
+     // per host the TCP ports and the SNMP probe run at the same time (not one after another): a silent address costs one
+     // timeout (~0.8-1.5 s) instead of the sum of all of them (~7 s), so a /24 takes about a minute instead of several
+@@ -198,14 +200,29 @@
+         }
+         return null;
+       })();
+-      const [r, sid] = await Promise.all([tcpP, snmpP]);
++      const dbP = useDb ? svcM.db(ip, m.db.engines, probeOpt).catch(() => null) : Promise.resolve(null);
++      const unixP = useUnix ? svcM.unix(ip, probeOpt).catch(() => null) : Promise.resolve(null);
++      const storP = useStor ? svcM.storage(ip, probeOpt).catch(() => null) : Promise.resolve(null);
++      const [r, sid, dr, ur, sr] = await Promise.all([tcpP, snmpP, dbP, unixP, storP]);
++      if (sr && sr.alive) isUp = true;
+       if (r && r.alive) { isUp = true; tcpUp++; rec.open = r.open; }
+       if (sid) { rec.snmp = sid; isUp = true; snmpUp++; }
+-      if (isUp) { if (!alive.has(ip)) run.progress.alive++; alive.set(ip, rec); obs({ method: allowed.includes('sweep') ? 'sweep' : 'snmp', ip, open_ports: rec.open }); }
++      if (dr && dr.alive) isUp = true;
++      if (ur && ur.alive) isUp = true;
++      if (isUp) {
++        if (!alive.has(ip)) run.progress.alive++; alive.set(ip, rec);
++        obs({ method: allowed.includes('sweep') ? 'sweep' : allowed.includes('snmp') ? 'snmp' : useDb ? 'db' : useUnix ? 'unix' : 'storage', ip, open_ports: rec.open });
++        if (sr && sr.protocols.length) { if (sr.protocols.some((p) => p !== 'nfs')) storHosts++; obs({ method: 'storage', ip, open_ports: sr.open, extra: { storage: { protocols: sr.protocols } } }); }
++        if (dr && dr.found.length) { dbHosts++; dbListeners += dr.found.length; obs({ method: 'db', ip, open_ports: dr.open, extra: { db: dr.found } }); }
++        if (ur && (ur.open.length || ur.ssh_banner)) { if (ur.hint) unixHosts++; obs({ method: 'unix', ip, open_ports: ur.open, os: ur.hint ? ur.hint.label : '', extra: { unix: { ssh_banner: ur.ssh_banner, ports: ur.open, os: ur.hint ? ur.hint.os : null, label: ur.hint ? ur.hint.label : null, confidence: ur.hint ? ur.hint.confidence : null } } }); }
++      }
+       run.progress.hosts_done++;
+       if (run.progress.hosts_done % 8 === 0) ctx.onProgress();
+     }, stop);
+     if (allowed.includes('sweep')) stat('sweep', { ok: true, alive: alive.size, tcp_alive: tcpUp, hosts: hosts.length, ms: Date.now() - t0 });
++    if (useDb) stat('db', { ok: true, seen: dbHosts, listeners: dbListeners, ms: Date.now() - t0 });
++    if (useUnix) stat('unix', { ok: true, seen: unixHosts, ms: Date.now() - t0 });
++    if (useStor) stat('storage', { ok: true, seen: storHosts, ms: Date.now() - t0 });
+     // 3) SNMP collection on responders (system, interfaces, entity serial, LLDP / CDP neighbours)
+     if (snmpCreds.length && !stop()) {
+       const responders = [...alive.entries()].filter(([, r]) => r.snmp);
+diff -ru a/engine/discovery/scopes.js b/engine/discovery/scopes.js
+--- a/engine/discovery/scopes.js	2026-10-12 13:49:21.957910647 +0000
++++ b/engine/discovery/scopes.js	2026-10-12 13:49:21.964859464 +0000
+@@ -12,7 +12,7 @@
+ const ip4 = require('./ipv4');
+ const sched = require('./schedule');
+ 
+-const ACTIVE = ['sweep', 'snmp'];
++const ACTIVE = ['sweep', 'snmp', 'db', 'unix', 'storage'];   // db: database listener ports; unix: SSH banner + Solaris service ports
+ const PASSIVE = ['arp', 'ad', 'vcenter', 'nutanix', 'hyperv', 'cucm', 'azure', 'aws'];
+ const METHODS = ACTIVE.concat(PASSIVE);
+ const DEFAULT_TCP_PORTS = [22, 80, 135, 443, 445, 3389, 5985];
+@@ -72,6 +72,13 @@
+       o.tcp_ports = [...new Set(ports.map((x) => intIn(x, 1, 65535, 'methods.sweep.tcp_ports[]')))].sort((a, b2) => a - b2);
+       if (o.tcp_ports.includes(161)) throw bad('UDP 161 is not a TCP port — enable the SNMP method instead (it sends an SNMP get of sysDescr)');
+     }
++    if (k === 'db') {
++      const DBE = ['oracle', 'mssql', 'mysql', 'postgres', 'db2', 'mongodb', 'hana'];
++      const e = b.engines !== undefined ? b.engines : (p.engines || DBE);
++      if (!Array.isArray(e) || !e.length) throw bad('methods.db.engines must be a non-empty list');
++      for (const x of e) if (!DBE.includes(String(x))) throw bad(`methods.db.engines: unknown engine "${x}" (allowed: ${DBE.join(', ')})`);
++      o.engines = [...new Set(e.map(String))];
++    }
+     if (k === 'snmp') {
+       const ids = b.credential_ids !== undefined ? b.credential_ids : (p.credential_ids || []);
+       if (!Array.isArray(ids) || ids.length > 8) throw bad('methods.snmp.credential_ids must be a list (max 8)');
+@@ -118,7 +125,7 @@
+   const methods = normMethods(b.methods, cur, credentials);
+   const infra = bool(b.infra, 'infra', cur ? !!cur.infra : false);
+   const label = str(pick('label'), 200);
+-  if (!targets.length && (methods.sweep.enabled || methods.snmp.enabled || methods.arp.enabled)) throw bad('targets are required for sweep, SNMP and ARP');
++  if (!targets.length && (methods.sweep.enabled || methods.snmp.enabled || methods.db.enabled || methods.unix.enabled || methods.storage.enabled || methods.arp.enabled)) throw bad('targets are required for sweep, SNMP, database / Unix probes and ARP');
+   return {
+     name, label, site, vlan, allow_public: allowPublic, infra,
+     targets: targets.map((t) => t.text), exclusions: exclusions.map((t) => t.text),

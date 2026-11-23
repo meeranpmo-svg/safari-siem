@@ -1,0 +1,172 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nutanix VMs</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-vmuse.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--nutanix:#7855FA}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t[data-act]{cursor:pointer;transition:transform .12s,box-shadow .12s}.t[data-act]:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.3)}.t[data-act]:focus-visible{outline:2px solid #fff;outline-offset:2px}.t[aria-pressed="true"]{box-shadow:0 0 0 2px #5794f2 inset}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:30px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.na .v{color:var(--mute);font-size:18px}
+.hdr{background:var(--nutanix);color:#fff;border-radius:10px;padding:8px 14px;font-weight:700;font-size:15px;margin:0 0 10px;text-align:center}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}
+select,input{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05)}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08)}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.off{background:rgba(255,255,255,.08);color:var(--mute)}.pill.bad{background:rgba(248,81,73,.16);color:#ff7b72}.pill.warn{background:rgba(227,179,65,.16);color:#e3b341}
+.bar{height:16px;border-radius:5px;background:rgba(255,255,255,.08);position:relative;overflow:hidden}.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
+.bar-ok{background:var(--ok)}.bar-warn{background:var(--warn)}.bar-bad{background:var(--bad)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+@media print{.top button,select{display:none}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.g2 .card,.g3 .card{margin:0}
+th.so{cursor:pointer;user-select:none}th.so:hover{color:var(--text)}th.so.on{color:var(--info)}.seg button{padding:4px 10px;margin-left:4px}.seg button.on{border-color:var(--info);color:var(--info)}
+tr.vr{cursor:pointer}tr.vr:hover td{background:rgba(255,255,255,.04)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Virtualization · Nutanix</div><h1>Nutanix VMs Dashboard</h1></div><span class="sp"></span>
+  <label class="muted" style="font-size:12px">Cluster <select id="cl"><option value="">All clusters</option></select></label>
+  <span class="muted" id="up"></span><button type="button" id="fetch" title="Read the CPU and memory in use from Prism / vCenter now">⚡ Fetch now</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="muted" id="live" style="font-size:12px;margin:-4px 0 10px"></div>
+<div id="note"></div>
+<div class="k" id="kk"></div>
+<div class="hdr">VM Metrics</div>
+<div class="k" id="metrics"></div>
+<div class="hdr">DR replication <a href="dr-replication.html" style="font-size:12px;font-weight:500;color:inherit;text-decoration:underline;margin-left:8px">protection domains, RPO, remote sites →</a></div>
+<div class="k" id="drk"></div>
+<div class="card"><h2>Utilization over time <span class="c" id="trc"></span><span class="sp" style="flex:1"></span><span class="seg" id="days"><button type="button" data-d="1">24 h</button><button type="button" data-d="7" class="on">7 days</button><button type="button" data-d="31">31 days</button></span></h2>
+  <div class="g2"><div id="trCpu"><div class="empty">Loading…</div></div><div id="trIo"></div></div></div>
+<div class="g3" style="margin:0 0 12px">
+  <div class="card"><h2>Top CPU consumers <span class="c">running VMs</span></h2><div id="topCpu"></div></div>
+  <div class="card"><h2>Top memory consumers <span class="c">memory in use</span></h2><div id="topMem"></div></div>
+  <div class="card"><h2>Top IO consumers <span class="c">IOPS</span></h2><div id="topIo"></div></div>
+</div>
+<div class="g2" style="margin:0 0 12px">
+  <div class="card"><h2>How busy the VMs are</h2><div class="g2"><div id="dCpu"></div><div id="dMem"></div></div><p class="note">Many VMs under 20% with several vCPUs or a lot of memory = right-sizing candidates; VMs over 80% may be short of resources.</p></div>
+  <div class="card" id="clcard"><h2>Cluster utilization <span class="c" id="clc"></span></h2><div class="tw" id="clusters"><div class="empty">Loading…</div></div></div>
+</div>
+<div class="card" id="vmcard"><h2>VM summary <span class="c" id="vmc"></span> <span id="vmf"></span></h2>
+  <div style="margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap"><input type="search" id="q" placeholder="Search VM, IP, MAC, host, OS…" style="width:100%;max-width:320px"><select id="pw"><option value="">On and off</option><option value="on">Running only</option><option value="off">Stopped only</option></select></div>
+  <div class="tw" id="vms"><div class="empty">Loading…</div></div><p class="note">Click a VM for its own CPU, memory and IO graphs. Click a column heading to sort.</p></div>
+</main>
+<script src="vendor/zyb-live.js"></script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, U=window.zybVmUse, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var CAP=null, SEL='', DAYS=7, SORT={k:'cpu_pct',d:-1}, LIST=[];
+  function req(p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/itam'+p);x.withCredentials=true;x.timeout=120000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send();});}
+  // every tile opens what it counts: the VM list filtered / sorted by that measure, the clusters, or the hosts
+  var TACT=null;
+  function ta(act){return act?' data-act="'+act+'" role="button" tabindex="0" aria-pressed="'+(TACT===act)+'" title="Click to see these VMs"':'';}
+  function tile(l,v,s,cls,act){return '<div class="t '+(cls||'')+'"'+ta(act)+'><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function mtile(l,v,unit,s,act){return '<div class="t"'+ta(act)+'><div class="l">'+esc(l)+'</div><div class="v">'+(v==null?'<span class="muted" style="font-size:18px">not reported</span>':esc(v)+(unit?'<span style="font-size:14px;color:var(--mute)"> '+esc(unit)+'</span>':''))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function nutanix(){
+    var plats=(CAP.platforms||[]).filter(function(p){return p.kind==='nutanix';}), labels=plats.map(function(p){return p.label;});
+    var clusters=(CAP.clusters||[]).filter(function(c){return c.kind==='nutanix'||labels.indexOf(c.platform)>=0;});
+    // CAP.vms = every VM; top_vms / vms_off are the overview's cut lists, used only when the server is older than the full list
+    var full=Array.isArray(CAP.vms), mine=function(v){return labels.indexOf(v.platform)>=0;};
+    var vms=full?CAP.vms.filter(mine):(CAP.top_vms||[]).filter(mine).concat((CAP.vms_off||[]).filter(mine));
+    var hosts=(CAP.hosts||[]).filter(function(h){return labels.indexOf(h.platform)>=0;});
+    return {plats:plats,clusters:clusters,vms:vms,hosts:hosts,connected:plats.length>0,partial:!full,capped:!!CAP.vms_capped,usage:plats.some(function(p){return p.vm_usage;})};
+  }
+  function scope(N){var cls=SEL?N.clusters.filter(function(c){return c.id===SEL;}):N.clusters,names={};cls.forEach(function(c){names[c.name]=1;});
+    return {cls:cls,vms:SEL?N.vms.filter(function(v){return names[v.cluster];}):N.vms};}
+  function avg(arr,k){var v=arr.map(function(x){return x[k];}).filter(function(x){return x!=null;});return v.length?Math.round(v.reduce(function(a,b){return a+b;},0)/v.length*10)/10:null;}
+  function sum(arr,k){var v=arr.map(function(x){return x[k];}).filter(function(x){return x!=null;});return v.length?v.reduce(function(a,b){return a+b;},0):null;}
+  function top(L,k,unit,dec){return U.hbars(L.filter(function(v){return v[k]!=null;}).sort(function(a,b){return b[k]-a[k];}).slice(0,10).map(function(v){return {label:v.name,sub:v.host,v:v[k],key:v.pid+'|'+v.id};}),{max:unit==='%'?100:null,unit:unit,dec:dec,color:unit==='%'?null:'#3fb950',empty:'Not reported by this Nutanix connection.'});}
+  // DR replication per VM, from the protection domains Prism reports (virt-capacity drView): the VM's protection domain status
+  var DRB={ok:['Replicating within RPO','ok'],late:['Behind RPO','bad'],gap:['No DR copy','warn'],none:['Not protected','bad'],unknown:['DR not reported','off']};
+  var DRI={};
+  function drIndex(N){var idx={},dr=CAP.dr||{},sites=dr.sites||[];
+    sites.forEach(function(st){var key=function(n){return st.platform+'|'+String(n||'').toLowerCase();};
+      (st.protection_domains||[]).forEach(function(pd){var b=pd.status==='ok'||pd.status==='standby'?(pd.stuck?'late':'ok'):pd.status==='late'||pd.status==='critical'?'late':'gap';
+        (pd.vms||[]).forEach(function(n){idx[key(n)]={b:b,pd:pd.name,why:pd.why+(pd.stuck?' - a replication to '+pd.stuck.remote_site+' has run '+pd.stuck.minutes+' min':''),rpo:pd.rpo_min,age:pd.age_min,remote:(pd.remote_sites||[]).join(', ')};});});
+      (st.unprotected_vms||[]).forEach(function(n){if(!idx[key(n)])idx[key(n)]={b:'none',why:'in no protection domain on '+st.platform+(st.leap&&st.leap.rules&&st.leap.rules.length?' (Leap protection policies are read separately - check them on the DR page)':'')};});
+      st._read=st.read;});
+    var readSites={};sites.forEach(function(st){readSites[st.platform]=st;});
+    N.vms.forEach(function(v){var k=v.platform+'|'+String(v.name||'').toLowerCase();if(!idx[k]){var st=readSites[v.platform];
+      idx[k]={b:'unknown',why:!dr.sites?'the server does not report DR yet - run the update':!st||!st.read?'DR was not read from '+v.platform+((st&&st.read_errors&&st.read_errors.length)?' ('+st.read_errors[0]+')':''):st.leap&&st.leap.rules&&st.leap.rules.length?'protected by Leap policies (categories) - per-VM membership is not reported':'not in the protection-domain list Prism returned'};}});
+    return idx;}
+  function drOf(v){return DRI[v.platform+'|'+String(v.name||'').toLowerCase()]||{b:'unknown',why:''};}
+  function drPill(v){var d=drOf(v),x=DRB[d.b];return '<span class="pill '+x[1]+'" title="'+esc((d.pd?'protection domain '+d.pd+': ':'')+d.why)+'">'+esc(x[0])+'</span>'+(d.pd?'<div class="muted" style="font-size:11px">'+esc(d.pd)+(d.age!=null?' · '+esc(d.age)+' min ago':'')+'</div>':'');}
+  function draw(){
+    var N=nutanix();
+    if(!N.connected){['kk','metrics','vms','topCpu','topMem','topIo','dCpu','dMem','trCpu','trIo'].forEach(function(i){$(i).innerHTML='';});$('clusters').innerHTML='<div class="empty">No Nutanix cluster connected. Add a Nutanix Prism platform in Virtualization Platforms, then it appears here.</div>';return;}
+    if($('cl').options.length<=1&&N.clusters.length)$('cl').innerHTML='<option value="">All clusters</option>'+N.clusters.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>';}).join('');
+    var S=scope(N), on=S.vms.filter(function(v){return v.power==='on';}), off=S.vms.length-on.length;
+    $('note').innerHTML=(N.partial?'<p class="err">Only part of the VM list: IT Asset Management on the server is older than this page. Run the update to list every VM and their usage.</p>':'')
+      +(!N.partial&&!N.usage?'<div class="card" style="border-color:rgba(227,179,65,.4)"><b>Per-VM usage is not reported yet.</b> <span class="muted">After the server update the next collection reads it from the Prism VM list (read-only, v1 API). If it stays empty: the Prism account needs the Viewer role on the cluster, and with Prism Central on some releases add the cluster (Prism Element) address on the Virtualization page.</span></div>':'');
+    $('kk').innerHTML=tile('VM count',S.vms.length,on.length+' on · '+off+' off','ok','all')+tile('Powered on',on.length,off?off+' stopped - click Stopped in the list':'','ok','on')
+      +tile('Clusters',N.clusters.length,'','info','clusters')+tile('Hosts',N.hosts.length,'','info','hosts')
+      +tile('vCPU allocated',on.reduce(function(n,v){return n+(v.vcpus||0);},0),'running VMs','info','vcpus')
+      +tile('Memory allocated',Math.round(on.reduce(function(n,v){return n+(v.mem_gb||0);},0))+' GB','running VMs','info','mem_gb');
+    var cpuV=avg(on,'cpu_pct'), memV=avg(on,'mem_used_pct'), io=sum(on,'iops'), lat=avg(on,'io_latency_ms'), bw=sum(on,'io_kbps');
+    $('metrics').innerHTML=mtile('Avg CPU utilization',cpuV!=null?cpuV:avg(S.cls,'cpu_used_pct'),'%',cpuV!=null?'average of running VMs':'cluster average (per-VM not reported)',cpuV!=null?'cpu_pct':'clusters')
+      +mtile('Avg memory utilization',memV!=null?memV:avg(S.cls,'mem_used_pct'),'%',memV!=null?'average of running VMs':'cluster average (per-VM not reported)',memV!=null?'mem_used_pct':'clusters')
+      +mtile('Total IOPS',io!=null?U.f(io):null,'','all running VMs',io!=null?'iops':'')+mtile('Avg IO latency',lat,'ms','controller latency',lat!=null?'io_latency_ms':'')+mtile('IO bandwidth',bw!=null?U.f(bw/1024,1):null,'MB/s','all running VMs',bw!=null?'io_kbps':'');
+    DRI=drIndex(N);var dc={ok:0,late:0,gap:0,none:0,unknown:0};S.vms.forEach(function(v){dc[drOf(v).b]++;});
+    $('drk').innerHTML=tile('Replicating within RPO',dc.ok,'protection domain up to date','ok','dr:ok')+tile('Behind RPO',dc.late,dc.late?'last copy older than 2x the RPO, or replication stuck':'none behind',dc.late?'bad':'ok','dr:late')
+      +tile('No DR copy',dc.gap,'protected locally only - no remote site, no schedule, or no snapshot',dc.gap?'warn':'ok','dr:gap')+tile('Not protected',dc.none,'in no protection domain',dc.none?'bad':'ok','dr:none')
+      +tile('DR not reported',dc.unknown,dc.unknown?'Prism did not say - click for the reason per VM':'','','dr:unknown');
+    $('topCpu').innerHTML=top(on,'cpu_pct','%');$('topMem').innerHTML=top(on,'mem_used_pct','%');$('topIo').innerHTML=top(on,'iops','',0);
+    $('dCpu').innerHTML=U.dist(on.map(function(v){return v.cpu_pct;}),'CPU in use');$('dMem').innerHTML=U.dist(on.map(function(v){return v.mem_used_pct;}),'Memory in use');
+    $('clc').textContent=S.cls.length+' cluster(s)';
+    $('clusters').innerHTML=S.cls.length?'<table><thead><tr><th>Cluster</th><th>Hosts</th><th>VMs on</th><th>CPU used</th><th>Memory used</th><th>Storage used</th></tr></thead><tbody>'+S.cls.map(function(c){
+      return '<tr><td><b>'+esc(c.name)+'</b></td><td>'+(c.hosts!=null?c.hosts:'—')+'</td><td>'+(c.vms_on!=null?c.vms_on:'—')+'</td><td>'+U.ubar(c.cpu_used_pct)+'</td><td>'+U.ubar(c.mem_used_pct)+'</td><td>'+U.ubar(c.storage_used_pct)+'</td></tr>';
+    }).join('')+'</tbody></table>':'<div class="empty">No cluster utilization reported yet.</div>';
+    wireTop(); drawVms(); trends();
+  }
+  function wireTop(){[].forEach.call(document.querySelectorAll('[data-vm]'),function(el){if(el._w)return;el._w=1;var go=function(){var k=el.getAttribute('data-vm').split('|'),v=nutanix().vms.filter(function(x){return x.pid===k[0]&&x.id===k[1];})[0];if(v)U.openVm(v);};el.addEventListener('click',go);el.addEventListener('keydown',function(e){if(e.key==='Enter')go();});});}
+  function trends(){
+    var N=nutanix(), pids=N.plats.map(function(p){return p.id;});
+    U.history({days:DAYS}).then(function(r){
+      var ser=(r.series||[]).filter(function(s){return pids.indexOf(s.pid)>=0;}), many=ser.length>1, cpu=[], mem=[], io=[];
+      ser.forEach(function(s,i){var nm=many?' · '+s.label:'';cpu.push({name:'CPU'+nm,color:i?'#79c0ff':U.COL.cpu,points:s.points.map(function(p){return {t:p.t,v:p.cpu};})});mem.push({name:'Memory'+nm,color:i?'#d2a8ff':U.COL.mem,points:s.points.map(function(p){return {t:p.t,v:p.mem};})});io.push({name:'IOPS'+nm,color:i?'#7ee787':U.COL.iops,points:s.points.map(function(p){return {t:p.t,v:p.iops};})});});
+      var n=ser.reduce(function(a,s){return a+s.points.length;},0);
+      $('trc').textContent=n?n+' hourly samples · average of running VMs':'';
+      $('trCpu').innerHTML='<div class="muted" style="font-size:12px;margin-bottom:4px">CPU and memory in use (average of running VMs)</div>'+U.line(cpu.concat(mem),{max:100,unit:'%',limit:80});
+      $('trIo').innerHTML='<div class="muted" style="font-size:12px;margin-bottom:4px">Total IOPS</div>'+U.line(io,{empty:'No IO samples yet.'});
+    }).catch(function(e){$('trCpu').innerHTML='<div class="empty">'+esc(e.status===404?'Graphs need the server update (IT Asset Management) - run update-platform.ps1.':e.message)+'</div>';$('trIo').innerHTML='';});
+  }
+  var COLS=[['name','VM'],['ip','IP address'],['host','Host'],['power','Power'],['vcpus','vCPU'],['mem_gb','Memory (GB)'],['cpu_pct','CPU in use'],['mem_used_pct','Memory in use'],['iops','IOPS'],['io_latency_ms','Latency (ms)'],['io_kbps','IO (MB/s)'],['disk_gb','Disk (GB)'],['guest_os','Guest OS'],['dr','DR replication']];
+  function ipKey(ip){if(!ip)return null;var p=ip.split('.');return p.length===4?p.map(function(x){return ('00'+x).slice(-3);}).join('.'):'~'+ip;}
+  function drawVms(){
+    var N=nutanix(), q=$('q').value.trim().toLowerCase(), pw=$('pw').value;
+    var L=scope(N).vms.filter(function(v){return (!q||[v.name,v.host,v.platform,v.guest_os,v.cluster].concat(v.ips||[],v.macs||[]).join(' ').toLowerCase().indexOf(q)>=0)&&(!pw||(pw==='on'?v.power==='on':v.power!=='on'))&&(!TACT||TACT.indexOf('dr:')!==0||drOf(v).b===TACT.slice(3));});
+    var k=SORT.k,d=SORT.d,val=function(v){return k==='ip'?ipKey((v.ips||[])[0]):k==='dr'?({late:0,none:1,gap:2,unknown:3,ok:4})[drOf(v).b]:v[k];};L.sort(function(a,b){var x=val(a),y=val(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return (typeof x==='number'?x-y:String(x).localeCompare(String(y)))*d;});
+    LIST=L;
+    var lab={'dr:ok':'DR: replicating within RPO','dr:late':'DR: behind RPO','dr:gap':'DR: no DR copy','dr:none':'DR: not protected','dr:unknown':'DR: not reported',all:'all VMs',on:'running VMs',vcpus:'running, most vCPU first',mem_gb:'running, most memory first',cpu_pct:'running, busiest CPU first',mem_used_pct:'running, most memory in use first',iops:'running, most IOPS first',io_latency_ms:'running, slowest IO first',io_kbps:'running, most IO bandwidth first'}[TACT];
+    $('vmf').innerHTML=lab?'<span class="pill info">'+esc(lab)+'</span> <button type="button" class="sm" id="vmclr">Clear</button>':'';
+    var noip=L.filter(function(v){return v.power==='on'&&!(v.ips||[]).length;}).length;
+    $('vmc').textContent=L.length+' VMs'+(N.partial?' (partial)':'')+(noip?' · '+noip+' running without a reported IP':'');
+    $('vms').innerHTML=L.length?'<table><thead><tr>'+COLS.map(function(c){return '<th class="so'+(c[0]===k?' on':'')+'" data-so="'+c[0]+'">'+esc(c[1])+(c[0]===k?(d>0?' ▲':' ▼'):'')+'</th>';}).join('')+'</tr></thead><tbody>'+L.slice(0,2000).map(function(v,i){
+      return '<tr class="vr" data-i="'+i+'" tabindex="0"><td><b>'+esc(v.name)+'</b></td><td class="mono">'+U.ipCell(v)+'</td><td>'+esc(v.host||'—')+'</td><td>'+(v.power==='on'?'<span class="pill ok">on</span>':'<span class="pill off">off</span>')+'</td><td>'+(v.vcpus!=null?v.vcpus:'—')+'</td><td>'+(v.mem_gb!=null?v.mem_gb:'—')+'</td><td>'+U.ubar(v.cpu_pct)+'</td><td>'+U.ubar(v.mem_used_pct)+'</td><td>'+U.f(v.iops)+'</td><td>'+U.f(v.io_latency_ms,1)+'</td><td>'+(v.io_kbps!=null?U.f(v.io_kbps/1024,1):'—')+'</td><td>'+(v.disk_gb!=null?v.disk_gb:'—')+'</td><td class="muted">'+esc(v.guest_os||'')+'</td><td>'+drPill(v)+'</td></tr>';
+    }).join('')+'</tbody></table>'+(L.length>2000?'<p class="note">First 2000 shown - search to narrow.</p>':''):'<div class="empty">No Nutanix VMs match.</div>';
+  }
+  $('vms').addEventListener('click',function(e){var th=e.target.closest('[data-so]');if(th){var k=th.getAttribute('data-so');SORT=SORT.k===k?{k:k,d:-SORT.d}:{k:k,d:/^(name|host|power|guest_os|ip|dr)$/.test(k)?1:-1};drawVms();return;}var tr=e.target.closest('tr.vr');if(tr)U.openVm(LIST[+tr.getAttribute('data-i')],DAYS);});
+  $('vms').addEventListener('keydown',function(e){var tr=e.target.closest('tr.vr');if(tr&&e.key==='Enter')U.openVm(LIST[+tr.getAttribute('data-i')],DAYS);});
+  $('days').addEventListener('click',function(e){var b=e.target.closest('[data-d]');if(!b)return;DAYS=+b.getAttribute('data-d');[].forEach.call(this.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});trends();});
+  function load(){return req('/virt/capacity').then(function(r){CAP=r;draw();$('live').textContent=zybVirtLive.line(r);$('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}).catch(function(e){$('clusters').innerHTML='<p class="err">'+esc(e.status===404?'IT Asset Management on the server does not have Nutanix capacity yet — run the update (update-platform.ps1).':e.message)+'</p>';$('vms').innerHTML='';});}
+  $('cl').addEventListener('change',function(){SEL=this.value;draw();});
+  function hostsOpen(){var N=nutanix(),S=scope(N),names={};S.cls.forEach(function(c){names[c.name]=1;});var H=N.hosts.filter(function(h){return !SEL||names[h.cluster];});
+    Z.open('Nutanix','Hosts ('+H.length+')',H.length?Z.tbl(['Host','Cluster','Model','Serial','VMs on','vCPU on'],H.map(function(h){var v=S.vms.filter(function(x){return x.host===h.name&&x.power==='on';});
+      return [esc(h.name),esc(h.cluster||'—'),esc(h.model||'—'),'<span class="mono">'+esc(h.serial||'—')+'</span>',String(v.length),String(v.reduce(function(n,x){return n+(x.vcpus||0);},0))];})):'<p class="muted">No host reported.</p>');}
+  function tileGo(act){
+    if(act==='hosts')return hostsOpen();
+    if(act==='clusters'){$('clcard').scrollIntoView({behavior:'smooth',block:'start'});return;}
+    TACT=TACT===act?null:act;
+    if(!TACT){$('pw').value='';SORT={k:'cpu_pct',d:-1};}
+    else if(act==='all'){$('pw').value='';SORT={k:'name',d:1};}
+    else if(act.indexOf('dr:')===0){$('pw').value='';SORT={k:'name',d:1};}
+    else{$('pw').value='on';SORT=act==='on'?{k:'name',d:1}:{k:act,d:-1};}
+    [].forEach.call(document.querySelectorAll('.t[data-act]'),function(t){t.setAttribute('aria-pressed',String(t.getAttribute('data-act')===TACT));});
+    drawVms();if(TACT)$('vmcard').scrollIntoView({behavior:'smooth',block:'start'});}
+  [$('kk'),$('metrics'),$('drk')].forEach(function(box){box.addEventListener('click',function(e){var t=e.target.closest('[data-act]');if(t)tileGo(t.getAttribute('data-act'));});
+    box.addEventListener('keydown',function(e){var t=e.target.closest('[data-act]');if(t&&(e.key==='Enter'||e.key===' ')){e.preventDefault();tileGo(t.getAttribute('data-act'));}});});
+  $('vmf').addEventListener('click',function(e){if(e.target.id==='vmclr'){TACT=null;$('pw').value='';SORT={k:'cpu_pct',d:-1};[].forEach.call(document.querySelectorAll('.t[data-act]'),function(t){t.setAttribute('aria-pressed','false');});drawVms();}});
+  $('q').addEventListener('input',drawVms);$('pw').addEventListener('change',drawVms);
+  $('refresh').onclick=load;
+  $('fetch').onclick=function(){zybVirtLive.fetch(this,function(r){CAP=r;draw();$('live').textContent=zybVirtLive.line(r);$('up').textContent='updated '+new Date().toLocaleTimeString('en-GB');});};
+  load();setInterval(function(){if(!document.hidden)load();},30000);   // the server reads the live counters every minute; the page shows them within 30 s
+})();
+</script></body></html>

@@ -1,0 +1,104 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Applications</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left;color:inherit;font:inherit}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer;text-decoration:none;display:inline-block}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn.sm{padding:4px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:default}
+input,select{font:13px "Segoe UI",system-ui,sans-serif;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}
+.rowc{cursor:pointer}.rowc:hover{background:rgba(255,255,255,.04)}
+.flt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}.links{display:flex;gap:8px;flex-wrap:wrap}
+.form{display:grid;gap:10px}.form label{display:grid;gap:3px;font-size:12px;color:var(--mute)}.row2{display:flex;gap:8px;flex-wrap:wrap}.row2>label{flex:1;min-width:140px}
+.pick{max-height:280px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px}.pick label{display:flex;gap:8px;align-items:center;padding:3px 4px;color:var(--text);font-size:13px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Applications · business services · availability</div><h1>Applications</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <button type="button" class="btn pri" id="new" hidden>＋ New application</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="banner">Each application with the servers it runs on: is it up, does it survive one server failing (redundancy), does it have a DR copy — and who owns it. An application is the servers you group under its name; servers not yet grouped are guessed from their names and marked <b>guessed</b> until you confirm them.</div>
+<div class="k" id="kk"><div class="empty">Loading…</div></div>
+<div class="card"><h2>All applications <span class="c" id="ac"></span></h2>
+  <div class="flt"><input id="q" placeholder="Search application or server…" style="flex:1;min-width:200px"><select id="fst"><option value="">All</option><option value="problem">Down or degraded</option><option value="spof">Single server</option><option value="nodr">No DR</option><option value="guessed">Guessed (not confirmed)</option></select></div>
+  <div class="tw" id="tbl"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>More on applications</h2><div class="links"><a class="btn" href="ai-app-manager.html">🤖 AI Application Manager</a><a class="btn" href="apm-claims-portal.html">⏱ Claims Portal (APM)</a><a class="btn" href="portal-traffic.html">🌐 Portal Traffic</a><a class="btn" href="server-availability.html">🖥 Server Availability</a><a class="btn" href="asset-ownership.html">👤 Business owners</a><a class="btn" href="databases.html">🗄 Databases</a></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', AV=null, OWN={}, ERR='';
+  var ISS={'single-server':'single server','no-dr':'no DR','dr-offline':'DR offline','no-redundancy-now':'running on fewer servers','service-down':'down'};
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(m,url,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,url);x.withCredentials=true;x.timeout=60000;if(b!==undefined)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(b!==undefined?JSON.stringify(b):null);});}
+  function who(){return new Promise(function(ok){var x=new XMLHttpRequest();x.open('GET','/dashboards/whoami.json');x.onload=function(){try{ok(JSON.parse(x.responseText));}catch(e){ok(null);}};x.onerror=function(){ok(null);};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function pill(t,c){return '<span class="pill p-'+c+'">'+esc(t)+'</span>';}
+  function tile(l,v,s,cls,f){return '<button type="button" class="t '+(cls||'')+'" data-f="'+esc(f||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function stPill(s){return pill({ok:'healthy',warning:'warning',spof:'single server',degraded:'degraded',down:'down'}[s]||s,{ok:'ok',warning:'warn',spof:'warn',degraded:'bad',down:'bad'}[s]||'mut');}
+  function hostSt(s){return pill(s,{online:'ok',offline:'bad'}[s]||'mut');}
+  var key=function(s){return String(s||'').trim().toLowerCase();};
+
+  function load(){
+    Promise.all([who(),req('GET','/api/soc/netops/avail').catch(function(e){ERR=e.message;return null;}),req('GET','/api/itam/ownership/services').catch(function(){return null;})]).then(function(r){
+      if(r[0]){var rl=String(r[0].role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}
+      AV=r[1];OWN={};((r[2]&&r[2].services)||[]).forEach(function(s){OWN[key(s.service)]=s;});
+      $('new').hidden=!can('admin')||!AV;draw();$('up').textContent='read '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    });
+  }
+  function hostsOf(g){return g.members.map(function(id){return AV.items.filter(function(h){return h.id===id;})[0];}).filter(Boolean);}
+  function draw(){
+    if(!AV){$('kk').innerHTML='<p class="err">Server Availability is not reachable ('+esc(ERR)+') — applications are built from it.</p>';$('tbl').innerHTML='';return;}
+    var G=AV.groups||[],conf=G.filter(function(g){return !g.inferred;});
+    var down=G.filter(function(g){return g.status==='down'||g.status==='degraded';}).length,spof=G.filter(function(g){return g.issues.indexOf('single-server')>=0;}).length,nodr=G.filter(function(g){return g.issues.indexOf('no-dr')>=0;}).length;
+    $('kk').innerHTML=tile('Applications',G.length,conf.length+' confirmed · '+(G.length-conf.length)+' guessed','info','')+tile('Down or degraded',down,'now',down?'bad':'ok','problem')
+      +tile('Single server',spof,'one failure stops it',spof?'warn':'ok','spof')+tile('No DR copy',nodr,'no server at the DR site',nodr?'warn':'ok','nodr')
+      +tile('Servers',AV.summary.total,AV.summary.online+' online · '+AV.summary.offline+' offline',AV.summary.offline?'warn':'ok','');
+    var q=key($('q').value),f=$('fst').value;
+    var rows=G.filter(function(g){if(f==='problem'&&!(g.status==='down'||g.status==='degraded'))return false;if(f==='spof'&&g.issues.indexOf('single-server')<0)return false;if(f==='nodr'&&g.issues.indexOf('no-dr')<0)return false;if(f==='guessed'&&!g.inferred)return false;
+      return !q||(g.name+' '+hostsOf(g).map(function(h){return h.name+' '+h.ip;}).join(' ')).toLowerCase().indexOf(q)>=0;});
+    var order={down:0,degraded:1,spof:2,warning:3,ok:4};rows.sort(function(a,b){return (order[a.status]-order[b.status])||a.name.localeCompare(b.name);});
+    $('ac').textContent=rows.length+' of '+G.length;
+    $('tbl').innerHTML=rows.length?'<table><thead><tr><th>Application</th><th>Status</th><th>Production</th><th>DR</th><th>Redundant</th><th>Issues</th><th>Business owner</th><th>IT owner</th></tr></thead><tbody>'+rows.map(function(g){var o=OWN[key(g.name)]||{};
+      return '<tr class="rowc" data-app="'+esc(g.key)+'"><td><b>'+esc(g.name)+'</b>'+(g.inferred?' '+pill('guessed','mut'):'')+(g.critical?' '+pill('critical','bad'):'')+'</td><td>'+stPill(g.status)+'</td><td>'+g.production_online+'/'+g.production+' online</td><td>'+(g.dr?g.dr_online+'/'+g.dr+' online':'<span class="muted">none</span>')+'</td><td>'+(g.ha?pill('yes','ok'):pill('no','warn'))+'</td><td>'+(g.issues.map(function(i){return esc(ISS[i]||i);}).join(', ')||'<span class="muted">—</span>')+'</td><td>'+(esc(o.business_owner)||'<span class="muted">—</span>')+'</td><td>'+(esc(o.it_owner)||'<span class="muted">—</span>')+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">'+(G.length?'No application matches.':'No servers in Server Availability yet — add them there (or sync from the asset inventory), then group them into applications here.')+'</div>';
+  }
+  function openApp(k){var g=(AV.groups||[]).filter(function(x){return x.key===k;})[0];if(!g)return;var hs=hostsOf(g),o=OWN[key(g.name)]||{};
+    var body=Z.kv([['Status',stPill(g.status)],['Production',g.production_online+'/'+g.production+' online'],['DR',g.dr?g.dr_online+'/'+g.dr+' online':'none'],['Redundant',g.ha?'yes':'no'],['Business owner',esc(o.business_owner)||'—'],['IT owner',esc(o.it_owner)||'—']]);
+    if(g.inferred)body+='<p class="note">This grouping is guessed from the server names. Confirm it to make it an application.</p>';
+    body+=Z.sec('Servers','<table><thead><tr><th>Server</th><th>IP</th><th>Role</th><th>Status</th><th>Availability</th>'+(can('admin')?'<th></th>':'')+'</tr></thead><tbody>'+hs.map(function(h){var a=h.availability;
+      return '<tr><td>'+esc(h.name)+(h.dr_site?' '+pill('DR site','info'):'')+'</td><td class="mono">'+esc(h.ip)+'</td><td>'+(can('admin')?'<select data-role="'+esc(h.id)+'">'+['','primary','secondary','dr','standalone'].map(function(r){return '<option value="'+r+'"'+(r===(h.role||'')?' selected':'')+'>'+(r||'—')+'</option>';}).join('')+'</select>':esc(h.role||'—'))+'</td><td>'+hostSt(h.status)+'</td><td>'+(a&&a.d30!=null&&isFinite(a.d30)?a.d30+'% (30 d)':'<span class="muted">—</span>')+'</td>'
+        +(can('admin')?'<td><button class="btn sm" data-rm="'+esc(h.id)+'">Remove</button></td>':'')+'</tr>';}).join('')+'</tbody></table>');
+    if(can('admin'))body+='<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">'+(g.inferred?'<button class="btn pri" data-confirm="'+esc(g.key)+'">✔ Confirm as application</button>':'')+'<button class="btn" data-addsrv="'+esc(g.key)+'">＋ Add servers</button><button class="btn" data-rename="'+esc(g.key)+'">✎ Rename</button><a class="btn" href="asset-ownership.html">Set owners</a></div>';
+    Z.open('Application',g.name,body);
+  }
+  function setHosts(ids,patch){return Promise.all(ids.map(function(id){return req('POST','/api/soc/netops/avail/hosts',Object.assign({id:id},patch));}));}
+  function picker(title,sub,name,exclude,cb){var hs=(AV.items||[]).filter(function(h){return exclude.indexOf(h.id)<0;}).sort(function(a,b){return a.name.localeCompare(b.name);});
+    Z.open(title,sub,'<div class="form">'+(name!==null?'<label>Application name<input id="p-name" value="'+esc(name)+'" placeholder="ERP"></label>':'')+'<input id="p-q" placeholder="Filter servers…"><div class="pick" id="p-list">'+hs.map(function(h){return '<label data-s="'+esc((h.name+' '+h.ip+' '+(h.service||'')).toLowerCase())+'"><input type="checkbox" value="'+esc(h.id)+'"> '+esc(h.name)+' <span class="muted mono">'+esc(h.ip)+'</span>'+(h.service?' <span class="muted">in '+esc(h.service)+'</span>':'')+'</label>';}).join('')+'</div><div><button class="btn pri" id="p-ok">Save</button></div></div>');
+    $('p-q').addEventListener('input',function(){var v=this.value.toLowerCase();[].forEach.call(document.querySelectorAll('#p-list label'),function(l){l.style.display=l.getAttribute('data-s').indexOf(v)>=0?'':'none';});});
+    $('p-ok').addEventListener('click',function(){var ids=[].map.call(document.querySelectorAll('#p-list input:checked'),function(i){return i.value;});var n=name!==null?$('p-name').value.trim():null;if(name!==null&&!n){toast('Give the application a name');return;}if(!ids.length){toast('Choose at least one server');return;}this.disabled=true;cb(ids,n);});}
+  document.addEventListener('click',function(e){var t=e.target,el;if(!t.closest)return;
+    if((el=t.closest('[data-f]'))){$('fst').value=el.getAttribute('data-f');draw();return;}
+    if((el=t.closest('[data-app]'))&&!t.closest('#zd')){openApp(el.getAttribute('data-app'));return;}
+    var g=function(k){return (AV.groups||[]).filter(function(x){return x.key===k;})[0];};
+    if((el=t.closest('[data-confirm]'))){var x=g(el.getAttribute('data-confirm'));setHosts(x.members,{service:x.name}).then(function(){toast('Confirmed: '+x.name);Z.close();load();},function(er){toast(er.message);});return;}
+    if((el=t.closest('[data-rename]'))){var y=g(el.getAttribute('data-rename'));var n=window.prompt('New name for '+y.name,y.name);if(!n||!n.trim())return;setHosts(y.members,{service:n.trim().slice(0,80)}).then(function(){toast('Renamed');Z.close();load();},function(er){toast(er.message);});return;}
+    if((el=t.closest('[data-addsrv]'))){var z=g(el.getAttribute('data-addsrv'));picker('Add servers',z.name,null,z.members,function(ids){setHosts(ids.concat(z.inferred?z.members:[]),{service:z.name}).then(function(){toast(ids.length+' server(s) added');Z.close();load();},function(er){toast(er.message);});});return;}
+    if((el=t.closest('[data-rm]'))){if(!window.confirm('Remove this server from the application? The server stays monitored.'))return;setHosts([el.getAttribute('data-rm')],{service:''}).then(function(){toast('Removed');Z.close();load();},function(er){toast(er.message);});return;}
+  });
+  document.addEventListener('change',function(e){var el=e.target;if(el.getAttribute&&el.getAttribute('data-role')){setHosts([el.getAttribute('data-role')],{role:el.value}).then(function(){toast('Role saved');load();},function(er){toast(er.message);});}});
+  $('new').addEventListener('click',function(){picker('New application','Name it and pick its servers','',[],function(ids,n){setHosts(ids,{service:n}).then(function(){toast('Application '+n+' created with '+ids.length+' server(s)');Z.close();load();},function(er){toast(er.message);});});});
+  $('refresh').addEventListener('click',load);['q','fst'].forEach(function(id){$(id).addEventListener('input',draw);});
+  load();
+})();
+</script>
+</body></html>

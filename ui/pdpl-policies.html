@@ -1,0 +1,90 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PDPL Policies</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}.mut{font-size:11.5px;color:var(--tblr-secondary)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+pre.letter{white-space:pre-wrap;font:13px/1.55 "Segoe UI",system-ui,sans-serif;background:rgba(255,255,255,.03);padding:12px;border-radius:8px}pre.letter[dir=rtl]{text-align:right}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">Governance, Risk &amp; Compliance · Saudi PDPL (SDAIA)</div><h2 class="page-title">PDPL Policies</h2></div>
+ <div class="col-auto ms-auto d-flex align-items-center gap-2"><a class="btn" href="grc-policies.html#drafts"><i class="ti ti-file-pencil me-1"></i>Drafts on GRC Policies</a><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="d-flex flex-wrap gap-1 mb-3" id="pdplnav"></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>The policies and procedures PDPL expects {{org.short}} to have, checked against the approved IT policy register and the GRC drafts. For each: whether it is <b>approved</b>, in <b>review</b>, a <b>draft</b> or <b>missing</b>, what it must cover (drawn from the law and its regulations - an outline, not policy text), the page that runs it day to day and what the registers show. <b>Start a draft</b> creates it on GRC Policies &amp; Controls with that outline; it is written there and approved by an administrator who did not write it.</div></div></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<section class="card mb-3"><div class="card-header"><h3 class="card-title">PDPL policy set</h3><div class="card-actions"><select class="form-select form-select-sm" id="filter" aria-label="Filter"><option value="">All</option><option value="missing">Missing</option><option value="draft">Draft or in review</option><option value="approved">Approved</option></select></div></div>
+<div class="table-responsive" id="list"><div class="card-body text-secondary">Loading…</div></div><div class="card-footer small text-secondary" id="note"></div></section>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, esc=P.esc, $=P.$;
+
+  var V=null, STC={approved:'green',in_review:'azure',draft:'yellow',missing:'red'}, STL={approved:'approved',in_review:'in review',draft:'draft',missing:'missing'};
+  function draw(){var f=$('filter').value,rows=(V.policies||[]).filter(function(p){return !f||(f==='draft'?(p.state==='draft'||p.state==='in_review'):p.state===f);});
+    $('list').innerHTML=P.table([['Policy',function(p){return '<b>'+esc(p.title)+'</b><div class="mut">'+esc(p.id)+' · '+esc(p.ref)+'</div>';}],
+      ['State',function(p){return P.badge(STL[p.state],STC[p.state])+(p.review_overdue?' '+P.badge('review overdue','orange'):'')+(p.doc?'<div class="mut">'+esc(p.doc)+(p.version?' v'+esc(p.version):'')+'</div>':'')+(p.revision?'<div class="mut">revision '+esc(p.revision.doc)+' · '+esc(STL[p.revision.state]||p.revision.state)+'</div>':'');}],
+      ['In practice',function(p){return '<a href="'+esc(p.page)+'">'+esc(p.page.replace('.html','').replace(/#.*/,''))+'</a>'+(p.in_practice?'<div class="mut">'+esc(p.in_practice)+'</div>':'');}],
+      ['',acts]],rows,function(p){return 'class="rowc" data-id="'+esc(p.id)+'"';});}
+  // what each row offers: write it from the outline, upload the one the organisation already has, send it for approval, decide
+  var ROLE='viewer',RANK={viewer:0,analyst:0,operator:1,admin:2},can=function(r){return (RANK[ROLE]||0)>=RANK[r];};
+  function acts(p){var b=function(a,t,cls){return '<button type="button" class="btn btn-sm '+(cls||'')+'" data-act="'+a+'" data-pid="'+esc(p.id)+'">'+esc(t)+'</button> ';};
+    var r=p.revision;   // a revision of an approved policy: the approved one stays in force, the revision is what moves
+    if(!can('operator'))return p.state==='in_review'||(r&&r.state==='in_review')?'<span class="mut">waiting for approval</span>':'';
+    if(r&&r.state==='draft')return b('upload','Upload document')+b('submit','Submit revision','btn-primary');
+    if(r&&r.state==='in_review')return can('admin')?b('decide','Review revision','btn-primary'):'<span class="mut">revision waiting for an administrator</span>';
+    if(p.state==='missing')return (p.can_draft?b('draft',p.full_draft?'Start from the full draft':'Start a draft','btn-primary'):'')+b('upload','Upload our policy');
+    if(p.state==='draft')return b('upload','Upload document')+b('submit','Submit for approval','btn-primary');
+    if(p.state==='in_review')return can('admin')?b('decide','Review & approve','btn-primary'):'<span class="mut">waiting for an administrator</span>';
+    return b('upload','Upload new version');}
+  function load(){return P.req('GET','/pdpl/policies').then(function(r){V=r;var c=r.counts;
+    $('kpis').innerHTML=P.tile(c.approved+' / '+r.total,'Approved')+P.tile(c.in_review,'In review')+P.tile(c.draft,'Draft')+P.tile(c.missing,'Missing',c.missing?'text-red':'');
+    $('note').textContent=r.note;draw();}).catch(function(e){P.fail($('list'),e);});}
+  function open(p){Z.open('PDPL policy',p.id+' · '+p.title,Z.kv([['State',P.badge(STL[p.state],STC[p.state])],['Reference',esc(p.ref)],['Document',esc(p.doc||'—')+(p.version?' v'+esc(p.version):'')],['Owner',esc(p.owner||'—')],['Approved by',esc(p.approved_by||'—')],['Next review',esc(p.next_review||'—')],['In practice','<a href="'+esc(p.page)+'">'+esc(p.page)+'</a> '+esc(p.in_practice||'')]])
+    +Z.sec('What it must cover (from the law - an outline)','<ul class="small">'+p.covers.map(function(c){return '<li>'+esc(c)+'</li>';}).join('')+'</ul>')
+    +(p.can_draft?'<button type="button" class="btn btn-primary" data-draft="'+esc(p.id)+'">'+(p.full_draft?'Start from the full first draft':'Start a draft with this outline')+'</button> '+(p.full_draft?'<div class="small text-secondary mt-1">A full first draft is ready: it opens on GRC Policies &amp; Controls with every section written. Complete the [bracketed] items, then submit it for approval by an administrator who did not write it.</div>':''):'')+(can('operator')?acts(p):''));}
+  // upload: PDF or Word, checked by its content on the server (6 MB); the owner can send it for approval in the same step
+  var MAXF=6*1024*1024;
+  function uploadForm(p){Z.open(p.state==='approved'?'Upload a new version':'Upload the policy',p.id+' · '+p.title,
+    '<p class="small">'+(p.state==='missing'?('The policy ' + ZYB_ORG.short + ' already has: it becomes this policy\'s draft on GRC Policies with the document attached.'):p.state==='approved'?'A revision of '+esc(p.doc||'the approved policy')+': it goes through approval again; the approved version stays in force until then.':'The document is attached to draft '+esc(p.doc)+' (it replaces any earlier upload).')+'</p>'
+    +'<label class="small d-block mt-2">Document (PDF or Word, up to 6 MB)</label><input type="file" id="pu-file" accept=".pdf,.docx,.doc">'
+    +'<label class="small d-block mt-2">Owner (who maintains it)</label><input id="pu-owner" maxlength="120" value="'+esc(p.owner||'')+'" placeholder="e.g. DPO">'
+    +'<label class="small d-block mt-2"><input type="checkbox" id="pu-submit" checked> Submit for approval now</label>'
+    +'<p class="mut small mt-1">An administrator who did not upload it approves it (four-eyes). Every step is in the audit log.</p>'
+    +'<div class="mt-2"><button type="button" class="btn btn-primary" id="pu-go" data-pid="'+esc(p.id)+'">Upload</button> <span class="mut small" id="pu-msg"></span></div>');}
+  function doUpload(id,btn){var f=$('pu-file').files[0],msg=$('pu-msg');
+    if(!f){msg.textContent='Choose the document first.';return;}
+    if(!/\.(pdf|docx|doc)$/i.test(f.name)){msg.textContent='Only PDF or Word documents.';return;}
+    if(f.size>MAXF){msg.textContent='The file is larger than 6 MB - save a smaller PDF.';return;}
+    btn.disabled=true;msg.textContent='Uploading…';var rd=new FileReader();
+    rd.onload=function(){var b64=String(rd.result).split(',')[1]||'';
+      P.req('POST','/pdpl/policies/'+encodeURIComponent(id)+'/upload',{filename:f.name,content_b64:b64,owner:$('pu-owner').value.trim()||undefined,submit:$('pu-submit').checked})
+        .then(function(r){P.toast(r.title+': '+(r.state==='in_review'?'uploaded and sent for approval':'document uploaded')+' ('+r.doc+')');if(Z.close)Z.close();load();})
+        .catch(function(e){btn.disabled=false;msg.textContent=P.why(e);});};
+    rd.onerror=function(){btn.disabled=false;msg.textContent='The file could not be read.';};rd.readAsDataURL(f);}
+  function submit(id,btn){btn.disabled=true;P.req('POST','/pdpl/policies/'+encodeURIComponent(id)+'/submit',{}).then(function(r){P.toast(r.title+': sent for approval');if(Z.close)Z.close();load();}).catch(function(e){btn.disabled=false;P.toast(P.why(e));});}
+  // review: the approver reads the submitted document, then approves or rejects with a reason
+  function decideForm(p0){var p=p0.revision?Object.assign({},p0,p0.revision):p0;Z.open(p0.revision?'Review the revision':'Review & approve',p.id+' · '+p.title,'<p class="small">'+(p0.revision?'Revision of approved '+esc(p0.doc)+' - draft ':'Draft ')+esc(p.doc)+(p.version?' v'+esc(p.version):'')+(p.owner?' · owner '+esc(p.owner):'')+'.</p>'
+    +'<button type="button" class="btn btn-sm" data-dl="'+esc(p.doc)+'">Download the submitted document</button> <a class="btn btn-sm" href="grc-policies.html#drafts">Open in GRC</a>'
+    +'<label class="small d-block mt-3">Note (required to reject)</label><textarea id="pd-note" maxlength="500" rows="3" style="width:100%"></textarea>'
+    +'<div class="mt-2"><button type="button" class="btn btn-primary" data-decide="approve" data-pid="'+esc(p.id)+'">Approve</button> <button type="button" class="btn" data-decide="reject" data-pid="'+esc(p.id)+'">Reject</button> <span class="mut small" id="pd-msg"></span></div>'
+    +'<p class="mut small mt-2">You cannot approve a policy you wrote, changed or uploaded - another administrator does (four-eyes).</p>');}
+  function decide(id,d,btn){var note=$('pd-note').value.trim();if(d==='reject'&&note.length<5){$('pd-msg').textContent='Say why it is rejected (at least 5 characters).';return;}btn.disabled=true;
+    P.req('POST','/pdpl/policies/'+encodeURIComponent(id)+'/decide',{decision:d,note:note||undefined}).then(function(r){P.toast(r.title+': '+(d==='approve'?'approved':'rejected'));if(Z.close)Z.close();load();}).catch(function(e){btn.disabled=false;$('pd-msg').textContent=P.why(e);});}
+  function download(id,btn){btn.disabled=true;P.req('GET','/grc/drafts/'+encodeURIComponent(id)+'/document').then(function(d){btn.disabled=false;var bin=atob(d.content_b64),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([u],{type:'application/octet-stream'}));a.download=d.filename;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);}).catch(function(e){btn.disabled=false;P.toast(P.why(e));});}
+  function start(id,btn){btn.disabled=true;P.req('POST','/pdpl/policies/'+encodeURIComponent(id)+'/draft',{}).then(function(r){P.toast(r.title+': draft '+r.doc+' created on GRC Policies');if(Z.close)Z.close();load();}).catch(function(e){btn.disabled=false;P.toast(P.why(e));});}
+  $('filter').addEventListener('change',draw);
+  var byId=function(id){return (V&&V.policies||[]).filter(function(p){return p.id===id;})[0];};
+  document.addEventListener('click',function(ev){var b=ev.target.closest('[data-draft]');if(b){ev.stopPropagation();start(b.getAttribute('data-draft'),b);return;}
+    var x=ev.target.closest('[data-act]');if(x){ev.stopPropagation();var p=byId(x.getAttribute('data-pid')),a=x.getAttribute('data-act');if(!p)return;
+      if(a==='draft')start(p.id,x);else if(a==='upload')uploadForm(p);else if(a==='submit')submit(p.id,x);else if(a==='decide')decideForm(p);return;}
+    if((x=ev.target.closest('#pu-go'))){doUpload(x.getAttribute('data-pid'),x);return;}
+    if((x=ev.target.closest('[data-decide]'))){decide(x.getAttribute('data-pid'),x.getAttribute('data-decide'),x);return;}
+    if((x=ev.target.closest('[data-dl]'))){download(x.getAttribute('data-dl'),x);return;}
+    var tr=ev.target.closest('#list tr[data-id]');if(tr&&V&&!ev.target.closest('a'))open(V.policies.find(function(p){return p.id===tr.getAttribute('data-id');}));});
+  $('refresh').addEventListener('click',function(){load();});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var r=String(JSON.parse(w.responseText).role||'').toLowerCase();if(RANK[r]!=null)ROLE=r;}catch(e){/* unknown: shown as a viewer, the server decides anyway */}load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

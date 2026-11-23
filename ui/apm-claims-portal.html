@@ -1,0 +1,86 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Claims Portal Performance</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--info);border-radius:12px;padding:18px;margin:0 0 12px}
+.hero .txt{flex:1 1 380px;min-width:0}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--info);text-transform:uppercase}.hero h1{margin:6px 0;font-size:24px;color:var(--title)}.hero p{margin:0;color:var(--mute)}
+.live{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;border:1px solid rgba(63,185,80,.5);color:var(--ok);letter-spacing:.06em}.live[hidden]{display:none}
+.rings{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}.ring{width:120px;text-align:center}.ring svg{display:block;margin:0 auto}.ring .rl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-top:6px}.ring .rs{font-size:11px;color:var(--mute)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}.t .v{font-size:24px;font-weight:700;color:var(--title)}.t .s{font-size:12px;color:var(--mute)}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.na .v{color:var(--mute);font-size:15px;font-weight:600}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{margin-left:auto;display:flex;gap:6px;align-items:center}
+button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 11px;cursor:pointer}button:hover{border-color:#4a5162}button.sm{padding:3px 9px;font-size:12px}
+button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}.tw{overflow-x:auto}
+.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.empty{color:var(--mute);padding:6px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}.err{color:var(--bad)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}
+.bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 56px;gap:8px;align-items:center;margin:5px 0;font-size:13px}.bar .tr{height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}.bar .fl{height:100%;border-radius:5px}.bar .n{text-align:right;font-variant-numeric:tabular-nums}
+.na{color:var(--mute);background:var(--raise);border:1px dashed var(--border);border-radius:9px;padding:10px;font-size:13px}
+.top{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin:0 0 8px}
+@media print{.top{display:none}body{background:#fff;color:#000}.card,.t,.hero{background:#fff;border-color:#ccc}}
+select{font:inherit;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:5px 8px;max-width:340px}
+</style></head><body><main>
+<div class="top"><label class="muted" for="mon">Application monitor</label><select id="mon" aria-label="Application monitor"><option value="">Loading…</option></select><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<section class="hero"><div class="txt"><div class="eb">Application performance · Applications Manager<span class="live" id="live" hidden>LIVE DATA</span></div><h1 id="title">Claims Portal performance</h1>
+<p>Response time, calls, errors, JVM memory and the database behind the application - every figure is an attribute Applications Manager measured for the chosen monitor, read when the page opens. An attribute it does not measure is not shown; nothing on this page is sample data.</p></div></section>
+<div class="k" id="kk"><div class="empty">Loading…</div></div>
+<div class="g">
+  <div class="card"><h2>⚡ Response time &amp; calls</h2><div id="g-perf"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>❗ Errors</h2><div id="g-err"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>☕ JVM &amp; memory</h2><div id="g-jvm"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🛢️ Database</h2><div id="g-db"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>🔔 Active alarms on this monitor <span class="c"><button type="button" class="sm" data-go="apm.html">Applications Manager →</button></span></h2><div id="al"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>📋 Other attributes</h2><div id="g-other"><div class="empty">Loading…</div></div></div>
+</div>
+<p class="note">Thresholds and their colours are Applications Manager's own (the status it reports for each attribute). History and trends are kept in Applications Manager - open the monitor there for its graphs.</p>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);}, MON=[], AL=[];
+  function get(url){return new Promise(function(ok){var x=new XMLHttpRequest();x.zybQuiet=true;x.open('GET',url);x.withCredentials=true;x.timeout=60000;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }ok({status:x.status,json:j&&typeof j==='object'?j:null});};x.onerror=x.ontimeout=function(){ok({status:0,json:null});};x.send();});}
+  function why(r,what){return r.status===403?'needs the operator role to read '+what:r.status===404?what+' is not installed on the server':r.status===0?what+' did not answer':r.json&&r.json.error?String(r.json.error):!r.json?what+' did not answer with data (HTTP '+r.status+')':'';}
+  function na(t){return '<div class="na">'+esc(t)+'</div>';}
+  function tile(l,v,s,c){return '<div class="t '+(c||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function st(s){return s==='critical'?'bad':s==='warning'?'warn':s==='clear'?'ok':'';}
+  // which card an attribute belongs to - by its name as Applications Manager reports it
+  var GROUPS=[['g-err',/error|exception|fail|5\d\d|4\d\d|fault|reject/i],['g-jvm',/jvm|heap|memory|gc\b|garbage|thread|class(es)? loaded|perm|metaspace|cpu/i],['g-db',/database|\bdb\b|jdbc|connection pool|sql|query|cursor|tablespace|session/i],['g-perf',/response|latency|time|throughput|request|call|hits|transactions|per (sec|min)|apdex|availability/i]];
+  function groupOf(a){for(var i=0;i<GROUPS.length;i++)if(GROUPS[i][1].test(a.name))return GROUPS[i][0];return 'g-other';}
+  function rows(L){return L.length?'<div class="tw"><table><thead><tr><th>Attribute</th><th>Value</th><th>Status</th></tr></thead><tbody>'+L.map(function(a){return '<tr><td>'+esc(a.name)+'</td><td class="mono">'+esc(a.value)+(a.unit?' '+esc(a.unit):'')+'</td><td>'+(a.status&&a.status!=='unknown'?'<span class="pill '+st(a.status)+'">'+esc(a.status==='clear'?'ok':a.status)+'</span>':'<span class="muted">–</span>')+'</td></tr>';}).join('')+'</tbody></table></div>':'';}
+  function empty(msg){['g-perf','g-err','g-jvm','g-db','g-other'].forEach(function(id){$(id).innerHTML=na(msg);});}
+  function drawMon(m,r){
+    $('title').textContent=(m?m.name:'Application')+' performance';
+    var alarms=AL.filter(function(a){return m&&a.resource_id===m.id&&a.severity!=='clear';});
+    $('kk').innerHTML=m?tile('Availability',m.availability||'unknown',m.host||'',m.availability==='up'?'ok':m.availability==='down'?'bad':'na')+tile('Health',m.health==='clear'?'ok':m.health||'unknown',m.message||'',st(m.health)||'na')
+      +tile('Active alarms',alarms.length,alarms.filter(function(a){return a.severity==='critical';}).length+' critical',alarms.length?'warn':'ok')+tile('Last polled',m.last_polled||'–',m.type||'',''):'';
+    $('al').innerHTML=alarms.length?'<div class="tw"><table><thead><tr><th>Severity</th><th>Attribute</th><th>Message</th></tr></thead><tbody>'+alarms.map(function(a){return '<tr><td><span class="pill '+st(a.severity)+'">'+esc(a.severity)+'</span></td><td>'+esc(a.attribute||'')+'</td><td class="muted">'+esc(a.message||'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No active alarm on this monitor.</div>';
+    if(!r){empty('Choose a monitor.');return;}
+    if(!(r.status===200&&r.json&&Array.isArray(r.json.attributes))){empty(why(r,'this monitor\'s attributes')||'Applications Manager did not return the attributes.');return;}
+    var A=r.json.attributes,G={'g-perf':[],'g-err':[],'g-jvm':[],'g-db':[],'g-other':[]};A.forEach(function(a){G[groupOf(a)].push(a);});
+    var label={'g-perf':'response time or call','g-err':'error','g-jvm':'JVM or memory','g-db':'database','g-other':'other'};
+    Object.keys(G).forEach(function(id){$(id).innerHTML=rows(G[id])||na(A.length?'Applications Manager reports no '+label[id]+' attribute for this monitor - add the matching monitor type (for example an APM Insight / Java agent for JVM and calls, a database monitor for the database).':'Applications Manager returned no attributes for this monitor yet.');});
+    $('live').hidden=false;
+  }
+  function loadMon(){var id=$('mon').value,m=MON.filter(function(x){return x.id===id;})[0];if(!m){drawMon(null,null);return;}
+    get('/api/soc/integrations/apm/monitors/'+encodeURIComponent(id)).then(function(r){drawMon(m,r);$('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});});}
+  function load(){Promise.all([get('/api/soc/integrations/apm/status'),get('/api/soc/integrations/apm/monitors'),get('/api/soc/integrations/apm/alarms')]).then(function(rs){
+    var s=rs[0],m=rs[1];AL=rs[2].json&&Array.isArray(rs[2].json.items)?rs[2].json.items:[];
+    var msg=s.json&&s.json.configured===false?'Applications Manager is not connected - set it up under Connections & Setup (ManageEngine Applications Manager), then add a monitor for the Claims portal.':!(m.json&&Array.isArray(m.json.items))?why(m,'Applications Manager')||why(s,'Applications Manager')||'Applications Manager did not answer.':'';
+    MON=msg?[]:m.json.items.filter(function(x){return x.managed!==false&&x.id;});
+    if(!msg&&!MON.length)msg='Applications Manager is connected but reports no managed monitor - add one for the Claims portal.';
+    if(msg){$('mon').innerHTML='<option value="">no monitor</option>';$('kk').innerHTML=na(msg);empty(msg);$('al').innerHTML=na(msg);$('live').hidden=true;$('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});return;}
+    var keep=$('mon').value||(location.hash||'').slice(1),def=MON.filter(function(x){return /claim/i.test(x.name);})[0]||MON[0];
+    MON.sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+    $('mon').innerHTML=MON.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.name)+(x.type?' · '+esc(x.type):'')+'</option>';}).join('');
+    $('mon').value=MON.some(function(x){return x.id===keep;})?keep:def.id;loadMon();});}
+  $('mon').addEventListener('change',function(){location.hash=$('mon').value;loadMon();});
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)location.href=b.getAttribute('data-go');});
+  $('refresh').addEventListener('click',load);
+  load();setInterval(function(){if(!document.hidden)load();},120000);
+})();
+</script>
+</body></html>

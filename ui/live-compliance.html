@@ -1,0 +1,289 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Live Compliance</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.card h3{margin:14px 0 8px;font-size:13px;color:var(--title)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}
+.stmt{font-size:14.5px;line-height:1.6}.stmt p{margin:0 0 8px}.stmt .b{color:var(--title);font-weight:600}
+.chk{list-style:none;margin:0;padding:0}.chk li{padding:3px 0}.chk .y{color:var(--ok);font-weight:700}.chk .n{color:var(--bad);font-weight:700}
+.kv{display:grid;grid-template-columns:170px 1fr;gap:4px 10px;font-size:13px}.kv dt{color:var(--mute)}.kv dd{margin:0;overflow-wrap:anywhere}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+ul.plain{margin:0;padding-left:18px}ul.plain li{margin:3px 0}
+@media print{.top button,.noprint{display:none!important}body{background:#fff;color:#000}.card,.t{border-color:#bbb;background:#fff;break-inside:avoid}.banner{color:#000;background:#f3f6fa}.card h2,.t .v,.stmt .b{color:#000}.muted,.note,th{color:#444}}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--panel);color:var(--mute);border:1px solid var(--edge);border-radius:999px;padding:6px 13px;cursor:pointer}.tabs button.on{background:#e7eaf0;color:#0a0b0f;border-color:#e7eaf0}.tabs button i{font-style:normal;opacity:.7;margin-left:4px}
+select,input.in{background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:13px}.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+[hidden]{display:none!important}
+.fwt{--c:#8C93A1;display:inline-block;font:600 11px ui-monospace,Consolas,monospace;color:color-mix(in srgb,var(--c) 85%,#fff);background:color-mix(in srgb,var(--c) 12%,transparent);border:1px solid color-mix(in srgb,var(--c) 32%,transparent);border-radius:5px;padding:1px 6px;margin:1px 3px 1px 0;white-space:nowrap}
+td.code{font-family:Consolas,monospace;white-space:nowrap}td a{color:var(--info);text-decoration:none}td a:hover{text-decoration:underline}
+.plist a{display:inline-block;margin:1px 10px 1px 0}
+tr.hit td{background:rgba(121,184,255,.09)}
+.bar{height:6px;border-radius:3px;background:var(--raise);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--c,#3fb950)}
+
+.fwsel{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:10px 14px;margin:0 0 12px}
+.fwsel label{font-weight:600;color:var(--title)}.fwsel select{font-size:15px;font-weight:600;padding:8px 12px;min-width:300px}
+.minis{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.mini{--c:#8C93A1;display:flex;align-items:center;gap:8px;background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:5px 10px 5px 6px;cursor:pointer;color:var(--text);font:600 12.5px "Segoe UI",system-ui,sans-serif}
+.mini:hover{border-color:#4a5162}.mini.on{border-color:var(--c);box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 25%,transparent)}.mini small{display:block;color:var(--mute);font-weight:500;font-size:11px}
+.hero2{display:grid;grid-template-columns:300px 1fr;gap:12px;margin:0 0 12px}@media(max-width:980px){.hero2{grid-template-columns:1fr}}
+.gauge{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.gauge .cap{color:var(--mute);font-size:12px;margin-top:4px;max-width:260px}
+.legend{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 12px}@media(max-width:720px){.legend{grid-template-columns:repeat(2,1fr)}}
+.lg{--c:#8C93A1;background:var(--raise);border:1px solid var(--edge);border-left:4px solid var(--c);border-radius:10px;padding:9px 12px;cursor:pointer;text-align:left;color:var(--text);font:inherit}
+.lg .v{font-size:24px;font-weight:800;color:var(--c)}.lg .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.lg .s{font-size:11px;color:var(--mute)}
+.lg.on{box-shadow:0 0 0 2px var(--c)}.lg:hover{border-color:#4a5162;border-left-color:var(--c)}
+.stack{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--raise);margin:2px 0 12px}.stack i{display:block;height:100%}
+.dbar{display:grid;grid-template-columns:minmax(150px,240px) 1fr 56px;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer}
+.dbar:hover .nm{color:var(--title)}.dbar .nm{font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dbar .nm small{color:var(--mute)}
+.dbar .stack{margin:0;height:12px}.dbar .pc{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.grp2{margin:0 0 14px}.grp2 h3{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:13px;color:var(--title)}.grp2 h3 small{color:var(--mute);font-weight:400}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px}
+.tl{--c:#8C93A1;position:relative;text-align:left;background:color-mix(in srgb,var(--c) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--c) 40%,transparent);border-radius:10px;padding:9px 10px 9px 12px;cursor:pointer;color:var(--text);font:inherit;min-height:74px;transition:transform .12s,box-shadow .12s}
+.tl::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:0 3px 3px 0;background:var(--c)}
+.tl:hover,.tl:focus-visible{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.35);outline:none}
+.tl b{display:block;font:700 12px ui-monospace,Consolas,monospace;color:var(--c)}.tl span{display:block;font-size:12.5px;line-height:1.3;margin-top:2px;color:var(--title)}
+.tl em{position:absolute;right:8px;top:8px;font-style:normal;font-size:10.5px;color:var(--mute)}
+.tl.dim{opacity:.22}
+.xw{display:flex;flex-wrap:wrap;gap:6px}.xw a,.xw span.fwt{text-decoration:none}
+.pl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:7px}.pl i{font-style:normal;font:600 10px ui-monospace,Consolas,monospace;color:var(--mute)}.pl u{display:block;height:4px;border-radius:2px;background:#252933;margin-top:2px;overflow:hidden;text-decoration:none}.pl u b{display:block;height:100%;font-size:0}
+.pills3{display:flex;gap:18px;justify-content:center;margin-top:12px;flex-wrap:wrap}.pills3 div{text-align:center;font-size:11.5px;color:var(--mute)}.pills3 b{display:block;color:var(--title);font-size:12px;margin-top:2px}
+.pbar{display:grid;grid-template-columns:150px 1fr 48px;gap:10px;align-items:center;margin:6px 0}.pbar .t2{height:9px;border-radius:5px;background:#252933;overflow:hidden}.pbar .t2 i{display:block;height:100%}.pbar .n2{text-align:right;font-weight:700}
+.pol{border:1px solid var(--edge,#2e3440);border-radius:8px;padding:10px 12px;margin:0 0 10px}.pol h4{margin:0 0 6px;font-size:13px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.req{border-left:3px solid #2e3440;padding:4px 8px;margin:6px 0;font-size:12.5px}.req small{display:block;color:var(--mute,#8e8e9e);margin-top:2px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+.li-g{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:12px}@media(max-width:1100px){.li-g{grid-template-columns:1fr}}
+.li-k{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 8px}.li-k div{min-width:90px}.li-k b{display:block;font-size:22px;color:var(--title)}.li-k span{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.mix{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;align-items:center;background:var(--panel,#12151c);border:1px solid var(--line,#232837);border-radius:14px;padding:12px 16px;margin-bottom:10px}.mix svg{display:block;width:130px;height:130px;margin:auto}
+.mixb{display:flex;height:22px;border-radius:999px;overflow:hidden;background:#1b2332}.mixb i{display:grid;place-items:center;height:100%;font-size:11px;font-weight:800;color:#0b0e14;min-width:0;overflow:hidden;white-space:nowrap;font-style:normal}.mixs{font-size:12px;color:#8b93a4;margin-top:8px}
+.lv .g{display:grid;gap:3px;justify-items:end}.lv .gb{width:58px;height:6px;border-radius:999px;background:#1b2332;overflow:hidden}.lv .gb i{display:block;height:100%;background:#3fb950;border-radius:999px}
+.li-k>button{all:unset;box-sizing:border-box;cursor:pointer;min-width:90px;position:relative;overflow:hidden;padding-bottom:9px}.li-k>button b{display:block;font-size:22px;color:var(--title)}.li-k>button span{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}.li-k>button::after{content:"";position:absolute;inset:auto 0 0 0;height:3px;background:var(--a,#3a4258)}.li-k>button:hover span,.li-k>button:focus-visible span{color:var(--title);text-decoration:underline}
+.pills3 .pgo{all:unset;box-sizing:border-box;cursor:pointer;text-align:center}.pills3 .pgo:hover b,.pills3 .pgo:focus-visible b{text-decoration:underline}@keyframes jflash{0%{box-shadow:0 0 0 3px #f59f00}100%{box-shadow:0 0 0 0 transparent}}.jflash{animation:jflash 1.6s ease-out}
+.li-k>div{position:relative;overflow:hidden;padding-bottom:9px}.li-k>div::after{content:"";position:absolute;inset:auto 0 0 0;height:3px;background:var(--a,#3a4258)}
+@media (max-width:640px){.mix{grid-template-columns:1fr}}
+.lv{display:grid;grid-template-columns:1fr 58px;gap:4px 10px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12.5px}.lv:last-child{border:0}.lv small{display:block;color:var(--mute)}.lv .g{text-align:right;font-weight:800;color:var(--ok)}
+.rl{display:grid;grid-template-columns:62px 1fr 40px;gap:8px;align-items:center;font-size:12px;margin:3px 0}.rl .tr{height:8px;border-radius:4px;background:var(--raise);overflow:hidden}.rl .tr i{display:block;height:100%}
+.chip{display:inline-block;font:600 11px ui-monospace,Consolas,monospace;border-radius:999px;padding:2px 8px;margin:2px 4px 2px 0}.chip.bad{background:rgba(255,123,114,.15);color:var(--bad)}.chip.warn{background:rgba(227,179,65,.15);color:var(--warn)}
+#li-ans{white-space:pre-wrap;border:1px solid var(--edge);border-radius:10px;padding:10px;margin-top:8px;background:var(--raise);font-size:13px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Governance, Risk &amp; Compliance · live from the SIEM evidence checks</div><h1>Live Compliance</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <button type="button" class="btn pri" id="xlsx">⬇ Excel</button><button type="button" class="btn" id="print">🖨 Print / PDF</button><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="fwsel"><label for="fw">Framework</label><select id="fw" aria-label="Framework"></select>
+  <label for="days" class="muted" style="font-weight:400">Period</label><select id="days"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option></select>
+  <div class="minis" id="minis" role="group" aria-label="All frameworks at a glance"></div></div>
+<div class="banner" id="note"></div>
+<div class="hero2"><div class="card gauge" id="gauge"></div><div class="card"><h2>By domain<span class="c" id="dsub"></span></h2><div id="dom"></div></div></div>
+<div class="card" id="li"><h2>Live intelligence<span class="c">learned from the SIEM's daily SAMA snapshots - leverage, quick wins, reliability, regressions, forecast</span></h2><div id="li-body"><span class="muted">Loading…</span></div></div>
+<div class="mix" id="mix"></div>
+<div class="legend" id="legend"></div>
+<div class="card"><h2 id="ctitle">Controls</h2><div id="map"></div><p class="note" id="foot"></p></div>
+</main>
+<script src="vendor/zyb-xlsx.js"></script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z?Z.esc:function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var $=function(id){return document.getElementById(id);};
+  var F=window.ZYB_FW||{}, N=window.ZYB_NAV||[], PAGES=[];N.forEach(function(a){a.pages.forEach(function(p){PAGES.push({a:a,p:p});});});
+  var KEYS=['sama','ia','nca','pdpl'].filter(function(k){return F[k];});
+  var ST={covered:{l:'Covered',c:'#3fb950',s:'every live check passes'},partial:{l:'Partial',c:'#e3b341',s:'some checks fail or cannot be read'},gap:{l:'Gap',c:'#ff7b72',s:'the live checks fail'},grc:{l:'Not measured live',c:'#8C93A1',s:'evidence is a GRC record, not a live check'}};
+  var ORDER=['covered','partial','gap','grc'], SC={covered:1,partial:0.5,gap:0};
+  var V=null, ERR='', LIVE={}, POL=null, PERR='', FIL='', K=(/fw=([a-z]+)/.exec(location.hash)||[])[1];if(KEYS.indexOf(K)<0)K='sama';
+  function req(p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/soc'+p);x.withCredentials=true;x.timeout=90000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('The SIEM is not reachable'));};x.send();});}
+  // ---- model: one row per framework domain with a status derived from the SAMA controls' live checks
+  function samaRow(code){var f=F.sama,l=LIVE[code];
+    if(code==='BCM')return {code:code,name:f.domains[code],st:'grc',why:['Business continuity is a separate SAMA framework; its evidence (BIA, DR tests) is a GRC record.'],src:[]};
+    if(!l)return {code:code,name:f.domains[code],st:'grc',why:[ERR?'The SIEM did not answer, so nothing is measured live.':'Not in the SIEM evidence map.'],src:[]};
+    return {code:code,name:f.domains[code],st:l.status==='n/a'?'grc':l.status,why:l.reasons||[],live:l,src:[code]};}
+  function derived(k,code,list){var f=F[k],rows=list.map(function(c){return samaRow(c);}),m=rows.filter(function(r){return r.st!=='grc';});
+    var r={code:code,name:f.domains[code],src:list,via:rows};
+    if(!list.length){r.st='grc';r.why=['A privacy obligation with no SAMA CSF control behind it: its evidence is a GRC record (procedure, register, DPO decision).'];return r;}
+    if(!m.length){r.st='grc';r.why=['The SAMA controls it maps to ('+list.join(', ')+') are evidenced in GRC, not by a live check.'];return r;}
+    var s=m.reduce(function(a,x){return a+SC[x.st];},0)/m.length;
+    r.st=m.every(function(x){return x.st==='covered';})?'covered':m.every(function(x){return x.st==='gap';})?'gap':'partial';r.score=s;
+    r.why=m.filter(function(x){return x.st!=='covered';}).map(function(x){return 'SAMA '+x.code+' '+x.name+': '+ST[x.st].l.toLowerCase();});
+    if(m.length<rows.length)r.why.push('Partly measured: '+rows.filter(function(x){return x.st==='grc';}).map(function(x){return x.code;}).join(', ')+' are GRC evidence.');
+    if(!r.why.length)r.why=['Every mapped SAMA control passes its live checks.'];return r;}
+  function groups(k){
+    var S=F.sama, sg=function(){var g={'3.1':['3.1','Cyber Security Leadership & Governance'],'3.2':['3.2','Risk Management & Compliance'],'3.3':['3.3','Operations & Technology'],'3.4':['3.4','Third Party Cyber Security']};
+      var out=Object.keys(g).map(function(d){return {id:d,name:g[d][1],rows:Object.keys(S.domains).filter(function(c){return c.indexOf(d+'.')===0;}).map(samaRow)};});
+      out.push({id:'BCM',name:'Business Continuity (SAMA BCM)',rows:[samaRow('BCM')]});return out;};
+    if(k==='sama')return sg();
+    if(k==='ia'){var g=sg();g.unshift({id:'IA',name:'IA circular requirements',rows:(F.ia.extra||[]).map(function(x){return {code:x.code,name:x.name,st:'grc',why:['Evidence: the mailbox address registered with the Insurance Authority and who reads it. A GRC record.'],src:[]};})});return g;}
+    var f=F[k],rows=Object.keys(f.domains).map(function(c){return derived(k,c,(f.xw||{})[c]||[]);});
+    if(k==='nca'){var nm={'1':'Cybersecurity Governance','2':'Cybersecurity Defense','3':'Cybersecurity Resilience','4':'Third-Party and Cloud Computing'};
+      return Object.keys(nm).map(function(d){return {id:d,name:d+' · '+nm[d],rows:rows.filter(function(r){return r.code.split('-')[0]===d;})};});}
+    var pg=[['Rights and processing',['Art. 4','Art. 11','Art. 17','Art. 18']],['Security and breach',['Art. 19','Art. 20','Art. 22','Art. 23','Art. 41']],['Transfer and records',['Art. 29','IR Art. 33']]];
+    return pg.map(function(g){return {id:g[0],name:g[0],rows:rows.filter(function(r){return g[1].indexOf(r.code)>=0;})};});
+  }
+  function score(rows){var m=rows.filter(function(r){return r.st!=='grc';});return {pct:m.length?Math.round(100*m.reduce(function(a,r){return a+SC[r.st];},0)/m.length):null,measured:m.length,total:rows.length,n:ORDER.reduce(function(o,s){o[s]=rows.filter(function(r){return r.st===s;}).length;return o;},{})};}
+  function flat(k){return [].concat.apply([],groups(k).map(function(g){return g.rows;}));}
+  // ---- implementation pillars per control: devices & infrastructure, applications & SOC (live checks + ITAM signals), IT GRC policies
+  var DEV={'c333-hosts':1,'c333-coverage':1,'c335-dc':1,'c335-adsync':1,'c337-dc':1,'c338-fw':1,'c338-defender':1,'c3314-active':1,'c3314-silent':1,'c3314-classes':1,'c3314-retention':1,'c3317-scanner':1};
+  var PV={pass:1,partial:0.5,fail:0,unknown:0};
+  function items(codes){var d=[],a=[],pol=[],seen={};
+    codes.forEach(function(c){var l=LIVE[c];
+      if(l&&l.checks)l.checks.forEach(function(k){(DEV[k.id]?d:a).push({src:'SIEM',ctl:c,name:k.title,state:k.result,detail:k.reason||''});});
+      var pc=POL&&POL.controls&&POL.controls[c];
+      if(pc){pc.signals.forEach(function(g){(g.pillar==='devices'?d:a).push({src:'ITAM',ctl:c,name:g.name,state:g.state,detail:(g.metric?g.metric+' · ':'')+(g.detail||'')});});
+        pc.policies.forEach(function(x){var key=x.doc_id+'|'+x.sub_code;if(seen[key])return;seen[key]=1;pol.push(Object.assign({ctl:c},x));});}});
+    return {d:d,a:a,pol:pol};}
+  function pct(list){return list.length?Math.round(100*list.reduce(function(s,x){return s+(PV[x.state]||0);},0)/list.length):null;}
+  function pillars(r){var codes=r.via?r.src:(r.code==='IA-277'?[]:[r.code]);var it=items(codes);
+    var pp=it.pol.length?Math.round(it.pol.reduce(function(s,x){return s+x.score;},0)/it.pol.length):null;
+    var P={dev:pct(it.d),app:pct(it.a),pol:pp,it:it};var av=[P.dev,P.app,P.pol].filter(function(x){return x!=null;});P.all=av.length?Math.round(av.reduce(function(s,x){return s+x;},0)/av.length):null;return P;}
+  var PL=[['dev','Devices & infrastructure','D'],['app','Applications & SOC','A'],['pol','IT GRC policies','P']];
+  // ---- graphics
+  function ring(pct,size,stroke,col,label){var r=(size-stroke)/2,C=2*Math.PI*r,o=pct==null?C:C*(1-pct/100);
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'" role="img" aria-label="'+esc(label)+'"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="#252933" stroke-width="'+stroke+'"/>'
+      +'<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+o.toFixed(1)+'" transform="rotate(-90 '+size/2+' '+size/2+')"/>'
+      +'<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Segoe UI,system-ui,sans-serif" font-weight="800" font-size="'+Math.round(size/4.6)+'">'+(pct==null?'—':pct+'%')+'</text></svg>';}
+  function colFor(p){return p==null?'#8C93A1':p>=80?'#3fb950':p>=50?'#e3b341':'#ff7b72';}
+  function stack(n,tot){return '<div class="stack">'+ORDER.map(function(s){return n[s]?'<i style="width:'+(100*n[s]/tot)+'%;background:'+ST[s].c+'" title="'+esc(ST[s].l+': '+n[s])+'"></i>':'';}).join('')+'</div>';}
+  function draw(){
+    var f=F[K], G=groups(K), rows=flat(K), sc=score(rows);
+    $('fw').value=K;
+    $('minis').innerHTML=KEYS.map(function(k){var s=score(flat(k));return '<button type="button" class="mini'+(k===K?' on':'')+'" data-k="'+k+'" style="--c:'+esc(F[k].c)+'" title="'+esc(F[k].name)+'">'+ring(s.pct,34,5,colFor(s.pct),F[k].short)+'<span>'+esc(F[k].short)+'<small>'+(s.pct==null?'not measured':s.pct+'% live')+'</small></span></button>';}).join('');
+    var note=K==='ia'?F.ia.basis:K==='sama'?'Each SAMA CSF control is graded by the SIEM’s live evidence checks (logs received, rules enabled, retention, assets reporting, incidents handled). Controls the SIEM cannot see are evidenced in GRC and shown grey, never green.'
+      :'Each '+f.short+' '+(K==='nca'?'sub-domain':'article')+' is graded through the crosswalk: the SAMA CSF controls that address the same requirement, and their live checks. The crosswalk is a draft for the compliance team to verify.';
+    $('note').innerHTML=(ERR?'<b style="color:var(--bad)">'+esc(ERR)+'</b> — the framework structure is shown, nothing is graded live. ':'')+esc(note);
+    $('gauge').innerHTML=ring(sc.pct,190,16,colFor(sc.pct),f.short+' live coverage')+'<div style="font-weight:700;color:var(--title);margin-top:8px">'+esc(f.name)+'</div><div class="cap">Live coverage of the '+sc.measured+' of '+sc.total+' '+(K==='nca'?'sub-domains':K==='pdpl'?'articles':'controls')+' that have a live check (covered = 1, partial = ½, gap = 0).</div>'
+      +'<div class="pills3">'+PL.map(function(x){var vs=rows.map(function(r){return pillars(r)[x[0]];}).filter(function(v){return v!=null;});var v=vs.length?Math.round(vs.reduce(function(a,b){return a+b;},0)/vs.length):null;
+        return '<button type="button" class="pgo" data-pillar="'+x[0]+'" data-jump="ctitle" title="'+esc(x[1]+': average over the '+vs.length+' '+(K==='nca'?'sub-domains':K==='pdpl'?'articles':'controls')+' with data - click for each control')+'">'+ring(v,58,7,colFor(v),x[1])+'<b>'+esc(x[1])+'</b></button>';}).join('')+'</div>'+(PERR?'<div class="cap" style="color:var(--warn)">IT GRC policies: '+esc(PERR)+'</div>':'');
+    var tot=ORDER.reduce(function(t,x){return t+(sc.n[x]||0);},0),R=50,Cc=2*Math.PI*R,off=0,live=tot-(sc.n.grc||0);
+    $('mix').innerHTML=tot?'<svg viewBox="0 0 130 130" role="img" aria-label="'+esc(ORDER.map(function(x){return ST[x].l+' '+(sc.n[x]||0);}).join(', '))+'"><circle cx="65" cy="65" r="'+R+'" fill="none" stroke="#1b2332" stroke-width="16"/>'
+      +ORDER.map(function(x){var n=sc.n[x]||0;if(!n)return '';var l=n/tot*Cc,c='<circle cx="65" cy="65" r="'+R+'" fill="none" stroke="'+ST[x].c+'" stroke-width="16" stroke-dasharray="'+Math.max(0,l-1.5).toFixed(2)+' '+(Cc-l+1.5).toFixed(2)+'" stroke-dashoffset="'+(-off).toFixed(2)+'" transform="rotate(-90 65 65)"><title>'+esc(ST[x].l+': '+n)+'</title></circle>';off+=l;return c;}).join('')
+      +'<text x="65" y="64" text-anchor="middle" font-size="22" font-weight="800" fill="#e7eaf0">'+live+'/'+tot+'</text><text x="65" y="80" text-anchor="middle" font-size="9.5" fill="#8b93a4">measured live</text></svg>'
+      +'<div><div class="mixb" role="img" aria-label="'+esc(ORDER.map(function(x){return ST[x].l+' '+Math.round((sc.n[x]||0)/tot*100)+' %';}).join(', '))+'">'+ORDER.map(function(x){var n=sc.n[x]||0;return n?'<i style="flex:'+n+' 1 0;background:'+ST[x].c+'" title="'+esc(ST[x].l+': '+n)+'">'+(n/tot>=0.08?Math.round(n/tot*100)+'%':'')+'</i>':'';}).join('')+'</div>'
+      +'<div class="mixs">'+esc(live?Math.round((sc.n.covered||0)/live*100)+' % of the controls the SIEM can see are fully covered; '+(sc.n.grc||0)+' are evidenced in GRC and shown grey, never green.':'Nothing is measured live yet: every control is evidenced in GRC only.')+'</div></div>':'';
+    $('legend').innerHTML=ORDER.map(function(s){return '<button type="button" class="lg'+(FIL===s?' on':'')+'" data-s="'+s+'" style="--c:'+ST[s].c+'"><div class="l">'+esc(ST[s].l)+'</div><div class="v">'+sc.n[s]+'</div><div class="s">'+esc(ST[s].s)+'</div></button>';}).join('');
+    $('dsub').textContent=G.length+' domains · click one to jump';
+    $('dom').innerHTML=stack(sc.n,rows.length||1)+G.map(function(g){var s=score(g.rows);return '<div class="dbar" data-g="'+esc(g.id)+'"><div class="nm" title="'+esc(g.name)+'">'+esc(g.name)+' <small>'+g.rows.length+'</small></div>'+stack(s.n,g.rows.length||1)+'<div class="pc" style="color:'+colFor(s.pct)+'">'+(s.pct==null?'—':s.pct+'%')+'</div></div>';}).join('');
+    $('ctitle').innerHTML=esc(f.short)+' '+(K==='nca'?'sub-domains':K==='pdpl'?'articles':'controls')+' <span class="c">click any tile for the live checks, the crosswalk and the dashboards that give evidence'+(FIL?' · showing '+esc(ST[FIL].l.toLowerCase())+' (click the tile above again to clear)':'')+'</span>';
+    $('map').innerHTML=G.map(function(g){return '<section class="grp2" id="g-'+esc(g.id).replace(/[^A-Za-z0-9-]/g,'_')+'"><h3>'+esc(g.name)+'<small>'+g.rows.length+'</small></h3><div class="tiles">'
+      +g.rows.map(function(r){return '<button type="button" class="tl'+(FIL&&r.st!==FIL?' dim':'')+'" data-code="'+esc(r.code)+'" style="--c:'+ST[r.st].c+'" title="'+esc(ST[r.st].l+' — '+(r.why[0]||''))+'"><b>'+esc(r.code)+'</b><span>'+esc(r.name)+'</span><em>'+esc(ST[r.st].l)+'</em>'+(function(){var P=pillars(r);return '<div class="pl">'+PL.map(function(x){var v=P[x[0]];return '<i title="'+esc(x[1]+': '+(v==null?'no data':v+'%'))+'">'+x[2]+' '+(v==null?'—':v+'%')+'<u><b style="width:'+(v||0)+'%;background:'+colFor(v)+'"></b></u></i>';}).join('')+'</div>';})()+'</button>';}).join('')+'</div></section>';}).join('');
+    $('foot').textContent=(K!=='sama'&&K!=='ia'?'Crosswalk: '+f.short+' → SAMA CSF (vendor/zyb-nav.js xw), DRAFT — verify with the compliance team. ':'')+'Live checks: SIEM evidence map (draft, verify with the compliance team). A grade says what the platform can evidence now; it is not a certification.';
+    $('up').textContent=V?'Live · '+new Date(V.generated_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+' · '+V.period.days+' days':ERR?'Not live':'Loading…';
+  }
+  // ---- detail drawer: why, live checks, crosswalk, evidence pages
+  function pagesFor(k,code){return PAGES.filter(function(x){return x.p.fw&&(x.p.fw[k]||[]).indexOf(code)>=0;});}
+  function crossOf(k,r){var sama=k==='sama'||k==='ia'?[r.code]:r.src, out=[];
+    ['sama','nca','pdpl'].forEach(function(t){if(t===k)return;var f=F[t];
+      var codes=t==='sama'?sama.filter(function(c){return f.domains[c];}):Object.keys(f.domains).filter(function(c){return ((f.xw||{})[c]||[]).some(function(s){return sama.indexOf(s)>=0;});});
+      if(codes.length)out.push('<div style="margin:4px 0"><b>'+esc(f.short)+'</b> '+codes.map(function(c){return '<a href="#fw='+t+'" data-go="'+t+'" data-gc="'+esc(c)+'" class="fwt" style="--c:'+esc(f.c)+';text-decoration:none" title="'+esc(f.domains[c])+'">'+esc(c)+'</a>';}).join('')+'</div>');});
+    if(k!=='ia'&&sama.some(function(c){return c!=='BCM';}))out.push('<div style="margin:4px 0"><b>IA</b> <span class="muted">applies through the SAMA CSF baseline (circular UTC/277/202401)</span></div>');
+    return out.join('')||'<span class="muted">No mapped requirement in the other frameworks.</span>';}
+  function pill(st){return Z.pill(ST[st].l,{covered:'ok',partial:'warn',gap:'bad',grc:'info'}[st]);}
+  function checks(l){if(!l||!l.checks||!l.checks.length)return '';
+    return Z.sec('Live checks ('+l.checks.length+')',Z.tbl(['Check','Result','What the SIEM sees'],l.checks.map(function(c){return [esc(c.title),Z.pill(c.result,{pass:'ok',fail:'bad',unknown:'warn'}[c.result]),esc(c.reason||'')];})))
+      +(l.actions&&l.actions.length?Z.sec('What to do',' <ul class="plain">'+l.actions.map(function(a){return '<li>'+esc(a.action)+'</li>';}).join('')+'</ul>'):'');}
+  function bar(l,v,t){return '<div class="pbar" title="'+esc(t||'')+'"><span>'+esc(l)+'</span><div class="t2"><i style="width:'+(v||0)+'%;background:'+colFor(v)+'"></i></div><span class="n2" style="color:'+colFor(v)+'">'+(v==null?'—':v+'%')+'</span></div>';}
+  function stPill(s){return Z.pill(s,{pass:'ok',partial:'warn',fail:'bad',unknown:'warn'}[s]||'info');}
+  var STOP={shall:1,must:1,should:1,which:1,their:1,there:1,these:1,those:1,where:1,within:1,other:1,about:1,being:1,every:1,under:1,according:1,ensure:1,including:1,information:1,technology:1,policy:1,management:1,security:1,cyber:1};
+  function words(t){return String(t||'').toLowerCase().match(/[a-z]{5,}/g)||[];}
+  // cross-check one requirement statement against the live evidence of the same control(s): shared significant words
+  function evidenceFor(line,live){var w=words(line).filter(function(x){return !STOP[x];});
+    return live.filter(function(e){var ew=words(e.name+' '+e.detail);return w.some(function(x){return ew.some(function(y){return y.slice(0,6)===x.slice(0,6);});});});}
+  function implHtml(r){var P=pillars(r),it=P.it,live=it.d.concat(it.a);
+    var h=Z.sec('Implementation',bar('Devices & infrastructure',P.dev,it.d.length+' live item(s)')+bar('Applications & SOC',P.app,it.a.length+' live item(s)')+bar('IT GRC policies',P.pol,it.pol.length+' polic(ies)')
+      +'<p class="zd-dim" style="margin-top:6px">Live items: pass = 100, partial = 50, fail or cannot be read = 0. Policy: four points of 25 (approved, review in date, owner attestation, requirements address the control). — means there is no data for that part, not 0.</p>');
+    [['Devices & infrastructure',it.d],['Applications & SOC',it.a]].forEach(function(g){if(g[1].length)h+=Z.sec(g[0]+' — what was checked',Z.tbl(['Source','Item','Result','Detail'],g[1].map(function(e){return [esc(e.src+(r.via?' · '+e.ctl:'')),esc(e.name),stPill(e.state),esc(e.detail)];})));});
+    if(PERR)h+=Z.sec('IT GRC policies','<p class="zd-dim">'+esc(PERR)+'</p>');
+    else if(!it.pol.length)h+=Z.sec('IT GRC policies','<p><b>No approved IT policy covers this '+(r.via?'requirement':'control')+'.</b> This is a policy gap: draft one in <a href="grc-policies.html">Policies &amp; Controls</a>.</p>');
+    else h+=Z.sec('IT GRC policies — how each is followed ('+it.pol.length+')',it.pol.slice().sort(function(a,b){return a.score-b.score;}).map(function(x){
+      return '<div class="pol" data-pol="'+esc(x.doc_id)+'"><h4><span>'+esc(x.doc_id)+' · '+esc(x.title)+'</span>'+Z.pill(x.score+'%',x.score>=75?'ok':x.score>=50?'warn':'bad')+'</h4>'
+        +'<div class="zd-dim" style="margin-bottom:6px">Owner: '+esc(x.owner||'—')+(r.via?' · via SAMA '+esc(x.ctl):'')+(x.enforcement?' · enforced by: '+esc(x.enforcement.module)+' ('+esc(x.enforcement.cls)+')':'')+'</div>'
+        +Z.tbl(['Point','Score','Remark'],x.items.map(function(i){return [esc(i.label),'<b style="color:'+colFor(100*i.pts/i.max)+'">'+i.pts+'/'+i.max+'</b>',esc(i.remark)];}))
+        +(x.lines&&x.lines.length?'<p style="margin:8px 0 2px"><b>Requirements cross-checked against live evidence</b></p>'+x.lines.map(function(l){var ev=evidenceFor(l,live);
+          return '<div class="req" style="border-left-color:'+(ev.length?(ev.every(function(e){return e.state==='pass';})?'#3fb950':'#e3b341'):'#8C93A1')+'">“'+esc(l)+'”<small>'+(ev.length?'Live evidence: '+ev.map(function(e){return esc(e.name)+' — '+esc(e.state);}).join('; '):'No live check covers this statement: it is followed only if the owner attests it.')+'</small></div>';}).join(''):'')+'</div>';}).join(''));
+    return h;}
+  function areasHtml(pg){if(!pg.length)return Z.sec('Where it is implemented in the platform','<p class="zd-dim">No dashboard is tagged with this requirement. Evidence comes from GRC records.</p>');
+    var by={},order=[];pg.forEach(function(x){if(!by[x.a.id]){by[x.a.id]={a:x.a,p:[]};order.push(x.a.id);}by[x.a.id].p.push(x.p);});
+    return Z.sec('Where it is implemented — by main menu area ('+order.length+' areas, '+pg.length+' pages)',order.map(function(id){var g=by[id];
+      return '<div class="area" style="margin:0 0 8px"><b><span class="dot" style="background:'+esc(g.a.c)+'"></span>'+esc(g.a.name)+'</b> <span class="zd-dim">'+g.p.length+' of '+g.a.pages.length+' pages</span><ul class="plain" style="margin-top:3px">'+g.p.map(function(p){return '<li><a href="'+esc(p.h)+'">'+esc(p.s)+'</a> <span class="zd-dim">'+esc(p.t)+'</span></li>';}).join('')+'</ul></div>';}).join(''));}
+  function openRow(code){var r=flat(K).filter(function(x){return x.code===code;})[0];if(!r||!Z)return;var f=F[K];
+    var pk=K==='ia'?'sama':K, pg=pagesFor(pk,code);
+    var P0=pillars(r);var h=Z.kv([['Status',pill(r.st)],['Implementation',P0.all==null?'no data':P0.all+'%'],['Framework',esc(f.short)],[K==='sama'||K==='ia'?'Owner':'Mapped SAMA controls',esc(K==='sama'||K==='ia'?(r.live&&r.live.owner)||'—':(r.src.join(', ')||'none'))],['Measured live',r.st==='grc'?'no':'yes']])
+      +Z.sec('Why',' <ul class="plain">'+r.why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>')
+      +(r.live?checks(r.live):'')
+      +(r.via&&r.via.length?Z.sec('Through the crosswalk',Z.tbl(['SAMA','Control','Live'],r.via.map(function(v){return [esc(v.code),esc(v.name),pill(v.st)];}))+r.via.filter(function(v){return v.live&&v.live.actions&&v.live.actions.length;}).map(function(v){return '<p class="zd-dim" style="margin-top:8px">SAMA '+esc(v.code)+' — what to do:</p><ul class="plain">'+v.live.actions.map(function(a){return '<li>'+esc(a.action)+'</li>';}).join('')+'</ul>';}).join('')):'')
+      +implHtml(r)
+      +Z.sec('Same requirement in the other frameworks',crossOf(K,r))
+      +areasHtml(pg);
+    Z.open(f.short+' · '+ST[r.st].l,code+' '+r.name,h);
+  }
+  // ---- wiring
+  $('fw').innerHTML=KEYS.map(function(k){return '<option value="'+k+'">'+esc(F[k].name)+'</option>';}).join('');
+  function setK(k,code){K=k;FIL='';try{history.replaceState(null,'','#fw='+k);}catch(e){ /* address bar not updated (sandboxed frame): the page works without it */ }draw();if(code)setTimeout(function(){openRow(code);},0);}
+  $('fw').addEventListener('change',function(){setK(this.value);});
+  $('minis').addEventListener('click',function(e){var b=e.target.closest('[data-k]');if(b)setK(b.getAttribute('data-k'));});
+  $('legend').addEventListener('click',function(e){var b=e.target.closest('[data-s]');if(!b)return;var s=b.getAttribute('data-s');FIL=FIL===s?'':s;draw();});
+  $('dom').addEventListener('click',function(e){var b=e.target.closest('[data-g]');if(!b)return;var el=$('g-'+b.getAttribute('data-g').replace(/[^A-Za-z0-9-]/g,'_'));if(el)el.scrollIntoView({behavior:'smooth',block:'start'});});
+  $('map').addEventListener('click',function(e){var b=e.target.closest('[data-code]');if(b)openRow(b.getAttribute('data-code'));});
+  document.addEventListener('click',function(e){var a=e.target.closest('a[data-go]');if(!a)return;e.preventDefault();var k=a.getAttribute('data-go'),c=a.getAttribute('data-gc'),zd=$('zd');
+    // close the drawer first: its history entry is popped asynchronously, so switch only once that has happened
+    if(zd&&!zd.hidden){var done=false,go=function(){if(done)return;done=true;window.removeEventListener('popstate',go);setTimeout(function(){setK(k,c);},0);};window.addEventListener('popstate',go);Z.close();setTimeout(go,400);}else setK(k,c);});
+  // the figures and rings open what they count on this page: the control map, the trend, the watch list, the quick wins
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-jump]');if(!b)return;var id=b.getAttribute('data-jump'),el=$(id)||(id==='li-watch'?$('li-trend'):null);if(!el)return;
+    var box=el.closest('.card')||el;el.scrollIntoView({block:'start'});box.classList.remove('jflash');void box.offsetWidth;box.classList.add('jflash');});
+  $('print').addEventListener('click',function(){window.print();});
+  $('xlsx').addEventListener('click',function(){if(!window.zybXlsx){alert('The Excel writer did not load.');return;}
+    var sheets=[{name:'Summary',columns:[{h:'Framework',w:50},{h:'Live coverage %',w:12},{h:'Covered',w:9},{h:'Partial',w:9},{h:'Gap',w:9},{h:'Not measured live',w:12},{h:'Basis',w:80}],
+      rows:KEYS.map(function(k){var s=score(flat(k));return [F[k].name,s.pct==null?'':s.pct,s.n.covered,s.n.partial,s.n.gap,s.n.grc,k==='sama'?'SIEM live evidence checks':k==='ia'?F.ia.basis:'Crosswalk to SAMA CSF (draft) + SIEM live checks'];})}];
+    KEYS.forEach(function(k){sheets.push({name:F[k].short,columns:[{h:'Domain',w:30},{h:'Code',w:10},{h:'Requirement',w:52},{h:'Status',w:16},{h:'Mapped SAMA',w:18},{h:'Implementation %',w:12},{h:'Devices %',w:10},{h:'Applications %',w:12},{h:'Policies %',w:10},{h:'Policies and how they are followed',w:110},{h:'Why',w:90},{h:'What to do',w:90}],
+      rows:[].concat.apply([],groups(k).map(function(g){return g.rows.map(function(r){var acts=[].concat.apply([],(r.via||[r]).map(function(v){return v.live&&v.live.actions?v.live.actions.map(function(a){return a.action;}):[];}));
+        var P=pillars(r),nv=function(v){return v==null?'':v;};return [g.name,r.code,r.name,ST[r.st].l,(r.src||[]).join(', '),nv(P.all),nv(P.dev),nv(P.app),nv(P.pol),P.it.pol.map(function(x){return x.doc_id+' '+x.score+'%: '+x.items.filter(function(i){return i.pts<i.max;}).map(function(i){return i.remark;}).join(' ');}).join(' || ')||(PERR?'not readable':'no policy - gap'),r.why.join(' | '),acts.join(' | ')];});}))});});
+    zybXlsx.download('live-compliance-'+new Date().toISOString().slice(0,10)+'.xlsx',sheets,{title:'Live Compliance - SAMA CSF, IA, NCA ECC, PDPL',filter:'period '+$('days').value+' days',by:(ZYB_ORG.short + ' — IT Operations and Cyber Security Automation Platform')});});
+  function reqItam(p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/itam'+p);x.withCredentials=true;x.timeout=60000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('ITAM is not reachable'));};x.send();});}
+  function loadPol(){reqItam('/grc/csf-coverage').then(function(r){POL=r;PERR='';draw();}).catch(function(e){POL=null;PERR=e.status===404?'the policy view is not installed in ITAM yet — run the ITAM update':e.message;draw();});}
+  function load(force){$('up').textContent='Loading…';loadPol();
+    req('/compliance/sama?days='+encodeURIComponent($('days').value)+(force?'&refresh=1':'')).then(function(r){V=r;ERR='';LIVE={};(r.controls||[]).forEach(function(c){LIVE[c.id]=c;});draw();})
+      .catch(function(e){V=null;LIVE={};ERR=e.status===404?'The SIEM does not have the SAMA compliance module yet — run the engine update.':e.status===401||e.status===403?'You are not signed in to the SIEM.':e.message;draw();});}
+  $('refresh').addEventListener('click',function(){load(true);});
+  $('days').addEventListener('change',function(){load(false);});
+  if(!N.length||!F.sama){$('map').innerHTML='<p class="err">The framework registry (vendor/zyb-nav.js) did not load — refresh, or run the dashboards install.</p>';return;}
+  draw();load(false);setInterval(function(){if(!document.hidden)load(false);},300000);   // live: re-read every 5 minutes while the page is open
+})();
+</script>
+<script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);},E=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  function rq(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc'+p);x.withCredentials=true;x.zybQuiet=true;x.timeout=120000;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status below */}if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||'HTTP '+x.status),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('the SIEM is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function spark(T){var p=(T||[]).filter(function(x){return x.pct!=null;});if(p.length<2)return '<div class="muted" style="font-size:12px">The trend line appears after the second daily snapshot.</div>';var w=300,h=60,mn=Math.min.apply(null,p.map(function(x){return x.pct;})),mx=Math.max.apply(null,p.map(function(x){return x.pct;})),rg=(mx-mn)||1;
+    var d=p.map(function(x,i){return (i?'L':'M')+(i*(w-4)/(p.length-1)+2).toFixed(1)+' '+(h-4-(x.pct-mn)/rg*(h-8)).toFixed(1);}).join(' ');
+    return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:60px" role="img" aria-label="SIEM coverage per day"><path d="'+d+' L'+(w-2)+' '+h+' L2 '+h+' Z" fill="rgba(121,184,255,.12)"/><path d="'+d+'" fill="none" stroke="#79b8ff" stroke-width="2"/></svg><div class="muted" style="font-size:11px">'+E(p[0].date)+' → '+E(p[p.length-1].date)+' · '+E(mn)+'–'+E(mx)+' %</div>';}
+  function draw(v){var b=$('li-body');if(!v.installed){b.innerHTML='<span class="muted">'+E(v.note||'The SAMA coverage module is not installed in the SIEM.')+'</span>';return;}
+    var k=v.kpis,L=v.learning||{},F=L.forecast||{},per=(v.per||[]).slice().sort(function(a,c){return a.reliability-c.reliability;}).slice(0,10);
+    var acc=function(c){return ' style="--a:'+c+'"';},gm=Math.max.apply(null,[1].concat((v.leverage||[]).concat(v.quick_wins||[]).map(function(g){return +g.gain_pts||0;})));
+    var gbar=function(g){return '<div class="g">+'+E(g.gain_pts)+'<span class="gb" title="'+E('+'+g.gain_pts+' coverage points')+'"><i style="width:'+((+g.gain_pts||0)/gm*100).toFixed(1)+'%"></i></span></div>';};
+    var h='<div class="li-k"><button type="button" data-jump="ctitle"'+acc(k.coverage_pct>=80?'#3fb950':k.coverage_pct>=50?'#e3b341':'#f85149')+'><b>'+E(k.coverage_pct)+'%</b><span>SIEM coverage</span></button><button type="button" data-jump="li-trend"'+acc(k.change_7d==null?'#3a4258':k.change_7d>=0?'#3fb950':'#f85149')+'><b>'+(k.change_7d==null?'—':(k.change_7d>=0?'+':'')+E(k.change_7d))+'</b><span>pts in 7 days</span></button><button type="button" data-jump="li-watch"'+acc(k.regressions?'#f85149':'#3fb950')+'><b style="color:'+(k.regressions?'var(--bad)':'var(--ok)')+'">'+E(k.regressions)+'</b><span>regressions</span></button><button type="button" data-jump="li-watch"'+acc(k.flapping?'#e3b341':'#3fb950')+'><b style="color:'+(k.flapping?'var(--warn)':'var(--ok)')+'">'+E(k.flapping)+'</b><span>flapping</span></button><button type="button" data-jump="li-qw"'+acc('#79b8ff')+'><b>'+E(k.quick_wins)+'</b><span>quick wins</span></button><button type="button" data-jump="li-trend"'+acc('#3a4258')+'><b>'+E(L.snapshots||0)+'</b><span>daily snapshots</span></button></div>';
+    h+='<div class="li-g"><div><h3 style="margin-top:0" id="li-trend">Coverage trend and forecast</h3>'+spark(L.trend)+'<p class="muted" style="font-size:12px;margin:6px 0 0">'+E(F.reached?'At or above the target.':F.why||'')+(F.target?' · '+E(F.target.why):'')+'</p>'
+      +((v.regressions||[]).length||(v.flapping||[]).length?'<h3 id="li-watch">Watch</h3>'+(v.regressions||[]).map(function(r){return '<span class="chip bad" title="'+E('covered on '+r.regression.last_covered+', now '+r.regression.now+': '+(r.regression.why||[]).join('; '))+'">'+E(r.id)+' regressed</span>';}).join('')+(v.flapping||[]).map(function(r){return '<span class="chip warn" title="'+E(r.changes_14+' status changes in 14 days')+'">'+E(r.id)+' flapping</span>';}).join(''):'')+'</div>';
+    h+='<div><h3 style="margin-top:0">Fix once, move many <span class="muted" style="font-weight:400">(leverage)</span></h3>'+((v.leverage||[]).length?(v.leverage||[]).slice(0,6).map(function(g){return '<div class="lv"><div><b>'+E(g.title||g.check)+'</b><small>'+E(g.controls.length)+' control(s): '+E(g.controls.join(', '))+(g.actions&&g.actions[0]?' · '+E(g.actions[0]):'')+'</small></div>'+gbar(g)+'</div>';}).join(''):'<div class="muted">No open check.</div>')
+      +'<h3 id="li-qw">Quick wins <span class="muted" style="font-weight:400">(one check from covered)</span></h3>'+((v.quick_wins||[]).length?v.quick_wins.slice(0,5).map(function(q){return '<div class="lv"><div><b>'+E(q.id)+' '+E(q.title)+'</b><small>'+E(q.check_title)+(q.reason?' · '+E(q.reason):'')+'</small></div>'+gbar(q)+'</div>';}).join(''):'<div class="muted">No control is one check away.</div>')+'</div>';
+    h+='<div><h3 style="margin-top:0">Least reliable controls <span class="muted" style="font-weight:400">(share of days covered, Beta(1,1))</span></h3>'+(per.length?per.map(function(r){var c=r.reliability>=80?'var(--ok)':r.reliability>=50?'var(--warn)':'var(--bad)';return '<div class="rl" title="'+E(r.title+' - '+r.days+' day(s) of history')+'"><b>'+E(r.id)+'</b><div class="tr"><i style="width:'+E(r.reliability)+'%;background:'+c+'"></i></div><span>'+E(r.reliability)+'%</span></div>';}).join('')+'<div class="muted" style="font-size:11px;margin-top:4px">50 % with no history - an honest prior, not a measurement.</div>':'<div class="muted">No SIEM-evidenced control yet.</div>')
+      +'<h3>Compliance advisor (AI)</h3>'+(v.ai&&v.ai.enabled?'<button type="button" class="btn" id="li-ask">Ask for the next priorities</button><div id="li-ans" hidden></div>':'<div class="muted" style="font-size:12px">Not available: '+E((v.ai&&v.ai.reason)||'not configured')+'</div>')+'</div></div>';
+    b.innerHTML=h;}
+  function load(){var d=$('days')?$('days').value:'30';rq('GET','/compliance/sama-intel?days='+encodeURIComponent(d)).then(draw).catch(function(e){$('li-body').innerHTML='<span class="muted">'+E(e.status===404?'The SIEM learning layer is not installed yet - run the SIEM update.':e.status===403?'Your role cannot read the SIEM coverage.':'Could not read the SIEM learning layer: '+e.message)+'</span>';});}
+  document.addEventListener('click',function(ev){if(ev.target.id!=='li-ask')return;var o=$('li-ans');o.hidden=false;o.textContent='Thinking…';
+    rq('POST','/compliance/sama-intel/ask',{question:'What should we fix next to raise SAMA coverage?'}).then(function(r){o.innerHTML='<b>'+E(r.summary)+'</b>'+(r.priorities||[]).map(function(p){return '\n• '+E(p.ref)+' - '+E(p.action)+' ('+E(p.why)+')';}).join('')+(r.note?'\n\n'+E(r.note):'');}).catch(function(e){o.textContent=e.message;});});
+  var dsel=$('days');if(dsel)dsel.addEventListener('change',load);var rf=$('refresh');if(rf)rf.addEventListener('click',load);
+  load();
+})();
+</script>
+</body></html>

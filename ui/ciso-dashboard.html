@@ -1,0 +1,147 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CISO Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1600px;margin:0 auto;padding:18px 16px 60px}a{color:#7aa7ff}
+.top{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}.btn:hover{border-color:#3a4258}.btn.sm{padding:3px 9px;font-size:12px}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.hero{display:grid;grid-template-columns:200px minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:center}
+.ring{position:relative;width:180px;height:180px;margin:auto}.ring svg{transform:rotate(-90deg)}.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.ring .v b{font-size:42px}.ring .v span{font-size:11.5px;color:var(--d-mute)}
+.ring circle.fg{transition:stroke-dashoffset 1.2s cubic-bezier(.2,.7,.2,1)}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--d-mute)}
+.cols3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:14px}.cols2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
+svg text{font:11px Inter,"Segoe UI",system-ui,sans-serif;fill:#c9d1dc}
+.mv{display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}.mv b{flex:1}.up{color:#56d364}.dn{color:#ff7b80}
+.fo{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;background:var(--d-raise);border:1px solid var(--d-line);margin-bottom:6px;font-size:13px}.fo i{margin-top:2px}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600}.live .dot{width:9px;height:9px;border-radius:50%;background:#2fb344;box-shadow:0 0 0 0 rgba(47,179,68,.6);animation:pulse 2s infinite}.live.off .dot{background:#e5484d;animation:none}.live.wait .dot{background:#f5b544;animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(47,179,68,.55)}70%{box-shadow:0 0 0 8px rgba(47,179,68,0)}100%{box-shadow:0 0 0 0 rgba(47,179,68,0)}}
+.al{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:10px;border:1px solid transparent;border-bottom-color:rgba(255,255,255,.05);text-decoration:none;color:inherit}.al:hover{background:rgba(255,255,255,.03)}
+.al.new{animation:flash 2.4s ease-out;border-color:#5b8def}@keyframes flash{0%{background:rgba(91,141,239,.35)}100%{background:transparent}}
+.sev{min-width:62px;text-align:center;padding:2px 6px;border-radius:999px;font-size:11px;font-weight:800}.s4{background:rgba(229,72,77,.2);color:#ff7b80}.s3{background:rgba(245,120,0,.2);color:#ffa25c}.s2{background:rgba(245,159,0,.16);color:#f5c544}.s1,.s0{background:rgba(139,147,164,.16);color:#aab2c2}
+.al .t{flex:1;min-width:0}.al .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.al .t span{font-size:12px;color:var(--d-mute)}
+.feed{max-height:520px;overflow:auto}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:5px 8px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.rk{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}.rk b{flex:1}
+.chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(139,147,164,.16);color:#aab2c2;white-space:nowrap}.chip.critical{background:rgba(229,72,77,.18);color:#ff7b80}.chip.high{background:rgba(245,120,0,.18);color:#ffa25c}.chip.medium{background:rgba(245,159,0,.16);color:#f5c544}
+.brief{white-space:pre-wrap;font-size:13px;line-height:1.55;max-height:260px;overflow:auto}
+.empty{color:var(--d-mute);font-size:13px;padding:6px 0}
+@media (max-width:1200px){.hero,.cols3,.cols2{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.live .dot,.al.new{animation:none}.ring circle.fg{transition:none}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Command &amp; Leadership · CISO</div><h1>CISO Dashboard</h1><div class="mute">Security posture by domain with its trend and ML forecast, the alerts open right now (synced live from the SOC), what moved, where to focus, the risks and the decisions waiting for a person. Every figure comes from the platform's own records; a source not connected says so.</div></div>
+ <span class="sp"></span><span class="live wait" id="live"><span class="dot"></span><span id="livet">connecting…</span></span><a class="btn" href="ai-ciso.html"><i class="ti ti-file-text"></i>Board brief &amp; details</a><a class="btn" href="soc-alerts.html"><i class="ti ti-alert-triangle"></i>Alert queue</a></div>
+<div id="err"></div>
+<div id="main" hidden>
+<section class="card hero"><div class="ring" id="ring"></div><div><div id="grade" style="font-size:22px;font-weight:900"></div><div class="sm mute" id="gradet"></div><svg id="trend" viewBox="0 0 420 120" role="img" aria-label="Posture trend and forecast" style="width:100%;margin-top:8px"></svg><div class="sm" id="fct"></div></div><div class="kpis" id="kpis"></div></section>
+<div class="cols3">
+ <section class="card"><h2><i class="ti ti-chart-radar"></i>Posture by domain <span class="c">solid = now · dashed = 7 days ago</span></h2><svg id="radar" viewBox="0 0 360 300" role="img" aria-label="Domains"></svg></section>
+ <section class="card"><h2><i class="ti ti-arrows-up-down"></i>What moved <span class="c" id="mvs"></span></h2><div id="movers"></div></section>
+ <section class="card"><h2><i class="ti ti-target-arrow"></i>Focus now <span class="c">ML · from the records</span></h2><div id="focus"></div></section>
+</div>
+<div class="cols2">
+ <section class="card"><h2><i class="ti ti-broadcast"></i>Open alerts - live <span class="c" id="alc"></span></h2>
+  <div class="tools"><select class="inp" id="minsev" aria-label="Minimum severity"><option value="3">high and critical</option><option value="4">critical only</option><option value="2">medium and above</option></select><span class="sm mute" id="newc"></span></div>
+  <div class="feed" id="feed"><div class="empty">Connecting to the SOC…</div></div></section>
+ <section class="card"><h2><i class="ti ti-chart-line"></i>Alerts per day <span class="c">30 days · dashed = next 7 days expected</span></h2><svg id="aline" viewBox="0 0 420 170" role="img" aria-label="Alerts per day" style="width:100%"></svg><div class="sm" id="alt"></div>
+  <h2 style="margin-top:14px"><i class="ti ti-clock"></i>Response</h2><div id="resp"></div></section>
+</div>
+<div class="cols3">
+ <section class="card"><h2><i class="ti ti-alert-octagon"></i>Top risks <span class="c" id="rkc"></span></h2><div id="risks"></div></section>
+ <section class="card"><h2><i class="ti ti-user-check"></i>Waiting for a person <span class="c" id="dcc"></span></h2><div id="dec"></div></section>
+ <section class="card"><h2><i class="ti ti-file-text"></i>Latest board brief <span class="c" id="brc"></span></h2><div class="brief" id="brief"></div></section>
+</div>
+<section class="card" id="wfcard" hidden><h2><i class="ti ti-route"></i>Requests to the IT teams <span class="c">Workflow Automation - evidence, reports, changes and exceptions the CISO office asked for</span><a href="workflow-automation.html#tab=new" style="margin-left:auto;color:#5b8def">New request</a>&nbsp;·&nbsp;<a href="workflow-automation.html#tab=mine" style="color:#5b8def">My requests</a></h2><div id="wf"></div></section>
+</div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var O=null,I=null,SEEN=null,NEWC=0,LAST_OK=0,FAILS=0,TIMER=null,POLL=10000;
+  var SEVN=['info','low','medium','high','critical'];
+  function req(base,m,u){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,base+u);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error&&j.error!=='internal error'?j.error:'')||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('not reachable'),{status:0}));};x.send(null);});}
+  var itam=function(u){return req('/api/itam','GET',u);},soc=function(u){return req('/api/soc','GET',u);};
+  function col(s){return s==null?'#8b93a4':s>=80?'#2fb344':s>=60?'#f5b544':'#e5484d';}
+  function ms(v){var n=Number(v);if(isFinite(n)&&n>0)return n<1e11?n*1000:n;var t=Date.parse(v);return isNaN(t)?null:t;}
+  function ago(v){var t=ms(v);if(!t)return '';var s=Math.max(0,(Date.now()-t)/1000);return s<60?'just now':s<3600?Math.round(s/60)+' min ago':s<86400?Math.round(s/3600)+' h ago':Math.round(s/86400)+' d ago';}
+  function dur(s){if(s==null)return '—';return s<3600?Math.round(s/60)+' min':s<86400?(s/3600).toFixed(1)+' h':(s/86400).toFixed(1)+' d';}
+  function ring(p,c){var r=82,ci=2*Math.PI*r,off=ci*(1-(p||0)/100);return '<svg width="180" height="180"><circle cx="90" cy="90" r="'+r+'" fill="none" stroke="#232837" stroke-width="15"/><circle class="fg" cx="90" cy="90" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="15" stroke-linecap="round" stroke-dasharray="'+ci.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';}
+  function drawTop(){var P=O.posture,s=O.soc,F=I.forecast,ob=(s&&s.open_by_severity)||{};
+    $('ring').innerHTML=ring(P.overall,col(P.overall))+'<div class="v"><b>'+(P.overall==null?'—':esc(P.overall))+'</b><span>security posture</span></div>';
+    $('grade').innerHTML=P.overall==null?'<span class="mute">not yet measurable</span>':'<span style="color:'+col(P.overall)+'">'+esc(P.grade||'')+'</span>';
+    $('gradet').textContent=P.overall==null?(P.withheld_why||''):(P.measured+' of '+P.domains.length+' domains measured');
+    var H=(O.trend||[]).filter(function(h){return h.overall!=null;}),w=420,h=120,o='';
+    if(H.length>=2){var n=H.length+(F.in_30_days!=null?6:0),X=function(i){return 10+i/(n-1)*(w-20);},Y=function(v){return h-10-v/100*(h-20);};
+      o+='<polyline points="'+H.map(function(p,i){return X(i).toFixed(1)+','+Y(p.overall).toFixed(1);}).join(' ')+'" fill="none" stroke="#5b8def" stroke-width="2"/>';
+      if(F.in_30_days!=null){var lx=X(H.length-1),ly=Y(H[H.length-1].overall);o+='<line x1="'+lx+'" y1="'+ly+'" x2="'+X(n-1)+'" y2="'+Y(F.in_30_days)+'" stroke="'+(F.falling?'#e5484d':'#2fb344')+'" stroke-width="2" stroke-dasharray="5 4"/><text x="'+(X(n-1)-4)+'" y="'+(Y(F.in_30_days)-6)+'" text-anchor="end" style="fill:'+(F.falling?'#ff7b80':'#56d364')+'">'+esc(F.in_30_days)+' in 30 d</text>';}
+      o+='<text x="10" y="12" style="fill:#8b93a4">'+esc(H.length+' days')+'</text>';}
+    else o='<text x="210" y="60" text-anchor="middle" style="fill:#8b93a4">the trend starts after the first days of posture history</text>';
+    $('trend').innerHTML=o;$('fct').innerHTML='<b>Forecast:</b> '+esc(F.text);
+    function k(n2,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n2==null?'—':n2)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    var crit=+(ob[4]||ob['4']||ob.critical||0),high=+(ob[3]||ob['3']||ob.high||0);
+    $('kpis').innerHTML=k(s?crit:null,'critical alerts open',crit?'#ff7b80':'')+k(s?high:null,'high alerts open',high?'#ffa25c':'')+k(s&&s.sla?s.sla.breaching_now:null,'SLA breaching now',s&&s.sla&&s.sla.breaching_now?'#ff7b80':'')
+      +k(O.risks.filter(function(r){return r.severity==='critical';}).length,'critical risks','#ff7b80')+k(O.decisions.length,'decisions waiting',O.decisions.length?'#f5c544':'')+k(O.compliance&&O.compliance.sama?O.compliance.sama.coverage_pct+'%':null,'SAMA CSF coverage');}
+  function drawRadar(){var D=O.posture.domains,N=D.length,cx=180,cy=150,R=110,o='',old={};
+    var H=O.trend||[],ref=H.length>=8?H[H.length-8]:H[0];if(ref&&ref.domains)old=ref.domains;
+    for(var g=1;g<=4;g++){o+='<polygon points="'+D.map(function(d,i){var a=-Math.PI/2+i*2*Math.PI/N;return (cx+R*g/4*Math.cos(a)).toFixed(1)+','+(cy+R*g/4*Math.sin(a)).toFixed(1);}).join(' ')+'" fill="none" stroke="#232837"/>';}
+    function poly(get,st,fill){return '<polygon points="'+D.map(function(d,i){var v=get(d);v=v==null?0:v;var a=-Math.PI/2+i*2*Math.PI/N;return (cx+R*v/100*Math.cos(a)).toFixed(1)+','+(cy+R*v/100*Math.sin(a)).toFixed(1);}).join(' ')+'" '+st+' fill="'+fill+'"/>';}
+    if(ref)o+=poly(function(d){return old[d.id];},'stroke="#8b93a4" stroke-dasharray="4 3" stroke-width="1.5"','none');
+    o+=poly(function(d){return d.measured?d.score:null;},'stroke="#5b8def" stroke-width="2"','rgba(91,141,239,.22)');
+    D.forEach(function(d,i){var a=-Math.PI/2+i*2*Math.PI/N,lx=cx+(R+22)*Math.cos(a),ly=cy+(R+18)*Math.sin(a);o+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" style="font-size:11px">'+esc(d.name.split(' ')[0])+'</text><text x="'+lx.toFixed(1)+'" y="'+(ly+13).toFixed(1)+'" text-anchor="middle" style="font-weight:800;fill:'+(d.measured?col(d.score):'#8b93a4')+'">'+esc(d.measured?d.score:'n/m')+'</text>';});
+    $('radar').innerHTML=o;}
+  function drawMovers(){var M=I.movers||[];$('mvs').textContent=M.length&&M[0].since?'since '+M[0].since:'';
+    $('movers').innerHTML=M.length?M.map(function(m){return '<div class="mv"><b>'+esc(m.name)+'</b><span class="mute sm">'+esc(m.before+' → '+m.now)+'</span><span class="'+(m.delta<0?'dn':m.delta>0?'up':'mute')+'" style="font-weight:800;min-width:46px;text-align:right">'+(m.delta>0?'+':'')+esc(m.delta)+'</span></div>';}).join(''):'<div class="empty">Needs a few days of posture history.</div>';
+    var ic={weakest:'ti-shield-half',falling:'ti-trending-down',alerts:'ti-activity-heartbeat',critical:'ti-alert-octagon'};
+    $('focus').innerHTML=(I.focus||[]).length?I.focus.map(function(f){return '<div class="fo"><i class="ti '+(ic[f.kind]||'ti-point')+'"></i><span>'+esc(f.text)+'</span></div>';}).join(''):'<div class="empty">Nothing stands out.</div>';}
+  function drawAlertLine(){var A=I.alerts,S=A.series||[],w=420,h=170,o='';
+    if(S.length>=2){var nx=(A.next_days||[]).length,n=S.length+nx,mx=Math.max.apply(null,S.map(function(s){return s.total;}).concat(A.next_days||[]).concat([1])),X=function(i){return 24+i/(n-1)*(w-34);},Y=function(v){return h-22-v/mx*(h-36);};
+      o+='<line x1="24" y1="'+(h-22)+'" x2="'+(w-10)+'" y2="'+(h-22)+'" stroke="#232837"/><text x="20" y="'+(Y(mx)+4)+'" text-anchor="end" style="fill:#8b93a4">'+esc(mx)+'</text>';
+      o+='<polyline points="'+S.map(function(s,i){return X(i).toFixed(1)+','+Y(s.total).toFixed(1);}).join(' ')+'" fill="none" stroke="#a371f7" stroke-width="2"/>';
+      if(nx)o+='<polyline points="'+[S.length-1].concat((A.next_days||[]).map(function(_,i){return S.length+i;})).map(function(i,k){var v=k===0?S[S.length-1].total:A.next_days[k-1];return X(i).toFixed(1)+','+Y(v).toFixed(1);}).join(' ')+'" fill="none" stroke="#a371f7" stroke-width="2" stroke-dasharray="5 4" opacity=".7"/>';
+      var li=S.length-1;o+='<circle cx="'+X(li)+'" cy="'+Y(S[li].total)+'" r="'+(A.unusual?6:4)+'" fill="'+(A.unusual?'#e5484d':'#a371f7')+'"><title>'+esc(S[li].day+': '+S[li].total)+'</title></circle>';
+      o+='<text x="24" y="'+(h-6)+'" style="fill:#8b93a4">'+esc(S[0].day)+'</text><text x="'+X(li)+'" y="'+(h-6)+'" text-anchor="middle" style="fill:#8b93a4">today</text>';}
+    else o='<text x="210" y="85" text-anchor="middle" style="fill:#8b93a4">no alert history from the SOC yet</text>';
+    $('aline').innerHTML=o;$('alt').innerHTML=(A.unusual?'<span style="color:#ff7b80;font-weight:700">⚠ </span>':'')+esc(A.text)+(A.next_7_days!=null?esc(' · about '+A.next_7_days+' expected in the next 7 days'):'');
+    var s=O.soc;$('resp').innerHTML=s?'<div class="mv"><b>Mean time to detect</b><span>'+esc(dur(s.mttd_s))+'</span></div><div class="mv"><b>Mean time to resolve</b><span>'+esc(dur(s.mttr_s))+'</span></div>'+(s.sla?'<div class="mv"><b>Acknowledged in SLA</b><span>'+esc(s.sla.ack_compliance_pct==null?'—':s.sla.ack_compliance_pct+'%')+'</span></div><div class="mv"><b>Resolved in SLA</b><span>'+esc(s.sla.resolve_compliance_pct==null?'—':s.sla.resolve_compliance_pct+'%')+'</span></div>':''):'<div class="empty">The SOC is not connected.</div>';}
+  function drawLists(){var R=O.risks.slice(0,8);$('rkc').textContent=O.risks_total+' in the register';
+    $('risks').innerHTML=R.length?R.map(function(r){return '<div class="rk"><span class="chip '+esc(r.severity)+'">'+esc(r.severity)+'</span><b>'+esc(r.title)+'</b><span class="sm mute">'+esc(r.source||'')+'</span></div>';}).join(''):'<div class="empty">No open risk recorded.</div>';
+    var D=O.decisions.slice(0,8);$('dcc').textContent=O.decisions.length+' waiting';
+    $('dec').innerHTML=D.length?D.map(function(d){return '<div class="rk"><span class="chip '+esc(d.severity||'')+'">'+esc(d.kind||'decision')+'</span><b>'+esc(d.title)+'</b><span class="sm mute">'+esc(d.who||'')+'</span></div>';}).join(''):'<div class="empty">Nothing waiting for a person.</div>';}
+  function drawBrief(B){$('brc').textContent=B?(B.kind==='ai'?'AI-written':'rule-based')+' · '+ago(B.at):'';$('brief').innerHTML=B?'<b>'+esc(B.headline||'')+'</b>'+(B.summary?'\n\n'+esc(String(B.summary).slice(0,900)):'')+((B.board_points||[]).length?'\n\n'+B.board_points.slice(0,5).map(function(x){return '• '+esc(typeof x==='string'?x:(x.text||x.point||''));}).join('\n'):''):'<div class="empty">No brief yet - the AI CISO writes one every working morning.</div>';}
+  // Workflow Automation (GET /workflow/attention): what the CISO office asked the IT teams for - open, late, results to accept,
+  // approvals - and how the security-relevant teams answer; one implementation with every workspace and dashboard
+  function drawWf(){itam('/workflow/attention').then(function(a){var w=a.summary,P=(a.priorities||[]).map(function(p){return {p:p,pts:p.why.reduce(function(n,q){return n+q[1];},0)};}).sort(function(x,y){return y.pts-x.pts;});$('wfcard').hidden=false;
+      var t=function(v,l,c){return '<div style="min-width:120px"><div style="font-size:22px;font-weight:700;color:'+(c||'inherit')+'">'+esc(String(v))+'</div><div style="font-size:11.5px;color:#8b93a4">'+esc(l)+'</div></div>';};
+      var done=w.teams.reduce(function(n,x){return n+x.n;},0),ont=w.teams.reduce(function(n,x){return n+x.on_time;},0);
+      var h='<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">'+t(w.raised_open,'open with the IT teams')+t(w.raised_late,'late with the IT teams',w.raised_late?'#e5484d':'')+t(w.to_accept,'results for you to accept',w.to_accept?'#f5b544':'')+t(w.approvals,'waiting for your approval',w.approvals?'#f5b544':'')+t(w.all_overdue,'overdue across the IT teams',w.all_overdue?'#e5484d':'#2fb344')+t(done?Math.round(ont/done*100)+' %':'—',done?'IT teams on time ('+ont+' of '+done+')':'on time - no history yet')+'</div>';
+      h+=P.length?P.slice(0,8).map(function(x){return '<a href="'+esc(x.p.page)+'" style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid #232837;color:inherit;text-decoration:none"><span style="font:600 11px ui-monospace,Consolas,monospace;padding:1px 7px;border-radius:9px;background:'+(x.pts>=45?'rgba(229,72,77,.18);color:#e5484d':'rgba(245,181,68,.16);color:#f5b544')+'">'+esc(x.pts)+'</span><span><b>'+esc(x.p.ref)+'</b> '+esc(x.p.text)+'<span style="display:block;font-size:12px;color:#8b93a4">'+esc(x.p.kind)+' · '+esc(x.p.why.map(function(q){return q[0]+' +'+q[1];}).join(', '))+'</span></span></a>';}).join('')
+        :'<div class="empty">Nothing late or waiting for you.'+(w.functions.indexOf('ciso')<0?' You are not listed under the CISO office in Workflow Automation → Settings, so only your own requests count.':'')+'</div>';
+      $('wf').innerHTML=h;},function(e){if(e.status===404){$('wfcard').hidden=true;return;}$('wfcard').hidden=false;$('wf').innerHTML='<div class="empty">Workflow Automation could not be read: '+esc(e.message)+'</div>';});}
+  function load(){drawWf();return Promise.all([itam('/ciso/overview'),itam('/ciso/insights'),itam('/ciso/briefs?limit=1').catch(function(){return {briefs:[]};})]).then(function(R){O=R[0];I=R[1];$('main').hidden=false;$('err').innerHTML='';
+      drawTop();drawRadar();drawMovers();drawAlertLine();drawLists();var b=(R[2].briefs||[])[0];if(b)itam('/ciso/briefs/'+encodeURIComponent(b.id)).then(drawBrief,function(){drawBrief(b);});else drawBrief(null);},
+    function(e){$('main').hidden=true;$('err').innerHTML='<div class="card"><p>'+esc(e.status===404?'The CISO dashboard needs the platform update (update-platform.ps1).':e.status===409?e.message:'IT Asset Management is not reachable ('+e.message+').')+'</p></div>';});}
+  // ---- live alerts: polled every 10 s while visible, at once when the tab comes back, backing off when the SOC does not answer
+  function liveState(st,txt){var l=$('live');l.className='live '+st;$('livet').textContent=txt;}
+  function tick(){var s=LAST_OK?Math.round((Date.now()-LAST_OK)/1000):null;if(FAILS)return;if(s!=null)liveState('','live · synced '+(s<2?'just now':s+' s ago'));}
+  setInterval(tick,1000);
+  function poll(){clearTimeout(TIMER);if(document.hidden){TIMER=setTimeout(poll,POLL);return;}
+    var ms2=$('minsev').value;
+    soc('/alerts?status=open&min_severity='+encodeURIComponent(ms2)+'&limit=60').then(function(r){var L=(r.items||r.alerts||r||[]);if(!Array.isArray(L))L=[];
+        L.sort(function(a,b){return (ms(b.ts_last||b.last_seen)||0)-(ms(a.ts_last||a.last_seen)||0);});
+        var first=SEEN===null,fresh={};if(first)SEEN={};L.forEach(function(a){var k=a.id+'|'+(a.ts_last||a.count||'');if(!first&&!SEEN[k]){fresh[a.id]=1;NEWC++;}SEEN[k]=1;});
+        $('alc').textContent=L.length+' open';$('newc').textContent=NEWC?NEWC+' new since you opened this page':'';
+        $('feed').innerHTML=L.length?L.map(function(a){var sv=Math.max(0,Math.min(4,+a.severity||0));return '<a class="al'+(fresh[a.id]?' new':'')+'" href="soc-alerts.html?id='+encodeURIComponent(a.id)+'"><span class="sev s'+sv+'">'+esc(SEVN[sv])+'</span><span class="t"><b>'+esc(a.rule_name||a.rule_id||'alert')+'</b><span>'+esc([a.summary,a.host,a.user].filter(Boolean).join(' · ').slice(0,180))+'</span></span><span class="sm mute" style="white-space:nowrap">'+esc(ago(a.ts_last||a.last_seen))+(a.count>1?' · ×'+esc(a.count):'')+'</span></a>';}).join(''):'<div class="empty">No open alert at this severity.</div>';
+        LAST_OK=Date.now();FAILS=0;tick();TIMER=setTimeout(poll,POLL);},
+      function(e){FAILS++;var wait=Math.min(120000,POLL*Math.pow(2,FAILS-1));liveState('off',(e.status===403?'your role cannot see alerts':e.status===404?'the SOC alert API is not installed':'SOC not reachable')+' · retrying in '+Math.round(wait/1000)+' s');
+        if(SEEN===null)$('feed').innerHTML='<div class="empty">'+esc(e.status===404?'The SIEM on the server does not have the alert API yet - run the update.':'The SOC is not reachable right now; this panel keeps retrying.')+'</div>';TIMER=setTimeout(poll,wait);});}
+  $('minsev').addEventListener('change',function(){SEEN=null;NEWC=0;poll();});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden){poll();load();}});
+  load();poll();
+  setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script></body></html>

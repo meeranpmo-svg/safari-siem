@@ -1,0 +1,84 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SOC Performance &amp; Operations</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1680px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.sm{padding:3px 9px;font-size:12px}.btn.bad{border-color:#5a2a2d;color:#ff8a8e}.btn:disabled{opacity:.5}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:14px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:24px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.kpi .s{font-size:11.5px;color:var(--d-mute)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;min-width:0;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}.card h2 a{margin-left:auto;font-size:12px;color:#8db0ff;text-decoration:none}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.s4{background:rgba(229,72,77,.22);color:#ff8a8e}.s3{background:rgba(245,99,0,.2);color:#ff9b5c}.s2{background:rgba(245,159,0,.18);color:#f5b544}.s1,.s0{background:rgba(139,147,164,.16);color:#aab2c2}.cj{background:rgba(229,72,77,.18);color:#ff8a8e}.hi{background:rgba(245,159,0,.18);color:#f5b544}.ok{background:rgba(47,179,68,.15);color:#56d364}.off{background:rgba(139,147,164,.16);color:#aab2c2}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px;border-bottom:1px solid var(--d-line)}td{padding:7px 6px;border-bottom:1px solid #1b2030;vertical-align:top}td.n{text-align:right;font-variant-numeric:tabular-nums}
+.inp,select.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.why{font-size:11.5px;color:var(--d-mute)}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+svg.w{width:100%;height:150px;display:block}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){main{padding:12px 12px 40px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}table{display:block;overflow-x:auto}.top h1{font-size:20px}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security Operations</div><h1>SOC Performance &amp; Operations</h1><div class="sm mute">How fast the SOC detects, acknowledges and resolves alerts - from the alert records - the alerts to work first with their priority explained, the watchlist of systems and people the SOC wants to hear about, and which systems are crown jewels.</div></div><div class="sp"></div>
+ <a class="btn" href="incident-response.html"><i class="ti ti-urgent"></i>Incident response</a><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <div class="kpis" id="kpis"></div>
+ <div class="grid">
+  <section class="card"><h2><i class="ti ti-clock-hour-4"></i>Response times by severity <span class="c">last 30 days · median / 90th percentile</span></h2><div id="sev"></div></section>
+  <section class="card"><h2><i class="ti ti-chart-bar"></i>Week by week <span class="c">median minutes</span></h2><div id="wk"></div></section>
+ </div>
+ <section class="card" id="topcard"><h2><i class="ti ti-list-numbers"></i>Work these first <span class="c">open alerts by priority - every point explained, asset criticality and the watchlist included</span><a href="soc-alerts.html">Alert queue →</a></h2><div id="top"></div></section>
+ <div class="grid">
+  <section class="card" id="wlcard"><h2><i class="ti ti-eye"></i>Watchlist <span class="c">an appearance in the logs raises an alert (checked every 5 minutes)</span></h2><div id="wlform"></div><div id="wl"></div></section>
+  <section class="card" id="accard"><h2><i class="ti ti-diamond"></i>Asset criticality <span class="c">crown jewel +20 priority, high +10</span></h2><div id="acform"></div><div id="ac"></div></section>
+ </div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc,$=function(id){return document.getElementById(id);};
+  var ROLE='viewer',P=null,W=null,Q=null,SEV=['info','low','medium','high','critical'];
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},can=function(r){return (RANK[ROLE]||0)>=RANK[r];};
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc'+u);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('The SIEM is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function dur(m){if(m==null)return '—';if(m<60)return m+' min';if(m<1440)return (m/60).toFixed(1)+' h';return (m/1440).toFixed(1)+' d';}
+  function cell(s){return s.median_min==null?'<span class="mute" title="'+esc(s.withheld||'')+'">— <span class="sm">('+esc(s.n)+')</span></span>':esc(dur(s.median_min))+' / '+esc(dur(s.p90_min))+' <span class="sm mute">('+esc(s.n)+')</span>';}
+  function drawPerf(){var o=P.overall;function k(n,l,s,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div>'+(s?'<div class="s">'+esc(s)+'</div>':'')+'</div>';}
+    $('kpis').innerHTML=k(o.raised,'alerts in 30 days')+k(dur(o.detect.median_min),'time to detect',o.detect.n?'median of '+o.detect.n:'no alert yet')+k(dur(o.acknowledge.median_min),'time to acknowledge',o.acknowledge.n?'median of '+o.acknowledge.n:'none acknowledged')
+      +k(dur(o.resolve.median_min),'time to resolve',o.resolve.n?'median of '+o.resolve.n:'none closed')+k(P.open,'open now')+k(P.unacknowledged,'not acknowledged',P.oldest_unacked_min!=null?'oldest '+dur(P.oldest_unacked_min):'',P.unacknowledged?'#f5b544':'');
+    $('sev').innerHTML='<table><thead><tr><th>Severity</th><th class="n">Raised</th><th>Detect</th><th>Acknowledge</th><th>Resolve</th></tr></thead><tbody>'+P.by_severity.map(function(s){return '<tr><td><span class="pill s'+s.severity+'">'+esc(SEV[s.severity])+'</span></td><td class="n">'+esc(s.raised)+'</td><td>'+cell(s.detect)+'</td><td>'+cell(s.acknowledge)+'</td><td>'+cell(s.resolve)+'</td></tr>';}).join('')+'</tbody></table><div class="sm mute" style="margin-top:6px">In brackets: how many alerts the figure is computed from. Fewer than 3 is withheld rather than shown as a trend.</div>';
+    var ks=[['detect','#5b8def','detect'],['acknowledge','#f5b544','acknowledge'],['resolve','#2fb344','resolve']],mx=1;P.weeks.forEach(function(w){ks.forEach(function(k){if(w[k[0]].median_min)mx=Math.max(mx,w[k[0]].median_min);});});
+    var Wd=600,Hh=120,gw=Wd/4,bw=gw/4,h='';P.weeks.forEach(function(w,i){ks.forEach(function(k,j){var v=w[k[0]].median_min;if(v==null)return;var hh=(Hh-10)*v/mx;h+='<rect x="'+(i*gw+j*bw+8).toFixed(1)+'" y="'+(Hh-hh).toFixed(1)+'" width="'+(bw-4).toFixed(1)+'" height="'+hh.toFixed(1)+'" rx="2" fill="'+k[1]+'"><title>'+esc(k[2]+': '+dur(v))+'</title></rect>';});h+='<text x="'+(i*gw+gw/2)+'" y="'+(Hh+14)+'" text-anchor="middle" fill="#8b93a4" font-size="11">'+esc(new Date(w.to).toLocaleDateString())+'</text>';});
+    $('wk').innerHTML=P.weeks.some(function(w){return w.raised;})?'<svg class="w" viewBox="0 0 '+Wd+' '+(Hh+18)+'" preserveAspectRatio="none" role="img" aria-label="Median response times per week">'+h+'</svg><div class="sm mute"><span style="color:#5b8def">■</span> detect &nbsp; <span style="color:#f5b544">■</span> acknowledge &nbsp; <span style="color:#2fb344">■</span> resolve</div>':note('No alert in the last four weeks.');}
+  function drawTop(){if(!Q){$('top').innerHTML=note('Reading the alert queue…');return;}var L=(Q.items||[]).slice(0,10);
+    $('top').innerHTML=L.length?'<table><thead><tr><th class="n">Priority</th><th>Alert</th><th>Why</th></tr></thead><tbody>'+L.map(function(a){var w=(a.why||[]).filter(function(x){return x.points;}).map(function(x){return (x.points>0?'+':'')+x.points+' '+x.factor+(x.factor==='asset criticality'||x.factor==='watchlist'?' ('+x.reason+')':'');});return '<tr><td class="n"><b>'+esc(a.priority)+'</b></td><td><span class="pill s'+esc(a.severity)+'">'+esc(SEV[a.severity]||a.severity)+'</span> '+esc(a.rule_name)+'<div class="sm mute">'+esc((a.entities||[]).slice(0,3).join(' · '))+'</div></td><td class="why">'+esc(w.join(' · '))+'</td></tr>';}).join('')+'</tbody></table>':note('No open alert.');}
+  function drawWl(){if(!W)return;var L=W.items||[];
+    $('wlform').innerHTML=can('operator')?'<div class="row" style="margin-bottom:10px"><select class="inp" id="wk1" aria-label="Kind"><option value="host">host</option><option value="ip">IP</option><option value="user">user</option><option value="domain">domain</option><option value="hash">file hash</option><option value="cve">CVE</option></select><input class="inp" id="wv" placeholder="pc-9, 10.0.0.9, dave, CVE-2026-1234" style="flex:1;min-width:160px" aria-label="Value"><input class="inp" id="wr" placeholder="Why watch it?" style="flex:1;min-width:160px" aria-label="Reason"><select class="inp" id="wd" aria-label="For how long"><option value="">until removed</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option></select><button class="btn pri sm" type="button" id="wadd">Watch</button></div>':'';
+    $('wl').innerHTML=L.length?'<table><thead><tr><th>Watched</th><th>Why</th><th class="n">Open alerts</th><th>Last seen in logs</th><th></th></tr></thead><tbody>'+L.map(function(w){return '<tr><td><span class="pill '+(w.active?'ok':'off')+'">'+esc(w.kind)+'</span> <b>'+esc(w.value)+'</b>'+(w.until?'<div class="sm mute">'+esc(w.active?'until '+new Date(w.until).toLocaleDateString():'expired '+new Date(w.until).toLocaleDateString())+'</div>':'')+'</td><td class="sm">'+esc(w.reason)+'<div class="mute">'+esc(w.by)+'</div></td><td class="n">'+(w.open_alerts?'<span class="pill s'+esc(w.worst)+'">'+esc(w.open_alerts)+'</span>':'0')+'</td><td class="sm">'+esc(w.last_appearance?new Date(w.last_appearance).toLocaleString():w.last_check?'not seen since added':'not checked yet')+'</td><td>'+(can('operator')?'<button class="btn sm bad" type="button" data-wrm="'+esc(w.id)+'">Remove</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':note('Nothing watched. Add a host, IP, user, domain, file hash or CVE - any appearance in the logs then raises an alert, and its alerts rank higher.');
+    var C=W.criticality||[];
+    $('acform').innerHTML=can('admin')?'<div class="row" style="margin-bottom:10px"><input class="inp" id="av" placeholder="Host name or IP" style="flex:1;min-width:150px" aria-label="System"><select class="inp" id="al" aria-label="Level"><option value="crown_jewel">crown jewel</option><option value="high">high</option></select><input class="inp" id="ar" placeholder="Why (business service)" style="flex:1;min-width:150px" aria-label="Reason"><button class="btn pri sm" type="button" id="aadd">Rate</button></div>':'<div class="sm mute" style="margin-bottom:8px">Administrators rate systems.</div>';
+    $('ac').innerHTML=C.length?'<table><thead><tr><th>System</th><th>Level</th><th>Why</th><th></th></tr></thead><tbody>'+C.map(function(c){return '<tr><td><b>'+esc(c.value)+'</b></td><td><span class="pill '+(c.level==='crown_jewel'?'cj':'hi')+'">'+esc(c.level==='crown_jewel'?'crown jewel':'high')+'</span></td><td class="sm">'+esc(c.reason)+'<div class="mute">'+esc(c.by)+'</div></td><td>'+(can('admin')?'<button class="btn sm bad" type="button" data-arm="'+esc(c.id)+'">Remove</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':note('No system rated yet. Rate the systems the business cannot lose (claims, core insurance, finance) so alerts on them rank first.');}
+  function load(){$('err').hidden=true;
+    return req('GET','/soc/performance').then(function(p){P=p;$('main').hidden=false;drawPerf();
+      if(!can('analyst')){['topcard','wlcard','accard'].forEach(function(i){$(i).hidden=true;});return;}
+      return Promise.all([req('GET','/soc/watchlist').then(function(w){W=w;drawWl();},function(e){$('wl').innerHTML=note(e.message);}),req('GET','/soc/queue?limit=10').then(function(q){Q=q;drawTop();},function(e){$('top').innerHTML=note(e.message);})]);})
+    .catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML=note(e.status===404?'SOC performance is not installed on the SIEM yet - run the update (update-platform.ps1).':e.message);});}
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-wrm],[data-arm],button[id]');if(!el)return;
+    if(el.id==='refresh'){load();return;}
+    if(el.id==='wadd'){var b={kind:$('wk1').value,value:$('wv').value.trim(),reason:$('wr').value.trim()};if($('wd').value)b.days=Number($('wd').value);el.disabled=true;req('POST','/soc/watchlist',b).then(function(r){toast('Watching '+r.kind+' '+r.value);return load();}).catch(function(e){el.disabled=false;toast(e.message);});return;}
+    if(el.dataset.wrm){var why=prompt('Why remove it from the watchlist?');if(!why)return;req('POST','/soc/watchlist/'+encodeURIComponent(el.dataset.wrm)+'/remove',{reason:why}).then(function(){toast('Removed');return load();}).catch(function(e){toast(e.message);});return;}
+    if(el.id==='aadd'){el.disabled=true;req('POST','/soc/criticality',{value:$('av').value.trim(),level:$('al').value,reason:$('ar').value.trim()}).then(function(r){toast(r.value+' rated '+(r.level==='crown_jewel'?'crown jewel':'high'));return load();}).catch(function(e){el.disabled=false;toast(e.message);});return;}
+    if(el.dataset.arm){req('POST','/soc/criticality/'+encodeURIComponent(el.dataset.arm)+'/remove',{}).then(function(){toast('Rating removed');return load();}).catch(function(e){toast(e.message);});}});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{ROLE=JSON.parse(w.responseText).role||'viewer';}catch(e){ROLE='viewer';/* unknown identity: least privilege */}load();};w.onerror=function(){load();};w.send();
+})();
+</script></body></html>

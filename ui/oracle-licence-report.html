@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Oracle Licence Compliance - one-page report</title>
+<style>
+body{margin:0;background:#e9ebee;font:13px "Segoe UI",Arial,sans-serif;color:#111}
+.bar{display:flex;gap:8px;align-items:center;justify-content:center;padding:10px;background:#181b1f;color:#d8d9da}
+.bar button{font:600 13px "Segoe UI",Arial,sans-serif;border:1px solid #2a2e35;background:#22262e;color:#fff;border-radius:8px;padding:7px 14px;cursor:pointer}.bar button.pri{background:#5794f2;border-color:#5794f2;color:#0b0d12}
+.page{background:#fff;width:210mm;min-height:287mm;margin:14px auto;padding:12mm 13mm;box-sizing:border-box;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.err{color:#c62828;text-align:center;padding:40px}
+@page{size:A4;margin:9mm}
+@media print{body{background:#fff}.bar{display:none}.page{box-shadow:none;margin:0;width:auto;min-height:0;padding:0}}
+</style></head><body>
+<div class="bar"><span id="st">Loading…</span><button type="button" class="pri" id="pr">🖨 Print / save as PDF</button><button type="button" id="back">← Oracle Licence Inventory</button></div>
+<div class="page" id="pg"></div>
+<script src="vendor/zyb-org.js"></script><script src="vendor/zyb-errors.js"></script>
+<script>
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);};
+  $('pr').addEventListener('click',function(){window.print();});
+  $('back').addEventListener('click',function(){location.href='oracle-licences.html';});
+  var x=new XMLHttpRequest();x.open('GET','/api/itam/oracle-licences/report');x.withCredentials=true;x.timeout=120000;
+  x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }
+    if(x.status===200&&j&&typeof j.html==='string'){$('pg').innerHTML=j.html;$('st').textContent=j.subject;document.title=j.subject;}   // the engine escapes every value it puts in this HTML
+    else{$('pg').innerHTML='<p class="err"></p>';$('pg').firstChild.textContent=x.status===404?'The one-page report needs the server update (IT Asset Management).':x.status===403?'Operators and administrators see licence data.':((j&&j.error)||('HTTP '+x.status));$('st').textContent='';}};
+  x.onerror=x.ontimeout=function(){$('pg').innerHTML='<p class="err">IT Asset Management could not be reached.</p>';};
+  x.send();
+})();
+</script></body></html>

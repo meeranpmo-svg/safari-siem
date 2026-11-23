@@ -1,0 +1,153 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Synthetic Monitoring &amp; Apdex</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7;--accent:#D7262D}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:24px;font-weight:800;margin-top:3px}.t .s{font-size:11.5px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--edge);margin:0 0 12px;overflow-x:auto}.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 14px;color:var(--mute);white-space:nowrap}.tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent)}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 6px;font-size:15px;color:var(--title)}.card p.d{margin:0 0 10px;color:var(--mute);font-size:12.5px}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:var(--accent);border-color:var(--accent);color:#fff}button.sm{padding:4px 9px;font-size:12px;white-space:nowrap}button:disabled{opacity:.5}
+input,select,textarea{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}textarea{font:12.5px Consolas,monospace;min-height:110px;width:100%}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,tr:focus-visible{outline:2px solid var(--title);outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(140,147,161,.12);vertical-align:middle}
+tbody tr[data-id]{cursor:pointer}tbody tr[data-id]:hover td{background:rgba(140,147,161,.07)}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.st{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}.st i{width:9px;height:9px;border-radius:50%;display:inline-block}.st.up i{background:var(--ok)}.st.down i{background:var(--bad)}.st.degraded i{background:var(--warn)}.st.pending i{background:#6e7681}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;background:rgba(140,147,161,.15);white-space:nowrap;margin:1px 2px 1px 0}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}.pill.info{background:rgba(88,166,255,.15);color:var(--info)}
+.brk{display:flex;height:10px;border-radius:5px;overflow:hidden;min-width:120px;background:rgba(140,147,161,.12)}.brk i{display:block;height:100%}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin:6px 0}.lg span{display:inline-flex;align-items:center;gap:5px}.lg b{width:10px;height:10px;border-radius:2px;display:inline-block}
+form.fm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}form.fm label{display:grid;gap:4px;font-size:12px;color:var(--mute)}form.fm .w{grid-column:1/-1}form.fm .ck{display:flex;gap:8px;align-items:center;color:var(--text)}
+.f{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px;align-items:center}.f input[type=search]{flex:1;min-width:200px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+@media(max-width:800px){form.fm{grid-template-columns:1fr}}
+@media print{.top button,.tabs{display:none}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Applications · digital experience</div><h1>Synthetic Monitoring &amp; Apdex</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
+<div class="k" id="kpi"><div class="t"><div class="l">Loading</div><div class="v">…</div></div></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-tab="chk">Checks</button><button type="button" role="tab" aria-selected="false" data-tab="app">Applications</button><button type="button" role="tab" aria-selected="false" data-tab="crt">Certificates</button><button type="button" role="tab" aria-selected="false" data-tab="por">Portal Apdex</button><button type="button" role="tab" aria-selected="false" data-tab="set" id="tab-set" hidden>Settings &amp; checks</button></div>
+<section id="t-chk" role="tabpanel" class="card"><div class="f"><input type="search" id="q" placeholder="Search check, application, URL" aria-label="Search"><select id="fst" aria-label="Status"><option value="">All statuses</option><option value="down">Down</option><option value="degraded">Degraded</option><option value="up">Up</option><option value="pending">Not run yet</option></select></div><div class="tw" id="chk"></div>
+  <p class="note">Apdex = (satisfied + tolerating / 2) / runs, against each check's threshold T: satisfied up to T, tolerating up to 4 T, frustrated above or failed. p50 / p95 are read from an hourly histogram (≈ the upper bound of the bucket).</p></section>
+<section id="t-app" role="tabpanel" class="card" hidden><h2>Digital experience by application</h2><p class="d">All checks of one application together, last 24 hours.</p><div class="tw" id="apps"></div></section>
+<section id="t-crt" role="tabpanel" class="card" hidden><h2>TLS certificates</h2><p class="d">The certificate each HTTPS check received on its last run, soonest expiry first.</p><div class="tw" id="crt"></div></section>
+<section id="t-por" role="tabpanel" class="card" hidden><h2>Portal Apdex from the web server logs</h2><p class="d">The same Apdex over real visitors' requests (nginx access logs in the SIEM, the Portal Traffic data). Only requests whose log line carries the request time are counted; a server error (5xx) is frustrated.</p>
+  <div class="f"><label class="muted">Threshold T <select id="pt"><option value="250">250 ms</option><option value="500" selected>500 ms</option><option value="1000">1 s</option><option value="2000">2 s</option></select></label><label class="muted">Period <select id="ph"><option value="1">1 hour</option><option value="24" selected>24 hours</option><option value="168">7 days</option><option value="720">30 days</option></select></label></div>
+  <div id="por"><div class="empty">Loading…</div></div></section>
+<section id="t-set" role="tabpanel" class="card" hidden><div id="set"></div></section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var API='/api/soc/netops', Z=window.zybDetail, esc=Z.esc, V=null, ROLE='viewer', RANK={viewer:0,analyst:1,operator:2,admin:3}, EDIT=null;
+  var $=function(id){return document.getElementById(id);}; function can(r){return (RANK[ROLE]||0)>=RANK[r];}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,API+p);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.errors&&j.errors.join('; ')||j.error))||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the SIEM engine is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
+  function dt(t){return t?new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'–';}
+  function ms(v){return v==null?'–':v>=1000?(v/1000).toFixed(v>=10000?0:1)+' s':Math.round(v)+' ms';}
+  function pc(v){return v==null?'–':v.toFixed(v>=99.95||v<10?1:2)+' %';}
+  var RATE={excellent:'ok',good:'ok',fair:'warn',poor:'bad',unacceptable:'bad'};
+  var RLBL={excellent:'Excellent',good:'Good',fair:'Fair',poor:'Poor',unacceptable:'Unacceptable'};
+  function apx(s){return !s||s.apdex==null?'<span class="muted">–</span>':'<b>'+s.apdex.toFixed(2)+'</b> <span class="pill '+(RATE[s.rating]||'')+'">'+esc(RLBL[s.rating]||s.rating)+'</span>';}
+  var SLBL={up:'Up',down:'Down',degraded:'Degraded',pending:'Not run yet'};
+  function st(s){return '<span class="st '+esc(s)+'"><i></i>'+esc(SLBL[s]||s)+'</span>';}
+  var COL={dns:'#79b8ff',connect:'#a371f7',tls:'#56d4dd',server:'#e3b341',download:'#3fb950'};
+  var CLBL={dns:'DNS',connect:'Connect',tls:'TLS',server:'Server (first byte)',download:'Download'};
+  function parts(m){if(!m||m.total==null)return null;var d=m.dns||0,c=m.connect||0,t=m.tls||0,f=m.ttfb!=null?m.ttfb:m.total;return {dns:d,connect:c,tls:t,server:Math.max(0,f-d-c-t),download:Math.max(0,m.total-f)};}
+  function brk(m){var p=parts(m);if(!p||!m.total)return '<span class="muted">–</span>';return '<div class="brk" title="'+esc(Object.keys(p).map(function(k){return CLBL[k]+' '+ms(p[k]);}).join(' · '))+'">'+Object.keys(p).map(function(k){return '<i style="width:'+(p[k]/m.total*100).toFixed(1)+'%;background:'+COL[k]+'"></i>';}).join('')+'</div>';}
+  function legend(){return '<div class="lg">'+Object.keys(COL).map(function(k){return '<span><b style="background:'+COL[k]+'"></b>'+esc(CLBL[k])+'</span>';}).join('')+'</div>';}
+  var CST={ok:['Valid','ok'],expiring:['Expiring soon','warn'],expired:['Expired','bad'],untrusted:['Not trusted','bad']};
+  function cert(c){if(!c)return '<span class="muted">–</span>';var s=CST[c.state]||[c.state||'',''];return '<span class="pill '+s[1]+'">'+esc(s[0])+'</span> '+(c.days_left!=null?'<span class="'+(c.days_left<=30?'err':'muted')+'">'+c.days_left+' d</span>':'');}
+
+  function load(){return req('GET','/synthetic').then(function(v){V=v;if(v.role&&RANK[v.role]!=null&&RANK[v.role]>(RANK[ROLE]||0))ROLE=v.role;draw();$('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});})
+    .catch(function(e){$('kpi').innerHTML='';$('chk').innerHTML='<p class="err">'+esc(e.status===404?'Synthetic monitoring is not installed in the SIEM engine yet - run the update (update-platform.ps1).':e.status===403?'Your role cannot read synthetic monitoring.':e.message)+'</p>';});}
+  function draw(){var s=V.summary,d=s.d1||{};
+    $('tab-set').hidden=!can('admin');
+    $('kpi').innerHTML=[['Checks',s.checks,s.pending?s.pending+' not run yet':'monitored','info'],['Up',s.up,'',s.up?'ok':''],['Degraded',s.degraded,'slow (Apdex below 0.70) or certificate',s.degraded?'warn':''],['Down',s.down,'failed on the last run',s.down?'bad':'ok'],
+      ['Apdex 24 h',d.apdex==null?'–':d.apdex.toFixed(2),d.rating?RLBL[d.rating]:'no runs yet',d.rating?RATE[d.rating]:''],['Availability 24 h',d.uptime_pct==null?'–':pc(d.uptime_pct),d.runs?d.runs+' runs':'',d.uptime_pct==null?'':d.uptime_pct>=99.9?'ok':d.uptime_pct>=99?'warn':'bad'],
+      ['Certificates',s.certs_expiring+s.certs_bad,s.certs_bad?s.certs_bad+' expired or not trusted':'expiring soon',s.certs_bad?'bad':s.certs_expiring?'warn':'ok']]
+      .map(function(k){return '<div class="t '+k[3]+'"><div class="l">'+esc(k[0])+'</div><div class="v">'+esc(String(k[1]))+'</div><div class="s">'+esc(k[2])+'</div></div>';}).join('');
+    drawChecks();drawApps();drawCerts();if(can('admin'))drawSet();}
+  function drawChecks(){var q=$('q').value.toLowerCase(),f=$('fst').value;
+    var L=V.checks.filter(function(c){return (!f||c.status===f)&&(!q||(c.name+' '+c.app+' '+c.url).toLowerCase().indexOf(q)>=0);});
+    $('chk').innerHTML=L.length?legend()+'<table><thead><tr><th>Status</th><th>Check</th><th>URL</th><th>Apdex 24 h</th><th class="n">24 h</th><th class="n">7 d</th><th class="n">30 d</th><th class="n">p50 / p95</th><th>Last run</th><th>Certificate</th><th></th></tr></thead><tbody>'
+      +L.map(function(c){var l=c.last;return '<tr data-id="'+esc(c.id)+'" tabindex="0"><td>'+st(c.status)+'</td><td><b>'+esc(c.name)+'</b>'+(c.app?'<div class="muted">'+esc(c.app)+'</div>':'')+(c.steps?' <span class="pill info">'+c.steps+' steps</span>':'')+(c.enabled?'':' <span class="pill">paused</span>')+'</td>'
+        +'<td class="mono">'+esc(c.method)+' '+esc(c.url)+'</td><td>'+apx(c.d1)+'</td><td class="n">'+pc(c.d1.uptime_pct)+'</td><td class="n">'+pc(c.d7.uptime_pct)+'</td><td class="n">'+pc(c.d30.uptime_pct)+'</td><td class="n">'+(c.d1.p50_ms!=null?'≈'+ms(c.d1.p50_ms)+' / ≈'+ms(c.d1.p95_ms):'–')+'</td>'
+        +'<td>'+(l?brk(l.ms)+'<div class="muted" style="font-size:11.5px">'+ms(l.ms&&l.ms.total)+' · '+(l.status?'HTTP '+l.status:'')+' · '+esc(dt(l.at))+'</div>'+(l.error?'<div class="err" style="font-size:12px">'+esc(l.error)+'</div>':''):'<span class="muted">–</span>')+'</td><td>'+cert(c.cert)+'</td>'
+        +'<td><div style="display:flex;gap:6px">'+(can('operator')?'<button type="button" class="sm" data-a="run" data-id="'+esc(c.id)+'">Run now</button>':'')+(can('admin')?'<button type="button" class="sm" data-a="edit" data-id="'+esc(c.id)+'">Edit</button>':'')+'</div></td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">'+(V.checks.length?'No check matches the filter.':'No synthetic checks yet. '+(can('admin')?'Open <b>Settings &amp; checks</b>: list the hosts the engine may reach, then add a check for each application URL.':'An administrator adds the allowed hosts and the checks.'))+'</div>';}
+  function drawApps(){var A=V.apps||[];$('apps').innerHTML=A.length?'<table><thead><tr><th>Application</th><th class="n">Checks</th><th class="n">Down</th><th>Apdex 24 h</th><th class="n">Satisfied</th><th class="n">Tolerating</th><th class="n">Frustrated</th><th class="n">Availability</th><th class="n">Error rate</th><th class="n">p50 / p95</th></tr></thead><tbody>'
+      +A.map(function(a){return '<tr><td><b>'+esc(a.app)+'</b></td><td class="n">'+a.checks+'</td><td class="n'+(a.down?' err':'')+'">'+a.down+'</td><td>'+apx(a)+'</td><td class="n">'+a.satisfied+'</td><td class="n">'+a.tolerating+'</td><td class="n">'+a.frustrated+'</td><td class="n">'+pc(a.uptime_pct)+'</td><td class="n">'+pc(a.error_rate_pct)+'</td><td class="n">'+(a.p50_ms!=null?'≈'+ms(a.p50_ms)+' / ≈'+ms(a.p95_ms):'–')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No checks yet.</div>';}
+  function drawCerts(){var C=V.certs||[];$('crt').innerHTML=C.length?'<table><thead><tr><th>Check</th><th>URL</th><th>State</th><th class="n">Days left</th><th>Expires</th><th>Issued to</th><th>Issuer</th></tr></thead><tbody>'
+      +C.map(function(c){return '<tr data-id="'+esc(c.id)+'" tabindex="0"><td><b>'+esc(c.name)+'</b></td><td class="mono">'+esc(c.url)+'</td><td>'+cert({state:c.state})+(c.error?'<div class="muted" style="font-size:11.5px">'+esc(c.error)+'</div>':'')+'</td><td class="n'+(c.days_left<=30?' err':'')+'">'+(c.days_left==null?'–':c.days_left)+'</td><td>'+esc(c.valid_to?new Date(c.valid_to).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'–')+'</td><td class="mono">'+esc(c.subject||'–')+'</td><td>'+esc(c.issuer||'–')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No HTTPS check has run yet.</div>';}
+
+  /* hourly chart: bars = p95 (≈), dots = Apdex */
+  function chart(H){var W=760,Hh=170,pad=28,n=H.length||1,bw=(W-pad*2)/n,max=Math.max.apply(null,H.map(function(h){return h.p95_ms||0;}).concat([1]));
+    var bars=H.map(function(h,i){if(h.p95_ms==null)return '';var y=Hh-pad-(h.p95_ms/max)*(Hh-pad*2);return '<rect x="'+(pad+i*bw+1).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+Math.max(1,bw-2).toFixed(1)+'" height="'+(Hh-pad-y).toFixed(1)+'" fill="#79b8ff" fill-opacity=".55"><title>'+esc(dt(h.hour)+': p95 ≈'+ms(h.p95_ms)+', '+h.runs+' runs')+'</title></rect>';}).join('');
+    var dots=H.map(function(h,i){if(h.apdex==null)return '';var y=Hh-pad-h.apdex*(Hh-pad*2);return '<circle cx="'+(pad+i*bw+bw/2).toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="'+(h.apdex>=0.85?'#3fb950':h.apdex>=0.7?'#e3b341':'#ff7b72')+'"><title>'+esc(dt(h.hour)+': Apdex '+h.apdex.toFixed(2))+'</title></circle>';}).join('');
+    var lbl=H.map(function(h,i){return i%6?'':'<text x="'+(pad+i*bw).toFixed(1)+'" y="'+(Hh-8)+'" font-size="10" fill="#8C93A1">'+esc(new Date(h.hour).toLocaleTimeString('en-GB',{hour:'2-digit'}))+'</text>';}).join('');
+    return '<svg viewBox="0 0 '+W+' '+Hh+'" style="width:100%;display:block" role="img" aria-label="Response time and Apdex per hour"><text x="'+pad+'" y="12" font-size="10" fill="#8C93A1">p95 ≈'+esc(ms(max))+'</text><line x1="'+pad+'" x2="'+(W-pad)+'" y1="'+(Hh-pad)+'" y2="'+(Hh-pad)+'" stroke="#8C93A1" stroke-opacity=".4"/>'+bars+dots+lbl+'</svg>'
+      +'<div class="lg"><span><b style="background:#79b8ff"></b>p95 response time per hour (≈)</span><span><b style="background:#3fb950;border-radius:50%"></b>Apdex per hour (top = 1.00)</span></div>';}
+  function detail(id){req('GET','/synthetic/checks/'+encodeURIComponent(id)).then(function(r){var c=r.check,l=r.last_result,p=l&&parts(l.ms);
+    Z.open('Synthetic check',c.name,Z.kv([['Status',st(c.status)],['URL','<span class="mono">'+esc(c.method+' '+c.url)+'</span>'],['Application',esc(c.app||'–')],['Apdex threshold T',ms(c.apdex_t_ms)+' (tolerating up to '+ms(c.apdex_t_ms*4)+')'],['Every',c.interval_s+' s · timeout '+ms(c.timeout_ms)],['Apdex 24 h / 7 d / 30 d',apx(c.d1)+' · '+apx(c.d7)+' · '+apx(c.d30)],['Availability 24 h / 7 d / 30 d',pc(c.d1.uptime_pct)+' / '+pc(c.d7.uptime_pct)+' / '+pc(c.d30.uptime_pct)],['Error rate 24 h',pc(c.d1.error_rate_pct)],['Certificate',cert(c.cert)+(c.cert&&c.cert.issuer?' · '+esc(c.cert.issuer):'')]])
+      +Z.sec('Last run'+(l?' · '+dt(l.at):''),l?(p?brk(l.ms)+legend()+Z.kv(Object.keys(p).map(function(k){return [CLBL[k],ms(p[k])];}).concat([['Total',ms(l.ms.total)]])):'')+(l.error?'<p class="err">'+esc(l.error)+'</p>':'')
+        +((l.steps||[]).length>1||l.redirects?Z.tbl(['Step','URL','HTTP','Time','Result'],l.steps.map(function(s,i){return [String(i+1)+(s.name?' '+esc(s.name):''),'<span class="mono">'+esc(s.url)+'</span>',String(s.status||'–'),ms(s.ms),s.ok?'<span class="pill ok">ok</span>':'<span class="err">'+esc(s.error||'')+'</span>'];})):''):'<p class="muted">Not run yet.</p>')
+      +Z.sec('Last 48 hours',r.hours.some(function(h){return h.runs;})?chart(r.hours):'<p class="muted">No runs in the last 48 hours.</p>')
+      +Z.sec('Daily (30 days)',r.days.length?Z.tbl(['Day','Runs','Apdex','Availability','Error rate','p95 ≈'],r.days.slice().reverse().map(function(d){return [esc(d.day),String(d.runs),d.apdex==null?'–':d.apdex.toFixed(2),pc(d.uptime_pct),pc(d.error_rate_pct),ms(d.p95_ms)];})):'<p class="muted">No daily data yet.</p>')
+      +'<p style="display:flex;gap:8px">'+(can('operator')?'<button type="button" class="pri" data-a="run" data-id="'+esc(c.id)+'">Run now</button>':'')+(can('admin')?'<button type="button" data-a="edit" data-id="'+esc(c.id)+'">Edit</button>':'')+'</p>');}).catch(function(e){toast(e.message);});}
+  function run(id,b){if(b)b.disabled=true;req('POST','/synthetic/checks/'+encodeURIComponent(id)+'/run').then(function(r){toast(r.ok?'Passed in '+ms(r.ms&&r.ms.total):'Failed: '+(r.error||''));return load();}).catch(function(e){toast(e.message);}).then(function(){if(b)b.disabled=false;});}
+
+  /* ---- Portal Apdex (web server access logs) */
+  function portal(){$('por').innerHTML='<div class="empty">Loading…</div>';req('GET','/apdex/portal?hours='+$('ph').value+'&t_ms='+$('pt').value).then(function(r){
+    var S=r.sites||[];if(!S.length){$('por').innerHTML='<div class="empty">'+esc(r.note||'No web server access logs in this period.')+'</div>';return;}
+    var ser=(r.series||[]).filter(function(x){return x.apdex!=null;});
+    $('por').innerHTML='<div class="tw"><table><thead><tr><th>Web site</th><th class="n">Requests</th><th class="n">With request time</th><th>Apdex</th><th class="n">Satisfied</th><th class="n">Tolerating</th><th class="n">Frustrated</th><th class="n">Server errors</th><th class="n">p50 / p95</th></tr></thead><tbody>'
+      +S.map(function(s){return '<tr><td><b>'+esc(s.site||'–')+'</b></td><td class="n">'+s.requests+'</td><td class="n">'+s.timed+'</td><td>'+apx(s)+'</td><td class="n">'+s.satisfied+'</td><td class="n">'+s.tolerating+'</td><td class="n">'+s.frustrated+'</td><td class="n">'+s.server_errors+(s.error_rate_pct!=null?' <span class="muted">('+pc(s.error_rate_pct)+')</span>':'')+'</td><td class="n">'+(s.p50_ms!=null?ms(s.p50_ms)+' / '+ms(s.p95_ms):'–')+'</td></tr>';}).join('')+'</tbody></table></div>'
+      +(ser.length?chart(ser.map(function(x){return {hour:x.hour,apdex:x.apdex,p95_ms:x.p95_ms,runs:x.timed};})):'')+'<p class="note">'+esc(r.note||'')+'</p>';
+  }).catch(function(e){$('por').innerHTML='<p class="err">'+esc(e.status===503?'The SIEM event store is not connected - portal Apdex needs the web server access logs.':e.message)+'</p>';});}
+
+  /* ---- Settings & checks (administrator) */
+  function drawSet(){var s=V.settings||{allow:[],allow_private:false,default_t_ms:500};
+    $('set').innerHTML='<h2>Hosts the engine may reach</h2><p class="d">One per line: a host name (portal.example.com), all hosts of a domain (*.example.com), an IP address or a network (10.20.0.0/16). Loopback and link-local addresses (169.254.x.x) are never reached. A private address (10.x, 172.16-31.x, 192.168.x) only when private networks are allowed below AND the address is inside a network listed here. Every redirect is checked again.</p>'
+      +'<form class="fm" id="sf"><label class="w">Allowed hosts and networks<textarea id="allow" placeholder="portal.example.com&#10;*.example.com&#10;10.20.0.0/16">'+esc((s.allow||[]).join('\n'))+'</textarea></label>'
+      +'<label class="ck w"><input type="checkbox" id="apriv"'+(s.allow_private?' checked':'')+'> Allow private networks listed above (internal applications)</label>'
+      +'<label>Default Apdex threshold T (ms)<input type="number" id="dt" min="50" max="60000" value="'+(s.default_t_ms||500)+'"></label><div></div><div class="w"><button class="pri" type="submit">Save allowed hosts</button>'+(s.updated?' <span class="muted">last changed '+esc(dt(s.updated))+' by '+esc(s.updated_by||'')+'</span>':'')+'</div></form>'
+      +'<h2 style="margin-top:20px" id="ftitle">'+(EDIT?'Edit check':'Add a check')+'</h2><p class="d">GET or HEAD only - a check never sends a body, never posts a form and never signs in. A transaction is a list of GET steps: a URL, or a link followed by its text on the previous page.</p>'+form(EDIT);}
+  function form(c){c=c||{};return '<form class="fm" id="cf"><label>Name<input name="name" required maxlength="120" value="'+esc(c.name||'')+'"></label><label>Application<input name="app" maxlength="80" value="'+esc(c.app||'')+'" placeholder="Customer portal"></label>'
+    +'<label class="w">URL<input name="url" required maxlength="1000" value="'+esc(c.url||'')+'" placeholder="https://portal.example.com/health"></label>'
+    +'<label>Method<select name="method"><option'+(c.method==='HEAD'?'':' selected')+'>GET</option><option'+(c.method==='HEAD'?' selected':'')+'>HEAD</option></select></label><label>Expected status (blank = any 2xx / 3xx)<input name="es" value="'+esc((c.expect_status||[]).join(', '))+'" placeholder="200"></label>'
+    +'<label class="w">Expected text on the page (optional)<input name="et" maxlength="200" value="'+esc(c.expect_text||'')+'"></label>'
+    +'<label>Every (seconds)<input type="number" name="iv" min="30" max="86400" value="'+(c.interval_s||300)+'"></label><label>Timeout (ms)<input type="number" name="to" min="1000" max="60000" value="'+(c.timeout_ms||10000)+'"></label>'
+    +'<label>Apdex threshold T (ms)<input type="number" name="t" min="50" max="60000" value="'+(c.apdex_t_ms||((V.settings||{}).default_t_ms)||500)+'"></label><label>Warn when the certificate expires within (days)<input type="number" name="cw" min="1" max="365" value="'+(c.cert_warn_days||30)+'"></label>'
+    +'<label class="ck"><input type="checkbox" name="fr"'+(c.follow_redirects===false?'':' checked')+'> Follow redirects (each one checked against the allowed hosts)</label><label>Maximum redirects<input type="number" name="mr" min="0" max="10" value="'+(c.max_redirects==null?5:c.max_redirects)+'"></label>'
+    +'<label class="ck"><input type="checkbox" name="tv"'+(c.tls_verify===false?'':' checked')+'> Verify the TLS certificate (fail when not trusted)</label><label class="ck"><input type="checkbox" name="en"'+(c.enabled===false?'':' checked')+'> Enabled</label>'
+    +'<label class="w">Transaction steps (optional, one per line: "url https://…" or "link Link text", add " | expected text")<textarea name="steps" placeholder="url https://portal.example.com/&#10;link Motor claims | Claim status">'+esc(stepsText(c))+'</textarea></label>'
+    +'<div class="w" style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" type="submit">'+(c.id?'Save check':'Add check')+'</button>'+(c.id?'<button type="button" data-a="new">New check</button><button type="button" data-a="del" data-id="'+esc(c.id)+'" style="color:var(--bad)">Delete check</button>':'')+'</div></form>';}
+  function stepsText(c){return (c.step_list||[]).map(function(s){return (s.url?'url '+s.url:'link '+s.link_text)+(s.expect_text?' | '+s.expect_text:'');}).join('\n');}
+  function parseSteps(t){return t.split('\n').map(function(l){return l.trim();}).filter(Boolean).map(function(l){var p=l.split('|'),h=p[0].trim(),o={},m=/^(url|link)\s+(.+)$/i.exec(h);if(!m)throw new Error('Each step line starts with "url" or "link": '+l);if(m[1].toLowerCase()==='url')o.url=m[2].trim();else o.link_text=m[2].trim();if(p[1]&&p[1].trim())o.expect_text=p.slice(1).join('|').trim();return o;});}
+  function submitCheck(f){var b={name:f.name.value.trim(),app:f.app.value.trim(),url:f.url.value.trim(),method:f.method.value,expect_text:f.et.value.trim(),interval_s:+f.iv.value,timeout_ms:+f.to.value,apdex_t_ms:+f.t.value,cert_warn_days:+f.cw.value,max_redirects:+f.mr.value,follow_redirects:f.fr.checked,tls_verify:f.tv.checked,enabled:f.en.checked};
+    b.expect_status=f.es.value.split(/[ ,]+/).filter(Boolean).map(Number);
+    try{b.steps=parseSteps(f.steps.value);}catch(e){toast(e.message);return;}
+    if(EDIT)b.id=EDIT.id;
+    req('POST','/synthetic/checks',b).then(function(c){toast((EDIT?'Saved ':'Added ')+c.name);EDIT=null;return load();}).catch(function(e){toast(e.message);});}
+  function edit(id){var c=V.checks.filter(function(x){return x.id===id;})[0];if(!c)return;EDIT=c;if(Z.close)Z.close();showTab('set');drawSet();$('ftitle').scrollIntoView({block:'start'});}
+  function showTab(t){[].forEach.call(document.querySelectorAll('[data-tab]'),function(x){x.setAttribute('aria-selected',String(x.getAttribute('data-tab')===t));});[].forEach.call(document.querySelectorAll('[role=tabpanel]'),function(p){p.hidden=p.id!=='t-'+t;});if(t==='por')portal();}
+  document.querySelector('.tabs').addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(b)showTab(b.getAttribute('data-tab'));});
+  document.addEventListener('click',function(e){var b=e.target.closest('[data-a]');if(b){var a=b.getAttribute('data-a'),id=b.getAttribute('data-id');
+      if(a==='run')run(id,b);else if(a==='edit')edit(id);else if(a==='new'){EDIT=null;drawSet();}
+      else if(a==='del'){if(!window.confirm('Delete this check and its history?'))return;req('DELETE','/synthetic/checks/'+encodeURIComponent(id)).then(function(){toast('Deleted');EDIT=null;return load();}).catch(function(x){toast(x.message);});}
+      return;}
+    var r=e.target.closest('tr[data-id]');if(r)detail(r.getAttribute('data-id'));});
+  document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.matches&&e.target.matches('tr[data-id]'))detail(e.target.getAttribute('data-id'));});
+  document.addEventListener('submit',function(e){var f=e.target;if(f.id==='sf'){e.preventDefault();req('PUT','/synthetic/settings',{allow:$('allow').value.split('\n').map(function(x){return x.trim();}).filter(Boolean),allow_private:$('apriv').checked,default_t_ms:+$('dt').value}).then(function(){toast('Allowed hosts saved');return load();}).catch(function(x){toast(x.message);});}
+    else if(f.id==='cf'){e.preventDefault();submitCheck(f);}});
+  $('q').addEventListener('input',function(){if(V)drawChecks();});$('fst').addEventListener('change',function(){if(V)drawChecks();});$('pt').addEventListener('change',portal);$('ph').addEventListener('change',portal);
+  $('refresh').addEventListener('click',load);
+  function go(){load();setInterval(function(){if(!document.hidden)load();},60000);}
+  var xr=new XMLHttpRequest();xr.open('GET','/dashboards/whoami.json');xr.zybQuiet=true;xr.onload=function(){try{var j=JSON.parse(xr.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: the role stays viewer */ }go();};xr.onerror=go;xr.send();
+})();
+</script></body></html>

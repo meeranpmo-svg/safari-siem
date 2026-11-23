@@ -1,0 +1,113 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Asset Data Autopilot</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Asset Data Autopilot over /api/itam/asset-autofill: how complete serial, MAC, warranty, support, end of life, classification and CIA
+     are across the register, and the values the platform proposes for the gaps - each with its source, whether it is VERIFIED (vendor
+     table, Cisco, verified contract) or an ESTIMATE / SUGGESTION learned from the register (how many assets it comes from), and the
+     reason. A person accepts one, a selection or every verified proposal; dismiss needs a reason. Nothing is written by looking. -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn:disabled{opacity:.5;cursor:default}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}.tabs button{font:600 13px Inter,system-ui,sans-serif;background:transparent;color:var(--d-mute);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}.tabs button[aria-selected=true]{color:var(--d-ink);background:var(--d-raise)}
+.cov{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px}
+.c{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px 14px;cursor:pointer;text-align:left;color:inherit;font:inherit}.c.on{outline:2px solid var(--acc)}
+.c .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.c .v{font-size:26px;font-weight:800}.c .s{font-size:11.5px;color:var(--d-mute)}
+.bar{height:8px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden;position:relative;margin-top:6px}.bar i{position:absolute;left:0;top:0;bottom:0;background:#2fb344}.bar b{position:absolute;top:0;bottom:0;background:rgba(91,141,239,.55)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:14px;margin-bottom:12px}.card h2{margin:0 0 10px;font-size:15px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);font-size:13px;vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:11.5px;text-transform:uppercase}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600}.pill.ok{background:rgba(95,210,122,.16);color:var(--ok)}.pill.warn{background:rgba(245,181,68,.16);color:var(--warn)}.pill.info{background:rgba(141,176,255,.16);color:var(--info)}
+.fil{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}.inp{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:inherit}
+.empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+.cf{font-size:11px;color:var(--d-mute)}.val{font-weight:600}
+dialog{background:var(--d-panel);color:var(--d-ink);border:1px solid var(--d-line);border-radius:12px;padding:16px;max-width:460px}dialog::backdrop{background:rgba(0,0,0,.6)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT assets · automated record data · a person accepts</div><h1>Asset Data Autopilot</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn" id="rf">⟳ Refresh</button></div>
+<div class="cov" id="cov"><div class="empty">Loading…</div></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="pr" aria-selected="true">Proposals</button><button type="button" role="tab" data-tab="gp" aria-selected="false">Serial / MAC gaps</button><button type="button" role="tab" data-tab="ml" aria-selected="false">What was learned</button><button type="button" role="tab" data-tab="st" aria-selected="false">Settings</button></div>
+<section id="pr"><div class="card">
+  <div class="fil"><select class="inp" id="f-kind" aria-label="Kind"><option value="">All proposals</option><option value="v">Verified only</option><option value="e">Estimates / suggestions</option></select>
+    <input class="inp" id="f-q" placeholder="Search asset…" aria-label="Search"><span class="sp"></span>
+    <button type="button" class="btn" id="b-sel" disabled>Accept selected (0)</button><button type="button" class="btn pri" id="b-ver">Accept all verified</button></div>
+  <div id="list"></div></div></section>
+<section id="gp" hidden><div class="card"><h2>Assets without a serial number or MAC address</h2><div id="gaps"></div></div></section>
+<section id="ml" hidden><div class="card"><h2>Hardware life per type</h2><div id="life"></div></div><div class="card"><h2>Warranty term per vendor and type</h2><div id="terms"></div></div></section>
+<section id="st" hidden><div class="card"><h2>Settings <span class="mut sm">(administrators)</span></h2>
+  <div class="mut sm" style="margin-bottom:8px">The hardware life used when the register has fewer than the minimum retirements of a type to learn from.</div>
+  <div class="fil" id="st-life"></div>
+  <div class="fil"><label class="sm">Minimum peers to learn from <input class="inp" id="st-min" type="number" min="2" max="50" style="width:80px"></label>
+    <label class="sm"><input type="checkbox" id="st-auto"> Fill VERIFIED vendor values into empty fields automatically (daily; estimates never)</label></div>
+  <button type="button" class="btn pri" id="st-save">Save settings</button></div></section>
+<dialog id="dlg"><h3 style="margin-top:0">Dismiss this proposal</h3><div class="sm mut" id="dlg-t"></div><textarea class="inp" id="dlg-r" rows="3" style="width:100%;margin:10px 0" placeholder="Why is it wrong? (required)"></textarea>
+  <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" id="dlg-c">Cancel</button><button type="button" class="btn pri" id="dlg-ok">Dismiss</button></div></dialog>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, FLD = '', SEL = {}, DK = null;
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var LBL = { serial: 'Serial number', mac: 'MAC address', warranty: 'Warranty', support: 'Support', eol: 'End of life', classification: 'Classification', cia: 'CIA values' };
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  var why = function (e) { return e.status === 403 ? 'Your role cannot do this (operators accept; administrators change settings).' : e.status === 409 ? 'The data changed - refreshed.' : e.message; };
+  function show(v) {
+    if (v == null) return '<span class="mut">–</span>';
+    if (typeof v !== 'object') return esc(String(v).slice(0, 10).match(/^\d{4}-\d\d-\d\d$/) ? String(v).slice(0, 10) : String(v).replace('_', ' '));
+    if ('c' in v || 'i' in v || 'a' in v) return 'C ' + esc(v.c || '–') + ' · I ' + esc(v.i || '–') + ' · A ' + esc(v.a || '–');
+    if ('contract' in v || 'level' in v) return esc([v.provider, v.contract, v.level].filter(Boolean).join(' · ')) + (v.end ? ' until ' + esc(v.end) : '');
+    return (v.start ? esc(v.start) : '?') + ' → ' + (v.end ? esc(v.end) : '?') + (v.provider ? ' · ' + esc(v.provider) : '');
+  }
+  function load() {
+    return req('GET', '/asset-autofill').then(function (v) { V = v; SEL = {}; draw(); }).catch(function (e) { $('cov').innerHTML = '<div class="card"><div class="empty">' + esc(e.status === 404 ? 'The Asset Data Autopilot is not on this platform yet - run the update.' : 'Not reachable: ' + e.message) + '</div></div>'; $('list').innerHTML = ''; });
+  }
+  function draw() {
+    $('up').textContent = V.assets + ' active assets · read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    $('cov').innerHTML = V.coverage.map(function (c) { var after = c.after_pct == null ? 0 : c.after_pct, now = c.pct == null ? 0 : c.pct;
+      return '<button type="button" class="c' + (FLD === c.field ? ' on' : '') + '" data-f="' + esc(c.field) + '"><div class="l">' + esc(LBL[c.field]) + '</div><div class="v">' + (c.pct == null ? '–' : now + ' %') + '</div><div class="s">' + c.have + ' of ' + c.total + (c.proposed ? ' · +' + c.proposed + ' proposed → ' + after + ' %' : '') + '</div><div class="bar"><b style="left:' + now + '%;width:' + Math.max(0, after - now) + '%"></b><i style="width:' + now + '%"></i></div></button>'; }).join('');
+    drawList();
+    $('gaps').innerHTML = V.gaps.length ? '<table><thead><tr><th>Asset</th><th>Missing</th><th>Why, and how to get it</th></tr></thead><tbody>' + V.gaps.map(function (g) { return '<tr><td><a class="lk" style="color:var(--info)" href="asset-studio.html#asset=' + encodeURIComponent(g.asset_id) + '">' + esc(g.name) + '</a></td><td>' + esc(LBL[g.field]) + '</td><td class="sm">' + esc(g.why) + '</td></tr>'; }).join('') + '</tbody></table>' + (V.gap_count > V.gaps.length ? '<div class="mut sm">First ' + V.gaps.length + ' of ' + V.gap_count + '.</div>' : '') : '<div class="empty">Every asset that should have a serial and a MAC has one.</div>';
+    $('life').innerHTML = V.learned.lifespan.length ? '<table><thead><tr><th>Type</th><th>Retirements</th><th>Learned life</th><th>Policy life</th></tr></thead><tbody>' + V.learned.lifespan.map(function (l) { return '<tr><td>' + esc(l.type) + '</td><td>' + l.n + '</td><td>' + (l.years ? '<b>' + l.years + ' years</b>' : '<span class="mut">needs ' + V.settings.min_peers + '</span>') + '</td><td>' + (l.policy_years ? l.policy_years + ' years' : '–') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No retired asset with a purchase date yet - the policy life is used until there are ' + V.settings.min_peers + ' per type.</div>';
+    $('terms').innerHTML = V.learned.warranty_terms.length ? '<table><thead><tr><th>Vendor</th><th>Type</th><th>Assets</th><th>Learned term</th><th>Agree (±3 months)</th></tr></thead><tbody>' + V.learned.warranty_terms.map(function (t) { return '<tr><td>' + esc(t.vendor || '(no vendor)') + '</td><td>' + esc(t.type) + '</td><td>' + t.n + '</td><td>' + (t.months ? '<b>' + t.months + ' months</b>' : '<span class="mut">needs ' + V.settings.min_peers + '</span>') + '</td><td>' + t.agree + ' of ' + t.n + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No asset carries both warranty dates yet, so no term can be learned.</div>';
+    var ly = V.settings.lifespan_years || {};
+    $('st-life').innerHTML = Object.keys(ly).map(function (t) { return '<label class="sm">' + esc(t) + ' <input class="inp" type="number" min="1" max="20" step="0.5" data-ly="' + esc(t) + '" value="' + esc(ly[t]) + '" style="width:70px"> y</label>'; }).join('');
+    $('st-min').value = V.settings.min_peers; $('st-auto').checked = !!V.settings.auto_fill_verified;
+  }
+  function rows() {
+    var k = $('f-kind').value, q = $('f-q').value.trim().toLowerCase();
+    return V.proposals.filter(function (p) { return (!FLD || p.field === FLD) && (!k || (k === 'v' ? p.verified : !p.verified)) && (!q || String(p.name).toLowerCase().indexOf(q) >= 0); });
+  }
+  function drawList() {
+    var L = rows();
+    $('list').innerHTML = L.length ? '<table><thead><tr><th><input type="checkbox" id="all" aria-label="Select all"></th><th>Asset</th><th>Field</th><th>Now</th><th>Proposed</th><th>Source</th><th>Why</th><th></th></tr></thead><tbody>' + L.slice(0, 400).map(function (p) {
+      return '<tr><td><input type="checkbox" data-sel="' + esc(p.key) + '"' + (SEL[p.key] ? ' checked' : '') + ' aria-label="Select"></td><td><b>' + esc(p.name) + '</b><div class="cf">' + esc(p.type || '') + '</div></td><td>' + esc(LBL[p.field]) + '</td><td>' + show(p.current) + '</td><td class="val">' + show(p.value) + (p.candidates && p.candidates.length > 1 ? '<div class="cf">' + p.candidates.map(function (c) { return esc(c.date) + ' ' + esc(c.source); }).join(' · ') + '</div>' : '') + '</td>'
+        + '<td>' + (p.verified ? '<span class="pill ok">verified</span>' : '<span class="pill ' + (p.confidence >= 0.7 ? 'info' : 'warn') + '">' + (p.field === 'classification' || p.field === 'cia' ? 'suggestion' : 'estimate') + ' ' + Math.round(p.confidence * 100) + ' %</span>') + '<div class="cf">' + esc(p.source) + '</div></td><td class="sm">' + esc(p.why) + '</td>'
+        + '<td style="white-space:nowrap"><button type="button" class="btn" data-acc="' + esc(p.key) + '">Accept</button> <button type="button" class="btn" data-dis="' + esc(p.key) + '" title="Dismiss">✕</button></td></tr>'; }).join('') + '</tbody></table>' + (L.length > 400 ? '<div class="mut sm">First 400 of ' + L.length + ' - filter to see the rest.</div>' : '')
+      : '<div class="empty">' + (V.proposals.length ? 'Nothing matches the filter.' : 'Nothing to propose: every field the platform can work out is already filled.') + '</div>';
+    var n = Object.keys(SEL).length; $('b-sel').textContent = 'Accept selected (' + n + ')'; $('b-sel').disabled = !n; $('b-ver').disabled = !V.verified; $('b-ver').textContent = 'Accept all verified (' + V.verified + ')';
+  }
+  function accept(b, label) { return req('POST', '/asset-autofill/accept', b).then(function (r) { toast(r.accepted + ' value(s) written to the register' + (label ? ' - ' + label : '')); return load(); }, function (e) { toast(why(e)); if (e.status === 409) load(); }); }
+  $('cov').addEventListener('click', function (e) { var c = e.target.closest('[data-f]'); if (!c) return; FLD = FLD === c.dataset.f ? '' : c.dataset.f; draw(); });
+  $('f-kind').addEventListener('change', drawList); $('f-q').addEventListener('input', drawList);
+  $('list').addEventListener('change', function (e) { var s = e.target.closest('[data-sel]'); if (s) { if (s.checked) SEL[s.dataset.sel] = 1; else delete SEL[s.dataset.sel]; drawList(); }
+    if (e.target.id === 'all') { rows().slice(0, 400).forEach(function (p) { if (e.target.checked) SEL[p.key] = 1; else delete SEL[p.key]; }); drawList(); } });
+  $('list').addEventListener('click', function (e) { var a = e.target.closest('[data-acc]'), d = e.target.closest('[data-dis]');
+    if (a) { a.disabled = true; accept({ keys: [a.dataset.acc] }); }
+    if (d) { DK = d.dataset.dis; var p = V.proposals.filter(function (x) { return x.key === DK; })[0]; $('dlg-t').textContent = p ? p.name + ' · ' + LBL[p.field] : ''; $('dlg-r').value = ''; $('dlg').showModal(); } });
+  $('b-sel').addEventListener('click', function () { accept({ keys: Object.keys(SEL) }); });
+  $('b-ver').addEventListener('click', function () { accept({ verified: true }, 'vendor-verified values only'); });
+  $('dlg-c').addEventListener('click', function () { $('dlg').close(); });
+  $('dlg-ok').addEventListener('click', function () { var r = $('dlg-r').value.trim(); if (!r) { $('dlg-r').focus(); return; }
+    req('POST', '/asset-autofill/dismiss', { key: DK, reason: r }).then(function () { $('dlg').close(); toast('Dismissed - it will not be proposed again unless the value changes'); load(); }, function (e) { toast(why(e)); }); });
+  document.querySelector('.tabs').addEventListener('click', function (e) { var b = e.target.closest('[data-tab]'); if (!b) return; ['pr', 'gp', 'ml', 'st'].forEach(function (t) { $(t).hidden = t !== b.dataset.tab; document.querySelector('[data-tab="' + t + '"]').setAttribute('aria-selected', String(t === b.dataset.tab)); }); });
+  $('st-save').addEventListener('click', function () { var ly = {}; Array.prototype.forEach.call(document.querySelectorAll('[data-ly]'), function (i) { ly[i.dataset.ly] = Number(i.value); });
+    req('PUT', '/asset-autofill/settings', { lifespan_years: ly, min_peers: Number($('st-min').value), auto_fill_verified: $('st-auto').checked }).then(function () { toast('Settings saved'); load(); }, function (e) { toast(why(e)); }); });
+  $('rf').addEventListener('click', load);
+  load();
+})();
+</script></body></html>

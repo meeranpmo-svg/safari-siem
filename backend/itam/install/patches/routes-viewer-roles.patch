@@ -1,0 +1,102 @@
+--- a/engine/routes.js
++++ b/engine/routes.js
+@@ -29,7 +29,7 @@ function registerRoutes(srv, app) {
+ 
+   // ---- health / status --------------------------------------------------------------------------------------------
+   srv.route('GET', '/health', () => ({ ok: true, service: 'sentra-itam', version: VERSION, uptime_s: Math.round((Date.now() - started) / 1000) }));
+-  srv.route('GET', '/status', async (ctx) => {
++  srv.route('GET', '/status', async (ctx) => { ctx.need('viewer');
+     const p = await provider.status();
+     return {
+       ai: { provider: p.provider, state: p.state, model: p.model, message: p.message, calls_today: jobs.callsToday(), daily_cap: jobs.dailyCap, per_user_hourly_cap: jobs.perUser, my_calls_last_hour: jobs.userCallsLastHour(ctx.user), queue: jobs.queueInfo() },
+@@ -39,11 +39,11 @@ function registerRoutes(srv, app) {
+       version: VERSION,
+     };
+   });
+-  srv.route('GET', '/summary', () => reports.summary());
+-  srv.route('GET', '/reports', () => reports.reports());
++  srv.route('GET', '/summary', (ctx) => void ctx.need('viewer') || reports.summary());
++  srv.route('GET', '/reports', (ctx) => void ctx.need('viewer') || reports.reports());
+ 
+   // ---- self-service lookup by tag (EVERYONE) ----------------------------------------------------------------------
+-  srv.route('GET', '/lookup', async (ctx) => {
++  srv.route('GET', '/lookup', async (ctx) => { ctx.need('viewer');
+     const tag = ctx.query.tag || ctx.query.q || '';
+     if (!tag) throw bad('tag query parameter required');
+     const p = PY && await PY.lookup(tag); if (p) return { tag: p.tag, found: p.found, assets: p.assets };
+@@ -52,7 +52,7 @@ function registerRoutes(srv, app) {
+   });
+ 
+   // ---- assets -----------------------------------------------------------------------------------------------------
+-  srv.route('GET', '/assets', async (ctx) => {
++  srv.route('GET', '/assets', async (ctx) => { ctx.need('viewer');
+     const q = ctx.query;
+     const p = PY && await PY.list(q); if (p) return { total: p.total, assets: p.assets };
+     const text = (q.q || '').toLowerCase();
+@@ -71,7 +71,7 @@ function registerRoutes(srv, app) {
+     const limit = limitOf(q.limit, 500, 5000);
+     return { total: list.length, assets: list.slice(0, limit) };
+   });
+-  srv.route('GET', '/assets/:id', async (ctx) => { const p = PY && await PY.detail(ctx.params.id); if (p) { if (!p.found) throw bad('asset not found', 404); return p.detail; } const d = assets.detail(ctx.params.id); if (!d) throw bad('asset not found', 404); return d; });
++  srv.route('GET', '/assets/:id', async (ctx) => { ctx.need('viewer'); const p = PY && await PY.detail(ctx.params.id); if (p) { if (!p.found) throw bad('asset not found', 404); return p.detail; } const d = assets.detail(ctx.params.id); if (!d) throw bad('asset not found', 404); return d; });
+   /* one asset per asset tag and per serial number (a person's entry; discovery and import match on these on purpose and are
+      not refused): a duplicate answers 409 naming the asset that holds it. Serials vendors ship as placeholders are ignored. */
+   const JUNK_SERIAL = /^(|0+|n\/?a|none|null|unknown|default|to be filled by o\.?e\.?m\.?|system serial number|not specified|123456789|xxxx+|-+)$/i;
+@@ -110,10 +110,10 @@ function registerRoutes(srv, app) {
+   // ---- log collection (SIEM membership; reads: everyone, writes: admin; engine/monitoring-membership.js) ----------
+   const M = app.membership;
+   if (M) {
+-    srv.route('GET', '/log-collection', async () => M.list());
++    srv.route('GET', '/log-collection', async (ctx) => void ctx.need('viewer') || M.list());
+     srv.route('POST', '/log-collection/bulk', async (ctx) => { ctx.need('admin'); return M.bulk(ctx.body.ids, String(ctx.body.action || ''), ctx.who); });
+-    srv.route('GET', '/assets/:id/log-collection', async (ctx) => M.detail(ctx.params.id));
+-    srv.route('GET', '/assets/:id/log-collection/setup', async (ctx) => M.setup(ctx.params.id));
++    srv.route('GET', '/assets/:id/log-collection', async (ctx) => void ctx.need('viewer') || M.detail(ctx.params.id));
++    srv.route('GET', '/assets/:id/log-collection/setup', async (ctx) => void ctx.need('viewer') || M.setup(ctx.params.id));
+     srv.route('POST', '/assets/:id/log-collection', async (ctx) => {
+       ctx.need('admin');
+       const act = String(ctx.body.action || '');
+@@ -128,13 +128,13 @@ function registerRoutes(srv, app) {
+   srv.route('POST', '/assets/:id/assign', (ctx) => { ctx.need('operator'); return AW ? AW.assign(ctx.params.id, ctx.body, ctx.who) : assets.assign(ctx.params.id, ctx.body, ctx.who); });
+ 
+   // ---- software + licences ----------------------------------------------------------------------------------------
+-  srv.route('GET', '/software', async () => { const p = PY && await PY.software(); if (p) return { software: p.software }; const { rollup } = require('./model/software'); return { software: rollup(assets.all().filter((a) => a.status !== 'disposed')) }; });
+-  srv.route('GET', '/licences', async () => { const p = PY && await PY.licences(); return p ? { licences: p.licences } : { licences: licences.complianceView() }; });
++  srv.route('GET', '/software', async (ctx) => { ctx.need('viewer'); const p = PY && await PY.software(); if (p) return { software: p.software }; const { rollup } = require('./model/software'); return { software: rollup(assets.all().filter((a) => a.status !== 'disposed')) }; });
++  srv.route('GET', '/licences', async (ctx) => { ctx.need('viewer'); const p = PY && await PY.licences(); return p ? { licences: p.licences } : { licences: licences.complianceView() }; });
+   srv.route('POST', '/licences', (ctx) => { ctx.need('operator'); return cw('licences.save', { own: ['licences'], newId: ctx.body.id ? undefined : rid('lic', 5), extra: { body: ctx.body } }, ctx.who, () => ({ licence: licences.upsert(ctx.body, ctx.who) })); });
+   srv.route('POST', '/licences/:id/retire', (ctx) => { ctx.need('operator'); return cw('licences.retire', { own: ['licences'], extra: { id: ctx.params.id, reason: ctx.body.reason } }, ctx.who, () => licences.retire(ctx.params.id, ctx.who, ctx.body.reason)); });
+ 
+   // ---- CMDB -------------------------------------------------------------------------------------------------------
+-  srv.route('GET', '/cmdb', async (ctx) => {
++  srv.route('GET', '/cmdb', async (ctx) => { ctx.need('viewer');
+     const p = PY && await PY.cmdb(ctx.query); if (p) return p.graph ? { graph: p.graph } : { relationships: p.relationships };
+     if (ctx.query.asset) return { graph: assets.relationshipsFor(ctx.query.asset, { confirmedOnly: ctx.query.confirmed === '1' }) };
+     return { relationships: assets.allRelationships().map((r) => { const { key, ...rest } = r; return rest; }) };
+@@ -142,7 +142,7 @@ function registerRoutes(srv, app) {
+   srv.route('POST', '/cmdb', (ctx) => { ctx.need('operator'); return cw('cmdb.add', { reads: ['relationships'], own: ['relationships'], newId: rid('rel', 5), extra: { body: ctx.body } }, ctx.who, () => ({ relationship: assets.addRelationship(ctx.body, ctx.who, { source: 'manual', autoConfirm: ctx.body.confirm !== false }) })); });
+ 
+   // ---- discovery --------------------------------------------------------------------------------------------------
+-  srv.route('GET', '/discovery', () => ({ runs: ingest.runSummaries(), unmatched: ingest.discoveredList() }));
++  srv.route('GET', '/discovery', (ctx) => void ctx.need('viewer') || ({ runs: ingest.runSummaries(), unmatched: ingest.discoveredList() }));
+   srv.route('POST', '/discovery/run', async (ctx) => {
+     ctx.need('admin');
+     const source = ctx.query.source || ctx.body.source;
+@@ -153,14 +153,14 @@ function registerRoutes(srv, app) {
+   srv.route('POST', '/discovery/:id/adopt', (ctx) => { ctx.need('operator'); return ingest.adopt(ctx.params.id, ctx.who); });
+ 
+   // ---- stocktake --------------------------------------------------------------------------------------------------
+-  srv.route('GET', '/stocktake', () => ({ stocktakes: stocktake.list() }));
+-  srv.route('GET', '/stocktake/:id', (ctx) => { const r = stocktake.get(ctx.params.id); if (!r) throw bad('stocktake not found', 404); return r; });
++  srv.route('GET', '/stocktake', (ctx) => void ctx.need('viewer') || ({ stocktakes: stocktake.list() }));
++  srv.route('GET', '/stocktake/:id', (ctx) => { ctx.need('viewer'); const r = stocktake.get(ctx.params.id); if (!r) throw bad('stocktake not found', 404); return r; });
+   srv.route('POST', '/stocktake', (ctx) => { ctx.need('admin'); return cw('stocktake.open', { reads: ['assets'], own: ['stocktakes'], newId: rid('stk', 5), extra: { body: ctx.body } }, ctx.who, () => stocktake.open(ctx.body, ctx.who)); });
+   srv.route('POST', '/stocktake/:id/scan', (ctx) => { ctx.need('operator'); return cw('stocktake.scan', { reads: ['assets'], own: ['stocktakes'], extra: { id: ctx.params.id, body: ctx.body } }, ctx.who, () => stocktake.scan(ctx.params.id, ctx.body, ctx.who)); });
+   srv.route('POST', '/stocktake/:id/close', (ctx) => { ctx.need('admin'); return cw('stocktake.close', { own: ['stocktakes'], extra: { id: ctx.params.id } }, ctx.who, () => stocktake.close(ctx.params.id, ctx.who)); });
+ 
+   // ---- AI findings + runs -----------------------------------------------------------------------------------------
+-  srv.route('GET', '/ai/findings', (ctx) => {
++  srv.route('GET', '/ai/findings', (ctx) => { ctx.need('viewer');
+     const status = ctx.query.status || 'open';
+     const list = findings.list((f) => (status === 'all' ? true : f.status === status) && (!ctx.query.kind || f.kind === ctx.query.kind));
+     return { findings: list, summary: findings.summary() };

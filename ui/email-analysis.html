@@ -1,0 +1,79 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email / Phishing Analysis</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-eml.js"></script>
+<style>
+.verdict{display:flex;gap:20px;align-items:center;flex-wrap:wrap;border-left:4px solid var(--mute)}.verdict .sc{text-align:center;min-width:120px}.verdict .sc b{display:block;font-size:42px;line-height:1}
+.v-High{border-left-color:var(--bad)}.v-High .sc{color:var(--bad)}.v-Medium{border-left-color:#d29922}.v-Medium .sc{color:#d29922}.v-Low{border-left-color:#58a6ff}.v-Low .sc{color:#58a6ff}.v-none{border-left-color:var(--ok)}.v-none .sc{color:var(--ok)}
+textarea.src{width:100%;min-height:200px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.acts{display:flex;flex-direction:column;gap:8px}.brk{word-break:break-all}.pts{color:var(--bad);text-align:right;font-family:ui-monospace,Consolas,monospace}
+</style></head><body><main>
+<div class="top"><div><div class="eb">SOC · endpoint, web and email</div><h1>Email / Phishing Analysis</h1></div><span class="sp"></span><span class="muted" id="ti"></span></div>
+<div class="card">
+ <p class="note">Paste the full message source, or open a saved <code>.eml</code>. Outlook: File → Properties → Internet headers (headers only), or drag the message to the desktop and open the file here. OWA: ⋯ → View → View message details. Reported by a user? Ask for it <b>as an attachment</b> so the headers survive.
+ <b>The message is analysed in this browser only - it is not stored and nothing is opened or looked up on the internet.</b> Only the sender domains, link hosts and the origin IP are checked against the SIEM's own indicator lists.</p>
+ <textarea id="src" class="src" spellcheck="false" placeholder="Received: from …&#10;Authentication-Results: …&#10;From: …&#10;Subject: …"></textarea>
+ <div class="fil"><button type="button" id="go">🔍 Analyse</button><label class="btn">Open .eml<input type="file" id="file" accept=".eml,.txt,message/rfc822" hidden></label><span class="muted small" id="len"></span></div>
+</div>
+<div id="out"></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,E=window.zybEml,esc=S.esc,$=function(i){return document.getElementById(i);},R=null,SRC='';
+  function pill(r){return r==='pass'?S.pill('pass','ok'):/^(fail|softfail|permerror|temperror)$/.test(r)?S.pill(r,'bad'):S.pill(r||'not recorded');}
+  function vclass(v){return v==='No indicators'?'v-none':'v-'+v;}
+  function render(){
+    if(!R){$('out').innerHTML='';return;}
+    if(R.err){$('out').innerHTML='<div class="card"><p class="err">'+esc(R.err)+'</p></div>';return;}
+    var op=S.can('operator');
+    var fac=R.F.length?'<table><thead><tr><th class="num">Points</th><th>Indicator</th><th>Why</th></tr></thead><tbody>'+R.F.map(function(f){return '<tr><td class="pts">+'+f.p+'</td><td><b>'+esc(f.k)+'</b></td><td class="muted small">'+esc(f.d)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No indicator fired.</div>';
+    var hop=R.hops.length?'<table><thead><tr><th>#</th><th>From</th><th>By</th><th>IP</th><th>Time</th><th class="num">Delay</th></tr></thead><tbody>'+R.hops.map(function(h,i){var p=i?R.hops[i-1].ts:null,d=(h.ts&&p)?Math.round((h.ts-p)/1000):null;
+      return '<tr><td>'+(i+1)+'</td><td class="mono">'+esc(h.from||'–')+'</td><td class="mono">'+esc(h.by||'–')+'</td><td class="mono">'+esc(h.ip||'–')+(h.ip&&R.privateIp(h.ip)?' <span class="muted">(private)</span>':'')+'</td><td>'+(h.ts?esc(S.dt(h.ts)):'–')+'</td><td class="num">'+(d===null?'–':(d<0?'<span class="err">'+d+'s</span>':d+'s'))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No Received headers.</div>';
+    var lnk=R.urls.length?'<table><thead><tr><th>Link (defanged - safe to copy)</th><th>Shown as</th><th>Flags</th></tr></thead><tbody>'+R.urls.slice(0,80).map(function(u){return '<tr><td class="mono small brk">'+esc(E.defang(u.href).slice(0,220))+'</td><td class="small">'+esc(u.shown||'–')+'</td><td class="small'+(u.flags.length?' err':' muted')+'">'+esc(u.flags.join('; ')||'–')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(R.bodyGiven?'No links in the body.':'Only headers were pasted - links and attachments need the body too.')+'</div>';
+    var att=R.att.length?R.att.map(function(a){return '<div><span class="mono">'+esc(a.name)+'</span> '+(a.risky||a.double?S.pill(a.double?'double extension':'risky type','bad'):'')+'</div>';}).join(''):'<span class="muted">none found</span>';
+    $('out').innerHTML='<div class="card verdict '+vclass(R.verdict)+'"><div class="sc"><b>'+R.score+'</b>'+esc(R.verdict)+'</div>'+
+      '<div style="flex:1;min-width:240px;line-height:1.7"><div><b>From:</b> '+esc(R.from.display?R.from.display+' <'+R.from.addr+'>':R.from.addr)+'</div>'+(R.reply.addr?'<div><b>Reply-To:</b> '+esc(R.reply.addr)+'</div>':'')+'<div><b>Subject:</b> '+esc(R.subject||'–')+'</div>'+
+      '<div><b>SPF</b> '+pill(R.auth.spf)+' <b>DKIM</b> '+pill(R.auth.dkim)+' <b>DMARC</b> '+pill(R.auth.dmarc)+'</div><div class="muted small">'+esc(R.tiNote)+'</div></div>'+
+      '<div class="acts">'+(op?'<button type="button" id="case">🗂️ Open a case</button>':'')+'<button type="button" id="rep">⬇ Download report</button><button type="button" id="clr">Clear</button></div></div>'+
+      '<p class="note">The score adds the points of each indicator that fired, capped at 100. These are indicators, not proof: a legitimate newsletter can fail alignment, and a careful attacker can pass SPF from their own domain.</p>'+
+      '<div class="card"><h2>Indicators</h2><div class="tw">'+fac+'</div></div>'+
+      '<div class="card"><h2>Delivery path'+(R.firstIp?' <span class="c">origin '+esc(R.firstIp)+'</span>':'')+'</h2><div class="tw">'+hop+'</div></div>'+
+      '<div class="card"><h2>Links <span class="c">'+R.urls.length+'</span></h2><div class="tw">'+lnk+'</div></div>'+
+      '<div class="card"><h2>Attachments</h2>'+att+'</div>';
+  }
+  function analyse(){
+    SRC=$('src').value; var ind=E.indicators(SRC);
+    var done=function(ti,note){R=E.analyze(SRC,ti);if(!R.err)R.tiNote=note;render();};
+    if(!ind.length){done(null,'Nothing to check against threat intelligence.');return;}
+    $('out').innerHTML='<div class="card"><div class="empty">Checking '+ind.length+' indicator(s) against the SIEM\'s lists…</div></div>';
+    S.req('POST','/intel/check',{values:ind}).then(function(j){
+      if(!j.enabled){done(null,'Reputation not checked - the SIEM has no indicator lists loaded. That is not the same as clean.');return;}
+      var m=new Map();Object.keys(j.results||{}).forEach(function(k){m.set(k,j.results[k]);});
+      done(m,'Reputation checked against the SIEM\'s indicator lists ('+ind.length+' indicator(s), '+m.size+' on a threat list).');
+    }).catch(function(e){done(null,'Reputation not checked - the SIEM could not be asked ('+e.message+'). That is not the same as clean.');});
+  }
+  function report(){
+    var L=['<!doctype html><meta charset="utf-8"><title>Phishing analysis</title><style>body{font:12px/1.5 Segoe UI,Arial,sans-serif;margin:24px;color:#111}td,th{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}table{border-collapse:collapse;width:100%;margin:8px 0 16px}.m{font-family:Consolas,monospace;word-break:break-all}</style>',
+      '<h1>Phishing analysis - '+esc(R.verdict)+' ('+R.score+('/100)</h1><p>' + ZYB_ORG.short + ' SOC · prepared ')+esc(new Date().toLocaleString('en-GB'))+(S.user&&S.user()?' by '+esc(S.user()):'')+'. Indicators, not proof. '+esc(R.tiNote)+'</p>',
+      '<table><tr><th>From</th><td>'+esc(R.from.addr)+'</td></tr><tr><th>Reply-To</th><td>'+esc(R.reply.addr||'–')+'</td></tr><tr><th>Subject</th><td>'+esc(R.subject)+'</td></tr><tr><th>Date</th><td>'+esc(R.date)+'</td></tr><tr><th>Message-ID</th><td class="m">'+esc(R.msgId)+'</td></tr><tr><th>SPF / DKIM / DMARC</th><td>'+esc([R.auth.spf,R.auth.dkim,R.auth.dmarc].map(function(x){return x||'–';}).join(' / '))+'</td></tr><tr><th>Origin IP</th><td>'+esc(R.firstIp||'–')+'</td></tr></table>',
+      '<h2>Indicators</h2><table><tr><th>Points</th><th>Indicator</th><th>Why</th></tr>'+R.F.map(function(f){return '<tr><td>+'+f.p+'</td><td>'+esc(f.k)+'</td><td>'+esc(f.d)+'</td></tr>';}).join('')+'</table>',
+      '<h2>Links (defanged)</h2><table><tr><th>Link</th><th>Flags</th></tr>'+R.urls.map(function(u){return '<tr><td class="m">'+esc(E.defang(u.href))+'</td><td>'+esc(u.flags.join('; '))+'</td></tr>';}).join('')+'</table>',
+      '<h2>Attachments</h2><p>'+(R.att.map(function(a){return esc(a.name);}).join(', ')||'none')+'</p>'];
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([L.join('')],{type:'text/html'}));a.download='phishing-analysis-'+new Date().toISOString().slice(0,10)+'.html';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
+  }
+  function openCase(btn){
+    var iocs=[R.from.addr,R.reply.addr,R.firstIp].concat(R.urls.filter(function(u){return u.flags.length;}).map(function(u){return E.defang(u.href);})).concat(R.att.filter(function(a){return a.risky||a.double;}).map(function(a){return a.name;})).filter(Boolean);
+    var desc='Email / Phishing Analysis: score '+R.score+' ('+R.verdict+'). '+R.F.map(function(f){return f.k+' (+'+f.p+')';}).join('; ')+'.\nFrom: '+R.from.addr+'\nSubject: '+R.subject+'\nMessage-ID: '+R.msgId+'\nIndicators: '+iocs.slice(0,40).join(', ')+'\n'+R.tiNote;
+    btn.disabled=true;
+    S.req('POST','/cases',{title:('Phishing: '+(R.subject||R.from.addr)).slice(0,200),severity:R.verdict==='High'?3:2,playbook_id:'PB-PHISHING',description:desc}).then(function(c){
+      S.toast('Case '+c.id+' opened with the phishing playbook - its containment steps wait for approval');btn.textContent='Case '+c.id;}).catch(function(e){btn.disabled=false;S.toast(e.message);});
+  }
+  $('src').addEventListener('input',function(){var n=$('src').value.length;$('len').textContent=n?Math.round(n/1024)+' KB'+(n>E.MAX?' - over 1 MB':''):'';});
+  $('file').addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;if(f.size>E.MAX){S.toast('That file is over 1 MB - paste the headers and the text part only');return;}var rd=new FileReader();rd.onload=function(){$('src').value=String(rd.result||'');$('src').dispatchEvent(new Event('input'));analyse();};rd.readAsText(f);this.value='';});
+  document.addEventListener('click',function(ev){var t=ev.target;
+    if(t.id==='go'){analyse();return;}
+    if(t.id==='clr'){R=null;SRC='';$('src').value='';$('len').textContent='';render();return;}
+    if(t.id==='rep'&&R&&!R.err){report();return;}
+    if(t.id==='case'&&R&&!R.err){openCase(t);return;}
+  });
+  S.ready(function(){S.req('GET','/intel').then(function(j){$('ti').textContent=j.enabled?'Threat intel: '+S.n((j.stats||{}).domain)+' domains, '+S.n((j.stats||{}).ip)+' IPs loaded':'Threat intel: no indicator lists loaded';}).catch(function(){$('ti').textContent='';});});
+})();
+</script></body></html>

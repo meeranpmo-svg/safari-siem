@@ -1,0 +1,133 @@
+diff -ru a/engine/discovery/classify.js b/engine/discovery/classify.js
+--- a/engine/discovery/classify.js	2026-10-12 12:59:51.208230567 +0000
++++ b/engine/discovery/classify.js	2026-10-12 12:59:51.213400063 +0000
+@@ -103,6 +103,8 @@
+   if (x.cloud) add('cloud', 95, `${x.cloud.provider} instance`);
+   if (x.vcenter && x.vcenter.kind === 'vm') add('vm', 92, 'vCenter virtual machine');
+   if (x.vcenter && x.vcenter.kind === 'host') add('server', 90, 'vCenter ESXi host');
++  if (x.nutanix && x.nutanix.kind === 'vm') add('vm', 92, 'Nutanix virtual machine');
++  if (x.nutanix && x.nutanix.kind === 'host') { add('server', 90, 'Nutanix host'); vendor = vendor || 'Nutanix'; }
+   if (x.hyperv && x.hyperv.kind === 'vm') add('vm', 90, 'Hyper-V virtual machine');
+   if (x.hyperv && x.hyperv.kind === 'host') add('server', 85, 'Hyper-V host');
+   if (x.cucm) { add('phone', 95, 'registered in CUCM'); vendor = vendor || 'Cisco'; }
+diff -ru a/engine/discovery/devices.js b/engine/discovery/devices.js
+--- a/engine/discovery/devices.js	2026-10-12 12:59:51.200230566 +0000
++++ b/engine/discovery/devices.js	2026-10-12 12:59:51.205254603 +0000
+@@ -18,7 +18,7 @@
+ const str = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max);
+ const macFmt = (m) => { const h = hex12(m); return h && /[1-9a-f]/.test(h) && h !== 'ffffffffffff' ? h.match(/.{2}/g).join(':') : null; };
+ // which method's value wins for descriptive fields (higher = more authoritative)
+-const RANK = { cucm: 9, vcenter: 9, hyperv: 8, azure: 9, aws: 9, ad: 7, snmp: 6, sweep: 3, arp: 2 };
++const RANK = { cucm: 9, vcenter: 9, nutanix: 9, hyperv: 8, azure: 9, aws: 9, ad: 7, snmp: 6, sweep: 3, arp: 2 };
+ 
+ function createDevices({ store, assets, ingest, audit, config }) {
+   const col = store.collection('disc_devices');
+diff -ru a/engine/discovery/index.js b/engine/discovery/index.js
+--- a/engine/discovery/index.js	2026-10-12 12:59:51.216230567 +0000
++++ b/engine/discovery/index.js	2026-10-12 12:59:51.220697524 +0000
+@@ -20,13 +20,14 @@
+ const snmpM = require('./methods/snmp');
+ const adM = require('./methods/ad');
+ const vcM = require('./methods/vcenter');
++const ntxM = require('./methods/nutanix');
+ const cucmM = require('./methods/cucm');
+ const azM = require('./methods/azure');
+ const awsM = require('./methods/aws');
+ const hypervM = require('./methods/hyperv');
+ 
+ const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
+-const SYSTEMS_OF_RECORD = ['ad', 'vcenter', 'hyperv', 'cucm', 'azure', 'aws'];
++const SYSTEMS_OF_RECORD = ['ad', 'vcenter', 'nutanix', 'hyperv', 'cucm', 'azure', 'aws'];
+ const DEFAULTS = { methods: Object.fromEntries(scopesM.METHODS.map((m) => [m, true])), rogue_min_sightings: 3, max_concurrent_runs: 2, icmp_mode: 'fping' };
+ const SYSTEM = { user: 'system:discovery', role: 'system', ip: '' };
+ 
+@@ -241,6 +242,7 @@
+       try {
+         if (meta.kind === 'ldap') res = await adM.test(c, { ca: deps.ldapCa });
+         else if (meta.kind === 'vcenter') res = await vcM.test(c, { request: deps.request });
++        else if (meta.kind === 'nutanix') res = await ntxM.test(c, { request: deps.request });
+         else if (meta.kind === 'cucm_axl') res = await cucmM.test(c, { request: deps.request });
+         else if (meta.kind === 'azure') res = await azM.test(c, Object.assign({}, dc.azure || {}, deps.request ? { request: deps.request } : {}));
+         else if (meta.kind === 'aws') res = await awsM.test(c, Object.assign({}, dc.aws || {}, deps.request ? { request: deps.request } : {}));
+diff -ru a/engine/discovery/routes.js b/engine/discovery/routes.js
+--- a/engine/discovery/routes.js	2026-10-12 12:59:51.224230568 +0000
++++ b/engine/discovery/routes.js	2026-10-12 12:59:51.226824115 +0000
+@@ -11,7 +11,7 @@
+ 
+   // dashboard + configuration (read: everyone)
+   srv.route('GET', `${P}/dashboard`, () => D.dashboard());
+-  srv.route('GET', `${P}/methods`, () => ({ settings: D.settings(), active: ['sweep', 'snmp'], passive: ['arp', 'ad', 'vcenter', 'hyperv', 'cucm', 'azure', 'aws'], credential_kinds: D.credentialKinds(), sites: D.sites() }));
++  srv.route('GET', `${P}/methods`, () => ({ settings: D.settings(), active: ['sweep', 'snmp'], passive: ['arp', 'ad', 'vcenter', 'nutanix', 'hyperv', 'cucm', 'azure', 'aws'], credential_kinds: D.credentialKinds(), sites: D.sites() }));
+   srv.route('POST', `${P}/methods`, (ctx) => { admin(ctx); return { settings: D.updateSettings(ctx.body, ctx.who) }; });
+ 
+   // scopes
+diff -ru a/engine/discovery/runner.js b/engine/discovery/runner.js
+--- a/engine/discovery/runner.js	2026-10-12 12:59:51.228230568 +0000
++++ b/engine/discovery/runner.js	2026-10-12 12:59:51.233770587 +0000
+@@ -12,6 +12,7 @@
+ const snmpM = require('./methods/snmp');
+ const adM = require('./methods/ad');
+ const vcM = require('./methods/vcenter');
++const ntxM = require('./methods/nutanix');
+ const cucmM = require('./methods/cucm');
+ const azM = require('./methods/azure');
+ const awsM = require('./methods/aws');
+@@ -77,7 +78,7 @@
+   const cloudOpt = (k) => Object.assign({}, (ctx.config.discovery || {})[k] || {}, deps.request ? { request: deps.request } : {});
+ 
+   // ---------------- passive ----------------
+-  for (const method of ['ad', 'vcenter', 'cucm', 'azure', 'aws', 'arp', 'hyperv']) {
++  for (const method of ['ad', 'vcenter', 'nutanix', 'cucm', 'azure', 'aws', 'arp', 'hyperv']) {
+     if (stop() || !allowed.includes(method)) continue;
+     const t0 = Date.now();
+     try {
+@@ -110,6 +111,12 @@
+         }
+         for (const v of r.vms) obs({ method: 'vcenter', hostname: v.hostname || v.name, ips: v.ips, macs: v.macs, os: v.guest_os, uid: `vc:${v.uuid || v.id}`, extra: { vcenter: { kind: 'vm', host: v.host_name, power_state: v.power_state, uuid: v.uuid, name: v.name } } });
+         stat('vcenter', { ok: true, seen: r.hosts.length + r.vms.length, hosts: r.hosts.length, vms: r.vms.length, ms: Date.now() - t0 });
++      } else if (method === 'nutanix') {
++        const r = await withCred(vault, m.nutanix.credential_id, (c) => ntxM.collect(c, { request: deps.request }));
++        if (!r.ok) { stat('nutanix', { ok: false, error_class: r.error_class }); continue; }
++        for (const h of r.hosts) obs({ method: 'nutanix', hostname: h.name, ip: h.ip, serial: h.serial, model: h.model, vendor: 'Nutanix', os: h.hypervisor || 'Nutanix AHV', uid: `ntnx-host:${h.id}`, extra: { nutanix: { kind: 'host', cluster: h.cluster, cvm_ip: h.cvm_ip, ipmi_ip: h.ipmi_ip, sockets: h.sockets, cores: h.cores, cores_per_socket: h.cores_per_socket, cpu_model: h.cpu_model } } });
++        for (const v of r.vms) obs({ method: 'nutanix', hostname: v.name, ips: v.ips, macs: v.macs, uid: `ntnx:${v.id}`, extra: { nutanix: { kind: 'vm', host: v.host_name, cluster: v.cluster, power_state: v.power_state, vcpus: v.vcpus, memory_mb: v.memory_mb, name: v.name } } });
++        stat('nutanix', { ok: true, seen: r.hosts.length + r.vms.length, hosts: r.hosts.length, vms: r.vms.length, clusters: (r.clusters || []).length, api: r.api, ms: Date.now() - t0 });
+       } else if (method === 'cucm') {
+         const r = await withCred(vault, m.cucm.credential_id, (c) => cucmM.collect(c, { request: deps.request }));
+         if (!r.ok) { stat('cucm', { ok: false, error_class: r.error_class }); continue; }
+diff -ru a/engine/discovery/scopes.js b/engine/discovery/scopes.js
+--- a/engine/discovery/scopes.js	2026-10-12 12:59:51.192230566 +0000
++++ b/engine/discovery/scopes.js	2026-10-12 12:59:51.197135498 +0000
+@@ -13,11 +13,11 @@
+ const sched = require('./schedule');
+ 
+ const ACTIVE = ['sweep', 'snmp'];
+-const PASSIVE = ['arp', 'ad', 'vcenter', 'hyperv', 'cucm', 'azure', 'aws'];
++const PASSIVE = ['arp', 'ad', 'vcenter', 'nutanix', 'hyperv', 'cucm', 'azure', 'aws'];
+ const METHODS = ACTIVE.concat(PASSIVE);
+ const DEFAULT_TCP_PORTS = [22, 80, 135, 443, 445, 3389, 5985];
+ // which credential kinds a method may use
+-const METHOD_CRED = { snmp: ['snmp_v2c', 'snmp_v3'], ad: ['ldap'], vcenter: ['vcenter'], cucm: ['cucm_axl'], azure: ['azure'], aws: ['aws'] };
++const METHOD_CRED = { snmp: ['snmp_v2c', 'snmp_v3'], ad: ['ldap'], vcenter: ['vcenter'], nutanix: ['nutanix'], cucm: ['cucm_axl'], azure: ['azure'], aws: ['aws'] };
+ 
+ const bad = (msg) => Object.assign(new Error(msg), { status: 400 });
+ const str = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max);
+diff -ru a/engine/discovery/vault.js b/engine/discovery/vault.js
+--- a/engine/discovery/vault.js	2026-10-12 12:59:51.184230565 +0000
++++ b/engine/discovery/vault.js	2026-10-12 12:59:51.190425876 +0000
+@@ -40,6 +40,7 @@
+   winrm: { secret: { username: { max: 128 }, password: { max: 256 } }, target: { transport: ['https', 'http'], port: 'port' }, future: true },
+   ldap: { secret: { bind_dn: { max: 512 }, password: { max: 256 } }, target: { servers: 'ldapurls', ip: 'ip', base_dn: 'dn', ca_file: 'path' } },
+   vcenter: { secret: { username: { max: 128 }, password: { max: 256 } }, target: { base_url: 'url', ca_file: 'path', tls_fingerprint: 'fp' } },
++  nutanix: { secret: { username: { max: 128 }, password: { max: 256 } }, target: { base_url: 'url', ca_file: 'path', tls_fingerprint: 'fp' } },
+   cucm_axl: { secret: { username: { max: 128 }, password: { max: 256 } }, target: { host: 'host', port: 'port', axl_version: 'axlver', ca_file: 'path' } },
+   azure: { secret: { client_secret: { max: 512 } }, target: { tenant_id: 'guid', client_id: 'guid', subscriptions: 'guids' } },
+   aws: { secret: { access_key_id: { max: 128 }, secret_access_key: { max: 256 } }, target: { regions: 'regions' } },
+@@ -47,7 +48,7 @@
+ // connection-target fields: changing any of them re-points where the stored secret is sent, so the secret must be
+ // re-entered in the same request (otherwise an admin session/CSRF could redirect a saved password to a new host).
+ const CONNECTION_TARGET_FIELDS = ['base_url', 'servers', 'host', 'ip', 'port', 'ca_file', 'tls_fingerprint', 'transport'];
+-const REQUIRED_TARGET = { ldap: ['servers', 'base_dn'], vcenter: ['base_url'], cucm_axl: ['host'], azure: ['tenant_id', 'client_id'], aws: ['regions'] };
++const REQUIRED_TARGET = { ldap: ['servers', 'base_dn'], vcenter: ['base_url'], nutanix: ['base_url'], cucm_axl: ['host'], azure: ['tenant_id', 'client_id'], aws: ['regions'] };
+ 
+ function normTarget(kind, raw) {
+   const spec = KINDS[kind].target;

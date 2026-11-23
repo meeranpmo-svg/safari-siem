@@ -1,0 +1,94 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Branch Connectivity</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+.fil{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.fil input[type=search]{width:100%;max-width:280px}
+.k .t.on{outline:2px solid var(--accent,#5794f2)}
+.chip{display:inline-block;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:2px 9px;font-size:12px;cursor:pointer;background:transparent;color:inherit}.chip.on{background:var(--accent,#5794f2);border-color:var(--accent,#5794f2);color:#fff}
+.wan{display:inline-flex;gap:3px;flex-wrap:wrap}.wl{display:inline-block;min-width:44px;text-align:center;border-radius:5px;padding:1px 6px;font-size:11px;font-weight:600;border:1px solid transparent}
+.wl.up{background:rgba(47,179,68,.18);color:#4cd964}.wl.degraded,.wl.critical{background:rgba(245,159,0,.18);color:#f5b942}.wl.down{background:rgba(229,72,77,.2);color:#ff8a8e}.wl.unmeasured{border-color:rgba(255,255,255,.18);color:#8b93a4}
+.reach{font-weight:700;font-size:12px}.reach.yes,.reach.self{color:#4cd964}.reach.no{color:#ff8a8e}.reach.unproven,.reach.n-a{color:#8b93a4}
+tr.br{cursor:pointer}tr.br:hover td{background:rgba(255,255,255,.03)}
+.strip{display:flex;gap:1px;height:22px;align-items:stretch;margin:6px 0}.strip i{flex:1;border-radius:1px;display:block}
+.strip .ok,.strip .self{background:#2fb344}.strip .backup,.strip .degraded{background:#f59f00}.strip .partial{background:#d97706}.strip .down{background:#e5484d}.strip .unmeasured{background:#4b5263}
+pre.draft{white-space:pre-wrap;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;font-size:12px;max-height:340px;overflow:auto}
+.two{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px}@media(max-width:1000px){.two{grid-template-columns:1fr}}
+.act{border-left:3px solid #4299e1;padding:6px 10px;margin:6px 0;cursor:pointer;border-radius:4px;background:rgba(255,255,255,.02)}.act.bad{border-color:#e5484d}.act.warn{border-color:#f59f00}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · WAN · every site in one window</div><h1>Branch Connectivity</h1></div><span class="sp"></span><span class="muted" id="up"></span><a class="btn" href="network-route-map.html">🗺 WAN &amp; LAN Route Map</a><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="body"><div class="card"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc,Z=window.zybDetail,esc=S.esc,$=function(i){return document.getElementById(i);};
+  var V=null,F='',Q='';
+  var HL={ok:'healthy',down:'cannot reach DC',partial:'DC, not DR',backup:'on fewer paths',degraded:'degraded',unmeasured:'not measured',self:'hub'};
+  var HC={ok:'ok',down:'bad',partial:'bad',backup:'warn',degraded:'warn',unmeasured:''};
+  var RL={yes:'✔ yes',no:'✖ no',unproven:'? not proven','n/a':'– no site',self:'● hub'};
+  function reach(v){return '<span class="reach '+esc(String(v).replace('/','-'))+'">'+esc(RL[v]||v)+'</span>';}
+  function pct(v){return v==null?'<span class="muted">–</span>':esc(v)+' %';}
+  function wl(w){return '<span class="wl '+esc(w.state)+'" title="'+esc((w.isp?w.isp+' · ':'')+(w.circuit?w.circuit+' · ':'')+w.kind+' to '+w.to+'\n'+w.state+': '+(w.why||''))+'">'+esc(w.isp?w.isp.split(' ')[0]:w.kind)+'</span>';}
+  function load(){return S.req('GET','/netops/branches').then(function(v){V=v;draw();$('up').textContent='read '+S.ago(v.at);}).catch(function(e){$('body').innerHTML='<div class="card">'+(e.status===404?'<div class="empty">Branch Connectivity is not on this SIEM yet - run the SIEM update.</div>':S.errHtml(e,'Branch Connectivity'))+'</div>';});}
+  function match(b){
+    if(Q&&(b.name+' '+b.city+' '+b.wan.map(function(w){return (w.isp||'')+' '+(w.circuit||'')+' '+w.to;}).join(' ')).toLowerCase().indexOf(Q)<0)return false;
+    if(!F)return true;
+    if(F==='design')return b.design.length>0; if(F==='flapping')return b.reliability.flapping; if(F==='latency')return !!b.latency.unusual;
+    return b.health===F;
+  }
+  function draw(){
+    if(!V.configured){$('body').innerHTML='<div class="card"><div class="empty">'+esc(V.reason)+'</div><p><a class="btn" href="network-route-map.html">Open the WAN &amp; LAN Route Map</a></p></div>';return;}
+    var k=V.kpis,t=function(f,l,v,s,c){return S.tile(l,v,s,(c||'')+(F===f?' on':''),'f:'+f);};
+    var sites=k.sites-V.dc_sites.length;
+    var tiles='<div class="k" id="kp">'+t('','Sites healthy',k.ok+'/'+sites,'reach the DC and DR on every path',k.ok===sites?'ok':'')
+      +t('down','Cannot reach DC',k.down,'policies and claims stop there',k.down?'bad':'ok')+t('partial','DC but not DR',k.partial,'cut off in a DR failover',k.partial?'bad':'ok')
+      +t('backup','On fewer paths',k.backup,'one more failure cuts them off',k.backup?'warn':'ok')+t('degraded','Degraded',k.degraded,'loss / latency / utilisation',k.degraded?'warn':'ok')
+      +t('unmeasured','Not measured',k.unmeasured,'map their links',k.unmeasured?'warn':'')
+      +S.tile('WAN paths up',k.wan_up+'/'+k.wan_total,'branch side','', 'go:mx')+S.tile('Availability to DC',k.availability==null?'–':k.availability+' %','average over 7 days kept',k.availability!=null&&k.availability<99?'warn':'','go:mx')
+      +S.tile('ISPs below target',k.isp_below_sla,'target '+V.sla_target_pct+' %',k.isp_below_sla?'bad':'ok','go:isp')+t('design','Resilience gaps',k.design,'single path · one ISP · no DR route',k.design?'warn':'ok')+'</div>';
+    var acts=V.actions.length?V.actions.map(function(a){return '<div class="act '+(a.priority>=75?'bad':a.priority>=45?'warn':'')+'" data-act="'+esc(a.filter==='isp'?'go:isp':'f:'+a.filter)+'"><b>'+esc(a.title)+'</b><div class="muted small">'+esc(a.detail)+'</div></div>';}).join(''):'<div class="empty">Nothing to do: every site reaches the data centre and the DR site on every path.</div>';
+    var rows=V.branches.filter(match);
+    var chips=['','down','partial','backup','degraded','unmeasured','design','flapping','latency'].map(function(f){return '<button type="button" class="chip'+(F===f?' on':'')+'" data-f="'+f+'">'+esc(f?(HL[f]||{design:'resilience gaps',flapping:'flapping',latency:'latency unusual'}[f]):'all')+'</button>';}).join(' ');
+    var mx='<div class="fil"><input type="search" id="q" placeholder="Search site, city, ISP, circuit…" value="'+esc(Q)+'"> '+chips+'</div>'
+      +(rows.length?'<div class="tw"><table><thead><tr><th>Site</th><th>State</th><th>DC</th><th>DR</th><th>WAN paths</th><th>Latency</th><th>Loss</th><th>Util.</th><th>7-day to DC</th><th>Outages</th><th>Flags</th></tr></thead><tbody>'
+      +rows.map(function(b){var r=b.reliability,fl=[];if(r.flapping)fl.push(S.pill('flapping','warn'));if(b.latency.unusual)fl.push(S.pill('latency unusual','warn'));if(b.design.length)fl.push(S.pill(b.design.length+' gap'+(b.design.length>1?'s':''),''));
+        return '<tr class="br" data-id="'+esc(b.id)+'" tabindex="0"><td><b>'+esc(b.name)+'</b><div class="muted small">'+esc(b.kind)+(b.city?' · '+esc(b.city):'')+'</div></td><td>'+S.pill(b.kind==='dc'?'hub':(HL[b.health]||b.health),b.kind==='dc'?'ok':HC[b.health])+'<div class="muted small">'+esc(b.why)+'</div></td>'
+        +'<td>'+reach(b.dc)+'</td><td>'+reach(b.dr)+'</td><td><span class="wan">'+(b.wan.length?b.wan.map(wl).join(''):'<span class="muted small">none on the map</span>')+'</span></td>'
+        +'<td>'+(b.latency_ms==null?'<span class="muted">–</span>':esc(b.latency_ms)+' ms')+'</td><td>'+pct(b.loss_pct)+'</td><td>'+pct(b.util_pct)+'</td><td>'+(r.availability==null?'<span class="muted small">needs 1 h</span>':esc(r.availability)+' %')+'</td><td>'+esc(r.outages)+(r.mttr_min!=null?' <span class="muted small">~'+esc(r.mttr_min)+' min</span>':'')+'</td><td>'+fl.join(' ')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No site matches this filter.</div>');
+    var isp=V.isps.length?'<div class="tw"><table><thead><tr><th>ISP</th><th>Circuits</th><th>Sites</th><th>Availability</th><th>Outages (7 d)</th><th>Down now</th></tr></thead><tbody>'+V.isps.map(function(g){return '<tr><td><b>'+esc(g.isp)+'</b></td><td>'+esc(g.links)+'</td><td>'+esc(g.sites)+'</td><td>'+(g.availability==null?'<span class="muted small">needs 1 h</span>':S.pill(g.availability+' %',g.below_sla?'bad':'ok'))+'</td><td>'+esc(g.outages)+'</td><td>'+(g.down_now?S.pill(g.down_now,'bad'):'0')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No WAN link on the map names an ISP yet.</div>';
+    isp+=S.can('admin')?'<div class="fil" style="margin-top:8px"><label class="small">Availability target <input type="number" id="sla" min="90" max="100" step="0.1" value="'+esc(V.sla_target_pct)+'" style="width:80px"> %</label><button type="button" id="slaSave">Save target</button></div>':'<p class="muted small">Target '+esc(V.sla_target_pct)+' % - an administrator sets it.</p>';
+    var des=V.branches.filter(function(b){return b.design.length;});
+    var design=des.length?des.map(function(b){return '<div style="margin:6px 0"><b>'+esc(b.name)+'</b>'+b.design.map(function(d){return '<div class="small">⚠ '+esc(d.text)+' <span class="muted">→ '+esc(d.fix)+'</span></div>';}).join('')+'</div>';}).join(''):'<div class="empty">No resilience gap: every branch has two paths, two ISPs, two edges and a DR route.</div>';
+    $('body').innerHTML=tiles+'<div class="two"><div class="card" id="x-act"><h2>🧭 What to do first</h2>'+acts+'</div><div class="card" id="x-isp"><h2>📶 ISP scorecard</h2>'+isp+'</div></div>'
+      +'<div class="card" id="x-mx"><h2>🔗 All sites <span class="c">'+rows.length+'</span></h2>'+mx+'</div>'
+      +'<div class="card" id="x-des"><h2>🛡 Resilience design</h2>'+design+'</div><p class="muted small">'+esc(V.note)+'</p>';
+  }
+  function detail(id){
+    S.req('GET','/netops/branches/'+encodeURIComponent(id)).then(function(b){
+      var r=b.reliability;
+      var strip=b.strip.length?'<div class="strip">'+b.strip.map(function(h){return '<i class="'+esc(h.worst)+'" title="'+esc(S.dt(h.t)+': '+(HL[h.worst]||h.worst)+(h.lat!=null?' · '+h.lat+' ms':''))+'"></i>';}).join('')+'</div><div class="muted small">Each bar is one hour, coloured by the worst state seen in it.</div>':'<p class="muted small">No history yet - the SIEM samples every site every 5 minutes.</p>';
+      var wan=b.wan.length?'<div class="tw"><table><thead><tr><th>Path</th><th>State</th><th>Quality</th><th></th></tr></thead><tbody>'+b.wan.map(function(w){return '<tr><td><b>'+esc(w.kind)+'</b> to '+esc(w.to)+'<div class="muted small">'+esc([w.isp,w.circuit,w.capacity_mbps?w.capacity_mbps+' Mb/s':''].filter(Boolean).join(' · ')||'no ISP / circuit on the map')+' · from '+esc(w.edge)+'</div></td><td>'+S.pill(w.state,w.state==='up'?'ok':w.state==='down'?'bad':w.state==='unmeasured'?'':'warn')+'<div class="muted small">'+esc(w.why||'')+'</div></td><td class="small">'+esc([w.lat!=null?w.lat+' ms':null,w.loss!=null?'loss '+w.loss+' %':null,w.jitter!=null?'jitter '+w.jitter+' ms':null,w.util!=null?'util '+w.util+' %':null].filter(Boolean).join(' · ')||'–')+'</td><td>'+(S.can('analyst')&&w.state!=='up'?'<button type="button" data-draft="'+esc(w.id)+'">Draft ISP ticket</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<p class="muted">No WAN link on the map for this site.</p>';
+      var inc=b.incidents.length?b.incidents.map(function(x){return '<div style="margin:6px 0">'+S.sev(x.severity)+' <b>'+esc(x.title)+'</b>'+(x.acked_by?' <span class="muted small">acknowledged by '+esc(x.acked_by)+'</span>':'')+(x.fix.length?'<ol class="small">'+x.fix.slice(0,5).map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol>':'')+'</div>';}).join('')+'<p class="muted small">Acknowledge on the WAN &amp; LAN Route Map.</p>':'<p class="muted">No open route-map incident at this site.</p>';
+      Z.open('Branch Connectivity · '+(b.kind||'site'),b.name,Z.kv([['State',esc(HL[b.health]||b.health)+' - '+esc(b.why)],['Data centre',reach(b.dc)],['DR site',reach(b.dr)+' <span class="muted small">(without passing the DC)</span>'],['7-day to DC',r.availability==null?'needs 1 hour of samples':esc(r.availability)+' % · '+esc(r.outages)+' outage(s)'+(r.mttr_min!=null?' · MTTR '+esc(r.mttr_min)+' min':'')],['Fewer paths',r.backup_pct==null?'–':esc(r.backup_pct)+' % of the time · '+esc(r.failovers)+' failover(s)'],['Latency',b.latency_ms==null?'–':esc(b.latency_ms)+' ms'+(b.latency.usual!=null?' (usually '+esc(b.latency.usual)+' ms)':'')]])
+        +'<h3>Last 7 days</h3>'+strip+'<h3>WAN paths</h3>'+wan+'<div id="drf"></div>'
+        +(b.design.length?'<h3>Resilience design</h3>'+b.design.map(function(d){return '<div class="small">⚠ '+esc(d.text)+' <span class="muted">→ '+esc(d.fix)+'</span></div>';}).join(''):'')
+        +'<h3>Incidents</h3>'+inc);
+    }).catch(function(e){S.toast(e.message);});
+  }
+  function draft(link){S.req('POST','/netops/branches/isp-draft',{link:link}).then(function(d){var h=document.getElementById('drf');if(!h)return;h.innerHTML='<h3>ISP ticket draft</h3><pre class="draft" id="drtxt">'+esc(d.text)+'</pre><p class="muted small">'+esc(d.note)+'</p><button type="button" id="drcp">Copy</button>';}).catch(function(e){S.toast(e.message);});}
+  document.addEventListener('click',function(ev){
+    var x=ev.target;
+    if(x.closest('#zd [data-draft]'))return draft(x.closest('[data-draft]').getAttribute('data-draft'));
+    if(x.closest('#drcp')){var tx=(document.getElementById('drtxt')||{}).textContent||'';if(navigator.clipboard)navigator.clipboard.writeText(tx).then(function(){S.toast('Copied - send it from your mailbox or the ISP portal');},function(){S.toast('Select the text and copy it');});else S.toast('Select the text and copy it');return;}
+    if(!$('body').contains(x))return;
+    var a=x.closest('[data-act]');
+    if(a){var v=a.getAttribute('data-act');if(v.indexOf('f:')===0){F=F===v.slice(2)?'':v.slice(2);draw();var m=$('x-mx');if(m)m.scrollIntoView({behavior:'smooth'});}else{var t=$('x-'+v.slice(3));if(t)t.scrollIntoView({behavior:'smooth'});}return;}
+    var c=x.closest('[data-f]');if(c){F=c.getAttribute('data-f');draw();return;}
+    if(x.closest('#slaSave')){var n=+$('sla').value;S.req('POST','/netops/branches/config',{sla_target_pct:n}).then(function(){S.toast('Availability target saved');load();}).catch(function(e){S.toast(e.message);});return;}
+    var r=x.closest('tr.br');if(r)detail(r.getAttribute('data-id'));
+  });
+  document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;var r=e.target.closest&&e.target.closest('tr.br');if(r)detail(r.getAttribute('data-id'));});
+  document.addEventListener('input',function(e){if(e.target.id!=='q')return;Q=e.target.value.trim().toLowerCase();var p=e.target.selectionStart;draw();var q=$('q');if(q){q.focus();try{q.setSelectionRange(p,p);}catch(er){/* not a text input */}}});
+  $('rf').addEventListener('click',load);
+  S.ready(load);setInterval(function(){var z=document.getElementById('zd');if(!document.hidden&&(!z||z.hidden))load();},60000);
+})();
+</script></body></html>

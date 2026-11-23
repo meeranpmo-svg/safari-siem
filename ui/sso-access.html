@@ -1,0 +1,140 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SSO Access from AD</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1380px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#1f6feb;color:#fff;font-size:12px;font-weight:700}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:18px;font-weight:700;margin-top:3px}.t .s{font-size:11.5px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button:disabled{opacity:.5;cursor:default}
+button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button.dang{color:var(--bad)}
+input,select{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+.tw{overflow-x:auto;max-height:520px;overflow-y:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;border:1px solid var(--edge);color:var(--mute);margin:2px 4px 2px 0;white-space:nowrap}
+.p-admin{color:var(--bad);border-color:rgba(255,123,114,.45)}.p-operator{color:var(--info);border-color:rgba(121,184,255,.45)}.p-viewer{color:var(--ok);border-color:rgba(63,185,80,.45)}
+.warn{border:1px solid rgba(227,179,65,.45);background:rgba(227,179,65,.07);border-radius:10px;padding:9px 12px;margin:0 0 8px}.bad{border:1px solid rgba(255,123,114,.45);background:rgba(255,123,114,.07);border-radius:10px;padding:9px 12px;margin:0 0 8px}
+.okb{border:1px solid rgba(63,185,80,.45);background:rgba(63,185,80,.07);border-radius:10px;padding:9px 12px;margin:0 0 8px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+ol.steps{margin:6px 0 0;padding-inline-start:20px;line-height:1.75;font-size:13px}
+tr.mem td{background:rgba(255,255,255,.02)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Platform administration · identity · single sign-on</div><h1>SSO Access from AD</h1></div><span class="sp"></span><span class="muted" id="me"></span><button type="button" id="refreshv">⟳ Refresh</button></div>
+<div class="okb" style="font-size:13px">Active Directory groups are given a platform role for single sign-on with Microsoft Entra ID. <b>No account is created</b>, nothing is written to AD and MFA stays as Identity &amp; Sign-in sets it. One administrator proposes, <b>a different administrator approves and applies</b>; people then sign in with their own Microsoft account and get the role of their highest group.</div>
+<div class="k" id="status"></div>
+<div id="drift"></div>
+<div class="card"><h2><span class="n">1</span> Choose AD groups and their role <span class="c">read only from AD · members counted through nested groups, as Entra ID counts them</span></h2>
+  <div class="bar"><input type="search" id="q" placeholder="Part of a group name, e.g. SENTRA-" style="min-width:240px"><button type="button" id="readg">📥 Read groups from AD</button><span class="muted" id="gread"></span></div>
+  <div id="groups"><div class="empty">Loading…</div></div>
+  <div class="bar" style="margin-top:10px"><input id="pnote" placeholder="Why (recorded with the proposal)" style="flex:1;min-width:240px" maxlength="500"><button type="button" class="pri" id="propose">Propose this access</button><span class="muted" id="psel"></span></div>
+</div>
+<div class="card"><h2><span class="n">2</span> Review and approve <span class="c">four-eyes: the proposer cannot approve or apply</span></h2><div id="open"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Job roles from AD groups <span class="c">same menu and server limits as a local account · re-read from AD every hour · a job role set by hand in Roles &amp; Functions wins</span></h2><div id="jobs"></div></div>
+<div class="card"><h2>History</h2><div id="hist"></div></div>
+<div class="card"><h2>Claim format and Entra ID set-up <span class="c">the value Entra ID sends for a synced group must match what is mapped</span></h2><div id="setup"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var V=null, ME={}, CFG=null, CFGERR='', SEL={}, JOB={}, OPEN={}, MEM={};
+  var RANK={viewer:1,operator:2,admin:3};
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(m==='POST')x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: reported below as the HTTP status */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('The server is not reachable'));};x.send(m==='POST'?JSON.stringify(b||{}):null);});}
+  var itam=function(m,p,b){return req(m,'/api/itam'+p,b);};
+  function why(e,what){return e.status===403?(/four-eyes|person|service/.test(e.message)?e.message:what+' needs the administrator role.'):e.status===404&&/HTTP 404|not found$/.test(e.message)?'The server does not have this yet - run the update.':e.message;}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function tile(l,v,s,c){return '<div class="t '+(c||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  function rp(r){return r?'<span class="pill p-'+esc(r)+'">'+esc(r)+'</span>':'<span class="muted">no access</span>';}
+  function tbl(h,rows,empty){return rows.length?'<div class="tw"><table><thead><tr>'+h.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':'<div class="empty">'+esc(empty)+'</div>';}
+  function isAdmin(){return ME.role==='admin';}
+  function load(){return Promise.all([req('GET','/auth/whoami').catch(function(){return {};}),itam('GET','/sso-groups'),req('GET','/auth/admin/config').then(function(c){CFGERR='';return c;}).catch(function(e){CFGERR=e.status===403?'Only an administrator can read the sign-in settings.':e.message;return null;})])
+    .then(function(r){ME=r[0]||{};V=r[1];CFG=r[2];draw();}).catch(function(e){$('groups').innerHTML='<p class="err">'+esc(e.status===403?'Reading SSO access needs the operator role (group members are personal data).':why(e,'Reading SSO access'))+'</p>';$('open').innerHTML='';$('status').innerHTML='';});}
+  function draw(){
+    $('me').textContent=ME.user?('signed in as '+ME.user+' ('+ME.role+')'):'';
+    var cn=V.connection||{}, s=CFG&&CFG.sso||null;
+    $('status').innerHTML=tile('Directory',cn.ok?'Connected':'Not connected',cn.ok?cn.base_dn:(cn.why||''),cn.ok?'ok':'bad')
+      +tile('Single sign-on',s?(s.enabled?'On':'Off'):'—',s?(s.provider||''):CFGERR,s&&s.enabled?'ok':'warn')
+      +tile('Role claim',s?(s.roleClaim||'—'):'—',s&&s.roleClaim==='groups'?'groups - AD groups decide the role':'set to groups when the mapping is applied',s&&s.roleClaim==='groups'?'ok':'warn')
+      +tile('People with no mapped group',s?(s.defaultRole==='none'?'Denied':s.defaultRole):'—',s&&s.defaultRole!=='none'?'everyone who can sign in gets this role':'only mapped groups get in',s&&s.defaultRole!=='none'?'bad':'ok')
+      +tile('MFA on SSO',s?(s.requireMfa?'Required':'Not required'):'—','never changed from this page',s&&!s.requireMfa?'warn':'ok')
+      +tile('Claim format',{sam:'sAMAccountName',netbios:'NETBIOS\\sAMAccountName',dns:'DNS\\sAMAccountName',sid:'On-premises SID'}[V.settings.claim]||V.settings.claim,'Entra ID token configuration','');
+    drawDrift();drawGroups();drawOpen();drawHist();drawSetup();}
+  function drawDrift(){var a=V.applied,s=CFG&&CFG.sso,el=$('drift');if(!a||!s){el.innerHTML='';return;}
+    var miss=a.mappings.filter(function(m){return (s.roleMap||{})[m.key]!==m.role;});
+    el.innerHTML=miss.length?'<div class="bad"><b>The sign-in settings no longer match the approved AD access</b> ('+esc(a.id)+', applied by '+esc(a.applied_by)+'): '+miss.map(function(m){return esc(m.group)+' should be '+esc(m.role)+' but is '+esc((s.roleMap||{})[m.key]||'not mapped');}).join('; ')+'. Someone changed the role mapping in Identity &amp; Sign-in - propose the access again to put it back under four-eyes.</div>'
+      :'<div class="okb">The sign-in settings hold the approved AD access <b>'+esc(a.id)+'</b> - '+a.mappings.length+' group(s), applied by '+esc(a.applied_by)+' '+esc(new Date(a.applied_at).toLocaleString('en-GB'))+(a.verified?' and read back':'')+'.</div>';}
+  function drawGroups(){var g=V.groups,el=$('groups');
+    $('gread').textContent=g?('read '+new Date(g.at).toLocaleString('en-GB')+' by '+g.by+' · '+g.items.length+' group(s)'+(g.truncated?' (first 2000 - narrow the search)':'')):'';
+    if(!V.connection.ok){el.innerHTML='<div class="warn">'+esc(V.connection.why)+'</div>';return;}
+    if(!g){el.innerHTML='<div class="empty">No groups read yet - search for the groups made for the platform (for example SENTRA-) and press Read groups from AD.</div>';return;}
+    var rows=[];g.items.forEach(function(x){var k=x.dn,dis=x.broad||!isAdmin();
+      rows.push('<tr><td><b>'+esc(x.sam)+'</b><div class="muted" style="font-size:12px">'+esc(x.description||'')+'</div></td><td>'+esc(x.scope||'')+(x.security?'':' <span class="pill" style="color:var(--warn)">distribution</span>')+'</td><td class="mono">'+esc(x.claim||'—')+'</td>'
+        +'<td><button type="button" data-mem="'+esc(k)+'">'+(OPEN[k]?'Hide':'Members')+'</button></td><td>'+(x.broad?'<span class="pill p-admin">means everyone - not allowed</span>':'<select data-role="'+esc(k)+'"'+(dis||JOB[k]?' disabled':'')+'><option value="">no access</option>'+['viewer','operator','admin'].map(function(r){return '<option'+(SEL[k]===r?' selected':'')+'>'+r+'</option>';}).join('')+'</select>')+'</td>'
+        +'<td>'+(x.broad?'':'<select data-job="'+esc(k)+'"'+(dis?' disabled':'')+' title="A job role limits the menu and the server routes, as for a local account"><option value="">— no job role —</option>'+(V.job_roles||[]).map(function(j){return '<option value="'+esc(j.id)+'"'+(JOB[k]===j.id?' selected':'')+'>'+esc(j.name)+' ('+esc(j.base)+')</option>';}).join('')+'</select>')+'</td></tr>');
+      if(OPEN[k])rows.push('<tr class="mem"><td colspan="6">'+(MEM[k]?(MEM[k].error?'<span class="err">'+esc(MEM[k].error)+'</span>':MEM[k].members.length?MEM[k].members.map(function(u){return '<span class="pill" title="'+esc(u.upn||'no UPN')+'">'+esc(u.display_name||u.sam)+(u.enabled?'':' · disabled')+(u.admin_count?' · privileged':'')+(u.upn?'':' · no UPN')+'</span>';}).join(''):'<span class="muted">no members</span>'):'<span class="muted">Reading…</span>')+'</td></tr>');});
+    el.innerHTML=tbl(['Group','Scope','Claim value Entra ID sends','Who is in it','Platform role','Job role (optional)'],rows,'No group matches.')+(!isAdmin()?'<p class="note">Choosing roles and proposing needs the administrator role.</p>':'');
+    var n=Object.keys(SEL).filter(function(k){return SEL[k];}).length;$('psel').textContent=n?n+' group(s) chosen':'';$('propose').disabled=!n||!isAdmin();}
+  function drawOpen(){var p=V.open,el=$('open');if(!p){el.innerHTML='<div class="empty">Nothing waiting. Choose groups above and propose the access.</div>';return;}
+    var pv=p.preview||{},c=pv.counts||{},mine=p.by===ME.user;
+    var h='<div class="bar"><b>'+esc(p.id)+'</b><span class="pill">'+esc(p.status)+'</span><span class="muted">proposed by '+esc(p.by)+' '+esc(new Date(p.at).toLocaleString('en-GB'))+(p.note?' · “'+esc(p.note)+'”':'')+(p.approver?' · approved by '+esc(p.approver):'')+'</span></div>'
+      +tbl(['Group','Claim value','Role','Job role','Members'],p.mappings.map(function(m){return '<tr><td>'+esc(m.group)+'</td><td class="mono">'+esc(m.key)+'</td><td>'+rp(m.role)+'</td><td>'+(m.job_role_name?'<span class="pill p-operator">'+esc(m.job_role_name)+'</span>':'<span class="muted">—</span>')+'</td><td>'+esc(String(m.members))+'</td></tr>';}),'')
+      +'<div class="k" style="margin-top:10px">'+tile('Administrators',c.admin||0,'through these groups',c.admin?'bad':'')+tile('Operators',c.operator||0,'')+tile('Viewers',c.viewer||0,'')+tile('With a job role',c.job_roles||0,'menu and server limited to it','')+tile('Disabled in AD',c.disabled||0,'cannot sign in','')+'</div>'
+      +(pv.warnings||[]).map(function(w){return '<div class="warn">⚠ '+esc(w.text)+'</div>';}).join('')
+      +'<details><summary class="muted" style="cursor:pointer">Everyone who would get access ('+(pv.people||[]).length+')</summary>'+tbl(['Person','UPN','Role','Through'],(pv.people||[]).map(function(u){return '<tr><td>'+esc(u.display_name||u.sam)+(u.enabled?'':' <span class="pill">disabled</span>')+(u.admin_count?' <span class="pill p-admin">privileged AD account</span>':'')+'</td><td class="mono">'+esc(u.upn||'—')+'</td><td>'+rp(u.role)+(u.job_role_name?' <span class="pill p-operator">'+esc(u.job_role_name)+'</span>':u.job_dropped?' <span class="pill" title="a higher role through another group">no job role</span>':'')+'</td><td class="muted" style="font-size:12px">'+esc(u.via.join(' · '))+'</td></tr>';}),'')+'</details>';
+    if(p.status==='proposed')h+='<div class="bar" style="margin-top:10px">'+(mine?'<span class="muted">You proposed this - another administrator approves it.</span>':isAdmin()?'<button type="button" class="pri" data-approve="'+esc(p.id)+'">✓ Approve</button><input id="rreason" placeholder="Reason to reject" maxlength="500" style="min-width:220px"><button type="button" class="dang" data-reject="'+esc(p.id)+'">Reject</button>':'<span class="muted">An administrator approves it.</span>')+'</div>';
+    if(p.status==='approved'){var s=CFG&&CFG.sso;
+      var prevKeys=V.applied?V.applied.keys:[],legacy=s?Object.keys(s.roleMap||{}).filter(function(k){return prevKeys.indexOf(k)<0;}):[];
+      h+='<div style="margin-top:10px">'+(mine?'<span class="muted">Approved by '+esc(p.approver)+'. You proposed it, so another administrator applies it.</span>':!isAdmin()?'<span class="muted">An administrator applies it.</span>':!s?'<div class="warn">'+esc(CFGERR||'The sign-in settings could not be read.')+'</div>'
+        :(s.roleClaim!=='groups'&&legacy.length?'<div class="warn"><label><input type="checkbox" id="legack"> The role claim changes from <b>'+esc(s.roleClaim)+'</b> to <b>groups</b>: the existing mappings '+esc(legacy.join(', '))+' are kept but will no longer match anyone. People who got their role from them need to be in one of the groups.</label></div>':'')
+          +'<button type="button" class="pri" data-apply="'+esc(p.id)+'">Apply to Identity &amp; Sign-in</button> <span class="muted">Saves the role mapping (role claim = groups) with every other sign-in setting unchanged, reads it back and records it.</span>')+'</div>';}
+    el.innerHTML=h;}
+  function drawHist(){var H=V.history||[],D=V.derived||[],LS=V.last_sync;
+    var jr=function(id){var j=(V.job_roles||[]).filter(function(x){return x.id===id;})[0];return j?j.name:id;};
+    $('jobs').innerHTML='<div class="bar">'+(LS?'<span class="muted">last synced from AD '+esc(new Date(LS.at).toLocaleString('en-GB'))+' ('+esc(LS.reason)+') - '+LS.added+' added, '+LS.removed+' removed</span>':'<span class="muted">not synced yet</span>')+(isAdmin()?' <button type="button" id="syncnow">⟳ Sync now</button>':'')+'</div>'
+      +tbl(['Sign-in name','Job role','From AD group','Since'],D.map(function(a){return '<tr><td class="mono">'+esc(a.user)+'</td><td><span class="pill p-operator">'+esc(jr(a.role_id))+'</span></td><td>'+esc(a.via||'')+'</td><td>'+esc(a.at?new Date(a.at).toLocaleString('en-GB'):'')+'</td></tr>';}),'No job role comes from AD yet. Give a group a job role above, then propose, approve and apply.');
+    $('hist').innerHTML=tbl(['Proposal','Status','By','When','Approved by','Groups','People','Reason'],H.map(function(x){return '<tr><td class="mono">'+esc(x.id)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.by)+'</td><td>'+esc(new Date(x.at).toLocaleString('en-GB'))+'</td><td>'+esc(x.approver||'—')+'</td><td>'+x.mappings+'</td><td>'+x.people+'</td><td>'+esc(x.reason||'')+'</td></tr>';}),'No proposals yet.');}
+  function drawSetup(){var s=V.settings,cn=V.connection||{},red=CFG&&CFG.sso&&CFG.sso.redirectUri||'(shown in Identity & Sign-in)';
+    $('setup').innerHTML=(isAdmin()?'<div class="bar"><select id="claim">'+[['sam','sAMAccountName'],['netbios','NetBIOSDomain\\sAMAccountName'],['dns','DNSDomain\\sAMAccountName'],['sid','On-premises group SID']].map(function(o){return '<option value="'+o[0]+'"'+(s.claim===o[0]?' selected':'')+'>'+esc(o[1])+'</option>';}).join('')+'</select><input id="netbios" placeholder="NetBIOS domain, e.g. CORPHQ" value="'+esc(s.netbios||'')+'" maxlength="15" style="width:200px"><button type="button" id="saveclaim">Save claim format</button></div>':'')
+      +'<ol class="steps"><li>Entra ID → App registrations → the platform app (redirect URI <span class="mono">'+esc(red)+'</span>) → <b>Token configuration → Add groups claim</b>.</li>'
+      +'<li>Choose <b>Groups assigned to the application</b> (recommended: a token carries at most 200 groups, and assigning only the platform groups avoids the overage) or <b>Security groups</b>.</li>'
+      +'<li>Under <b>ID</b>, choose the same format as above - <b>'+esc({sam:'sAMAccountName',netbios:'NetBIOSDomain\\sAMAccountName',dns:'DNSDomain\\sAMAccountName',sid:'On Premises Group Security Identifier'}[s.claim])+'</b>. These formats are sent only for groups synced from AD by Entra Connect.</li>'
+      +'<li>Enterprise applications → the app → <b>Users and groups</b>: assign the AD groups you map here, and set <b>Assignment required</b> to Yes.</li>'
+      +'<li>Identity &amp; Sign-in: keep <b>Users with no mapped role = Deny access</b> and <b>Require MFA</b> on (this page never changes either).</li>'
+      +'<li>Test with one person from each group: they sign in with Microsoft and the sign-in log shows the role they got.</li></ol>'
+      +(cn.dns_domain?'<p class="note">Domain read from the directory: '+esc(cn.dns_domain)+'.</p>':'');}
+  // apply: the same admin API the Identity & Sign-in Save button uses, every other setting sent back unchanged, then read back
+  function apply(id,btn){var p=V.open,s=CFG.sso;
+    if(s.roleClaim!=='groups'&&$('legack')&&!$('legack').checked){toast('Tick the box to confirm the role claim change first.');return;}
+    var prev=V.applied?V.applied.keys:[],map={};Object.keys(s.roleMap||{}).forEach(function(k){if(prev.indexOf(k)<0)map[k]=s.roleMap[k];});p.mappings.forEach(function(m){map[m.key]=m.role;});
+    var b={provider:s.provider,issuer:s.issuer,clientId:s.clientId,redirectUri:s.redirectUri,scopes:s.scopes,roleClaim:'groups',allowedDomains:s.allowedDomains,defaultRole:s.defaultRole,requireMfa:s.requireMfa,roleMap:map};
+    btn.disabled=true;btn.textContent='Applying…';
+    req('POST','/auth/admin/sso',b).then(function(){return req('GET','/auth/admin/config');}).then(function(c){var rm=c.sso.roleMap||{},ok=p.mappings.every(function(m){return rm[m.key]===m.role;})&&c.sso.roleClaim==='groups';
+      if(!ok)throw new Error('The sign-in settings were saved but did not read back as approved - check Identity & Sign-in.');
+      return itam('POST','/sso-groups/'+encodeURIComponent(id)+'/applied',{role_map:rm,role_claim:c.sso.roleClaim,verified:true});})
+      .then(function(r){var js=r&&r.job_role_sync;toast('Applied and read back: AD groups now decide the role at sign-in.'+(js&&js.synced?' Job roles: '+js.added.length+' given.':js&&js.reason?' Job roles not synced: '+js.reason:''));load();})
+      .catch(function(e){btn.disabled=false;btn.textContent='Apply to Identity & Sign-in';toast(why(e,'Applying'));});}
+  document.addEventListener('change',function(e){var j=e.target.getAttribute&&e.target.getAttribute('data-job');
+    if(j!=null){JOB[j]=e.target.value;var jb=(V.job_roles||[]).filter(function(x){return x.id===e.target.value;})[0];if(jb)SEL[j]=jb.base;drawGroups();}});
+  document.addEventListener('change',function(e){var k=e.target.getAttribute&&e.target.getAttribute('data-role');if(k!=null){SEL[k]=e.target.value;var n=Object.keys(SEL).filter(function(x){return SEL[x];}).length;$('psel').textContent=n?n+' group(s) chosen':'';$('propose').disabled=!n||!isAdmin();}});
+  document.addEventListener('click',function(e){var t;
+    if((t=e.target.closest('[data-mem]'))){var k=t.getAttribute('data-mem');OPEN[k]=!OPEN[k];drawGroups();if(OPEN[k]&&!MEM[k])itam('GET','/sso-groups/members?group='+encodeURIComponent(k)).then(function(r){MEM[k]=r;}).catch(function(x){MEM[k]={error:why(x,'Reading members')};}).then(drawGroups);return;}
+    if((t=e.target.closest('[data-approve]'))){t.disabled=true;itam('POST','/sso-groups/'+encodeURIComponent(t.getAttribute('data-approve'))+'/approve',{}).then(function(){toast('Approved - apply it to Identity & Sign-in next.');load();}).catch(function(x){t.disabled=false;toast(why(x,'Approving'));});return;}
+    if((t=e.target.closest('[data-reject]'))){var rs=($('rreason').value||'').trim();if(!rs){toast('Say why it is rejected.');return;}itam('POST','/sso-groups/'+encodeURIComponent(t.getAttribute('data-reject'))+'/reject',{reason:rs}).then(function(){toast('Rejected.');load();}).catch(function(x){toast(why(x,'Rejecting'));});return;}
+    if((t=e.target.closest('[data-apply]'))){apply(t.getAttribute('data-apply'),t);return;}
+  });
+  $('readg').addEventListener('click',function(){var b=this;b.disabled=true;itam('POST','/sso-groups/refresh',{q:$('q').value.trim()}).then(function(r){V=r;SEL={};OPEN={};MEM={};draw();}).catch(function(x){toast(why(x,'Reading the directory'));}).then(function(){b.disabled=false;});});
+  $('propose').addEventListener('click',function(){var b=this,M=Object.keys(SEL).filter(function(k){return SEL[k];}).map(function(k){var o={group:k,role:SEL[k]};if(JOB[k])o.job_role=JOB[k];return o;});b.disabled=true;
+    itam('POST','/sso-groups/propose',{mappings:M,note:$('pnote').value.trim()}).then(function(){toast('Proposed - another administrator reviews and approves it.');SEL={};JOB={};$('pnote').value='';load();}).catch(function(x){b.disabled=false;toast(why(x,'Proposing'));});});
+  document.addEventListener('click',function(e){if(e.target.id!=='syncnow')return;var b=e.target;b.disabled=true;itam('POST','/sso-groups/sync',{}).then(function(r){toast(r.synced?'Synced from AD: '+r.added.length+' added, '+r.removed.length+' removed.':'Not synced: '+r.reason);load();}).catch(function(x){b.disabled=false;toast(why(x,'Syncing'));});});
+  document.addEventListener('click',function(e){if(e.target.id!=='saveclaim')return;itam('POST','/sso-groups/settings',{claim:$('claim').value,netbios:$('netbios').value.trim()}).then(function(r){V=r;draw();toast('Claim format saved.');}).catch(function(x){toast(why(x,'Changing the claim format'));});});
+  $('refreshv').addEventListener('click',load);
+  load();
+})();
+</script></body></html>

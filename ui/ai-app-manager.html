@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Application Manager</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:22px;color:var(--title)}.sub{color:var(--mute);font-size:13px}.sp{flex:1}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:16px;margin:0 0 12px;min-width:0}.card h2{margin:0 0 12px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:0 0 12px}.kpi{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:12px 14px}.kpi .v{font-size:24px;font-weight:800}.kpi .l{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.empty{color:var(--mute);padding:12px 0}
+.p{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;margin:1px 2px 1px 0}.ok{background:rgba(63,185,80,.15);color:var(--ok)}.warn{background:rgba(227,179,65,.15);color:var(--warn)}.bad{background:rgba(255,123,114,.16);color:var(--bad)}.mut{background:rgba(140,147,161,.16);color:#a3a9b5}.info{background:rgba(121,184,255,.15);color:var(--info)}
+a.lk{color:var(--info);text-decoration:none;font-weight:600}
+.banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">AI &amp; Automation · applications</div><h1>AI Application Manager</h1><div class="sub">Watches every business service the way an application owner would: is it up, does it still have redundancy, is there a working DR copy, are its servers under pressure</div></div><span class="sp"></span><a class="lk" href="server-availability.html">Server availability →</a></div>
+<div class="banner">Services come from Server Availability: the service an administrator set on each server, or — until set — servers grouped by name (shown as <i>inferred</i>). The AI Application Manager recommends; the application owner decides. Nothing is restarted or changed.</div>
+<section data-zyb-duty="apps" data-api="/api/soc"></section>
+<section class="kpis" id="kpis"></section>
+<section class="card"><h2>Business services <span class="c" id="gen"></span></h2><div class="tw"><table><thead><tr><th>Service</th><th>Status</th><th>Production online</th><th>High availability</th><th>Servers</th><th>Findings</th></tr></thead><tbody id="svc"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table></div></section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var ST={down:['Down','bad'],degraded:['No redundancy','bad'],spof:['Single server','warn'],warning:['Warning','warn'],ok:['Healthy','ok']};
+  var IS={'service-down':'service down','no-redundancy-now':'running without redundancy','single-server':'single point of failure','no-dr':'no DR copy','dr-offline':'DR offline'};
+  function pill(t,k){return '<span class="p '+esc(k)+'">'+esc(t)+'</span>';}
+  function load(){var x=new XMLHttpRequest();x.open('GET','/api/soc/netops/avail');x.withCredentials=true;x.timeout=60000;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }
+      if(x.status!==200||!j){$('svc').innerHTML='<tr><td colspan="6" class="empty">'+(x.status===404?'Server Availability is not installed in the SIEM.':'Could not read Server Availability ('+esc(x.status)+').')+'</td></tr>';return;}
+      var G=(j.groups||[]).slice(), H={};(j.items||[]).forEach(function(h){H[h.id]=h;});
+      var down=G.filter(function(g){return g.status==='down';}).length, deg=G.filter(function(g){return g.status==='degraded';}).length, spof=G.filter(function(g){return g.issues.indexOf('single-server')>=0;}).length, nodr=G.filter(function(g){return g.issues.indexOf('no-dr')>=0;}).length;
+      function k(v,l,c){return '<div class="kpi"><div class="v" style="color:'+(c||'inherit')+'">'+esc(v)+'</div><div class="l">'+esc(l)+'</div></div>';}
+      $('kpis').innerHTML=k(G.length,'Services')+k(down,'Down',down?'var(--bad)':'')+k(deg,'Without redundancy',deg?'var(--bad)':'')+k(spof,'Single point of failure',spof?'var(--warn)':'')+k(nodr,'No DR copy',nodr?'var(--warn)':'')+k((j.summary||{}).offline||0,'Servers offline',(j.summary||{}).offline?'var(--bad)':'');
+      $('gen').textContent=G.length+' services · '+(j.items||[]).length+' servers · updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      var O={down:0,degraded:1,spof:2,warning:3,ok:4};G.sort(function(a,b){return (O[a.status]-O[b.status])||(b.critical-a.critical)||String(a.name).localeCompare(b.name);});
+      $('svc').innerHTML=G.length?G.map(function(g){var s=ST[g.status]||['?','mut'],m=g.members.map(function(id){return H[id];}).filter(Boolean);
+        return '<tr><td><b>'+esc(g.name)+'</b>'+(g.critical?' '+pill('business-critical','info'):'')+(g.inferred?' <span class="muted" style="font-size:12px">inferred</span>':'')+(g.required?'':' <span class="muted" style="font-size:12px">non-production</span>')+'</td>'
+          +'<td>'+pill(s[0],s[1])+'</td><td>'+esc(g.production_online)+' / '+esc(g.production)+'</td><td>'+(g.ha?pill('yes','ok'):pill('no','mut'))+'</td>'
+          +'<td class="muted" style="font-size:12px">'+m.map(function(h){return esc(h.name)+(h.status==='offline'?' <span style="color:var(--bad)">(offline)</span>':'');}).join(', ')+'</td>'
+          +'<td>'+(g.issues.length?g.issues.map(function(i){return pill(IS[i]||i,i==='service-down'||i==='no-redundancy-now'?'bad':'warn');}).join(''):pill('none','ok'))+'</td></tr>';}).join(''):'<tr><td colspan="6" class="empty">No servers are monitored yet — Server Availability fills from IT Asset Management (servers with a management IP).</td></tr>';
+    };x.onerror=x.ontimeout=function(){$('svc').innerHTML='<tr><td colspan="6" class="empty">The SIEM is not reachable.</td></tr>';};x.send();}
+  load();setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script>
+<script src="vendor/zyb-duty.js" defer></script></body></html>

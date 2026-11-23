@@ -1,0 +1,46 @@
+--- a/engine/discovery/runner.js	2026-10-14 09:06:54.795552622 +0000
++++ b/engine/discovery/runner.js	2026-10-14 09:06:54.805125710 +0000
+@@ -183,6 +183,14 @@
+     const loginTargets = new Map();   // ip → {db:[{engine,port}], ssh: port|null, storage} for the read-only login phase
+     const lt = (ip) => { if (!loginTargets.has(ip)) loginTargets.set(ip, { ip, db: [], ssh: null, storage: false }); return loginTargets.get(ip); };
+     const useDb = allowed.includes('db'), useUnix = allowed.includes('unix'), useStor = allowed.includes('storage'), probeOpt = { connect: deps.connect, banner: deps.banner, timeout_ms: ctx.config.discovery.tcp_timeout_ms };
++    // database listeners on non-standard ports: the scope's list + the port written on each database login (so a login for
++    // Oracle on 1600 is enough for discovery to find that listener)
++    const dbExtraPorts = {};
++    if (useDb) {
++      const addPort = (e, port) => { const n = Number(port); if (!e || !Number.isInteger(n) || n < 1 || n > 65535) return; (dbExtraPorts[e] = dbExtraPorts[e] || []); if (!dbExtraPorts[e].includes(n)) dbExtraPorts[e].push(n); };
++      for (const [e, list] of Object.entries((m.db && m.db.ports) || {})) for (const port of list || []) addPort(e, port);
++      for (const id of (m.db && m.db.credential_ids) || []) { try { const c = vault && vault.get ? vault.get(id) : null; if (c && c.target) addPort(c.target.engine, c.target.port); } catch { /* unusable credential */ } }
++    }
+     run.progress.phase = 'probe';
+     // per host the TCP ports and the SNMP probe run at the same time (not one after another): a silent address costs one
+     // timeout (~0.8-1.5 s) instead of the sum of all of them (~7 s), so a /24 takes about a minute instead of several
+@@ -203,7 +211,7 @@
+         }
+         return null;
+       })();
+-      const dbP = useDb ? svcM.db(ip, m.db.engines, probeOpt).catch(() => null) : Promise.resolve(null);
++      const dbP = useDb ? svcM.db(ip, m.db.engines, Object.assign({}, probeOpt, { extra_ports: dbExtraPorts })).catch(() => null) : Promise.resolve(null);
+       const unixP = useUnix ? svcM.unix(ip, probeOpt).catch(() => null) : Promise.resolve(null);
+       const storP = useStor ? svcM.storage(ip, probeOpt).catch(() => null) : Promise.resolve(null);
+       const [r, sid, dr, ur, sr] = await Promise.all([tcpP, snmpP, dbP, unixP, storP]);
+--- a/engine/discovery/scopes.js	2026-10-14 09:06:54.807552622 +0000
++++ b/engine/discovery/scopes.js	2026-10-14 09:06:54.811552623 +0000
+@@ -80,6 +80,17 @@
+       if (!Array.isArray(e) || !e.length) throw bad('methods.db.engines must be a non-empty list');
+       for (const x of e) if (!DBE.includes(String(x))) throw bad(`methods.db.engines: unknown engine "${x}" (allowed: ${DBE.join(', ')})`);
+       o.engines = [...new Set(e.map(String))];
++      // non-standard listener ports per engine, probed besides the well-known ones (a database login's own port is added at scan time)
++      const pin = b.ports !== undefined ? b.ports : (p.ports || {});
++      if (!isObj(pin)) throw bad('methods.db.ports must be an object such as {"oracle": [1600], "mssql": [51433]}');
++      o.ports = {};
++      for (const [eng, raw] of Object.entries(pin)) {
++        if (!DBE.includes(eng)) throw bad(`methods.db.ports: unknown engine "${eng}" (allowed: ${DBE.join(', ')})`);
++        const arr = Array.isArray(raw) ? raw : [raw];
++        if (arr.length > 16) throw bad(`methods.db.ports.${eng}: at most 16 ports`);
++        const v = [...new Set(arr.map((x) => intIn(x, 1, 65535, `methods.db.ports.${eng}[]`)))].sort((a, b2) => a - b2);
++        if (v.length) o.ports[eng] = v;
++      }
+     }
+     if (k === 'snmp' || k === 'db') {   // several: SNMP tries each, a database credential is per engine
+       const ids = b.credential_ids !== undefined ? b.credential_ids : (p.credential_ids || []);

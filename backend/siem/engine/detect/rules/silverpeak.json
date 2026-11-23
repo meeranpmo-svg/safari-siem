@@ -1,0 +1,51 @@
+[
+  {
+    "id": "SENTRA-SP-001", "name": "WAN optimizer configuration change outside the change window", "enabled": true, "severity": 2,
+    "mitre": ["T1599", "T1078"], "sama": ["3.3.7", "3.3.8"], "tactic": "defense-impairment", "author":"Sentra SOC", "version": 1,
+    "description": "A configuration change on a Silver Peak / HPE Aruba EdgeConnect WAN optimizer (appliance audit log: web UI, CLI, REST API or Orchestrator push) outside the change window (07:00-18:00 Asia/Riyadh, Sunday-Thursday) - same window as SENTRA-FW-002. Tune hour_between / weekday_in to the customer's CAB window.",
+    "type": "single",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "silverpeak" },
+                        { "field": "action", "op": "eq", "value": "config-change" } ],
+               "any": [ { "field": "ts", "op": "hour_between", "value": [18, 7] },
+                        { "field": "ts", "op": "weekday_in", "value": [5, 6] } ] },
+    "group_by": ["host", "user"], "suppress_s": 1800,
+    "fields_in_alert": ["host", "user", "src_ip", "fields.ui", "fields.change_id", "fields.change", "fields.site"]
+  },
+  {
+    "id": "SENTRA-SP-002", "name": "WAN optimizer reboot or software upgrade outside the change window", "enabled": true, "severity": 2,
+    "mitre": ["T1529", "T1601"], "sama": ["3.3.7", "3.3.8", "3.3.14"], "tactic": "impact", "author":"Sentra SOC", "version": 1,
+    "description": "A Silver Peak / EdgeConnect appliance was rebooted (requested, or the appliance's own reboot alarm) or its software was upgraded outside the change window (07:00-18:00 Asia/Riyadh, Sunday-Thursday). An unplanned reboot of a WAN optimizer drops every optimised tunnel of its site.",
+    "type": "single",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "silverpeak" },
+                        { "any": [ { "field": "action", "op": "in", "value": ["reboot", "upgrade"] },
+                                   { "all": [ { "field": "action", "op": "eq", "value": "alarm" },
+                                              { "field": "fields.alarm_type", "op": "eq", "value": "reboot" },
+                                              { "field": "fields.alarm_state", "op": "eq", "value": "raised" } ] } ] },
+                        { "any": [ { "field": "ts", "op": "hour_between", "value": [18, 7] },
+                                   { "field": "ts", "op": "weekday_in", "value": [5, 6] } ] } ] },
+    "group_by": ["host"], "suppress_s": 1800,
+    "fields_in_alert": ["host", "user", "src_ip", "action", "fields.phase", "fields.version", "fields.ui", "fields.site", "message"]
+  },
+  {
+    "id": "SENTRA-SP-003", "name": "WAN optimizer tunnel down alarm", "enabled": true, "severity": 1,
+    "mitre": ["T1499", "T1498"], "sama": ["3.3.8", "3.3.14"], "tactic": "impact", "author":"Sentra SOC", "version": 1,
+    "description": "Operational: an EdgeConnect appliance raised its tunnel-down alarm (the appliance raises it once the tunnel stays down past its own detection time - verify on the release). The real-time engine cannot express 'no tunnel-up within N minutes'; the down duration against the tunnel_down_minutes threshold is measured by the WAN optimization monitor in the infrastructure service and forwarded on the infra bridge. Cleared alarms are ignored.",
+    "type": "single",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "silverpeak" },
+                        { "field": "action", "op": "eq", "value": "alarm" },
+                        { "field": "fields.alarm_type", "op": "eq", "value": "tunnel_down" },
+                        { "field": "fields.alarm_state", "op": "eq", "value": "raised" } ] },
+    "group_by": ["host", "fields.tunnel"], "suppress_s": 3600,
+    "fields_in_alert": ["host", "fields.tunnel", "fields.peer", "fields.alarm_severity", "fields.site", "message"]
+  },
+  {
+    "id": "SENTRA-SP-004", "name": "WAN optimizer tunnel flapping", "enabled": true, "severity": 2,
+    "mitre": ["T1499", "T1498"], "sama": ["3.3.8", "3.3.14"], "tactic": "impact", "author":"Sentra SOC", "version": 1,
+    "description": "Operational: the same Silver Peak / EdgeConnect tunnel went down 3 or more times within 30 minutes (unstable WAN link, MPLS / internet circuit flapping or path MTU problems between sites).",
+    "type": "threshold",
+    "match": { "all": [ { "field": "src_type", "op": "eq", "value": "silverpeak" },
+                        { "field": "action", "op": "eq", "value": "tunnel-down" } ] },
+    "group_by": ["host", "fields.tunnel"], "window_s": 1800, "count": 3, "suppress_s": 3600,
+    "fields_in_alert": ["host", "fields.tunnel", "fields.peer", "fields.reason", "fields.site"]
+  }
+]

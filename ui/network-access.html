@@ -1,0 +1,116 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network Access Control</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-xlsx.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+[hidden]{display:none!important}
+.hero{display:grid;grid-template-columns:minmax(220px,260px) 1fr;gap:14px;margin:12px 0}@media(max-width:900px){.hero{grid-template-columns:1fr}}
+.hero .k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}@media(max-width:700px){.hero .k{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.gauge{background:var(--card,#12151c);border:1px solid var(--edge);border-radius:14px;padding:14px;text-align:center}
+.gauge svg{width:170px;height:170px;display:block;margin:0 auto}.gauge .t{font-size:12px;color:var(--mute)}
+.bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:rgba(255,255,255,.06);margin:10px 0 6px}.bar i{display:block;height:100%;cursor:pointer}.bar i:hover{filter:brightness(1.25)}
+.c-authorised{background:#3fb950}.c-quarantined{background:#d29922}.c-unauthorised{background:#f85149}.c-other{background:#8b949e}.c-bypass{background:#ff2d55}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute)}.lg button{background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0}.lg button:before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;background:var(--c)}
+.lg button[aria-pressed="true"]{color:#fff;text-decoration:underline}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:1100px){.grid2{grid-template-columns:1fr}}
+.auth svg{width:100%;height:150px;display:block}
+.xb{height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;min-width:90px}.xb i{display:block;height:100%}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.chips button[aria-pressed="true"]{border-color:#2f81f7;color:#fff;background:rgba(47,129,247,.2)}
+tr[data-ep]{cursor:pointer}tr[data-ep]:hover td{background:rgba(255,255,255,.03)}
+.risk{display:inline-block;min-width:34px;text-align:center;border-radius:6px;padding:1px 6px;font-weight:700;font-size:12px}
+.why{margin:4px 0 0;padding-left:16px;font-size:12px;color:var(--mute)}
+.days{display:flex;gap:2px;margin:6px 0}.days i{flex:1;height:16px;border-radius:2px;background:#30363d}
+.ans{white-space:pre-wrap;border:1px solid var(--edge);border-radius:10px;padding:12px;margin-top:10px}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:95;overflow:auto}#dlg>div{background:var(--card,#12151c);border:1px solid var(--edge);border-radius:14px;max-width:760px;width:100%;padding:16px}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Network · security</div><h1>Network Access Control</h1><div class="muted small">Every device Genian NAC sees on the network and whether it was let in, checked against the switch MAC tables and the 802.1X / MAB / RADIUS events in the SIEM. Machine learning flags what is new, unstable or out of place; the AI analyst explains it. Read-only: nothing here changes NAC, a switch or a device.</div></div>
+<div class="sp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="muted small" id="up"></span><a href="switch-port-map.html" class="btn">Switch Port Map →</a><button type="button" id="sample" hidden>Record today</button><button type="button" id="xls">Excel</button><button type="button" id="refresh">Refresh</button></div></div>
+<div class="banner" id="nc" hidden></div>
+<div id="body">
+<div class="hero"><div class="gauge" id="gauge"></div><div><div class="k" id="kk"></div><div class="bar" id="bar"></div><div class="lg" id="lg"></div><div class="muted small" id="srcs" style="margin-top:6px"></div></div></div>
+<div class="card" id="fcard"><h2>What needs attention <span class="c">most severe first</span></h2><div id="findings"></div></div>
+<div class="grid2">
+<div class="card auth"><h2>Authentication - last 24 hours <span class="c">802.1X / MAB / RADIUS events in the SIEM; red = failures, ▲ = unusual for that hour</span></h2><div id="auth"></div></div>
+<div class="card"><h2>Switches by exposure <span class="c">share of risky devices on each switch</span></h2><div id="sw"></div></div>
+</div>
+<div class="card" id="epcard"><h2>Devices <span class="c" id="epc"></span></h2><div class="chips" id="chips"></div><input id="q" type="search" placeholder="Filter by host, MAC, IP, switch or VLAN" style="width:100%;max-width:420px;margin-bottom:8px"><div id="eps"></div></div>
+<div class="grid2"><div class="card"><h2>VLANs</h2><div id="vl"></div></div><div class="card" id="aicard"><h2>AI NAC analyst <span class="c">reads NAC, switch and SIEM data; changes nothing</span></h2><div id="ai"></div></div></div>
+<p class="note" id="learn"></p>
+</div>
+<div id="dlg" hidden></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc,esc=Z.esc,$=function(i){return document.getElementById(i);};
+  var V=null,FIL='',Q='',ANS=null;
+  var ST={authorised:['authorised','ok','#3fb950'],quarantined:['quarantined','warn','#d29922'],unauthorised:['unauthorised / unknown','bad','#f85149'],other:['other status','','#8b949e']};
+  var SEV={critical:'bad',high:'bad',medium:'warn',low:''};
+  function why(e){return e.status===404?'Network Access Control is not installed on the SIEM yet - run the update.':e.message;}
+  function riskCol(r){return r>=60?'#f85149':r>=35?'#d29922':r>0?'#2f81f7':'#3fb950';}
+  function gauge(p){var r=70,c=2*Math.PI*r,v=p==null?0:p,col=p==null?'#6e7681':p>=95?'#3fb950':p>=80?'#d29922':'#f85149';
+    return '<svg viewBox="0 0 170 170" role="img" aria-label="Enforcement"><circle cx="85" cy="85" r="'+r+'" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="14"/><circle cx="85" cy="85" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+(c*v/100)+' '+c+'" transform="rotate(-90 85 85)"/><text x="85" y="88" text-anchor="middle" fill="#e6edf3" font-size="30" font-weight="800">'+(p==null?'–':p+'%')+'</text><text x="85" y="110" text-anchor="middle" fill="#8b949e" font-size="11">authorised</text></svg><div class="t">Enforcement: devices NAC authorised, out of every device seen (including those on a port NAC never saw)</div>';}
+  function authChart(a){if(!a.connected)return '<div class="empty">No 802.1X / MAB / RADIUS events reached the SIEM. Send Genian NAC (or the RADIUS server) syslog to the SIEM in Connect &amp; Onboard.</div>';
+    var H=a.hours;if(!H.length)return '<div class="empty">No authentication events in the last 24 hours.</div>';
+    var max=Math.max.apply(null,H.map(function(h){return h.ok+h.fail;}).concat([1])),W=720,bw=W/24,sp={};(a.spikes||[]).forEach(function(s){sp[s.t]=s;});
+    var g=H.map(function(h,i){var x=i*bw,ho=h.ok/max*120,hf=h.fail/max*120,t=new Date(h.t+3*3600000).toISOString().slice(11,16);
+      return '<g><title>'+esc(t+' Riyadh: '+h.ok+' accepted, '+h.fail+' failed')+'</title><rect x="'+(x+2)+'" y="'+(130-ho-hf)+'" width="'+(bw-4)+'" height="'+ho+'" fill="#2f81f7" opacity=".55"/><rect x="'+(x+2)+'" y="'+(130-hf)+'" width="'+(bw-4)+'" height="'+hf+'" fill="#f85149"/>'+(sp[h.t]?'<text x="'+(x+bw/2)+'" y="'+(126-ho-hf)+'" text-anchor="middle" fill="#ff2d55" font-size="12">▲</text>':'')+'</g>';}).join('');
+    return '<svg viewBox="0 0 '+W+' 150" preserveAspectRatio="none">'+g+'<line x1="0" y1="130" x2="'+W+'" y2="130" stroke="#30363d"/></svg><div class="muted small">'+Z.n(a.ok_24h)+' accepted · <b style="color:#f85149">'+Z.n(a.fail_24h)+' failed</b> in 24 h'+(a.days>=7?' · unusual hours judged against '+a.days+' earlier days':' · the hour-of-day baseline needs 7 days of events (has '+a.days+')')+'</div>';}
+  function draw(v){V=v;$('up').textContent='updated '+new Date().toLocaleTimeString();$('sample').hidden=!Z.can('operator');
+    if(!v.connected){$('nc').hidden=false;$('nc').innerHTML='No Genian NAC is polled yet, so there is nothing to show (not an empty "all good"). Add the NAC server in <a href="network-onboarding.html">Network Onboarding</a> with a read-only REST API key; devices appear after its first poll.';$('body').hidden=true;return;}
+    $('nc').hidden=true;$('body').hidden=false;
+    var C=v.counts,bp=v.bypass_count,tot=C.total+bp;
+    $('gauge').innerHTML=gauge(v.enforcement_pct);
+    $('kk').innerHTML=Z.tile('Devices seen',Z.n(C.total),v.devices.length+' NAC server'+(v.devices.length>1?'s':''))+Z.tile('Authorised',Z.n(C.authorised),'','ok')+Z.tile('Quarantined',Z.n(C.quarantined),'remediation network',C.quarantined?'warn':'ok')
+      +Z.tile('Unauthorised / unknown',Z.n(C.unauthorised),'',C.unauthorised?'bad':'ok')+Z.tile('Not seen by NAC',Z.n(bp),'on a switch port, never in NAC',bp?'bad':'ok')+Z.tile('Findings',Z.n(v.findings.length),'',v.findings.some(function(f){return f.severity==='high';})?'bad':v.findings.length?'warn':'ok');
+    var segs=[['authorised',C.authorised],['quarantined',C.quarantined],['unauthorised',C.unauthorised],['other',C.other],['bypass',bp]];
+    $('bar').innerHTML=segs.map(function(s){return s[1]?'<i class="c-'+s[0]+'" data-f="'+s[0]+'" style="width:'+(s[1]/Math.max(1,tot)*100)+'%" title="'+esc((ST[s[0]]||['not seen by NAC'])[0]+': '+s[1])+'"></i>':'';}).join('');
+    $('lg').innerHTML=segs.map(function(s){var col=(ST[s[0]]||[0,0,'#ff2d55'])[2];return '<button type="button" data-f="'+s[0]+'" style="--c:'+col+'" aria-pressed="'+(FIL===s[0])+'">'+esc((ST[s[0]]||['not seen by NAC'])[0])+' '+s[1]+'</button>';}).join('');
+    $('srcs').innerHTML=v.devices.map(function(d){return esc(d.name)+(d.site?' ('+esc(d.site)+')':'')+': '+(d.error?'<b style="color:#f85149">'+esc(d.error)+'</b>':Z.n(d.nodes)+' devices, polled '+(d.polled_at?Z.ago(d.polled_at):'never'));}).join(' · ');
+    var F=v.findings;$('findings').innerHTML=F.length?'<div class="tw"><table><thead><tr><th>Severity</th><th>Finding</th><th>Evidence</th><th>What to do</th></tr></thead><tbody>'+F.map(function(f){return '<tr data-finding><td>'+Z.pill(f.severity,SEV[f.severity]||'')+'</td><td><b>'+esc(f.title)+'</b></td><td class="small">'+esc(f.why)+'</td><td class="small"><ol class="steps">'+(f.fix||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol></td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">Nothing needs attention.</div>';
+    $('auth').innerHTML=authChart(v.auth);
+    $('sw').innerHTML=v.switches.length?'<div class="tw"><table><thead><tr><th>Switch</th><th>Devices</th><th>Quarantined</th><th>Unauthorised</th><th>Not in NAC</th><th>Exposure</th></tr></thead><tbody>'+v.switches.slice(0,15).map(function(s){return '<tr><td><b>'+esc(s.switch)+'</b></td><td>'+s.endpoints+'</td><td>'+s.quarantined+'</td><td>'+s.unauthorised+'</td><td>'+s.bypass+'</td><td><div style="display:flex;gap:6px;align-items:center"><div class="xb"><i style="width:'+s.exposure+'%;background:'+riskCol(s.exposure)+'"></i></div>'+s.exposure+'%</div></td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">NAC reports no switch for its devices.</div>';
+    $('vl').innerHTML=v.vlans.length?'<div class="tw"><table><thead><tr><th>VLAN</th><th>Devices</th><th>Quarantined</th><th>Unauthorised</th></tr></thead><tbody>'+v.vlans.slice(0,20).map(function(x){return '<tr><td class="mono">'+esc(x.vlan)+'</td><td>'+x.endpoints+'</td><td>'+x.quarantined+'</td><td>'+x.unauthorised+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">NAC reports no VLAN.</div>';
+    eps();ai();
+    var L=v.learning;$('learn').textContent='Learning: '+L.samples+' daily sample'+(L.samples===1?'':'s')+(L.first_seen_ready?' - first-seen, flapping and stuck quarantine are judged against them.':' - "first seen" needs 7 (until then nothing is called new).')+(L.portmap_macs?' '+L.portmap_macs+' switch-port MACs from the Switch Port Map checked against NAC.':' The Switch Port Map has not read any switch yet, so devices NAC never saw cannot be found.')+' Risk is a sum of the reasons listed under each device: indicators to check, not proof.';}
+  function eps(){
+    if(!V.named){$('epc').textContent='';$('chips').innerHTML='';$('q').hidden=true;$('eps').innerHTML='<div class="empty">Device names, addresses and the device list are shown to analysts and above (PDPL): host names often name the person using the device.</div>';return;}
+    $('q').hidden=false;
+    var list=(V.endpoints||[]).map(function(e){return Object.assign({k:'ep'},e);}).concat((V.bypass||[]).map(function(b){return {k:'bypass',mac:b.mac,host:'',ip:'',state:'bypass',status:'never seen by NAC',vlan:b.vlan,locations:[{switch:b.switch,port:b.port}],risk:b.risk,why:[{pts:45,txt:'on an access port, never seen by NAC'}]};}));
+    var q=Q.toLowerCase(),rows=list.filter(function(e){return (!FIL||e.state===FIL)&&(!q||[e.host,e.mac,e.ip,e.vlan].concat(e.locations.map(function(l){return l.switch+' '+l.port;})).join(' ').toLowerCase().indexOf(q)>=0);}).sort(function(a,b){return b.risk-a.risk;});
+    $('epc').textContent=rows.length+' of '+list.length+' · sorted by risk';
+    $('chips').innerHTML=[['','All'],['unauthorised','Unauthorised'],['quarantined','Quarantined'],['bypass','Not in NAC'],['other','Other'],['authorised','Authorised']].map(function(c){return '<button type="button" data-f="'+c[0]+'" aria-pressed="'+(FIL===c[0])+'">'+esc(c[1])+'</button>';}).join('');
+    $('eps').innerHTML=rows.length?'<div class="tw"><table><thead><tr><th>Risk</th><th>Device</th><th>MAC / IP</th><th>NAC status</th><th>Switch / port</th><th>VLAN</th></tr></thead><tbody>'+rows.slice(0,400).map(function(e){var st=ST[e.state]||['not seen by NAC','bad'];
+      return '<tr data-ep="'+esc(e.mac||e.ip)+'"><td><span class="risk" style="background:'+riskCol(e.risk)+'22;color:'+riskCol(e.risk)+'">'+e.risk+'</span></td><td><b>'+esc(e.host||'(no host name)')+'</b>'+(e.first_seen?' '+Z.pill('new','warn'):'')+(e.why&&e.why.length?'<ul class="why">'+e.why.map(function(w){return '<li>+'+w.pts+' '+esc(w.txt)+'</li>';}).join('')+'</ul>':'')+'</td><td class="mono small">'+esc(e.mac||'')+'<div class="muted">'+esc(e.ip||'')+'</div></td><td>'+Z.pill(st[0],st[1])+'<div class="muted small">'+esc(e.status||'')+'</div></td><td class="small">'+e.locations.map(function(l){return esc(l.switch+' '+l.port);}).join('<br>')+'</td><td class="mono">'+esc(e.vlan||'')+'</td></tr>';}).join('')+'</tbody></table></div>'+(rows.length>400?'<p class="note">Showing the 400 riskiest - filter or export to Excel for all.</p>':''):'<div class="empty">No device matches.</div>';}
+  function ai(){var a=V.ai||{};
+    if(!a.enabled){$('ai').innerHTML='<div class="empty">The AI NAC analyst is off: '+esc(a.reason||'not configured')+'.</div>';return;}
+    if(!Z.can('analyst')){$('ai').innerHTML='<div class="empty">The AI analyst is for analysts and above.</div>';return;}
+    $('ai').innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="aq" style="flex:1;min-width:260px" placeholder="e.g. Which devices should we deal with first, and why?"><button type="button" id="ask">Ask</button></div>'
+      +'<div class="chips"><button type="button" data-sug="Which devices are the riskiest right now and what should we do first?">Riskiest devices</button><button type="button" data-sug="Explain the devices on switch ports that NAC has never seen.">Not seen by NAC</button><button type="button" data-sug="Why are devices stuck in quarantine and who should fix them?">Stuck quarantine</button></div>'
+      +(ANS?'<div class="ans">'+esc(ANS.answer)+'</div><div class="muted small">'+esc((ANS.steps||[]).map(function(s){return s.tool;}).join(' → '))+(ANS.injection_signals&&ANS.injection_signals.length?' · ⚠ the data contained text that looks like instructions; it was treated as data':'')+'</div>':'');}
+  function detail(key){Z.req('GET','/netops/nac/endpoint?q='+encodeURIComponent(key)).then(function(r){var n=r.nodes[0]||{},e=(V.endpoints||[]).find(function(x){return x.mac===key||x.ip===key;})||{};
+    var hist=r.history.map(function(d){return '<i title="'+esc(d.day+': '+(d.state||'not seen'))+'" style="background:'+(d.state?(ST[d.state]||[0,0,'#8b949e'])[2]:'#30363d')+'"></i>';}).join('');
+    $('dlg').innerHTML='<div role="dialog" aria-modal="true" aria-label="Device"><div style="display:flex;justify-content:space-between;gap:8px"><h2 style="margin:0">'+esc(n.host||e.host||key)+'</h2><button type="button" id="dlgx">Close</button></div>'
+      +'<p class="mono small">'+esc((n.mac||e.mac||'')+'  '+(n.ip||e.ip||''))+'</p>'+(r.nodes.length?'<table><thead><tr><th>NAC server</th><th>Status</th><th>Switch / port</th><th>VLAN</th></tr></thead><tbody>'+r.nodes.map(function(x){return '<tr><td>'+esc(x.nac)+'</td><td>'+Z.pill((ST[x.state]||[x.status])[0],(ST[x.state]||[0,''])[1])+'<div class="muted small">'+esc(x.status)+'</div></td><td>'+esc((x.switch||'')+' '+(x.port||''))+'</td><td>'+esc(x.vlan||'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">NAC has no record of this device.</div>')
+      +'<h3>NAC state, last 30 days</h3>'+(r.history.length?'<div class="days">'+hist+'</div>':'<div class="muted small">No daily samples yet.</div>')
+      +(e.why&&e.why.length?'<h3>Why risk '+e.risk+'</h3><ul>'+e.why.map(function(w){return '<li>+'+w.pts+' '+esc(w.txt)+'</li>';}).join('')+'</ul>':'')
+      +'<p class="note">To change this device\'s access, use Genian NAC (register, quarantine or block it there). This page only reads.</p></div>';$('dlg').hidden=false;},function(err){Z.toast(why(err));});}
+  function load(){return Z.req('GET','/netops/nac').then(draw,function(e){$('nc').hidden=false;$('nc').textContent=why(e);$('body').hidden=true;});}
+  $('q').addEventListener('input',function(){Q=this.value;eps();});
+  document.addEventListener('keydown',function(ev){if(ev.key==='Escape')$('dlg').hidden=true;});
+  document.addEventListener('click',function(ev){var t=ev.target.closest('[data-f],[data-ep],[data-sug],button[id],#dlg');if(!t)return;
+    if(t.id==='dlg'){if(ev.target===t)t.hidden=true;return;}
+    if(t.id==='dlgx'){$('dlg').hidden=true;return;}
+    if(t.dataset.f!=null){FIL=FIL===t.dataset.f?'':t.dataset.f;draw(V);if(V.named)$('epcard').scrollIntoView({block:'start',behavior:'smooth'});return;}
+    if(t.dataset.ep){return detail(t.dataset.ep);}
+    if(t.dataset.sug){$('aq').value=t.dataset.sug;return;}
+    if(t.id==='refresh')return load();
+    if(t.id==='sample'){t.disabled=true;return Z.req('POST','/netops/nac/sample').then(function(r){Z.toast(r.recorded?'Recorded '+r.endpoints+' devices for '+r.day:r.reason);t.disabled=false;load();},function(e){t.disabled=false;Z.toast(why(e));});}
+    if(t.id==='ask'){var q=$('aq').value.trim();if(q.length<5)return Z.toast('Ask a full question');t.disabled=true;t.textContent='Thinking…';return Z.req('POST','/netops/nac/ask',{question:q}).then(function(r){ANS=r;ai();},function(e){t.disabled=false;t.textContent='Ask';Z.toast(why(e));});}
+    if(t.id==='xls'&&V){var sheets=[{name:'Summary',columns:[{h:'Measure',w:34},{h:'Value',w:16}],rows:[['Devices seen',V.counts.total],['Authorised',V.counts.authorised],['Quarantined',V.counts.quarantined],['Unauthorised / unknown',V.counts.unauthorised],['Other status',V.counts.other],['On a switch port, never seen by NAC',V.bypass_count],['Enforcement %',V.enforcement_pct==null?'':V.enforcement_pct],['Authentication failures (24 h)',V.auth.fail_24h]]},
+        {name:'Findings',columns:[{h:'Severity',w:10},{h:'Finding',w:60},{h:'Evidence',w:50},{h:'What to do',w:80}],rows:V.findings.map(function(f){return [f.severity,f.title,f.why,(f.fix||[]).join(' | ')];})},
+        {name:'Switches',columns:[{h:'Switch',w:24},{h:'Devices',t:'n'},{h:'Quarantined',t:'n'},{h:'Unauthorised',t:'n'},{h:'Not in NAC',t:'n'},{h:'Exposure %',t:'n'}],rows:V.switches.map(function(s){return [s.switch,s.endpoints,s.quarantined,s.unauthorised,s.bypass,s.exposure];})}];
+      if(V.named)sheets.push({name:'Devices',columns:[{h:'Risk',t:'n'},{h:'Host',w:24},{h:'MAC',w:18},{h:'IP',w:16},{h:'NAC status',w:18},{h:'State',w:14},{h:'Switch / port',w:26},{h:'VLAN',w:8},{h:'Why',w:70}],rows:(V.endpoints||[]).map(function(e){return [e.risk,e.host,e.mac,e.ip,e.status,e.state,e.locations.map(function(l){return l.switch+' '+l.port;}).join(', '),e.vlan,(e.why||[]).map(function(w){return '+'+w.pts+' '+w.txt;}).join('; ')];}).concat((V.bypass||[]).map(function(b){return [b.risk,'',b.mac,'','never seen by NAC','bypass',b.switch+' '+b.port,b.vlan,'on an access port, never seen by NAC'];}))});
+      return window.zybXlsx.download('network-access-control-'+new Date().toISOString().slice(0,10)+'.xlsx',sheets,{title:('Network Access Control - ' + ZYB_ORG.short),filter:V.named?'all devices':'counts only (viewer)',by:Z.user()||Z.role()});}
+  });
+  Z.ready(load);
+})();
+</script></body></html>

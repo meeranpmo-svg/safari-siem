@@ -1,0 +1,105 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Software &amp; Licences</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Software & Licences over /api/itam/software-studio: licence compliance (seats vs installs, utilisation, waste and true-up from the
+     licence's own cost - operators and above), seats to reclaim, findings (blocked, remote-access tools, commercial software with no
+     licence, software rare for its asset type - ML, version sprawl), every installed product with its category, and the approved /
+     blocked software policy a person sets with a reason. Licences are recorded on the classic page (link). -->
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff;--acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mut{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:5px 11px;cursor:pointer}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}.tabs button{font:600 13px Inter,system-ui,sans-serif;background:transparent;color:var(--d-mute);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer}.tabs button[aria-selected=true]{color:var(--d-ink);background:var(--d-raise)}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.t{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:12px 14px}.t .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}.t .v{font-size:24px;font-weight:800}.t .s{font-size:11.5px;color:var(--d-mute)}.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:12px;padding:14px;margin-bottom:12px}.card h2{margin:0 0 10px;font-size:15px}
+.g2{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px}@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--d-line);font-size:13px;vertical-align:top}th{color:var(--d-mute);font-weight:600;font-size:11.5px;text-transform:uppercase}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:rgba(141,176,255,.16);color:var(--info)}.pill.bad{background:rgba(255,123,128,.16);color:var(--bad)}.pill.warn{background:rgba(245,181,68,.16);color:var(--warn)}.pill.ok{background:rgba(95,210,122,.16);color:var(--ok)}
+.bar{height:9px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden}.bar i{display:block;height:100%}
+.row{display:flex;gap:8px;align-items:center;margin:4px 0;font-size:13px}.row .n{width:110px}.row .b{flex:1}
+.inp{background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:inherit}
+.empty{color:var(--d-mute);padding:14px;text-align:center}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2030;border:1px solid var(--d-line);border-radius:10px;padding:10px 16px;z-index:60}
+dialog{background:var(--d-panel);color:var(--d-ink);border:1px solid var(--d-line);border-radius:12px;padding:16px;max-width:460px}dialog::backdrop{background:rgba(0,0,0,.6)}
+a.lk{color:var(--info);text-decoration:none}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT assets · installed software · licences</div><h1>Software &amp; Licences</h1></div><span class="sp"></span><button type="button" class="btn pri" id="b-lic">＋ Record a licence</button><span class="mut sm" id="up"></span><button type="button" class="btn" id="rf">⟳</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" data-tab="fi" aria-selected="true">Findings</button><button type="button" role="tab" data-tab="li" aria-selected="false">Licences</button><button type="button" role="tab" data-tab="pr" aria-selected="false">Installed software</button><button type="button" role="tab" data-tab="po" aria-selected="false">Policy</button></div>
+<section id="fi"><div class="g2"><div class="card"><h2>What needs attention</h2><div id="find"></div></div><div class="card"><h2>Software by category</h2><div id="cat"></div></div></div></section>
+<section id="li" hidden><div class="card" id="lf" hidden><h2>Record a licence</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+  <label class="sm mut">Product<input class="inp" id="l-prod" style="width:100%" placeholder="e.g. Microsoft Visio"></label><label class="sm mut">Publisher<input class="inp" id="l-pub" style="width:100%"></label>
+  <label class="sm mut">Type<select class="inp" id="l-type" style="width:100%"><option>subscription</option><option>perpetual</option><option>per-core</option><option>per-user</option><option>site</option></select></label>
+  <label class="sm mut">Seats<input class="inp" id="l-seats" type="number" min="0" style="width:100%"></label><label class="sm mut">Total cost<input class="inp" id="l-cost" type="number" min="0" style="width:100%"></label>
+  <label class="sm mut">Expiry<input class="inp" id="l-exp" type="date" style="width:100%"></label><label class="sm mut">Matches installed software containing<input class="inp" id="l-match" style="width:100%" placeholder="e.g. visio"></label></div>
+  <div style="margin-top:8px;display:flex;gap:8px"><button type="button" class="btn pri" id="l-save">Save licence</button><button type="button" class="btn" id="l-x">Cancel</button><span class="sm" id="l-err" style="color:var(--bad)"></span></div></div>
+  <div class="card"><h2>Licence compliance</h2><div id="lic"></div></div></section>
+<section id="pr" hidden><div class="card"><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap"><input class="inp" id="q" placeholder="Search software or publisher…" aria-label="Search" style="min-width:280px"><select class="inp" id="fc" aria-label="Category"><option value="">All categories</option></select><select class="inp" id="ff" aria-label="Flag"><option value="">All</option><option value="unlicensed">Unlicensed</option><option value="risky">Risky</option><option value="rare">Rare</option><option value="blocked">Blocked</option></select></div><div id="prod"></div></div></section>
+<section id="po" hidden><div class="card"><h2>Software policy</h2><div class="sm mut" style="margin-bottom:8px">Approve a product to stop it being flagged (a sanctioned remote-support tool, a free commercial reader) or block it so every install is a finding. Set from a product's row in Installed software or a finding.</div><div id="pol"></div></div></section>
+<dialog id="dlg"><h3 style="margin-top:0" id="dlg-h">Set policy</h3><div class="sm mut" id="dlg-t"></div><textarea class="inp" id="dlg-r" rows="3" style="width:100%;margin:10px 0" placeholder="Reason (required)"></textarea>
+  <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" id="dlg-c">Cancel</button><button type="button" class="btn pri" id="dlg-ok">Save</button></div></dialog>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, PK = null, PS = null;
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var money = function (n) { return n == null ? '–' : Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3500); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b !== undefined) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* not JSON */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b !== undefined ? JSON.stringify(b) : null); }); }
+  var KIND = { blocked: ['bad', 'blocked'], risky: ['bad', 'remote access / risky'], unlicensed: ['warn', 'no licence'], rare: ['', 'rare for its type'], sprawl: ['', 'version sprawl'] };
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s) + '</div></div>'; }
+  function load() { return req('GET', '/software-studio').then(function (v) { V = v; draw(); }).catch(function (e) { $('kp').innerHTML = '<div class="card" style="grid-column:1/-1"><div class="empty">' + esc(e.status === 404 ? 'The Software & Licences studio is not on this platform yet - run the update.' : 'Not reachable: ' + e.message) + '</div></div>'; }); }
+  function draw() {
+    var K = V.kpis; $('up').textContent = 'read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    $('kp').innerHTML = tile('Products', K.products, K.installs + ' installs') + tile('Assets reporting software', K.assets_reporting + ' / ' + K.assets, K.assets ? Math.round(100 * K.assets_reporting / K.assets) + ' % coverage' : '', K.assets && K.assets_reporting / K.assets < 0.8 ? 'warn' : '')
+      + tile('Licences over', K.over, K.under + ' under-used · ' + K.expiring_90 + ' expire ≤ 90 d', K.over ? 'bad' : '') + tile('Unlicensed', K.unlicensed, 'commercial, no licence', K.unlicensed ? 'warn' : 'ok') + tile('Risky / blocked', K.risky, 'remote access, tunnelling', K.risky ? 'bad' : 'ok')
+      + tile('Seats to reclaim', K.reclaim, V.costs_visible ? 'worth ' + money(K.reclaim_value) : 'in stock / not seen 60 d') + (V.costs_visible ? tile('Unused seat cost', money(K.waste), 'true-up exposure ' + money(K.true_up), K.true_up ? 'warn' : '') : '');
+    $('find').innerHTML = V.findings.length ? '<table><thead><tr><th>Software</th><th>Finding</th><th>Why</th><th></th></tr></thead><tbody>' + V.findings.slice(0, 200).map(function (f) { var k = KIND[f.kind] || ['', f.kind];
+      return '<tr><td><b>' + esc(f.product) + '</b><div class="sm mut">' + esc(f.publisher || '') + ' · ' + f.installs + ' install(s)</div></td><td><span class="pill ' + k[0] + '">' + esc(k[1]) + '</span></td><td class="sm">' + esc(f.why) + '</td><td style="white-space:nowrap">' + (f.kind !== 'sprawl' ? '<button type="button" class="btn" data-pol="approved" data-key="' + esc(f.key) + '" data-name="' + esc(f.product) + '">Approve</button> <button type="button" class="btn" data-pol="blocked" data-key="' + esc(f.key) + '" data-name="' + esc(f.product) + '">Block</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">' + (K.products ? 'No finding: every commercial product is licensed and nothing risky or unusual is installed.' : 'No installed software reported yet - enrol the endpoint agent or import software lists.') + '</div>';
+    var cats = Object.keys(V.categories).sort(function (a, b) { return V.categories[b] - V.categories[a]; }), mx = Math.max.apply(null, cats.map(function (c) { return V.categories[c]; }).concat([1]));
+    $('cat').innerHTML = cats.length ? cats.map(function (c) { return '<div class="row"><span class="n">' + esc(c) + '</span><span class="b"><span class="bar"><i style="width:' + (V.categories[c] / mx * 100) + '%;background:#5b8def"></i></span></span><b>' + V.categories[c] + '</b></div>'; }).join('') : '<div class="empty">–</div>';
+    $('fc').innerHTML = '<option value="">All categories</option>' + cats.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
+    $('lic').innerHTML = V.licences.length ? '<table><thead><tr><th>Licence</th><th>Seats</th><th>Used</th><th style="width:16%">Utilisation</th><th>Compliance</th><th>Expiry</th>' + (V.costs_visible ? '<th style="text-align:right">Cost</th><th style="text-align:right">Per used seat</th><th style="text-align:right">Unused cost</th><th style="text-align:right">True-up</th>' : '') + '<th>Reclaim</th></tr></thead><tbody>' + V.licences.map(function (l) {
+      var u = l.utilisation_pct, col = u == null ? '#5b6273' : u > 100 ? '#e5484d' : u < 60 ? '#f59f00' : '#2fb344';
+      return '<tr><td><b>' + esc(l.product) + '</b><div class="sm mut">' + esc([l.publisher, l.type].filter(Boolean).join(' · ')) + '</div></td><td>' + (l.seats == null ? '<span class="mut">not set</span>' : l.seats) + '</td><td>' + l.used + '</td><td>' + (u == null ? '<span class="mut sm">no seat count</span>' : '<div class="bar"><i style="width:' + Math.min(100, u) + '%;background:' + col + '"></i></div><span class="sm">' + u + ' %</span>') + '</td>'
+        + '<td><span class="pill ' + (l.compliance === 'over' ? 'bad' : l.compliance === 'under' ? 'warn' : l.compliance === 'ok' ? 'ok' : '') + '">' + esc(l.compliance) + (l.delta ? ' ' + (l.delta > 0 ? '+' : '') + l.delta : '') + '</span></td><td>' + (l.expiry ? esc(l.expiry) + (l.days_left != null ? '<div class="sm ' + (l.days_left < 0 ? '' : 'mut') + '"' + (l.days_left <= 90 ? ' style="color:var(--warn)"' : '') + '>' + (l.days_left < 0 ? 'expired' : l.days_left + ' days') + '</div>' : '') : '–') + '</td>'
+        + (V.costs_visible ? '<td style="text-align:right">' + money(l.cost) + '</td><td style="text-align:right">' + money(l.cost_per_used_seat) + '</td><td style="text-align:right">' + money(l.waste) + '</td><td style="text-align:right">' + money(l.true_up) + '</td>' : '')
+        + '<td>' + (l.reclaim_count ? '<details><summary class="sm">' + l.reclaim_count + ' seat(s)</summary>' + l.reclaim.map(function (r) { return '<div class="sm">' + esc(r.name) + ' - ' + esc(r.why) + '</div>'; }).join('') + '</details>' : '<span class="mut sm">–</span>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No licence recorded yet - "Record a licence" adds one; installs are already counted per product below.</div>';
+    drawProducts(); drawPolicy();
+  }
+  function drawProducts() {
+    var q = $('q').value.trim().toLowerCase(), c = $('fc').value, f = $('ff').value;
+    var L = V.products.filter(function (p) { return (!q || (p.name + ' ' + (p.publisher || '')).toLowerCase().indexOf(q) >= 0) && (!c || p.category === c) && (!f || p.flags.indexOf(f) >= 0); });
+    $('prod').innerHTML = L.length ? '<table><thead><tr><th>Software</th><th>Category</th><th>Assets</th><th>Versions</th><th>Licence</th><th>Policy</th></tr></thead><tbody>' + L.slice(0, 500).map(function (p) {
+      return '<tr><td><b>' + esc(p.name) + '</b><div class="sm mut">' + esc(p.publisher || '') + '</div>' + p.flags.map(function (x) { var k = KIND[x] || ['', x]; return ' <span class="pill ' + k[0] + '">' + esc(k[1]) + '</span>'; }).join('') + '</td><td>' + esc(p.category) + '</td><td>' + p.assets + '</td><td class="sm">' + esc(p.versions.slice(-3).join(', ')) + (p.versions.length > 3 ? ' +' + (p.versions.length - 3) : '') + (p.behind ? '<div class="mut">' + p.behind + ' behind ' + esc(p.newest) + '</div>' : '') + '</td><td>' + (p.licensed ? '<span class="pill ok">licensed</span>' : '<span class="mut sm">–</span>') + '</td>'
+        + '<td style="white-space:nowrap">' + (p.policy ? '<span class="pill ' + (p.policy === 'blocked' ? 'bad' : 'ok') + '">' + esc(p.policy) + '</span> ' : '') + '<button type="button" class="btn" data-pol="approved" data-key="' + esc(p.key) + '" data-name="' + esc(p.name) + '">Approve</button> <button type="button" class="btn" data-pol="blocked" data-key="' + esc(p.key) + '" data-name="' + esc(p.name) + '">Block</button></td></tr>'; }).join('') + '</tbody></table>' + (L.length > 500 ? '<div class="sm mut">First 500 of ' + L.length + '.</div>' : '') : '<div class="empty">Nothing matches.</div>';
+  }
+  function drawPolicy() {
+    $('pol').innerHTML = V.policy.length ? '<table><thead><tr><th>Product</th><th>Status</th><th>Reason</th><th>By</th><th></th></tr></thead><tbody>' + V.policy.map(function (p) { var pr = V.products.filter(function (x) { return x.key === p.id; })[0];
+      return '<tr><td><b>' + esc(pr ? pr.name : p.id) + '</b></td><td><span class="pill ' + (p.status === 'blocked' ? 'bad' : 'ok') + '">' + esc(p.status) + '</span></td><td class="sm">' + esc(p.reason) + '</td><td class="sm">' + esc(p.by) + ' · ' + esc(String(p.at).slice(0, 10)) + '</td><td><button type="button" class="btn" data-clear="' + esc(p.id) + '">Clear</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No product approved or blocked yet.</div>';
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-pol]'); if (b) { PK = b.dataset.key; PS = b.dataset.pol; $('dlg-h').textContent = (PS === 'blocked' ? 'Block ' : 'Approve ') + b.dataset.name; $('dlg-t').textContent = PS === 'blocked' ? 'Every install becomes a high finding.' : 'It stops being flagged as risky, unlicensed or rare.'; $('dlg-r').value = ''; $('dlg').showModal(); return; }
+    var c = e.target.closest('[data-clear]'); if (c) req('POST', '/software-studio/policy', { key: c.dataset.clear, status: 'none' }).then(function () { toast('Cleared'); load(); }, function (er) { toast(er.status === 403 ? 'Operators and administrators set the policy.' : er.message); });
+  });
+  $('dlg-c').addEventListener('click', function () { $('dlg').close(); });
+  $('dlg-ok').addEventListener('click', function () { var r = $('dlg-r').value.trim(); if (!r) { $('dlg-r').focus(); return; }
+    req('POST', '/software-studio/policy', { key: PK, status: PS, reason: r }).then(function () { $('dlg').close(); toast('Policy saved'); load(); }, function (er) { $('dlg').close(); toast(er.status === 403 ? 'Operators and administrators set the policy.' : er.message); }); });
+  document.querySelector('.tabs').addEventListener('click', function (e) { var b = e.target.closest('[data-tab]'); if (!b) return; ['fi', 'li', 'pr', 'po'].forEach(function (t) { $(t).hidden = t !== b.dataset.tab; document.querySelector('[data-tab="' + t + '"]').setAttribute('aria-selected', String(t === b.dataset.tab)); }); });
+  $('q').addEventListener('input', drawProducts); $('fc').addEventListener('change', drawProducts); $('ff').addEventListener('change', drawProducts);
+  $('b-lic').addEventListener('click', function () { document.querySelector('[data-tab="li"]').click(); $('lf').hidden = false; $('l-prod').focus(); });
+  $('l-x').addEventListener('click', function () { $('lf').hidden = true; });
+  $('l-save').addEventListener('click', function () { $('l-err').textContent = ''; var prod = $('l-prod').value.trim(); if (!prod) { $('l-err').textContent = 'Product is required.'; return; }
+    var b = { product: prod, type: $('l-type').value }; if ($('l-pub').value.trim()) b.publisher = $('l-pub').value.trim(); if ($('l-seats').value !== '') b.seats = Number($('l-seats').value); if ($('l-cost').value !== '') b.cost = Number($('l-cost').value); if ($('l-exp').value) b.expiry = $('l-exp').value; if ($('l-match').value.trim()) b.product_key_match = $('l-match').value.trim();
+    req('POST', '/licences', b).then(function () { toast('Licence saved'); $('lf').hidden = true; ['l-prod', 'l-pub', 'l-seats', 'l-cost', 'l-exp', 'l-match'].forEach(function (i) { $(i).value = ''; }); load(); }, function (e) { $('l-err').textContent = e.status === 403 ? 'Operators and administrators record licences.' : e.message; }); });
+  $('rf').addEventListener('click', load);
+  load();
+})();
+</script></body></html>

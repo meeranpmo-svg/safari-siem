@@ -1,0 +1,92 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PDPL Intelligence</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler.min.css"><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css"><script src="vendor/zyb-pdpl.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<style>
+[hidden]{display:none!important}
+.au-num{font-size:24px;font-weight:800;line-height:1.1}.au-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tblr-secondary)}
+.mut{font-size:11.5px;color:var(--tblr-secondary)}tr.rowc{cursor:pointer}tr.rowc:hover td{background:rgba(255,255,255,.025)}
+.toast-zyb{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1200;max-width:90vw;padding:10px 16px;border-radius:8px;background:#1d2b3d;border:1px solid #2c3e55;color:#fff}
+.pbar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;width:90px;display:inline-block;vertical-align:middle;margin-right:6px}.pbar span{display:block;height:100%}
+.ch{position:relative;height:180px}.pre{white-space:pre-wrap;overflow-wrap:anywhere}.tabs-zyb .btn{margin:0 6px 6px 0}
+</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+<div class="page-header d-print-none mb-2"><div class="row align-items-center g-2">
+ <div class="col"><div class="page-pretitle">PDPL · Intelligence</div><h2 class="page-title">PDPL Intelligence</h2></div>
+ <div class="col-auto ms-auto d-flex gap-2"><span class="mut align-self-center" id="up"></span><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
+</div></div>
+<div class="alert alert-info mb-3" role="alert"><div class="d-flex gap-2"><i class="ti ti-info-circle alert-icon"></i><div>Three pieces of a privacy analyst's work, done on the PDPL registers: a <b>column model that learns</b> from your reviews which discovered columns really hold personal data (and asks you about the ones it is least sure of first), the <b>deadline risk</b> of every open data subject request (30 days, Art. 4) and breach (72 hours to SDAIA, IR Art. 24) from this organisation's own history, and <b>impact assessment drafts</b> for activities that need one (IR Art. 25) - approved by the DPO. Every figure says how it was made. It ranks the work; <b>people decide</b>.</div></div></div>
+<div id="err"></div>
+<div class="row row-cards mb-3" id="kpis"></div>
+<div class="tabs-zyb mb-2" role="tablist"><button type="button" class="btn btn-primary" data-tab="cols" role="tab" aria-selected="true">Column review</button><button type="button" class="btn" data-tab="dl" role="tab" aria-selected="false">Deadline risk</button><button type="button" class="btn" data-tab="dpia" role="tab" aria-selected="false">Impact assessments</button></div>
+<div id="tab-cols">
+ <div class="row row-cards mb-3"><div class="col-lg-8"><div class="card"><div class="card-header"><h3 class="card-title">The model</h3></div><div class="card-body" id="mdl"></div></div></div>
+  <div class="col-lg-4"><div class="card"><div class="card-header"><h3 class="card-title">Reviews so far</h3></div><div class="card-body"><div class="ch"><canvas id="c-rev"></canvas></div></div></div></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">To review <span class="mut ms-2">the columns the model is least sure of come first - each answer teaches it the most</span></h3></div><div id="queue"></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">Reviewed</h3></div><div id="done"></div></div>
+</div>
+<div id="tab-dl" hidden>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">Breaches · 72 hours to notify SDAIA</h3></div><div id="br"></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">Data subject requests · chance of answering in time</h3><a class="ms-auto btn btn-sm" href="pdpl-dsar.html">Open the requests</a></div><div id="ds"></div></div>
+</div>
+<div id="tab-dpia" hidden>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">Activities that need an impact assessment</h3><span class="mut ms-2" id="ais"></span></div><div id="dp"></div></div>
+ <div class="card mb-3"><div class="card-header"><h3 class="card-title">Drafts</h3><span class="mut ms-2" id="dpo"></span></div><div id="dr"></div></div>
+</div>
+</div></main>
+<script>
+(function(){
+  'use strict';
+  var P=window.zybPdpl, Z=window.zybDetail, C=window.zybCharts, esc=P.esc, $=P.$, V=null;
+  var RK={breached:['missed','red'],high:['high risk','red'],medium:['at risk','orange'],low:['on track','green']};
+  var DS={draft:['waiting for the DPO','orange'],approved:['approved by the DPO','green'],returned:['returned','secondary']};
+  function bx(M,k){var x=M[k]||[k,'secondary'];return P.badge(x[0],x[1]);}
+  function dt(s){return s?String(s).slice(0,16).replace('T',' '):'—';}
+  function pbar(p){var c=p>=0.8?'#0ca30c':p>=0.5?'#fab219':'#d03b3b';return '<span class="pbar"><span style="width:'+Math.round(p*100)+'%;background:'+c+'"></span></span>'+esc(Math.round(p*100))+'%';}
+  function load(){return P.req('GET','/pdpl/intel').then(function(v){V=v;$('err').innerHTML='';draw();}).catch(function(e){P.fail($('err'),e);$('up').textContent='not loaded';});}
+  function draw(){var v=V,s=v.summary,m=v.model;$('up').textContent='updated '+dt(v.at)+' UTC';
+    $('kpis').innerHTML=P.tile(s.review_queue,'Columns to review ('+s.sensitive_unreviewed+' sensitive)',s.sensitive_unreviewed?'text-orange':'')+P.tile(s.dsar_at_risk+' / '+s.dsar_open,'Requests at risk / open',s.dsar_at_risk?'text-red':'text-green')
+      +P.tile(s.breach_at_risk,'Breaches near or past 72 h',s.breach_at_risk?'text-red':'text-green')+P.tile(s.dpia_missing,'Activities without an impact assessment',s.dpia_missing?'text-orange':'text-green');
+    $('mdl').innerHTML='<div class="d-flex gap-4 flex-wrap"><div><div class="au-num">'+(m.trained?'trained':'not trained')+'</div><div class="au-lbl">naive Bayes over the column\'s name, matched attribute, how it matched and the sampled match rate</div></div>'
+      +'<div><div class="au-num">'+esc(m.reviews)+'</div><div class="au-lbl">reviews</div></div><div><div class="au-num">'+(m.loo_accuracy==null?'—':esc(m.loo_accuracy)+'%')+'</div><div class="au-lbl">leave-one-out accuracy</div></div><div><div class="au-num">'+esc(m.columns)+'</div><div class="au-lbl">discovered columns</div></div></div>'
+      +'<div class="mut mt-2">'+esc(m.note)+(m.likely_not_personal?' '+esc(m.likely_not_personal)+' unreviewed column(s) look like they are not personal data - review them to take them out of the catalogue\'s counts.':'')+'</div>';
+    if(m.reviews)C.ring($('c-rev'),['Personal data','Not personal data'],[m.personal,m.not_personal],['crit','ok'],{v:m.reviews,l:'reviews'},{title:'Reviews by answer'});else C.empty($('c-rev'),'No review yet - the first answers train the model.');
+    var colT=function(c){return '<b>'+esc(c.column)+'</b><div class="mut">'+esc(c.label)+' · '+esc(c.owner)+(c.owner?'.':'')+esc(c.table)+'</div>';};
+    $('queue').innerHTML=P.table([['Column',colT],['Matched as',function(c){return esc(c.kind||'—')+(c.sensitive?' '+P.badge('sensitive','red'):'')+'<div class="mut">by '+esc(c.by||'?')+'</div>';}],['Rows',function(c){return c.rows==null?'—':esc(c.rows);}],
+      ['Personal data?',function(c){return pbar(c.p);}],['Why',function(c){return '<span class="mut">'+c.why.map(function(w){return esc(w.feature)+(w.weight==null?'':' ('+(w.weight>0?'+':'')+esc(w.weight)+')');}).join(', ')+'</span>';}]],m.queue,function(c){return 'class="rowc" data-col="'+esc(c.id)+'"';},'Nothing to review. The discovery scan has not found columns yet, or every column is reviewed.');
+    $('done').innerHTML=P.table([['Column',colT],['Decision',function(c){return c.review.decision==='personal'?P.badge('personal data','red'):P.badge('not personal data','green');}],['By',function(c){return esc(c.review.by)+'<div class="mut">'+esc(dt(c.review.at))+'</div>';}],['Note',function(c){return '<span class="mut">'+esc(c.review.note)+'</span>';}],['Model now',function(c){return pbar(c.p);}]],m.reviewed,null,'No column reviewed yet.');
+    $('br').innerHTML=P.table([['Breach',function(b){return '<b>'+esc(b.ref)+'</b><div class="mut">aware '+esc(dt(b.aware_at))+' UTC</div>';}],['Deadline',function(b){return esc(dt(b.deadline))+' UTC';}],['Hours left',function(b){return '<b>'+esc(b.hours_left)+'</b>';}],['Risk',function(b){return bx(RK,b.risk);}],['Why',function(b){return '<span class="mut">'+b.why.map(esc).join('; ')+'</span>';}]],v.breaches,null,'No breach is waiting for an SDAIA notification.');
+    $('ds').innerHTML=P.table([['Request',function(d){return '<b>'+esc(d.ref)+'</b><div class="mut">'+esc(d.type)+' · '+esc(d.stage)+'</div>';}],['Due',function(d){return esc(d.due)+(d.extended?' <span class="mut">(extended)</span>':'');}],['Days left',function(d){return esc(d.days_left);}],
+      ['In time',function(d){return pbar(d.p_on_time)+'<div class="mut">'+(d.method==='history'?'from your history':'by the rules')+'</div>';}],['Risk',function(d){return bx(RK,d.risk);}],['Why',function(d){return '<span class="mut">'+d.why.map(esc).join('; ')+(d.can_extend&&d.risk!=='low'?'; an extension can still be notified':'')+'</span>';}],['Handler',function(d){return esc(d.assigned_to||'—');}]],v.dsar,null,'No open data subject request.');
+    $('ais').textContent=v.ai.enabled?'AI wording available ('+v.ai.model+')':v.ai.reason;
+    $('dpo').textContent=v.dpo?'DPO: '+v.dpo+' decides':'No DPO named in the PDPL profile - an administrator decides';
+    $('dp').innerHTML=P.table([['Activity',function(c){return '<b>'+esc(c.name)+'</b><div class="mut">'+esc(c.ropa_id)+' · '+esc(c.legal_basis||'no legal basis recorded')+'</div>';}],['Why it needs one',function(c){return c.triggers.map(function(t){return P.badge(t,'orange');}).join(' ');}],
+      ['Assessment',function(c){return c.dpia?P.badge('completed '+c.dpia.completed,'green'):P.badge('none completed','red');}],['Draft',function(c){return c.draft?bx(DS,c.draft.state):'';}],
+      ['',function(c){return c.dpia||(c.draft&&c.draft.state==='draft')?'':'<button type="button" class="btn btn-sm" data-dd="'+esc(c.ropa_id)+'" data-ai="0">Draft</button>'+(V.ai.enabled?' <button type="button" class="btn btn-sm" data-dd="'+esc(c.ropa_id)+'" data-ai="1">Draft with AI</button>':'');}]],v.dpia,null,'No processing activity has a DPIA trigger on its record (sensitive data, automated decisions, profiling, monitoring, several sources).');
+    $('dr').innerHTML=P.table([['Draft',function(d){return '<b>'+esc(d.id)+'</b><div class="mut">'+esc(d.source==='ai'?'worded by the AI':'from the rules')+'</div>';}],['Activity',function(d){return esc(d.name);}],['State',function(d){return bx(DS,d.state)+(d.decided_by?'<div class="mut">'+esc(d.decided_by)+'</div>':'');}],['Asked by',function(d){return esc(d.requested_by)+'<div class="mut">'+esc(dt(d.at))+'</div>';}]],v.drafts,function(d){return 'class="rowc" data-dr="'+esc(d.id)+'"';},'No draft yet.');
+  }
+  function openCol(id){var c=V.model.queue.filter(function(x){return x.id===id;})[0];if(!c)return;
+    var h=Z.kv([['Database',esc(c.label)],['Table',esc(c.owner+(c.owner?'.':'')+c.table)],['Column',esc(c.column)+' <span class="mut">'+esc(c.type)+'</span>'],['Matched as',esc(c.kind||'—')+' ('+esc(c.category||'—')+')'],['How',esc(c.by||'—')],['Rows',esc(c.rows==null?'—':c.rows)],['Model',pbar(c.p)]])
+      +'<form id="fr" class="mt-3"><label class="form-label" for="fr-n">What you checked (never paste a value from the column)</label><textarea class="form-control" id="fr-n" rows="2" maxlength="1000"></textarea><div class="text-red small mt-1" data-msg></div>'
+      +'<div class="d-flex gap-2 mt-2"><button type="submit" class="btn btn-danger" data-d="personal">Personal data</button><button type="submit" class="btn btn-success" data-d="not_personal">Not personal data</button></div></form>';
+    Z.open('PDPL · column review',c.column,h);var fm=document.getElementById('fr'),dec='personal';
+    fm.addEventListener('click',function(ev){var b=ev.target.closest('[data-d]');if(b)dec=b.getAttribute('data-d');});
+    fm.addEventListener('submit',function(ev){ev.preventDefault();P.req('POST','/pdpl/intel/columns/review',{key:id,decision:dec,note:document.getElementById('fr-n').value}).then(function(){Z.close();P.toast('Reviewed - the model learns from it');load();}).catch(function(x){P.msg(fm,P.why(x));});});
+  }
+  function openDraft(id){var d=V.drafts.filter(function(x){return x.id===id;})[0];if(!d)return;
+    var h='<div class="mut mb-2">'+(d.source==='ai'?'Worded by the AI from the activity\'s own record - check every sentence; it may not add facts.':'Drafted by the rules from the activity\'s own record.')+(d.flags&&d.flags.length?' <b class="text-orange">The record contained text that looked like instructions to the AI ('+d.flags.map(esc).join(', ')+') - it was treated as data.</b>':'')+'</div>'
+      +['necessity','risks','measures','residual'].map(function(k){return '<div class="fw-bold mt-2">'+esc(k)+'</div><div class="pre small">'+esc(d[k])+'</div>';}).join('')
+      +'<div class="mt-2">'+d.triggers.map(function(t){return P.badge(t,'orange');}).join(' ')+'</div>';
+    if(d.state==='draft')h+='<form id="fx" class="mt-3"><label class="form-label" for="fx-n">DPO decision note</label><textarea class="form-control" id="fx-n" rows="2" maxlength="1000"></textarea><div class="mut mt-1">The DPO named in the PDPL profile (or an administrator) decides - never the person who asked for the draft. The assessment itself is recorded on the DPIA page.</div><div class="text-red small mt-1" data-msg></div><div class="d-flex gap-2 mt-2"><button type="submit" class="btn btn-success" data-x="approve">Approve</button><button type="submit" class="btn" data-x="return">Return</button></div></form>';
+    else h+='<div class="alert alert-secondary mt-3 mb-0">'+esc(d.state)+' by <b>'+esc(d.decided_by)+'</b> on '+esc(dt(d.decided_at))+': '+esc(d.decision_note)+'</div>';
+    Z.open('PDPL · impact assessment draft',d.id+' · '+d.name,h);var fm=document.getElementById('fx');if(!fm)return;var dec='approve';
+    fm.addEventListener('click',function(ev){var b=ev.target.closest('[data-x]');if(b)dec=b.getAttribute('data-x');});
+    fm.addEventListener('submit',function(ev){ev.preventDefault();P.req('POST','/pdpl/intel/drafts/'+encodeURIComponent(id)+'/decide',{decision:dec,note:document.getElementById('fx-n').value}).then(function(){Z.close();P.toast(dec==='approve'?'Approved':'Returned');load();}).catch(function(x){P.msg(fm,P.why(x));});});
+  }
+  function show(t){[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){var on=b.getAttribute('data-tab')===t;b.className='btn'+(on?' btn-primary':'');b.setAttribute('aria-selected',String(on));});['cols','dl','dpia'].forEach(function(k){$('tab-'+k).hidden=k!==t;});}
+  document.addEventListener('click',function(ev){var t=ev.target,x;
+    if((x=t.closest('[data-tab]'))){show(x.getAttribute('data-tab'));return;}
+    if((x=t.closest('tr[data-col]'))){openCol(x.getAttribute('data-col'));return;}
+    if((x=t.closest('tr[data-dr]'))){openDraft(x.getAttribute('data-dr'));return;}
+    if((x=t.closest('[data-dd]'))){x.disabled=true;P.req('POST','/pdpl/intel/dpia/'+encodeURIComponent(x.getAttribute('data-dd'))+'/draft',{use_ai:x.getAttribute('data-ai')==='1'}).then(function(d){P.toast('Draft '+d.id+' prepared for the DPO');return load().then(function(){openDraft(d.id);});}).catch(function(e){P.toast(e.status===503?V.ai.reason:P.why(e));x.disabled=false;});return;}
+    if(t.closest('#refresh'))load();
+  });
+  load();
+})();
+</script></body></html>

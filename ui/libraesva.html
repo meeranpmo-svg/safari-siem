@@ -1,0 +1,85 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Libraesva ESG</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 12px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px}.g2>.card{margin:0}
+.msg{font-size:12.5px;margin-top:6px}.steps li{margin:3px 0}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">Endpoint & Email · gateway</div><h1>Libraesva ESG</h1><div class="muted small">The Libraesva Email Security Gateway: its mail log arriving in the SIEM by syslog, and the appliance's own view (status, queues, quarantine, message log) through its REST API - read-only</div></div>
+<div class="sp"><a href="email-security.html" style="color:var(--info);text-decoration:none;font-weight:600">Email Security →</a></div></div>
+<div class="g2">
+<div class="card"><h2>Mail log in the SIEM <span class="c">syslog from the gateway, last 24 hours</span></h2><div id="sys"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>API connection <span class="c" id="cst"></span></h2><div id="conn"><div class="empty">Loading…</div></div>
+<form id="cf" class="frm" autocomplete="off" hidden style="margin-top:10px">
+<label>Gateway URL<input id="burl" maxlength="200" placeholder="https://esg.your-domain"></label>
+<label>API user<input id="user" maxlength="120"></label>
+<label>Password<input id="pw" type="password" maxlength="200" autocomplete="new-password" placeholder="leave empty to keep"></label>
+<label>Act as ESG user (X-Switch-User)<input id="sw" maxlength="120" placeholder="a read-only ESG user"></label>
+<label>Host name (only when the Gateway URL is an IP address)<input id="hn" maxlength="253" placeholder="esg.your-domain - the name in the ESG web console address"></label>
+<label>Certificate pin (SHA-256, self-signed only)<input id="pin" maxlength="100"></label>
+<div><button type="submit">Save</button></div></form>
+<div style="margin-top:8px"><button type="button" id="test">Test connection</button> <button type="button" id="diag" title="Step by step: DNS, HTTPS and certificate, API, login, catalogue, mapping, a sample read - with the fix for the step that fails">Diagnose step by step</button> <span class="msg" id="tmsg"></span></div><div id="dres" style="margin-top:8px"></div></div>
+</div>
+<div class="card" id="mapc" hidden style="margin-top:12px"><h2>What to read <span class="c">GET endpoints from the appliance's own catalogue (/api/v2/) - administrators map them once</span></h2>
+<form id="mf" class="frm"><label>System status<input id="m-status" list="esg-gets" placeholder="/api/v2/… (not read)" autocomplete="off" spellcheck="false"></label><label>Mail queue<input id="m-queue" list="esg-gets" placeholder="/api/v2/… (not read)" autocomplete="off" spellcheck="false"></label><label>Quarantine<input id="m-quarantine" list="esg-gets" placeholder="/api/v2/… (not read)" autocomplete="off" spellcheck="false"></label><label>Message log<input id="m-messages" list="esg-gets" placeholder="/api/v2/… (not read)" autocomplete="off" spellcheck="false"></label><div><button type="submit">Save mapping</button> <span class="msg" id="mmsg"></span></div></form>
+<datalist id="esg-gets"></datalist><p class="small muted" id="mhint"></p>
+<details style="margin-top:8px"><summary class="small muted">Catalogue (<span id="catn">0</span> endpoints)</summary><div class="tw" id="cat"></div></details></div>
+<div class="g2" style="margin-top:12px">
+<div class="card"><h2>System status</h2><div class="tw" id="r-status"><div class="empty">Not mapped yet.</div></div></div>
+<div class="card"><h2>Mail queue</h2><div class="tw" id="r-queue"><div class="empty">Not mapped yet.</div></div></div>
+</div>
+<div class="card" style="margin-top:12px"><h2>Quarantine <span class="c">operators - names senders and recipients</span></h2><div style="margin-bottom:6px"><button type="button" id="lq">Load quarantine</button></div><div class="tw" id="r-quarantine"></div></div>
+<div class="card"><h2>Message log <span class="c">operators - filters are passed to the gateway as query parameters</span></h2>
+<form id="sf" class="frm"><label>Parameter<input id="sk1" maxlength="30" placeholder="e.g. sender"></label><label>Value<input id="sv1" maxlength="200"></label><label>Parameter<input id="sk2" maxlength="30" placeholder="e.g. date_from"></label><label>Value<input id="sv2" maxlength="200"></label><div><button type="submit">Search</button></div></form>
+<div class="tw" id="r-messages" style="margin-top:8px"></div><p class="note">The parameter names are the appliance's (see its /api/v2/ page for the message log endpoint). Every quarantine and message-log read is recorded with who asked.</p></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybSoc,esc=Z.esc,$=function(i){return document.getElementById(i);},C=null;
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status below */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function why(e,what){return e.status===403?(what||'This')+' needs a higher role.':e.status===404?'The Libraesva connection is not installed on the server yet - run the update.':e.message;}
+  function table(rows){if(!rows||!rows.length)return '<div class="empty">Nothing returned.</div>';var cols=[];rows.slice(0,50).forEach(function(r){Object.keys(r).forEach(function(k){if(cols.indexOf(k)<0&&cols.length<12)cols.push(k);});});
+    return '<table><thead><tr>'+cols.map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(r){return '<tr>'+cols.map(function(c){var v=r[c];return '<td class="small">'+esc(v===undefined||v===null?'':String(v))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';}
+  function syslog(){Z.req('POST','/top',{q:'src_type:libraesva',field:'fields.email_action',from:'now-24h',to:'now',limit:10}).then(function(r){var v=r.values||[],t=v.reduce(function(m,x){return m+x.n;},0);
+    $('sys').innerHTML=t?'<div class="k">'+Z.tile('Events (24 h)',Z.n(t),'')+v.slice(0,5).map(function(x){return Z.tile(String(x.v||'other'),Z.n(x.n),'');}).join('')+'</div><p class="note">Email Security and the Email Dashboard read these events.</p>'
+      :'<div class="empty">No Libraesva event reached the SIEM in 24 hours.</div><ol class="steps small"><li>On the gateway: <b>System → Log settings → Remote syslog</b>, send the mail log to the SIEM collector (UDP/TCP 514).</li><li>In the SIEM: Sources → add the gateway as a <b>Libraesva ESG</b> source (its IP), so its lines are parsed as email events.</li><li>Send a test mail through the gateway and refresh this page.</li></ol>';},
+    function(e){$('sys').innerHTML='<div class="empty">'+esc(e.status===403?'The SIEM view needs a signed-in user.':'The SIEM is not reachable: '+e.message)+'</div>';});}
+  function draw(c){C=c;var admin=Z.can('admin'),lt=c.last_test;
+    $('cst').textContent=c.configured?(lt?(lt.ok?'connected':'last test failed'):'not tested yet'):'not set';
+    $('conn').innerHTML=c.configured?'<div class="small">'+esc(c.base_url)+' · user <b>'+esc(c.username)+'</b>'+(c.switch_user?' acting as <b>'+esc(c.switch_user)+'</b>':' · <span style="color:var(--warn)">no act-as user (an API user needs one)</span>')+(c.pinned?' · certificate pinned':'')+'</div>'
+      +(lt?'<div class="msg">'+Z.pill(lt.ok?'ok':'failed',lt.ok?'ok':'bad')+' '+esc(lt.message)+' <span class="muted">('+esc(lt.by)+', '+esc(Z.ago(lt.at))+')</span></div>':'')
+      :'<div class="empty">Not connected. An administrator creates an <b>API user</b> on the gateway (Admin → Users → API), gives it an ESG user with read-only rights to act as, and enters it here.</div>';
+    $('cf').hidden=!admin;if(admin&&c.configured&&document.activeElement.tagName!=='INPUT'){$('burl').value=c.base_url||'';$('user').value=c.username||'';$('sw').value=c.switch_user||'';$('hn').value=c.host_name||'';}
+    $('test').disabled=!c.configured||!Z.can('operator');
+    $('mapc').hidden=!c.configured;var gets=(c.catalogue||[]).filter(function(x){return x.methods.indexOf('GET')>=0&&x.path.indexOf('{')<0;});
+    // pick from the appliance's catalogue, or - when it published none - type the GET path from its API page; the engine checks either way
+    $('esg-gets').innerHTML=gets.map(function(x){return '<option value="'+esc(x.path)+'">'+esc(x.summary||'')+'</option>';}).join('');
+    ['status','queue','quarantine','messages'].forEach(function(k){var inp=$('m-'+k),cur=(c.endpoints||{})[k]||'';if(document.activeElement!==inp)inp.value=cur;inp.disabled=!admin;});
+    $('mhint').textContent=gets.length?'Start typing to pick a read-only GET path from the appliance\'s catalogue ('+gets.length+' paths). Leave a box empty not to read it.':'The appliance\'s catalogue was not read, so type each read-only GET path from its API page (https://<gateway>/api/v2/), for example the quarantine or message-log collection path. Leave a box empty not to read it. Test connection again after an update to fill this list.';
+    $('catn').textContent=(c.catalogue||[]).length;$('cat').innerHTML=(c.catalogue||[]).length?'<table><thead><tr><th>Path</th><th>Methods</th><th>Summary</th></tr></thead><tbody>'+c.catalogue.map(function(x){return '<tr><td class="mono small">'+esc(x.path)+'</td><td class="small">'+esc(x.methods.join(' '))+'</td><td class="small">'+esc(x.summary)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">Not read yet - use Test connection.</div>';
+    ['status','queue'].forEach(function(k){if((c.endpoints||{})[k])read(k);});}
+  function read(k,q){var el=$('r-'+k);el.innerHTML='<div class="empty">Reading…</div>';var qs=q&&Object.keys(q).length?'?'+new URLSearchParams(q).toString():'';
+    req('GET','/esg/read/'+k+qs).then(function(r){el.innerHTML=table(r.rows)+(r.capped?'<p class="note">First '+r.rows.length+' of '+r.total+'.</p>':'')+'<p class="note">'+esc(r.path)+' · '+esc(new Date(r.at).toLocaleTimeString())+'</p>';},function(e){el.innerHTML='<div class="empty">'+esc(why(e,'Reading '+k))+'</div>';});}
+  function load(){return req('GET','/esg').then(draw,function(e){$('conn').innerHTML='<div class="empty">'+esc(why(e))+'</div>';});}
+  $('cf').addEventListener('submit',function(ev){ev.preventDefault();var b={base_url:$('burl').value.trim(),username:$('user').value.trim()};if($('pw').value)b.password=$('pw').value;if($('sw').value.trim())b.switch_user=$('sw').value.trim();if($('hn').value.trim())b.host_name=$('hn').value.trim();if($('pin').value.trim())b.pin=$('pin').value.trim();
+    req('POST','/esg/config',b).then(function(c){$('pw').value='';$('tmsg').textContent='Saved - now test the connection.';draw(c);},function(e){$('tmsg').textContent=why(e,'Setting the connection');});});
+  // the integration doctor: each step with what was seen and, where it fails, the exact fix
+  var DI={ok:['✓','#0ca30c'],fail:['✗','#d03b3b'],warn:['!','#fab219'],info:['i','#3987e5']};
+  $('diag').addEventListener('click',function(){var b=$('diag');b.disabled=true;$('dres').innerHTML='<div class="empty">Checking each step…</div>';
+    req('POST','/esg/diagnose',{}).then(function(r){
+      $('dres').innerHTML='<ol class="steps small" style="list-style:none;padding-left:0">'+r.steps.map(function(x){var d=DI[x.status]||['?','#6b7280'];
+        return '<li style="margin:6px 0"><b style="display:inline-block;width:18px;text-align:center;border-radius:4px;color:#fff;background:'+d[1]+'">'+esc(d[0])+'</b> <b>'+esc(x.step)+'</b> - '+esc(x.detail)+(x.fix?'<div class="muted" style="margin:2px 0 0 24px">'+(x.status==='fail'?'<b>Fix:</b> ':'Next: ')+esc(x.fix)+'</div>':'')+'</li>';}).join('')+'</ol>'
+        +'<p class="note">'+(r.ok?'Every step passed.':'Fix the first red step and run it again.')+' Recorded in the audit trail.</p>';
+    },function(e){$('dres').innerHTML='<div class="empty">'+esc(why(e,'Diagnosing'))+'</div>';}).then(function(){b.disabled=false;});});
+  $('test').addEventListener('click',function(){var b=$('test');b.disabled=true;$('tmsg').textContent='Logging in…';req('POST','/esg/test',{}).then(function(c){$('tmsg').textContent='';draw(c);},function(e){$('tmsg').textContent=why(e,'Testing');}).then(function(){b.disabled=false;});});
+  $('mf').addEventListener('submit',function(ev){ev.preventDefault();var b={},badk=null;['status','queue','quarantine','messages'].forEach(function(k){var v=$('m-'+k).value.trim();if(v&&!/^\/api\/v2\/[A-Za-z0-9\/_\-.]*$/.test(v))badk=badk||k;b[k]=v;});
+    if(badk){$('mmsg').textContent='"'+badk+'": a path under /api/v2/ (letters, digits, / _ - . only), or leave it empty';return;}
+    req('POST','/esg/endpoints',b).then(function(c){$('mmsg').textContent='Saved';draw(c);},function(e){$('mmsg').textContent=why(e,'Mapping');});});
+  $('lq').addEventListener('click',function(){read('quarantine');});
+  $('sf').addEventListener('submit',function(ev){ev.preventDefault();var q={};[['sk1','sv1'],['sk2','sv2']].forEach(function(p){var k=$(p[0]).value.trim(),v=$(p[1]).value.trim();if(k&&v)q[k]=v;});read('messages',q);});
+  Z.ready(function(){load();syslog();});
+})();
+</script></body></html>

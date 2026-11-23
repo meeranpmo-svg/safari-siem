@@ -1,0 +1,340 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Route Map</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<style>
+[hidden]{display:none!important}
+.map svg{width:100%;max-width:1240px;margin:0 auto;height:auto;display:block}.map g[data-node]{cursor:pointer}.map g[data-node]:focus{outline:none}.map g[data-node]:focus rect,.map g[data-node]:hover rect{stroke-width:2.6}
+.rtb{border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:13px}.rtb.down{background:rgba(255,123,114,.12);border:1px solid #8b2b2b;color:#ffd5d0}.rtb.okb{background:rgba(63,185,80,.08);border:1px solid #2b6b3a;color:#c6f0cf}.rtb.inf{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;color:#bcd6f5}
+.rtl{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin:6px 0}.rtl i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.rtd{border-top:1px solid var(--edge);margin-top:8px;padding-top:8px}.rtd h3{font-size:14px;margin:0 0 6px}
+.wl{display:flex;flex-direction:column;gap:8px}.wl>div{border:1px solid var(--edge);border-left-width:4px;border-radius:8px;padding:8px 11px}.wl .critical,.wl .high{border-left-color:#f85149}.wl>.critical{border-left-color:#ff2d55}.wl>.medium{border-left-color:#d29922}.wl>.low,.wl>.info{border-left-color:#2f81f7}.wl b{font-size:13px}
+.srvf input,.srvf select{min-width:0}.srvf td{padding:3px}.srvrow input{width:100%}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:4px 0}.facts>div{border:1px solid var(--edge);border-radius:10px;padding:9px 11px;font-size:12.5px}.facts b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);margin-bottom:3px}
+.dstep{display:flex;gap:10px;padding:8px 10px;border-left:4px solid #6e7681;border-radius:6px;background:rgba(255,255,255,.02);margin-bottom:6px}.dstep .ic{font-weight:800;width:18px}
+.dstep.ok{border-left-color:#3fb950}.dstep.fixed{border-left-color:#2f81f7}.dstep.warn{border-left-color:#d29922}.dstep.fail{border-left-color:#f85149}.dstep.info{border-left-color:#6e7681}
+.dstep .ev{font-size:11.5px;color:var(--muted,#8b949e);margin:3px 0 0 0;padding-left:16px}.dstep .fx{font-size:12.5px;margin-top:4px}.dstep button{margin:5px 6px 0 0}
+</style></head><body><main data-zyb-fluid>
+<div class="top"><div><div class="eb">SOC · email</div><h1>Email Route Map</h1><div class="muted small">The whole mail path on one map: DNS (MX) and where it is hosted, each Internet link, the MX hosts, the email gateway, Exchange on-premises and Exchange Online (hybrid), and the IPs mail leaves from. A broken hop and the line into it turn red, with the fix</div></div>
+<div class="sp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="per" aria-label="Period for mail counts"><option value="24h">Last 24 hours</option><option value="7d" selected>Last 7 days</option><option value="30d">Last 30 days</option></select>
+<span class="muted" id="up"></span><button type="button" id="doc" style="background:var(--info);color:#fff;border-color:var(--info)">🩺 Troubleshoot</button><button type="button" id="chk">⟳ Check now</button><button type="button" id="refresh">Refresh</button><a href="email-security.html#route" style="color:var(--info);text-decoration:none;font-weight:600">Route settings →</a></div></div>
+<div id="banner"></div>
+<div class="card" id="doccard"><h2>Troubleshooter <span class="c">works through the mail path like an engineer: asks public DNS (what senders and MX Toolbox see) and this server's DNS, re-checks by itself, follows MX, egress and the gateway, and says what is wrong, why and what to do</span></h2>
+<div id="docout"><div class="empty">Not run yet - press 🩺 Troubleshoot. It also runs by itself once an hour while the map shows a failure.</div></div></div>
+<div class="card map"><h2>Mail route map <span class="c">receiving on top, sending below - click any box for what was checked, its issues, how to fix them and its setup</span></h2>
+<div id="svg"><div class="empty">Loading…</div></div>
+<div class="rtl"><span><i style="background:#3fb950"></i>working</span><span><i style="background:#d29922"></i>warning</span><span><i style="background:#f85149"></i>failing</span><span><i style="background:#ff2d55"></i>down - no mail in the last hour</span><span><i style="background:#2f81f7"></i>in use (not measured)</span><span><i style="background:#6e7681"></i>not connected / not checked / unused</span></div>
+<div class="rtd" id="detail" hidden></div></div>
+<div class="card" id="dnscard"><h2>DNS changes <span class="c">SPF fixes the map proposes - an operator proposes, a different administrator approves, then the platform writes the record through the Cloudflare API and reads it back</span></h2><div id="dnsfix"><div class="empty">Loading…</div></div></div>
+<div class="card" id="esgcard"><h2>Email gateway - Libraesva ESG <span class="c">the gateway in the route: its connection, the appliance's own status and mail queue (read-only API) - configured in Connections &amp; Setup</span></h2>
+<div id="esg"><div class="empty">Loading…</div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><a href="connections.html#cn-esg" style="color:var(--info);text-decoration:none;font-weight:600">Configure / manage in Connections &amp; Setup →</a><a href="libraesva.html" style="color:var(--info);text-decoration:none;font-weight:600">Libraesva ESG page (endpoints, quarantine, message log) →</a><button type="button" id="esgtest" class="sm">Test connection</button><span class="muted small" id="esgmsg"></span></div></div>
+<div class="card"><h2>What the map is built from <span class="c">facts read by the platform</span></h2><div class="facts" id="facts"><div class="empty">Loading…</div></div><p class="note" id="note"></p></div>
+<div class="card" id="warncard"><h2>Early warnings <span class="c">what will break if nobody acts - certificates, DNS changes, Exchange queues and disks, the downtime budget; new ones are e-mailed to the mail team</span></h2>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><span class="muted small" id="warnst"></span><button type="button" id="evalnow">⟳ Evaluate now</button></div>
+<div class="wl" id="warn"><div class="empty">Loading…</div></div><details style="margin-top:8px"><summary class="muted small">Cleared recently</summary><div class="tw" id="warncl"></div></details></div>
+<div class="card" id="rdnscard"><h2>Reverse DNS per Internet link <span class="c">the PTR each ISP publishes for our mail addresses, whether it resolves back, and the exact request to send the ISP when it is wrong</span></h2><div id="rdns"><div class="empty">Loading…</div></div></div>
+<div class="card" id="srvcard"><h2>Mail servers <span class="c">every server on the mail path: DNS name, internal address, public (NAT) addresses, which MX reaches it and whether mail leaves from it; Exchange health from the SIEM</span></h2>
+<div class="small" id="srvbar" style="margin:4px 0 8px"><button type="button" class="btn" id="srvaddr" hidden><i class="ti ti-refresh"></i> Fetch every server's IP addresses now</button> <span id="srvaddrmsg" class="muted"></span></div><div class="tw" id="srv"><div class="empty">Loading…</div></div>
+<details id="srvedit" style="margin-top:8px"><summary class="small" style="cursor:pointer;color:var(--info)">Edit the mail server register (operator)</summary>
+<form id="srvf" class="srvf"><table><thead><tr><th>Name</th><th>Role</th><th>DNS name</th><th>Internal IP</th><th>Public (NAT) IPs, comma separated</th><th></th></tr></thead><tbody id="srvrows"></tbody></table>
+<div style="display:flex;gap:6px;margin-top:6px"><button type="button" id="srvadd">+ Add server</button><button type="submit">Save register</button><span class="muted small" id="srvmsg"></span></div></form></details></div>
+<div class="card" id="rcptcard"><h2>Alert recipients <span class="c">who receives the early-warning e-mails (sent by the SIEM's mail relay) - set by an administrator</span></h2>
+<form id="rcptf" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input id="rcpt" placeholder="mail.admin@your-domain, exchange.team@your-domain" maxlength="2000" aria-label="Alert recipients" style="min-width:360px;flex:1"><button type="submit">Save</button><button type="button" id="rcpttest">Send test</button></form>
+<div class="muted small" id="rcptst" style="margin-top:6px"></div></div>
+<div class="card"><h2>Issues on the route <span class="c">most severe first</span></h2><div class="tw" id="issues"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+// Email Route Map (IT Asset Management /mail-route; rules and topology in Python). The SIEM counts are read here as the signed-in analyst.
+(function(){
+  'use strict';
+  var Z=window.zybSoc, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var CURIP=null, DNSF=null, G='fields.vendor_class:email_gateway', EXQ='src_type:exchange AND category:email', R=null, NODES={};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status below */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  var opt=function(p){return p.then(function(x){return x;},function(){return null;/* SIEM part not available: those hops show "not connected" */});};
+  var top=function(q,field,from,limit){return opt(Z.req('POST','/top',{q:q,from:from,to:'now',field:field,limit:limit||20}));};
+  var map=function(r){if(!r||!r.values)return null;var o={};r.values.forEach(function(x){o[String(x.v)]=x.n;});return o;};
+  var sum=function(o){if(!o)return null;var t=0;for(var k in o)t+=o[k];return t;};
+  function siem(){var P='now-'+$('per').value;
+    return Promise.all([top(G+' AND fields.email_direction:inbound','fields.email_action',P),top(G+' AND fields.email_direction:outbound','fields.email_action',P),top(EXQ,'action',P),
+      top(EXQ+' AND action:(fail OR defer)','fields.recipient_status',P,10),top(G,'fields.email_direction','now-1h'),top(EXQ,'action','now-1h')]).then(function(a){
+      var gi=map(a[0]),go=map(a[1]),ex=map(a[2]),rs=a[3]&&a[3].values,gr=map(a[4]),er=map(a[5]);
+      if(!gi&&!go&&!ex)return null;
+      var pick=function(o,keys){if(!o)return undefined;var r={};keys.forEach(function(k){if(o[k]!=null)r[k]=Math.max(0,Math.round(o[k]));});return r;};
+      var GK=['delivered','quarantined','blocked','rejected','email-event'],EK=['receive','send','deliver','fail','defer','dsn','submit','drop','expand','redirect','resolve','transfer','transport'];
+      var out={gateway_in:gi&&sum(gi)?pick(gi,GK):undefined,gateway_out:go&&sum(go)?pick(go,GK):undefined,exchange:ex&&sum(ex)?pick(ex,EK):undefined,
+        exchange_reasons:(rs||[]).slice(0,15).map(function(x){return {value:String(x.v).slice(0,300),n:Math.max(0,Math.round(x.n))};}),recent:{}};
+      if(gr){out.recent.gateway_in=Math.round(gr.inbound||0);out.recent.gateway_out=Math.round(gr.outbound||0);}
+      if(er){out.recent.exchange_receive=Math.round(er.receive||0);out.recent.exchange_send=Math.round(er.send||0);out.recent.exchange_deliver=Math.round(er.deliver||0);}
+      return out;});}
+  var COL={ok:'#3fb950',warn:'#d29922',bad:'#f85149',down:'#ff2d55',not_connected:'#6e7681',not_checked:'#6e7681',unused:'#6e7681',info:'#2f81f7'};
+  var LBL={ok:'working',warn:'warning',bad:'failing',down:'DOWN',not_connected:'not connected',not_checked:'not checked',unused:'unused',info:'in use'};
+  var broken=function(s){return s==='bad'||s==='down';};
+  function hopIssues(f){return (R&&R.issues||[]).filter(f);}
+  var has=function(i,t){t=String(t||'').toLowerCase();return !!t&&(String(i.title).toLowerCase().indexOf(t)>=0||(i.evidence||[]).join(' ').toLowerCase().indexOf(t)>=0);};
+  var worstOf=function(list){var o=['down','bad','warn','ok','info','not_checked','not_connected','unused'];return list.reduce(function(a,b){return o.indexOf(b)<o.indexOf(a)?b:a;},'unused');};
+  function sevState(list){return list.some(function(i){return i.severity==='critical'||i.severity==='high';})?'bad':list.some(function(i){return i.severity==='medium';})?'warn':null;}
+  // node: {id, x, y, w, h, title, sub, state, issues(), info}
+  function box(n){NODES[n.id]=n;var c=COL[n.state]||'#6e7681',its=n.issues().filter(function(i){return i.severity!=='info';}).length;
+    var t=String(n.title),mc=Math.floor(n.w/7.6),t2=t.length>mc?t.slice(0,mc-1)+'…':t;
+    return '<g data-node="'+esc(n.id)+'" tabindex="0" role="button" aria-label="'+esc(t+': '+(LBL[n.state]||n.state))+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="10" fill="'+c+'22" stroke="'+c+'" stroke-width="1.6"'+(n.state==='down'?' stroke-dasharray="6 3"':'')+'/>'
+      +'<text x="'+(n.x+n.w/2)+'" y="'+(n.y+18)+'" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">'+esc(t2)+'</text>'
+      +(n.sub?'<text x="'+(n.x+n.w/2)+'" y="'+(n.y+33)+'" text-anchor="middle" fill="#8b949e" font-size="10.5">'+esc(String(n.sub).slice(0,30))+(n.full?'<title>'+esc(n.full)+'</title>':'')+'</text>':'')
+      +'<text x="'+(n.x+n.w/2)+'" y="'+(n.y+n.h-9)+'" text-anchor="middle" fill="'+c+'" font-size="11" font-weight="700">'+esc(LBL[n.state]||'')+(its?' · '+its+' issue'+(its>1?'s':''):'')+'</text></g>';}
+  function edge(a,b,state,label,dash){if(!a||!b)return '';var x1=a.x+a.w,y1=a.y+a.h/2,x2=b.x,y2=b.y+b.h/2;if(x2<x1){x1=a.x;x2=b.x+b.w;}
+    // the tall Internet box: meet it level with the other end, so lines do not fan out of one point
+    if(a.id==='inet')y1=Math.max(a.y+12,Math.min(a.y+a.h-12,y2));if(b.id==='inet')y2=Math.max(b.y+12,Math.min(b.y+b.h-12,y1));
+    var mx=(x1+x2)/2,c=broken(state)?'#ff2d55':state==='unused'||state==='not_connected'||state==='not_checked'?'#6e7681':'#8b949e',d='M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2;
+    var dir=x2>x1?1:-1,h='<path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+(broken(state)?2.6:1.8)+'"'+(broken(state)||dash?' stroke-dasharray="5 4"':'')+'/>'
+      +'<path d="M'+(x2-8*dir)+' '+(y2-5)+' L'+x2+' '+y2+' L'+(x2-8*dir)+' '+(y2+5)+' Z" fill="'+c+'"/>';
+    if(broken(state))h+='<text x="'+mx+'" y="'+((y1+y2)/2+6)+'" text-anchor="middle" fill="#ff2d55" font-size="18" font-weight="800">✕</text>';
+    else if(label)h+='<text x="'+mx+'" y="'+((y1+y2)/2-5)+'" text-anchor="middle" fill="#8b949e" font-size="10">'+esc(label)+'</text>';
+    return h;}
+  function draw(r){R=r;NODES={};
+    if(!r.lanes||!r.topology){$('svg').innerHTML='<div class="empty">'+esc(r.note||'The route has not been checked yet: use Check now.')+'</div>';$('banner').innerHTML='';$('issues').innerHTML='';$('facts').innerHTML='';return;}
+    var T=r.topology,S=T.states||{},mx=T.mx||[],eg=T.egress||[],links=T.links||[];
+    var C={inet:10,dns:150,link:330,mx:510,gw:720,ex:900,mb:1080},W={inet:110,dns:150,link:150,mx:180,gw:150,ex:150,mb:150},H=58,STEP=68;
+    var nMx=Math.max(1,mx.length),nEg=Math.max(1,eg.length),inTop=44,inH=Math.max(nMx,2)*STEP,egTop=inTop+inH+60,egH=Math.max(nEg,2)*STEP,bottom=egTop+egH+(T.exo?96:10);
+    var inMid=inTop+inH/2-H/2,outMid=egTop+egH/2-H/2,h='<text x="'+C.mx+'" y="22" fill="#c9d1d9" font-size="13.5" font-weight="700">Receiving (inbound)</text><text x="'+C.mx+'" y="'+(egTop-14)+'" fill="#c9d1d9" font-size="13.5" font-weight="700">Sending (outbound)</text>';
+    var N={};
+    N.inet={id:'inet',x:C.inet,y:inTop,w:W.inet,h:egTop+egH-inTop-10,title:'Internet',sub:'senders / receivers',state:'info',issues:function(){return [];},info:'Mail from outside arrives here and mail to outside leaves here.'};
+    N.dns={id:'dns',x:C.dns,y:inMid,w:W.dns,h:H,title:'DNS - MX',sub:T.dns&&T.dns.provider?'hosted: '+T.dns.provider:'',state:S.mx||'not_checked',issues:function(){return hopIssues(function(i){return i.hop==='mx'&&!mx.some(function(m){return has(i,m.host);})&&!/internet link/i.test(i.title);});},info:'Senders look up the MX record to find where to deliver. '+(T.dns&&T.dns.ns&&T.dns.ns.length?'Name servers: '+T.dns.ns.join(', '):'')};
+    N.auth={id:'auth',x:C.dns,y:outMid,w:W.dns,h:H,title:'SPF / DKIM / DMARC',sub:'checked by receivers',state:S.auth||'not_checked',issues:function(){return hopIssues(function(i){return i.hop==='auth';});},info:'Receivers check these records against the IP and signature of every mail you send.'};
+    var twoLinkIssue=hopIssues(function(i){return /internet link/i.test(i.title);});
+    var ptrBad=function(l){return (l.rdns||[]).some(function(x){return x.ok===false;});};
+    var lTop=inTop+(egTop+egH-inTop)/2-(links.length*STEP)/2;
+    links.forEach(function(l,i){var st=l.state==='unused'?(twoLinkIssue.length?'warn':'unused'):ptrBad(l)?'warn':'info';
+      N['link'+i]={id:'link'+i,x:C.link,y:lTop+i*STEP,w:W.link,h:H,title:'Internet link '+l.n,sub:l.network||'no mail address seen',state:st,issues:function(){return (l.state==='unused'||!l.mx.length?twoLinkIssue:[]).concat(hopIssues(function(x){return /reverse DNS|PTR/i.test(x.title)&&(l.rdns||[]).some(function(r){return has(x,r.ip);});}));},
+        info:'Carries: '+(l.state==='unused'?'nothing the platform can see (no MX or egress address on it)':l.state)+(l.mx.length?' · MX: '+l.mx.join(', '):'')+(l.egress.length?' · egress: '+l.egress.join(', '):'')+((l.rdns||[]).length?' · reverse DNS: '+l.rdns.map(function(x){return x.ip+' → '+(x.ptr||'none')+(x.ok?' (ok)':'');}).join(', '):'')+'. '+(T.note||'')};});
+    if(!mx.length)N.mx0={id:'mx0',x:C.mx,y:inTop,w:W.mx,h:H,title:'MX host',sub:'none found',state:S.smtp||'not_checked',issues:function(){return hopIssues(function(i){return i.hop==='smtp';});},info:'No MX host was found for your domains.'};
+    mx.forEach(function(m,i){var its=function(){return hopIssues(function(x){return (x.hop==='mx'||x.hop==='smtp')&&has(x,m.host);});};
+      var st=S.smtp==='down'?'down':m.cf_routing||m.proxied?'bad':m.probed&&m.connected===false?'bad':sevState(its())||(!m.probed?'not_checked':m.probed&&m.starttls===false?'warn':'ok');
+      var nat=(T.servers||[]).filter(function(sv){return (sv.mx||[]).indexOf(m.host)>=0;});
+      N['mx'+i]={id:'mx'+i,x:C.mx,y:inTop+i*STEP,w:W.mx,h:H,title:m.host,sub:(m.ips[0]||'no address')+(nat.length?' → '+nat[0].name+(nat[0].private_ip?' '+nat[0].private_ip:''):m.priority!=null?' · pref '+m.priority:'')+(m.eop?' · EOP':''),state:st,issues:its,
+        info:'Addresses: '+(m.ips.join(', ')||'none')+(m.proxied?' · behind the Cloudflare proxy (SMTP cannot pass)':'')+(m.cf_routing?' · Cloudflare Email Routing':'')+' · SMTP probe: '+(!m.probed?'not probed':m.connected?'answered'+(m.starttls?', STARTTLS offered':', no STARTTLS'):'no answer')+(nat.length?' · NAT to '+nat.map(function(sv){return sv.name+(sv.private_ip?' ('+sv.private_ip+')':'');}).join(', '):'')};});
+    var exs=(T.servers||[]).filter(function(sv){return sv.role==='exchange'||sv.role==='hybrid';}),exList=exs.length?' Servers: '+exs.map(function(sv){return sv.name+(sv.private_ip?' '+sv.private_ip:'');}).join(', ')+'.':'';
+    var ex=function(id){return function(){return hopIssues(function(i){return i.hop===id||(i.hop==='exchange'&&/^exchange_/.test(id));});};};
+    var cnt=function(id){var hp=[].concat(r.lanes.inbound,r.lanes.outbound).find(function(z){return z.id===id;});return hp&&hp.counts&&Object.keys(hp.counts).length?Object.keys(hp.counts).slice(0,2).map(function(k){return k+' '+Z.n(hp.counts[k]);}).join(' · '):'';};
+    N.gwi={id:'gwi',x:C.gw,y:inMid,w:W.gw,h:H,title:GWT(),sub:cnt('gateway_in')||(GWAPI()&&!S.gateway_in?'API ok · no mail log':'inbound'),state:S.gateway_in||(GWAPI()?'info':'not_connected'),apiOnly:!S.gateway_in&&GWAPI(),issues:ex('gateway_in'),info:'Filters inbound mail (spam, phishing, malware) before Exchange. Counts from the gateway syslog in the SIEM.'+GWI()};
+    N.exi={id:'exi',x:C.ex,y:inMid,w:W.ex,h:H,title:'Exchange - receive',sub:cnt('exchange_in')||'on-premises',state:S.exchange_in||'not_connected',issues:ex('exchange_in'),info:'Exchange receive connectors accept mail from the gateway. Counts from message tracking in the SIEM.'+exList};
+    N.mbi={id:'mbi',x:C.mb,y:inMid,w:W.mb,h:H,title:'Mailboxes',sub:cnt('mailbox')||'delivery',state:S.mailbox||'not_connected',issues:ex('mailbox'),info:'Delivery into the mailbox databases.'};
+    N.mbo={id:'mbo',x:C.mb,y:outMid,w:W.mb,h:H,title:'Mailboxes',sub:cnt('mailbox_out')||'submission',state:S.mailbox_out||'not_connected',issues:ex('mailbox_out'),info:'Users submit mail from Outlook / OWA / mobile.'};
+    N.exo={id:'exo',x:C.ex,y:outMid,w:W.ex,h:H,title:'Exchange - send',sub:cnt('exchange_out')||'on-premises',state:S.exchange_out||'not_connected',issues:ex('exchange_out'),info:'Exchange send connectors route Internet mail through the gateway.'+exList};
+    N.gwo={id:'gwo',x:C.gw,y:outMid,w:W.gw,h:H,title:GWT(),sub:cnt('gateway_out')||(GWAPI()&&!S.gateway_out?'API ok · no mail log':'outbound'),state:S.gateway_out||(GWAPI()?'info':'not_connected'),apiOnly:!S.gateway_out&&GWAPI(),issues:ex('gateway_out'),info:'Outbound filtering and DKIM signing, then out through the egress IP.'+GWI()};
+    if(!eg.length)N.eg0={id:'eg0',x:C.mx,y:egTop,w:W.mx,h:H,title:'Egress IP',sub:'none registered',state:S.egress||'not_checked',issues:function(){return hopIssues(function(i){return i.hop==='egress';});},info:'Register the public IP mail leaves from on Email Security → reputation card.'};
+    eg.forEach(function(e,i){var its=function(){return hopIssues(function(x){return x.hop==='egress'&&has(x,e.ip);});};
+      var snd=(T.servers||[]).filter(function(sv){return (sv.egress||[]).indexOf(e.ip)>=0;});
+      // the subtitle names what is actually wrong: a correct PTR is shown as "rDNS ✓", so a red box is never read as a PTR problem
+      var bad=its().filter(function(x){return x.severity==='critical'||x.severity==='high';}),why=bad.map(function(x){var t=String(x.title);return /not authorised by the SPF record/.test(t)?'not in SPF':/listed on Spamhaus/.test(t)?'Spamhaus '+((/\(([^)]*)\)/.exec(t)||[])[1]||'listed'):/no reverse DNS/.test(t)?'no reverse DNS':'';}).filter(Boolean);
+      N['eg'+i]={id:'eg'+i,x:C.mx,y:egTop+i*STEP,w:W.mx,h:H,title:e.ip,sub:why.length?why.join(' · ')+(e.ptr?' · rDNS ✓':''):(snd.length?'from '+snd[0].name+' · ':'')+(e.ptr?'rDNS ✓ '+e.ptr:e.ptr_error?'rDNS not checked (lookup failed)':'no reverse DNS'),full:(why.length?why.join(' · ')+' · ':'')+(snd.length?'from '+snd[0].name+' · ':'')+(e.ptr?'reverse DNS '+e.ptr+(e.fcrdns===false?' (does not resolve back)':' ✓'):e.ptr_error?'reverse DNS not checked (lookup failed)':''),state:S.egress==='down'?'down':sevState(its())||'ok',issues:its,info:'Outbound mail leaves from this address. Checked: reverse DNS, forward-confirmed rDNS, SPF authorisation and Spamhaus.'};});
+    if(T.exo)N.eol={id:'eol',x:C.ex,y:egTop+egH+20,w:W.ex+W.mb+30,h:H,title:'Exchange Online (Microsoft 365)',sub:T.platform==='hybrid'?'hybrid - connectors to on-premises':'mailboxes in the cloud',state:sevState(hopIssues(function(i){return /microsoft 365|exchange online|hybrid/i.test(i.title);}))||'info',
+      issues:function(){return hopIssues(function(i){return /microsoft 365|exchange online|hybrid/i.test(i.title);});},info:'Mail between on-premises and Exchange Online mailboxes travels over the hybrid send / receive connectors (TLS). The platform checks the DNS side (SPF include, DKIM selectors, MX choice); Exchange Online message trace is not read here.'};
+    // edges
+    var e='';
+    e+=edge(N.inet,N.dns,S.mx,'MX lookup',true);
+    mx.forEach(function(m,i){var to=N['mx'+i];if(!m.links.length)e+=edge(N.dns,to,to.state,'');m.links.forEach(function(li){var L=N['link'+li];e+=edge(N.inet,L,'info','')+edge(L,to,to.state,'');});e+=edge(to,N.gwi,N.gwi.state,'');});
+    if(!mx.length)e+=edge(N.dns,N.mx0,N.mx0.state,'');
+    e+=edge(N.gwi,N.exi,N.exi.state,'')+edge(N.exi,N.mbi,N.mbi.state,'');
+    e+=edge(N.mbo,N.exo,N.exo.state,'')+edge(N.exo,N.gwo,N.gwo.state,'');
+    eg.forEach(function(x,i){var from=N['eg'+i];e+=edge(N.gwo,from,from.state,'');if(x.link!=null&&N['link'+x.link])e+=edge(from,N['link'+x.link],'info','')+edge(N['link'+x.link],N.inet,'info','');else e+=edge(from,N.inet,'info','');});
+    if(!eg.length)e+=edge(N.gwo,N.eg0,N.eg0.state,'');
+    e+=edge(N.auth,N.inet,S.auth,'verified',true);
+    if(N.eol){var eo=N.eol,a=N.exi,b=N.exo;e+='<path d="M'+(eo.x+30)+' '+eo.y+' L'+(eo.x+30)+' '+(b.y+b.h)+'" stroke="#2f81f7" stroke-width="1.8" stroke-dasharray="5 4" fill="none"/><text x="'+(eo.x+38)+'" y="'+(eo.y-6)+'" fill="#8b949e" font-size="10">hybrid connectors (TLS)</text>';}
+    var nodes='';for(var k in N)nodes+=box(N[k]);
+    $('svg').innerHTML='<svg viewBox="0 0 1240 '+bottom+'" role="img" aria-label="Mail route map">'+h+e+nodes+'</svg>';
+    var b=r.blocked||{},bl=[];['inbound','outbound'].forEach(function(k){var x=b[k];if(x)bl.push('<div><b>'+(k==='inbound'?'Receiving':'Sending')+' mail is '+(x.state==='down'?'stopped':'failing')+' at: '+esc(x.label)+'</b> - '+esc(x.reason)+(x.fix&&x.fix.length?'<ol class="steps">'+x.fix.map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol>':'')+'</div>');});
+    $('banner').innerHTML=bl.length?'<div class="rtb down">'+bl.join('')+'</div>':'<div class="rtb okb">No hop is failing.'+(r.siem?'':' Mail counts from the SIEM are not available, so the gateway and Exchange boxes show not connected.')+'</div>';
+    var L=links.map(function(l){return 'Link '+l.n+': '+(l.network||'-')+' ('+l.state+')';});
+    $('facts').innerHTML='<div><b>Mail platform</b>'+esc({onprem:'Exchange on-premises',hybrid:'Hybrid (on-premises + Exchange Online)',online:'Exchange Online'}[T.platform]||T.platform)+'</div>'
+      +'<div><b>DNS hosting</b>'+esc(T.dns&&T.dns.provider?T.dns.provider:'not read')+'</div>'
+      +'<div><b>Internet links</b>'+esc(T.declared_links+' declared · '+(L.join(' · ')||'none seen'))+'</div>'
+      +'<div><b>MX hosts</b>'+esc(mx.map(function(m){return m.host;}).join(', ')||'none')+'</div>'
+      +'<div><b>Egress IPs</b>'+esc(eg.map(function(x){return x.ip;}).join(', ')||'none registered')+'</div>'
+      +'<div><b>Checked</b>'+esc(r.checked_at?new Date(r.checked_at).toLocaleString():'not yet')+'</div>';
+    $('note').textContent=(T.note||'')+' '+(r.note||'');
+    var SV={critical:'bad',high:'bad',medium:'warn',low:'inf',info:'mut'};
+    $('issues').innerHTML=r.issues.length?'<table><thead><tr><th>Severity</th><th>Hop</th><th>Issue</th><th>How to fix</th></tr></thead><tbody>'+r.issues.map(function(i){return '<tr><td>'+Z.pill(i.severity,SV[i.severity]||'')+'</td><td class="small">'+esc(String(i.hop).replace('_',' '))+'</td><td>'+esc(i.title)+'<div class="muted small">'+esc((i.evidence||[]).join(' · '))+'</div></td><td class="small"><ol class="steps">'+(i.fix||[]).map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol></td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No issue found on the route.</div>';
+    rdnsDraw(T);
+    $('up').textContent='updated '+new Date().toLocaleTimeString();servers(T);}
+  function rdnsDraw(T){var L=(T.links||[]).filter(function(l){return (l.rdns||[]).length;});
+    $('rdns').innerHTML=L.length?L.map(function(l){var req=l.ptr_request||[];
+      return '<h3 style="font-size:13.5px;margin:10px 0 4px">Internet link '+esc(l.n)+' <span class="muted small">'+esc(l.network||'')+'</span></h3><table><thead><tr><th>Address</th><th>Used for</th><th>PTR now</th><th>Resolves back</th><th>Should be</th><th></th></tr></thead><tbody>'+l.rdns.map(function(x){
+        return '<tr><td class="mono">'+esc(x.ip)+'</td><td class="small">'+esc(x.role)+(x.server?' · '+esc(x.server):'')+'</td><td class="mono small">'+esc(x.ptr||(x.error?'not checked':'none'))+'</td><td>'+(x.ptr?(x.fcrdns?Z.pill('yes','ok'):Z.pill('no','warn')):'–')+'</td><td class="mono small">'+esc(x.expected)+'</td><td>'+(x.ok?Z.pill('ok','ok'):x.ok===null?'<span title="'+esc(x.error||'')+'">'+Z.pill('lookup failed','muted')+'</span>':Z.pill('ask the ISP','warn'))+'</td></tr>';}).join('')+'</tbody></table>'
+        +(req.length?'<div class="small" style="margin-top:6px"><b>Request to send this ISP</b> <button type="button" class="sm" data-copy="'+esc(req.join('\n'))+'">Copy</button><pre class="mono small" style="white-space:pre-wrap;margin:4px 0 0">'+esc(req.join('\n'))+'</pre></div>':'<div class="muted small" style="margin-top:4px">Nothing to ask this ISP: every PTR is right and resolves back.</div>');}).join('')
+      :'<div class="empty">No public mail address checked yet - use Check now (MX addresses come from Domains & Hosting, outbound ones from the reputation card).</div>';}
+  $('rdns').addEventListener('click',function(ev){var b=ev.target.closest('[data-copy]');if(!b)return;var txt=b.getAttribute('data-copy');try{navigator.clipboard.writeText(txt).then(function(){b.textContent='Copied';},function(){b.textContent='Select the text below';});}catch(e){b.textContent='Select the text below';/* no clipboard in this browser - the text is shown below */}});
+  function detail(id){var n=NODES[id];if(!n)return;var its=n.issues(),d=$('detail');d.hidden=false;
+    d.innerHTML='<h3>'+esc(n.title)+' - '+esc(LBL[n.state]||n.state)+'</h3><div class="muted small">'+esc(n.info||'')+'</div>'
+      +(its.length?its.map(function(i){return '<div style="margin-top:6px"><b>'+esc(i.title)+'</b>'+(i.evidence&&i.evidence.length?'<div class="muted small">'+esc(i.evidence.join(' · '))+'</div>':'')+'<ol class="steps">'+(i.fix||[]).map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol></div>';}).join('')
+        :'<div class="small" style="margin-top:6px">'+(n.apiOnly?'The Libraesva API is connected (status, queue, quarantine, message log on the Libraesva page), but the gateway\'s mail log does not reach the SIEM, so this hop has no mail counts and an outage here would not show. On the ESG: System → Logging → Remote syslog → the SIEM collector address, TCP or UDP 514, all mail-log facilities; within minutes SIEM → Sources shows "libraesva" events and this box turns green.':n.state==='not_connected'?'No data for this hop: connect its logs to the SIEM (gateway syslog / Exchange message tracking).':n.state==='not_checked'?'Not checked yet - use Check now.':'No issue found here.')+'</div>')
+      +setup(id);
+    d.scrollIntoView({block:'nearest'});}
+  // ---- set up from the box: each hop offers the setting that fixes it, sent to the route that already owns it.
+  // The server checks the role again (operator for the route register and IPs, administrator for the gateway credentials
+  // and the SIEM log sender) and validates every field; the page only hides what the role cannot do.
+  var ROLE_TXT={operator:'an operator or administrator',admin:'an administrator'};
+  function f(k,label,val,o){o=o||{};return '<label class="small" style="display:block;margin:6px 0 2px">'+esc(label)+'</label><input name="'+k+'" value="'+esc(val==null?'':val)+'"'+(o.type?' type="'+o.type+'"':'')+(o.ph?' placeholder="'+esc(o.ph)+'"':'')+' maxlength="'+(o.max||200)+'" style="width:100%;max-width:520px"'+(o.req?' required':'')+(o.ac?' autocomplete="'+o.ac+'"':'')+'>';}
+  function sel(k,label,opts,cur){return '<label class="small" style="display:block;margin:6px 0 2px">'+esc(label)+'</label><select name="'+k+'">'+opts.map(function(o){return '<option value="'+esc(o[0])+'"'+(String(o[0])===String(cur)?' selected':'')+'>'+esc(o[1])+'</option>';}).join('')+'</select>';}
+  function form(kind,role,title,body,btn,note){var can=Z.can(role);
+    return '<form class="rtd" data-setup="'+kind+'"><h3><i class="ti ti-settings"></i> Set up: '+esc(title)+'</h3>'+(note?'<div class="muted small">'+note+'</div>':'')
+      +(can?body+'<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button type="submit">'+esc(btn)+'</button><span class="muted small" data-msg></span></div>'
+        :'<div class="muted small" style="margin-top:4px">Set up by '+ROLE_TXT[role]+' (your role: '+esc(Z.role()||'viewer')+').</div>')+'</form>';}
+  function prof(){return (R&&R.profile)||{};}
+  var PLAT=[['onprem','Exchange on-premises'],['hybrid','Hybrid (on-premises + Exchange Online)'],['online','Exchange Online only']];
+  function setup(id){var P=prof(),h='';
+    if(id==='dns'||/^mx\d+$/.test(id))h+=form('mx','operator','expected MX hosts','<div class="muted small">The MX hosts your domains should publish - the check warns when DNS answers with something else. Domains themselves come from <a href="domains.html">Domains &amp; Hosting</a>.</div>'+f('expected_mx','Expected MX hosts or domain suffixes (comma separated)',(P.expected_mx||[]).join(', '),{ph:'mail.your-domain, your-domain.mail.protection.outlook.com',max:2000}),'Save and check now');
+    if(/^link\d+$/.test(id)||id==='inet')h+=form('links','operator','Internet links for mail',sel('isp_links','How many Internet (ISP) links carry mail',[[1,'1 link'],[2,'2 links'],[3,'3 links'],[4,'4 links']],P.isp_links||1)+'<div class="muted small" style="margin-top:4px">A link the platform sees no MX or egress address on is shown as unused. The addresses come from the MX records and the egress IPs.</div>','Save');
+    var EG=(R&&R.topology&&R.topology.egress)||[],egi=/^eg(\d+)$/.exec(id),cur=egi?EG[+egi[1]]:null;
+    CURIP=cur&&cur.ip;if(cur&&cur.ip){var spfIss=hopIssues(function(i){return i.hop==='egress'&&has(i,cur.ip)&&/not authorised by the SPF record of/.test(i.title);});
+      if(spfIss.length){var doms=String(spfIss[0].title.split('SPF record of ')[1]||'').split(/,\s*/).filter(Boolean);
+        h+=form('spffix','operator','fix SPF for '+cur.ip,sel('domain','Domain',doms.map(function(d){return [d,d];}),doms[0])+f('reason','Why',null,{ph:'outbound IP '+cur.ip+' is not in SPF',max:300,req:1}),'Propose SPF fix','Adds ip4:'+esc(cur.ip)+' to the SPF record (before the "all"). Nothing is written until a different administrator approves it under DNS changes; the record is then written through Cloudflare and read back.'+(DNSF&&!DNSF.connected?' <b>Cloudflare is not connected yet</b> - an administrator connects it under DNS changes.':''));}}
+    if(cur&&cur.ip)h+=form('egchange','operator','change '+cur.ip,'<input type="hidden" name="old_ip" value="'+esc(cur.ip)+'">'+f('ip','New public IPv4 address',null,{ph:'87.101.229.50',max:15,req:1})+f('reason','Why it changes',null,{ph:'wrong address registered - ISP NAT is .50',max:300,req:1})+'<label class="small" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" name="spf" value="1" checked> Also propose the SPF change (remove the old address, add the new one) for approval</label>','Change and check now','The old address is retired (kept in the history with your reason); the new one keeps the label and is checked at once for reverse DNS, SPF and Spamhaus.');
+    if(/^eg\d+$/.test(id)||id==='inet')h+=form('egress','operator','an IP mail leaves from',f('ip','Public IPv4 address',(id==='eg0'||id==='inet')?'':'',{ph:'203.0.113.25',max:15,req:1})+f('label','Label',null,{ph:'Libraesva outbound - ISP 1',max:120,req:1}),'Add and check now','Checked for reverse DNS, forward-confirmed rDNS, SPF authorisation and Spamhaus.');
+    if(id==='auth')h+='<div class="rtd"><h3><i class="ti ti-settings"></i> Set up: SPF / DKIM / DMARC</h3><div class="muted small">These records live at your DNS host; the platform reads them. After you change them, run the check again.</div><div style="display:flex;gap:8px;margin-top:6px">'+(Z.can('operator')?'<button type="button" data-act="check">⟳ Check now</button>':'')+'<a href="email-security.html" style="color:var(--info);font-weight:600">Email Security - authentication records →</a><span class="muted small" data-msg></span></div></div>';
+    if(id==='gwi'||id==='gwo'){var E=ESG||{};
+      h+=form('esg','admin','Libraesva ESG API (read-only)',f('base_url','Gateway address',E.base_url,{ph:'https://esg.your-domain',max:200,req:1})+f('username','ESG API user (read-only)',E.username,{max:120,req:1,ac:'off'})+f('password','Password'+(E.configured?' (leave empty to keep the stored one)':''),'',{type:'password',max:200,ac:'new-password'})+f('switch_user','ESG user it acts as (X-Switch-User) - the read-only ESG user, e.g. zyberon',E.switch_user,{max:120,ac:'off'})+f('host_name','Host name - only when the address is an IP (the name in the ESG web console address)',E.host_name,{max:253,ac:'off'}),E.configured?'Save and test':'Connect and test','The password is sent once over HTTPS and stored sealed on the server; it is never shown again. The platform makes GET calls only.');
+      h+=form('esglog','admin','gateway mail log to the SIEM (syslog)',f('id','Source id',null,{ph:'esg-hq',max:40,req:1})+f('label','Label',null,{ph:'Libraesva ESG - HQ node 1',max:80})+f('match_ip','Gateway IP the syslog comes from',null,{ph:'10.0.20.25',max:15,req:1}),'Register sender','The map\'s mail counts for the gateway come from this log. After registering, the SIEM shows the host and port to enter on the gateway (Admin → System → Log settings).');}
+    if(/^(exi|exo|mbi|mbo)$/.test(id))h+=form('exch','operator','an Exchange server on the route',f('name','Server name',null,{ph:'MBX01',max:80,req:1})+sel('role','Role',[['exchange','Exchange'],['hybrid','Hybrid'],['edge','Edge'],['relay','Relay']],'exchange')+f('dns_name','DNS name',null,{ph:'mbx01.your-domain',max:253})+f('private_ip','Internal IP',null,{ph:'10.0.12.20',max:15})+f('public_ips','Public (NAT) IPs, comma separated',null,{max:80}),'Add to the register',
+      'Added to the mail server register below. The receive / send counts come from Exchange message tracking in the SIEM: install the collector on each server from <a href="connections.html">Connections &amp; Setup</a>, and add it in <a href="exchange-admin.html">Exchange Admin</a> for its health.');
+    if(id==='eol'||id==='inet')h+=form('platform','operator','mail platform',sel('platform','Where the mailboxes are',PLAT,P.platform||'onprem'),'Save');
+    return h;}
+  function vals(fm){var o={};[].forEach.call(fm.querySelectorAll('[name]'),function(x){o[x.name]=x.value.trim();});return o;}
+  function say(fm,t){var m=fm.querySelector('[data-msg]');if(m)m.textContent=t;}
+  function refusal(e){return e.status===403?'Your role cannot change this.':e.status===404?'Not installed on the server yet - run the update.':e.message;}
+  function saveProfile(patch){var P=prof(),b={servers:REG.map(function(r){var x={name:r.name,role:r.role};if(r.dns_name)x.dns_name=r.dns_name;if(r.private_ip)x.private_ip=r.private_ip;if(r.public_ips&&r.public_ips.length)x.public_ips=r.public_ips;return x;})};
+    for(var k in patch)b[k]=patch[k];return req('POST','/mail-route/profile',b);}
+  var SETUP={
+    mx:function(v){var l=v.expected_mx.split(/[,\s]+/).map(function(x){return x.trim();}).filter(Boolean);return saveProfile({expected_mx:l}).then(function(){return req('POST','/mail-reputation/check',{});}).then(function(){return 'Saved and checked.';});},
+    links:function(v){return saveProfile({isp_links:parseInt(v.isp_links,10)}).then(function(){return 'Saved.';});},
+    platform:function(v){return saveProfile({platform:v.platform}).then(function(){return 'Saved.';});},
+    egchange:function(v,fm){var spf=fm&&fm.querySelector('[name="spf"]')&&fm.querySelector('[name="spf"]').checked;return req('GET','/mail-reputation').then(function(m){var r=(m.registered||[]).filter(function(x){return x.ip===v.old_ip;})[0];if(!r)throw new Error(v.old_ip+' is not in the registered list any more - reload the page');
+      return req('POST','/mail-reputation/ips/'+encodeURIComponent(r.id)+'/replace',{ip:v.ip,reason:v.reason});}).then(function(){return req('POST','/mail-reputation/check',{});}).then(function(){
+        if(!spf)return 'Changed and checked.';var doms=((R&&R.topology&&R.topology.domains)||[]).slice();
+        if(!doms.length)return 'Changed and checked. No mail domain known to propose the SPF change for - use Fix SPF on the box.';
+        return Promise.all(doms.map(function(d){return req('POST','/dns-fix/spf',{domain:d,add:[v.ip],remove:[v.old_ip],reason:'outbound IP changed '+v.old_ip+' → '+v.ip+': '+v.reason}).then(function(){return d+': proposed';},function(e){return d+': '+refusal(e);});})).then(function(r){loadDns();return 'Changed and checked. SPF - '+r.join('; ');});});},
+    spffix:function(v){return req('POST','/dns-fix/spf',{domain:v.domain,add:[CURIP],reason:v.reason}).then(function(p){loadDns();return 'Proposed '+p.id+' - waiting for a different administrator under DNS changes.';});},
+    egress:function(v){return req('POST','/mail-reputation/ips',{ip:v.ip,label:v.label,role:'outbound'}).then(function(){return req('POST','/mail-reputation/check',{});}).then(function(){return 'Added and checked.';});},
+    exch:function(v){var r={name:v.name,role:v.role};if(v.dns_name)r.dns_name=v.dns_name;if(v.private_ip)r.private_ip=v.private_ip;var p=v.public_ips.split(',').map(function(x){return x.trim();}).filter(Boolean);if(p.length)r.public_ips=p;
+      if(REG.some(function(x){return String(x.name).toLowerCase()===r.name.toLowerCase();}))return Promise.reject(new Error(r.name+' is already in the register - edit it in the Mail servers card'));
+      REG=REG.concat([r]);return saveProfile({}).then(function(){return 'Added - DNS names are resolved on the next check.';},function(e){REG=REG.slice(0,-1);throw e;});},
+    esg:function(v){var b={base_url:v.base_url,username:v.username};if(v.password)b.password=v.password;if(v.switch_user)b.switch_user=v.switch_user;if(v.host_name)b.host_name=v.host_name;
+      return req('POST','/esg/config',b).then(function(){return req('POST','/esg/test',{});}).then(function(r){var t=r.last_test||{};ESG=null;loadEsg();return t.ok?'Connected - '+((r.catalogue||[]).length)+' endpoints read.':'Saved, but the test failed: '+(t.message||t.error||'');});},
+    esglog:function(v){var id=v.id.indexOf('esg-')===0?v.id:'esg-'+v.id,b={id:id,kind:'email-security-gateway',match_ip:v.match_ip};if(v.label)b.label=v.label;
+      return Z.req('POST','/onboard/sources',b).then(function(r){var sv=(r&&r.siem)||{};return 'Registered '+id+'. On the gateway set the remote syslog server to '+(sv.ip||sv.host||'the SIEM')+' port '+(sv.syslog_port||5514)+' TCP'+(sv.tls_port?' (or TLS '+(sv.host||sv.ip||'')+':'+sv.tls_port+')':'')+'.';});}
+  };
+  $('detail').addEventListener('submit',function(ev){var fm=ev.target.closest('form[data-setup]');if(!fm)return;ev.preventDefault();var fn=SETUP[fm.getAttribute('data-setup')];if(!fn)return;
+    var b=fm.querySelector('button[type="submit"]');b.disabled=true;say(fm,'Saving…');var keep=fm.getAttribute('data-setup')==='esglog';
+    fn(vals(fm),fm).then(function(t){say(fm,t);var pw=fm.querySelector('[name="password"]');if(pw)pw.value='';if(!keep)load();},function(e){say(fm,refusal(e));}).then(function(){b.disabled=false;});});
+  $('detail').addEventListener('click',function(ev){var b=ev.target.closest('[data-act="check"]');if(!b)return;var box=b.parentNode;b.disabled=true;
+    req('POST','/mail-reputation/check',{}).then(function(){box.querySelector('[data-msg]').textContent='Checked.';load();},function(e){box.querySelector('[data-msg]').textContent=refusal(e);}).then(function(){b.disabled=false;});});
+  // ---- mail servers: the register joined to DNS (ITAM) and the Exchange servers' health (SIEM, Windows / Exchange admin)
+  var EXS=null,REG=[];
+  var ptrOf=function(ips){var rd=(R&&R.topology&&R.topology.rdns)||[];return (ips||[]).map(function(ip){var x=rd.find(function(y){return y.ip===ip;});return x?'<div class="small2 muted">PTR '+esc(x.ptr||'none')+(x.ok?' ✓':' - should be '+esc(x.expected))+'</div>':'';}).join('');};
+  // every IPv4 address the server itself reports (SIEM network check: a second NIC / DAG / NAT-side address), never guessed
+  var addrCell=function(h,known){if(!h)return esc(known||'—');var A=h.addresses,kn=String(known||h.ip||'');
+    if(!A)return esc(kn||'—')+'<div class="muted small2">other addresses not read yet - press "Fetch every server\'s IP addresses now"</div>';
+    if(A.error)return esc(kn||'—')+'<div class="muted small2">addresses could not be read: '+esc(A.error)+'</div>';
+    var it=A.items||[];if(!it.length)return esc(kn||'—');
+    return it.map(function(x){return '<div>'+esc(x.ip)+(x.prefix!=null?'/'+esc(x.prefix):'')+' <span class="muted small2">'+esc(x.interface||'')+(x.ip===kn?' · managed by':'')+'</span></div>';}).join('')
+      +(kn&&!it.some(function(x){return x.ip===kn;})?'<div class="muted small2">'+esc(kn)+' (in the register) is not on the server</div>':'')+'<div class="muted small2">read '+esc(Z.dt(A.at))+'</div>';};
+  var LASTT=null;
+  function servers(T){LASTT=T;$('srvaddr').hidden=!Z.can('operator');   // the role is known once the page has loaded
+REG=(R&&R.profile&&R.profile.servers)||[];var rows=(T&&T.servers)||[],ex=(EXS&&EXS.items)||[];
+    var match=function(r){var n=String(r.name||'').toLowerCase();return ex.find(function(x){return String(x.name||'').toLowerCase()===n||(r.private_ip&&x.ip===r.private_ip);});};
+    var extra=ex.filter(function(x){return !rows.some(function(r){return match(r)===x;});});
+    var SV={critical:'bad',high:'bad',medium:'warn',low:'inf'};
+    var tr=rows.map(function(r){var h=match(r);return '<tr><td><b>'+esc(r.name)+'</b><div class="muted small">'+esc(r.role)+'</div></td><td class="mono small">'+esc(r.dns_name||'—')+(r.dns_ips&&r.dns_ips.length?'<div class="muted">→ '+esc(r.dns_ips.join(', '))+'</div>':'')+'</td><td class="mono small">'+addrCell(h,r.private_ip)+'</td><td class="mono small">'+esc((r.public_ips||[]).join(', ')||'—')+ptrOf(r.public_ips)+'</td><td class="small">'+esc((r.mx||[]).join(', ')||'—')+'</td><td class="small">'+esc((r.egress||[]).join(', ')||'—')+'</td><td class="small">'+(h?(h.worst?Z.pill(h.findings+' finding'+(h.findings>1?'s':''),SV[h.worst]||''):h.last_check?Z.pill('healthy','ok'):Z.pill('not checked yet',''))+'<div class="muted">checked '+esc(h.last_check?Z.dt(h.last_check):'never')+'</div>':'<span class="muted">not monitored</span>')+'</td><td class="small muted">'+esc((r.notes||[]).join(' · '))+'</td></tr>';});
+    extra.forEach(function(x){tr.push('<tr><td><b>'+esc(x.name)+'</b><div class="muted small">exchange · from the SIEM</div></td><td class="muted small">—</td><td class="mono small">'+addrCell(x,x.ip)+'</td><td class="muted small">not in the register</td><td>—</td><td>—</td><td class="small">'+(x.worst?Z.pill(x.findings+' finding'+(x.findings>1?'s':''),SV[x.worst]||''):x.last_check?Z.pill('healthy','ok'):Z.pill('not checked yet',''))+'</td><td class="small muted">add it to the register with its public address</td></tr>');});
+    $('srv').innerHTML=tr.length?'<table><thead><tr><th>Server</th><th>DNS name</th><th>Internal IP</th><th>Public (NAT)</th><th>Reached by MX</th><th>Sends from</th><th>Health (SIEM)</th><th>Notes</th></tr></thead><tbody>'+tr.join('')+'</tbody></table>'
+      +(EXS&&EXS.error?'<p class="note">'+esc(EXS.error)+'</p>':''):'<div class="empty">No mail server recorded yet. Add the gateway and Exchange servers below with their internal and public addresses, and add the Exchange servers in Windows / Exchange Admin so their health is checked.</div>';
+    if(!$('srvedit').open)editRows();}
+  $('srvaddr').addEventListener('click',function(){var b=this,m=$('srvaddrmsg');b.disabled=true;m.textContent='Reading the addresses on every server (read-only)…';
+    Z.req('POST','/sysadmin/addresses/refresh',{}).then(function(r){var it=(r&&r.items)||[],ok=it.filter(function(x){return x.status==='ok';}),nl=it.filter(function(x){return x.status==='no-login';}),bad=it.filter(function(x){return x.status==='failed';});
+      m.textContent=ok.length+' of '+it.length+' server(s) read'+(nl.length?' · no login for '+nl.map(function(x){return x.name;}).join(', ')+' - set it in Windows / Exchange Admin':'')+(bad.length?' · failed: '+bad.map(function(x){return x.name+' ('+x.error+')';}).join('; '):'');
+      return loadExs().then(function(){servers(LASTT);});},function(e){m.textContent=refusal(e);}).then(function(){b.disabled=false;});});
+  function srvRow(r){r=r||{};var o=function(v,l){return '<option value="'+v+'"'+(r.role===v?' selected':'')+'>'+l+'</option>';};
+    return '<tr class="srvrow"><td><input name="name" maxlength="80" value="'+esc(r.name||'')+'" aria-label="Name"></td><td><select name="role" aria-label="Role">'+o('gateway','Gateway')+o('exchange','Exchange')+o('edge','Edge')+o('relay','Relay')+o('hybrid','Hybrid')+o('other','Other')+'</select></td><td><input name="dns_name" maxlength="253" value="'+esc(r.dns_name||'')+'" aria-label="DNS name"></td><td><input name="private_ip" maxlength="15" value="'+esc(r.private_ip||'')+'" aria-label="Internal IP"></td><td><input name="public_ips" maxlength="80" value="'+esc((r.public_ips||[]).join(', '))+'" aria-label="Public IPs"></td><td><button type="button" data-del="1" aria-label="Remove">✕</button></td></tr>';}
+  function editRows(){$('srvrows').innerHTML=(REG.length?REG:[{}]).map(srvRow).join('');}
+  $('srvadd').addEventListener('click',function(){$('srvrows').insertAdjacentHTML('beforeend',srvRow({}));});
+  $('srvrows').addEventListener('click',function(ev){var b=ev.target.closest('[data-del]');if(b)b.closest('tr').remove();});
+  $('srvf').addEventListener('submit',function(ev){ev.preventDefault();var list=[].map.call($('srvrows').querySelectorAll('tr'),function(tr){var g=function(n){return tr.querySelector('[name="'+n+'"]').value.trim();};
+      var r={name:g('name'),role:g('role')};if(g('dns_name'))r.dns_name=g('dns_name');if(g('private_ip'))r.private_ip=g('private_ip');var p=g('public_ips').split(',').map(function(x){return x.trim();}).filter(Boolean);if(p.length)r.public_ips=p;return r;}).filter(function(r){return r.name;});
+    req('POST','/mail-route/profile',{servers:list}).then(function(){$('srvmsg').textContent='Saved - DNS names are resolved on the next check.';$('srvedit').open=false;load();},function(e){$('srvmsg').textContent=e.status===403?'Editing the register needs the operator role.':e.message;});});
+  function loadExs(){return opt(Z.req('GET','/sysadmin/targets?role=exchange')).then(function(x){EXS=x||{items:[],error:'Exchange server health is not available from the SIEM (Windows / Exchange Admin).'};});}
+  // ---- early warnings
+  var SVL={critical:'CRITICAL',high:'HIGH',medium:'WARNING',low:'NOTICE',info:'INFO'};
+  function warnings(a){var st=a.state;
+    $('warnst').textContent=st?('evaluated '+Z.dt(st.at)+(st.mail?(st.mail.ok?' · last mail '+Z.dt(st.mail.at)+' ('+st.mail.count+' warning'+(st.mail.count>1?'s':'')+')':' · last mail FAILED: '+st.mail.error):'')+(st.gaps&&st.gaps.length?' · not readable: '+st.gaps.join('; '):'')):'not evaluated yet';
+    $('warn').innerHTML=a.open.length?a.open.map(function(w){return '<div class="'+esc(w.severity)+'"><b>'+esc(SVL[w.severity]||w.severity)+' · '+esc(w.title)+'</b><div class="muted small">'+esc(w.detail||'')+' · since '+esc(Z.dt(w.first_seen))+' · '+esc(w.source)+'</div>'+(w.fix&&w.fix.length?'<ol class="steps small">'+w.fix.map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ol>':'')+'</div>';}).join(''):'<div class="empty">No early warning open.</div>';
+    $('warncl').innerHTML=a.cleared.length?'<table><thead><tr><th>Warning</th><th>Raised</th><th>Cleared</th></tr></thead><tbody>'+a.cleared.map(function(w){return '<tr><td>'+esc(w.title)+'</td><td class="small">'+esc(Z.dt(w.first_seen))+'</td><td class="small">'+esc(Z.dt(w.cleared_at))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">None.</div>';}
+  // ---- DNS changes (SPF through Cloudflare, four-eyes)
+  function loadDns(){return req('GET','/dns-fix').then(function(d){DNSF=d;drawDns();},function(e){DNSF=null;$('dnsfix').innerHTML='<div class="empty">'+esc(e.status===404?'Not installed on the server yet - run the update.':why(e))+'</div>';});}
+  function drawDns(){var d=DNSF,me=Z.user&&Z.user(),admin=Z.can('admin'),op=Z.can('operator'),h='';
+    h+='<div class="small" style="margin-bottom:8px">'+(d.connected?'<span style="color:#3fb950">● Cloudflare connected</span> <span class="muted">by '+esc(d.set_by||'')+' '+esc(String(d.set_at||'').slice(0,10))+'</span>':'<span style="color:#d29922">● Cloudflare not connected</span> <span class="muted">- SPF fixes can be proposed once an administrator connects it. Create the token in Cloudflare → My Profile → API Tokens → "Edit zone DNS", limited to the mail domains.</span>')+'</div>';
+    if(admin)h+='<form id="cftok" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><input name="token" type="password" autocomplete="off" placeholder="'+(d.connected?'Replace the Cloudflare API token':'Cloudflare API token (Edit zone DNS)')+'" style="min-width:320px;flex:1" aria-label="Cloudflare API token"><button type="submit">'+(d.connected?'Replace token':'Connect')+'</button>'+(d.connected?'<button type="button" id="cfclr">Disconnect</button>':'')+'<span class="muted small" id="cfmsg"></span></form>';
+    var L=d.changes||[];
+    h+=L.length?'<div class="tw"><table><thead><tr><th>Change</th><th>Domain</th><th>Before → after</th><th>Status</th><th></th></tr></thead><tbody>'+L.map(function(c){var col=c.status==='applied'?'#3fb950':c.status==='pending'?'#d29922':c.status==='rejected'||c.status==='stale'||c.status==='unverified'?'#f85149':'#8b949e';
+      var act='';if(c.status==='pending'&&admin&&c.requested_by!==me)act='<button type="button" data-dns="approve" data-id="'+esc(c.id)+'">Approve &amp; apply</button> <button type="button" data-dns="reject" data-id="'+esc(c.id)+'">Reject</button>';
+      else if(c.status==='pending')act='<span class="muted small">waiting for an administrator other than '+esc(c.requested_by)+'</span>';else if(c.status==='applied'&&op)act='<button type="button" data-dns="undo" data-id="'+esc(c.id)+'">Undo…</button>';
+      return '<tr data-dnsrow="'+esc(c.id)+'"><td><b>'+esc(c.id)+'</b><div class="muted small">'+esc(c.reason)+'<br>by '+esc(c.requested_by)+(c.approved_by?' · approved by '+esc(c.approved_by):'')+'</div></td><td>'+esc(c.domain)+'</td><td class="mono small"><div style="color:#f85149">− '+esc(c.before)+'</div><div style="color:#3fb950">+ '+esc(c.after)+'</div></td><td><b style="color:'+col+'">'+esc(c.status)+'</b>'+(c.status==='stale'?'<div class="muted small">the record changed before approval - nothing written</div>':c.status==='unverified'?'<div class="muted small">written, but the read-back differs - check Cloudflare</div>':'')+'</td><td>'+act+'<div class="muted small" data-dnsmsg="'+esc(c.id)+'"></div></td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No DNS change proposed yet. Click an outbound IP box that is not in SPF to propose one.</div>';
+    $('dnsfix').innerHTML=h;}
+  $('dnsfix').addEventListener('submit',function(ev){if(ev.target.id!=='cftok')return;ev.preventDefault();var t=ev.target.token.value.trim();if(!t)return;$('cfmsg').textContent='Checking the token with Cloudflare…';
+    req('POST','/dns-fix/token',{token:t}).then(function(){loadDns();},function(e){$('cfmsg').textContent=refusal(e);});});
+  $('dnsfix').addEventListener('click',function(ev){var b=ev.target.closest('[data-dns],#cfclr');if(!b)return;
+    if(b.id==='cfclr')return req('POST','/dns-fix/token',{clear:true}).then(loadDns,function(e){$('cfmsg').textContent=refusal(e);});
+    var id=b.dataset.id,k=b.dataset.dns,msg=document.querySelector('[data-dnsmsg="'+id+'"]'),body={};
+    if(k==='reject'||k==='undo'){var r=window.prompt(k==='reject'?'Why is this change rejected?':'Why undo this change?','');if(!r)return;body.reason=r;}
+    b.disabled=true;if(msg)msg.textContent=k==='approve'?'Writing through Cloudflare…':'Saving…';
+    req('POST','/dns-fix/'+encodeURIComponent(id)+'/'+k,body).then(function(){loadDns();if(k==='approve')req('POST','/mail-reputation/check',{}).then(load,function(){/* the check runs on its schedule as well */});},function(e){b.disabled=false;if(msg)msg.textContent=refusal(e);});});
+  function loadWarn(){return req('GET','/mail-route/alerts').then(warnings,function(e){$('warn').innerHTML='<div class="empty">'+esc(why(e))+'</div>';});}
+  $('evalnow').addEventListener('click',function(){var b=$('evalnow');b.disabled=true;req('POST','/mail-route/alerts/check',{}).then(warnings,function(e){$('warnst').textContent=e.status===403?'Evaluate now needs the operator role.':e.message;}).then(function(){b.disabled=false;});});
+  // ---- recipients (SIEM)
+  function loadRcpt(){return Z.req('GET','/mail/notify').then(function(n){$('rcpt').value=(n.recipients||[]).join(', ');$('rcptst').textContent=(n.recipients&&n.recipients.length?n.recipients.length+' recipient(s)':'No recipient yet - early warnings are shown here but not e-mailed')+(n.problems&&n.problems.length?' · mail relay: '+n.problems.join('; '):'')+(n.recent&&n.recent[0]?' · last mail '+Z.dt(n.recent[0].at)+' '+n.recent[0].status:'');},function(e){$('rcptst').textContent=e.status===403?'The recipient list is visible to operators and administrators.':e.status===404?'Mail team alerts are not installed on the SIEM yet - run the update.':e.message;});}
+  $('rcptf').addEventListener('submit',function(ev){ev.preventDefault();var l=$('rcpt').value.split(/[,;\s]+/).map(function(x){return x.trim();}).filter(Boolean);
+    Z.req('POST','/mail/notify',{recipients:l}).then(function(){loadRcpt();},function(e){$('rcptst').textContent=e.status===403?'Only an administrator sets the recipients.':e.message;});});
+  $('rcpttest').addEventListener('click',function(){Z.req('POST','/mail/notify/test',{}).then(function(r){$('rcptst').textContent='Test sent to '+r.recipients+' recipient(s).';},function(e){$('rcptst').textContent=e.status===403?'Only an administrator sends a test.':e.message;});});
+  // ---- the email gateway: Libraesva ESG (IT Asset Management /esg, read-only API). Not connected = said so, never "fine".
+  var ESG=null,ESGR={};
+  function GWT(){return ESG&&ESG.configured?'Libraesva ESG':'Email gateway';}
+  // the Libraesva API answers (its last test passed): the gateway is connected even when its mail log does not reach the SIEM yet
+  function GWAPI(){return !!(ESG&&ESG.configured&&ESG.last_test&&ESG.last_test.ok);}
+  function GWI(){if(!ESG)return '';if(ESG.err)return ' Libraesva API: '+ESG.err;if(!ESG.configured)return ' Libraesva ESG API not connected - configure it in Connections & Setup.';var t=ESG.last_test;return ' Libraesva ESG '+ESG.base_url+': '+(t?(t.ok?'API connected, tested '+Z.dt(t.at):'API test FAILED - '+(t.message||t.error||'')):'API not tested yet')+'.';}
+  function esgRows(r,max){var rows=(r&&r.rows)||[];if(!rows.length)return '<div class="muted small">No rows returned.</div>';var keys=[];rows.slice(0,20).forEach(function(o){Object.keys(o||{}).forEach(function(k){if(keys.indexOf(k)<0&&keys.length<6&&(o[k]==null||typeof o[k]!=='object'))keys.push(k);});});
+    return '<div class="tw"><table><thead><tr>'+keys.map(function(k){return '<th>'+esc(k)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.slice(0,max).map(function(o){return '<tr>'+keys.map(function(k){return '<td class="small">'+esc(o[k]==null?'':String(o[k]).slice(0,120))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>'+(r.total>max?'<div class="muted small">'+esc(r.total)+' rows in all - see the Libraesva page.</div>':'');}
+  function drawEsg(){var el=$('esg');if(!ESG){el.innerHTML='<div class="empty">Loading…</div>';return;}
+    if(ESG.err){el.innerHTML='<div class="empty">'+esc(ESG.err)+'</div>';return;}
+    if(!ESG.configured){el.innerHTML='<div class="empty">The Libraesva ESG API is not connected. An administrator adds it in <b>Connections &amp; Setup → Libraesva Email Security Gateway</b> (address, a read-only ESG API user, the ESG user it acts as). The gateway\'s mail counts on the map come from its syslog in the SIEM, which works without the API.</div>';return;}
+    var t=ESG.last_test,map=ESG.endpoints||{},mapped=Object.keys(map).filter(function(k){return map[k];});
+    var h='<div class="small">'+Z.pill(t?(t.ok?'connected':'test failed'):'not tested',t?(t.ok?'ok':'bad'):'warn')+' <b>'+esc(ESG.base_url)+'</b> · API user '+esc(ESG.username||'?')+(ESG.switch_user?' acting as '+esc(ESG.switch_user):' · <span style="color:var(--warn)">no ESG user to act as - reads will be refused</span>')+(t?' · tested '+esc(Z.dt(t.at))+(t.ok?'':' - '+esc(t.message||t.error||'')):'')+'</div>';
+    h+='<div class="muted small" style="margin-top:4px">'+esc((ESG.catalogue||[]).length+' endpoints in the appliance catalogue · mapped: '+(mapped.join(', ')||'none'))+(mapped.length<2?' - map Status and Queue on the Libraesva page to see them here.':'')+'</div>';
+    ['status','queue'].forEach(function(k){if(!map[k])return;var r=ESGR[k];h+='<h3 style="font-size:13px;margin:10px 0 4px">'+(k==='status'?'Appliance status':'Mail queue')+'</h3>'+(!r?'<div class="muted small">Reading…</div>':r.err?'<div class="muted small">'+esc(r.err)+'</div>':esgRows(r,k==='status'?3:8));});
+    el.innerHTML=h;}
+  function loadEsg(){return req('GET','/esg').then(function(d){ESG=d;ESGR={};drawEsg();if(R){try{draw(R);}catch(e){/* the map keeps its last drawing */}}['status','queue'].forEach(function(k){if(d.configured&&d.endpoints&&d.endpoints[k])req('GET','/esg/read/'+k).then(function(r){ESGR[k]=r;drawEsg();},function(e){ESGR[k]={err:e.status===409?'not mapped yet':e.message};drawEsg();});});},
+    function(e){ESG={err:e.status===404?'The Libraesva module is not installed on the server yet - run the update.':e.status===403?'Reading the gateway connection needs a signed-in role.':e.message};drawEsg();});}
+  $('esgtest').addEventListener('click',function(){var b=$('esgtest');b.disabled=true;$('esgmsg').textContent='Testing…';req('POST','/esg/diagnose',{}).then(function(r){var st=(r&&r.steps)||[],f=st.filter(function(x){return x.status==='fail';})[0];$('esgmsg').textContent=f?'Stopped at "'+f.step+'": '+f.detail+(f.fix?' - Fix: '+f.fix:''):'All '+st.length+' checks passed.';ESG=null;loadEsg().then(load);},function(e){$('esgmsg').textContent=e.status===403?'Testing needs the operator role.':e.status===409?'Not configured yet - add it in Connections & Setup.':e.message;}).then(function(){b.disabled=false;});});
+  function why(e){return e.status===404?'The Email Route Map is not installed on the server yet - run the update.':e.message;}
+
+  // ---- troubleshooter (engine/mail-doctor.js): every step with its status, evidence, fix and the actions a person may take
+  var DIC={ok:'✓',fixed:'✔',warn:'!',fail:'✗',info:'i'}, DST={ok:'working',fixed:'fixed by the troubleshooter',warn:'warning',fail:'failing',info:'note'};
+  function drawDoc(r){var el=$('docout');if(!r){return;}
+    var head='<div class="small" style="margin-bottom:8px"><b>'+(r.ok?'No failure left on the path.':esc(r.counts.fail)+' failing step(s)')+'</b>'+(r.counts.fixed?' · '+esc(r.counts.fixed)+' fixed by re-checking':'')+(r.counts.warn?' · '+esc(r.counts.warn)+' warning(s)':'')+' <span class="muted">· '+(r.auto?'automatic run':'run by '+esc(r.by))+' '+esc(Z.dt(r.at))+'</span></div>';
+    el.innerHTML=head+r.steps.map(function(x){return '<div class="dstep '+esc(x.status)+'"><span class="ic">'+esc(DIC[x.status]||'·')+'</span><div style="flex:1"><b>'+esc(x.title)+'</b> <span class="muted small">'+esc(DST[x.status]||x.status)+'</span><div class="small">'+esc(x.detail)+'</div>'
+      +((x.evidence||[]).length?'<ul class="ev">'+x.evidence.map(function(v){return '<li>'+esc(v)+'</li>';}).join('')+'</ul>':'')+(x.fix?'<div class="fx"><b>What to do:</b> '+esc(x.fix)+'</div>':'')
+      +(x.actions||[]).map(function(a){return '<button type="button" data-dact="'+esc(a.action)+'"'+(a.ip?' data-ip="'+esc(a.ip)+'"':'')+' title="needs the '+esc(a.role)+' role">'+esc(a.label)+'</button>';}).join('')+'</div></div>';}).join('')
+      +'<div class="muted small">'+esc(r.note)+'</div>';}
+  function runDoc(){var b=$('doc');b.disabled=true;$('docout').innerHTML='<div class="empty">Troubleshooting - asking public DNS and this server, re-checking, following the path…</div>';
+    req('POST','/mail-route/troubleshoot',{siem:{exchange:(LSIEM&&LSIEM.exchange)||null}}).then(function(r){drawDoc(r);load();},function(e){$('docout').innerHTML='<div class="empty">'+esc(e.status===403?'Troubleshooting needs the operator role.':e.status===404?'The troubleshooter is not installed yet: run the update (update-platform.ps1).':e.message)+'</div>';}).then(function(){b.disabled=false;});}
+  $('doc').addEventListener('click',runDoc);
+  $('docout').addEventListener('click',function(ev){var b=ev.target.closest('[data-dact]');if(!b)return;var act=b.getAttribute('data-dact'),body={action:act};
+    if(act==='add-domain'){var d=window.prompt(('Mail domain to add (e.g. ' + ZYB_ORG.domain + ')'));if(!d)return;body.domain=d.trim();}
+    if(b.getAttribute('data-ip'))body.ip=b.getAttribute('data-ip');b.disabled=true;
+    req('POST','/mail-route/troubleshoot/action',body).then(function(r){drawDoc(r);load();},function(e){b.disabled=false;window.alert(e.status===403?(e.message||'Not allowed for your role.'):e.message);});});
+  req('GET','/mail-route/troubleshoot').then(function(r){if(r&&r.last)drawDoc(r.last);},function(){/* no troubleshooter yet: the card keeps its "not run yet" text */});
+  var LSIEM=null;
+  function load(){loadWarn();loadDns();return Promise.all([siem(),loadExs(),ESG?null:loadEsg()]).then(function(r){LSIEM=r[0];return req('POST','/mail-route',{siem:r[0]});}).then(draw).catch(function(e){$('svg').innerHTML='<div class="empty">'+esc(why(e))+'</div>';});}
+  $('svg').addEventListener('click',function(ev){var g=ev.target.closest('[data-node]');if(g)detail(g.getAttribute('data-node'));});
+  $('svg').addEventListener('keydown',function(ev){if(ev.key!=='Enter'&&ev.key!==' ')return;var g=ev.target.closest('[data-node]');if(g){ev.preventDefault();detail(g.getAttribute('data-node'));}});
+  $('chk').addEventListener('click',function(){var b=$('chk');b.disabled=true;req('POST','/mail-reputation/check',{}).then(load,function(e){$('banner').innerHTML='<div class="rtb down">'+esc(e.status===403?'Check now needs the operator role.':why(e))+'</div>';}).then(function(){b.disabled=false;});});
+  $('refresh').addEventListener('click',load);$('per').addEventListener('change',load);
+  load();loadRcpt();var t=setInterval(load,300000);window.addEventListener('pagehide',function(){clearInterval(t);});
+})();
+</script></body></html>

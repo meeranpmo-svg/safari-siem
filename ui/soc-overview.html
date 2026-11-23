@@ -1,0 +1,150 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Security Operations Overview</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-secops.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-copilot.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+</head><body><main class="so">
+<div class="so-head"><div><div class="eb">Security Operations · Overview</div><h1>Security Operations Centre</h1></div><span class="sp"></span>
+ <span id="srcs"></span><span class="so-chip" id="up">loading…</span><button type="button" class="so-btn" id="refresh" aria-label="Refresh">⟳ Refresh</button><a class="so-btn pri" href="soc-alerts.html">Open the Alert Queue →</a></div>
+<div id="err"></div>
+<div class="so-kpis" id="kpis"></div>
+<div class="so-grid">
+ <section class="so-p w8"><h2>Alert volume <span class="c">last 14 days · raised vs how they were closed</span></h2><div class="so-ch tall"><canvas id="c-vol"></canvas></div></section>
+ <section class="so-p"><h2>Open alerts by priority <span class="c">explainable score</span><a href="soc-alerts.html">queue →</a></h2><div class="so-ch tall"><canvas id="c-band"></canvas></div></section>
+</div>
+<div id="ml" hidden>
+<div class="so-grid">
+ <section class="so-p w8"><h2>Alert volume forecast <span class="c" id="fcn">next 7 days · weekday pattern x recent level</span></h2><div id="fc"></div></section>
+ <section class="so-p"><h2>AI shift brief <span class="c">SOC Copilot · read-only</span></h2><div id="brief"></div></section>
+</div>
+<div class="so-grid">
+ <section class="so-p w6"><h2>Rules behaving differently <span class="c">last 24 h against their own 14 days</span></h2><ul class="so-list" id="shift"></ul></section>
+ <section class="so-p w6"><h2>Most at risk now <span class="c">summed priority of open alerts, across rules</span></h2><ul class="so-list" id="risk"></ul></section>
+</div>
+<div class="so-grid">
+ <section class="so-p w6"><h2>Detection efficacy <span class="c">30 days of closures · smoothed precision</span></h2><div id="eff"></div></section>
+ <section class="so-p w6"><h2>SLA attainment <span class="c">per week · case SLA policy</span></h2><div id="slaw"></div></section>
+</div>
+</div>
+<div class="so-grid">
+ <section class="so-p"><h2>Act now <span class="c" id="anc"></span><a href="soc-alerts.html?label=act-now">all →</a></h2><ul class="so-list" id="act"></ul></section>
+ <section class="so-p"><h2>Open by severity</h2><div class="so-ch short"><canvas id="c-sev"></canvas></div><p class="so-note" id="mt"></p></section>
+ <section class="so-p"><h2>ATT&amp;CK tactics <span class="c">alerts in 7 days</span></h2><div class="so-ch short"><canvas id="c-tac"></canvas></div></section>
+</div>
+<div class="so-grid">
+ <section class="so-p"><h2>Top detection rules <span class="c">7 days</span></h2><ul class="so-list" id="rules"></ul></section>
+ <section class="so-p"><h2>Most alerted entities <span class="c">7 days</span></h2><ul class="so-list" id="ents"></ul></section>
+ <section class="so-p"><h2>Alert sources <span class="c">7 days</span></h2><div class="so-ch short"><canvas id="c-src"></canvas></div></section>
+</div>
+<div class="so-grid">
+ <section class="so-p"><h2>Correlated incidents (XDR)<a href="soc-xdr.html">XDR →</a></h2><ul class="so-list" id="xdr"></ul></section>
+ <section class="so-p"><h2>Riskiest behaviour (UEBA · machine learning)<a href="soc-ueba.html">UEBA →</a></h2><ul class="so-list" id="ueba"></ul></section>
+ <section class="so-p"><h2>AI SOC analyst <span class="c" id="ais"></span></h2><div id="ai"></div></section>
+</div>
+<div class="so-grid" id="wfgrid" hidden>
+ <section class="so-p w12"><h2>Business requests to Security engineering <span class="c">Workflow Automation - what the CISO office, risk, audit and GRC asked the security team for</span><a href="workflow-automation.html#tab=queue">team queue →</a></h2><div id="wf"></div></section>
+</div>
+<div class="so-grid">
+ <section class="so-p w12"><h2>Noisy rules the platform has learned <span class="c">80%+ of closures were false positive or benign · candidates for tuning</span></h2><ul class="so-list" id="noisy"></ul>
+  <p class="so-note">Learned from how people closed alerts in the last 30 days; a rule with fewer than 3 closures is not judged. Priority scores, clusters and noise are computed on the SIEM from its own history - no data leaves the platform.</p></section>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var S=window.zybSoc, C=window.zybCharts, esc=S.esc, $=function(i){return document.getElementById(i);};
+  var BAND=[['act-now','Act now','crit'],['investigate','Investigate','warn'],['review','Review','acc'],['low','Low','mute'],['likely-noise','Likely noise','purple']];
+  var SEVN=['Info','Low','Medium','High','Critical'];
+  function mins(m){return m==null?'—':m<60?m+' min':m<1440?Math.round(m/6)/10+' h':Math.round(m/144)/10+' d';}
+  function kpi(l,v,s,cls,href){return '<button type="button" class="so-kpi '+(cls||'')+'" data-href="'+esc(href||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function li(items,fn,empty){return items&&items.length?items.map(fn).join(''):'<li class="so-empty">'+esc(empty)+'</li>';}
+  function chip(on,l,t){return '<span class="so-chip '+(on?'on':'off')+'" title="'+esc(t||'')+'"><i></i>'+esc(l)+'</span> ';}
+  // Workflow Automation (GET /api/itam/workflow/attention): the security team's open / overdue / on-time record and what needs this person
+  function loadWf(){var w=new XMLHttpRequest();w.open('GET','/api/itam/workflow/attention');w.withCredentials=true;w.zybQuiet=true;w.timeout=60000;
+    w.onload=function(){var j=null;try{j=JSON.parse(w.responseText);}catch(e){j=null;/* not JSON: said below */}
+      if(w.status===404){$('wfgrid').hidden=true;return;}$('wfgrid').hidden=false;
+      if(w.status!==200||!j||!j.summary){$('wf').innerHTML='<p class="so-note">Workflow Automation could not be read'+(j&&j.error?': '+esc(j.error):' (HTTP '+w.status+')')+'.</p>';return;}
+      var s=j.summary,sec=(s.teams||[]).filter(function(t){return t.team==='security';})[0]||{open:0,overdue:0,n:0,on_time:0};
+      var P=(j.priorities||[]).map(function(p){return {p:p,pts:p.why.reduce(function(n,q){return n+q[1];},0)};}).sort(function(a,b){return b.pts-a.pts;});
+      var h='<div style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 10px">'+kpi('Security team · open',sec.open,'requests with Security engineering','','workflow-automation.html#tab=queue')+kpi('Security team · overdue',sec.overdue,'past their due date',sec.overdue?'crit':'','workflow-automation.html#tab=queue')
+        +kpi('Security team · on time',sec.n?Math.round(sec.on_time/sec.n*100)+'%':'—',sec.n?sec.on_time+' of '+sec.n+' fulfilled':'no history yet','','workflow-automation.html')+kpi('Waiting for your approval',s.approvals,'changes and exceptions',s.approvals?'warn':'','workflow-automation.html#tab=queue')
+        +kpi('Overdue across IT',s.all_overdue,'every IT team',s.all_overdue?'warn':'','workflow-automation.html')+'</div>';
+      h+='<ul class="so-list">'+li(P.slice(0,8),function(x){return '<li><span class="so-chip '+(x.pts>=45?'on':'off')+'"><i></i>'+esc(x.pts)+'</span><a class="grow" href="'+esc(x.p.page)+'" title="'+esc(x.p.why.map(function(q){return q[0]+' +'+q[1];}).join(', '))+'"><b>'+esc(x.p.ref)+'</b> '+esc(x.p.text)+'</a><span class="n">'+esc(x.p.kind)+'</span></li>';},'Nothing waiting for you in Workflow Automation'+(s.queue_open||s.approvals?'':' - list the SOC engineers under Security engineering in its Settings to see the team queue')+'.')+'</ul>';
+      $('wf').innerHTML=h;};
+    w.onerror=w.ontimeout=function(){$('wfgrid').hidden=false;$('wf').innerHTML='<p class="so-note">Workflow Automation did not answer.</p>';};w.send();}
+
+  // ---- AI / ML (GET /soc/overview/insights, analysts and above: it names people and hosts)
+  function fcSvg(f){var ser=f.series,fc=f.forecast||[],all=ser.map(function(x){return x.raised;}).concat(fc.map(function(x){return x.high;})),mx=Math.max.apply(null,[1].concat(all)),n=ser.length+fc.length,W=720,H=170,bw=W/n,y=function(v){return H-16-v/mx*(H-30);};
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" role="img" aria-label="'+esc('Alerts raised per day for '+ser.length+' days'+(fc.length?' and the forecast for 7 days: '+fc.map(function(x){return x.day+' '+x.alerts;}).join(', '):''))+'">'
+      +ser.map(function(x,i){return '<rect x="'+(i*bw+1)+'" y="'+y(x.raised)+'" width="'+(bw-2)+'" height="'+(H-16-y(x.raised))+'" fill="var(--so-acc)" opacity=".75"><title>'+esc(x.day+': '+x.raised)+'</title></rect>';}).join('')
+      +fc.map(function(x,i){var X=(ser.length+i)*bw;return '<rect x="'+(X+1)+'" y="'+y(x.high)+'" width="'+(bw-2)+'" height="'+Math.max(1,y(x.low)-y(x.high))+'" fill="var(--so-purple)" opacity=".18"></rect><rect x="'+(X+1)+'" y="'+y(x.alerts)+'" width="'+(bw-2)+'" height="'+(H-16-y(x.alerts))+'" fill="none" stroke="var(--so-purple)" stroke-dasharray="3 2"><title>'+esc(x.day+': about '+x.alerts+' ('+x.low+'-'+x.high+')')+'</title></rect>';}).join('')
+      +'<text x="0" y="'+(H-2)+'" font-size="10" fill="var(--so-mute)">'+esc(ser[0].day)+'</text><text x="'+W+'" y="'+(H-2)+'" font-size="10" fill="var(--so-mute)" text-anchor="end">'+esc(fc.length?fc[fc.length-1].day+' (forecast)':ser[ser.length-1].day)+'</text></svg>';}
+  var SK={silent:['Silent','crit'],'new':['New','warn'],surging:['Surging','warn']};
+  function drawMl(I){$('ml').hidden=false;
+    $('fc').innerHTML=fcSvg(I.forecast)+'<p class="so-note">'+esc(I.forecast.why)+'</p>';
+    $('shift').innerHTML=I.shifts.judged?li(I.shifts.items,function(x){return '<li class="cl" tabindex="0" data-q="'+esc(x.rule_name)+'"><span class="so-tag '+SK[x.kind][1]+'">'+esc(SK[x.kind][0])+'</span><span class="grow" style="min-width:0;overflow-wrap:anywhere" title="'+esc(x.why)+'"><b>'+esc(x.rule_name)+'</b><div class="so-why" style="white-space:normal">'+esc(x.why)+'</div></span><span class="n">'+esc(x.last24)+'</span></li>';},'Every rule is firing within its usual range.'):'<li class="so-empty">'+esc(I.shifts.why)+'</li>';
+    var mr=Math.max.apply(null,[1].concat(I.entities.map(function(x){return x.risk;})));
+    $('risk').innerHTML=li(I.entities,function(x){return '<li class="cl" tabindex="0" data-q="'+esc(x.entity)+'"><span class="grow" style="min-width:0;overflow-wrap:anywhere" title="'+esc(x.why)+'"><span class="so-tag ent">'+esc(x.entity)+'</span> <span class="so-why">'+esc(x.alerts)+' alert(s) · '+esc(x.rules.join(', '))+'</span>'+(x.tactics.length?'<div class="so-why">'+x.tactics.map(esc).join(' → ')+'</div>':'')+'<div style="height:6px;border-radius:3px;background:var(--so-line);margin-top:3px"><div style="height:6px;border-radius:3px;width:'+(100*x.risk/mr).toFixed(1)+'%;background:'+(x.max_priority>=70?'var(--so-crit)':x.max_priority>=50?'var(--so-warn)':'var(--so-acc)')+'"></div></div></span><span class="so-score '+(x.max_priority>=70?'act-now':x.max_priority>=50?'investigate':'review')+'">'+esc(x.max_priority)+'</span></li>';},'No open alert names a user, host or IP.');
+    var E=I.efficacy;$('eff').innerHTML=E.rules.length?'<div class="so-tw" style="overflow-x:auto"><table class="so-t"><thead><tr><th>Rule</th><th>Precision</th><th>Closures</th><th>Median close</th><th>Open</th></tr></thead><tbody>'+E.rules.slice(0,10).map(function(r){return '<tr title="'+esc(r.why)+'"><td><b>'+esc(r.rule_name)+'</b><div class="so-why">'+esc(r.grade)+'</div></td><td><span class="so-tag '+(r.grade==='high value'?'ok':r.grade==='noise'?'crit':'warn')+'">'+esc(r.precision)+'%</span></td><td>'+esc(r.closures)+'</td><td>'+esc(mins(r.median_close_min))+'</td><td>'+esc(r.open)+'</td></tr>';}).join('')+'</tbody></table></div><p class="so-note">Precision = share of closures that were true positive, smoothed so 1 of 1 does not read as 100%. High value at 60%+, noise at 20% or less.</p>':'<p class="so-empty">'+esc(E.why)+'</p>';
+    var W=I.sla.weeks,bar=function(v,c){return v==null?'<span class="so-why">not judged</span>':'<div style="display:flex;gap:6px;align-items:center"><div style="flex:1;height:8px;border-radius:4px;background:var(--so-line)"><div style="height:8px;border-radius:4px;width:'+v+'%;background:'+(v>=90?'var(--so-ok)':v>=70?'var(--so-warn)':'var(--so-crit)')+'"></div></div><b>'+esc(v)+'%</b></div>';};
+    $('slaw').innerHTML='<div class="so-tw" style="overflow-x:auto"><table class="so-t"><thead><tr><th>Week ending</th><th>Alerts</th><th>Acknowledged in time</th><th>Closed in time</th></tr></thead><tbody>'+W.map(function(w){return '<tr><td>'+esc(w.week_ending)+'</td><td>'+esc(w.alerts)+'</td><td>'+bar(w.ack_pct)+'</td><td>'+bar(w.resolve_pct)+'</td></tr>';}).join('')+'</tbody></table></div><p class="so-note">'+esc(I.sla.why)+'</p>';
+    brief();}
+  var BTRY=0;
+  function brief(){var ok=window.zybCopilot&&window.zybCopilot.ready&&window.zybCopilot.ready();if(!ok&&BTRY<8){BTRY++;setTimeout(brief,1000);}
+    $('brief').innerHTML='<p class="so-why">The SOC Copilot reads the queue, the incidents and the measures above with read-only tools and writes a short brief for the shift: what needs a person first, what changed, what is quiet that should not be. It proposes; people decide.</p>'
+      +(ok?'<button type="button" class="so-btn pri" id="briefme">✦ Brief me for this shift</button>':'<p class="so-note" id="briefna">The SOC Copilot is not available'+(window.zybCopilot?' (no AI key or AI switched off)':'')+' - the figures on this page do not need it.</p>');}
+  function loadMl(){if(!S.can('analyst'))return;S.req('GET','/soc/overview/insights').then(drawMl,function(e){$('ml').hidden=false;$('fc').innerHTML=S.errHtml(e,'the overview insights');});}
+  function load(){loadWf();loadMl();
+    return S.req('GET','/soc/overview').then(function(o){$('err').innerHTML='';draw(o);}).catch(function(e){$('err').innerHTML=S.errHtml(e,'the Security Operations overview');$('up').textContent='not loaded';});
+  }
+  function draw(o){
+    var ai=o.ai||{},st=ai.status||{};
+    $('up').textContent='updated '+S.dt(o.generated_at);
+    $('srcs').innerHTML=chip(o.sources_connected.xdr,'XDR')+chip(o.sources_connected.ueba,'UEBA')+chip(o.sources_connected.intel,'Threat intel')+chip(st.enabled,'AI analyst',st.enabled?st.model:st.reason);
+    var op=o.open,xs=o.xdr&&o.xdr.summary,ut=o.ueba&&o.ueba.tiers;
+    $('kpis').innerHTML=kpi('Open alerts',S.n(op.total),S.n(op.unassigned)+' unassigned','','soc-alerts.html')
+      +kpi('Act now',S.n(op.bands['act-now']),'priority 70+',op.bands['act-now']?'crit':'ok','soc-alerts.html?label=act-now')
+      +kpi('Investigate',S.n(op.bands.investigate),'priority 45-69',op.bands.investigate?'warn':'','soc-alerts.html?label=investigate')
+      +kpi('New in 24 h',S.n(op.new_24h),'raised by detection','','soc-alerts.html?sort=-ts')
+      +kpi('Time to acknowledge',mins(o.mtta_min),'median, alerts raised in 7 days','','')
+      +kpi('Time to resolve',mins(o.mttr_min),'median, closed in 7 days','','')
+      +kpi('XDR incidents open',xs?S.n(xs.open):'—',xs?S.n(xs.cross_domain)+' cross-domain':'XDR not running',xs&&xs.high?'crit':'','soc-xdr.html')
+      +kpi('Risky identities',ut?S.n((ut.critical||0)+(ut.high||0)):'—',ut?'critical + high in UEBA':'UEBA not running',ut&&ut.critical?'warn':'purple','soc-ueba.html')
+      +kpi('AI agreement',ai.agreement_pct==null?'—':ai.agreement_pct+'%',ai.agreement_pct==null?'shown after 3 closed triages':'of '+ai.closed_triaged+' triaged alerts closed the same way','purple','soc-alerts.html?triage=accepted');
+    var lab=o.series.map(function(r){return r.day.slice(5);});
+    C.area($('c-vol'),lab,[{label:'Raised',data:o.series.map(function(r){return r.raised;}),color:'acc'},
+      {label:'Closed: true positive',type:'bar',stack:'c',data:o.series.map(function(r){return r.tp;}),color:'crit'},
+      {label:'Closed: false positive',type:'bar',stack:'c',data:o.series.map(function(r){return r.fp;}),color:'mute'},
+      {label:'Closed: benign',type:'bar',stack:'c',data:o.series.map(function(r){return r.benign;}),color:'ok'}],{title:'Alerts raised and closed per day'});
+    var bs=BAND.filter(function(b){return op.bands[b[0]];});
+    C.ring($('c-band'),bs.length?bs.map(function(b){return b[1];}):['No open alerts'],bs.length?bs.map(function(b){return op.bands[b[0]];}):[1],bs.length?bs.map(function(b){return b[2];}):['line'],{v:S.n(op.total),l:'open'},
+      {title:'Open alerts by priority band',onClick:function(i){if(bs[i])location.href='soc-alerts.html?label='+bs[i][0];}});
+    $('anc').textContent=o.act_now.length?'('+o.act_now.length+' shown)':'';
+    $('act').innerHTML=li(o.act_now,function(a){return '<li class="cl" data-alert="'+esc(a.id)+'" tabindex="0"><span class="so-score act-now">'+esc(a.priority)+'</span><span class="grow"><b>'+esc(a.rule_name)+'</b><br><span class="so-why">'+esc(a.entities.join(', ')||a.summary)+'</span></span></li>';},'Nothing at priority 70 or above.');
+    C.bars($('c-sev'),SEVN.slice().reverse(),[{label:'Open',data:op.by_severity.slice().reverse(),colors:['crit','crit','warn','acc','mute']}],{horizontal:true,title:'Open alerts by severity',onClick:function(i){location.href='soc-alerts.html?severity='+(4-i);}});
+    $('mt').textContent='Medians from the alert lifecycle; an alert never acknowledged is not counted.';
+    var tac=o.tactics.filter(function(t){return t.key;});
+    if(tac.length)C.bars($('c-tac'),tac.map(function(t){return t.key.replace(/-/g,' ');}),[{label:'Alerts',data:tac.map(function(t){return t.count;}),color:'purple'}],{horizontal:true,title:'Alerts by ATT&CK tactic'});
+    else C.empty($('c-tac'),'No alert carries an ATT&CK tactic in the last 7 days.');
+    var noisy=new Set((o.noisy_rules||[]).map(function(r){return r.rule_name;}));
+    $('rules').innerHTML=li(o.top_rules,function(r){return '<li class="cl" data-q="'+esc(r.key)+'" tabindex="0"><span class="grow">'+esc(r.key)+(noisy.has(r.key)?' <span class="so-tag warn">noisy</span>':'')+'</span><span class="n">'+S.n(r.count)+'</span></li>';},'No alert in 7 days.');
+    $('ents').innerHTML=li(o.top_entities,function(r){return '<li class="cl" data-q="'+esc(r.key)+'" tabindex="0"><span class="grow"><span class="so-tag ent">'+esc(r.key)+'</span></span><span class="n">'+S.n(r.count)+'</span></li>';},'No entity on alerts in 7 days.');
+    if(o.sources.length)C.ring($('c-src'),o.sources.map(function(s){return s.key;}),o.sources.map(function(s){return s.count;}),[],null,{title:'Alerts by source'});
+    else C.empty($('c-src'),'No alert in 7 days.');
+    $('xdr').innerHTML=o.xdr?li(o.xdr.top,function(i){return '<li><span class="so-score '+(i.score>=70?'act-now':i.score>=45?'investigate':'review')+'">'+esc(i.score)+'</span><span class="grow">'+esc(i.title)+'<br><span class="so-why">'+esc(i.alerts+' alerts · '+i.domains.join(', '))+'</span></span></li>';},'No correlated incident.'):'<li class="so-empty">XDR correlation is not running on the SIEM.</li>';
+    $('ueba').innerHTML=o.ueba?li(o.ueba.top,function(e){return '<li><span class="so-tag '+(e.tier==='critical'?'crit':e.tier==='high'?'warn':'')+'">'+esc(e.tier)+'</span><span class="grow">'+esc(e.name||e.id)+' <span class="so-why">'+esc(e.type)+'</span></span><span class="n">'+esc(e.score)+'</span></li>';},'No entity with an elevated behaviour score.'):'<li class="so-empty">UEBA is not running on the SIEM.</li>';
+    $('ais').textContent=st.enabled?st.model:'not available';
+    $('ai').innerHTML=(st.enabled?'':'<p class="so-err">'+esc(st.reason||'not available')+'</p>')
+      +'<ul class="so-list"><li><span class="grow">Alerts triaged by the AI</span><span class="n">'+S.n(ai.triaged)+'</span></li><li><span class="grow">Drafts waiting for a person</span><span class="n">'+S.n(ai.drafts)+'</span></li>'
+      +'<li><span class="grow">Accepted / rejected by analysts</span><span class="n">'+S.n(ai.accepted)+' / '+S.n(ai.rejected)+'</span></li><li><span class="grow">Auto-triage of new high alerts</span><span class="n">'+(ai.auto&&ai.auto.auto?'on (severity '+ai.auto.min_severity+'+, '+ai.auto.max_per_hour+'/h)':'off')+'</span></li></ul>'
+      +'<p class="so-note">The AI drafts; a person accepts or rejects. It never closes, assigns or contains - containment steps are approval requests a named approver decides.</p>';
+    $('noisy').innerHTML=li(o.noisy_rules,function(r){return '<li><span class="grow"><b>'+esc(r.rule_name)+'</b> <span class="so-why">'+esc(r.rule_id)+'</span></span><span class="n">'+esc(Math.round(r.noise*100))+'% of '+S.n(r.closed)+' closures · '+esc(r.per_day)+'/day</span></li>';},'No rule has been learned as noisy yet.');
+  }
+  document.addEventListener('click',function(ev){var x;
+    if((x=ev.target.closest('.so-kpi'))){var h=x.getAttribute('data-href').trim();if(h)location.href=h;return;}
+    if((x=ev.target.closest('[data-alert]'))){location.href='soc-alerts.html?id='+encodeURIComponent(x.getAttribute('data-alert'));return;}
+    if((x=ev.target.closest('[data-q]'))){location.href='soc-alerts.html?q='+encodeURIComponent(x.getAttribute('data-q'));return;}
+    if(ev.target.closest('#briefme')){if(!window.zybCopilot.ask('Brief me for this shift: what needs a person first in the open queue, which rules are new, surging or silent, which users or hosts are most at risk, and how we are doing on SLA. Cite the alert ids.'))S.toast('The SOC Copilot is busy or not available');return;}
+    if(ev.target.closest('#refresh'))load();
+  });
+  document.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&ev.target.matches&&ev.target.matches('li.cl'))ev.target.click();});
+  S.ready(load);
+  setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script></body></html>

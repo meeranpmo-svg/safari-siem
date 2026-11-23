@@ -1,0 +1,33 @@
+[
+  {
+    "id": "SENTRA-SOM-001", "name": "Repeated Somansa endpoint DLP violations on one host", "enabled": true, "severity": 3,
+    "mitre": ["T1048", "T1567"], "sama": ["3.3.8", "3.3.14", "3.3.15"], "tactic": "exfiltration", "author":"Sentra SOC", "version": 1,
+    "description": "5 or more Somansa (Privacy-i / Mail-i / Server-i) DLP incidents on the same endpoint within 1 hour - a user or host repeatedly tripping data-protection policy (complements SENTRA-DLP-003 which counts per user across all DLP vendors).",
+    "type": "threshold",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "dlp-incident" },
+                        { "field": "fields.dlp_vendor", "op": "eq", "value": "somansa" } ] },
+    "group_by": ["host"], "window_s": 3600, "count": 5, "suppress_s": 3600,
+    "fields_in_alert": ["host", "user", "fields.dlp_policy", "fields.dlp_channel", "fields.dlp_action", "fields.dlp_product"]
+  },
+  {
+    "id": "SENTRA-SOM-002", "name": "Mass USB / print / upload exfiltration (Somansa)", "enabled": true, "severity": 3,
+    "mitre": ["T1052", "T1567", "T1048"], "sama": ["3.3.14", "3.3.16", "3.3.17"], "tactic": "exfiltration", "author":"Sentra SOC", "version": 1,
+    "description": "10 or more DISTINCT files moved by one user over a removable / print / upload / cloud channel within 1 hour, flagged by Somansa endpoint DLP - bulk exfiltration to USB, printer or the web.",
+    "type": "distinct",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "dlp-incident" },
+                        { "field": "fields.dlp_vendor", "op": "eq", "value": "somansa" },
+                        { "field": "fields.dlp_channel", "op": "re", "value": "usb|removable|portable|print|upload|webmail|cloud|external|ftp|http|web|burn|cd|dvd" } ] },
+    "group_by": ["user", "fields.dlp_channel"], "distinct_field": "fields.dlp_file", "distinct_count": 10, "window_s": 3600, "suppress_s": 3600,
+    "fields_in_alert": ["user", "host", "fields.dlp_channel", "fields.dlp_file", "fields.dlp_policy", "fields.dlp_classification"]
+  },
+  {
+    "id": "SENTRA-SOM-003", "name": "Somansa DLP agent or protection disabled", "enabled": true, "severity": 3,
+    "mitre": ["T1685"], "sama": ["3.3.8", "3.3.14"], "tactic": "defense-impairment", "author":"Sentra SOC", "version": 1,
+    "description": "A Somansa DLP endpoint agent was stopped / uninstalled or its protection was disabled (normalised action agent-tamper with the dlp tag) - a user or attacker turning off data-protection enforcement on the endpoint.",
+    "type": "single",
+    "match": { "all": [ { "field": "action", "op": "eq", "value": "agent-tamper" },
+                        { "field": "tags", "op": "eq", "value": "dlp" } ] },
+    "group_by": ["host", "user"], "suppress_s": 3600,
+    "fields_in_alert": ["host", "user", "fields.dlp_vendor", "fields.dlp_product", "message"]
+  }
+]

@@ -1,0 +1,134 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>User Desktops</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{font-weight:400;color:var(--mute);font-size:12px}
+.br{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer}.t:hover{border-color:#4a5162}.t.on{border-color:#79b8ff;background:#16243a}.t .l{font-weight:600}.t .s{font-size:12px;color:var(--mute)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px;align-items:center}.chip{border-radius:16px;padding:4px 11px;font-size:12.5px}.chip.on{border-color:#79b8ff;background:#16243a}
+button,select,input,textarea{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}button.pri{background:#1f6feb;border-color:#1f6feb;color:#fff}button.sm{padding:3px 9px;font-size:12px}button:disabled{opacity:.5;cursor:default}
+select,input,textarea{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}textarea{width:100%;min-height:90px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #fff;outline-offset:1px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:7px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}.tw{overflow-x:auto}
+.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}.pill.info{background:rgba(121,184,255,.14);color:var(--info)}
+pre.cmd{background:#0b0c10;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font:12.5px Consolas,monospace;margin:4px 0;white-space:pre-wrap}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute);margin:0 0 8px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+.ai{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+</style></head><body><main>
+<div class="top"><div><div class="eb">User desktops · Endpoint Central · SAMA CSF 3.3.8 · NCA ECC 2-3</div><h1>User Desktops</h1></div><span class="sp"></span><span class="muted" id="up"></span>
+  <a href="desktop-patches.html"><button type="button">Patch Management →</button></a> <a href="desk-support.html"><button type="button">AI Desktop Support →</button></a></div>
+<p class="err" id="denied" hidden>The desktop list names the people who use each computer (PDPL) - desktop engineers (operator) and administrators see it. Branch counts are below.</p>
+<div class="card"><h2>Branches <span class="c">click a branch to filter; compliance = desktops with patch data and no critical patch missing</span></h2><div class="br" id="br"><div class="empty">Loading…</div></div></div>
+<div class="card" id="listc"><h2>Desktops <span class="c" id="cnt"></span></h2>
+  <div class="filters">
+    <select id="fb" aria-label="Branch"><option value="">All branches</option></select>
+    <button type="button" class="chip on" data-st="">All</button><button type="button" class="chip" data-st="offline">Agent offline</button><button type="button" class="chip" data-st="no_agent">No agent</button><button type="button" class="chip" data-st="critical">Critical patches missing</button><button type="button" class="chip" data-st="tickets">Open tickets</button>
+    <input type="search" id="q" placeholder="Desktop, user or IP" aria-label="Search">
+  </div>
+  <div class="tw" id="list"><div class="empty">Loading…</div></div>
+  <p class="note">Sources: the Endpoint Central computers ManageEngine syncs (servers left out), and desktops / laptops in the asset register with no Endpoint Central agent. Remote support is logged with the engineer, the reason and the ticket.</p></div>
+<div class="card" id="aic"><h2>AI Desktop Support Engineer <span class="c">triages ServiceDesk Plus tickets, watches desktop health, proposes patch installs for approval</span></h2><div class="ai" id="ai"><span class="muted">Loading…</span></div></div>
+<div class="card" id="rsc"><h2>My remote support sessions <span class="c">open sessions are closed with the outcome</span></h2><div class="tw" id="rs"><div class="empty">Loading…</div></div></div>
+<div class="card" id="setc" hidden><h2>Settings <span class="c">administrators</span></h2>
+  <label>Endpoint Central remote-control link (https, {resource_id} = the computer)<input id="s-ec" placeholder="https://endpointcentral:8383/webclient#/uems/tools/remote-control?resourceId={resource_id}"></label>
+  <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="s-msra"> offer Windows Remote Assistance (msra /offerra - the user accepts)</label>
+  <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="s-rdp"> offer Remote Desktop (mstsc)</label>
+  <label>Desktop engineers and their branches - one per line: <span class="mono">user.name: Branch A, Branch B</span><textarea id="s-eng"></textarea></label>
+  <button type="button" class="pri" id="s-save">Save settings</button> <span class="err" id="s-err"></span></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var PR=null, API='/api/itam', RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', ME='', D=null, F={b:'',st:'',q:''}, CUR=null, SET=null;
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,API+p);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){/* not JSON */}if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&(j.error||(j.errors&&j.errors.join('; '))))||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function when(t){if(!t)return '–';var d=new Date(t);return isNaN(d)?esc(String(t)):esc(d.toISOString().slice(0,16).replace('T',' '));}
+  var AG={live:['live','ok'],offline:['offline','bad'],unknown:['unknown',''],missing:['no agent','warn']};
+  function patchCell(p){if(p.critical==null&&!p.health)return '<span class="muted">–</span>';return (p.critical?'<span class="pill bad">'+p.critical+' critical</span> ':'')+(p.missing!=null?'<span class="muted">'+p.missing+' missing</span>':'')+(p.health==='highly vulnerable'&&!p.critical?' <span class="pill bad">highly vulnerable</span>':'');}
+
+  // the branch's printers (SIEM printer module, by site); the link opens Printers filtered on the branch
+  function prLine(br){if(!PR)return '';var x=PR[br.toLowerCase()];if(!x)return '';return '<div class="s">🖨 <a href="printers.html?branch='+encodeURIComponent(br)+'" style="color:var(--info)">'+x.n+' printer'+(x.n===1?'':'s')+'</a>'+(x.off?' · <span style="color:var(--bad)">'+x.off+' offline</span>':'')+(x.att?' · <span style="color:var(--warn)">'+x.att+' need attention</span>':'')+'</div>';}
+  function loadPrinters(){var x=new XMLHttpRequest();x.open('GET','/api/soc/printers');x.withCredentials=true;x.zybQuiet=true;x.onload=function(){if(x.status!==200)return;try{var by={};(JSON.parse(x.responseText).items||[]).forEach(function(p){var b=((p.site||'').trim()||'Unassigned').toLowerCase();var y=by[b]||(by[b]={n:0,off:0,att:0});y.n++;if(p.status==='offline')y.off++;if(p.status==='warning'||p.status==='error')y.att++;});PR=by;if(D)drawBranches(D.branches||[]);}catch(e){/* printer list unreadable: cards without printers */}};x.onerror=function(){/* SIEM printer module not reachable: cards without printers */};x.send();}
+  function drawBranches(list){
+    $('br').innerHTML=list.length?list.map(function(b){var on=F.b===b.branch;return '<button type="button" class="t'+(on?' on':'')+'" data-br="'+esc(b.branch)+'"><div class="l">'+esc(b.branch)+'</div><div class="s">'+b.desktops+' desktops · '+(b.compliance_pct==null?'patch data not reported':b.compliance_pct+'% compliant')+'</div><div class="s">'+(b.agent_offline?'<span class="pill bad">'+b.agent_offline+' agent offline</span> ':'')+(b.agent_missing?'<span class="pill warn">'+b.agent_missing+' no agent</span> ':'')+(b.critical_missing?'<span class="pill bad">'+b.critical_missing+' critical patches</span>':'')+'</div>'+prLine(b.branch)+'</button>';}).join(''):'<div class="empty">No desktop yet. Connect Endpoint Central in ManageEngine (Start here → Connections & Setup) - its computers appear here by branch.</div>';
+  }
+  function draw(){
+    $('up').textContent=D.source&&D.source.last_sync?'Endpoint Central read '+new Date(D.source.last_sync.at).toISOString().slice(0,16).replace('T',' ')+' UTC':(D.source&&D.source.ec_configured?'Endpoint Central not read yet':'Endpoint Central not connected');
+    drawBranches(D.branches||[]);
+    var o='<option value="">All branches</option>'+((D.my_branches||[]).length?'<option value="mine"'+(F.b==='mine'?' selected':'')+'>My branches ('+esc(D.my_branches.join(', '))+')</option>':'')+(D.branches||[]).map(function(b){return '<option value="'+esc(b.branch)+'"'+(F.b===b.branch?' selected':'')+'>'+esc(b.branch)+'</option>';}).join('');
+    $('fb').innerHTML=o;
+    $('cnt').textContent=D.shown+' of '+D.total;
+    var R=D.desktops||[];
+    $('list').innerHTML=R.length?'<table><thead><tr><th>Desktop</th><th>User</th><th>Branch</th><th>IP</th><th>OS</th><th>Agent</th><th>Patches</th><th>Tickets</th><th></th></tr></thead><tbody>'+R.map(function(d){var a=AG[d.agent]||[d.agent,''];return '<tr><td><b>'+esc(d.name)+'</b></td><td>'+esc(d.user||'–')+'</td><td>'+esc(d.branch)+'</td><td class="mono">'+esc(d.ip||'–')+'</td><td class="muted">'+esc(d.os||'–')+'</td><td><span class="pill '+a[1]+'">'+esc(a[0])+'</span>'+(d.last_contact?'<div class="muted" style="font-size:11.5px">'+when(d.last_contact)+'</div>':'')+'</td><td>'+patchCell(d.patch)+'</td><td>'+(d.tickets?'<span class="pill info">'+d.tickets+' open</span>':'0')+'</td><td style="white-space:nowrap"><button type="button" class="sm" data-rem="'+esc(d.id)+'">Remote support</button>'+(d.resource_id?' <button type="button" class="sm" data-pat="'+esc(d.id)+'">Patches</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No desktop matches.</div>';
+  }
+  function load(){
+    var qs='?branch='+encodeURIComponent(F.b)+'&state='+encodeURIComponent(F.st)+'&q='+encodeURIComponent(F.q);
+    req('GET','/desktops'+qs).then(function(r){D=r;draw();}).catch(function(e){$('list').innerHTML='<p class="err">'+esc(e.message)+'</p>';});
+  }
+  function loadSessions(){
+    req('GET','/desktops/remote/sessions?mine=1').then(function(r){var S=r.sessions||[];
+      $('rs').innerHTML=S.length?'<table><thead><tr><th>Started</th><th>Desktop</th><th>User</th><th>Reason</th><th>Ticket</th><th>Status</th><th></th></tr></thead><tbody>'+S.map(function(x){return '<tr><td class="mono">'+when(x.started_at)+'</td><td>'+esc(x.desktop)+'<div class="muted" style="font-size:11.5px">'+esc(x.branch)+'</div></td><td>'+esc(x.end_user||'–')+'</td><td>'+esc(x.reason)+'</td><td>'+esc(x.ticket||'–')+'</td><td>'+(x.status==='open'?'<span class="pill warn">open</span>':'<span class="pill ok">'+esc(String(x.outcome||'').replace('_',' '))+'</span>'+(x.note?'<div class="muted" style="font-size:11.5px">'+esc(x.note)+'</div>':''))+'</td><td>'+(x.status==='open'?'<button type="button" class="sm" data-end="'+esc(x.id)+'">Close</button>':'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No remote support session yet.</div>';}).catch(function(e){$('rs').innerHTML='<p class="err">'+esc(e.message)+'</p>';});
+  }
+  function loadAi(){
+    req('GET','/me/desk').then(function(r){var q=(r.triage||[]).length,p=(r.patch_proposals||[]).filter(function(x){return !x.status||/pending|proposed|endorsed/.test(x.status);}).length,dk=r.desktops||{},h=(dk.items||[]).length,m=(r.config&&r.config.mode)||'off';
+      $('ai').innerHTML='<span>Mode <b>'+esc(m)+'</b></span><span><b>'+q+'</b> tickets waiting for triage</span>'+(dk.not_connected?'<span class="muted">Endpoint Central not connected</span>':'<span><b>'+h+'</b> desktops with a health problem</span>')+'<span><b>'+p+'</b> patch installs proposed</span><a href="desk-support.html"><button type="button">Open AI Desktop Support →</button></a>';})
+      .catch(function(e){$('ai').innerHTML='<span class="muted">'+esc(e.status===404?'The AI Desktop Support Engineer is not installed yet.':e.message)+'</span> <a href="desk-support.html"><button type="button">Open →</button></a>';});
+  }
+  function remoteDialog(id){
+    var d=(D.desktops||[]).find(function(x){return x.id===id;});if(!d)return;
+    Z.open('Remote support',d.name,Z.kv([['User',esc(d.user||'–')],['Branch',esc(d.branch)],['IP',esc(d.ip||'–')]])+'<label>What is the user\'s problem? (logged)<input id="r-why" maxlength="500"></label><label>Ticket (optional)<input id="r-tk" maxlength="40" placeholder="SDP-1234"></label><p><button type="button" class="pri" id="r-go" data-id="'+esc(id)+'">Start remote support</button></p><div id="r-out"></div><p class="note">Tell the user before you connect. Remote Assistance asks them to accept. Look only at what the problem needs (PDPL).</p>');
+  }
+  function startRemote(b){
+    var why=$('r-why').value.trim(),tk=$('r-tk').value.trim();if(why.length<5){$('r-out').innerHTML='<p class="err">Describe the problem (at least 5 characters).</p>';return;}
+    b.disabled=true;req('POST','/desktops/'+encodeURIComponent(b.getAttribute('data-id'))+'/remote',tk?{reason:why,ticket:tk}:{reason:why}).then(function(r){
+      var h='<p class="muted">Session '+esc(r.session.id)+' logged.</p>';
+      (r.links||[]).forEach(function(l){h+='<p><a href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer"><button type="button" class="pri">'+esc(l.label)+' ↗</button></a></p>';});
+      (r.commands||[]).forEach(function(c,i){h+='<div class="muted" style="font-size:12px">'+esc(c.label)+'</div><pre class="cmd" id="r-c'+i+'"></pre><button type="button" class="sm" data-copycmd="r-c'+i+'">Copy</button>';});
+      $('r-out').innerHTML=h;(r.commands||[]).forEach(function(c,i){$('r-c'+i).textContent=c.command;});loadSessions();})
+      .catch(function(e){b.disabled=false;$('r-out').innerHTML='<p class="err">'+esc(e.message)+'</p>';});
+  }
+  function endDialog(sid){Z.open('Close remote support','','<label>Outcome<select id="e-out"><option value="resolved">Resolved</option><option value="escalated">Escalated</option><option value="not_resolved">Not resolved</option><option value="user_unavailable">User not available</option></select></label><label>Note (optional)<input id="e-note" maxlength="1000"></label><button type="button" class="pri" id="e-go" data-sid="'+esc(sid)+'">Close session</button> <span class="err" id="e-err"></span>');}
+  function patchesOf(id){
+    Z.open('Patches','loading…','<div class="empty">Reading Endpoint Central…</div>');
+    req('GET','/desktops/'+encodeURIComponent(id)+'/patches').then(function(r){
+      var P=r.patches||[];$('zd-b').innerHTML=Z.kv([['Desktop',esc(r.desktop.name)],['Branch',esc(r.desktop.branch)],['Missing',String(r.missing)]])+(P.length?Z.tbl(['Patch','Severity','Status'],P.map(function(p){return [esc(p.name||p.bulletin||p.patch_id)+' <span class="muted mono">'+esc(p.patch_id)+'</span>','<span class="pill '+(p.severity==='critical'?'bad':p.severity==='important'?'warn':'')+'">'+esc(p.severity)+'</span>',esc(p.status||'missing')];})):'<div class="empty">Endpoint Central lists no patches for this computer.</div>')+'<p class="note">Deploy from Patch Management - a different person approves each deployment.</p>';})
+      .catch(function(e){$('zd-b').innerHTML='<p class="err">'+esc(e.message)+'</p>';});
+  }
+  function loadSettings(){req('GET','/desktops/settings').then(function(s){SET=s;$('s-ec').value=s.remote.ec_url||'';$('s-msra').checked=!!s.remote.msra;$('s-rdp').checked=!!s.remote.rdp;$('s-eng').value=(s.engineers||[]).map(function(e){return e.user+': '+e.branches.join(', ');}).join('\n');}).catch(function(){/* settings card stays empty; saving shows the error */});}
+  function saveSettings(){
+    var eng=[],bad='';$('s-eng').value.split('\n').forEach(function(l,i){l=l.trim();if(!l)return;var k=l.indexOf(':');if(k<1){bad='line '+(i+1)+': use user.name: Branch A, Branch B';return;}eng.push({user:l.slice(0,k).trim(),branches:l.slice(k+1).split(',').map(function(x){return x.trim();}).filter(Boolean)});});
+    if(bad){$('s-err').textContent=bad;return;}
+    req('POST','/desktops/settings',{remote:{ec_url:$('s-ec').value.trim(),msra:$('s-msra').checked,rdp:$('s-rdp').checked},engineers:eng}).then(function(){$('s-err').textContent='';toast('Settings saved');load();}).catch(function(e){$('s-err').textContent=e.message;});
+  }
+  var tq=null;
+  document.addEventListener('click',function(ev){
+    var t=ev.target;if(!t.closest)return;
+    var b=t.closest('[data-br]');if(b){var v=b.getAttribute('data-br');F.b=F.b===v?'':v;load();return;}
+    var c=t.closest('[data-st]');if(c){F.st=c.getAttribute('data-st');[].forEach.call(document.querySelectorAll('[data-st]'),function(x){x.classList.toggle('on',x===c);});load();return;}
+    var r=t.closest('[data-rem]');if(r){remoteDialog(r.getAttribute('data-rem'));return;}
+    var p=t.closest('[data-pat]');if(p){patchesOf(p.getAttribute('data-pat'));return;}
+    if(t.closest('#r-go')){startRemote(t.closest('#r-go'));return;}
+    var cc=t.closest('[data-copycmd]');if(cc){var tx=$(cc.getAttribute('data-copycmd')).textContent;if(navigator.clipboard)navigator.clipboard.writeText(tx).then(function(){toast('Copied - paste it in Run (Win+R) or a command prompt');},function(){toast('Copy not allowed - select the text');});return;}
+    var en=t.closest('[data-end]');if(en){endDialog(en.getAttribute('data-end'));return;}
+    if(t.closest('#e-go')){var g=t.closest('#e-go');var note=$('e-note').value.trim();req('POST','/desktops/remote/'+encodeURIComponent(g.getAttribute('data-sid'))+'/end',note?{outcome:$('e-out').value,note:note}:{outcome:$('e-out').value}).then(function(){Z.close();toast('Session closed');loadSessions();}).catch(function(e){$('e-err').textContent=e.message;});return;}
+    if(t.closest('#s-save')){saveSettings();return;}
+  });
+  $('fb').addEventListener('change',function(){F.b=this.value;load();});
+  $('q').addEventListener('input',function(){var v=this.value;clearTimeout(tq);tq=setTimeout(function(){F.q=v.trim();load();},300);});
+  function start(){
+    if(!can('operator')){$('denied').hidden=false;$('listc').hidden=true;$('rsc').hidden=true;$('aic').hidden=true;
+      req('GET','/desktops/summary').then(function(r){drawBranches(r.branches||[]);}).catch(function(e){$('br').innerHTML='<p class="err">'+esc(e.message)+'</p>';});return;}
+    if(can('admin')){$('setc').hidden=false;loadSettings();}
+    // open on the engineer's own branches when an administrator assigned some
+    req('GET','/desktops/settings').then(function(s){var mine=(s.engineers||[]).find(function(e){return e.user.toLowerCase()===ME.toLowerCase();});if(mine)F.b='mine';load();}).catch(function(){load();});
+    loadSessions();loadAi();loadPrinters();
+  }
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;ME=String(j.user||'');}catch(e){/* no role: viewer */}start();};w.onerror=start;w.send();
+})();
+</script></body></html>

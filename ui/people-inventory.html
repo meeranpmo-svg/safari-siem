@@ -1,0 +1,126 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>User Inventory</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--bg:#0b0e14;--pn:#121722;--rs:#18202d;--ln:#232c3c;--tx:#e8ecf3;--mu:#8c95a8;--hi:#e5484d;--md:#f59f00;--lo:#2fb344;--ac:#3b82f6}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1560px;margin:0 auto;padding:16px 16px 60px}
+.top{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}.top h1{margin:0;font-size:26px}.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:7px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}.btn:hover{border-color:#3a4560}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:14px 16px;min-width:0;margin-bottom:14px}.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}button.t{background:var(--pn);border:1px solid var(--ln);border-radius:12px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer;min-width:0}button.t:hover,button.t:focus-visible{border-color:var(--ac);outline:none}button.t[aria-pressed=true]{border-color:var(--ac);background:rgba(59,130,246,.1)}.t b{display:block;font-size:22px}.t span{color:var(--mu);font-size:12px}
+.ok{color:#56d364}.bad{color:#ff7b80}.warn{color:#ffc14d}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.bar input,.bar select{background:#0f141e;border:1px solid var(--ln);border-radius:8px;color:var(--tx);padding:7px 10px;font:13px Inter,system-ui}.bar input{flex:1 1 260px;min-width:0}
+.g{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;align-items:start}@media (max-width:1100px){.g{grid-template-columns:1fr}}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mu);font-weight:600;font-size:12px;padding:7px;border-bottom:1px solid var(--ln);white-space:nowrap}td{padding:7px;border-bottom:1px solid #1a2130;vertical-align:top;overflow-wrap:anywhere}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.row{cursor:pointer}tr.row:hover td{background:#151c28}tr.row[aria-selected=true] td{background:rgba(59,130,246,.12)}
+.pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;background:#1b2230;color:var(--mu);margin:1px 2px 1px 0}.p-bad{background:rgba(229,72,77,.18);color:#ff7b80}.p-warn{background:rgba(245,159,0,.16);color:#ffc14d}.p-info{background:rgba(59,130,246,.16);color:#8fb8ff}.p-ok{background:rgba(47,179,68,.15);color:#56d364}
+.dev i{margin-right:2px;color:var(--mu)}
+.detail{position:sticky;top:12px}
+.who{display:flex;gap:12px;align-items:center;margin-bottom:10px}.av{width:44px;height:44px;border-radius:50%;background:#1d2a44;display:grid;place-items:center;font-weight:700;color:#8fb8ff;flex:none}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;margin-bottom:10px}.kv span:nth-child(odd){color:var(--mu)}
+.flag{padding:6px 0;border-bottom:1px solid #1a2130;font-size:13px}.flag:last-child{border-bottom:0}
+.cat{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 4px}
+.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:12px;margin-bottom:12px}.empty{color:var(--mu);padding:18px;text-align:center;border:1px dashed var(--ln);border-radius:12px}
+.note{font-size:12.5px;color:var(--mu);border-left:3px solid var(--ac);padding:7px 11px;background:rgba(59,130,246,.07);border-radius:0 8px 8px 0;margin:0 0 12px}
+.hb{display:grid;grid-template-columns:minmax(90px,170px) 1fr auto;gap:6px 10px;align-items:center;font-size:12.5px}.hb .b{height:9px;border-radius:4px;background:#1b2230;position:relative}.hb .b i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--ac)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body><main>
+<div class="top"><div><h1><i class="ti ti-users-group" style="color:#3b82f6"></i> User Inventory</h1><div class="mu sm">Each person, the devices they hold or sign in to, the applications installed on those devices and the Microsoft 365 apps they use - from the directory, the asset register, Endpoint Central and Microsoft 365.</div></div><span class="sp"></span>
+ <a class="btn" href="user-management.html"><i class="ti ti-address-book"></i>Directory users</a><a class="btn" href="software-studio.html"><i class="ti ti-apps"></i>Software &amp; Licences</a><button type="button" class="btn" id="m365read" hidden><i class="ti ti-brand-office"></i>Read Microsoft 365</button><button type="button" class="btn" id="csv"><i class="ti ti-file-spreadsheet"></i>Export CSV</button></div>
+<div id="err"></div>
+<div class="k" id="kpi" role="group" aria-label="Filter people"></div>
+<div class="note" id="note"></div>
+<div class="g">
+ <div class="card"><h2><i class="ti ti-list"></i>People <span class="mu sm" id="cnt"></span></h2>
+  <div class="bar"><input id="q" type="search" placeholder="Search name, user name, department or title" aria-label="Search people"><select id="dept" aria-label="Department"><option value="">All departments</option></select>
+   <select id="flag" aria-label="Flag"><option value="">All people</option><option value="any">Needs review</option><option value="leaver">Leaver holding devices</option><option value="stale">No sign-in 90+ days</option><option value="nodir">Not in the directory</option><option value="risky">Remote-access tools</option><option value="blocked">Blocked software</option><option value="unusual">Unusual application</option><option value="m365_leaver">Microsoft 365 licence on a disabled account</option><option value="m365_unused">Microsoft 365 licence unused 30 days</option><option value="nodev">No device</option></select></div>
+  <div class="tw" id="list"></div></div>
+ <div class="card detail" id="det"><div class="empty">Choose a person to see their devices and applications.</div></div>
+</div>
+<div class="g">
+ <div class="card"><h2><i class="ti ti-device-laptop-off"></i>End-user devices with no person <span class="mu sm" id="usub"></span></h2><div class="tw" id="unas"></div></div>
+ <div class="card"><h2><i class="ti ti-building"></i>Devices by department</h2><div id="depts"></div></div>
+</div>
+<div class="mu sm" id="src"></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail?window.zybDetail.esc:function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var $=function(id){return document.getElementById(id);},V=null,KF='',SEL='';
+  function req(u){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/itam'+u);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(null);});}
+  var tm=function(s){return s?String(s).slice(0,10):'—';};
+  var ICON={laptop:'ti-device-laptop',workstation:'ti-device-desktop',mobile:'ti-device-mobile',phone:'ti-phone',server:'ti-server',vm:'ti-server-2',printer:'ti-printer'};
+  var SEV={bad:'p-bad',warn:'p-warn',info:'p-info'};
+  var LAB={leaver:'leaver',stale:'no sign-in 90 d',nodir:'not in directory',risky:'remote access',blocked:'blocked software',many:'many devices',unusual:'unusual app',m365_leaver:'M365 licence on leaver',m365_unused:'M365 unused'};
+  var M365A={outlook:'Outlook',word:'Word',excel:'Excel',powerPoint:'PowerPoint',oneNote:'OneNote',teams:'Teams'},M365I={outlook:'ti-mail',word:'ti-file-text',excel:'ti-table',powerPoint:'ti-presentation',oneNote:'ti-notebook',teams:'ti-brand-teams'};
+  function kpis(){var k=V.kpis,t=function(key,v,l,c){return '<button type="button" class="t" data-k="'+key+'" aria-pressed="'+(KF===key)+'"><b class="'+(c||'')+'">'+esc(v)+'</b><span>'+esc(l)+'</span></button>';};
+    $('kpi').innerHTML=t('',k.people,'people')+t('withdev',k.with_devices,'with a device')+t('',k.assigned_pct==null?'—':k.assigned_pct+'%','end-user devices assigned',k.assigned_pct==null?'':k.assigned_pct>=90?'ok':'warn')
+      +t('unas',k.unassigned,'devices with no person',k.unassigned?'warn':'ok')+t('leaver',k.leavers,'leavers holding devices',k.leavers?'bad':'ok')+t('risky',k.risky,'with remote-access tools',k.risky?'warn':'ok')+t('nodir',k.not_in_directory,'not in the directory',k.not_in_directory?'warn':'ok')
+      +(V.sources.m365?t('m365',k.m365_licensed,'with Microsoft 365 licences')+t('m365_unused',k.m365_unused,'M365 licences to review',k.m365_unused?'warn':'ok'):''); }
+  function filtered(){var q=$('q').value.trim().toLowerCase(),d=$('dept').value,f=$('flag').value;
+    return V.people.filter(function(p){
+      if(q&&[p.name,p.sam,p.upn,p.department,p.title].join(' ').toLowerCase().indexOf(q)<0)return false;
+      if(d&&p.department!==d)return false;
+      var has=function(k){return p.flags.some(function(x){return x.k===k;});};
+      if(f==='any'&&!p.flags.some(function(x){return x.sev!=='info';}))return false;
+      if(f==='nodev'&&p.devices)return false;
+      if(f&&f!=='any'&&f!=='nodev'&&!has(f))return false;
+      if(KF==='withdev'&&!p.devices)return false; if(KF==='m365'){if(!(p.m365&&p.m365.licences))return false;} else if(KF==='m365_unused'){if(!has('m365_unused')&&!has('m365_leaver'))return false;} else if(KF&&KF!=='withdev'&&KF!=='unas'&&!has(KF))return false;
+      return true;});}
+  function list(){var L=filtered();$('cnt').textContent=L.length+' of '+V.people.length;
+    if(!V.people.length){$('list').innerHTML='<div class="empty">No people yet. Read the directory (Directory users -> Read), or put a custodian on the devices in the asset register.</div>';return;}
+    $('list').innerHTML=L.length?'<table><thead><tr><th>Person</th><th>User name</th><th>Department</th><th>Devices</th><th class="n">Apps</th><th>Microsoft 365</th><th>Review</th></tr></thead><tbody>'+L.slice(0,500).map(function(p){
+      var dv=Object.keys(p.types).map(function(t){return '<span class="dev" title="'+esc(t)+'"><i class="ti '+(ICON[t]||'ti-box')+'"></i>'+p.types[t]+'</span>';}).join(' ');
+      return '<tr class="row" tabindex="0" data-key="'+esc(p.key)+'" aria-selected="'+(SEL===p.key)+'"><td><b>'+esc(p.name)+'</b>'+(p.title?'<div class="mu sm">'+esc(p.title)+'</div>':'')+'</td><td class="sm">'+esc(p.sam||'—')+(p.enabled===false?' <span class="pill p-bad">disabled</span>':'')+'</td><td class="sm">'+esc(p.department||'—')+'</td><td>'+(dv||'<span class="mu">none</span>')+'</td><td class="n">'+p.apps+'</td><td>'+m365cell(p)+'</td><td>'+p.flags.map(function(f){return '<span class="pill '+SEV[f.sev]+'" title="'+esc(f.why)+'">'+esc(LAB[f.k]||f.k)+'</span>';}).join('')+'</td></tr>';}).join('')+'</tbody></table>'+(L.length>500?'<div class="mu sm">First 500 shown - narrow the search.</div>':'')
+      :'<div class="empty">No person matches.</div>';}
+  function detail(key){SEL=key;list();var D=$('det');D.innerHTML='<div class="mu">Loading…</div>';
+    req('/people-inventory/'+encodeURIComponent(key)).then(function(p){
+      var ini=String(p.name||'?').split(/\s+/).map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+      var h='<div class="who"><div class="av" aria-hidden="true">'+esc(ini)+'</div><div><b style="font-size:16px">'+esc(p.name)+'</b><div class="mu sm">'+esc([p.title,p.department].filter(Boolean).join(' · ')||'—')+'</div></div></div>';
+      h+='<div class="kv"><span>User name</span><span>'+esc(p.sam||'—')+'</span><span>UPN / mail</span><span>'+esc(p.upn||p.mail||'—')+'</span><span>Directory</span><span>'+(p.in_directory?(p.enabled===false?'<span class="bad">disabled</span>':'<span class="ok">enabled</span>')+(p.privileged?' · <span class="warn">privileged</span>':''):'<span class="mu">no matching account</span>')+'</span><span>Last sign-in</span><span>'+esc(tm(p.last_logon))+'</span>'+(p.named_as.length?'<span>Named on devices as</span><span>'+p.named_as.map(esc).join(', ')+'</span>':'')+'</div>';
+      if(p.flags.length)h+='<div class="cat">For review</div>'+p.flags.map(function(f){return '<div class="flag"><span class="pill '+SEV[f.sev]+'">'+esc(LAB[f.k]||f.k)+'</span> '+esc(f.why)+'</div>';}).join('');
+      h+=m365detail(p.m365);
+      h+='<div class="cat">Devices ('+p.devices.length+')</div>'+(p.devices.length?'<div class="tw"><table><thead><tr><th>Device</th><th>Model / serial</th><th>OS</th><th>Linked by</th><th>Last seen</th></tr></thead><tbody>'+p.devices.map(function(d){return '<tr><td><i class="ti '+(ICON[d.type]||'ti-box')+'"></i> <b>'+esc(d.name)+'</b><div class="mu sm">'+esc(d.type)+(d.status!=='in_use'?' · '+esc(d.status):'')+(d.site?' · '+esc(d.site):'')+'</div></td><td class="sm">'+esc([d.vendor,d.model].filter(Boolean).join(' ')||'—')+'<div class="mu">'+esc(d.serial||'')+'</div></td><td class="sm">'+esc(d.os||'—')+'</td><td class="sm">'+d.linked_by.map(esc).join('<br>')+'</td><td class="sm">'+esc(tm(d.last_seen))+(d.ec&&d.ec.missing!=null?'<div class="mu">'+esc(d.ec.missing)+' patches missing</div>':'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty">No device is linked to this person.</div>');
+      var cats={};p.apps.forEach(function(a){(cats[a.category]=cats[a.category]||[]).push(a);});
+      h+='<div class="cat">Applications ('+p.apps.length+')</div>'+(p.apps.length?Object.keys(cats).map(function(c){return '<div class="mu sm" style="margin-top:6px"><b>'+esc(c)+'</b></div>'+cats[c].map(function(a){return '<div class="flag">'+esc(a.name)+(a.versions.length?' <span class="mu sm">'+esc(a.versions.join(', '))+'</span>':'')+(a.policy==='blocked'?' <span class="pill p-bad">blocked</span>':a.policy==='approved'?' <span class="pill p-ok">approved</span>':'')+(a.risky&&a.policy!=='approved'?' <span class="pill p-warn">remote access</span>':'')+(a.unusual!=null?' <span class="pill p-info" title="on '+esc(a.unusual)+' % of the department">unusual for department</span>':'')+'<div class="mu sm">'+esc(a.publisher||'')+(a.on.length>1?' · on '+esc(a.on.join(', ')):'')+'</div></div>';}).join('');}).join(''):'<div class="empty">No installed software reported for these devices (the endpoint agent or an import reports it).</div>');
+      D.innerHTML=h;}).catch(function(e){D.innerHTML='<div class="err">'+esc(e.message)+'</div>';});}
+  function m365cell(p){var m=p.m365;if(!m)return '<span class="mu sm">'+(V.sources.m365?'no account matched':'not read')+'</span>';
+    var used=m.used==null?'<span class="mu sm">usage not reported</span>':m.used.length?m.used.map(function(k){return '<i class="ti '+M365I[k]+'" title="'+esc(M365A[k])+' used in 30 days"></i>';}).join(' '):'<span class="mu sm">no app used</span>';
+    return '<span class="pill p-info">'+m.licences+' licence'+(m.licences===1?'':'s')+'</span> '+used;}
+  function m365detail(m){if(!m)return '<div class="cat">Microsoft 365</div><div class="mu sm">'+(V.sources.m365?'No Microsoft 365 account matches this person (UPN or mail).':'Microsoft 365 has not been read yet - use Read Microsoft 365.')+'</div>';
+    var h='<div class="cat">Microsoft 365</div><div class="kv"><span>Account</span><span>'+esc(m.upn)+(m.enabled?'':' <span class="pill p-bad">blocked in Entra ID</span>')+'</span><span>Licences</span><span>'+(m.licences.length?m.licences.map(function(l){return '<span class="pill p-info">'+esc(l)+'</span>';}).join(''):'<span class="mu">none</span>')+'</span><span>Last activity</span><span>'+esc(tm(m.last_activity))+'</span></div>';
+    if(m.apps){h+='<div class="tw"><table><thead><tr><th>App (last 30 days)</th><th>Used</th></tr></thead><tbody>'+Object.keys(M365A).map(function(k){return '<tr><td><i class="ti '+M365I[k]+'"></i> '+esc(M365A[k])+'</td><td>'+(m.apps[k]?'<span class="ok">✓ used</span>':'<span class="mu">—</span>')+'</td></tr>';}).join('')+'</tbody></table></div>'
+      +'<div class="mu sm">Used on: '+(m.platforms?['windows','mac','mobile','web'].filter(function(x){return m.platforms[x];}).map(function(x){return {windows:'Windows',mac:'Mac',mobile:'mobile',web:'web'}[x];}).join(', ')||'—':'—')+'</div>';}
+    else h+='<div class="mu sm">App usage was not reported (the usage reports need the Reports.Read.All permission, or the tenant conceals user names in reports).</div>';
+    if(m.services)h+='<div class="kv" style="margin-top:8px"><span>Exchange (mail)</span><span>'+esc(tm(m.services.exchange))+'</span><span>OneDrive</span><span>'+esc(tm(m.services.onedrive))+'</span><span>SharePoint</span><span>'+esc(tm(m.services.sharepoint))+'</span><span>Teams</span><span>'+esc(tm(m.services.teams))+'</span></div>';
+    return h;}
+  function unas(){var U=V.unassigned;$('usub').textContent=U.length?U.length+' device(s)':'';
+    $('unas').innerHTML=U.length?'<table><thead><tr><th>Device</th><th>Type</th><th>Status</th><th>Site</th><th>Last seen</th></tr></thead><tbody>'+U.map(function(a){return '<tr><td><a href="asset-studio.html#'+encodeURIComponent(a.id)+'" style="color:inherit">'+esc(a.name)+'</a></td><td>'+esc(a.type)+'</td><td>'+esc(a.status)+'</td><td>'+esc(a.site||'—')+'</td><td>'+esc(tm(a.last_seen))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty ok">Every end-user device has a person.</div>';}
+  function depts(){var D=V.departments.slice().sort(function(a,b){return b.devices-a.devices;}).slice(0,12),mx=Math.max.apply(null,[1].concat(D.map(function(d){return d.devices;})));
+    $('depts').innerHTML=D.length?'<div class="hb">'+D.map(function(d){return '<span>'+esc(d.name)+'</span><div class="b"><i style="width:'+(100*d.devices/mx)+'%"></i></div><span class="mu">'+d.devices+' devices · '+d.people+' people</span>';}).join('')+'</div>':'<div class="empty">Departments come from the directory read.</div>';}
+  function draw(){kpis();var ds=V.departments.map(function(d){return d.name;}),cur=$('dept').value;$('dept').innerHTML='<option value="">All departments</option>'+ds.map(function(d){return '<option'+(d===cur?' selected':'')+'>'+esc(d)+'</option>';}).join('');
+    $('note').textContent=V.note;list();unas();depts();
+    $('m365read').hidden=!V.sources.m365_connected;
+    var S=V.sources;$('src').textContent='Read: '+(S.m365?'Microsoft 365 '+S.m365.users+' accounts, '+S.m365.matched+' matched ('+tm(S.m365.read_at)+')'+(S.m365.concealed?' - user names are concealed in the usage reports: turn off "Display concealed user, group, and site names" in Microsoft 365 admin centre -> Settings -> Org settings -> Reports':'')+(S.m365.errors.length?' - '+S.m365.errors.join('; '):'')+' · ':(S.m365_connected?'Microsoft 365 not read yet · ':'Microsoft 365 not connected (HR Onboarding -> Microsoft 365) · '))+(S.directory?'directory '+S.directory.users+' accounts ('+tm(S.directory.read_at)+')':'directory not read')+' · asset register '+S.assets.active+' active assets ('+S.assets.with_software+' report software) · Endpoint Central '+S.endpoint_central.computers+' computers ('+S.endpoint_central.with_user+' with a signed-in user)';}
+  function load(){req('/people-inventory').then(function(j){V=j;$('err').innerHTML='';draw();}).catch(function(e){$('err').innerHTML='<div class="err">'+esc(e.status===403?'The User Inventory shows employees\' devices and software (personal data): operators and administrators only.':e.status===404?'The User Inventory is not installed on the server yet - run the update.':e.message)+'</div>';});}
+  var tmr=null;$('q').addEventListener('input',function(){clearTimeout(tmr);tmr=setTimeout(function(){if(V)list();},150);});
+  $('dept').addEventListener('change',function(){if(V)list();});$('flag').addEventListener('change',function(){if(V)list();});
+  document.addEventListener('click',function(e){var t;
+    if((t=e.target.closest('[data-k]'))){var k=t.getAttribute('data-k');KF=KF===k?'':k;kpis();if(k==='unas'){$('unas').scrollIntoView({block:'center'});}list();return;}
+    if((t=e.target.closest('tr.row'))){detail(t.getAttribute('data-key'));return;}
+    if(e.target.closest('#m365read')){var b=$('m365read');b.disabled=true;b.lastChild.textContent='Reading…';
+      var x=new XMLHttpRequest();x.open('POST','/api/itam/people-inventory/m365/read');x.withCredentials=true;x.zybQuiet=true;x.timeout=300000;x.setRequestHeader('Content-Type','application/json');
+      x.onloadend=function(){b.disabled=false;b.lastChild.textContent='Read Microsoft 365';var j=null;try{j=JSON.parse(x.responseText);}catch(err){j=null;/* not JSON: shown by status */}
+        if(x.status>=200&&x.status<300){load();}else{$('err').innerHTML='<div class="err">'+esc((j&&j.error)||('Microsoft 365 could not be read (HTTP '+x.status+')'))+'</div>';}};x.send('{}');return;}
+    if(e.target.closest('#csv')&&V){var L=filtered(),q=function(v){v=String(v==null?'':v);if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+      var rows=[['Person','User name','UPN','Department','Title','Directory','Last sign-in','Devices','Applications','M365 licences','M365 apps used (30 d)','M365 last activity','Review']].concat(L.map(function(p){return [p.name,p.sam,p.upn,p.department,p.title,p.in_directory?(p.enabled===false?'disabled':'enabled'):'not in directory',tm(p.last_logon),p.devices,p.apps,p.m365?p.m365.licences:'',p.m365&&p.m365.used?p.m365.used.map(function(k){return M365A[k];}).join(' '):'',p.m365?tm(p.m365.last_activity):'',p.flags.map(function(f){return f.why;}).join(' | ')];}));
+      var meta='"Exported","'+new Date().toISOString()+'"\n"Filter","'+[$('q').value,$('dept').value,$('flag').value,KF].filter(Boolean).join(' / ').replace(/"/g,'""')+'"\n"Rows","'+L.length+' of '+V.people.length+'"\n\n';
+      var blob=new Blob([meta+rows.map(function(r){return r.map(q).join(',');}).join('\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='user-inventory.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);}});
+  document.addEventListener('keydown',function(e){var t=e.target.closest&&e.target.closest('tr.row');if(t&&(e.key==='Enter'||e.key===' ')){e.preventDefault();detail(t.getAttribute('data-key'));}});
+  load();
+})();
+</script></body></html>

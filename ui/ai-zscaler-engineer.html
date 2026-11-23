@@ -1,0 +1,94 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Security Engineer — Zscaler</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1320px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.empty{color:var(--mute);padding:10px 0}.mono{font-family:Consolas,monospace;font-size:12px}
+.btn{font:600 12.5px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 11px;cursor:pointer}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn:disabled{opacity:.5;cursor:default}
+.p{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.ok{background:rgba(63,185,80,.15);color:var(--ok)}.warn{background:rgba(227,179,65,.15);color:var(--warn)}.bad{background:rgba(255,123,114,.16);color:var(--bad)}.info{background:rgba(121,184,255,.15);color:var(--info)}.mut{background:rgba(140,147,161,.16);color:#a3a9b5}
+form.add{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:8px}form.add label{display:grid;gap:4px;font-size:12px;color:var(--mute)}
+form.add input,form.add select{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 8px;font:13px "Segoe UI",system-ui,sans-serif}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.sev-critical{color:var(--bad);font-weight:700}.sev-high{color:var(--warn);font-weight:700}.sev-medium{color:var(--info)}.sev-low{color:var(--mute)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">AI &amp; Automation · Zscaler</div><h1>AI Security Engineer — Zscaler</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="banner">Read-only posture for <b>Zscaler Internet Access (ZIA)</b> and <b>Zscaler Private Access (ZPA)</b>. The engineer patrols the tenant, opens a work item for every problem, and <b>proposes</b> a change an administrator approves and a person applies in the Zscaler console — nothing is changed automatically.</div>
+<div class="card"><h2>Connections <span class="c" id="connc"></span></h2><div class="tw" id="tenants"><div class="empty">Loading…</div></div>
+  <div id="addbox"></div></div>
+<div class="card"><h2>Posture findings <span class="c" id="findc"></span></h2><div class="tw" id="findings"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Change plans (four-eyes) <span class="c">an administrator approves; a person applies in the Zscaler console, then it is verified by a fresh read</span></h2><div class="tw" id="changes"><div class="empty">Loading…</div></div></div>
+<div class="card"><h2>Work items</h2><div data-zyb-duty="zscaler" data-api="/api/soc"></div></div>
+</main>
+<script src="vendor/zyb-duty.js"></script>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail||{esc:function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}};
+  var esc=Z.esc,$=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3},ROLE='viewer';
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4200);}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc'+p);x.withCredentials=true;x.timeout=120000;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)return ok(j);bad(new Error((j&&((j.errors&&j.errors.join('; '))||j.error))||('HTTP '+x.status)));};
+    x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(b?JSON.stringify(b):(m!=='GET'?'{}':null));});}
+  function pill(t,k){return '<span class="p '+esc(k||'mut')+'">'+esc(t)+'</span>';}
+
+  function drawTenants(d){
+    var ts=d.tenants||[];$('connc').textContent=ts.length?ts.length+' tenant(s)'+(d.connected?'':' · not connected'):'';
+    if(!ts.length){$('tenants').innerHTML='<div class="empty">No Zscaler tenant yet.'+(can('admin')?' Add one below.':' An administrator can add one.')+'</div>';}
+    else{$('tenants').innerHTML='<table><thead><tr><th>Tenant</th><th>ZIA</th><th>ZPA</th><th>Credentials</th><th>Last read</th><th></th></tr></thead><tbody>'+ts.map(function(t){
+      var last=t.last?(((t.last.errors||[]).length?pill('error','bad'):pill('ok','ok'))+' <span class="muted mono">'+esc(new Date(t.last.at).toLocaleString('en-GB'))+'</span>'+((t.last.errors||[]).length?'<div class="muted mono">'+esc(t.last.errors.join('; '))+'</div>':'')):'<span class="muted">never</span>';
+      var cred=[t.credentials&&t.credentials.zia?'ZIA '+pill('set','ok'):'',t.credentials&&t.credentials.zpa?'ZPA '+pill('set','ok'):''].filter(Boolean).join(' ')||'<span class="muted">not set</span>';
+      return '<tr><td><b>'+esc(t.label)+'</b><div class="muted mono">'+esc(t.id)+'</div></td><td>'+(t.zia&&t.zia.enabled?esc(t.zia.cloud||'—'):pill('off','mut'))+'</td><td>'+(t.zpa&&t.zpa.enabled?'customer '+esc(t.zpa.customerId||'—'):pill('off','mut'))+'</td><td>'+cred+'</td><td>'+last+'</td>'
+        +'<td class="row-actions">'+(can('admin')?'<button type="button" class="btn" data-cred="'+esc(t.id)+'">Credentials</button><button type="button" class="btn" data-test="'+esc(t.id)+'">Test</button>':'')+(can('operator')?'<button type="button" class="btn" data-sync="'+esc(t.id)+'">Sync</button>':'')+(can('admin')?'<button type="button" class="btn" data-del="'+esc(t.id)+'">Delete</button>':'')+'</td></tr>';}).join('')+'</tbody></table>';}
+    $('addbox').innerHTML=can('admin')?'<form class="add" id="addf"><label>Tenant id<input name="id" placeholder="tenant1" required></label><label>Label<input name="label" placeholder="Tenant 1"></label><label>ZIA cloud host<input name="cloud" placeholder="zsapi.zscalertwo.net"></label><label>ZIA admin username<input name="username" placeholder="admin@domain"></label><label>ZPA base URL<input name="zpabase" placeholder="https://config.private.zscaler.com"></label><label>ZPA customer id<input name="customerId" placeholder="(optional)"></label><label>ZPA client id<input name="clientId" placeholder="(optional)"></label><label>&nbsp;<button type="submit" class="btn pri">Add tenant</button></label></form>':'';
+    var f=$('addf');if(f)f.addEventListener('submit',function(e){e.preventDefault();var g=function(n){return (f.elements[n].value||'').trim();};
+      var body={id:g('id'),label:g('label'),zia:{enabled:!!g('cloud'),cloud:g('cloud'),username:g('username')},zpa:{enabled:!!g('customerId'),base_url:g('zpabase')||'https://config.private.zscaler.com',customerId:g('customerId'),clientId:g('clientId')}};
+      req('POST','/zscaler/tenants',body).then(function(){toast('Tenant added — now set its credentials');load();}).catch(function(er){toast(er.message);});});
+  }
+  function drawFindings(items){
+    $('findc').textContent=items.length?items.length+' open':'none';
+    $('findings').innerHTML=items.length?'<table><thead><tr><th>Severity</th><th>Problem</th><th>Evidence</th></tr></thead><tbody>'+items.map(function(f){return '<tr><td class="sev-'+esc(f.severity)+'">'+esc(f.severity)+'</td><td>'+esc(f.title)+'</td><td class="muted">'+esc((f.evidence||[]).join(' · '))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No posture problems reported (or no tenant connected yet).</div>';
+  }
+  function drawChanges(items){
+    var open=items.filter(function(c){return c.status==='proposed'||c.status==='approved';});
+    $('changes').innerHTML=open.length?'<table><thead><tr><th>Plan</th><th>What</th><th>Status</th><th></th></tr></thead><tbody>'+open.map(function(c){
+      var act=c.status==='proposed'&&(can('admin')||(window.zybApproves&&window.zybApproves('eng:zscaler')))?'<button type="button" class="btn pri" data-approve="'+esc(c.id)+'">Approve</button> <button type="button" class="btn" data-reject="'+esc(c.id)+'">Reject</button>':c.status==='approved'&&can('operator')?'<button type="button" class="btn pri" data-applied="'+esc(c.id)+'">Mark applied</button>':'';
+      return '<tr><td class="mono">'+esc(c.id)+'</td><td>'+esc(c.title)+'<div class="muted">'+esc((c.commands||[]).join(' ')) +'</div></td><td>'+pill(c.status,c.status==='approved'?'info':'warn')+'</td><td class="row-actions">'+act+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No change plans waiting.</div>';
+  }
+  function load(){Promise.all([req('GET','/zscaler/overview'),req('GET','/zscaler/changes')]).then(function(r){
+    drawTenants(r[0]);drawFindings(r[0].findings||[]);drawChanges((r[1]&&r[1].items)||[]);
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }).catch(function(e){$('tenants').innerHTML='<div class="empty">'+esc(e.message==='not reachable'?'The Zscaler module is not installed yet — run the engine update.':e.message)+'</div>';});}
+
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('button');if(!b)return;
+    var id;
+    if((id=b.getAttribute('data-sync'))){b.disabled=true;req('POST','/zscaler/tenants/'+encodeURIComponent(id)+'/sync').then(function(r){toast((r.errors&&r.errors.length)?('Synced with problems: '+r.errors.join('; ')):'Synced');load();}).catch(function(er){toast(er.message);b.disabled=false;});return;}
+    if((id=b.getAttribute('data-test'))){b.disabled=true;req('POST','/zscaler/tenants/'+encodeURIComponent(id)+'/test').then(function(r){var m=[];if(r.zia)m.push('ZIA '+(r.zia.ok?'OK':'FAILED: '+r.zia.error));if(r.zpa)m.push('ZPA '+(r.zpa.ok?'OK':'FAILED: '+r.zpa.error));toast(m.join(' · ')||'Nothing to test');b.disabled=false;}).catch(function(er){toast(er.message);b.disabled=false;});return;}
+    if((id=b.getAttribute('data-del'))){if(!confirm('Remove tenant '+id+'? Its credentials are deleted too.'))return;req('DELETE','/zscaler/tenants/'+encodeURIComponent(id)).then(function(){toast('Removed');load();}).catch(function(er){toast(er.message);});return;}
+    if((id=b.getAttribute('data-approve'))){var cm=prompt('Approval comment (optional):')||'';req('POST','/zscaler/changes/'+encodeURIComponent(id)+'/decide',{decision:'approved',comment:cm}).then(function(){toast('Approved');load();}).catch(function(er){toast(er.message);});return;}
+    if((id=b.getAttribute('data-reject'))){var rr=prompt('Reason for rejecting:');if(!rr)return;req('POST','/zscaler/changes/'+encodeURIComponent(id)+'/decide',{decision:'rejected',comment:rr}).then(function(){toast('Rejected');load();}).catch(function(er){toast(er.message);});return;}
+    if((id=b.getAttribute('data-applied'))){var nn=prompt('Note (what you changed in the Zscaler console):');if(!nn)return;req('POST','/zscaler/changes/'+encodeURIComponent(id)+'/applied',{note:nn}).then(function(){toast('Marked applied — the engineer will verify on its next patrol');load();}).catch(function(er){toast(er.message);});return;}
+    if((id=b.getAttribute('data-cred'))){openCred(id);return;}
+  });
+  function openCred(id){
+    var ak=prompt('ZIA API key (leave blank to keep / skip):');var un,pw;
+    pw=prompt('ZIA admin password (leave blank to keep / skip):');
+    var zs=prompt('ZPA client secret (leave blank to keep / skip):');
+    var body={};if(ak)body.zia=Object.assign(body.zia||{},{apiKey:ak});if(pw)body.zia=Object.assign(body.zia||{},{password:pw});if(zs)body.zpa={clientSecret:zs};
+    if(!body.zia&&!body.zpa){toast('Nothing to set');return;}
+    req('PUT','/zscaler/tenants/'+encodeURIComponent(id)+'/credentials',body).then(function(){toast('Credentials saved (write-only) — use Test');load();}).catch(function(er){toast(er.message);});
+  }
+  $('refresh').onclick=load;
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText),rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+  setInterval(function(){if(!document.hidden)load();},60000);
+})();
+</script></body></html>

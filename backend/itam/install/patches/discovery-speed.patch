@@ -1,0 +1,75 @@
+--- a/engine/discovery/runner.js	2026-10-12 10:44:17.441068602 +0000
++++ b/engine/discovery/runner.js	2026-10-12 10:44:17.442896263 +0000
+@@ -143,7 +143,7 @@
+   const active = allowed.filter((x) => x === 'sweep' || x === 'snmp');
+   if (!active.length || stop()) return;
+   const hosts = ip4.expand(scope.targets, scope.exclusions, { max: (ctx.config.discovery && ctx.config.discovery.max_hosts_per_scope) || 4096 }).map(ip4.ipStr);
+-  run.progress = { hosts_total: hosts.length, hosts_done: 0 };
++  run.progress = { hosts_total: hosts.length, hosts_done: 0, alive: 0, phase: 'ping', started_at: new Date().toISOString() };
+   const take = tokenBucket(scope.rate.max_hosts_per_sec);
+   const windowOk = () => sched.inWindow(scope.window, Date.now());
+   const st = settings();
+@@ -161,7 +161,7 @@
+         const r = await sweep.icmp(hosts.slice(i, i + chunk), { mode: st.icmp_mode, fping_bin: ctx.config.discovery.fping_bin, ping_bin: ctx.config.discovery.ping_bin, timeout_ms: ctx.config.discovery.icmp_timeout_ms, exec: deps.exec });
+         for (const ip of r) { alive.set(ip, alive.get(ip) || { open: [], snmp: null }); up++; }
+       }
+-      stat('icmp', { ok: true, alive: up, ms: Date.now() - t0 });
++      stat('icmp', { ok: true, alive: up, ms: Date.now() - t0 }); run.progress.alive = up;
+     } catch (e) { stat('icmp', { ok: false, error_class: e.code === 'icmp_unavailable' ? 'unavailable' : 'error' }); log.warn('discovery: ICMP unavailable', { run: run.id, err: e.message }); }
+   }
+   // 2) per host: TCP connect probes + SNMP sysDescr probe (UDP 161), concurrency-limited and rate-limited
+@@ -171,33 +171,44 @@
+     for (const id of snmpCreds) opened.set(id, vault.open(id));
+     const t0 = Date.now();
+     let tcpUp = 0; let snmpUp = 0;
++    run.progress.phase = 'probe';
++    // per host the TCP ports and the SNMP probe run at the same time (not one after another): a silent address costs one
++    // timeout (~0.8-1.5 s) instead of the sum of all of them (~7 s), so a /24 takes about a minute instead of several
+     await pool(hosts, scope.rate.concurrency, async (ip) => {
+       if (!windowOk()) { ctx.stopWindow(); return; }
+       await take();
+       if (stop()) return;
+       const rec = alive.get(ip) || { open: [], snmp: null };
+       let isUp = alive.has(ip);
+-      if (allowed.includes('sweep') && m.sweep.tcp_ports.length) {
+-        const r = await sweep.tcp(ip, m.sweep.tcp_ports, { connect: deps.connect, timeout_ms: ctx.config.discovery.tcp_timeout_ms });
+-        if (r.alive) { isUp = true; tcpUp++; rec.open = r.open; }
+-      }
+-      for (const id of snmpCreds) {
+-        const p = await snmpM.probe(ip, opened.get(id), { createSession: deps.createSession, timeout: ctx.config.discovery.snmp_timeout_ms });
+-        if (p.ok) { rec.snmp = id; isUp = true; snmpUp++; break; }
+-      }
+-      if (isUp) { alive.set(ip, rec); obs({ method: allowed.includes('sweep') ? 'sweep' : 'snmp', ip, open_ports: rec.open }); }
++      const tcpP = allowed.includes('sweep') && m.sweep.tcp_ports.length
++        ? Promise.all(m.sweep.tcp_ports.map((port) => sweep.tcp(ip, [port], { connect: deps.connect, timeout_ms: ctx.config.discovery.tcp_timeout_ms })))
++          .then((rs) => ({ alive: rs.some((r) => r.alive), open: [].concat(...rs.map((r) => r.open)).sort((a, b) => a - b) }))
++        : Promise.resolve(null);
++      const snmpP = (async () => {
++        for (const id of snmpCreds) {
++          const p = await snmpM.probe(ip, opened.get(id), { createSession: deps.createSession, timeout: ctx.config.discovery.snmp_timeout_ms });
++          if (p.ok) return id;
++        }
++        return null;
++      })();
++      const [r, sid] = await Promise.all([tcpP, snmpP]);
++      if (r && r.alive) { isUp = true; tcpUp++; rec.open = r.open; }
++      if (sid) { rec.snmp = sid; isUp = true; snmpUp++; }
++      if (isUp) { if (!alive.has(ip)) run.progress.alive++; alive.set(ip, rec); obs({ method: allowed.includes('sweep') ? 'sweep' : 'snmp', ip, open_ports: rec.open }); }
+       run.progress.hosts_done++;
+-      if (run.progress.hosts_done % 16 === 0) ctx.onProgress();
++      if (run.progress.hosts_done % 8 === 0) ctx.onProgress();
+     }, stop);
+     if (allowed.includes('sweep')) stat('sweep', { ok: true, alive: alive.size, tcp_alive: tcpUp, hosts: hosts.length, ms: Date.now() - t0 });
+     // 3) SNMP collection on responders (system, interfaces, entity serial, LLDP / CDP neighbours)
+     if (snmpCreds.length && !stop()) {
+       const responders = [...alive.entries()].filter(([, r]) => r.snmp);
++      run.progress.phase = 'snmp'; run.progress.snmp_total = responders.length; run.progress.snmp_done = 0; ctx.onProgress();
+       let ok = 0;
+       await pool(responders, Math.min(scope.rate.concurrency, 8), async ([ip, r]) => {
+         if (!windowOk()) { ctx.stopWindow(); return; }
+         await take();
+         const c = await snmpM.collect(ip, opened.get(r.snmp), { createSession: deps.createSession, timeout: ctx.config.discovery.snmp_timeout_ms });
++        run.progress.snmp_done++; ctx.onProgress();
+         if (!c.ok) return;
+         ok++;
+         obs({ method: 'snmp', ip, mac: c.mac, macs: c.macs, serial: c.serial, model: c.model, sys: c.sys, neighbours: c.neighbours });

@@ -1,0 +1,198 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NOC Summary</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.top h1{margin:0;font-size:21px;color:var(--title)}.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:26px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+button,select,input{font:13px "Segoe UI",system-ui,sans-serif}button{font-weight:600;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer}button:hover{border-color:#4a5162}
+input{background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05)}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.err{color:var(--bad)}.empty{color:var(--mute);padding:10px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.st-up{background:var(--ok)}.st-warning{background:var(--warn)}.st-critical{background:var(--bad)}.st-unknown{background:#6b7280}.st-unpolled{background:#3b4252}
+.vgroup>summary{cursor:pointer;padding:6px 4px;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}.vgroup>summary::-webkit-details-marker{display:none}
+.vgroup>summary:hover{color:var(--title)}.vgroup .arr{color:var(--mute);transition:transform .15s}.vgroup[open] .arr{transform:rotate(90deg)}
+.node{display:flex;align-items:center;gap:7px;padding:4px 4px 4px 24px;border-radius:6px;cursor:pointer;font-size:13px}.node:hover{background:rgba(255,255,255,.04)}
+.util{height:14px;border-radius:4px;background:rgba(255,255,255,.08);position:relative;min-width:80px;overflow:hidden}.util i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.bar-ok{background:var(--ok)}.bar-warn{background:var(--warn)}.bar-bad{background:var(--bad)}
+.node .why{display:block;color:var(--mute);font-size:11.5px;margin-top:1px}.node .nm{min-width:0;overflow-wrap:anywhere}
+.banner{border:1px solid rgba(255,123,114,.4);background:rgba(255,123,114,.07);border-radius:10px;padding:10px 12px;margin:0 0 12px;font-size:13px}.banner b{color:var(--title)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
+.noc{display:grid;grid-template-columns:260px 1fr;gap:12px;margin:0 0 12px}@media(max-width:900px){.noc{grid-template-columns:1fr}}
+.gauge{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center}.gauge .ring{width:150px;height:150px;border-radius:50%;display:grid;place-items:center}.gauge .ring i{width:118px;height:118px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font:800 34px/1 "Segoe UI",system-ui,sans-serif;font-style:normal}
+.cause{border:1px solid var(--edge);border-left:4px solid var(--bad);border-radius:10px;padding:10px 12px;margin:0 0 8px;background:var(--raise)}.cause b{color:var(--title)}.cause .k2{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute)}
+.cause.site-link{border-left-color:var(--warn)}.cause.engine-path{border-left-color:var(--info)}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;border:1px solid var(--edge);color:var(--mute);margin:2px 4px 2px 0}
+.sc{font-weight:800}.sc.bad{color:var(--bad)}.sc.warn{color:var(--warn)}.sc.ok{color:var(--ok)}
+.ai{border:1px solid rgba(121,184,255,.35);background:rgba(121,184,255,.06);border-radius:10px;padding:10px 12px}.ai .lbl{font:600 11px ui-monospace,Consolas,monospace;color:var(--info);letter-spacing:.06em}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.tabs button[aria-selected=true]{border-color:var(--info);color:var(--title)}
+@media print{.top button{display:none}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · NOC summary · performance (NPM)</div><h1>NOC Summary</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="print">🖨 Report</button><button type="button" id="refresh" title="Re-read the latest poll results">⟳ Refresh</button><button type="button" id="pollnow" title="Ping / poll every device now from the engine server (operator)">📡 Poll all now</button></div>
+<div id="why"></div>
+<!-- NOC intelligence (SIEM /api/soc/netops/noc): health score, probable causes, anomalies, flapping, capacity forecast, AI shift brief -->
+<section id="nocsec">
+  <div class="noc">
+    <div class="card gauge" id="gauge"><div class="empty">Loading…</div></div>
+    <div class="card"><h2>Probable causes <span class="c">one cause, one incident - a lead to check, not a verdict</span></h2><div id="causes"><div class="empty">Loading…</div></div></div>
+  </div>
+  <div class="card"><div class="tabs" role="tablist" id="ntabs">
+      <button type="button" role="tab" data-t="attn" aria-selected="true">Needs attention</button><button type="button" role="tab" data-t="anom">Anomalies (ML)</button>
+      <button type="button" role="tab" data-t="flap">Flapping</button><button type="button" role="tab" data-t="fc">Capacity forecast</button><button type="button" role="tab" data-t="sites">Site health</button>
+      <button type="button" role="tab" data-t="ai">AI shift brief</button></div>
+    <div id="npanel"><div class="empty">Loading…</div></div>
+    <p class="note" id="nmodel"></p></div>
+</section>
+<div class="k" id="kk"></div>
+<div class="grid">
+  <div class="card"><h2>All nodes managed by NPM <span class="c">grouped by vendor, status</span></h2>
+    <div style="margin-bottom:8px"><input type="search" id="q" placeholder="Filter nodes…" style="width:100%"></div>
+    <div id="tree"><div class="empty">Loading…</div></div></div>
+  <div><div class="card"><h2>Interfaces with high % utilization <span class="c" id="ifc"></span></h2>
+    <div class="tw" id="ifs"><div class="empty">Loading…</div></div>
+    <p class="note">Receive / transmit as a percent of the link speed, from the latest SNMP poll. Needs SNMP polling enabled on the device (AI Network Engineer → device → credentials).</p></div>
+  <div class="card"><h2>Hardware health overview</h2><div id="health"></div></div></div>
+</div>
+<div class="card"><h2>Sites across Saudi Arabia <span class="c" id="mapc"></span></h2><div id="map"></div>
+  <p class="note">Each site is placed by its name (Riyadh, Jeddah, Dammam …). The dot size is the number of nodes; its colour is the worst status at the site. Sites whose name is not a known city are listed below the map.</p></div>
+<div class="card" id="wfcard" hidden><h2>Business requests to the network team <span class="c">Workflow Automation - firewall rule reviews, configuration backups and changes the CISO office, audit, GRC and administration asked for</span><span class="sp"></span><a href="workflow-automation.html#tab=queue" style="color:var(--info);font-size:12.5px">Team queue →</a></h2><div class="k" id="wfk"></div><div id="wfl"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var V=null, OPEN={};
+  function req(m,p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/soc/netops'+p);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;if(m==='POST')x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('The AI Network Engineer service is not reachable'));};x.send(m==='POST'?'{}':null);});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4000);}
+  function tile(l,v,s,cls){return '<div class="t '+(cls||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></div>';}
+  var SLBL={up:'Up',warning:'Warning',critical:'Critical',unknown:'Unknown',unpolled:'Not polled'};
+  function draw(){
+    var c=V.counts||{};
+    $('kk').innerHTML=tile('Nodes',V.total||0,'managed by NPM','info')+tile('Up',c.up||0,'',c.up?'ok':'')+tile('Warning',c.warning||0,'',c.warning?'warn':'')+tile('Critical',c.critical||0,'',c.critical?'bad':'')+tile('Unknown',c.unknown||0,'not yet polled')+tile('Hot interfaces',V.high_interfaces||0,'≥ 70% utilisation',(V.high_interfaces)?'warn':'ok');
+    drawTree();
+    var I=V.interfaces||[];$('ifc').textContent=I.length?I.length+' shown':'';
+    $('ifs').innerHTML=I.length?'<table><thead><tr><th>Node</th><th>Interface</th><th>Receive</th><th>Transmit</th></tr></thead><tbody>'+I.slice(0,100).map(function(i){return '<tr><td><span class="dot st-'+(i.oper==='up'?'up':'critical')+'"></span>'+esc(i.node)+'</td><td class="mono">'+esc(i.name)+'</td><td>'+ubar(i.rx)+'</td><td>'+ubar(i.tx)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(V.polled?'No interface utilisation reported. Enable SNMP polling on the devices.':'No SNMP polling yet — add SNMP credentials to the network devices in the AI Network Engineer.')+'</div>';
+    drawHealth();
+    drawMap();
+    var P=V.poller||{}, hm=function(t){return new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});};
+    $('up').textContent=P.running?'polling the devices now…':P.last_cycle_at?'last poll '+hm(P.last_cycle_at):'not polled yet';
+    // every device red at once is the path from the engine server, not 19 broken switches: say so
+    var tot=V.total||0, crit=c.critical||0;
+    $('why').innerHTML=tot&&crit===tot?'<div class="banner"><b>No device answers the engine server ('+crit+' of '+tot+').</b> When every node is red at once it is usually the path, not the devices: check that the engine server can reach the management network (ICMP and SNMP UDP 161 allowed from it through the firewall), then press <b>Poll all now</b>. Each node below shows the reason from its last poll.</div>'
+      :(tot&&crit?'<div class="banner"><b>'+crit+' of '+tot+' nodes are not answering.</b> The reason from the last poll is shown under each red node.</div>':'');
+  }
+  // Saudi Arabia: a simplified border outline (lon,lat) and the main cities, so sites plot on the real map.
+  var KSA=[[34.6,28.0],[36.0,29.4],[37.5,30.0],[38.0,31.0],[39.1,32.1],[42.0,31.1],[44.5,29.2],[46.5,29.1],[47.5,28.5],[48.5,28.0],[49.0,28.5],[50.2,27.0],[50.8,25.0],[51.6,24.6],[52.5,23.0],[55.2,22.6],[55.7,20.0],[52.0,19.0],[48.0,18.5],[47.0,17.0],[43.4,17.5],[42.6,16.4],[41.8,17.8],[40.8,19.8],[39.2,21.3],[38.0,24.0],[36.8,25.7],[35.5,27.5]];
+  var CITY={riyadh:[46.72,24.69],jeddah:[39.19,21.49],makkah:[39.83,21.39],mecca:[39.83,21.39],madinah:[39.61,24.47],medina:[39.61,24.47],dammam:[50.10,26.43],khobar:[50.21,26.28],dhahran:[50.14,26.27],jubail:[49.66,27.01],tabuk:[36.57,28.38],abha:[42.51,18.22],buraydah:[43.97,26.33],qassim:[43.97,26.33],hail:[41.69,27.52],jazan:[42.57,16.89],najran:[44.13,17.49],yanbu:[38.06,24.09],taif:[40.42,21.27],kharj:[47.30,24.15],hofuf:[49.59,25.36],ahsa:[49.59,25.36]};
+  var BB={x0:34.3,x1:56.0,y0:16.0,y1:32.3};
+  function px(lon,lat,W,H){return [ (lon-BB.x0)/(BB.x1-BB.x0)*W, (BB.y1-lat)/(BB.y1-BB.y0)*H ];}
+  function cityOf(site){var s=String(site||'').toLowerCase();for(var k in CITY)if(s.indexOf(k)>=0)return {key:k,ll:CITY[k]};return null;}
+  function drawMap(){
+    var nodes=[];(V.vendors||[]).forEach(function(g){g.nodes.forEach(function(n){nodes.push(n);});});
+    var sites={},unknown={};var rank={critical:3,warning:2,unknown:1,unpolled:0,up:0};
+    nodes.forEach(function(n){var c=cityOf(n.site);if(!c){var u=n.site||'(no site)';unknown[u]=(unknown[u]||0)+1;return;}
+      var s=sites[c.key]||(sites[c.key]={ll:c.ll,name:(n.site||c.key),count:0,worst:'up'});s.count++;if((rank[n.state]||0)>(rank[s.worst]||0))s.worst=n.state;});
+    var W=760,H=430,path='M'+KSA.map(function(p){var xy=px(p[0],p[1],W,H);return xy[0].toFixed(1)+','+xy[1].toFixed(1);}).join(' L')+' Z';
+    var col={up:'var(--ok)',warning:'var(--warn)',critical:'var(--bad)',unknown:'#6b7280',unpolled:'#3b4252'};
+    var dots=Object.keys(sites).map(function(k){var s=sites[k],xy=px(s.ll[0],s.ll[1],W,H),rr=Math.min(22,6+s.count*2);
+      return '<g><circle cx="'+xy[0].toFixed(1)+'" cy="'+xy[1].toFixed(1)+'" r="'+rr+'" fill="'+col[s.worst]+'" fill-opacity="0.75" stroke="#fff" stroke-opacity="0.5"><title>'+esc(s.name+': '+s.count+' node(s), worst '+s.worst)+'</title></circle>'
+        +'<text x="'+xy[0].toFixed(1)+'" y="'+(xy[1]+rr+11).toFixed(1)+'" text-anchor="middle" font-size="11" fill="var(--mute)">'+esc(s.name)+' ('+s.count+')</text></g>';}).join('');
+    var n=Object.keys(sites).length, uk=Object.keys(unknown);
+    $('mapc').textContent=n+' mapped'+(uk.length?' · '+uk.length+' unmapped':'');
+    $('map').innerHTML=nodes.length?'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:820px;display:block;margin:0 auto"><path d="'+path+'" fill="rgba(47,129,247,0.07)" stroke="#2f81f7" stroke-opacity="0.5" stroke-width="1.5"/>'+dots+'</svg>'
+      +(uk.length?'<p class="note">Not placed on the map (site name is not a known city): '+uk.map(function(u){return esc(u)+' ('+unknown[u]+')';}).join(', ')+'</p>':'')
+      :'<div class="empty">No nodes to map yet.</div>';
+  }
+  function ubar(p){if(p==null)return '<span class="muted">—</span>';var cls=p>=90?'bar-bad':p>=70?'bar-warn':'bar-ok';return '<div style="display:flex;align-items:center;gap:7px"><div class="util" style="flex:1"><i class="'+cls+'" style="width:'+Math.min(100,p)+'%"></i></div><span style="width:38px;text-align:right">'+p+'%</span></div>';}
+  function drawTree(){
+    var q=$('q').value.trim().toLowerCase(), G=V.vendors||[], html='';
+    G.forEach(function(g){
+      var ns=g.nodes.filter(function(n){return !q||[n.name,n.ip,n.site,n.role].join(' ').toLowerCase().indexOf(q)>=0;});
+      if(!ns.length)return;
+      var open=OPEN[g.vendor]!==false; // default open
+      html+='<details class="vgroup" data-v="'+esc(g.vendor)+'"'+(open?' open':'')+'><summary><span class="arr">▶</span><b>'+esc(g.vendor)+'</b> <span class="muted">('+ns.length+')</span></summary>'
+        +ns.map(function(n){return '<div class="node" data-id="'+esc(n.id)+'" title="'+esc((SLBL[n.state]||n.state)+(n.reason?' — '+n.reason:'')+(n.last?' · polled '+new Date(n.last).toLocaleString('en-GB'):''))+'"><span class="dot st-'+esc(n.state)+'"></span><span class="nm">'+esc(n.name)+(n.reason&&(n.state==='critical'||n.state==='warning')?'<span class="why">'+esc(n.reason)+'</span>':'')+'</span>'+(n.response_ms!=null?' <span class="muted" style="margin-left:auto;font-size:11.5px">'+n.response_ms+' ms</span>':'')+'</div>';}).join('')+'</details>';
+    });
+    $('tree').innerHTML=html||'<div class="empty">No network devices yet. Add them in the AI Network Engineer (or run device discovery).</div>';
+  }
+  function drawHealth(){
+    var c=V.counts||{}, seg=[['up',c.up||0,'var(--ok)'],['warning',c.warning||0,'var(--warn)'],['critical',c.critical||0,'var(--bad)'],['unknown',(c.unknown||0)+(c.unpolled||0),'#6b7280']];
+    var tot=seg.reduce(function(n,x){return n+x[1];},0)||1, a=0, stops=seg.map(function(x){var p=x[1]/tot*100,s=x[2]+' '+a.toFixed(2)+'% '+(a+p).toFixed(2)+'%';a+=p;return s;}).join(',');
+    $('health').innerHTML='<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><div style="width:120px;height:120px;border-radius:50%;background:conic-gradient('+stops+')"></div>'
+      +'<div><div style="font-size:13px;color:var(--mute);margin-bottom:6px">Nodes count: <b style="color:var(--title)">'+(V.total||0)+'</b></div>'
+      +seg.map(function(x){return '<div style="margin:3px 0"><span class="dot" style="background:'+x[2]+'"></span>'+esc(SLBL[x[0]]||x[0])+' <b>'+x[1]+'</b></div>';}).join('')+'</div></div>';
+  }
+  function detail(id){req('GET','/devices/'+encodeURIComponent(id)).then(function(r){var d=r.device,s=r.snapshot||{};
+    Z.open('Node',d.name,Z.kv([['Vendor',esc(d.vendor)],['IP address',esc(d.ip)],['Site',esc(d.site||'—')],['Role',esc(d.role||'—')],['Machine type',esc(s.system&&s.system.model||'—')],['Response time',s.reach&&s.reach.rtt_avg_ms!=null?Math.round(s.reach.rtt_avg_ms)+' ms':'—'],['Last poll',s.at?new Date(s.at).toLocaleString('en-GB'):'—'],['Errors',(s.errors||[]).join('; ')||'none']])
+      +((s.interfaces&&s.interfaces.length)?Z.sec('Interfaces','<table><thead><tr><th>Name</th><th>Oper</th><th>Rx%</th><th>Tx%</th></tr></thead><tbody>'+s.interfaces.map(function(i){return '<tr><td class="mono">'+esc(i.name)+'</td><td>'+esc(i.oper||'')+'</td><td>'+(i.util_in!=null?Math.round(i.util_in):'—')+'</td><td>'+(i.util_out!=null?Math.round(i.util_out):'—')+'</td></tr>';}).join('')+'</tbody></table>'):''));
+  }).catch(function(e){toast(e.message);});}
+  // ---- NOC intelligence: read from the SIEM, drawn here; nothing is computed on the page but colours and words
+  var NOC=null,NT='attn',BRIEF=null;
+  function scls(v){return v==null?'':v<50?'bad':v<80?'warn':'ok';}
+  function loadNoc(){return req('GET','/noc').then(function(r){NOC=r;drawNoc();}).catch(function(e){NOC=null;
+    $('gauge').innerHTML='<div class="empty">'+esc(e.status===404?'The engine on the server does not have the NOC intelligence yet - run the update.':e.status===403?'Not part of your job role.':e.message)+'</div>';
+    $('causes').innerHTML='<div class="empty">Nothing to show until the SIEM answers.</div>';$('npanel').innerHTML='';$('nmodel').textContent='';});}
+  function drawNoc(){var o=NOC,c=o.counts||{},sc=o.estate_score,col=sc==null?'#3b4252':sc<50?'var(--bad)':sc<80?'var(--warn)':'var(--ok)';
+    $('gauge').innerHTML='<div class="ring" style="background:conic-gradient('+col+' '+(sc||0)*3.6+'deg,rgba(255,255,255,.07) 0)"><i>'+(sc==null?'—':esc(String(sc)))+'</i></div>'
+      +'<div><b style="color:var(--title)">Network health</b><div class="muted" style="font-size:12px">'+(sc==null?'not measured yet - no node has been polled':'weighted by role (core, firewall, router, gateway count double)')+'</div></div>'
+      +'<div style="font-size:12px">'+[['up','Up'],['warning','Warning'],['critical','Down'],['unknown','Unknown'],['unpolled','Not polled']].map(function(x){return '<span class="pill"><span class="dot st-'+x[0]+'"></span>'+x[1]+' '+(c[x[0]]||0)+'</span>';}).join('')+'</div>';
+    var C=o.causes||[];
+    $('causes').innerHTML=C.length?C.map(function(k){return '<div class="cause '+esc(k.kind)+'"><div class="k2">'+esc({device:'Probable root cause','site-link':'Site link','engine-path':'Engine server path'}[k.kind]||k.kind)+(k.site?' · '+esc(k.site):'')+'</div><b>'+esc(k.title)+'</b><div class="muted" style="margin-top:4px">'+esc(k.check)+'</div><div class="muted" style="font-size:12px;margin-top:4px">'+(k.nodes||[]).length+' node(s) covered - not counted again below</div></div>';}).join('')
+      :'<div class="empty">'+((c.critical||0)?'Nodes are down, but none share a cause - each is listed under Needs attention.':'No outage with a shared cause.')+'</div>';
+    var M=o.model||{};$('nmodel').textContent='Learning: '+(M.learning_nodes||0)+' node(s) still building their own baseline (anomalies need '+(M.min_samples||30)+' samples, judged at |z| ≥ '+(M.z_alert||4)+' against the node’s own last '+(M.window_h||24)+' h). '+(o.note||'');
+    drawPanel();}
+  function row(cells){return '<tr>'+cells.map(function(x){return '<td>'+x+'</td>';}).join('')+'</tr>';}
+  function tbl(h,rows,empty){return rows.length?'<div class="tw"><table><thead><tr>'+h.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':'<div class="empty">'+esc(empty)+'</div>';}
+  function nlink(id,name){return '<a href="node-details.html?id='+encodeURIComponent(id)+'" style="color:var(--title)">'+esc(name||id)+'</a>';}
+  function drawPanel(){var o=NOC,el=$('npanel');if(!o)return;
+    [].forEach.call(document.querySelectorAll('#ntabs button'),function(b){b.setAttribute('aria-selected',b.getAttribute('data-t')===NT?'true':'false');});
+    if(NT==='attn')el.innerHTML=tbl(['Node','Site','Health','Why'],(o.attention||[]).map(function(a){return row([nlink(a.id,a.name),esc(a.site||'—'),'<span class="sc '+scls(a.score)+'">'+esc(String(a.score))+'</span>',(a.why||[]).map(function(w){return '<span class="pill">'+esc(String(w.pts))+' · '+esc(w.why)+'</span>';}).join('')]);}),'No node below 70 that is not already covered by a probable cause.');
+    else if(NT==='anom')el.innerHTML=tbl(['Node','Site','Metric','Now','Its normal','z'],(o.anomalies||[]).map(function(a){return row([nlink(a.device,a.name),esc(a.site||'—'),esc({rtt:'Response time (ms)',cpu:'CPU %',mem:'Memory %',loss:'Packet loss %'}[a.metric]||a.metric),esc(String(a.value)),esc(String(a.baseline)),'<b>'+esc(String(a.z))+'</b>']);}),(o.model&&o.model.learning_nodes)?'No anomaly yet - '+o.model.learning_nodes+' node(s) are still learning their normal.':'No node is far from its own normal.');
+    else if(NT==='flap')el.innerHTML=tbl(['Node','Site','Changes (1 h)','Last changes'],(o.flapping||[]).map(function(f){return row([nlink(f.device,f.name),esc(f.site||'—'),'<b>'+esc(String(f.flaps))+'</b>',(f.events||[]).map(function(e){return '<span class="pill mono">'+esc(e)+'</span>';}).join('')]);}),'Nothing flapping in the last hour.');
+    else if(NT==='fc'){var F=o.forecast||{};el.innerHTML=tbl(['Node','Interface','Peak now','Growth / week','Reaches 90 % in','History'],(F.items||[]).map(function(i){return row([nlink(i.device,i.device_name),'<span class="mono">'+esc(i.interface)+'</span>',esc(String(i.peak_now))+' %','+'+esc(String(i.growth_per_week))+' pts','<b class="sc '+(i.days_to_90<30?'bad':i.days_to_90<90?'warn':'ok')+'">'+(i.days_to_90===0?'now':esc(String(i.days_to_90))+' days')+'</b>',esc(String(i.days_of_data))+' days']);}),F.note||'No forecast yet.')
+      +'<p class="note">A straight line through each interface’s daily peak over the last 14 days; shown only with 5+ days of history and a rising trend.</p>';}
+    else if(NT==='sites')el.innerHTML=tbl(['Site','Nodes','Down','Worst','Health'],(o.sites||[]).map(function(x){return row([esc(x.site),esc(String(x.nodes)),x.down?'<b class="sc bad">'+x.down+'</b>':'0','<span class="dot st-'+esc(x.worst)+'"></span>'+esc(SLBL[x.worst]||x.worst),x.score==null?'<span class="muted">not measured</span>':'<span class="sc '+scls(x.score)+'">'+x.score+'</span>']);}),'No sites yet.');
+    else if(NT==='ai'){var st=o.ai||{};
+      el.innerHTML='<div class="ai"><div class="lbl">AI SHIFT BRIEF · READ-ONLY · A DRAFT TO VERIFY</div><p class="muted" style="margin:6px 0">What is down, the probable cause, what to check first and who should look. It reads this page’s data only; it changes, polls and restarts nothing.</p>'
+        +(st.enabled?'<button type="button" id="askbrief">✨ Write the shift brief</button>':'<p class="muted">'+esc(st.reason||'AI is not available')+'</p>')+'<div id="briefout" style="margin-top:10px"></div></div>';
+      if(BRIEF)drawBrief();}
+  }
+  function drawBrief(){var b=BRIEF,el=$('briefout');if(!el)return;
+    if(b.error){el.innerHTML='<p class="err">'+esc(b.error)+'</p>';return;}
+    if(!b.ok){el.innerHTML='<p class="muted">'+esc(b.note||'The AI did not return a brief.')+'</p>';return;}
+    el.innerHTML='<p style="white-space:pre-wrap">'+esc(b.summary)+'</p>'+tbl(['Node','Why','Check first','Team',''],(b.priorities||[]).map(function(p){return row([esc(p.device),esc(p.why),esc(p.check),esc(p.team||'—'),p.verified?'<span class="pill">checked</span>':'<span class="pill" style="color:var(--warn)">unverified - not a node the AI looked at</span>']);}),'No priorities.')
+      +((b.watch||[]).length?'<p class="note">Watch: '+b.watch.map(esc).join(' · ')+'</p>':'');}
+  document.addEventListener('click',function(e){var t=e.target.closest('#ntabs button');if(t){NT=t.getAttribute('data-t');drawPanel();return;}
+    if(e.target.closest('#askbrief')){var b=e.target.closest('#askbrief');b.disabled=true;b.textContent='Writing…';
+      req('POST','/noc/brief').then(function(r){BRIEF=r;}).catch(function(x){BRIEF={error:x.status===403?'The AI shift brief needs the operator role.':x.message};}).then(function(){b.disabled=false;b.textContent='✨ Write the shift brief';drawBrief();});}});
+  // Workflow Automation (GET /api/itam/workflow/attention): the network team's open / overdue / on-time record and what needs this person
+  function loadWf(){var w=new XMLHttpRequest();w.open('GET','/api/itam/workflow/attention');w.withCredentials=true;w.zybQuiet=true;w.timeout=60000;
+    w.onload=function(){var j=null;try{j=JSON.parse(w.responseText);}catch(e){j=null;/* not JSON: said below */}
+      if(w.status===404){$('wfcard').hidden=true;return;}$('wfcard').hidden=false;
+      if(w.status!==200||!j||!j.summary){$('wfk').innerHTML='';$('wfl').innerHTML='<div class="empty">Workflow Automation could not be read'+(j&&j.error?': '+esc(j.error):' (HTTP '+w.status+')')+'.</div>';return;}
+      var s=j.summary,n=(s.teams||[]).filter(function(t){return t.team==='network';})[0]||{open:0,overdue:0,n:0,on_time:0};
+      var P=(j.priorities||[]).map(function(p){return {p:p,pts:p.why.reduce(function(a,q){return a+q[1];},0)};}).sort(function(a,b){return b.pts-a.pts;});
+      $('wfk').innerHTML=tile('Network team · open',n.open,'requests with the network team')+tile('Network team · overdue',n.overdue,'past their due date',n.overdue?'bad':'ok')
+        +tile('Network team · on time',n.n?Math.round(n.on_time/n.n*100)+'%':'—',n.n?n.on_time+' of '+n.n+' fulfilled':'no history yet')+tile('Waiting for your approval',s.approvals,'changes to approve',s.approvals?'warn':'')+tile('Overdue across IT',s.all_overdue,'every IT team',s.all_overdue?'warn':'');
+      $('wfl').innerHTML=P.length?'<div class="tw"><table><thead><tr><th>Points</th><th>Request</th><th>Why</th></tr></thead><tbody>'+P.slice(0,8).map(function(x){return '<tr><td><span style="display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;background:'+(x.pts>=45?'rgba(255,123,114,.15);color:var(--bad)':'rgba(227,179,65,.15);color:var(--warn)')+'">'+esc(x.pts)+'</span></td><td><a href="'+esc(x.p.page)+'" style="color:var(--info)">'+esc(x.p.ref)+'</a> '+esc(x.p.text)+'</td><td class="muted">'+esc(x.p.kind)+' · '+esc(x.p.why.map(function(q){return q[0]+' +'+q[1];}).join(', '))+'</td></tr>';}).join('')+'</tbody></table></div>'
+        :'<div class="empty">Nothing waiting for you in Workflow Automation'+(s.queue_open||s.approvals?'':' - list the network engineers under the Network team in its Settings to see the team queue')+'.</div>';};
+    w.onerror=w.ontimeout=function(){$('wfcard').hidden=false;$('wfk').innerHTML='';$('wfl').innerHTML='<div class="empty">Workflow Automation did not answer.</div>';};w.send();}
+  function load(){loadWf();return req('GET','/npm').then(function(r){V=r;draw();}).catch(function(e){$('tree').innerHTML='<p class="err">'+esc(e.status===404?'The AI Network Engineer on the server does not have the NPM summary yet — run the update (update-all.ps1).':e.message)+'</p>';$('ifs').innerHTML='';});}
+  $('q').addEventListener('input',drawTree);
+  document.addEventListener('click',function(e){var n=e.target.closest('.node');if(n){location.href='node-details.html?id='+encodeURIComponent(n.getAttribute('data-id'));return;}});
+  document.addEventListener('toggle',function(e){var d=e.target.closest('.vgroup');if(d)OPEN[d.getAttribute('data-v')]=d.open;},true);
+  // Poll all now: the engine pings / polls every device in the background; re-read every 4 s until the cycle ends
+  var watching=null;
+  function watch(){clearTimeout(watching);var t0=Date.now(),tick=function(){load().then(function(){if(V&&V.poller&&V.poller.running&&Date.now()-t0<300000)watching=setTimeout(tick,4000);else{$('pollnow').disabled=false;toast('Poll finished'+(V&&V.counts?': '+(V.counts.up||0)+' up, '+(V.counts.critical||0)+' not answering':''));}});};watching=setTimeout(tick,3000);}
+  $('pollnow').addEventListener('click',function(){var b=this;b.disabled=true;
+    req('POST','/poll').then(function(r){toast(r.started?'Polling '+r.devices+' device(s) now…':'A poll is already running — following it…');$('up').textContent='polling the devices now…';watch();})
+      .catch(function(e){b.disabled=false;toast(e.status===403?'Polling now needs the operator role.':e.status===404?'The engine does not have Poll all now yet — run the update (update-all.ps1).':e.message);});});
+  $('refresh').addEventListener('click',function(){load();loadNoc();});$('print').addEventListener('click',function(){window.print();});
+  load();loadNoc();setInterval(function(){if(!document.hidden){load();loadNoc();}},60000);
+})();
+</script></body></html>

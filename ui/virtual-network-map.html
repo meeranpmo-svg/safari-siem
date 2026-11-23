@@ -1,0 +1,142 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Virtual Network Map</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<style>
+:root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-ok:#2fb344;--d-warn:#f59f00;--d-bad:#e5484d;--d-acc:#5b8def}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1680px;margin:0 auto;padding:18px 16px 60px}
+.top{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.top h1{margin:0;font-size:24px}.eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:var(--d-mute);text-transform:uppercase}
+.sp{flex:1}.mute{color:var(--d-mute)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--d-raise);color:var(--d-ink);border:1px solid var(--d-line);border-radius:9px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:#3a4258}.btn.pri{background:var(--d-acc);border-color:var(--d-acc);color:#fff}.btn.ai{background:linear-gradient(135deg,#7c4dff,#5b8def);border:0;color:#fff}.btn.bad{border-color:#5a2a2d;color:#ff8a8e}.btn.sm{padding:3px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--d-panel);border:1px solid var(--d-line);border-radius:16px;padding:16px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--d-mute);font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}.kpi{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:10px 12px}.kpi .n{font-size:26px;font-weight:800}.kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--d-mute)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tabs button{background:transparent;border:1px solid var(--d-line);color:var(--d-mute);border-radius:999px;padding:6px 14px;font:600 13px Inter,"Segoe UI",system-ui,sans-serif;cursor:pointer;display:inline-flex;gap:6px;align-items:center}.tabs button[aria-selected="true"]{color:#fff;border-color:var(--d-acc);background:rgba(91,141,239,.2)}
+.cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px}
+.hosts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.host{background:var(--d-raise);border:1px solid var(--d-line);border-radius:14px;padding:12px}.host.bad{border-color:#5a2a2d}.host h3{margin:0 0 8px;font-size:14px;display:flex;gap:6px;align-items:center}
+.sw{border:1px solid #2a3142;border-radius:10px;padding:8px;margin:8px 0;background:#10131a}.sw .t{font-weight:700;font-size:12.5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.chip{display:inline-flex;gap:4px;align-items:center;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;border:1px solid var(--d-line);margin:2px 3px 2px 0;white-space:nowrap}
+.c-up{border-color:#245c32;color:#56d364}.c-down{border-color:#5a2a2d;color:#ff8a8e;background:rgba(229,72,77,.1)}.c-free{color:var(--d-mute)}.c-bad{border-color:#5a2a2d;color:#ff8a8e;background:rgba(229,72,77,.12)}.c-warn{border-color:#5a4a1d;color:#f5b544}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.v-critical{background:rgba(229,72,77,.22);color:#ff8a8e}.v-high{background:rgba(245,99,0,.2);color:#ff9b5c}.v-medium{background:rgba(245,159,0,.18);color:#f5b544}.v-low,.v-info{background:rgba(139,147,164,.16);color:#aab2c2}.v-ok{background:rgba(47,179,68,.15);color:#56d364}
+.li{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-bottom:1px solid #1b2030;cursor:pointer;border-radius:8px}.li:hover{background:#151924}.li.sel{background:#172036}.li .b{flex:1;min-width:0}.li .t{font-weight:600;overflow-wrap:anywhere}.li .s{font-size:12px;color:var(--d-mute);overflow-wrap:anywhere}
+.note{color:var(--d-mute);font-size:12.5px;padding:10px;border:1px dashed var(--d-line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--d-mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px;border-bottom:1px solid var(--d-line)}td{padding:6px;border-bottom:1px solid #1b2030;vertical-align:top}
+td.mx{text-align:center;font-weight:700}td.mx.bad{background:rgba(229,72,77,.18);color:#ff8a8e}td.mx.miss{background:rgba(245,159,0,.12);color:#f5b544}
+pre.cmd{background:#0b0d12;border:1px solid var(--d-line);border-radius:10px;padding:10px;font:12px ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
+.inp,select.inp,textarea.inp{background:#0b0d12;color:var(--d-ink);border:1px solid var(--d-line);border-radius:8px;padding:6px 9px;font:13px Inter,"Segoe UI",system-ui,sans-serif;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.path{display:flex;gap:6px;align-items:stretch;flex-wrap:wrap;margin:8px 0}.hop{background:var(--d-raise);border:1px solid var(--d-line);border-radius:10px;padding:8px 10px;min-width:130px}.hop b{display:block;font-size:12px;color:var(--d-mute);text-transform:uppercase;letter-spacing:.04em}.hop.bad{border-color:#5a2a2d}.arrow{align-self:center;color:var(--d-mute)}
+.ans{white-space:pre-wrap;background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:12px;margin-top:10px;font-size:13px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2430;border:1px solid #2e3747;border-radius:10px;padding:10px 16px;z-index:9999;max-width:90vw}
+@media(max-width:1100px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Servers &amp; Virtualization</div><h1>Virtual Network Map</h1><div class="sm mute">vCenter / ESXi and Nutanix AHV networking: how every VM reaches the physical network, what differs between hosts of a cluster, and the exact fix with its rollback.</div></div><div class="sp"></div>
+ <span class="sm mute" id="up"></span><button class="btn" id="read" type="button" hidden><i class="ti ti-refresh-dot"></i>Read now</button><button class="btn" id="refresh" type="button"><i class="ti ti-refresh"></i>Refresh</button></div>
+<div id="err" class="card" hidden></div>
+<div id="main" hidden>
+ <section class="card"><div class="kpis" id="kpis"></div></section>
+ <div class="tabs" id="tabs" role="tablist"></div>
+ <div id="view"></div>
+</div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
+  var V=null, TAB='map', PL='', CL='', SELF='', SEV='all', ANS='', TR=null;
+  function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},5000);}
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=300000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: shown as the HTTP status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('IT Asset Management is not reachable'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function when(t){return t?new Date(t).toLocaleString():'—';}
+  function pill(t,c){return '<span class="pill '+c+'">'+esc(t)+'</span>';}
+  function note(t){return '<div class="note">'+esc(t)+'</div>';}
+  function plat(){return V.platforms.find(function(p){return p.id===PL;})||V.platforms[0];}
+  function clus(){var p=plat();return p?(p.clusters.find(function(c){return c.id===CL;})||p.clusters[0]):null;}
+  function fOn(host,obj){return V.findings.filter(function(f){return f.host===host&&(obj==null||f.object===obj)&&f.severity!=='info';});}
+  function load(){$('err').hidden=true;return req('GET','/virt-network').then(function(v){V=v;$('main').hidden=false;$('read').hidden=!v.can_propose;draw();}).catch(function(e){$('main').hidden=true;$('err').hidden=false;$('err').innerHTML='<h2><i class="ti ti-alert-triangle"></i>The Virtual Network Map is not available</h2>'+note(e.status===404?'It is not installed on the server - run the update (update-platform.ps1).':e.message);});}
+  function draw(){var s=V.summary;function k(n,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n)+'</div><div class="l">'+esc(l)+'</div></div>';}
+    $('kpis').innerHTML=k(s.platforms,'platforms read')+k(s.hosts,'hosts')+k(s.vms,'VMs')+k(s.critical,'critical',s.critical?'#ff7b80':'')+k(s.high,'high',s.high?'#ff9b5c':'')+k(s.medium,'medium',s.medium?'#f5b544':'')+k(s.pending,'fixes waiting for approval',s.pending?'#8db0ff':'');
+    var last=V.platforms.map(function(p){return p.at;}).filter(Boolean).sort().pop();$('up').textContent=last?'Last read '+when(last):'';
+    var T=[['map','topology-star-3','Map'],['matrix','table','VLAN matrix'],['findings','alert-triangle','Findings ('+V.findings.filter(function(f){return f.severity!=='info';}).length+')'],['trace','route','Trace a VM'],['proposals','git-pull-request','Fixes'],['changes','history','Changes']];if(V.can_propose)T.push(['ai','robot','AI engineer']);
+    $('tabs').innerHTML=T.map(function(t){return '<button type="button" role="tab" data-tab="'+t[0]+'" aria-selected="'+(TAB===t[0])+'"><i class="ti ti-'+t[1]+'"></i>'+esc(t[2])+'</button>';}).join('');
+    var v=$('view');
+    if(!V.installed){v.innerHTML='<section class="card">'+note('Capacity Planning (the vCenter / Prism reader) is not installed - run the update (update-platform.ps1).')+'</section>';return;}
+    if(!V.platforms.length){v.innerHTML='<section class="card">'+note(V.sources.length?'No network read yet. '+(V.can_propose?'Press Read now.':'An operator presses Read now.'):'No vCenter or Nutanix Prism is connected. Add it on the Virtualization page (read-only login); the map reads it with the same login.')+'</section>';return;}
+    v.innerHTML=TAB==='map'?mapView():TAB==='matrix'?matrixView():TAB==='findings'?findingsView():TAB==='trace'?traceView():TAB==='proposals'?propView():TAB==='changes'?changesView():aiView();}
+  function pickers(){var p=plat(),c=clus();return '<div class="row" style="margin-bottom:10px"><select class="inp" id="pl" style="max-width:280px" aria-label="Platform">'+V.platforms.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===p.id?' selected':'')+'>'+esc(x.label+' ('+(x.kind==='nutanix'?'Nutanix':'vSphere')+')')+'</option>';}).join('')+'</select>'
+    +'<select class="inp" id="cl" style="max-width:260px" aria-label="Cluster">'+p.clusters.map(function(x){return '<option value="'+esc(x.id)+'"'+(c&&x.id===c.id?' selected':'')+'>'+esc(x.name+' · '+x.hosts.length+' hosts')+'</option>';}).join('')+'</select>'
+    +(p.error?'<span class="pill v-critical">read failed: '+esc(p.error)+'</span>':'')+(p.read_errors.length?'<span class="sm mute">not read: '+esc(p.read_errors.join(' · '))+'</span>':'')+'</div>';}
+  // ---------- map: each host with its uplinks, switches, port groups (VLAN) and VMkernel interfaces
+  function mapView(){var p=plat(),c=clus();if(!c)return pickers()+note('No host in this platform.');var cs=c.consensus;
+    var h='<section class="card"><h2><i class="ti ti-topology-star-3"></i>'+esc(c.name)+' <span class="c">'+(cs&&cs.portgroups.length?'learned from '+c.hosts.length+' hosts: '+cs.portgroups.length+' port groups'+(cs.uplinks!=null?', usually '+cs.uplinks+' links up per host':''):'')+'</span></h2>'+pickers()+'<div class="hosts">';
+    c.hosts.forEach(function(x){var bad=fOn(x.name).length;
+      h+='<div class="host'+(bad?' bad':'')+'"><h3><i class="ti ti-server"></i>'+esc(x.name)+(x.maintenance?' '+pill('maintenance','v-low'):'')+(x.state&&x.state!=='connected'?' '+pill(x.state,'v-critical'):'')+(bad?' '+pill(bad+' issue'+(bad>1?'s':''),'v-high'):'')+'</h3><div class="sm mute">'+esc(x.vms)+' VMs running</div>';
+      if(!x.read){h+=note('Networking not read for this host (the login may lack the privilege).')+'</div>';return;}
+      var used={};(x.switches||[]).forEach(function(s){s.uplinks.forEach(function(u){used[u]=1;});});
+      (x.switches||[]).forEach(function(s){h+='<div class="sw"><div class="t"><i class="ti ti-switch-horizontal"></i>'+esc(s.name)+' <span class="mute">'+esc(s.kind==='dvs'?'distributed':s.kind==='ovs'?'OVS':'standard')+(s.mtu?' · MTU '+s.mtu:'')+'</span></div><div>'
+        +(s.uplinks.length?s.uplinks.map(function(u){var n=(x.pnics||[]).find(function(p){return p.device===u;})||{};return '<span class="chip '+(n.up?'c-up':'c-down')+'" title="'+esc(n.mac||'')+'"><i class="ti ti-plug'+(n.up?'':'-x')+'"></i>'+esc(u)+(n.speed_mb?' '+(n.speed_mb>=1000?n.speed_mb/1000+'G':n.speed_mb+'M'):' no link')+(s.standby.indexOf(u)>=0?' standby':'')+'</span>';}).join(''):'<span class="chip c-warn">no uplink - internal only</span>')+'</div><div style="margin-top:4px">'
+        +(x.portgroups||[]).filter(function(g){return g.switch===s.id;}).map(function(g){var f=fOn(x.name,g.name);return '<span class="chip '+(f.length?'c-bad':'')+'" title="'+esc(f.map(function(z){return z.title;}).join(' | '))+'">'+esc(g.name)+' · '+(g.vlan===4095?'trunk':'VLAN '+esc(g.vlan))+'</span>';}).join('')
+        +(x.vmks||[]).filter(function(k){return (k.portgroup&&(x.portgroups||[]).some(function(g){return g.name===k.portgroup&&g.switch===s.id;}))||(k.dvs_uuid&&'dvs:'+k.dvs_uuid===s.id);}).map(function(k){var f=fOn(x.name,k.device);return '<span class="chip '+(f.length?'c-bad':'c-free')+'">'+esc(k.device)+' '+esc(k.services.join('/')||'vmk')+(k.ip?' '+esc(k.ip):'')+(k.mtu?' · '+k.mtu:'')+'</span>';}).join('')+'</div></div>';});
+      var free=(x.pnics||[]).filter(function(n){return !used[n.device];});
+      if(free.length)h+='<div class="sm mute">'+(p.kind==='nutanix'?'NICs: ':'Not on a switch: ')+free.map(function(n){return '<span class="chip '+(n.up?'c-up':n.up===false?'c-down':'c-free')+'">'+esc(n.device)+(n.speed_mb?' '+(n.speed_mb>=1000?n.speed_mb/1000+'G':n.speed_mb+'M'):n.up===false?' no link':'')+'</span>';}).join('')+'</div>';
+      h+='</div>';});
+    h+='</div>';
+    if(p.kind==='nutanix'){h+='<h2 style="margin-top:14px"><i class="ti ti-network"></i>AHV networks</h2><table><thead><tr><th>Network</th><th>VLAN</th><th>VMs</th></tr></thead><tbody>'+p.networks.map(function(n){return '<tr><td>'+esc(n.name)+'</td><td>'+esc(n.vlan)+'</td><td>'+esc(n.vms)+'</td></tr>';}).join('')+'</tbody></table>';
+      if(p.vswitches&&p.vswitches.length)h+='<div class="sm mute" style="margin-top:8px">Virtual switches: '+p.vswitches.map(function(s){return esc(s.name+(s.bond_mode?' ('+s.bond_mode+')':'')+(s.mtu?' MTU '+s.mtu:''));}).join(' · ')+'</div>';}
+    else if(p.dvs.length)h+='<div class="sm mute" style="margin-top:10px">Distributed switches: '+p.dvs.map(function(d){return esc(d.name+(d.mtu?' (MTU '+d.mtu+')':''));}).join(' · ')+'</div>';
+    return h+'</section>';}
+  // ---------- VLAN matrix: port group x host, the learned value per row
+  function matrixView(){var p=plat(),c=clus();if(!c)return pickers();if(p.kind==='nutanix')return '<section class="card">'+pickers()+note('AHV networks are defined once per cluster, so every host has the same VLANs - see the Map tab for the networks and the Findings for duplicates.')+'</section>';
+    var names={};c.hosts.forEach(function(x){(x.portgroups||[]).forEach(function(g){names[g.name]=1;});});var cs=c.consensus||{portgroups:[]};
+    var h='<section class="card"><h2><i class="ti ti-table"></i>VLAN per port group and host <span class="c">red = differs from the hosts\' majority · orange = missing on that host</span></h2>'+pickers()+'<div style="overflow:auto"><table><thead><tr><th>Port group</th><th>Learned</th>'+c.hosts.map(function(x){return '<th>'+esc(x.name)+'</th>';}).join('')+'</tr></thead><tbody>';
+    Object.keys(names).sort().forEach(function(n){var b=cs.portgroups.find(function(g){return g.name===n;})||{};
+      h+='<tr><td>'+esc(n)+'</td><td class="sm">'+(b.vlan!=null?'VLAN '+esc(b.vlan)+' <span class="mute">('+esc(b.agree)+'/'+esc(b.on)+')</span>':'—')+'</td>'+c.hosts.map(function(x){var g=(x.portgroups||[]).find(function(z){return z.name===n;});if(!x.read)return '<td class="mx">?</td>';if(!g)return '<td class="mx miss">—</td>';return '<td class="mx'+(b.vlan!=null&&g.vlan!==b.vlan?' bad':'')+'">'+(g.vlan===4095?'trunk':esc(g.vlan))+'</td>';}).join('')+'</tr>';});
+    h+='</tbody></table></div>';
+    if(cs.services&&cs.services.length)h+='<div class="sm mute" style="margin-top:10px">VMkernel services: '+cs.services.map(function(s){return esc(s.service+' on '+s.hosts+'/'+s.of+(s.mtu?' (MTU '+s.mtu+')':''));}).join(' · ')+'</div>';
+    return h+'</section>';}
+  // ---------- findings with the fix
+  function fRow(f){return '<div class="li'+(SELF===f.id?' sel':'')+'" data-f="'+esc(f.id)+'"><div>'+pill(f.severity,'v-'+f.severity)+'</div><div class="b"><div class="t">'+esc(f.title)+'</div><div class="s">'+esc([f.platform_label,f.cluster].filter(Boolean).join(' · '))+(f.confidence?' · learned from peers: '+esc(f.confidence)+'% agree':'')+(f.after_change?' · after a change: '+esc(f.after_change):'')+'</div></div></div>';}
+  function findingsView(){var L=V.findings.filter(function(f){return SEV==='all'?f.severity!=='info':f.severity===SEV;});var f=V.findings.find(function(x){return x.id===SELF;});
+    return '<div class="cols"><section class="card"><h2><i class="ti ti-alert-triangle"></i>Findings</h2><div class="row" style="margin-bottom:8px">'+['all','critical','high','medium','low','info'].map(function(s){return '<button type="button" class="btn sm'+(SEV===s?' pri':'')+'" data-sev="'+s+'">'+esc(s==='all'?'All problems':s)+'</button>';}).join('')+'</div>'+(L.length?L.map(fRow).join(''):note('Nothing here - the hosts agree and every uplink has link.'))+'</section><section class="card" id="fdet">'+(f?fDetail(f):'<h2>Fix</h2>'+note('Choose a finding.'))+'</section></div>';}
+  function cmds(o){if(!o)return '';return Object.keys(o).map(function(k){return '<div class="sm mute">'+esc({esxcli:'ESXi shell (esxcli)',powercli:'PowerCLI',acli:'Nutanix CVM (acli)',check:'Read-only checks'}[k]||k)+'</div><pre class="cmd">'+esc(o[k].join('\n'))+'</pre>';}).join('');}
+  function fDetail(f){var open=V.proposals.find(function(p){return p.finding_id===f.id&&['pending','approved','done'].indexOf(p.status)>=0;});
+    return '<h2>'+pill(f.severity,'v-'+f.severity)+' '+esc(f.title)+'</h2><div class="sm">'+esc(f.why||'')+'</div>'+(f.confidence?'<div class="sm mute" style="margin-top:6px">Learned from the peer hosts: '+esc(f.confidence)+'% of them agree on the value this host differs from.</div>':'')
+      +(f.after_change?'<div class="note" style="margin-top:8px">Appeared after a configuration change: '+esc(f.after_change)+'</div>':'')+(f.affected_vms&&f.affected_vms.length?'<div class="sm" style="margin-top:6px">Affected VMs: '+esc(f.affected_vms.join(', '))+'</div>':'')
+      +(f.commands?'<h2 style="margin-top:12px"><i class="ti ti-terminal-2"></i>Fix</h2>'+cmds(f.commands):'')+(f.rollback?'<h2 style="margin-top:8px"><i class="ti ti-arrow-back-up"></i>Rollback</h2>'+cmds(f.rollback):'')
+      +(f.steps&&f.steps.length?'<ol class="sm">'+f.steps.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>':'')+(f.needs_input?'<div class="note">Fill in before running: '+esc(f.needs_input.join(', '))+'</div>':'')+(f.verify?'<div class="sm mute">Check: '+esc(f.verify)+'</div>':'')
+      +'<div class="row" style="margin-top:10px">'+(open?'<span class="sm">Fix '+esc(open.id)+' is '+esc(open.status)+' - see Fixes.</span>':f.proposable&&V.can_propose?'<button class="btn pri" type="button" data-prop="'+esc(f.id)+'"><i class="ti ti-git-pull-request"></i>Propose this fix</button><span class="sm mute">Another administrator approves; an engineer runs it; the next read verifies it.</span>':'')+'</div>';}
+  // ---------- trace a VM
+  function traceView(){var h='<section class="card"><h2><i class="ti ti-route"></i>Trace a VM <span class="c">NIC → port group / network (VLAN) → switch → uplinks → host</span></h2><div class="row"><input class="inp" id="vmq" style="max-width:320px" placeholder="VM name" aria-label="VM name" value="'+esc(TR&&TR.vm?TR.vm.name:'')+'"><button class="btn pri" type="button" id="trgo">Trace</button></div><div id="trout">';
+    if(TR){h+='<div class="sm" style="margin-top:10px"><b>'+esc(TR.vm.name)+'</b> ('+esc(TR.vm.power)+') on '+esc(TR.host?TR.host.name:'unknown host')+' · '+esc(TR.platform)+'</div>';
+      TR.nics.forEach(function(n){var badU=n.uplinks.length&&!n.uplinks.some(function(u){return u.up;});
+        h+='<div class="path"><div class="hop'+(n.connected===false?' bad':'')+'"><b>VM NIC</b>'+esc(n.mac||'—')+'<br><span class="sm mute">'+(n.connected===false?'not connected':'connected')+(n.ips.length?' · '+esc(n.ips.join(', ')):'')+'</span></div><div class="arrow">→</div><div class="hop"><b>Network</b>'+esc(n.network||'—')+'<br><span class="sm mute">'+(n.trunk?'trunk '+esc(n.trunk.map(function(r){return r[0]+'-'+r[1];}).join(',')):n.vlan!=null?'VLAN '+esc(n.vlan):'VLAN not read')+'</span></div><div class="arrow">→</div><div class="hop'+(n.switch?'':' bad')+'"><b>Switch</b>'+esc(n.switch?n.switch.name:'not on this host')+'<br><span class="sm mute">'+esc(n.switch?(n.switch.kind+(n.switch.mtu?' · MTU '+n.switch.mtu:'')):'')+'</span></div><div class="arrow">→</div><div class="hop'+(badU||!n.uplinks.length?' bad':'')+'"><b>Uplinks</b>'+(n.uplinks.length?n.uplinks.map(function(u){return '<span class="chip '+(u.up?'c-up':'c-down')+'">'+esc(u.device)+(u.speed_mb?' '+(u.speed_mb>=1000?u.speed_mb/1000+'G':u.speed_mb+'M'):' no link')+'</span>';}).join(''):'none')+'</div><div class="arrow">→</div><div class="hop"><b>Host</b>'+esc(TR.host?TR.host.name:'—')+'</div></div>';});
+      if(!TR.vm.guest_read)h+=note('VMware Tools did not report the guest NICs - connection state and IPs are not known.');
+      h+=TR.findings.length?'<h2 style="margin-top:10px">Problems on this path</h2>'+TR.findings.map(fRow).join(''):'<div class="sm" style="margin-top:8px"><span class="pill v-ok">no problem found on this path</span></div>';}
+    return h+'</div></section>';}
+  // ---------- proposals
+  function propView(){var P=V.proposals;if(!P.length)return '<section class="card">'+note('No fix proposed yet. Open a finding and press Propose this fix.')+'</section>';var me=window.zybWho&&window.zybWho.user;
+    return '<section class="card"><h2><i class="ti ti-git-pull-request"></i>Fixes <span class="c">proposed → approved by another administrator → run by an engineer → verified by the next read</span></h2>'+P.map(function(p){var c={pending:'v-medium',approved:'v-low',done:'v-low',verified:'v-ok',rejected:'v-critical'}[p.status]||'v-low';
+      return '<div class="card" style="background:#10131a"><div class="row">'+pill(p.status,c)+'<b>'+esc(p.id)+'</b><span>'+esc(p.title)+'</span></div><div class="sm mute">asked by '+esc(p.requested_by)+' · '+esc(when(p.at))+(p.decided_by?' · '+esc(p.status==='rejected'?'rejected':'approved')+' by '+esc(p.decided_by):'')+(p.done_by?' · run by '+esc(p.done_by):'')+(p.still_present_at?' · still present after the run ('+esc(when(p.still_present_at))+')':'')+(p.note?' · '+esc(p.note):'')+'</div>'+cmds(p.commands)+(p.rollback?'<div class="sm mute">Rollback</div>'+cmds(p.rollback):'')
+        +'<div class="row">'+(p.status==='pending'&&V.can_decide?'<input class="inp" id="dn-'+esc(p.id)+'" placeholder="Note (required to reject)" style="max-width:300px"><button class="btn pri sm" type="button" data-dec="approve:'+esc(p.id)+'">Approve</button><button class="btn bad sm" type="button" data-dec="reject:'+esc(p.id)+'">Reject</button>':'')+(p.status==='approved'&&V.can_propose?'<button class="btn sm" type="button" data-done="'+esc(p.id)+'"><i class="ti ti-check"></i>I ran it</button>':'')+'</div></div>';}).join('')+'</section>';}
+  function changesView(){return '<section class="card"><h2><i class="ti ti-history"></i>Configuration changes seen between reads</h2>'+(V.changes.length?'<table><thead><tr><th>When</th><th>Platform</th><th>Host</th><th>Change</th></tr></thead><tbody>'+V.changes.map(function(c){return '<tr><td>'+esc(when(c.at))+'</td><td>'+esc(c.platform)+'</td><td>'+esc(c.host)+'</td><td>'+esc(c.what)+'</td></tr>';}).join('')+'</tbody></table>':note('No change seen yet - the platform compares each read with the one before.'))+'</section>';}
+  function aiView(){var a=V.ai||{};return '<section class="card"><h2><i class="ti ti-robot"></i>AI Virtualization Network Engineer <span class="c">explains from the findings and may propose one fix - it cannot approve or change anything</span></h2>'+(a.enabled?'':note('Not available: '+(a.reason||'')))+'<div class="row"><textarea class="inp" id="q" maxlength="4000" style="min-height:60px;flex:1" aria-label="Question" placeholder="Why does app01 lose its network after vMotion? Which host is the odd one out in PROD?"></textarea><button class="btn ai" type="button" id="ask"'+(a.enabled?'':' disabled')+'>Ask</button></div>'+(ANS?'<div class="ans">'+esc(ANS)+'</div>':'')+'</section>';}
+  // ---------- actions
+  document.addEventListener('change',function(ev){if(ev.target.id==='pl'){PL=ev.target.value;CL='';draw();}else if(ev.target.id==='cl'){CL=ev.target.value;draw();}});
+  document.addEventListener('click',function(ev){var el=ev.target.closest('[data-tab],[data-f],[data-sev],[data-prop],[data-dec],[data-done],button[id]');if(!el)return;
+    if(el.dataset.tab){TAB=el.dataset.tab;draw();return;}
+    if(el.dataset.f){SELF=el.dataset.f;TAB='findings';draw();return;}
+    if(el.dataset.sev){SEV=el.dataset.sev;draw();return;}
+    if(el.dataset.prop){el.disabled=true;req('POST','/virt-network/proposals',{finding:el.dataset.prop}).then(function(r){toast('Fix '+r.id+' proposed - another administrator approves it');return load();}).catch(function(e){toast(e.message);el.disabled=false;});return;}
+    if(el.dataset.dec){var d=el.dataset.dec.split(':'),n=$('dn-'+d[1]),b={decision:d[0]};if(n&&n.value.trim())b.note=n.value.trim();req('POST','/virt-network/proposals/'+encodeURIComponent(d[1])+'/decide',b).then(function(){toast(d[0]==='approve'?'Approved':'Rejected');return load();}).catch(function(e){toast(e.message);});return;}
+    if(el.dataset.done){req('POST','/virt-network/proposals/'+encodeURIComponent(el.dataset.done)+'/done',{}).then(function(){toast('Marked as run - the next read verifies it');return load();}).catch(function(e){toast(e.message);});return;}
+    if(el.id==='refresh'){load();return;}
+    if(el.id==='read'){el.disabled=true;$('up').textContent='Reading vCenter / Prism…';req('POST','/virt-network/read',{}).then(function(r){var bad=r.results.filter(function(x){return !x.ok;});toast(bad.length?'Read with problems: '+bad.map(function(x){return x.label+': '+x.error;}).join('; '):'Read '+r.results.length+' platform(s)'+(r.changes.length?', '+r.changes.length+' change(s) seen':''));el.disabled=false;return load();}).catch(function(e){toast(e.message);el.disabled=false;});return;}
+    if(el.id==='trgo'){var v=$('vmq').value.trim();if(!v)return;req('GET','/virt-network/trace?vm='+encodeURIComponent(v)).then(function(r){TR=r;draw();}).catch(function(e){$('trout').innerHTML=note(e.message);});return;}
+    if(el.id==='ask'){var q=$('q').value.trim();if(q.length<3)return;el.disabled=true;ANS='';req('POST','/virt-network/ai/ask',{question:q}).then(function(r){ANS=r.answer+(r.proposed.length?'\n\nProposed: '+r.proposed.join(', ')+' (waiting for an administrator)':'');return load();}).catch(function(e){ANS=e.message;draw();});return;}
+  });
+  load();
+})();
+</script></body></html>

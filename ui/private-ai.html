@@ -1,0 +1,160 @@
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Private AI Server</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<style>
+:root{--bg:#0b0e14;--pn:#121722;--rs:#18202d;--ln:#232c3c;--tx:#e8ecf3;--mu:#8c95a8;--hi:#e5484d;--md:#f59f00;--lo:#2fb344;--ac:#7c5cff;--c2:#14b8a6}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:16px 16px 60px}
+.top{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}.top h1{margin:0;font-size:26px}.sp{flex:1}.mu{color:var(--mu)}.sm{font-size:12px}
+.btn{font:600 13px Inter,"Segoe UI",system-ui,sans-serif;background:var(--rs);color:var(--tx);border:1px solid var(--ln);border-radius:9px;padding:7px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none}.btn:hover{border-color:#3a4560}.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}.btn.sm2{padding:4px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:14px 16px;min-width:0;margin-bottom:14px}.card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}.t{background:var(--pn);border:1px solid var(--ln);border-radius:12px;padding:10px 12px;min-width:0}.t b{display:block;font-size:21px;overflow-wrap:anywhere}.t span{color:var(--mu);font-size:12px}
+.hero{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:14px}@media (max-width:900px){.hero{grid-template-columns:1fr}}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}@media (max-width:1000px){.g2{grid-template-columns:1fr}}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mu);font-weight:600;font-size:12px;padding:7px;border-bottom:1px solid var(--ln);white-space:nowrap}td{padding:7px;border-bottom:1px solid #1a2130;vertical-align:top;overflow-wrap:anywhere}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ok{color:#56d364}.bad{color:#ff7b80}.warn{color:#ffc14d}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;background:#1b2230;color:var(--mu)}.p-bad{background:rgba(229,72,77,.18);color:#ff7b80}.p-warn{background:rgba(245,159,0,.16);color:#ffc14d}.p-ok{background:rgba(47,179,68,.15);color:#56d364}.p-ac{background:rgba(124,92,255,.18);color:#b9a8ff}
+svg.ch{width:100%;height:auto;display:block}svg.ch text{font:11.5px Inter,'Segoe UI',system-ui,sans-serif;fill:var(--mu)}svg.ch .t2{fill:var(--tx);font-weight:700}
+.lgd{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mu);margin-top:4px}.lgd i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+.ded{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #1a2130}.ded:last-child{border-bottom:0}.ded .pts{font-weight:800;min-width:44px;text-align:right}.ded .act{font-size:12.5px;color:var(--mu);margin-top:2px}
+.err{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);border-radius:12px;padding:12px;margin-bottom:12px}.empty{color:var(--mu);padding:18px;text-align:center;border:1px dashed var(--ln);border-radius:12px}
+.note{font-size:12.5px;color:var(--mu);border-left:3px solid var(--ac);padding:7px 11px;background:rgba(124,92,255,.07);border-radius:0 8px 8px 0;margin:8px 0}
+.aibox{white-space:pre-wrap;background:#141a26;border:1px solid var(--ln);border-radius:10px;padding:12px;margin-top:8px;font-size:13px}.ailbl{display:inline-block;font-size:11px;font-weight:700;color:#b9a8ff;background:rgba(124,92,255,.14);border-radius:6px;padding:1px 6px;margin-bottom:6px}
+.bar{height:8px;border-radius:4px;background:#1b2230;position:relative;min-width:70px}.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+label.f{display:block;font-size:12px;color:var(--mu);margin:8px 0 3px}input.i,textarea.i{width:100%;background:#0f141e;border:1px solid var(--ln);border-radius:8px;color:var(--tx);padding:7px 9px;font:13px Inter,system-ui}textarea.i{min-height:76px;font-family:ui-monospace,Consolas,monospace}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+#dlgbg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}#dlg{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:16px;max-width:520px;width:100%}#dlg h3{margin:0 0 8px;font-size:16px}
+.toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:60}.toast{background:#1b2230;border:1px solid var(--ln);border-radius:10px;padding:9px 13px;max-width:380px}.toast.bad{border-color:rgba(229,72,77,.6)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body><main>
+<div class="top"><div><h1><i class="ti ti-server-bolt" style="color:#7c5cff"></i> Private AI Server</h1><div class="mu sm">Health of {{org.short}}'s own AI server: the model gateway, the GPUs, and every AI call the platform sends it - read from the server, measured against its own usual, with the action for each problem.</div></div><span class="sp"></span>
+ <a class="btn" href="ai-engine.html"><i class="ti ti-switch-horizontal"></i>AI Engine</a><button type="button" class="btn" id="pollnow" hidden><i class="ti ti-refresh"></i>Check now</button><button type="button" class="btn pri" id="aibrief" hidden><i class="ti ti-sparkles"></i>AI health briefing</button></div>
+<div id="err"></div>
+<div id="aiout"></div>
+<div class="hero">
+ <div class="card" id="score"></div>
+ <div class="card"><h2><i class="ti ti-list-check"></i>What lowers the score <span class="mu sm">and the action for each</span></h2><div id="ded"></div></div>
+</div>
+<div class="k" id="kpi"></div>
+<div class="g2">
+ <div class="card"><h2><i class="ti ti-activity-heartbeat"></i>Gateway answer time <span class="mu sm">last 24 h, the strip shows when it answered</span></h2><div id="ch-gw"></div></div>
+ <div class="card"><h2><i class="ti ti-message-bolt"></i>AI calls to the server <span class="mu sm">slowest 5 % per 5 minutes, and failures</span></h2><div id="ch-calls"></div></div>
+</div>
+<div class="g2">
+ <div class="card"><h2><i class="ti ti-cpu"></i>GPU <span class="mu sm">use and temperature</span></h2><div id="ch-gpu"></div></div>
+ <div class="card"><h2><i class="ti ti-server-2"></i>Server <span class="mu sm">CPU and memory</span></h2><div id="ch-host"></div></div>
+</div>
+<div class="g2">
+ <div class="card"><h2><i class="ti ti-box-model-2"></i>Models <span class="mu sm" id="msub"></span></h2><div id="models"></div><div id="changes"></div></div>
+ <div class="card"><h2><i class="ti ti-chart-dots-3"></i>Hardware and forecasts</h2><div id="hw"></div></div>
+</div>
+<div class="g2">
+ <div class="card"><h2><i class="ti ti-apps"></i>Features using the server <span class="mu sm">last 24 h</span></h2><div class="tw" id="feats"></div></div>
+ <div class="card"><h2><i class="ti ti-alert-triangle"></i>Outages and failed calls</h2><div id="outs"></div></div>
+</div>
+<div class="card" id="cfgcard" hidden><h2><i class="ti ti-settings"></i>Monitoring settings <span class="mu sm" id="cfgsub"></span></h2>
+ <p class="note">Exporters are read-only Prometheus endpoints on the AI server: node_exporter (port 9100) for CPU, memory and disk, and the NVIDIA DCGM exporter (port 9400) or nvidia_gpu_exporter (port 9835) for the GPUs. Addresses inside the network only, up to 4. The gateway itself is the AI Engine's address.</p>
+ <label class="f" for="c-urls">Exporter addresses (one per line)</label><textarea class="i" id="c-urls" placeholder="http://10.20.0.40:9100/metrics"></textarea>
+ <div class="fg"><div><label class="f" for="c-poll">Check every (seconds)</label><input class="i" id="c-poll" type="number" min="30" max="900"></div>
+  <div><label class="f" for="c-gpu_temp_c">GPU temperature limit (°C)</label><input class="i" id="c-gpu_temp_c" type="number"></div>
+  <div><label class="f" for="c-gpu_mem_pct">GPU memory limit (%)</label><input class="i" id="c-gpu_mem_pct" type="number"></div>
+  <div><label class="f" for="c-disk_pct">Disk limit (%)</label><input class="i" id="c-disk_pct" type="number"></div>
+  <div><label class="f" for="c-mem_pct">Memory limit (%)</label><input class="i" id="c-mem_pct" type="number"></div>
+  <div><label class="f" for="c-p95_s">Slowest 5 % limit (seconds)</label><input class="i" id="c-p95_s" type="number"></div>
+  <div><label class="f" for="c-error_pct">Failed calls limit (%)</label><input class="i" id="c-error_pct" type="number"></div></div>
+ <div style="margin-top:10px"><button type="button" class="btn pri" id="cfgsave"><i class="ti ti-device-floppy"></i>Save settings</button></div></div>
+</main>
+<div class="toasts" id="toasts"></div>
+<div id="dlgbg" hidden><div id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgt"><h3 id="dlgt"></h3><div id="dlgb"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button type="button" class="btn" id="dlgno">Cancel</button><button type="button" class="btn pri" id="dlgok">Confirm</button></div></div></div>
+<script>
+(function(){
+  'use strict';
+  var esc=window.zybDetail?window.zybDetail.esc:function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var $=function(id){return document.getElementById(id);},V=null,ROLE='viewer',ME='',RANK={viewer:0,analyst:1,operator:2,admin:3},DLG=null;
+  var can=function(r){return RANK[ROLE]>=RANK[r];};
+  function req(m,u,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,'/api/itam'+u);x.withCredentials=true;x.timeout=120000;x.zybQuiet=true;if(b)x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: reported by status */}if(x.status>=200&&x.status<300&&j)return ok(j);bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};
+    x.onerror=x.ontimeout=function(){bad(new Error('IT Asset Management is not reachable'));};x.send(b?JSON.stringify(b):null);});}
+  function toast(msg,badT){var t=document.createElement('div');t.className='toast'+(badT?' bad':'');t.textContent=msg;$('toasts').appendChild(t);setTimeout(function(){t.remove();},6000);}
+  function dlg(title,html,fn){$('dlgt').textContent=title;$('dlgb').innerHTML=html;DLG=fn;$('dlgbg').hidden=false;var f=$('dlgb').querySelector('input,textarea');if(f)f.focus();}
+  var sec=function(ms){return ms==null?'—':ms>=10000?Math.round(ms/1000)+' s':(Math.round(ms/100)/10)+' s';};
+  var tm=function(s){return s?String(s).replace('T',' ').slice(0,16):'—';};
+  // the score as a ring
+  function ring(){var h=V.health,s=h.score,col=s==null?'#4a5468':s>=80?'#2fb344':s>=50?'#f59f00':'#e5484d',R=62,C=2*Math.PI*R,f=s==null?0:s/100;
+    $('score').innerHTML='<h2><i class="ti ti-heart-rate-monitor"></i>Health</h2><svg class="ch" viewBox="0 0 180 170" role="img" aria-label="'+esc('health '+(s==null?'not measured':s+' of 100, '+h.band))+'" style="max-width:240px;margin:0 auto"><circle cx="90" cy="82" r="'+R+'" fill="none" stroke="#1b2230" stroke-width="14"/><circle cx="90" cy="82" r="'+R+'" fill="none" stroke="'+col+'" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+(C*f).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(-90 90 82)"/><text x="90" y="90" text-anchor="middle" class="t2" style="font-size:34px">'+(s==null?'—':s)+'</text><text x="90" y="160" text-anchor="middle">'+esc(h.band)+'</text></svg>'
+      +'<div class="mu sm" style="text-align:center">'+(V.last_poll?'checked '+esc(tm(V.last_poll))+' · '+V.polls_24h+' checks in 24 h':'not checked yet')+'</div>';}
+  function deds(){var h=V.health,o='';h.deductions.forEach(function(d){o+='<div class="ded"><div class="pts '+(d.sev==='bad'?'bad':'warn')+'">−'+d.points+'</div><div><div>'+esc(d.why)+'</div><div class="act"><i class="ti ti-arrow-right"></i> '+esc(d.action)+'</div></div></div>';});
+    h.not_measured.forEach(function(n){o+='<div class="ded"><div class="pts mu">n/a</div><div><div class="mu">Not measured: '+esc(n)+'</div></div></div>';});
+    $('ded').innerHTML=o||'<div class="empty ok">Nothing lowers the score: every check passed.</div>';}
+  function kpis(){var g=V.gateway,c=V.calls,S=V.server,gt=S.gpus.filter(function(x){return x.temp!=null;}),t=function(v,l,cl){return '<div class="t"><b class="'+(cl||'')+'">'+v+'</b><span>'+esc(l)+'</span></div>';};
+    var e1=c.error_1h;
+    $('kpi').innerHTML=t(g?(g.ok?'answering':'down'):'—','gateway'+(g&&g.ok?' · '+sec(g.ms):''),g?(g.ok?'ok':'bad'):'')+t(esc(V.engine.model||'—'),'model in use · '+(V.mode==='local'?'every AI feature':V.engine.routes.length?V.engine.routes.length+' routed feature group(s)':'not used: AI Engine is '+V.mode))
+      +t(V.availability.pct==null?'—':V.availability.pct+'%','answered in 24 h',V.availability.pct==null?'':V.availability.pct>=99?'ok':'warn')+t(sec(c.p95_ms),'slowest 5 % (1 h)'+(c.usual_p50_ms?' · usual median '+sec(c.usual_p50_ms):''))
+      +t(e1?e1.pct+'%':'—',e1?'failed calls (1 h) · 95 % '+e1.low+'–'+e1.high+' %':'failed calls (no call this hour)',e1?(e1.pct>=10?'bad':e1.pct>0?'warn':'ok'):'')+t(c.tokens_per_s==null?'—':c.tokens_per_s,'tokens a second (median)')
+      +t(c.kept_in_network_pct==null?'—':c.kept_in_network_pct+'%','AI calls kept inside the network (24 h)')+t(gt.length?Math.max.apply(null,gt.map(function(x){return x.temp;}))+' °C':'—','hottest GPU',gt.length&&Math.max.apply(null,gt.map(function(x){return x.temp;}))>=V.config.thresholds.gpu_temp_c?'bad':'')
+      +t(S.host.disk_pct==null?'—':S.host.disk_pct+'%','disk used'+(S.host.disk_free_gb!=null?' · '+S.host.disk_free_gb+' GB free':''),S.host.disk_pct>=V.config.thresholds.disk_pct?'bad':'');}
+  // a line chart over the 24 h buckets: keys [{k, c, l}], optional limit line and an up/down strip
+  function line(keys,o){var P=V.charts;if(!P.length)return '<div class="empty">No check recorded in the last 24 hours.</div>';var any=P.some(function(p){return keys.some(function(k){return p[k.k]!=null;});});
+    if(!any)return '<div class="empty">'+esc(o.empty)+'</div>';
+    var W=560,H=200,l=40,r=10,t=12,b=(o.strip?44:28),mx=o.max||Math.max(1,Math.max.apply(null,P.map(function(p){return Math.max.apply(null,keys.map(function(k){return p[k.k]||0;}));}))*1.15);if(o.limit)mx=Math.max(mx,o.limit*1.1);
+    var t0=Date.parse(P[0].at),t1=Math.max(t0+1,Date.parse(P[P.length-1].at)),X=function(a){return l+(W-l-r)*(Date.parse(a)-t0)/(t1-t0);},Y=function(v){return t+(H-t-b)*(1-v/mx);};
+    var s=[0,mx/2,mx].map(function(v){return '<line x1="'+l+'" x2="'+(W-r)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="#1f2838"/><text x="'+(l-4)+'" y="'+(Y(v)+4).toFixed(1)+'" text-anchor="end">'+esc(o.fmt?o.fmt(v):Math.round(v))+'</text>';}).join('');
+    if(o.limit)s+='<line x1="'+l+'" x2="'+(W-r)+'" y1="'+Y(o.limit).toFixed(1)+'" y2="'+Y(o.limit).toFixed(1)+'" stroke="#e5484d" stroke-dasharray="4 3"/><text x="'+(W-r)+'" y="'+(Y(o.limit)-4).toFixed(1)+'" text-anchor="end" style="fill:#ff7b80">limit</text>';
+    if(o.bars)P.forEach(function(p){if(p[o.bars]){var x=X(p.at),bh=Math.min(H-t-b,(H-t-b)*p[o.bars]/Math.max.apply(null,P.map(function(q){return q[o.bars]||0;}).concat([1]))*0.35);s+='<rect x="'+(x-1.5).toFixed(1)+'" y="'+(Y(0)-bh).toFixed(1)+'" width="3" height="'+bh.toFixed(1)+'" fill="#e5484d"><title>'+esc(tm(p.at)+': '+p[o.bars]+' failed')+'</title></rect>';}});
+    keys.forEach(function(k){var d='',on=false;P.forEach(function(p){var v=p[k.k];if(v==null){on=false;return;}d+=(on?'L':'M')+X(p.at).toFixed(1)+' '+Y(v).toFixed(1);on=true;});s+='<path d="'+d+'" fill="none" stroke="'+k.c+'" stroke-width="2"/>';
+      var lp=P.filter(function(p){return p[k.k]!=null;}).pop();if(lp)s+='<circle cx="'+X(lp.at).toFixed(1)+'" cy="'+Y(lp[k.k]).toFixed(1)+'" r="3" fill="'+k.c+'"><title>'+esc(k.l+' '+tm(lp.at)+': '+(o.fmt?o.fmt(lp[k.k]):lp[k.k]))+'</title></circle>';});
+    if(o.strip)P.forEach(function(p,i){if(p.up==null)return;var x=X(p.at),nx=i<P.length-1?X(P[i+1].at):W-r;s+='<rect x="'+x.toFixed(1)+'" y="'+(H-36)+'" width="'+Math.max(1.5,nx-x).toFixed(1)+'" height="8" fill="'+(p.up===1?'#2fb344':p.up===0?'#e5484d':'#f59f00')+'"><title>'+esc(tm(p.at)+': '+(p.up===1?'answered':p.up===0?'down':'partly down'))+'</title></rect>';});
+    s+='<text x="'+l+'" y="'+(H-8)+'">'+esc(tm(P[0].at).slice(11))+'</text><text x="'+(W-r)+'" y="'+(H-8)+'" text-anchor="end">'+esc(tm(P[P.length-1].at).slice(11))+'</text>';
+    return '<svg class="ch" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.aria)+'">'+s+'</svg><div class="lgd">'+keys.map(function(k){return '<span><i style="background:'+k.c+'"></i>'+esc(k.l)+'</span>';}).join('')+(o.bars?'<span><i style="background:#e5484d"></i>failed calls</span>':'')+(o.strip?'<span><i style="background:#2fb344"></i>answered</span><span><i style="background:#e5484d"></i>down</span>':'')+'</div>';}
+  function charts(){var T=V.config.thresholds,fs=function(v){return sec(v);};
+    $('ch-gw').innerHTML=line([{k:'gw_ms',c:'#7c5cff',l:'answer time'}],{strip:true,fmt:fs,aria:'gateway answer time over 24 hours',empty:'The gateway has not been checked yet.'});
+    $('ch-calls').innerHTML=line([{k:'p95_ms',c:'#14b8a6',l:'slowest 5 %'}],{bars:'failed',fmt:fs,limit:T.p95_s*1000,aria:'AI call latency over 24 hours',empty:'No AI call went to the server in the last 24 hours.'});
+    $('ch-gpu').innerHTML=line([{k:'gpu_util',c:'#7c5cff',l:'GPU use %'},{k:'gpu_temp',c:'#f59f00',l:'temperature °C'}].concat(V.server.llm.kv_pct!=null?[{k:'kv',c:'#14b8a6',l:'KV cache %'}]:[]),{max:110,limit:T.gpu_temp_c,aria:'GPU use and temperature over 24 hours',empty:'No GPU exporter: add the NVIDIA DCGM exporter in the settings below.'});
+    $('ch-host').innerHTML=line([{k:'cpu',c:'#14b8a6',l:'CPU %'},{k:'mem',c:'#7c5cff',l:'memory %'}],{max:100,aria:'CPU and memory over 24 hours',empty:'No node_exporter: add it in the settings below.'});}
+  function models(){var g=V.gateway,eng=V.engine,P=V.changes.pending[0];$('msub').textContent=g&&g.server?'served by '+g.server:'';
+    if(!g){$('models').innerHTML='<div class="empty">The AI Engine has no local model address yet. Set the AI server\'s address on the <a href="ai-engine.html">AI Engine</a> page.</div>';$('changes').innerHTML='';return;}
+    var L={};(g.loaded||[]).forEach(function(m){L[m.name]=m;});
+    $('models').innerHTML=g.models.length?'<div class="tw"><table><thead><tr><th>Model</th><th>State</th><th class="n">VRAM</th><th></th></tr></thead><tbody>'+g.models.map(function(m){var lo=L[m]||L[m+':latest'];return '<tr><td data-no-tr>'+esc(m)+'</td><td>'+(m===eng.model?'<span class="pill p-ac">in use</span> ':'')+(lo?'<span class="pill p-ok">loaded</span>':'<span class="pill">on disk</span>')+'</td><td class="n">'+(lo?esc(lo.vram_gb)+' GB':'—')+'</td><td>'+(can('admin')&&m!==eng.model&&!P?'<button type="button" class="btn sm2" data-propose="'+esc(m)+'">Propose switching</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>'
+      :'<div class="empty">'+(g.ok?'The gateway answered but lists no model.':'The gateway is not answering, so its models are not known.')+'</div>';
+    var o='';if(P)o+='<div class="note"><b>Waiting for a second administrator:</b> switch from <span data-no-tr>'+esc(P.from)+'</span> to <span data-no-tr>'+esc(P.to)+'</span>, proposed by '+esc(P.by)+' '+esc(tm(P.at))+' - '+esc(P.reason)+(can('admin')?(P.by===ME?'<div class="sm" style="margin-top:6px">You proposed it: another administrator decides.</div>':'<div style="margin-top:8px;display:flex;gap:8px"><button type="button" class="btn sm2 pri" data-decide="approve" data-id="'+esc(P.id)+'">Approve and apply</button><button type="button" class="btn sm2" data-decide="reject" data-id="'+esc(P.id)+'">Reject</button></div>'):'')+'</div>';
+    V.changes.recent.slice(0,4).forEach(function(c){o+='<div class="sm mu" style="margin-top:4px">'+esc(tm(c.decided_at))+' · '+esc(c.from)+' → '+esc(c.to)+' · <span class="'+(c.status==='applied'?'ok':'bad')+'">'+esc(c.status)+'</span> by '+esc(c.decided_by)+(c.note?' - '+esc(c.note):'')+'</div>';});
+    $('changes').innerHTML=o;}
+  function hw(){var S=V.server,H=S.host,o='',T=V.config.thresholds,b=function(v,lim){var c=v>=lim?'#e5484d':v>=lim*0.85?'#f59f00':'#2fb344';return '<div class="bar" style="flex:1"><i style="width:'+Math.min(100,v)+'%;background:'+c+'"></i></div>';};
+    if(S.gpus.length)o+='<div class="tw"><table><thead><tr><th>GPU</th><th>Use</th><th>Memory</th><th class="n">Temp.</th><th class="n">Power</th></tr></thead><tbody>'+S.gpus.map(function(g){return '<tr><td>'+esc(g.name||('GPU '+g.id))+'</td><td>'+(g.util!=null?'<div style="display:flex;gap:6px;align-items:center">'+b(g.util,101)+'<b>'+g.util+'%</b></div>':'—')+'</td><td>'+(g.mem_pct!=null?'<div style="display:flex;gap:6px;align-items:center">'+b(g.mem_pct,T.gpu_mem_pct)+'<span class="sm">'+esc(g.mem_used_gb+' / '+g.mem_total_gb+' GB')+'</span></div>':'—')+'</td><td class="n '+(g.temp>=T.gpu_temp_c?'bad':'')+'">'+(g.temp!=null?g.temp+' °C':'—')+'</td><td class="n">'+(g.power_w!=null?Math.round(g.power_w)+' W':'—')+'</td></tr>';}).join('')+'</tbody></table></div>';
+    var row=function(l,v){return '<tr><td class="mu">'+esc(l)+'</td><td>'+v+'</td></tr>';};
+    var rows='';if(H.cpu_pct!=null)rows+=row('CPU',H.cpu_pct+' %'+(H.cores?' of '+H.cores+' cores':'')+(H.load1!=null?' · load '+H.load1:''));if(H.mem_pct!=null)rows+=row('Memory',H.mem_pct+' % of '+H.mem_total_gb+' GB');
+    if(H.disk_pct!=null)rows+=row('Disk ('+(H.disk_mount||'/')+')',H.disk_pct+' % · '+H.disk_free_gb+' GB free');if(H.uptime_h!=null)rows+=row('Up for',H.uptime_h>=48?Math.round(H.uptime_h/24)+' days':H.uptime_h+' h');
+    var L=S.llm;if(L.server==='vLLM')rows+=row('vLLM',(L.running!=null?L.running+' running':'')+(L.waiting!=null?' · '+L.waiting+' waiting':'')+(L.kv_pct!=null?' · KV cache '+L.kv_pct+' %':'')+(L.gen_tps!=null?' · '+L.gen_tps+' tokens/s':'')+(L.ttft_ms!=null?' · first token '+sec(L.ttft_ms):''));
+    var f=S.forecast,fd=function(x,name,lim){if(!x)return '';if(x.note)return row(name+' forecast','<span class="mu">'+esc(x.note)+'</span>');return row(name+' forecast',(x.hours_to!=null?'<b class="'+(x.hours_to<168?'bad':'warn')+'">reaches '+lim+' % in about '+(x.hours_to>=48?Math.round(x.hours_to/24)+' days':x.hours_to+' h')+'</b>':'<span class="ok">not rising towards '+lim+' %</span>')+' <span class="mu sm">('+(x.per_day>0?'+':'')+x.per_day+' points a day, ±'+x.band+')</span>');};
+    rows+=fd(f.disk,'Disk',T.disk_pct)+fd(f.gpu_mem,'GPU memory',T.gpu_mem_pct);
+    if(S.gpu_temp_z!=null)rows+=row('GPU temperature against its usual','robust z '+S.gpu_temp_z+(S.gpu_temp_z>=3.5?' <span class="warn">(unusual)</span>':' <span class="ok">(usual)</span>'));
+    if(rows)o+='<div class="tw" style="margin-top:8px"><table><tbody>'+rows+'</tbody></table></div>';
+    if(S.exporters.length)o+='<div class="sm" style="margin-top:8px">'+S.exporters.map(function(e){return '<span class="'+(e.ok?'ok':'bad')+'">'+(e.ok?'✓ ':'✕ ')+esc(e.host)+(e.ok?'':' - '+esc(e.error))+'</span>';}).join(' · ')+'</div>';
+    $('hw').innerHTML=o||'<div class="empty">No exporter is listed, so the server\'s CPU, memory, disk and GPUs are not measured. Add node_exporter and the NVIDIA DCGM exporter in the settings below.</div>';}
+  function feats(){var F=V.calls.features;$('feats').innerHTML=F.length?'<table><thead><tr><th>Feature</th><th class="n">Calls</th><th class="n">Failed</th><th class="n">Median</th></tr></thead><tbody>'+F.map(function(f){return '<tr><td data-no-tr>'+esc(f.feature)+'</td><td class="n">'+f.calls+'</td><td class="n '+(f.failed?'bad':'')+'">'+f.failed+'</td><td class="n">'+sec(f.p50_ms)+'</td></tr>';}).join('')+'</tbody></table>'
+      +(V.calls.latency_note?'<div class="mu sm" style="margin-top:6px">'+esc(V.calls.latency_note)+'</div>':''):'<div class="empty">No AI feature called the server in the last 24 hours.</div>';
+    var O=V.availability.outages,R=V.calls.recent_failures,o='';
+    if(O.length)o+='<table><thead><tr><th>Gateway down</th><th class="n">Minutes</th><th>Reason</th></tr></thead><tbody>'+O.map(function(x){return '<tr><td>'+esc(tm(x.from))+(x.open?' <span class="pill p-bad">still down</span>':'')+'</td><td class="n">'+x.minutes+'</td><td class="sm">'+esc(x.reason)+'</td></tr>';}).join('')+'</tbody></table>';
+    if(R.length)o+='<table style="margin-top:8px"><thead><tr><th>Failed call</th><th>Feature</th><th class="n">HTTP</th><th class="n">After</th></tr></thead><tbody>'+R.map(function(x){return '<tr><td>'+esc(tm(x.at))+'</td><td data-no-tr>'+esc(x.feature||'—')+'</td><td class="n">'+esc(x.status)+'</td><td class="n">'+sec(x.ms)+'</td></tr>';}).join('')+'</tbody></table>';
+    $('outs').innerHTML=o||'<div class="empty ok">No outage and no failed call in the last 24 hours.</div>';}
+  function cfgForm(){var c=V.config;$('cfgcard').hidden=!can('admin');if(!can('admin'))return;$('cfgsub').textContent='version '+c.version+(c.by?' · '+c.by+' '+tm(c.at):'');
+    if(document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#cfgcard'))return;
+    $('c-urls').value=c.metrics_urls.join('\n');$('c-poll').value=c.poll_s;Object.keys(c.thresholds).forEach(function(k){var e=$('c-'+k);if(e)e.value=c.thresholds[k];});}
+  function draw(){ring();deds();kpis();charts();models();hw();feats();cfgForm();}
+  function load(){return req('GET','/private-ai').then(function(j){V=j;$('err').innerHTML='';draw();}).catch(function(e){$('err').innerHTML='<div class="err">'+esc(e.status===403?'The Private AI Server page shows infrastructure details: operators and administrators only.':e.status===404?'The Private AI Server page is not installed on the server yet - run the update.':e.message)+'</div>';});}
+  document.addEventListener('click',function(e){var t;
+    if((t=e.target.closest('[data-propose]'))){var m=t.getAttribute('data-propose');dlg('Propose switching the model','<p class="sm">Every AI feature that uses the AI server will answer with <b data-no-tr>'+esc(m)+'</b>. A second administrator approves before it is applied.</p><label class="f" for="f-reason">Why (required)</label><textarea class="i" id="f-reason" maxlength="500"></textarea>',function(){return req('POST','/private-ai/model-change',{model:m,reason:$('f-reason').value}).then(function(){toast('Proposed: waiting for a second administrator');});});return;}
+    if((t=e.target.closest('[data-decide]'))){var d=t.getAttribute('data-decide'),id=t.getAttribute('data-id');dlg(d==='approve'?'Approve and apply the model change':'Reject the model change','<label class="f" for="f-note">'+(d==='approve'?'Note (optional)':'Why (required)')+'</label><textarea class="i" id="f-note" maxlength="500"></textarea>',function(){return req('POST','/private-ai/model-change/'+encodeURIComponent(id)+'/decide',{decision:d,note:$('f-note').value}).then(function(r){toast(r.status==='applied'?'Applied: the AI Engine now uses '+r.to:'Rejected');});});return;}
+    if(e.target.closest('#dlgno')||e.target.id==='dlgbg'){$('dlgbg').hidden=true;DLG=null;return;}
+    if(e.target.closest('#dlgok')){if(!DLG)return;var f=DLG;$('dlgok').disabled=true;f().then(function(){$('dlgbg').hidden=true;DLG=null;return load();}).catch(function(x){toast('Not done: '+x.message,true);}).then(function(){$('dlgok').disabled=false;});return;}
+    if(e.target.closest('#pollnow')){var b=$('pollnow');b.disabled=true;req('POST','/private-ai/poll',{}).then(function(j){V=j;draw();toast('Checked');}).catch(function(x){toast('Not done: '+x.message,true);}).then(function(){b.disabled=false;});return;}
+    if(e.target.closest('#cfgsave')){var th={};Object.keys(V.config.thresholds).forEach(function(k){var v=$('c-'+k).value;if(v!=='')th[k]=Number(v);});
+      req('PUT','/private-ai/config',{metrics_urls:$('c-urls').value.split('\n').map(function(s){return s.trim();}).filter(Boolean),poll_s:Number($('c-poll').value)||60,thresholds:th,version:V.config.version}).then(function(){toast('Settings saved');document.activeElement.blur();return load();}).catch(function(x){toast('Not saved: '+x.message,true);});return;}
+    if(e.target.closest('#aibrief')){var o=$('aiout');o.innerHTML='<div class="card"><div class="aibox mu">Drafting…</div></div>';
+      req('POST','/private-ai/ask',{question:'Brief the platform administrators on the health of the private AI server: what is wrong now and the likely cause, what is trending towards a limit and when, how the AI features are being served (speed, failures, against the usual), and the one action for each. Say what is not measured.'})
+        .then(function(r){o.innerHTML='<div class="card"><div class="aibox"><span class="ailbl">AI draft - verify before use</span>\n'+esc(r.answer||'')+'</div></div>';}).catch(function(e2){o.innerHTML='<div class="card"><div class="aibox">The AI advisor did not answer: '+esc(e2.message||'')+'</div></div>';});return;}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('dlgbg').hidden){$('dlgbg').hidden=true;DLG=null;}});
+  var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.zybQuiet=true;w.onload=function(){try{var j=JSON.parse(w.responseText);ROLE=j.role||'viewer';ME=j.user||'';}catch(e){ROLE='viewer';/* unknown identity: least privilege */}$('aibrief').hidden=!can('operator');$('pollnow').hidden=!can('admin');load();};w.onerror=function(){load();};w.send();
+  setInterval(function(){if(document.hidden||!V||!$('dlgbg').hidden)return;load();},60000);
+})();
+</script></body></html>

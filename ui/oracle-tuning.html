@@ -1,0 +1,220 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Oracle Tuning</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff;--acc:#a371f7}
+[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+main{max-width:1480px;margin:0 auto;padding:16px 16px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}.top h1{margin:0;font-size:21px;color:var(--title)}
+.eb{font:500 11px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}.sp{flex:1}
+.banner{background:rgba(121,184,255,.08);border:1px solid #2b4a6b;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#bcd6f5;margin:0 0 12px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:14px;min-width:0;margin:0 0 12px}
+.card h2{margin:0 0 10px;font-size:15px;color:var(--title);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card h2 .c{color:var(--mute);font-weight:400;font-size:12px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.t{background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left;color:inherit;font:inherit}.t:hover{border-color:#4a5162}.t .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}.t .v{font-size:25px;font-weight:800;margin-top:3px}.t .s{font-size:11px;color:var(--mute);margin-top:2px}
+.t.bad .v{color:var(--bad)}.t.warn .v{color:var(--warn)}.t.ok .v{color:var(--ok)}.t.info .v{color:var(--info)}
+.btn{font:600 13px "Segoe UI",system-ui,sans-serif;background:var(--raise);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;cursor:pointer;text-decoration:none;display:inline-block}.btn:hover{border-color:#4a5162}.btn.pri{background:#17313a;border-color:#2b6b7e;color:#9fe6f5}.btn.sm{padding:4px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:default}
+input,select,textarea{font:13px "Segoe UI",system-ui,sans-serif;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 9px}textarea{width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}.muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.3px}.err{color:var(--bad)}.empty{color:var(--mute);padding:8px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}
+.lnk{background:none;border:0;padding:0;color:var(--acc,#4f8cff);cursor:pointer;text-align:left;font:inherit}.lnk:hover{text-decoration:underline}pre.oref{white-space:pre-wrap;font-size:12px;max-height:none}.hl{outline:2px solid var(--acc,#4f8cff);outline-offset:4px;border-radius:4px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.p-bad{background:rgba(255,123,114,.15);color:var(--bad)}.p-warn{background:rgba(227,179,65,.15);color:var(--warn)}.p-ok{background:rgba(63,185,80,.14);color:var(--ok)}.p-info{background:rgba(121,184,255,.14);color:var(--info)}.p-mut{background:rgba(140,147,161,.16);color:var(--mute)}.p-acc{background:rgba(163,113,247,.15);color:var(--acc)}
+.rowc{cursor:pointer}.rowc:hover{background:rgba(255,255,255,.04)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--edge);margin:0 0 12px;flex-wrap:wrap}.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--mute);padding:9px 14px;font-weight:600;cursor:pointer;font-size:13.5px}.tabs button[aria-selected="true"]{color:var(--title);border-bottom-color:var(--acc)}.tabs .n{font-weight:400;margin-left:4px}
+.flt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+pre.sql{background:#0b0c10;border:1px solid var(--border);border-radius:8px;padding:10px;font:12px Consolas,monospace;max-height:320px;overflow:auto;white-space:pre;margin:4px 0 8px}
+.fnd{border:1px solid var(--edge);border-radius:10px;padding:12px;margin:0 0 10px;background:var(--raise)}.fnd h3{margin:0 0 6px;font-size:14px;color:var(--title)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999;max-width:90vw}
+.tai{display:grid;gap:12px}.tai .r2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.tai .r3{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}@media(max-width:1100px){.tai .r2{grid-template-columns:1fr}}.tai .card{margin:0}.tai svg{display:block;width:100%;height:auto}
+.tai .kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.tai .kt{border-radius:12px;padding:11px 12px;color:#fff}.tai .kt .v{font-size:26px;font-weight:800}.tai .kt .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;opacity:.9}
+.tai .vf{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--edge)}.tai .vf:first-of-type{border-top:0}.tai .vb{min-width:96px;text-align:center;font-size:11px;font-weight:800;border-radius:6px;padding:3px 0}
+.tai .vb.improved{background:rgba(63,185,80,.2);color:#56d364}.tai .vb.worse{background:rgba(248,81,73,.2);color:#ff7b72}.tai .vb.no-effect{background:rgba(139,148,158,.2);color:#c9d1d9}.tai .vb.not-measurable{background:rgba(110,118,129,.15);color:#8b949e}
+.tai .rk{display:grid;grid-template-columns:28px 1fr 90px;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--edge)}.tai .rk:first-of-type{border-top:0}.tai .rk .no{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-weight:800;color:#111}
+.tai .cb{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}.tai .cb i{display:block;height:100%;background:linear-gradient(90deg,#a371f7,#3fb950)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Databases · Oracle · performance &amp; tuning · GoldenGate</div><h1>Oracle Tuning</h1></div><span class="sp"></span>
+  <label class="muted" style="font-size:12px">Database <select id="inst"></select></label><span class="muted" id="up"></span><button type="button" class="btn" id="refresh">⟳ Refresh</button></div>
+<div class="banner">Findings come from what the platform reads from the database every 4 minutes (Top SQL, plans, waits, memory, statistics, GoldenGate) — each one names its reading and threshold. The <b>AI Oracle DBA</b> turns a finding or a slow SQL into a recommendation with the exact fix, its rollback and a check. <b>Nothing is run by the platform:</b> a named DBA approves it, runs it in a change window if needed, and records the result here.</div>
+<div class="k" id="kk"><div class="empty">Loading…</div></div>
+<div class="tabs" role="tablist" id="tabs">
+  <button role="tab" data-tab="ai" aria-selected="false">✦ AI / ML<span class="n" id="n-ai"></span></button>
+  <button role="tab" data-tab="find" aria-selected="true">Findings<span class="n" id="n-find"></span></button>
+  <button role="tab" data-tab="sql" aria-selected="false">Top SQL</button>
+  <button role="tab" data-tab="gg" aria-selected="false">GoldenGate<span class="n" id="n-gg"></span></button>
+  <button role="tab" data-tab="stats" aria-selected="false">Statistics<span class="n" id="n-stats"></span></button>
+  <button role="tab" data-tab="recs" aria-selected="false">Recommendations<span class="n" id="n-recs"></span></button>
+  <button role="tab" data-tab="set" aria-selected="false">Settings</button>
+</div>
+<section id="tab-find"><div class="card"><h2>Findings <span class="c">most serious first</span></h2><div id="find"><div class="empty">Loading…</div></div></div></section>
+<section id="tab-sql" hidden><div class="card"><h2>Top SQL <span class="c" id="sqlc"></span></h2>
+  <div class="flt"><select id="per"><option value="1h">last hour</option><option value="6h">6 hours</option><option value="24h" selected>24 hours</option><option value="7d">7 days</option></select>
+    <select id="by"><option value="elapsed">by elapsed time</option><option value="cpu">by CPU</option><option value="gets">by logical reads</option><option value="reads">by physical reads</option><option value="execs">by executions</option></select></div>
+  <div class="tw" id="sqlt"><div class="empty">Loading…</div></div><p class="note">SQL text is shown to operators and admins only, with literals masked. Click a statement for its plans, the live execution plan and the AI review.</p></div></section>
+<section id="tab-gg" hidden><div class="card"><h2>GoldenGate replication <span class="c">integrated Extract / Replicat as this database reports them</span></h2><div class="tw" id="gg"><div class="empty">Loading…</div></div>
+  <p class="note">Read from DBA_CAPTURE / DBA_APPLY and the GoldenGate V$ views (integrated mode). An aborted or disabled process or a lag of 30 minutes raises a SIEM alert. Classic-mode processes are visible only through GoldenGate itself.</p></div></section>
+<section id="tab-stats" hidden><div class="card"><h2>Stale optimizer statistics <span class="c">largest tables first · read hourly</span></h2><div class="tw" id="stats"><div class="empty">Loading…</div></div></div></section>
+<section id="tab-recs" hidden><div class="card"><h2>Recommendations <span class="c">AI and rule based · approved and run by a named DBA</span></h2>
+  <div class="flt"><select id="rst"><option value="">All</option><option value="proposed">Waiting for a decision</option><option value="approved">Approved, to run</option><option value="done">Done</option><option value="rejected">Rejected</option><option value="failed">Failed</option><option value="refused">Refused (unsafe SQL)</option></select></div>
+  <div class="tw" id="recs"><div class="empty">Loading…</div></div></div></section>
+<section id="tab-ai" hidden><div id="tai"><div class="empty">Loading…</div></div></section>
+<section id="tab-set" hidden>
+  <div class="card"><h2>Collection</h2><div id="coll"><div class="empty">Loading…</div></div></div>
+  <div class="card"><h2>Oracle Diagnostics Pack</h2><div id="pack"></div></div>
+</section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var Z=window.zybDetail, esc=Z.esc, $=function(id){return document.getElementById(id);};
+  var RANK={viewer:0,analyst:1,operator:2,admin:3}, ROLE='viewer', ME='', INST='', TV=null, TS=null, DH=null, TAB='find';
+  function can(r){return RANK[ROLE]>=RANK[r];}
+  function req(m,url,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,url);x.withCredentials=true;x.timeout=180000;if(m==='POST')x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send(m==='POST'?JSON.stringify(b||{}):null);});}
+  function who(){return new Promise(function(ok){var x=new XMLHttpRequest();x.open('GET','/dashboards/whoami.json');x.onload=function(){try{ok(JSON.parse(x.responseText));}catch(e){ok(null);}};x.onerror=function(){ok(null);};x.send();});}
+  function toast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},6000);}
+  function pill(t,c){return '<span class="pill p-'+c+'">'+esc(t)+'</span>';}
+  function sev(s){return pill(s,{critical:'bad',high:'bad',medium:'warn',low:'mut'}[s]||'mut');}
+  function rst(s){return pill({proposed:'waiting',approved:'approved',done:'done',rejected:'rejected',failed:'failed',refused:'refused'}[s]||s,{proposed:'info',approved:'acc',done:'ok',rejected:'mut',failed:'bad',refused:'bad'}[s]||'mut');}
+  function when(s){return s?new Date(s).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';}
+  function nf(v,d){return v==null?'—':Number(v).toLocaleString('en-GB',{maximumFractionDigits:d==null?1:d});}
+  function tile(l,v,s,cls,go){return '<button type="button" class="t '+(cls||'')+'" data-go="'+esc(go||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
+  function code(t,label){return t?'<div class="muted" style="font-size:12px;margin-top:6px">'+esc(label)+' <button class="btn sm" data-copy="1">⧉ Copy</button></div><pre class="sql">'+esc(t)+'</pre>':'';}
+
+  function load(){
+    var q=INST?'?instance='+encodeURIComponent(INST):'';
+    Promise.all([who(),req('GET','/api/soc/db/oracle/tuning'+q).catch(function(e){return {__err:e};}),req('GET','/api/itam/db-health').catch(function(){return null;})]).then(function(r){
+      if(r[0]){var rl=String(r[0].role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;ME=r[0].user||'';}
+      if(r[1].__err){$('kk').innerHTML='<p class="err">'+esc(r[1].__err.status===404?'Oracle Tuning is not installed on the SIEM yet - run the platform update.':r[1].__err.status===403?'Oracle Tuning needs the analyst role or above.':r[1].__err.message)+'</p>';return;}
+      TV=r[1];DH=r[2];INST=TV.instance||'';
+      $('inst').innerHTML=(TV.instances||[]).map(function(i){return '<option'+(i===INST?' selected':'')+'>'+esc(i)+'</option>';}).join('')||'<option value="">no database yet</option>';
+      draw();loadSql();$('up').textContent='read '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    });
+  }
+  function draw(){
+    var F=TV.findings||[],G=TV.goldengate||[],S=TV.stale_statistics||[],P=TV.proposals||[];
+    var crit=F.filter(function(f){return f.severity==='critical'||f.severity==='high';}).length,ggBad=G.filter(function(g){return /ABORTED|DISABLED/i.test(g.status)||g.error||(g.lag_s||0)>=1800;}).length;
+    $('kk').innerHTML=tile('Findings',F.length,crit+' critical / high',crit?'bad':F.length?'warn':'ok','find')+tile('GoldenGate processes',G.length,G.length?(ggBad?ggBad+' need attention':'all running'):'none seen',ggBad?'bad':G.length?'ok':'','gg')
+      +tile('Stale statistics',S.length,'application tables',S.length?'warn':'ok','stats')+tile('Waiting for a decision',P.filter(function(p){return p.status==='proposed';}).length,P.filter(function(p){return p.status==='approved';}).length+' approved, to run','info','recs')
+      +tile('AI Oracle DBA',TV.ai&&TV.ai.enabled?'ready':'off',TV.ai&&TV.ai.enabled?TV.ai.model:(TV.ai&&TV.ai.reason)||'',TV.ai&&TV.ai.enabled?'ok':'warn','set');
+    $('n-find').textContent='('+F.length+')';$('n-gg').textContent=G.length?'('+G.length+')':'';$('n-stats').textContent='('+S.length+')';$('n-recs').textContent='('+P.length+')';
+    $('find').innerHTML=F.length?F.map(function(f){return '<div class="fnd"><h3>'+sev(f.severity)+' '+esc(f.title)+' <span class="muted" style="font-weight:400;font-size:12px">'+esc(f.area)+'</span></h3>'
+      +'<div class="muted" style="font-size:12.5px">'+esc((f.evidence||[]).join(' · '))+'</div><p style="margin:6px 0">'+esc(f.why||'')+(f.advice?' '+esc(f.advice):'')+'</p>'
+      +(f.fix?'<details><summary class="muted" style="cursor:pointer">Proposed change: '+esc(f.fix.title)+(f.fix.needs_window?' '+pill('change window','warn'):'')+'</summary>'+code(f.fix.sql,'Run (DBA):')+code(f.fix.rollback,'Rollback:')+code(f.fix.verify,'Check:')+'</details>':'')
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+(can('operator')&&f.fix?'<button class="btn sm" data-prop="'+esc(f.key)+'">＋ Send for approval</button>':'')+(can('operator')&&TV.ai&&TV.ai.enabled?'<button class="btn sm pri" data-ai="'+esc(f.key)+'" data-sql="'+esc(f.sql_id||'')+'">🤖 Ask the AI Oracle DBA</button>':'')+(f.sql_id?'<button class="btn sm" data-sqlopen="'+esc(f.sql_id)+'">SQL '+esc(f.sql_id)+'</button>':'')+'</div></div>';}).join('')
+      :'<div class="empty" style="color:var(--ok)">'+(TV.readings?'No findings: nothing crossed a threshold in the last 24 hours.':'No tuning readings yet for this database. They arrive with the platform update (Oracle 12.2+ and the grants in the read-only account script).')+'</div>';
+    $('gg').innerHTML=G.length?'<table><thead><tr><th>Type</th><th>Process</th><th>Status</th><th>State</th><th class="n">Lag</th><th>Error</th><th>Read</th></tr></thead><tbody>'+G.map(function(g){var bad=/ABORTED|DISABLED/i.test(g.status)||g.error;
+      return '<tr><td>'+esc(g.type)+'</td><td class="mono">'+esc(g.name)+'</td><td>'+pill(g.status||'?',bad?'bad':'ok')+'</td><td>'+esc(g.state||'—')+'</td><td class="n">'+(g.lag_s==null?'—':(g.lag_s>=1800?pill(Math.round(g.lag_s/60)+' min','bad'):g.lag_s>=300?pill(Math.round(g.lag_s/60)+' min','warn'):g.lag_s+' s'))+'</td><td>'+(esc(g.error)||'—')+'</td><td class="muted">'+esc(when(g.read_at))+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No GoldenGate integrated Extract or Replicat reported by this database'+(TV.readings?' (none configured here, or the account lacks SELECT on DBA_CAPTURE / DBA_APPLY).':'.')+'</div>';
+    $('stats').innerHTML=S.length?'<table><thead><tr><th>Table</th><th class="n">Rows</th><th>Last analyzed</th><th>Locked</th></tr></thead><tbody>'+S.map(function(x){return '<tr><td class="mono">'+esc(x.owner+'.'+x.table)+'</td><td class="n">'+nf(x.num_rows,0)+'</td><td>'+esc(x.last_analyzed||'never')+'</td><td>'+(esc(x.locked)||'—')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No stale statistics reported (read once an hour).</div>';
+    drawRecs();drawSet();
+  }
+  function drawRecs(){var P=(TV.proposals||[]).filter(function(p){return !$('rst').value||p.status===$('rst').value;});
+    $('recs').innerHTML=P.length?'<table><thead><tr><th>ID</th><th>Recommendation</th><th>From</th><th>Risk</th><th>SQL</th><th>Status</th><th>Asked by</th><th>When</th></tr></thead><tbody>'+P.map(function(p){
+      return '<tr class="rowc" data-rec="'+esc(p.id)+'"><td class="mono">'+esc(p.id)+'</td><td>'+esc(p.title)+(p.needs_window?' '+pill('change window','warn'):'')+'</td><td>'+(p.source==='ai'?pill('AI','acc'):pill('rule','mut'))+'</td><td>'+pill(p.risk,{low:'ok',medium:'warn',high:'bad'}[p.risk])+'</td><td class="mono">'+esc(p.sql_id||'—')+'</td><td>'+rst(p.status)+'</td><td>'+esc(p.requested_by)+'</td><td class="muted">'+esc(when(p.created_at))+'</td></tr>';}).join('')+'</tbody></table>'
+      :'<div class="empty">No recommendations'+($('rst').value?' with this status':'')+'. Ask the AI Oracle DBA from a finding or a slow SQL.</div>';}
+  function drawSet(){
+    var last=DH&&DH.last,st=DH&&DH.settings||{};
+    var rows=(last&&last.results||[]).map(function(r){return '<tr><td>'+esc(r.host||r.ip)+'</td><td>'+esc(r.version||'—')+'</td><td>'+(r.tuning===true?pill('collected','ok'):r.tuning===false?pill('needs Oracle 12.2+','warn'):pill('not yet','mut'))+'</td><td>'+(r.missing&&r.missing.length?pill(r.missing.length+' not readable','warn')+' <span class="muted mono">'+esc(r.missing.join(', '))+'</span>':pill('all readable','ok'))+'</td></tr>';}).join('');
+    $('coll').innerHTML=DH?(rows?'<table><thead><tr><th>Database</th><th>Version</th><th>Tuning readings</th><th>Readings</th></tr></thead><tbody>'+rows+'</tbody></table><p class="note">A reading that is not readable needs a grant on the monitoring account: Databases → Add database shows the full script (send the new lines to the DBA).</p>':'<div class="empty">No read yet.</div>')+'<p class="note">Last read '+esc(when(last&&last.at))+'.</p>':'<div class="empty">IT Asset Management is not reachable.</div>';
+    $('pack').innerHTML='<p>'+(st.diagnostics_pack?pill('ON','warn')+' Active Session History is read. Confirmed by <b>'+esc(st.by||'?')+'</b> on '+esc(when(st.at))+(st.note?': '+esc(st.note):''):pill('OFF','ok')+' Only licence-free views are read (V$ metrics, V$SQLSTATS, V$SESSION captures). Recommended unless the licence is confirmed.')+'</p>'
+      +'<p class="note">Reading V$ACTIVE_SESSION_HISTORY, AWR (DBA_HIST_*) or running the SQL Tuning Advisor needs the Oracle Diagnostics / Tuning Pack. Using them without the licence is an Oracle audit finding.</p>'
+      +(can('admin')?(st.diagnostics_pack?'<button class="btn" id="packoff">Switch off</button>':'<button class="btn" id="packon">The licence is confirmed — switch on…</button>'):'');
+  }
+
+  /* ---------- Top SQL ---------- */
+  function loadSql(){if(!INST){$('sqlt').innerHTML='<div class="empty">No database yet.</div>';return;}
+    req('GET','/api/soc/db/oracle/topsql?instance='+encodeURIComponent(INST)+'&period='+$('per').value+'&by='+$('by').value).then(function(r){TS=r;var L=r.sql||[];
+      $('sqlc').textContent=L.length+' statements';
+      $('sqlt').innerHTML=L.length?'<table><thead><tr><th>SQL_ID</th><th>Module / user</th><th class="n">Executions</th><th class="n">Elapsed s</th><th class="n">ms / exec</th><th class="n">CPU s</th><th class="n">Gets / exec</th><th class="n">Reads / exec</th><th>Plans</th>'+(r.sql_text_visible?'<th>Text</th>':'')+'</tr></thead><tbody>'+L.map(function(x){
+        return '<tr class="rowc" data-sqlopen="'+esc(x.sql_id)+'"><td class="mono">'+esc(x.sql_id)+'</td><td>'+esc(x.module||'')+' <span class="muted">'+esc(x.user||'')+'</span></td><td class="n">'+nf(x.executions,0)+'</td><td class="n">'+nf(x.elapsed_s)+'</td><td class="n">'+nf(x.ela_ms_exec,2)+'</td><td class="n">'+nf(x.cpu_s)+'</td><td class="n">'+nf(x.gets_exec,0)+'</td><td class="n">'+nf(x.reads_exec,1)+'</td><td>'+x.plan_count+(x.plan_change&&x.plan_change.worse?' '+pill(x.plan_change.ratio+'× slower','bad'):'')+'</td>'+(r.sql_text_visible?'<td class="mono" style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(x.sql_text||'')+'">'+esc(x.sql_text||'')+'</td>':'')+'</tr>';}).join('')+'</tbody></table>'
+        :'<div class="empty">No Top SQL for this period yet. The platform sends it from the second read after the update (deltas between two reads).</div>';
+    },function(e){$('sqlt').innerHTML='<p class="err">'+esc(e.message)+'</p>';});}
+  function openSql(id){
+    var x=((TS&&TS.sql)||[]).filter(function(s){return s.sql_id===id;})[0]||{sql_id:id,plans:[]},plan=null;
+    var body=Z.kv([['SQL_ID','<span class="mono">'+esc(id)+'</span>'],['Module',esc(x.module||'—')],['User',esc(x.user||'—')],['Executions',nf(x.executions,0)],['ms per execution',nf(x.ela_ms_exec,2)],['Gets per execution',nf(x.gets_exec,0)]]);
+    if(x.sql_text)body+=Z.sec('SQL (literals masked)','<pre class="sql">'+esc(x.sql_text)+'</pre>');
+    if(x.plans&&x.plans.length)body+=Z.sec('Plans seen','<table><thead><tr><th>Plan hash</th><th class="n">Executions</th><th class="n">ms / exec</th></tr></thead><tbody>'+x.plans.map(function(p){return '<tr><td class="mono">'+esc(p.plan_hash)+'</td><td class="n">'+nf(p.executions,0)+'</td><td class="n">'+nf(p.executions?p.elapsed_us/p.executions/1000:null,2)+'</td></tr>';}).join('')+'</tbody></table>');
+    body+=Z.sec('Execution plan (live from the database)','<div id="planbox"><button class="btn sm" id="getplan"'+(can('operator')?'':' disabled')+'>Show the plan</button> <span class="muted" style="font-size:12px">DBMS_XPLAN.DISPLAY_CURSOR — licence-free, read-only, literals masked</span></div>');
+    if(can('operator')&&TV.ai&&TV.ai.enabled)body+='<div style="margin-top:12px"><textarea id="aiq" rows="2" placeholder="Optional: what should the AI look at? (e.g. it got slow since Monday)"></textarea><div style="margin-top:6px"><button class="btn pri" id="askai">🤖 Ask the AI Oracle DBA to review this SQL</button> <span class="muted" style="font-size:12px">it uses the plan above when you have opened it</span></div></div>';
+    Z.open('Top SQL',id,body);
+    var gp=$('getplan');if(gp)gp.addEventListener('click',function(){gp.disabled=true;req('GET','/api/itam/db-health/plan?sql_id='+encodeURIComponent(id)+'&instance='+encodeURIComponent(INST)).then(function(r){plan=r.lines||[];$('planbox').innerHTML=r.found?'<pre class="sql">'+esc(plan.join('\n'))+'</pre>':'<p class="muted">This cursor is no longer in the shared pool - the plan can be shown while the statement is cached.</p>';},function(e){gp.disabled=false;toast(e.message);});});
+    var aa=$('askai');if(aa)aa.addEventListener('click',function(){aa.disabled=true;aa.textContent='The AI is reviewing… (up to a minute)';
+      req('POST','/api/soc/db/oracle/tuning/advise',{instance:INST,sql_id:id,plan:plan,question:$('aiq').value,pack:!!(DH&&DH.settings&&DH.settings.diagnostics_pack)}).then(function(p){Z.close();toast('Recommendation '+p.id+' '+(p.status==='refused'?'refused (unsafe SQL)':'ready for a decision'));load();setTab('recs');setTimeout(function(){openRec(p.id);},600);},function(e){aa.disabled=false;aa.textContent='🤖 Ask the AI Oracle DBA to review this SQL';toast(e.message);});});
+  }
+  function openRec(id){var p=(TV.proposals||[]).filter(function(x){return x.id===id;})[0];if(!p)return;
+    var body=Z.kv([['Status',rst(p.status)],['From',p.source==='ai'?'AI Oracle DBA'+(p.model?' ('+esc(p.model)+')':''):'rule'],['Database',esc(p.instance)],['SQL_ID',esc(p.sql_id||'—')],['Risk',esc(p.risk)+(p.confidence?' · confidence '+esc(p.confidence):'')],['Change window',p.needs_window?'needed':'not needed'],['Asked by',esc(p.requested_by)+' · '+esc(when(p.created_at))]]);
+    if(p.refused_reason)body+='<p class="err">'+esc(p.refused_reason)+'</p>';
+    body+=Z.sec('Problem','<p>'+esc(p.problem)+'</p>'+(p.evidence&&p.evidence.length?'<ul>'+p.evidence.map(function(e){return '<li>'+esc(e)+'</li>';}).join('')+'</ul>':''));
+    if(p.recommendation)body+=Z.sec('Recommendation','<p>'+esc(p.recommendation)+'</p>'+(p.expected_benefit?'<p class="muted">Expected: '+esc(p.expected_benefit)+'</p>':''));
+    body+=Z.sec('Scripts for the DBA',(code(p.fix_sql,'Change:')+code(p.rollback_sql,'Rollback:')+code(p.verify_sql,'Check:'))||'<p class="muted">No SQL change - advice only.</p>');
+    // the Oracle guide sections the AI said it relied on - only ids the engine sent it survive, titles come from the library
+    var rs=p.reference_source;
+    if((p.references||[]).length)body+=Z.sec('Oracle guidance it drew on','<ul>'+p.references.map(function(r){return '<li><button class="lnk" data-oref="'+esc(String(r.id).split('#')[0])+'" data-osec="'+esc(r.id)+'">'+esc(r.title)+' — '+esc(r.heading)+'</button></li>';}).join('')+'</ul><p class="note">From Oracle\'s published guides'+(rs&&rs.commit?' (oracle/skills '+esc(String(rs.commit).slice(0,12))+')':'')+'. Background for the DBA to check, not proof about this database.</p>');
+    else if(p.source==='ai'&&rs)body+=Z.sec('Oracle guidance','<p class="muted">'+esc(rs.sections)+' Oracle guide section(s) were given to the AI; it cited none.'+(rs.left_out_licence?' '+esc(rs.left_out_licence)+' section(s) needing the Diagnostics Pack were left out.':'')+'</p>');
+    var b=[];if(p.status==='proposed'&&can('operator'))b.push('<button class="btn pri" data-dec="approve">✔ Approve</button>','<button class="btn" data-dec="reject">✕ Reject</button>');
+    if(p.status==='approved'&&can('operator'))b.push('<button class="btn pri" data-dec="done">✔ Ran it — record the result</button>','<button class="btn" data-dec="failed">It failed — record what happened</button>');
+    if(b.length)body+='<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap" id="decbar" data-id="'+esc(p.id)+'">'+b.join('')+'</div><p class="note">Approving needs an administrator or a named approver for the AI Oracle DBA (Roles &amp; Functions), and not the person who asked. The platform never runs the script.</p>';
+    body+=Z.sec('History','<ul class="muted" style="font-size:12px">'+(p.history||[]).map(function(h){return '<li>'+esc(when(h.at))+' · '+esc(h.by)+' — '+esc(h.what)+'</li>';}).join('')+'</ul>');
+    Z.open('Recommendation '+p.id,p.title,body);
+  }
+  function openRef(id,sec){Z.open('Oracle reference',id,'<p class="muted">Loading…</p>');
+    req('GET','/api/soc/db/oracle/reference?id='+encodeURIComponent(id)).then(function(r){var g=r&&r.guide;if(!g){Z.open('Oracle reference',id,'<p class="muted">'+esc(r&&r.reason||'not available')+'</p>');return;}
+      var body='<p class="note">Oracle\'s published guidance (oracle/skills'+(r.source&&r.source.commit?' '+esc(String(r.source.commit).slice(0,12)):'')+', © Oracle and/or its affiliates, Universal Permissive License 1.0). Read-only reference: statements in it are examples, not approved changes.</p>';
+      body+=g.sections.map(function(x){return '<div id="'+esc('oref-'+x.id.replace(/[^A-Za-z0-9_-]/g,'_'))+'"'+(x.id===sec?' class="hl"':'')+'>'+Z.sec(x.heading+(x.licensed?' — needs the Oracle Diagnostics Pack':''),'<pre class="oref">'+esc(x.text||'')+'</pre>')+'</div>';}).join('');
+      Z.open('Oracle reference',g.title,body);
+      var el=sec&&document.getElementById('oref-'+sec.replace(/[^A-Za-z0-9_-]/g,'_'));if(el&&el.scrollIntoView)el.scrollIntoView({block:'start'});
+    },function(e){Z.open('Oracle reference',id,'<p class="err">'+esc(e.message)+'</p>');});}
+  function decide(id,d){var label={approve:'Note (optional)',reject:'Why is it rejected?',done:'What did you run, when, and what was the result?',failed:'What happened? (was the rollback run?)'}[d];
+    Z.open('Recommendation '+id,d,'<div><textarea id="dn" rows="3" placeholder="'+esc(label)+'"></textarea><div style="margin-top:8px"><button class="btn pri" id="dok">Confirm</button></div></div>');
+    $('dok').addEventListener('click',function(){var b=this;b.disabled=true;req('POST','/api/soc/db/oracle/tuning/'+encodeURIComponent(id)+'/decide',{decision:d,note:$('dn').value}).then(function(){toast('Recorded');Z.close();load();},function(e){b.disabled=false;toast(e.message);});});}
+
+  function setTab(t){TAB=t;[].forEach.call(document.querySelectorAll('#tabs button'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});['find','sql','gg','stats','recs','set','ai'].forEach(function(k){$('tab-'+k).hidden=k!==t;});if(t==='ai'&&window.zybTunAi)window.zybTunAi(INST);}
+  $('tabs').addEventListener('click',function(e){var b=e.target.closest('button');if(b)setTab(b.getAttribute('data-tab'));});
+  document.addEventListener('click',function(e){var t=e.target,el;if(!t.closest)return;
+    if((el=t.closest('[data-go]'))&&el.getAttribute('data-go')){setTab(el.getAttribute('data-go'));return;}
+    if((el=t.closest('[data-copy]'))){var pre=el.parentNode.nextElementSibling;if(pre&&navigator.clipboard)navigator.clipboard.writeText(pre.textContent).then(function(){toast('Copied');});return;}
+    if((el=t.closest('[data-sqlopen]'))){openSql(el.getAttribute('data-sqlopen'));return;}
+    if((el=t.closest('[data-rec]'))){openRec(el.getAttribute('data-rec'));return;}
+    if((el=t.closest('[data-oref]'))){openRef(el.getAttribute('data-oref'),el.getAttribute('data-osec'));return;}
+    if((el=t.closest('[data-dec]'))){decide(t.closest('#decbar').getAttribute('data-id'),el.getAttribute('data-dec'));return;}
+    if((el=t.closest('[data-prop]'))){el.disabled=true;req('POST','/api/soc/db/oracle/tuning/proposals',{instance:INST,finding_key:el.getAttribute('data-prop')}).then(function(p){toast(p.id+' sent for approval');load();},function(er){el.disabled=false;toast(er.message);});return;}
+    if((el=t.closest('[data-ai]'))){el.disabled=true;el.textContent='The AI is reviewing…';req('POST','/api/soc/db/oracle/tuning/advise',{instance:INST,finding_key:el.getAttribute('data-ai'),sql_id:el.getAttribute('data-sql')||undefined,pack:!!(DH&&DH.settings&&DH.settings.diagnostics_pack)}).then(function(p){toast('Recommendation '+p.id+' ready');load();setTab('recs');setTimeout(function(){openRec(p.id);},600);},function(er){el.disabled=false;el.textContent='🤖 Ask the AI Oracle DBA';toast(er.message);});return;}
+    if(t.id==='packon'){Z.open('Oracle Diagnostics Pack','Confirm the licence','<div><p>Only switch this on when the Oracle Diagnostics Pack is licensed for these databases. Who confirmed it is recorded in the audit trail.</p><textarea id="pn" rows="2" placeholder="Licence reference / who confirmed it (required)"></textarea><div style="margin-top:8px"><button class="btn pri" id="pok">Switch on</button></div></div>');
+      $('pok').addEventListener('click',function(){if(!$('pn').value.trim()){toast('Say who confirmed the licence (licence reference) - it is recorded');return;}req('POST','/api/itam/db-health/settings',{diagnostics_pack:true,note:$('pn').value}).then(function(){toast('Diagnostics Pack reading switched on');Z.close();load();},function(er){toast(er.message);});});return;}
+    if(t.id==='packoff'){req('POST','/api/itam/db-health/settings',{diagnostics_pack:false,note:'switched off'}).then(function(){toast('Switched off');load();},function(er){toast(er.message);});return;}
+  });
+  $('inst').addEventListener('change',function(){INST=this.value;load();if(TAB==='ai'&&window.zybTunAi)window.zybTunAi(INST);});['per','by'].forEach(function(id){$(id).addEventListener('change',loadSql);});$('rst').addEventListener('change',drawRecs);
+  $('refresh').addEventListener('click',load);
+  load();
+})();
+</script>
+<script>
+/* ✦ AI / ML tab (SIEM /api/soc/db/oracle/tuning/intel, analyst): did each fix work (before / after per execution), success learned per
+   kind of fix, findings ranked by the DB time at stake, unstable plans, literal SQL, the Pareto line. Inline SVG; every value escaped. */
+(function(){
+  'use strict';
+  var $=function(i){return document.getElementById(i);},esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});},V=null,K=null,AT=0;
+  var VL={improved:'IMPROVED',worse:'WORSE','no-effect':'NO EFFECT','not-measurable':'NOT MEASURABLE'};
+  function req(url){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET',url);x.withCredentials=true;x.timeout=180000;x.zybQuiet=true;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: reported below */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&(j.error||j.message))||'HTTP '+x.status),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('not reachable'),{status:0}));};x.send();});}
+  function kt(v,l,c1,c2){return '<div class="kt" style="background:linear-gradient(135deg,'+c1+','+c2+')"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div></div>';}
+  function beforeAfter(L){L=L.filter(function(x){return x.before_ms!=null&&x.after_ms!=null;}).slice(0,8);if(!L.length)return '';
+    var W=520,rh=26,H=L.length*rh+10,mx=Math.max.apply(null,L.map(function(x){return Math.max(x.before_ms,x.after_ms);}))||1,lx=110,o='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Time per execution before and after each fix">';
+    L.forEach(function(x,i){var y=4+i*rh,b=(W-lx-70)*x.before_ms/mx,a=(W-lx-70)*x.after_ms/mx,c=x.verdict==='improved'?'#3fb950':x.verdict==='worse'?'#f85149':'#8b949e';
+      o+='<text x="'+(lx-8)+'" y="'+(y+14)+'" text-anchor="end" font-size="11" fill="currentColor">'+esc(x.sql_id||x.id)+'</text><rect x="'+lx+'" y="'+y+'" width="'+b.toFixed(1)+'" height="9" rx="3" fill="rgba(139,148,158,.45)"><title>before '+esc(x.before_ms)+' ms</title></rect><rect x="'+lx+'" y="'+(y+11)+'" width="'+Math.max(2,a).toFixed(1)+'" height="9" rx="3" fill="'+c+'"><title>after '+esc(x.after_ms)+' ms</title></rect><text x="'+(lx+Math.max(b,a)+6).toFixed(1)+'" y="'+(y+15)+'" font-size="10.5" fill="#8b949e">'+esc(x.before_ms)+' → '+esc(x.after_ms)+' ms</text>';});
+    return o+'</svg><div class="muted" style="font-size:11.5px"><span style="color:#8b949e">■</span> before (7 days) · <span style="color:#3fb950">■</span> after (from 1 h after it was run), ms per execution</div>';}
+  function draw(){var v=V,c=v.counts;
+    var vf=v.verified.length?v.verified.map(function(x){return '<div class="vf"><span class="vb '+esc(x.verdict)+'">'+esc(VL[x.verdict]||x.verdict)+'</span><div><b>'+esc(x.id)+' · '+esc(x.title)+'</b><div class="muted" style="font-size:12px">'+esc(x.why)+'</div><div class="muted" style="font-size:11px">run by '+esc(x.done_by||'—')+' · '+esc(String(x.done_at||'').slice(0,10))+'</div></div></div>';}).join(''):'<div class="empty">No recommendation has been marked done yet. Once a DBA runs one and marks it done, its effect is measured here from the SQL timings.</div>';
+    var lr=v.learned.length?v.learned.map(function(k){return '<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span>'+esc(k.name)+'</span><b>'+esc(k.success_pct)+'%</b></div><div class="cb"><i style="width:'+k.success_pct+'%"></i></div><div class="muted" style="font-size:11px">'+esc(k.why)+'</div></div>';}).join(''):'<div class="empty">Nothing learned yet: the success of each kind of fix is learned from the verified ones.</div>';
+    var nx=v.next.length?v.next.slice(0,10).map(function(n,i){var col=n.severity==='critical'||n.severity==='high'?'#ff7b72':n.severity==='medium'?'#e3b341':'#79b8ff';return '<div class="rk"><span class="no" style="background:'+col+'">'+(i+1)+'</span><div><b>'+esc(n.title)+'</b><div class="muted" style="font-size:12px">'+esc(n.why)+'</div></div><div style="text-align:right"><div style="font-weight:800">'+esc(n.score)+'</div><div class="muted" style="font-size:10.5px">'+esc(n.confidence_pct)+'% confidence</div></div></div>';}).join(''):'<div class="empty">No open finding to rank.</div>';
+    var C=v.candidates,un=C.unstable.length?'<table><thead><tr><th>SQL_ID</th><th>Plans</th><th class="num">Best ms</th><th class="num">Worst ms</th><th class="num">s / day</th></tr></thead><tbody>'+C.unstable.map(function(u){return '<tr title="'+esc(u.why)+'"><td class="mono">'+esc(u.sql_id)+'</td><td>'+esc(u.plans)+' · best '+esc(u.best_plan)+'</td><td class="num">'+esc(u.best_ms)+'</td><td class="num" style="color:#ff7b72">'+esc(u.worst_ms)+'</td><td class="num">'+esc(u.cost_s_day)+'</td></tr>';}).join('')+'</tbody></table><div class="muted" style="font-size:11.5px">A SQL Plan Management baseline on the best plan would pin it - propose it from Top SQL; a DBA approves and runs it.</div>':'<div class="empty">No SQL switches between a fast and a slow plan (2x) in 7 days, beyond the findings.</div>';
+    var li=C.literals.length?C.literals.map(function(g){return '<div class="vf"><span class="vb no-effect">'+esc(g.sql_ids.length)+' SQL_IDs</span><div><div class="mono" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:520px">'+esc(g.signature)+'</div><div class="muted" style="font-size:12px">'+esc(g.why)+' · '+esc(g.elapsed_s)+' s in 7 days</div></div></div>';}).join(''):'<div class="empty">'+(v.sql_text_visible?'No group of SQL that differs only in literals.':'SQL text is not shown to your role, so literal SQL cannot be grouped.')+'</div>';
+    var pa=C.pareto?'<div style="font-size:13px;margin-bottom:6px">The top 5 SQL take <b>'+esc(C.pareto.top5_pct)+'%</b> of all SQL time in 7 days</div>'+C.pareto.top.map(function(t){return '<div style="display:grid;grid-template-columns:130px 1fr 40px;gap:8px;align-items:center;font-size:12px;margin:4px 0"><span class="mono">'+esc(t.sql_id)+'</span><span class="cb"><i style="width:'+t.pct+'%;background:linear-gradient(90deg,#f0883e,#f85149)"></i></span><b>'+esc(t.pct)+'%</b></div>';}).join(''):'<div class="empty">No SQL timings in 7 days.</div>';
+    $('n-ai').textContent=c.worse?' '+c.worse:'';
+    $('tai').innerHTML='<div class="tai"><div class="kp">'+kt(c.improved,'Fixes that worked','#196c2e','#2ea043')+kt(c.worse,'Made worse','#8e1519','#f85149')+kt(c.no_effect,'No effect','#3d444d','#6e7681')+kt(c.not_measurable,'Not measurable','#30363d','#484f58')+kt(v.saved_s_day+' s','DB time saved a day','#6e40c9','#a371f7')+'</div>'
+      +'<div class="r2"><div class="card"><h2>Did each fix work? <span class="c">measured from the SQL timings, never assumed</span></h2>'+beforeAfter(v.verified)+vf+'</div><div class="card"><h2>Tune next <span class="c">severity × DB time at stake × what has worked here</span></h2>'+nx+'</div></div>'
+      +'<div class="r3"><div class="card"><h2>What works here <span class="c">learned from verified fixes</span></h2>'+lr+'</div><div class="card"><h2>Where the time goes</h2>'+pa+'</div></div>'
+      +'<div class="r2"><div class="card"><h2>Unstable plans <span class="c">baseline candidates the findings do not raise</span></h2><div class="tw">'+un+'</div></div><div class="card"><h2>Literal SQL <span class="c">same statement, different literals</span></h2>'+li+'</div></div></div>';}
+  window.zybTunAi=function(inst){if(K===inst&&V&&Date.now()-AT<300000)return;K=inst;$('tai').innerHTML='<div class="empty">Measuring the fixes and ranking the findings…</div>';
+    req('/api/soc/db/oracle/tuning/intel'+(inst?'?instance='+encodeURIComponent(inst):'')).then(function(v){V=v;AT=Date.now();draw();},function(e){$('tai').innerHTML='<div class="empty">'+esc(e.status===404?'Tuning intelligence is not installed on the SIEM yet - run the update.':e.status===403?'Tuning intelligence is for analysts and above.':'Could not analyse: '+e.message)+'</div>';});};
+})();
+</script>
+</body></html>

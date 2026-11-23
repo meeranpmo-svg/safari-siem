@@ -1,0 +1,202 @@
+--- a/engine/discovery/vault.js	2026-10-14 09:57:12.333690611 +0000
++++ b/engine/discovery/vault.js	2026-10-14 09:57:12.337058265 +0000
+@@ -44,6 +44,9 @@
+   azure: { secret: { client_secret: { max: 512 } }, target: { tenant_id: 'guid', client_id: 'guid', subscriptions: 'guids' } },
+   aws: { secret: { access_key_id: { max: 128 }, secret_access_key: { max: 256 } }, target: { regions: 'regions' } },
+ };
++// connection-target fields: changing any of them re-points where the stored secret is sent, so the secret must be
++// re-entered in the same request (otherwise an admin session/CSRF could redirect a saved password to a new host).
++const CONNECTION_TARGET_FIELDS = ['base_url', 'servers', 'host', 'ip', 'port', 'ca_file', 'tls_fingerprint', 'transport'];
+ const REQUIRED_TARGET = { ldap: ['servers', 'base_dn'], vcenter: ['base_url'], cucm_axl: ['host'], azure: ['tenant_id', 'client_id'], aws: ['regions'] };
+ 
+ function normTarget(kind, raw) {
+@@ -169,15 +172,24 @@
+     const label = b.label !== undefined ? str(b.label, 120) : cur.label;
+     if (!label) throw bad('label is required');
+     const target = b.target !== undefined ? normTarget(cur.kind, Object.assign({}, cur.target, b.target)) : cur.target;
++    const before = cur.target || {};
++    const targetChanged = CONNECTION_TARGET_FIELDS.filter((f) => JSON.stringify(before[f]) !== JSON.stringify(target[f]));
+     const prev = unseal(cur);
+-    const secret = b.secret !== undefined ? normSecret(cur.kind, b.secret, prev) : prev;
++    let secret;
++    if (targetChanged.length) {
++      // the stored secret is NOT carried over to a new target: every secret field that is set must be supplied again
++      const sb = isObj(b.secret) ? b.secret : {};
++      const missing = Object.keys(prev).filter((x) => prev[x] !== undefined && prev[x] !== null && prev[x] !== '' && (sb[x] === undefined || sb[x] === null || sb[x] === ''));
++      if (missing.length) { for (const x of Object.keys(prev)) prev[x] = null; throw bad(`changing the connection target (${targetChanged.join(', ')}) requires re-entering the secret in the same request (secret.${missing.join(', secret.')})`); }
++      secret = normSecret(cur.kind, sb, null);
++    } else secret = b.secret !== undefined ? normSecret(cur.kind, b.secret, prev) : prev;
+     const version = cur.version + 1;
+     const fp = fingerprint(secret);
+     const rec = Object.assign({}, cur, { label, target, version, enc: seal(id, version, secret), fingerprint: fp, updated_by: who.user, updated_at: new Date().toISOString() });
+     if (fp !== cur.fingerprint) rec.last_tested = null;
+     for (const x of Object.keys(prev)) prev[x] = null;
+     col.put(rec);
+-    return { credential: view(rec), secret_changed: fp !== cur.fingerprint };
++    return { credential: view(rec), secret_changed: fp !== cur.fingerprint, target_changed: targetChanged, target_before: before };
+   }
+ 
+   function remove(id) { const cur = col.get(id); if (!cur) throw bad('credential not found', 404); col.remove(id); return { removed: id, kind: cur.kind }; }
+@@ -207,4 +219,32 @@
+   };
+ }
+ 
+-module.exports = { createVault, KINDS, normTarget, normSecret };
++// Small AES-256-GCM sealer for OTHER engine secrets (legacy connector credentials in engine/settings.js) under the SAME
++// master key file as the discovery vault. A purpose-specific subkey (HMAC(master, purpose)) gives domain separation and
++// AAD = "<purpose>|<id>" binds each ciphertext to its record.
++function createSealer({ keyFile, createKey = true, purpose }) {
++  const k = loadKey(keyFile, createKey);
++  const sub = k.key ? crypto.createHmac('sha256', k.key).update(`sentra-itam-sealer|${purpose}`).digest() : null;
++  const aad = (id) => Buffer.from(`${purpose}|${id}`);
++  function need() { if (!sub) throw bad(`credential vault unavailable: ${k.error}`, 503); }
++  return {
++    available: () => !!sub, unavailableReason: () => k.error || null,
++    seal(id, plaintext) {
++      need();
++      const iv = crypto.randomBytes(12);
++      const c = crypto.createCipheriv('aes-256-gcm', sub, iv);
++      c.setAAD(aad(id));
++      const ct = Buffer.concat([c.update(String(plaintext), 'utf8'), c.final()]);
++      return { alg: 'aes-256-gcm', iv: iv.toString('hex'), tag: c.getAuthTag().toString('hex'), ct: ct.toString('base64') };
++    },
++    unseal(id, enc) {
++      need();
++      const d = crypto.createDecipheriv('aes-256-gcm', sub, Buffer.from(enc.iv, 'hex'));
++      d.setAAD(aad(id));
++      d.setAuthTag(Buffer.from(enc.tag, 'hex'));
++      try { return Buffer.concat([d.update(Buffer.from(enc.ct, 'base64')), d.final()]).toString('utf8'); } catch { throw bad(`sealed value ${id} failed authentication (vault key changed?)`, 500); }
++    },
++  };
++}
++
++module.exports = { createSealer, createVault, KINDS, normTarget, normSecret, CONNECTION_TARGET_FIELDS };
+--- a/engine/discovery/index.js	2026-10-14 09:57:12.340586117 +0000
++++ b/engine/discovery/index.js	2026-10-14 09:57:12.344291996 +0000
+@@ -204,7 +204,12 @@
+   // ---------------- credentials ----------------
+   function refsTo(credId) { return scopesCol.all((s) => s.status !== 'archived' && Object.values(s.methods || {}).some((m) => m.credential_id === credId || (m.credential_ids || []).includes(credId))).map((s) => ({ id: s.id, name: s.name })); }
+   function createCredential(body, who) { const v = vault.create(body, who); A(who, 'discovery.credential.create', v.id, { kind: v.kind, label: v.label, target: v.target, fingerprint: v.fingerprint }); return v; }
+-  function updateCredential(id, body, who) { const r = vault.update(id, body, who); A(who, 'discovery.credential.update', id, { kind: r.credential.kind, label: r.credential.label, target: r.credential.target, secret_changed: r.secret_changed, fingerprint: r.credential.fingerprint }); return r.credential; }
++  function updateCredential(id, body, who) {
++    const r = vault.update(id, body, who);
++    // target before/after are public connection parameters (never the secret) so a redirect is visible in the audit
++    A(who, 'discovery.credential.update', id, { kind: r.credential.kind, label: r.credential.label, target: r.credential.target, target_before: r.target_before, target_after: r.credential.target, target_changed: r.target_changed, secret_changed: r.secret_changed, fingerprint: r.credential.fingerprint });
++    return r.credential;
++  }
+   function deleteCredential(id, who) {
+     const used = refsTo(id);
+     if (used.length) throw bad(`credential is used by scope(s): ${used.map((s) => s.name).join(', ')} — remove it from them first`, 409);
+@@ -258,11 +263,14 @@
+   // ---------------- results ----------------
+   function cmdbIndex() {
+     const macs = new Set(); const serials = new Set();
++    // agent-reported identity is self-asserted by the endpoint: an agent's MAC (or serial) claim is NOT a system-of-record
++    // match, so it can never suppress a rogue-device alert (an enrolled agent could otherwise "whitelist" any MAC).
+     for (const a of assets.all()) {
+       if (a.status === 'disposed') continue;
+-      if (a.mac) macs.add(String(a.mac).toLowerCase().replace(/[^0-9a-f]/g, ''));
+-      if (a.serial) serials.add(String(a.serial).toLowerCase());
+-      for (const sg of a.sources || []) for (const k of sg.keys || []) if (k.startsWith('mac:')) macs.add(k.slice(4));
++      const prov = a.prov || {};
++      if (a.mac && prov.mac !== 'agent') macs.add(String(a.mac).toLowerCase().replace(/[^0-9a-f]/g, ''));
++      if (a.serial && prov.serial !== 'agent') serials.add(String(a.serial).toLowerCase());
++      for (const sg of a.sources || []) { if (sg.source === 'agent') continue; for (const k of sg.keys || []) if (k.startsWith('mac:')) macs.add(k.slice(4)); }
+     }
+     return { macs, serials };
+   }
+@@ -271,7 +279,9 @@
+     const st = settings(); const idx = cmdbIndex();
+     const infra = new Set(scopesCol.all((s) => s.infra).map((s) => s.id));
+     return devices.list((d) => d.status === 'new').filter((d) => {
+-      if (Object.keys(d.methods || {}).some((m) => SYSTEMS_OF_RECORD.includes(m))) return false; // known to AD / vCenter / … → not unknown
++      // known to AD / vCenter / … → not unknown. A Hyper-V report pushed with an agent key is self-asserted (untrusted) and
++      // does not count as a system-of-record sighting.
++      if (Object.entries(d.methods || {}).some(([m, v]) => SYSTEMS_OF_RECORD.includes(m) && !(v && v.untrusted))) return false;
+       if (inCmdb(d, idx)) return false;
+       return d.seen_count >= st.rogue_min_sightings || infra.has(d.scope_id);
+     }).map((d) => ({ id: d.id, ip: d.ip, mac: d.mac, vendor: d.vendor || null, type: d.type, site: d.site, scope_id: d.scope_id, seen_count: d.seen_count, first_seen: d.first_seen, last_seen: d.last_seen, infra: infra.has(d.scope_id), reason: infra.has(d.scope_id) ? 'unknown device on a server/infrastructure subnet' : `unknown device seen ${d.seen_count} times` }));
+@@ -350,6 +360,7 @@
+   }
+ 
+   // ---------------- Hyper-V report ingestion ----------------
++  // opts.untrusted: report arrived on the agent gateway (agent key, not an admin) → observations are flagged untrusted
+   function ingestHyperv(body, who, opts = {}) {
+     if (settings().methods.hyperv === false) throw bad('Hyper-V ingestion is disabled globally', 409);
+     const rep = hypervM.normReport(body);
+@@ -358,10 +369,11 @@
+     else if (rep.host.ip) scope = scopesCol.all((s) => s.status === 'active' && s.methods.hyperv && s.methods.hyperv.enabled && ip4.contains(s.targets, rep.host.ip))[0] || null;
+     if (!scope) throw bad('no active scope with Hyper-V enabled covers this host (send host.ip inside a scope, or import with scope_id)', 409);
+     const ctx = { scope_id: scope.id, site: scope.site, vlan: scope.vlan, at: rep.collected_at };
+-    devices.observe({ method: 'hyperv', ip: rep.host.ip, hostname: rep.host.name, fqdn: rep.host.fqdn, os: rep.host.os, uid: `hyperv-host:${rep.host.name.toLowerCase()}`, extra: { hyperv: { kind: 'host' } } }, ctx);
++    const untrusted = opts.untrusted === true;
++    devices.observe({ method: 'hyperv', untrusted, ip: rep.host.ip, hostname: rep.host.name, fqdn: rep.host.fqdn, os: rep.host.os, uid: `hyperv-host:${rep.host.name.toLowerCase()}`, extra: { hyperv: { kind: 'host' } } }, ctx);
+     let n = 0;
+-    for (const v of rep.vms) { if (devices.observe({ method: 'hyperv', ips: v.ips, macs: v.macs, hostname: v.name, os: v.os, uid: v.id ? `hyperv:${v.id.toLowerCase()}` : `hyperv:${rep.host.name.toLowerCase()}/${(v.name || '').toLowerCase()}`, extra: { hyperv: { kind: 'vm', host: rep.host.name, state: v.state, generation: v.generation } } }, ctx)) n++; }
+-    A(who, 'discovery.hyperv.report', rep.host.name, { scope_id: scope.id, vms: n });
++    for (const v of rep.vms) { if (devices.observe({ method: 'hyperv', untrusted, ips: v.ips, macs: v.macs, hostname: v.name, os: v.os, uid: v.id ? `hyperv:${v.id.toLowerCase()}` : `hyperv:${rep.host.name.toLowerCase()}/${(v.name || '').toLowerCase()}`, extra: { hyperv: { kind: 'vm', host: rep.host.name, state: v.state, generation: v.generation } } }, ctx)) n++; }
++    A(who, 'discovery.hyperv.report', rep.host.name, { scope_id: scope.id, vms: n, untrusted });
+     return { ok: true, scope_id: scope.id, host: rep.host.name, vms: n };
+   }
+ 
+@@ -405,7 +417,14 @@
+     return Number.isFinite(t) && now - t <= silentMs;
+   }
+   function covItem(a, src, status, by) {
+-    return { asset_id: a.id, name: a.name || null, mgmt_ip: a.mgmt_ip || null, type: a.type || null, site: a.site || null, is_server: a.type === 'server' || !!(a.discovery && a.discovery.class === 'server'), status, source_id: src ? src.id : (a.siem && a.siem.source_id) || null, source_kind: src ? src.kind : (a.siem && a.siem.kind) || null, last_seen: src && src.last_seen != null ? (typeof src.last_seen === 'number' ? new Date(src.last_seen).toISOString() : src.last_seen) : null, matched_by: by };
++    const disc = a.discovery || {};
++    const lc = a.log_collection || {};
++    return { asset_id: a.id, name: a.name || null, mgmt_ip: a.mgmt_ip || null, type: a.type || null, site: a.site || null, is_server: a.type === 'server' || !!(a.discovery && a.discovery.class === 'server'), status, source_id: src ? src.id : (a.siem && a.siem.source_id) || null, source_kind: src ? src.kind : (a.siem && a.siem.kind) || null, last_seen: src && src.last_seen != null ? (typeof src.last_seen === 'number' ? new Date(src.last_seen).toISOString() : src.last_seen) : null, matched_by: by,
++      // classification hints for the SIEM auto-onboarding (sentra-siem engine/onboard/auto-onboard.js)
++      vendor: disc.vendor || a.vendor || null, os: disc.os || a.os || null, class: disc.class || null, is_dc: !!disc.is_dc, hostname: a.hostname || a.fqdn || null,
++      asset_status: a.status || null, approved: true, siem_site: siem.siteMap[a.site] || null, suggested_kind: siem.kindFor(a).kind || null,
++      // an administrator stopped log collection for this asset in the inventory → never auto-onboard it again
++      auto_onboard: lc.state !== 'stopped' };
+   }
+   function summarizeCov(per) {
+     const s = { total: per.length, covered: 0, silent: 0, absent: 0, unknown: 0 };
+--- a/engine/discovery/routes.js	2026-10-14 09:57:12.347485041 +0000
++++ b/engine/discovery/routes.js	2026-10-14 09:57:12.350097804 +0000
+@@ -66,7 +66,7 @@
+   srv.route('POST', '/hyperv', (ctx) => {
+     const a = app.agentgw.authenticate(ctx.bearer());
+     if (!a) throw bad('invalid or revoked agent key', 401);
+-    return D.ingestHyperv(ctx.body, { user: `agent:${a.id}`, role: 'agent', ip: ctx.ip });
++    return D.ingestHyperv(ctx.body, { user: `agent:${a.id}`, role: 'agent', ip: ctx.ip }, { untrusted: true });
+   }, { agent: true, maxBody: 4 * 1024 * 1024 });
+ }
+ 
+--- a/engine/discovery/devices.js	2026-10-14 09:57:12.352963735 +0000
++++ b/engine/discovery/devices.js	2026-10-14 09:57:12.356079261 +0000
+@@ -43,7 +43,7 @@
+     const ips = [...new Set([o.ip].concat(o.ips || []).filter((x) => x && ip4.parseIp(x) !== null))];
+     const serial = str(o.serial, 120);
+     return {
+-      method: o.method, macs, ips, serial: serial.length >= 3 && !/^(n\/?a|none|unknown|0+)$/i.test(serial) ? serial : '',
++      method: o.method, untrusted: o.untrusted === true, macs, ips, serial: serial.length >= 3 && !/^(n\/?a|none|unknown|0+)$/i.test(serial) ? serial : '',
+       uid: o.uid ? str(o.uid, 200).toLowerCase() : '', hostname: str(o.hostname, 255).toLowerCase(), fqdn: str(o.fqdn, 255).toLowerCase(),
+       model: str(o.model, 200), vendor: str(o.vendor, 120), os: str(o.os, 200), sys: o.sys || null,
+       open_ports: Array.isArray(o.open_ports) ? o.open_ports.filter((p) => Number.isInteger(p)).slice(0, 64) : [],
+@@ -102,7 +102,8 @@
+     if (n.neighbours) d.neighbours = n.neighbours.map((x) => ({ via: x.via, local_port: x.local_port || null, remote_name: x.remote_name || null, remote_port: x.remote_port || null, remote_ip: x.remote_ip || null, remote_mac: x.remote_mac || null, remote_platform: x.remote_platform || null }));
+     if (n.extra) for (const [k, v] of Object.entries(n.extra)) d.extra[k] = v;
+     const m = d.methods[n.method] || { first_seen: now, count: 0 };
+-    d.methods[n.method] = { first_seen: m.first_seen, last_seen: now, count: m.count + 1 };
++    // a method sighting stays 'untrusted' (self-asserted, e.g. agent-key Hyper-V) until a trusted observation of it arrives
++    d.methods[n.method] = Object.assign({ first_seen: m.first_seen, last_seen: now, count: m.count + 1 }, n.untrusted && (m.count === 0 || m.untrusted) ? { untrusted: true } : {});
+     if (ctx.run_id && !d.runs.includes(ctx.run_id)) { d.runs = d.runs.concat(ctx.run_id).slice(-20); d.seen_count = (d.seen_count || 0) + 1; }
+     else if (!ctx.run_id) d.seen_count = (d.seen_count || 0) + 1;
+     d.last_seen = now;
+--- a/engine/discovery/siem.js	2026-10-14 09:57:12.359143233 +0000
++++ b/engine/discovery/siem.js	2026-10-14 09:57:12.362165903 +0000
+@@ -164,7 +164,9 @@
+     } catch (e) { return { sent: 0, error: e.code || 'error' }; }
+   }
+ 
+-  return { connect, health, fetchSources, silentFindings, bridge, kindFor, lastHealth: () => lastHealth, configured: () => !!sc.secret_file, siteMap, silentMinutes: () => Math.round(silentMs / 60000) };
++  // call(method, path, who, body) → {status, json}: the ONE authenticated loopback link to the SIEM API (proxy secret +
++  // identity). Reused by engine/monitoring-membership.js (inventory "Log collection" actions) — no parallel SIEM link.
++  return { connect, health, fetchSources, silentFindings, bridge, kindFor, call, lastHealth: () => lastHealth, configured: () => !!sc.secret_file, siteMap, silentMinutes: () => Math.round(silentMs / 60000) };
+ }
+ 
+ module.exports = { createSiem, kindFor, KIND_TABLE, CONNECTABLE, NOT_APPLICABLE, slug };
