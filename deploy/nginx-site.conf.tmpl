@@ -81,6 +81,8 @@ server {
     # the company logo (public: the sign-in page shows it before a session exists). add-dashboards-nginx.sh inserts
     # the /dashboards/ block just above this location.
     location = /logo.webp { alias /var/www/sentra/logo; default_type @LOGO_TYPE@; expires 7d; access_log off; }
+    # a sign-in service that asks for the logo under its own name (/<company>-logo.png) gets the same file
+    location ~ ^/[a-z0-9-]+-logo\.png$ { rewrite ^ /logo.webp last; }
     location = /favicon.ico { access_log off; log_not_found off; return 204; }
 
     # ---- the engines' APIs (session required; identity headers set here, never taken from the browser)
