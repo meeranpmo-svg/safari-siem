@@ -83,7 +83,8 @@ test('my brief: my risks and actions, the team\'s overdue work, compliance, rank
   assert.equal(v.priorities[0].kind, 'my action', 'my overdue action first: ' + JSON.stringify(v.priorities[0]));
   assert.ok(v.priorities.every((p) => p.why.length && p.why.every((w) => /\+\d+$/.test(w))), 'every point has its reason');
   assert.ok(v.brief.some((l) => /You own 1 open risk/.test(l)) && v.brief.some((l) => /1 overdue/.test(l)), v.brief.join(' | '));
-  assert.ok(v.compliance && v.compliance.frameworks.length === 6);
+  const off = require('../engine/brand').modules_off || [], expect = 6 - (off.includes('fw-sama') ? 1 : 0) - (off.includes('fw-ia') ? 1 : 0);
+  assert.ok(v.compliance && v.compliance.frameworks.length === expect, 'the organisation\'s frameworks: ' + (v.compliance && v.compliance.frameworks.map((f) => f.id)));
 });
 
 test('Head of Risk brief: Workflow Automation - what the risk function asked the IT teams for that is late, results to accept; failure named', async (t) => {
