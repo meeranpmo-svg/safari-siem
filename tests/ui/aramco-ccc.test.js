@@ -8,7 +8,7 @@
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
 const DASH = path.resolve(__dirname, '../../ui');
 let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
-let USER = 'omar.syn', ROLE = 'operator', CONTROLS = [];
+let USER = 'omar.syn', ROLE = 'operator', CONTROLS = [], SUBS = [], LINKED = [];
 const SVC = { general: 'General (every third party)', 'network-connectivity': 'Network connectivity to Aramco', 'outsourced-infrastructure': 'Outsourced infrastructure / hosting', 'critical-data': 'Critical data processing', 'custom-software': 'Customized software development', cloud: 'Cloud computing service' };
 const stage = (id, name, done, why, next) => ({ id, name, done, why, next });
 const VIEW = () => ({ org: 'Synthetic Co', profile: { ccc_owner: 'omar.syn', vendor_no: 'V-SYN', planned_audit: '2027-02-01' }, can_manage: USER === 'omar.syn' || ROLE === 'admin', services: SVC,
@@ -24,6 +24,15 @@ const posts = [];
     const body = (fn) => { let b = ''; req.on('data', (d) => { b += d; }); req.on('end', () => { const j = b ? JSON.parse(b) : null; posts.push([req.method, u, j]); fn(j); }); };
     if (u === '/dashboards/whoami.json') return json(200, { user: USER, role: ROLE });
     if (u === '/api/itam/aramco-ccc') return json(200, VIEW());
+    if (u === '/api/itam/aramco-ccc/evidence') return json(200, { catalogue: [{ id: 'assets', name: 'Asset inventory' }, { id: 'backup', name: 'Backup and recovery' }], covered: LINKED.length, gaps: 2 - LINKED.length,
+      sources: [{ id: 'assets', name: 'Asset inventory', stale: false, snapshot: { at: '2026-11-25T08:00:00Z', available: true, sha256: 'ab'.repeat(32), collections: { assets: { count: 240 } } } }, { id: 'backup', name: 'Backup and recovery', snapshot: { at: '2026-11-25T08:00:00Z', available: false, why: 'nothing recorded yet <img src=x onerror=alert(1)>', collections: {}, sha256: 'cd'.repeat(32) } }],
+      controls: [{ id: 'SYN-1', title: 'Policy', status: 'implemented', linked: LINKED, references: 0, suggested: LINKED.length ? [] : [{ source: 'assets', score: 0.42 }], gap: LINKED.length ? '' : 'no evidence' }], submissions: SUBS });
+    if (u === '/api/itam/aramco-ccc/evidence/collect') return body(() => json(200, [{ source: 'assets', available: true }, { source: 'backup', available: false }]));
+    if (u === '/api/itam/aramco-ccc/evidence/link') return body((b) => { if (b.linked) LINKED = [b.source]; json(200, b); });
+    if (u === '/api/itam/aramco-ccc/submissions') return body(() => { const x = { id: 'SUB-0001', status: 'prepared', prepared_by: USER, controls: 2, gaps: 1, unassessed: 0, readiness: 50, manifest_sha256: 'ef'.repeat(32) }; SUBS = [x]; json(200, x); });
+    if (/\/submissions\/SUB-0001\/approve$/.test(u)) return body(() => { SUBS[0].status = 'approved'; SUBS[0].approved_by = USER; json(200, SUBS[0]); });
+    if (/\/submissions\/SUB-0001\/submitted$/.test(u)) return body((b) => { Object.assign(SUBS[0], { status: 'submitted' }, b); json(200, SUBS[0]); });
+    if (/\/submissions\/SUB-0001\/export$/.test(u)) return json(200, { filename: 'aramco-ccc-SUB-0001.csv', csv: '"control"\n"SYN-1"', manifest_sha256: 'ef'.repeat(32) });
     if (u === '/api/itam/aramco-ccc/controls/import') return body((b) => { CONTROLS = [{ id: 'SYN-1', domain: 'Governance', title: 'Policy <img src=x onerror=alert(1)>', requirement: 'Synthetic requirement', applies: ['all'], status: 'not-assessed', evidence: [] }, { id: 'SYN-2', domain: 'Access', title: 'MFA', requirement: 'Synthetic', applies: ['network-connectivity'], status: 'not-implemented', evidence: [] }]; json(200, { added: 2, updated: 0, total: 2 }); });
     const m = u.match(/^\/api\/itam\/aramco-ccc\/controls\/([^/]+)\/(assess|na|evidence)$/);
     if (m) return body((b) => { const c = CONTROLS.find((x) => x.id === m[1]); if (m[2] === 'assess') { c.status = b.status; c.na = b.status === 'not-applicable' ? { state: 'proposed', by: USER, justification: b.justification } : null; } if (m[2] === 'na') c.na.state = b.decision; if (m[2] === 'evidence') c.evidence.push(b); json(200, c); });
@@ -56,9 +65,21 @@ const posts = [];
   ok(posts.some((x) => /SYN-2\/evidence$/.test(x[1]) && x[2].location === 'DMS/CCC/SYN-2'), 'evidence reference');
   answers = ['Enforce MFA on the VPN', 'it.syn', '2026-12-15']; await p.waitForSelector('[data-ac="SYN-2"]'); await p.click('[data-ac="SYN-2"]'); await toast(p);
   ok(posts.some((x) => x[1] === '/api/itam/aramco-ccc/actions' && x[2].control === 'SYN-2' && x[2].due === '2026-12-15'), 'action');
+  // platform evidence and the submission pack
+  ok(/Asset inventory/.test(await p.textContent('#x-ev')) && /assets: 240/.test(await p.textContent('#x-ev')), 'snapshots shown');
+  ok(!(await p.$('img[src="x"]')), 'hostile text in evidence stays text');
+  await p.click('#ev-go'); ok(/1 of 2 sources collected/.test(await toast(p)), 'collect now');
+  await p.waitForSelector('[data-link="SYN-1"]'); await p.click('[data-link="SYN-1"]'); await toast(p);
+  ok(posts.some((x) => x[1].endsWith('/evidence/link') && x[2].source === 'assets' && x[2].linked === true), 'suggestion linked by a person');
+  await p.waitForSelector('#sub-go'); await p.click('#sub-go'); ok(/SUB-0001 prepared - waiting for approval/.test(await toast(p)), 'pack prepared');
+  await p.waitForFunction(() => /SUB-0001/.test(document.querySelector('#x-sub').innerText));
+  ok(!(await p.$('[data-sapp]')), 'the preparer is not offered Approve');
   await p.close();
   USER = 'admin.syn'; ROLE = 'admin'; p = await open(); await p.waitForSelector('[data-na="accepted"]'); await p.click('[data-na="accepted"]'); await toast(p);
   ok(posts.some((x) => /SYN-1\/na$/.test(x[1]) && x[2].decision === 'accepted'), 'another person accepts');
+  await p.waitForSelector('[data-sapp]'); answers = ['yes']; await p.click('[data-sapp]'); await toast(p); ok(SUBS[0].status === 'approved', 'another person approves the pack');
+  answers = ['2026-11-25', 'SYN-AUDIT-REF']; await p.waitForSelector('[data-ssub]'); await p.click('[data-ssub]'); await toast(p); ok(SUBS[0].status === 'submitted' && SUBS[0].reference === 'SYN-AUDIT-REF', 'recorded as submitted');
+  const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 8000 }).catch(() => null), p.click('[data-sdl][data-fmt="csv"]')]); ok(dl && dl.suggestedFilename() === 'aramco-ccc-SUB-0001.csv', 'pack downloaded');
   await p.close();
   USER = 'vera.syn'; ROLE = 'viewer'; p = await open(); await p.waitForSelector('#x-ctl table');
   ok(!(await p.$('[data-as]')) && !(await p.$('#i-go')) && !(await p.$('#c-add')), 'viewer: read only');

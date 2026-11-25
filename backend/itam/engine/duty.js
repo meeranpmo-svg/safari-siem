@@ -261,6 +261,8 @@ function registerDuty(srv, app, opts = {}) {
   // remediation, evidence references, the audit firm's findings, the certificate and its renewal
   const ACM = optional('./aramco-ccc');
   if (ACM) { const AC = ACM.createAramcoCcc(app, { now: opts.now, noTimer: opts.noTimer }); app.addons.aramcoCcc = AC; ACM.registerAramcoCcc(srv, app, AC); AC.start(); }
+  const ACE = ACM && optional('./aramco-ccc-evidence');
+  if (ACE) { const AE = ACE.createAcccEvidence(app, { now: opts.now, noTimer: opts.noTimer }); app.addons.aramcoCccEvidence = AE; ACE.registerAcccEvidence(srv, app, AE); AE.start(); }
   if (IA) IAM.registerAuditEngageRoutes(srv, app, IA);
   if (CSA) IAM.registerAuditEngageRoutes(srv, app, CSA);
   if (IAD) IAM.registerAuditEngageRoutes(srv, app, IAD);

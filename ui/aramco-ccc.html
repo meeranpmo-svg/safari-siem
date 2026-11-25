@@ -19,12 +19,13 @@
   <div class="grid2"><div class="card" id="x-scope"></div><div class="card" id="x-cert"></div></div>
   <div class="card" id="x-ctl"></div>
   <div class="grid2"><div class="card" id="x-act"></div><div class="card" id="x-aud"></div></div>
+  <div class="grid2"><div class="card" id="x-ev"></div><div class="card" id="x-sub"></div></div>
 </div>
 </main>
 <script>
 (function () {
   'use strict';
-  var $ = function (i) { return document.getElementById(i); }, V = null, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 };
+  var $ = function (i) { return document.getElementById(i); }, V = null, EV = null, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function can(r) { return RANK[ME.role] >= RANK[r]; }
   function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
@@ -35,7 +36,7 @@
   function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
   var ST = { implemented: ['implemented', 'ok'], partial: ['partial', 'warn'], 'not-implemented': ['not implemented', 'bad'], 'not-applicable': ['not applicable', ''], 'not-assessed': ['not assessed', 'warn'] };
   function load() {
-    req('GET', '/aramco-ccc').then(function (v) { V = v; $('err').innerHTML = ''; $('main').hidden = false; $('up').textContent = 'read ' + new Date().toLocaleTimeString(); draw(); })
+    Promise.all([req('GET', '/aramco-ccc'), req('GET', '/aramco-ccc/evidence').catch(function () { return null; /* evidence module not installed: its cards say so */ })]).then(function (rr) { var v = rr[0]; EV = rr[1]; V = v; $('err').innerHTML = ''; $('main').hidden = false; $('up').textContent = 'read ' + new Date().toLocaleTimeString(); draw(); })
       .catch(function (e) { $('main').hidden = true; $('err').innerHTML = '<div class="card"><div class="empty">' + esc(e.status === 404 ? 'Aramco CCC is not on this platform yet - run the platform update.' : 'Could not load: ' + e.message) + '</div></div>'; });
   }
   function draw() {
@@ -66,6 +67,23 @@
           + (op ? '<td><select data-as="' + esc(c.id) + '" aria-label="Assess ' + esc(c.id) + '"><option value="">change…</option>' + ['implemented', 'partial', 'not-implemented', 'not-applicable'].map(function (o) { return '<option value="' + o + '">' + esc(ST[o][0]) + '</option>'; }).join('') + '</select>' + (c.status === 'partial' || c.status === 'not-implemented' ? '<div><button type="button" class="btn" data-ac="' + esc(c.id) + '">+ action</button></div>' : '') + '</td>' : '') + '</tr>';
       }).join('') + '</tbody></table></div>' : '<div class="empty">No control list imported. The CCC owner imports it from your copy of the Aramco Third Party Cybersecurity Standard (SACS-002) as CSV with the columns id, domain, title, requirement, applies_to (all, or service types separated by |: ' + esc(Object.keys(svc).join(' | ')) + '). The platform ships no control text.</div>')
       + (mg ? '<h3>Import the control list</h3><input type="file" id="i-f" accept=".csv,text/csv" aria-label="Control list CSV"> <label class="sm"><input type="checkbox" id="i-r"> replace (remove controls not in the file)</label> <button type="button" id="i-go">Import</button>' : '');
+    // platform evidence: snapshots, suggestions (TF-IDF), links, gaps; submissions (four-eyes)
+    if (!EV) { $('x-ev').innerHTML = '<h2>🗂 Platform evidence</h2><div class="empty">Evidence collection is not on this platform yet - run the platform update.</div>'; $('x-sub').innerHTML = ''; }
+    else {
+      var srcName = {}; EV.catalogue.forEach(function (x) { srcName[x.id] = x.name; });
+      $('x-ev').innerHTML = '<h2>🗂 Platform evidence <span class="c">' + esc(EV.covered) + ' control(s) covered · ' + esc(EV.gaps) + ' gap(s)</span></h2>' + (op ? '<p><button type="button" id="ev-go">Collect evidence now</button> <span class="mut sm">counts and dates only, each snapshot hashed</span></p>' : '')
+        + EV.sources.map(function (x) { var sn = x.snapshot; return '<div class="sm" style="padding:3px 0"><b>' + esc(x.name) + '</b> ' + (sn ? (sn.available ? pill('collected ' + sn.at.slice(0, 10), x.stale ? 'warn' : 'ok') + ' <span class="mut">' + esc(Object.keys(sn.collections).map(function (k) { return k + ': ' + sn.collections[k].count; }).join(' · ')) + ' · sha256 ' + esc(sn.sha256.slice(0, 12)) + '…</span>' : pill('not available', 'warn') + ' <span class="mut">' + esc(sn.why) + '</span>') : pill('not collected yet', '')) + '</div>'; }).join('')
+        + '<h3>Per control</h3>' + EV.controls.map(function (c) { return '<div class="sm" style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><b>' + esc(c.id) + '</b> ' + esc(c.title) + ' ' + (c.gap ? pill(c.gap, 'warn') : pill('evidence', 'ok'))
+          + (c.linked.length ? '<div>linked: ' + c.linked.map(function (l) { return esc(srcName[l] || l) + (op ? ' <button type="button" class="btn" data-unlink="' + esc(c.id) + '" data-src="' + esc(l) + '">×</button>' : ''); }).join(', ') + '</div>' : '')
+          + (c.suggested.length ? '<div class="mut">suggested: ' + c.suggested.map(function (g) { return esc(srcName[g.source] || g.source) + ' (' + esc(Math.round(g.score * 100)) + ')' + (op ? ' <button type="button" class="btn" data-link="' + esc(c.id) + '" data-src="' + esc(g.source) + '">Link</button>' : ''); }).join(' · ') + '</div>' : '') + '</div>'; }).join('');
+      $('x-sub').innerHTML = '<h2>📦 Submission to the audit firm <span class="c">prepared → approved by another person → submitted</span></h2>' + (op ? '<p><button type="button" id="sub-go">Prepare a submission pack</button></p>' : '')
+        + (EV.submissions.length ? EV.submissions.map(function (x) { var b = '';
+          if (x.status === 'prepared' && mg && x.prepared_by !== ME.user) b += ' <button type="button" class="btn" data-sapp="' + esc(x.id) + '">Approve</button>';
+          if (x.status === 'approved' && mg) b += ' <button type="button" class="btn" data-ssub="' + esc(x.id) + '">Record as submitted</button>';
+          if (op) b += ' <button type="button" class="btn" data-sdl="' + esc(x.id) + '" data-fmt="csv">CSV</button> <button type="button" class="btn" data-sdl="' + esc(x.id) + '" data-fmt="json">JSON</button>';
+          return '<div class="sm" style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)"><b>' + esc(x.id) + '</b> ' + pill(x.status, x.status === 'submitted' ? 'ok' : x.status === 'approved' ? 'ok' : 'warn') + ' ' + esc(x.controls) + ' controls · ' + esc(x.gaps) + ' gap(s)' + (x.unassessed ? ' · ' + esc(x.unassessed) + ' not assessed' : '') + ' · readiness ' + esc(x.readiness == null ? '–' : x.readiness + ' %')
+            + '<div class="mut">prepared by ' + esc(x.prepared_by) + (x.approved_by ? ' · approved by ' + esc(x.approved_by) : '') + (x.reference ? ' · submitted ' + esc(x.submitted_on) + ' ref ' + esc(x.reference) : '') + ' · manifest ' + esc(String(x.manifest_sha256).slice(0, 16)) + '…</div>' + b + '</div>'; }).join('') : '<div class="empty">No pack prepared yet.</div>');
+    }
     // actions
     $('x-act').innerHTML = '<h2>🛠 Remediation actions</h2>' + (v.actions.length ? v.actions.map(function (a) { var od = a.status !== 'done' && a.due && a.due < new Date().toISOString().slice(0, 10); return '<div class="sm" style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)"><b>' + esc(a.id) + '</b> ' + esc(a.control) + ' - ' + esc(a.title) + ' · ' + esc(a.owner) + ' · due ' + esc(a.due) + ' ' + pill(a.status === 'done' ? 'done' : od ? 'overdue' : 'open', a.status === 'done' ? 'ok' : od ? 'bad' : 'warn') + (a.note ? '<div class="mut">' + esc(a.note) + '</div>' : '') + (op && a.status !== 'done' ? ' <button type="button" class="btn" data-done="' + esc(a.id) + '">Done</button>' : '') + '</div>'; }).join('') : '<div class="empty">No actions. A gap (partial / not implemented) gets one from its row.</div>');
     // audit
@@ -81,6 +99,13 @@
   document.addEventListener('click', function (ev) {
     var t = ev.target, a;
     if (t.id === 'rf') return load();
+    if (t.id === 'ev-go') { t.disabled = true; return req('POST', '/aramco-ccc/evidence/collect', {}).then(function (r) { toast(r.filter(function (x) { return x.available; }).length + ' of ' + r.length + ' sources collected'); load(); }).catch(function (e) { toast(e.message); t.disabled = false; }); }
+    if (t.id === 'sub-go') return req('POST', '/aramco-ccc/submissions', {}).then(function (x) { toast(x.id + ' prepared' + (x.unassessed ? ' - ' + x.unassessed + ' control(s) still not assessed' : ' - waiting for approval')); load(); }).catch(function (e) { toast('Not prepared: ' + e.message); });
+    if ((a = t.closest('[data-link]'))) return did(req('POST', '/aramco-ccc/evidence/link', { control: a.getAttribute('data-link'), source: a.getAttribute('data-src'), linked: true }));
+    if ((a = t.closest('[data-unlink]'))) return did(req('POST', '/aramco-ccc/evidence/link', { control: a.getAttribute('data-unlink'), source: a.getAttribute('data-src'), linked: false }));
+    if ((a = t.closest('[data-sapp]'))) { if (confirm('Approve this pack for submission to the audit firm?')) did(req('POST', '/aramco-ccc/submissions/' + encodeURIComponent(a.getAttribute('data-sapp')) + '/approve', {})); return; }
+    if ((a = t.closest('[data-ssub]'))) { var on = prompt('Submitted on (YYYY-MM-DD)', new Date().toISOString().slice(0, 10)); if (!on) return; var rf = prompt('The audit firm\'s reference'); if (!rf) return; did(req('POST', '/aramco-ccc/submissions/' + encodeURIComponent(a.getAttribute('data-ssub')) + '/submitted', { submitted_on: on, reference: rf })); return; }
+    if ((a = t.closest('[data-sdl]'))) { var fm = a.getAttribute('data-fmt'); req('GET', '/aramco-ccc/submissions/' + encodeURIComponent(a.getAttribute('data-sdl')) + '/export?format=' + fm).then(function (x) { var blob = new Blob([fm === 'csv' ? x.csv : JSON.stringify(x, null, 2)], { type: fm === 'csv' ? 'text/csv' : 'application/json' }), u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = x.filename; document.body.appendChild(l); l.click(); l.remove(); setTimeout(function () { URL.revokeObjectURL(u); }, 5000); }).catch(function (e) { toast(e.message); }); return; }
     if (t.id === 'p-save') return did(req('PUT', '/aramco-ccc/profile', opt({ vendor_no: val('p-v'), ccc_owner: val('p-o'), planned_audit: val('p-a') })));
     if (t.id === 'c-add') return did(req('POST', '/aramco-ccc/contracts', opt({ contract_no: val('c-n'), title: val('c-t'), ccc_needed_by: val('c-d'), end: val('c-e'), services: [].map.call(document.querySelectorAll('[data-svc]:checked'), function (x) { return x.getAttribute('data-svc'); }) })));
     if (t.id === 'k-save') return did(req('POST', '/aramco-ccc/certificate', { number: val('k-n'), issued: val('k-i'), expires: val('k-e'), firm: val('k-f'), services: [].map.call(document.querySelectorAll('[data-ksvc]:checked'), function (x) { return x.getAttribute('data-ksvc'); }) }));
