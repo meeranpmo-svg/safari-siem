@@ -72,6 +72,11 @@ const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
   // Live Compliance offers only the frameworks that apply: no SAMA / IA tab when their modules are off
   { const q = await open('live-compliance.html'); await q.waitForSelector('#fw option', { timeout: 8000 }).catch(() => {}); const opts = await q.$$eval('#fw option', (o) => o.map((x) => x.value)).catch(() => []);
     ok(opts.length && (!ZYB_ORG.modules_off.includes('fw-sama') || !opts.includes('sama')) && (!ZYB_ORG.modules_off.includes('fw-ia') || !opts.includes('ia')), 'Live Compliance frameworks: ' + opts.join(',')); await q.context().close(); }
+  // SAMA / IA citations next to another framework are taken off the pages (also text a page draws later); choices for them go
+  for (const f of ['identity-signin.html', 'user-management.html']) { const q = await open(f); await q.waitForTimeout(800); const t = await q.evaluate(() => document.body.innerText);
+    ok(!ZYB_ORG.modules_off.includes('fw-sama') || (!/SAMA CSF 3\.3\.5 ·/.test(t) && /NCA ECC 2-2/.test(t)), f + ': SAMA citation taken off, NCA kept'); await q.context().close(); }
+  { const q = await open('email-dashboard.html'); await q.waitForTimeout(800); const vals = await q.$$eval('option', (o) => o.map((x) => x.value)).catch(() => []);
+    ok(!ZYB_ORG.modules_off.includes('fw-sama') || !vals.includes('sama'), 'no SAMA choice in a list: ' + vals.join(',')); await q.context().close(); }
   p = await open('index.html');
   const cat = await p.evaluate(() => window.ZybModules.CAT.map((m) => m[0])), sols = await p.evaluate(() => JSON.stringify(window.ZybModules.SOLUTIONS));
   ok(ZYB_ORG.modules_off.every((id) => !cat.includes(id)) && ZYB_ORG.modules_off.every((id) => !sols.includes('"' + id + '"')), 'switched-off modules are not offered: ' + ZYB_ORG.modules_off.filter((id) => cat.includes(id)).join(', '));

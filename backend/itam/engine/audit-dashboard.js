@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE.
 'use strict';
 const ZYB_ORG = require('./brand');
+const OFF = new Set(ZYB_ORG.modules_off || []);
 /*
  * The auditor's dashboard ({P} = /api/itam): every regulatory framework and every audit team on one page, so an internal or
  * external auditor sees where the organisation stands and goes straight to the evidence. It writes nothing and decides nothing:
@@ -154,6 +155,8 @@ function createAuditDashboard(app, opts = {}) {
     const [p, e, n, sa, ia, pg, tm, dp, io] = await Promise.all([source('pdpl', pdpl), source('nca-ecc', ecc), source('ndmo', ndmo),
       source('sama', checklist('sama', 'SAMA Cyber Security Framework')), source('ia', checklist('ia', 'Insurance Authority (IA)')), source('programmes', programmes), source('teams', teams), source('departments', departments), source('iso27001', iso27001)]);
     const frameworks = [['pdpl', 'PDPL (SDAIA)', p], ['nca-ecc', 'NCA ECC-1:2018', e], ['ndmo', 'NDMO data management', n], ['sama', 'SAMA Cyber Security Framework', sa], ['ia', 'Insurance Authority (IA)', ia], ['iso27001', 'ISO/IEC 27001:2022', io]]
+      // a framework the organisation is not under (its module switched off in the brand setting) is not listed at all
+      .filter(([id]) => (app.config && app.config.audit_dashboard && app.config.audit_dashboard.all_frameworks) || !((id === 'sama' && OFF.has('fw-sama')) || (id === 'ia' && OFF.has('fw-ia'))))
       .map(([id, name, x]) => (x.available ? x : { available: false, id, name, reason: x.reason, status: 'not_available', score: null }));
     // what needs an auditor's attention first: overdue audit findings, overdue evidence requests, framework gaps
     const att = [];

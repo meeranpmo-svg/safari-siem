@@ -7974,7 +7974,7 @@ window.ZYB_NAV.forEach(function (a) {
     (a.pages || []).forEach(function (p) {
       ['s', 't', 'd'].forEach(function (k) { if (typeof p[k] === 'string') p[k] = f(p[k]); });
       // framework tags: only the frameworks the organisation follows (brand setting: frameworks); a page keeps the rest of its record
-      if (p.fw && Array.isArray(o.frameworks) && o.frameworks.length && !o.frameworks_all) Object.keys(p.fw).forEach(function (k) { if (o.frameworks.indexOf(k) < 0) delete p.fw[k]; });
+      if (p.fw && Array.isArray(o.frameworks) && o.frameworks.length && !o.frameworks_all) Object.keys(p.fw).forEach(function (k) { if (o.frameworks.indexOf(k === 'iso' ? 'iso27001' : k === 'ecc' ? 'nca' : k) < 0) delete p.fw[k]; });
     });
   });
 })(ZYB_ORG);

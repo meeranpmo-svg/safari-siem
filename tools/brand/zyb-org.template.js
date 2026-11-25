@@ -25,6 +25,29 @@
   try { mo = new MutationObserver(function (list) { for (var i = 0; i < list.length; i++) { var ad = list[i].addedNodes; for (var j = 0; j < ad.length; j++) doNode(ad[j]); if (list[i].type === 'characterData') doNode(list[i].target); } }); mo.observe(document, { childList: true, subtree: true, characterData: true }); } catch (e) { mo = null; /* no observer: the pass at DOMContentLoaded still fills every token */ }
   var done = function () { if (mo) { var rest = mo.takeRecords(); mo.disconnect(); mo = null; } all(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', done); else done();
+  // frameworks the organisation is not under (SAMA / IA modules switched off): their citations next to another framework
+  // ("SAMA CSF 3.3.5 · NCA ECC 2-2", "(SAMA 3.3.5, NCA ECC 2-2-3)", "SAMA CSF (+ IA)"), SAMA / IA choices in lists and buttons tagged
+  // for them are taken off every page, also what a page draws later. A sentence that names SAMA on its own stays as written.
+  (function () {
+    var off = ORG.frameworks_all ? [] : (ORG.modules_off || []), noS = off.indexOf('fw-sama') >= 0, noI = off.indexOf('fw-ia') >= 0;
+    if (!noS && !noI) return;
+    var W = [], X = 'SAMA(?: CSF| Cyber Security Framework)?(?: \\d+(?:\\.\\d+)*(?:-\\d+)*)?', I = '(?:Insurance Authority|IA)(?: \\d+(?:\\.\\d+)*)?', SEP = '\\s*(?:·|,|/|\\+|&)\\s*';
+    if (noS) W.push(X); if (noI) W.push(I);
+    var lead = new RegExp('\\b(?:' + W.join('|') + ')' + SEP + '(?=[A-Z(])', 'g'), tail = new RegExp(SEP + '(?:' + W.join('|') + ')(?=$|[\\s).,;:])', 'g'), plusIa = /\s*\(\+ IA\)/g;
+    var clean = function (t) { if (t.indexOf('SAMA') < 0 && t.indexOf('Insurance Authority') < 0 && t.indexOf(' IA') < 0) return t; var o = noI ? t.replace(plusIa, '') : t; return o.replace(lead, '').replace(tail, ''); };
+    var walk = function (n) {
+      if (n.nodeType === 3) { var v = n.nodeValue, c = clean(v); if (c !== v) n.nodeValue = c; return; }
+      if (n.nodeType !== 1) return; var tag = n.tagName; if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA') return;
+      var fw = n.getAttribute && (n.getAttribute('data-fw') || (tag === 'OPTION' ? n.getAttribute('value') : null));
+      if (fw && ((noS && /^sama$/i.test(fw)) || (noI && /^ia$/i.test(fw)))) { if (tag === 'OPTION' && n.parentNode) { n.parentNode.removeChild(n); return; } n.hidden = true; n.style.display = 'none'; return; }
+      if (n.title) n.title = clean(n.title);
+      for (var c2 = n.firstChild; c2; c2 = c2.nextSibling) walk(c2);
+    };
+    var run = function () { if (document.body) walk(document.body); document.title = clean(document.title); };
+    var start = function () { run(); try { new MutationObserver(function (L) { for (var i = 0; i < L.length; i++) { if (L[i].type === 'characterData') walk(L[i].target); var a = L[i].addedNodes; for (var j = 0; j < a.length; j++) walk(a[j]); } }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (e) { /* no observer: the first pass stands */ } };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+    window.zybFwClean = clean;
+  })();
   // brand colours for pages that follow the company look (home page, report headers)
   try { var r = document.documentElement.style; r.setProperty('--org-primary', ORG.colors.primary); r.setProperty('--org-accent', ORG.colors.accent); r.setProperty('--org-ink', ORG.colors.ink); r.setProperty('--org-muted', ORG.colors.muted); } catch (e) { /* colours are decoration: a page without them still works */ }
 })();

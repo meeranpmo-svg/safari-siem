@@ -12,9 +12,10 @@ const { registerDuty } = require('../engine/duty');
 const ADM = { user: 'syed', role: 'admin' }, OP = { user: 'nora.syn', role: 'operator' }, VIEW = { user: 'vera.syn', role: 'viewer' };
 const HEAD = { user: 'noura.syn', role: 'operator' }, LEAD = { user: 'faris.syn', role: 'operator' }, OWNER = { user: 'majed.syn', role: 'operator' };
 
-async function setup(t) {
+async function setup(t, all = true) {
   let clock = Date.parse('2027-01-10T08:00:00Z');
   const e = await startApp({ noAi: true }); t.after(() => e.close());
+  if (all) e.app.config.audit_dashboard = Object.assign({}, e.app.config.audit_dashboard, { all_frameworks: true });   // the product's every-framework view; the sector filter has its own test
   registerDuty(e.app.srv, e.app, { noTimer: true, now: () => clock, python: process.env.PYTHON || 'python3', eccFacts: async () => ({}), ndmoCatalogFiles: false });
   const call = (m, p, body, who) => e.req(m, p, Object.assign(body !== undefined ? { body } : {}, who));
   return { e, post: (p, b, who) => call('POST', p, b, who), get: (p, who = OP) => call('GET', p, undefined, who), tick: (d) => { clock += d * 86400000; } };
@@ -136,4 +137,12 @@ test('priority: severity, days overdue and a running legal clock, itemised', asy
     assert.ok(b.priority >= 75 && b.priority_why.some((w) => /legal clock/.test(w)), 'a running PDPL clock ranks up: ' + b.priority_why.join(', '));
     assert.equal(v.attention[0].ref, 'BR-SYN-1');
   } finally { await e.close(); }
+});
+
+test('the organisation\'s frameworks only: SAMA / IA switched off in the brand setting are not listed', async (t) => {
+  const off = require('../engine/brand').modules_off || [];
+  const s = await setup(t, false);
+  const ids = (await s.get('/audit-dashboard')).json.frameworks.map((f) => f.id);
+  assert.equal(ids.includes('sama'), !off.includes('fw-sama')); assert.equal(ids.includes('ia'), !off.includes('fw-ia'));
+  assert.ok(ids.includes('nca-ecc') && ids.includes('pdpl'));
 });
