@@ -5211,6 +5211,7 @@ window.ZYB_NAV = [
   "hd": "gov",
   "icon": "<path d=\"M12 3 4 6v6c0 5 3.4 8.6 8 9 4.6-.4 8-4 8-9V6z\"/><path d=\"m9 12 2 2 4-4\"/>",
   "pages": [
+   {"h": "aramco-ccc.html", "s": "Aramco CCC", "t": "Aramco CCC - the Saudi Aramco Cybersecurity Compliance Certificate from scope to renewal", "d": "The Aramco contracts and their service types, the control list imported from your SACS-002 copy, self-assessment with a four-eyes 'not applicable', remediation actions, evidence references, the approved audit firm's findings, the certificate, its coverage and renewal, and the readiness trend against the planned audit", "fw": {}, "k": ["aramco", "ccc", "sacs-002", "third party", "certificate", "contractor", "vendor"]},
    {
     "h": "compliance-flow.html",
     "s": "Compliance Automation Flow",

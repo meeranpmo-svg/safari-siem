@@ -417,6 +417,7 @@ window.__orgApply(on,light);})();</script>
     <a class="st" id="grc-nca-ecc" href="nca-ecc.html"><span class="hd"><span class="l">NCA ECC</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">Essential Cybersecurity Controls</span></a>
     <a class="st" id="grc-iso27001" href="iso27001.html"><span class="hd"><span class="l">ISO/IEC 27001</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">information security management</span></a>
     <a class="st" id="grc-pdpl" href="pdpl-dashboard.html"><span class="hd"><span class="l">PDPL</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">Personal Data Protection Law</span></a>
+    <a class="st" id="grc-aramco" href="aramco-ccc.html"><span class="hd"><span class="l">Aramco CCC</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">Cybersecurity Compliance Certificate</span></a>
     <a class="st" id="grc-ndmo" href="ndmo.html"><span class="hd"><span class="l">NDMO</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">data management</span></a>
   </div>
 </section>
@@ -677,6 +678,11 @@ window.__orgApply(on,light);})();</script>
       if(r.s!==200||!p){tileSet('grc-er',why(r),'risk posture');grcBar('grc-er',null);return;}
       if(p.value==null){tileSet('grc-er','not assessed','no risk in the register yet');grcBar('grc-er',null);return;}
       tileSet('grc-er',p.value+' / 100','risk posture'+(r.j.kpis&&r.j.kpis.over_appetite?' · '+r.j.kpis.over_appetite+' above appetite':''),grcTone(p.value));grcBar('grc-er',p.value);});
+    if($('grc-aramco'))get('/api/itam/aramco-ccc').then(function(r){var v=r.j;
+      if(r.s!==200||!v){tileSet('grc-aramco',why(r));grcBar('grc-aramco',null);return;}
+      if(v.certificate&&v.days_left!=null&&v.days_left<0){tileSet('grc-aramco','expired','certificate '+v.certificate.number,'bad');grcBar('grc-aramco',null);return;}
+      if(v.score==null){tileSet('grc-aramco','not assessed',v.controls_total?'assessment not started':'control list not imported');grcBar('grc-aramco',null);return;}
+      tileSet('grc-aramco',v.score+'%',v.certificate?'certified · '+v.days_left+' days left':'readiness · '+v.gaps+' gap(s)',grcTone(v.score));grcBar('grc-aramco',v.score);});
     get('/api/itam/audit-dashboard').then(function(r){var F={};((r.j&&r.j.frameworks)||[]).forEach(function(f){F[f.id]=f;});
       var LBL={compliant:'compliant',partial:'partly compliant',gaps:'gaps open'};
       ['sama','nca-ecc','iso27001','pdpl','ndmo'].forEach(function(k){var id='grc-'+k,f=F[k];if(!$(id))return;
@@ -690,6 +696,7 @@ window.__orgApply(on,light);})();</script>
   (function(){var o=window.ZYB_ORG||{},fw=o.frameworks||[],off=o.pages_off||[],all=!!o.frameworks_all||!fw.length;
     var T={'grc-sama':'sama','grc-nca-ecc':'nca','grc-iso27001':'iso27001','grc-pdpl':'pdpl','grc-ndmo':'ndmo'};
     Object.keys(T).forEach(function(id){var el=$(id);if(el&&!all&&fw.indexOf(T[id])<0)el.remove();});
+    if((o.modules_off||[]).indexOf('fw-aramco')>=0&&!o.frameworks_all){var ar=$('grc-aramco');if(ar)ar.remove();}
     document.querySelectorAll('#grc a.st').forEach(function(a){var h=(a.getAttribute('href')||'').replace(/\.html$/,'');if(off.indexOf(h)>=0)a.remove();});})();
   grcLoad();
   // Brand colours switch: Zyberon Sentra (the default design) or the organisation colours; saved with the dashboard preferences, which the

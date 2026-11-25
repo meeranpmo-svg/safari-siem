@@ -253,6 +253,10 @@ function registerDuty(srv, app, opts = {}) {
   // the plan, a forecast to Stage 2, a read-only AI implementation coach
   const ILM = ISO && optional('./iso-lifecycle');
   if (ILM) { const IL = ILM.createIsoLifecycle(app, { now: opts.now, noTimer: opts.noTimer, sdk: opts.iaSdk, getKey: opts.iaKey }); app.addons.isoLifecycle = IL; ILM.registerIsoLifecycle(srv, app, IL); IL.start(); }
+  // Saudi Aramco CCC (engine/aramco-ccc.js): scope, imported SACS-002 controls, self-assessment with four-eyes "not applicable",
+  // remediation, evidence references, the audit firm's findings, the certificate and its renewal
+  const ACM = optional('./aramco-ccc');
+  if (ACM) { const AC = ACM.createAramcoCcc(app, { now: opts.now, noTimer: opts.noTimer }); app.addons.aramcoCcc = AC; ACM.registerAramcoCcc(srv, app, AC); AC.start(); }
   if (IA) IAM.registerAuditEngageRoutes(srv, app, IA);
   if (CSA) IAM.registerAuditEngageRoutes(srv, app, CSA);
   if (IAD) IAM.registerAuditEngageRoutes(srv, app, IAD);
