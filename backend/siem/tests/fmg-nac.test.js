@@ -64,3 +64,25 @@ test('routes: roles and the refused case, validation, four-eyes decisions, quara
   assert.equal((await call('GET', '/nac/endpoints', undefined, 'analyst')).b.endpoints[0].quarantine, 'done');
   for (const a of ['nac.decision.propose', 'nac.decision.approve', 'nac.decision.done']) assert.ok(audits.some((x) => x.a === a && x.t === id), 'audited: ' + a);
 });
+
+test('switch side: port map MACs join the FortiGate endpoints, shared port, flapping, switch-only devices, H3C quarantine steps', async () => {
+  const state = createState({ dir: fs.mkdtempSync(path.join(os.tmpdir(), 'nacsw-')) });
+  state.collection('fmg_endpoints').put(ep('aa:00:00:00:02:01', { host: 'PC-RECEPTION' }));
+  state.collection('portmap_reads').put({ id: 'sw-2f', at: NOW - H, vendor: 'h3c-comware', ports: [{ port: 'GE1/0/1', vlan: '10', name: 'PC-RECEPTION' }, { port: 'GE1/0/4', vlan: '20', name: 'PRINTER' }], trunks: ['xge1/0/49'], arp: [{ ip: '10.7.20.30', mac: 'aa0000000204' }] });
+  const M = (id, port, o) => state.collection('portmap_macs').put(Object.assign({ id, device: 'sw-2f', port, first: NOW - 20 * D, last: NOW - H, moves: [] }, o));
+  M('aa0000000201', 'ge1/0/1'); M('aa0000000202', 'ge1/0/1');                                    // two MACs on one access port
+  M('aa0000000204', 'ge1/0/4', { moves: [{ at: NOW - 3 * H }, { at: NOW - 2 * H }, { at: NOW - H }] });  // flapping
+  M('aa0000000209', 'xge1/0/49');                                                                 // trunk: not an endpoint
+  const R = {};
+  NAC.register({ route: (m, p, h) => { R[m + ' ' + p] = h; } }, { config: { netops: { nac: { quarantine_vlan: 999 } } }, state, log: { error() {} }, now: () => NOW, netopsInstance: { inventory: { get: (id) => (id === 'sw-2f' ? { name: 'SW-2F-SYN' } : null) } } });
+  const o = {}; const ctx = { role: 'analyst', user: 'ana.syn', params: {}, ok(x) { o.b = x; }, fail(c, m) { o.s = c; o.e = m; }, need: () => true, audit() {} };
+  const v = (await R['GET /api/soc/nac/endpoints'](ctx)) || o.b;
+  assert.deepEqual(v.sources, { fortigate: 1, switch_ports: 4, switches: 1 }); assert.equal(v.connected, true);
+  const by = Object.fromEntries(v.endpoints.map((e) => [e.mac, e]));
+  assert.ok(!by['aa:00:00:00:02:09'], 'a MAC on the trunk is not an endpoint');
+  const pc = by['aa:00:00:00:02:01']; assert.equal(pc.host, 'PC-RECEPTION'); assert.deepEqual([pc.sw.switch, pc.sw.port, pc.sw.vlan, pc.sw.shared], ['SW-2F-SYN', 'GE1/0/1', '10', 2], 'joined with its switch port');
+  assert.ok(pc.reasons.some((r) => r.code === 'shared-port'));
+  const silent = by['aa:00:00:00:02:02']; assert.ok(silent && silent.notes.some((n) => /never seen by a FortiGate/.test(n)), 'a device only the switch sees is listed and said');
+  const pr = by['aa:00:00:00:02:04']; assert.equal(pr.ip, '10.7.20.30', 'IP from the switch ARP table'); assert.ok(pr.reasons.some((r) => r.code === 'flapping'));
+  assert.deepEqual(pr.quarantine_steps.lines, ['system-view', 'interface GE1/0/4', 'port access vlan 999', 'quit', 'save']); assert.equal(pr.quarantine_steps.vendor, 'H3C Comware');
+});

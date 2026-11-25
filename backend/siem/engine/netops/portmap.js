@@ -123,6 +123,53 @@ function parseVlans(text) {
 }
 
 // ---------- endpoint type: rules and naive Bayes
+// ---------- H3C / HPE Comware 7 (display commands; pure). Port names in the short Comware form the MAC table and ARP use
+// (GE1/0/1, XGE1/0/49, BAGG1), so every table joins on the same key.
+const CW_LONG = [[/^ten-gigabitethernet/i, 'XGE'], [/^twenty-fivegige/i, 'WGE'], [/^fortygige/i, 'FGE'], [/^hundredgige/i, 'HGE'], [/^m-gigabitethernet/i, 'MGE'], [/^gigabitethernet/i, 'GE'], [/^bridge-aggregation/i, 'BAGG'], [/^ethernet/i, 'Eth']];
+function cwIf(n) { let s = String(n || '').trim().replace(/\s+/g, ''); for (const [re, sh] of CW_LONG) if (re.test(s)) { s = s.replace(re, sh); break; } return s; }
+const cwMac = (m) => low(m).replace(/[^0-9a-f]/g, '');
+const CW_MAC = /^[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}$/i;
+function cwStatus(text) {
+  const out = [], trunks = new Set(); let on = false;
+  for (const l of String(text || '').split(/\r?\n/)) {
+    if (/^Interface\s+Link\s+Speed\s+Duplex\s+Type\s+PVID/i.test(l)) { on = true; continue; }
+    if (/^Brief information on interfaces in route mode/i.test(l)) on = false;
+    if (!on) continue;
+    const t = l.trim().split(/\s+/); if (t.length < 6 || !/^\S+\d/.test(t[0])) continue;
+    const port = cwIf(t[0]), link = t[1].toUpperCase(), type = t[4].toUpperCase();
+    if (type === 'T' || type === 'H' || /^BAGG/i.test(port)) trunks.add(low(port));
+    out.push({ port, name: t.slice(6).join(' '), status: link === 'UP' ? 'connected' : /ADM/.test(link) ? 'disabled' : link === 'STBY' ? 'standby' : 'notconnect',
+      vlan: type === 'T' ? 'trunk' : type === 'H' ? 'hybrid' : t[5], duplex: /^F/i.test(t[3]) ? 'full' : /^H/i.test(t[3]) ? 'half' : low(t[3]).replace(/[()]/g, ''), speed: low(t[2]).replace(/[()]/g, ''), type: '' });
+  }
+  return { ports: out, trunks };
+}
+function cwMacs(text) {
+  const out = [];
+  for (const l of String(text || '').split(/\r?\n/)) {
+    const t = l.trim().split(/\s+/); if (t.length < 4 || !CW_MAC.test(t[0]) || !/^\d{1,4}$/.test(t[1])) continue;
+    out.push({ vlan: +t[1], mac: cwMac(t[0]), type: low(t[2]), port: cwIf(t[3]) });
+  }
+  return out;
+}
+function cwLldp(text) {
+  return String(text || '').split(/^LLDP neighbor-information of port /im).slice(1).map((b) => {
+    const local = (/^\d+\[([^\]]+)\]/.exec(b) || [])[1]; if (!local) return null;
+    const f = (re) => { const m = re.exec(b); return m ? m[1].trim() : ''; };
+    return { local: cwIf(local), remote_port: f(/PortID\/subtype\s*:\s*([^/\r\n]+)/i), port_desc: f(/Port description\s*:\s*(.+)/i), name: f(/System name\s*:\s*(.+)/i) || f(/ChassisID\/subtype\s*:\s*([^/\r\n]+)/i),
+      ip: f(/Management address\s*:\s*(\d+\.\d+\.\d+\.\d+)/i), platform: f(/System description\s*:\s*(.+)/i).slice(0, 160), caps: f(/System capabilities enabled\s*:\s*(.+)/i).split(/[\s,]+/).filter(Boolean), via: 'lldp' };
+  }).filter(Boolean);
+}
+function cwArp(text) {
+  const out = [];
+  for (const l of String(text || '').split(/\r?\n/)) { const m = /^\s*(\d+\.\d+\.\d+\.\d+)\s+([0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4})\s/i.exec(l); if (m) out.push({ ip: m[1], mac: cwMac(m[2]) }); }
+  return out;
+}
+function cwVlans(text) {
+  const out = {};
+  for (const l of String(text || '').split(/\r?\n/)) { const m = /^\s*(\d{1,4})\s+(.+?)\s{2,}/.exec(l) || /^\s*(\d{1,4})\s+(\S+)\s*$/.exec(l); if (m && !/^VLAN ID/i.test(l)) out[m[1]] = m[2].trim(); }
+  return out;
+}
+const CW_CMDS = ['display interface brief', 'display mac-address', 'display lldp neighbor-information verbose', 'display arp', 'display vlan brief'];
 function rulesType(f) {
   const caps = low((f.caps || []).join(' ')), plat = low(f.platform), org = low(f.vendor), host = low(f.host), poe = low(f.poe_device), why = [];
   const hit = (type, reason, conf) => ({ type, confidence: conf, by: 'rules', why: why.concat(reason) });
@@ -178,13 +225,23 @@ function createPortMap({ inventory, poller, cli, tasks, state, config, log, now,
     return OUI;
   }
   const vendorOf = (h) => (randomised(h) ? 'private (randomised) address' : oui().get(h.slice(0, 6)) || (ouiInfo.loaded ? 'unknown vendor' : ''));
-  const switches = () => inventory.list().filter((d) => cli && cli.supported(d.vendor) && d.vendor === 'cisco-ios' && !/firewall|router/.test(low(d.role)));
+  const SW = new Set(['cisco-ios', 'h3c-comware']);
+  const switches = () => inventory.list().filter((d) => cli && cli.supported(d.vendor) && SW.has(d.vendor) && !/firewall|router/.test(low(d.role)));
   const canRead = (d) => !!(inventory.credentialSummary(d.id) || {}).ssh && !!cli.hostKey(d.id);
 
   // ---- read one switch (read-only commands only, checked by cli.js)
   async function read(id, by) {
     const d = inventory.get(id); if (!d) throw bad('device not found', 404);
-    if (d.vendor !== 'cisco-ios') throw bad(`${d.name} is ${d.vendor}: the port map reads Cisco IOS / IOS-XE switches`, 409);
+    if (!SW.has(d.vendor)) throw bad(`${d.name} is ${d.vendor}: the port map reads Cisco IOS / IOS-XE and H3C Comware switches`, 409);
+    if (d.vendor === 'h3c-comware') {
+      const r = await cli.run(id, CW_CMDS, { by, via: 'portmap' }), out = (i) => ((r.results[i] || {}).output || ''), errors = [];
+      r.results.forEach((x, i) => { if (x.error || /^\s*% ?(unrecognized|wrong parameter|incomplete)/im.test(x.output || '')) errors.push(CW_CMDS[i] + ': ' + String(x.error || (x.output || '').split('\n')[0]).slice(0, 160)); });
+      const st = cwStatus(out(0)), t = clock(), rec = { id, at: t, by: by || '', vendor: 'h3c-comware', ports: st.ports, macs: cwMacs(out(1)), neighbours: cwLldp(out(2)), poe: { modules: [], ports: {} }, trunks: [...st.trunks], arp: cwArp(out(3)), vlans: cwVlans(out(4)), errors };
+      if (!rec.ports.length) throw bad(`${d.name}: "display interface brief" returned no ports - check the login's privilege`, 502);
+      C.reads.put(rec); learn(rec);
+      L.info('netops portmap read', { device: id, by, ports: rec.ports.length, macs: rec.macs.length, vendor: 'h3c-comware' });
+      return { device: id, at: t, ports: rec.ports.length, macs: rec.macs.length, neighbours: rec.neighbours.length, errors };
+    }
     const r = await cli.run(id, CMDS, { by, via: 'portmap' }), out = (i) => ((r.results[i] || {}).output || ''), errors = [];
     r.results.forEach((x, i) => { if (x.error || /^% ?(invalid|lldp is not enabled|cdp is not enabled)/im.test(x.output || '')) errors.push(CMDS[i] + ': ' + String(x.error || (x.output || '').split('\n')[0]).slice(0, 160)); });
     const t = clock(), rec = { id, at: t, by: by || '', ports: parseStatus(out(0)), macs: parseMac(out(1)), neighbours: parseCdp(out(2)).concat(parseLldp(out(3))), poe: parsePoe(out(4)), trunks: [...parseTrunk(out(5))], arp: parseArp(out(6)), vlans: parseVlans(out(7)), errors };
@@ -423,4 +480,4 @@ function createPortMap({ inventory, poller, cli, tasks, state, config, log, now,
   return { read, model, summary, find, label, propose, saveThresholds, cycle, start, ask, aiStatus, TOOLS, vendor: (h) => vendorOf(h), ouiLoaded: () => { oui(); return ouiInfo.loaded; }, stop: () => timer && clearTimeout(timer) };
 }
 
-module.exports = { createPortMap, parseStatus, parseMac, parseCdp, parseLldp, parsePoe, parseTrunk, parseArp, parseVlans, shortIf, longIf, slot, rulesType, features, trainNB, forecast, TYPES, CMDS };
+module.exports = { cwStatus, cwMacs, cwLldp, cwArp, cwVlans, cwIf, createPortMap, parseStatus, parseMac, parseCdp, parseLldp, parsePoe, parseTrunk, parseArp, parseVlans, shortIf, longIf, slot, rulesType, features, trainNB, forecast, TYPES, CMDS };

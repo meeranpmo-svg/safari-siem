@@ -9,8 +9,8 @@ const DASH = path.resolve(__dirname, '../../ui');
 let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 let USER = 'op.syn', ROLE = 'operator', EMPTY = true, DEC = [];
 const E = (mac, risk, reasons, o) => Object.assign({ mac, ip: '10.7.0.5', host: 'PC-' + mac.slice(-2), os: 'Windows', hw: 'Dell', user: '', site: 'Site 7', fortigate: 'FGT-S7', last_seen: '2026-11-25T11:00:00Z', risk, reasons, notes: [], authorised: false, quarantine: null }, o);
-const VIEW = () => ({ connected: true, learning: false, total: EMPTY ? 0 : 3, sites: [{ site: 'Site 7', endpoints: 3, risky: 1, exposure: 33 }], decisions: DEC,
-  endpoints: EMPTY ? [] : [E('aa:00:00:00:00:01', 65, [{ points: 35, code: 'two-sites', why: 'at FGT-S7 and FGT-S8 within 30 min <img src=x onerror=alert(1)>' }, { points: 30, code: 'identity', why: 'reported as windows and then linux' }]), E('aa:00:00:00:00:02', 10, [{ points: 10, code: 'unauthorised', why: 'seen for 20 days' }]), E('aa:00:00:00:00:03', 0, [], { authorised: true, host: 'PRINTER' })] });
+const VIEW = () => ({ connected: true, learning: false, sources: { fortigate: 2, switch_ports: 3, switches: 1 }, total: EMPTY ? 0 : 3, sites: [{ site: 'Site 7', endpoints: 3, risky: 1, exposure: 33 }], decisions: DEC,
+  endpoints: EMPTY ? [] : [E('aa:00:00:00:00:01', 65, [{ points: 35, code: 'two-sites', why: 'at FGT-S7 and FGT-S8 within 30 min <img src=x onerror=alert(1)>' }, { points: 30, code: 'identity', why: 'reported as windows and then linux' }], { sw: { switch: 'SW-2F-SYN', port: 'GE1/0/4', vlan: '20', desc: 'PRINTER', shared: 1 }, quarantine_steps: { switch: 'SW-2F-SYN', port: 'GE1/0/4', vendor: 'H3C Comware', lines: ['system-view', 'interface GE1/0/4', 'port access vlan 999', 'quit', 'save'], note: 'moves the port to quarantine VLAN 999' } }), E('aa:00:00:00:00:02', 10, [{ points: 10, code: 'unauthorised', why: 'seen for 20 days' }]), E('aa:00:00:00:00:03', 0, [], { authorised: true, host: 'PRINTER' })] });
 const posts = [];
 (async () => {
   const srv = http.createServer((req, res) => {
@@ -34,6 +34,8 @@ const posts = [];
   EMPTY = false; p = await open(); await p.waitForSelector('#body table');
   ok(!(await p.$('img[src="x"]')), 'hostile text stays text');
   ok(/\+35 at FGT-S7 and FGT-S8/.test(await p.textContent('#body')), 'reasons itemised');
+  ok(/SW-2F-SYN GE1\/0\/4/.test(await p.textContent('#body')) && /not on a read switch/.test(await p.textContent('#body')), 'switch port column');
+  ok(/1 switch\(es\) · 2 seen by FortiGates/.test(await p.textContent('#kp')), 'sources said');
   ok(await p.$$eval('#body tbody tr', (r) => r[0].innerText.includes('aa:00:00:00:00:01')), 'riskiest first');
   await p.selectOption('#min', '30'); ok((await p.$$('#body tbody tr')).length === 1, 'minimum risk filter');
   await p.selectOption('#min', '0'); await p.fill('#q', 'PRINTER'); ok((await p.$$('#body tbody tr')).length === 1, 'search');
@@ -45,7 +47,8 @@ const posts = [];
   await p.waitForFunction(() => /NAC-00002/.test(document.body.innerText), null, { timeout: 8000 }).catch(async () => console.log('BODY', (await p.textContent('#body')).slice(-600))); ok(!(await p.$('[data-dec="approved"]')), 'the proposer is not offered Approve');
   await p.close();
   USER = 'sec.syn'; ROLE = 'admin'; p = await open(); await p.waitForSelector('[data-dec="approved"]'); await p.click('[data-dec="approved"]'); ok(/approved/.test(await toast(p)), 'another person approves');
-  answers = ['MAC added to the quarantine group in FortiManager (synthetic)']; await p.waitForSelector('[data-done]'); await p.click('[data-done]'); ok(/done/.test(await toast(p)), 'carried out');
+  await p.waitForSelector('[data-done]'); ok(/port access vlan 999/.test(await p.textContent('#body')) && /H3C Comware/.test(await p.textContent('#body')), 'the exact switch commands are shown for the approved quarantine');
+  answers = ['MAC added to the quarantine group in FortiManager (synthetic)']; await p.click('[data-done]'); ok(/done/.test(await toast(p)), 'carried out');
   await p.close();
   ok(!errs.length, 'errors: ' + errs.join(' | '));
   await browser.close(); srv.close();
