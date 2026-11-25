@@ -223,6 +223,10 @@ function registerDuty(srv, app, opts = {}) {
   // supervisor, decided by a person, learning from those decisions, graded on outcomes. Business Risk is read at patrol time.
   const ROM = optional('./risk-officer'), RO = ROM ? ROM.createRiskOfficer(app, { now: opts.now, noTimer: opts.noTimer }) : null;
   if (RO) { engineers.push(RO.adapter); (app.addons = app.addons || {}).riskOfficer = RO; }
+  // the organisation's own estate (brand setting): its AI engineers join the desk; those for systems it does not run leave it
+  engineers.push(...require('./ai-team-adapters').adapters(app));
+  const ALL_ENG = !!(app.config && app.config.duty && app.config.duty.all_engineers);   // the product's every-engineer view (tests, a demo)
+  if (!ALL_ENG) { const off = new Set(require('./brand').engineers_off || []); for (let i = engineers.length - 1; i >= 0; i--) if (engineers[i] && off.has(engineers[i].id)) engineers.splice(i, 1); }
   const D = createDuty({ store, engineers, now: opts.now, log: app.log,
     audit: (action, target, detail) => { if (app.audit) app.audit({ by: (detail && detail.by) || 'duty', role: '', ip: '', action, target, detail }); },
     policyDefaults: Object.assign({ ai_min_severity: 'off' }, cfg.policy || {}),   // AI on patrol only when an admin sets it; proposals are rule-based
@@ -932,6 +936,14 @@ function registerDuty(srv, app, opts = {}) {
       ].concat(duty('pki')) });
     }
     if (!AU || !PD || !CLM) out.push({ id: 'modules', name: 'Newer AI engineers', engine: 'itam', checks: [chk('Installed', false, 'not installed: ' + [!AU && 'AI auditors (auditors.js)', !CLM && 'audit checklist (audit-checklist.js)', !PD && 'AI PDPL Consultant (pdpl.js)'].filter(Boolean).join(', '), 'Re-run the update (update-platform.ps1): add-duty.sh installs them')] });
+    // the organisation's own engineers (Voice, Hyper-V, Aramco CCC): their module set up and patrolling
+    const AD = app.addons || {};
+    const own = [['voice', 'AI Voice Engineer (Cisco CUCM)', () => { const v = AD.cucm && AD.cucm.view(); return [chk('Call Manager connected', !!(v && v.status && v.status.configured), v && v.status && v.status.configured ? 'AXL login chosen' : 'no CUCM login chosen', 'Call Manager → Connection: pick the read-only AXL credential'), chk('Polled', v ? !!v.polled : false, v && v.polled ? 'last read ' + v.at : 'not polled yet', 'Call Manager → Poll now')]; }],
+      ['hyperv', 'AI Hyper-V Administrator', () => { const v = AD.hypervManager && AD.hypervManager.view(); return [chk('Hosts reporting', v ? v.hosts.length > 0 : false, v ? v.hosts.length + ' host(s), ' + v.kpis.stale_hosts + ' not reporting' : 'module missing', 'On each Hyper-V host: install/hyperv-report.ps1 (read-only) as a scheduled task')]; }],
+      ['aramco', 'AI Aramco CCC Officer', () => { const v = AD.aramcoCcc && AD.aramcoCcc.view({ user: 'system', role: 'viewer' }); return [chk('Scope recorded', v ? v.contracts.length > 0 : false, v ? v.contracts.length + ' Aramco contract(s)' : 'module missing', 'Aramco CCC → Scope: name the CCC owner and add the contracts'), chk('Controls imported', v ? v.controls_total > 0 : false, v ? v.controls_total + ' control(s)' : '', 'Aramco CCC → import the SACS-002 control list')]; }]];
+    for (const [id, name, f] of own) { let c; try { c = f(); } catch (e) { c = [chk('Readable', false, e.message, 'run the platform update')]; } out.push({ id, name, engine: 'itam', checks: c.concat(duty(id)) }); }
+    const offE = new Set(ALL_ENG ? [] : require('./brand').engineers_off || []);
+    for (let i = out.length - 1; i >= 0; i--) if (offE.has(out[i].id)) out.splice(i, 1);
     for (const e of out) { const f = e.checks.filter((x) => x.ok === false); e.status = f.some((x) => /Assets|Endpoint Central|On duty|GRC records|Capacity collection|Platforms connected|PDPL rules|PDPL profile|Database logins/.test(x.name)) ? 'blocked' : f.length ? 'partial' : 'ready'; e.to_fix = f.map((x) => ({ name: x.name, fix: x.fix })); }
     return { generated: Date.now(), engineers: out, ready: out.filter((e) => e.status === 'ready').length, of: out.length };
   };

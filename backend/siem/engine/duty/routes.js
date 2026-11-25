@@ -148,7 +148,9 @@ function register(api, deps) {
   const engineers = netAdapters(N0).concat(sysAdapters(deps.sysadminInstance || deps.sysadmin))
     .concat(dbaAdapter(deps.oracle, deps.oracle_perf)).concat(appAdapter(N0 && N0.availability))
     .concat(zscalerAdapter(deps.zscalerInstance)).concat(kscAdapter(deps.kscInstance))   // Zscaler + Kaspersky KSC (registered before this module)
-    .concat(deps.collectionAssurance ? [deps.collectionAssurance.adapter] : []);   // AI SIEM Engineer: log-flow assurance (onboard/assurance.js)
+    .concat(deps.collectionAssurance ? [deps.collectionAssurance.adapter] : [])   // AI SIEM Engineer: log-flow assurance (onboard/assurance.js)
+    .concat(require('./estate-adapters').estateAdapters(deps))   // the organisation's own estate: FortiGate, NAC, NDR, Mimecast (read at patrol time)
+    .filter((e) => !new Set(require('../util/brand').engineers_off || []).has(e.id));   // engineers for systems the organisation does not run (brand setting)
   const ticketer = ticketerFor(deps.integrations && deps.integrations.manageengine, () => D);
   D = deps.duty || createDuty({ store: deps.state, log: deps.log, engineers, ticketer,
     audit: (action, target, detail) => { try { if (deps.state.audit) deps.state.audit({ action, target, detail, by: (detail && detail.by) || 'duty' }); } catch (e) { /* audit is best-effort */ } },
@@ -159,7 +161,9 @@ function register(api, deps) {
   if (cfg.enabled !== false && !deps.duty) D.start();
   const run = (fn) => fn;   // wrap() already answers coded errors (400/403/404/409/503) with their message
 
-  api.route('GET', `${P}/duty/readiness`, wrap(deps, null, run(() => require('./readiness').readiness(deps, D))));
+  // engineers for systems the organisation does not run (brand setting engineers_off) are not shown
+  const offEng = () => new Set(require('../util/brand').engineers_off || []);
+  api.route('GET', `${P}/duty/readiness`, wrap(deps, null, run(async () => { const r = await require('./readiness').readiness(deps, D), off = offEng(); r.engineers = r.engineers.filter((e) => !off.has(e.id)); r.ready = r.engineers.filter((e) => e.status === 'ready').length; r.of = r.engineers.length; return r; })));
   // team intelligence (duty-intel.js, identical in IT Asset Management): precision, verified fixes, MTTR, backlog trend, trust, needs you
   api.route('GET', `${P}/duty/intel`, wrap(deps, null, run(() => require('./duty-intel').analyse({ items: D.allItems(), engineers: Object.values(D.ENG).map((e) => ({ id: e.id, name: e.name })), now: (deps.now || Date.now)(), source: 'siem' }))));
   api.route('GET', `${P}/duty/engineers`, wrap(deps, null, run(async () => ({ engineers: await D.engineersAuto(), policy: D.policy(), close_codes: D.CLOSE_CODES }))));

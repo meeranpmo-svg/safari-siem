@@ -87,13 +87,16 @@ function register(api, deps) {
     const lines = cw ? ['system-view', 'interface ' + sw.port, q ? 'port access vlan ' + q : 'shutdown', 'quit', 'save'] : ['configure terminal', 'interface ' + sw.port, q ? 'switchport access vlan ' + q : 'shutdown', 'end', 'write memory'];
     return { switch: sw.switch, port: sw.port, vendor: cw ? 'H3C Comware' : 'Cisco IOS', lines, note: q ? 'moves the port to quarantine VLAN ' + q : 'no quarantine VLAN set (netops.nac.quarantine_vlan): the port is shut down' };
   }
-  api.route('GET', `${P}/nac/endpoints`, wrap(deps, 'analyst', () => {
+  // the duty desk's AI Network Access Engineer reads the same view (duty/estate-adapters.js)
+  deps.nacApi = { view: () => nacView() };
+  function nacView() {
     const now = NOW(), all = merge(eps.all(), now), list = assess(all, dec.all(), now).map((e) => Object.assign(e, { quarantine_steps: e.sw ? steps(e) : null })), oldest = all.reduce((a, e) => Math.min(a, Date.parse(e.first_seen) || now), now);
     const sites = {}; for (const e of list) { const s = sites[e.site] = sites[e.site] || { site: e.site, endpoints: 0, risky: 0 }; s.endpoints++; if (e.risk >= 30) s.risky++; }
     return { connected: !!deps.fmgApi || pm.reads.size() > 0, sources: { fortigate: eps.size(), switch_ports: pm.macs.size(), switches: pm.reads.size() }, learning: now - oldest < 7 * 86400000, learning_until: new Date(oldest + 7 * 86400000).toISOString().slice(0, 10), endpoints: list.slice(0, 3000), total: list.length,
       sites: Object.values(sites).map((s) => Object.assign(s, { exposure: s.endpoints ? Math.round(100 * s.risky / s.endpoints) : 0 })).sort((a, b) => b.exposure - a.exposure),
       decisions: dec.all().sort((a, b) => String(b.id).localeCompare(String(a.id))).slice(0, 300) };
-  }));
+  }
+  api.route('GET', `${P}/nac/endpoints`, wrap(deps, 'analyst', () => nacView()));
   api.route('POST', `${P}/nac/decisions`, wrap(deps, 'operator', async (ctx) => {
     const b = body(ctx.body).str('mac', { required: true, max: 17 }).oneOf('action', ['authorise', 'quarantine'], { required: true }).str('owner', { max: 120 }).str('reason', { required: true, max: 400 }).done();
     const mac = b.mac.toLowerCase(); if (!MAC.test(mac)) throw new HttpError(400, 'mac: aa:bb:cc:dd:ee:ff');

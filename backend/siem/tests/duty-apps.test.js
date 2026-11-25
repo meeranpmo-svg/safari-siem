@@ -110,7 +110,7 @@ test('readiness: blocked / partial / ready per SIEM engineer, with the fix', asy
   assert.equal(by('apps').status, 'ready', 'servers monitored, services named, on duty');
   // Zscaler + Kaspersky KSC: their modules are not wired in this test, so they read blocked (module not installed)
   assert.equal(by('zscaler').status, 'blocked'); assert.equal(by('ksc').status, 'blocked');
-  assert.equal(r.of, 8);
+  assert.equal(r.of, 12, 'eight engineers plus the four of the organisation\'s estate (FortiGate, NAC, NDR, Mimecast)');
 });
 
 // ---- performance: a database added in Connections & Setup (IT Asset Management's read-only connection, collector

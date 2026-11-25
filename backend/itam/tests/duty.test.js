@@ -74,7 +74,7 @@ test('duty routes: reads open, actions need operator, policy admin', async (t) =
   const l = await e.req('GET', '/duty/items?status=open', { role: 'viewer' });
   assert.equal(l.status, 200); assert.equal(l.json.total, 1);
   const id = l.json.items[0].id;
-  assert.equal((await e.req('GET', '/duty/engineers', { role: 'viewer' })).json.engineers.length, 17, 'pentest, desktop, GRC consultant, virtualization administrator, IT auditor, cyber security auditor, PDPL consultant, data governance officer (NDMO), cybersecurity compliance officer (NCA ECC), IT auditor (engagements), cyber security auditor (engagements), internal auditor (engagements), identity security engineer (NHI), PKI engineer, ISO 27001 lead implementer, database administrator (SQL Server / PostgreSQL / MySQL), AI Risk Officer');
+  assert.equal((await e.req('GET', '/duty/engineers', { role: 'viewer' })).json.engineers.length, 20, 'pentest, desktop, GRC consultant, virtualization administrator, IT auditor, cyber security auditor, PDPL consultant, data governance officer (NDMO), cybersecurity compliance officer (NCA ECC), IT auditor (engagements), cyber security auditor (engagements), internal auditor (engagements), identity security engineer (NHI), PKI engineer, ISO 27001 lead implementer, database administrator (SQL Server / PostgreSQL / MySQL), AI Risk Officer + the organisation\'s Voice, Hyper-V and Aramco CCC engineers');
   assert.equal((await e.req('POST', `/duty/items/${id}/close`, { role: 'operator', body: { code: 'fixed' } })).status, 400, 'a reason is required');
   assert.equal((await e.req('POST', `/duty/items/${id}/close`, { role: 'operator', body: { code: 'fixed', reason: 'agent re-installed' } })).status, 200);
   assert.equal((await e.req('PUT', '/duty/policy', { role: 'operator', body: { patrol_min: 5 } })).status, 403);
@@ -90,7 +90,7 @@ test('duty readiness: each engineer says ready / partial / blocked with the exac
   const pt = r.json.engineers.find((x) => x.id === 'pentest'), dk = r.json.engineers.find((x) => x.id === 'desktop');
   assert.equal(pt.status, 'blocked', 'no assets yet: blocked'); assert.match(pt.to_fix[0].fix, /Asset Discovery/);
   assert.equal(dk.status, 'blocked'); assert.ok(dk.to_fix.some((f) => /Endpoint Central/.test(f.fix)));
-  assert.equal(r.json.of, 16);
+  assert.equal(r.json.of, 19, 'and the three of the organisation\'s estate: Voice (CUCM), Hyper-V, Aramco CCC');
   const sq = r.json.engineers.find((x) => x.id === 'sqldba'); assert.equal(sq.status, 'blocked', 'no database login yet'); assert.ok(sq.to_fix.some((f) => /Add database/.test(f.fix)), 'says where to add the read-only login');
   const ia = r.json.engineers.find((x) => x.id === 'ia'); assert.ok(ia.to_fix.some((f) => /Head of Audit/.test(f.fix)), 'no Head of Audit named yet');
   const ec = r.json.engineers.find((x) => x.id === 'nca-ecc'); assert.notEqual(ec.status, 'ready', 'no CISO yet'); assert.ok(ec.to_fix.some((f) => /name the CISO/.test(f.fix)));

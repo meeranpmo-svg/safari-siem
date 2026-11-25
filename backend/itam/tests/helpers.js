@@ -74,6 +74,8 @@ async function startApp(o = {}) {
   const config = Object.assign({ data_dir: dir, api: { host: '127.0.0.1', port: 0, prefix: '/api/itam', agent_prefix: '/agent' } }, o.config || {});
   config.ai = Object.assign({ provider: 'private', private_url: o.noAi ? '' : fake.url, per_user_hourly_cap: 100, daily_cap: 100, timeout_ms: 10000 }, (o.config && o.config.ai) || {});
   // discovery vault key lives in the per-test temp dir (created by the engine); the scheduler is driven by tick() in tests
+  // the product's every-engineer duty desk in tests (the organisation's brand switches some off; tests/ai-team.test.js checks that)
+  config.duty = Object.assign({ all_engineers: true }, (o.config && o.config.duty) || {});
   // SYNTHETIC test sites (the product takes the organisation's sites from the brand setting)
   const TEST_SITES = ['Riyadh HQ', 'Jeddah DR', 'Riyadh Olaya', 'Alkhobar'];
   config.discovery = Object.assign({ vault_key_file: path.join(dir, 'discovery-vault.key'), vault_create_key: true, ad_resolve_dns: false, sites: TEST_SITES }, (o.config && o.config.discovery) || {});
