@@ -260,6 +260,10 @@ function registerDuty(srv, app, opts = {}) {
   // Saudi Aramco CCC (engine/aramco-ccc.js): scope, imported SACS-002 controls, self-assessment with four-eyes "not applicable",
   // remediation, evidence references, the audit firm's findings, the certificate and its renewal
   // Cisco Unified CM (engine/cucm-manager.js): phones, trunks, calls with learned findings; restart / reset phones four-eyes
+  // Hyper-V servers (engine/hyperv-manager.js): metrics in the hosts' own reports → capacity, right-sizing, health; four-eyes VM
+  // actions the host's report script fetches and runs
+  const HVM = optional('./hyperv-manager');
+  if (HVM) { app.addons.hypervManager = HVM.createHypervManager(app, { now: opts.now }); HVM.registerHypervManager(srv, app, app.addons.hypervManager); }
   const UCM = optional('./cucm-manager');
   if (UCM) { const UC = UCM.createCucm(app, { now: opts.now, noTimer: opts.noTimer, request: opts.cucmRequest }); app.addons.cucm = UC; UCM.registerCucm(srv, app, UC); UC.start(); }
   const ACM = optional('./aramco-ccc');

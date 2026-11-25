@@ -5,6 +5,8 @@
 // Secrets are returned as a separate object and are never serialised into status, logs or audit records.
 const fs = require('node:fs');
 const path = require('node:path');
+// the organisation's sites come from the brand setting (brand/brand.json "sites"); config.json discovery.sites overrides them
+const BRAND_SITES = (() => { try { return (require('./brand').sites || []).filter((x) => x && x.name); } catch (e) { return []; /* no brand file in a tool run: no default sites */ } })();
 
 const VERSION = '1.0.0';
 
@@ -43,7 +45,7 @@ const DEFAULTS = {
   },
   // Asset Discovery (engine/discovery, docs/DISCOVERY.md). Credentials are NOT here: they live in the write-only vault.
   discovery: {
-    sites: ['Riyadh HQ', 'Jeddah DR', 'Riyadh Olaya', 'Alkhobar'],
+    sites: BRAND_SITES.map((x) => x.name),
     vault_key_file: '/etc/sentra-itam/discovery-vault.key',   // 64 hex chars, mode 600, owner sentra-itam (install creates it)
     vault_create_key: false,                   // production: the installer creates the key; tests/dev may let the engine create it
     max_hosts_per_scope: 4096,
@@ -64,7 +66,7 @@ const DEFAULTS = {
       secret_file: '',                          // e.g. /etc/sentra-itam/siem-proxy-secret (the SIEM proxy_secret; '' = connect disabled)
       silent_minutes: 60,                       // connected source with no events for longer → ITAM finding "siem_silent"
       health_interval_min: 5,
-      site_map: { 'Riyadh HQ': 'riyadh-hq', 'Jeddah DR': 'jeddah', 'Riyadh Olaya': 'riyadh-olaya', Alkhobar: 'alkhobar' },
+      site_map: Object.fromEntries(BRAND_SITES.map((x) => [x.name, x.id])),
       bridge: { enabled: false, url: 'http://127.0.0.1:9120/ingest/itam-bridge', token_file: '/etc/sentra-itam/siem-bridge-token' },
     },
   },

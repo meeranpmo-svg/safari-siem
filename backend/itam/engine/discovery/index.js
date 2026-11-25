@@ -51,7 +51,7 @@ function createDiscovery({ config, store, audit, log, assets, ingest, findings, 
   const setCol = store.collection('disc_settings');
   const hvHostsCol = store.collection('disc_hyperv_hosts');   // one row per Hyper-V host that reported: when, how, how many VMs
   const active = new Map(); // run id → {run, cancelled, promise}
-  const sites = Array.isArray(dc.sites) && dc.sites.length ? dc.sites : ['Riyadh HQ', 'Jeddah DR', 'Riyadh Olaya', 'Alkhobar'];
+  const sites = Array.isArray(dc.sites) && dc.sites.length ? dc.sites : (() => { try { return (require('../brand').sites || []).map((x) => x.name).filter(Boolean); } catch (e) { return []; /* no brand file: no default sites */ } })();
 
   // runs left "running" by a previous process are closed as interrupted
   for (const r of runsCol.all((x) => x.status === 'running' || x.status === 'queued')) runsCol.put(Object.assign({}, r, { status: 'interrupted', finished_at: new Date().toISOString() }));

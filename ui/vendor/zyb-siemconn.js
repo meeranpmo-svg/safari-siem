@@ -14,7 +14,7 @@
 (function () {
   'use strict';
   if (window.__zybSiemConn || /^\/dashboards\//.test(location.pathname)) return; window.__zybSiemConn = true;
-  var IPRE = /^\s*(\d{1,3}(?:\.\d{1,3}){3})\b/, MAP = {}, ADMIN = false, SITES = ['Riyadh HQ', 'Jeddah DR', 'Riyadh Olaya', 'Alkhobar'], CAT = null;
+  var IPRE = /^\s*(\d{1,3}(?:\.\d{1,3}){3})\b/, MAP = {}, ADMIN = false, SITES = ((window.ZYB_ORG && window.ZYB_ORG.sites) || []).map(function (x) { return x.name; }), CAT = null;
   var KINDS = [['cisco', 'Cisco switch / router / AP (syslog)'], ['cisco-asa-ftd', 'Cisco ASA / Firepower'], ['fortigate', 'Fortinet FortiGate'], ['palo-alto', 'Palo Alto Networks'], ['check-point', 'Check Point'], ['sophos-firewall', 'Sophos firewall'], ['sonicwall', 'SonicWall'], ['f5-bigip', 'F5 BIG-IP'], ['syslog', 'Other device (generic syslog)']];
   function E(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function call(m, url, b) {
@@ -33,7 +33,7 @@
     if (/cisco/.test(t)) return fw || /asa|firepower|ftd/.test(t) ? 'cisco-asa-ftd' : 'cisco';
     return 'syslog';
   }
-  function guessSite(r) { var s = (r && r.site) || ''; if (SITES.indexOf(s) >= 0) return s; var t = s.toLowerCase(); return /jed|\bdr\b/.test(t) ? 'Jeddah DR' : /olaya/.test(t) ? 'Riyadh Olaya' : /khobar/.test(t) ? 'Alkhobar' : 'Riyadh HQ'; }
+  function guessSite(r) { var s = (r && r.site) || ''; if (SITES.indexOf(s) >= 0) return s; var t = s.toLowerCase(); for (var i = 0; i < SITES.length; i++) if (t && (t.indexOf(SITES[i].toLowerCase()) >= 0 || SITES[i].toLowerCase().indexOf(t) >= 0)) return SITES[i]; return SITES[0] || ''; }
   function css() {
     if (document.getElementById('zsc-css')) return;
     var s = document.createElement('style'); s.id = 'zsc-css';

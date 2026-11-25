@@ -62,7 +62,7 @@ function createSiem({ config, log, assets, store, audit, findings, request, read
   const prefix = sc.prefix || '/api/soc';
   const req = request || httpc.request;
   const read = readFile || ((p) => fs.readFileSync(p, 'utf8'));
-  const siteMap = Object.assign({ 'Riyadh HQ': 'riyadh-hq', 'Jeddah DR': 'jeddah', 'Riyadh Olaya': 'riyadh-olaya', Alkhobar: 'alkhobar' }, sc.site_map || {});
+  const siteMap = Object.assign((() => { try { return Object.fromEntries((require('../brand').sites || []).map((x) => [x.name, x.id])); } catch (e) { return {}; /* no brand file */ } })(), sc.site_map || {});
   const silentMs = Math.max(5, Number(sc.silent_minutes) || 60) * 60000;
   let lastHealth = null;
 

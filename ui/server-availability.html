@@ -113,8 +113,8 @@ form.fm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}form
   function guessKind(h){var o=(h.os||'').toLowerCase(),n=(h.name+' '+(h.service||'')).toLowerCase(),m=h.method||'';
     if(/esx/.test(o))return 'vmware-esxi-hosts';if(/solaris|sunos|\baix\b|hp-ux/.test(o))return 'syslog';if(/linux|ubuntu|red ?hat|rhel|centos|debian|suse|unix/.test(o)||m==='tcp/22')return 'linux';
     if(/windows/.test(o)||/tcp\/(3389|445|135)/.test(m))return /(^|[^a-z])(dc|adc|ad)\d*([^a-z]|$)|asdc|domain controller|active directory/.test(n)?'dc':'windows';return 'windows';}
-  var SC=null, SIEM_SITES=['Riyadh HQ','Jeddah DR','Riyadh Olaya','Alkhobar'];   /* IT Asset Management discovery.siem.site_map */
-  function guessSite(h,a){var as=a&&a.site;if(as&&SIEM_SITES.indexOf(as)>=0)return as;var t=((h.site||'')+' '+(as||'')).toLowerCase();if(h.dr_site||/jed|dr\b/.test(t))return 'Jeddah DR';if(/olaya/.test(t))return 'Riyadh Olaya';if(/khobar/.test(t))return 'Alkhobar';return 'Riyadh HQ';}
+  var SC=null, SIEM_SITES=((window.ZYB_ORG&&ZYB_ORG.sites)||[]).map(function(x){return x.name;});   /* IT Asset Management discovery.siem.site_map */
+  function guessSite(h,a){var as=a&&a.site;if(as&&SIEM_SITES.indexOf(as)>=0)return as;var t=((h.site||'')+' '+(as||'')).toLowerCase();if(h.dr_site){var dr=((window.ZYB_ORG&&ZYB_ORG.sites)||[]).filter(function(x){return x.kind==='dr';})[0];if(dr)return dr.name;}for(var i=0;i<SIEM_SITES.length;i++)if(t.indexOf(SIEM_SITES[i].toLowerCase())>=0)return SIEM_SITES[i];return SIEM_SITES[0]||'';}
   function findAsset(h){
     if(h.asset_id)return call('GET','/api/itam/assets/'+encodeURIComponent(h.asset_id)).then(function(a){return a&&(a.asset||a);}).catch(function(){return null;});
     return call('GET','/api/itam/assets?limit=5000&q='+encodeURIComponent(h.name===h.ip?'':h.name)).then(function(j){return (j.assets||[]).filter(function(a){return a.mgmt_ip===h.ip;})[0]||null;}).catch(function(){return null;});}

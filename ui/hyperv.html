@@ -1,0 +1,60 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hyper-V Servers</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css">
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Hyper-V Servers over /api/itam/hyperv: every host that reports (install/hyperv-report.ps1, read-only) with its CPU, memory,
+     volumes and capacity forecast; every VM with its state, CPU, memory demand against what it is assigned, heartbeat, checkpoints and
+     replication; learned findings with what to do; four-eyes VM actions the host's own script fetches and runs. -->
+<style>
+.grid2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px}@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.act{border-left:3px solid #4299e1;padding:6px 10px;margin:6px 0;border-radius:4px;background:rgba(255,255,255,.02)}.act.bad{border-color:#e5484d}.act.warn{border-color:#f59f00}
+.mut{color:#8b93a4}.sm{font-size:12px}.bar{display:inline-block;width:90px;height:7px;border-radius:5px;background:rgba(255,255,255,.08);vertical-align:middle;overflow:hidden;margin-right:4px}.bar i{display:block;height:100%}
+.host{border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;margin:10px 0}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Servers · virtualization · Microsoft Hyper-V</div><h1>Hyper-V Servers</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div><div class="k" id="kp"></div><div id="body"></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000); }
+  function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function bar(p) { if (p == null) return '<span class="mut">–</span>'; var c = p >= 90 ? '#e5484d' : p >= 75 ? '#f59f00' : '#2fb344'; return '<span class="bar"><i style="width:' + Math.max(2, Math.min(100, p)) + '%;background:' + c + '"></i></span>' + esc(Math.round(p)) + ' %'; }
+  function load() { req('GET', '/hyperv').then(function (v) { V = v; $('err').innerHTML = ''; draw(); }).catch(function (e) { $('kp').innerHTML = ''; $('body').innerHTML = ''; $('err').innerHTML = '<div class="card"><div class="empty">' + esc(e.status === 404 ? 'Hyper-V Servers is not on this platform yet - run the platform update.' : 'Could not load: ' + e.message) + '</div></div>'; }); }
+  function draw() {
+    var v = V, k = v.kpis;
+    if (!k.hosts) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(v.note) + '</div><p class="sm mut">On each Hyper-V host, as an administrator: copy hyperv-report.ps1 (on the platform server in /opt/sentra-itam/install/) to C:\\ProgramData\\Sentra\\, run it once with -Server https://&lt;portal&gt;/agent -EnrolToken &lt;token from Settings&gt;, then add the scheduled task shown at the top of the script.</p></div>'; return; }
+    $('kp').innerHTML = tile('Hosts', k.hosts, k.stale_hosts ? k.stale_hosts + ' not reporting' : 'all reporting', k.stale_hosts ? 'warn' : 'ok') + tile('VMs', k.vms, k.running + ' running', '') + tile('Need attention', k.high, 'high findings', k.high ? 'bad' : 'ok');
+    var F = v.findings.length ? v.findings.slice(0, 30).map(function (f) { return '<div class="act ' + (f.severity === 'high' ? 'bad' : f.severity === 'medium' ? 'warn' : '') + '">' + pill(f.severity, f.severity === 'high' ? 'bad' : f.severity === 'medium' ? 'warn' : '') + ' <b>' + esc(f.host) + '</b> · ' + esc(f.title) + '<div class="mut sm">' + esc(f.fix) + '</div></div>'; }).join('') : '<div class="empty">Nothing needs doing.</div>';
+    var H = v.hosts.map(function (h) {
+      var mem = h.mem_total_mb ? 100 * (h.mem_total_mb - (h.mem_free_mb || 0)) / h.mem_total_mb : null;
+      var vols = h.volumes.map(function (x) { var c = (h.capacity.volumes || []).filter(function (y) { return y.name === x.name; })[0] || {}; return '<div class="sm">' + esc(x.name) + ' ' + bar(x.size_gb ? 100 * (x.size_gb - x.free_gb) / x.size_gb : null) + ' <span class="mut">' + esc(x.free_gb) + ' of ' + esc(x.size_gb) + ' GB free' + (c.days != null ? ' · full in ~' + esc(c.days) + ' days' : '') + '</span></div>'; }).join('');
+      var vms = '<div class="tw"><table><thead><tr><th>VM</th><th>State</th><th>vCPU / CPU</th><th>Memory demand / assigned</th><th>Heartbeat</th><th>Checkpoints</th><th>Replication</th>' + (can('operator') ? '<th></th>' : '') + '</tr></thead><tbody>' + h.vms.map(function (m) {
+        return '<tr><td><b>' + esc(m.name) + '</b></td><td>' + pill(m.state || '?', m.state === 'running' ? 'ok' : m.state === 'off' ? '' : 'warn') + '</td><td>' + esc(m.vcpus == null ? '–' : m.vcpus) + ' · ' + bar(m.cpu_pct) + '</td><td>' + (m.mem_assigned_mb ? bar(100 * (m.mem_demand_mb || 0) / m.mem_assigned_mb) + ' <span class="mut sm">' + esc(m.mem_demand_mb) + ' / ' + esc(m.mem_assigned_mb) + ' MB</span>' : '<span class="mut">–</span>') + '</td>'
+          + '<td class="sm">' + esc(m.heartbeat || '') + '</td><td>' + esc(m.checkpoints) + '</td><td class="sm">' + esc([m.replication.state, m.replication.health].filter(Boolean).join(' · ')) + '</td>'
+          + (can('operator') ? '<td><select data-vm="' + esc(m.name) + '" data-host="' + esc(h.name) + '" aria-label="Action for ' + esc(m.name) + '"><option value="">propose…</option>' + Object.keys(v.verbs).map(function (a) { return '<option value="' + esc(a) + '">' + esc(v.verbs[a]) + '</option>'; }).join('') + '</select></td>' : '') + '</tr>'; }).join('') + '</tbody></table></div>';
+      return '<div class="host"><h3>' + esc(h.name) + ' ' + (h.stale ? pill('not reporting since ' + new Date(h.at).toLocaleString(), 'warn') : pill('reported ' + new Date(h.at).toLocaleTimeString(), 'ok')) + '</h3><div class="sm">CPU ' + bar(h.cpu_pct) + ' · ' + esc(h.cores || '?') + ' logical processors · vCPU ratio ' + esc(h.vcpu_ratio == null ? '–' : h.vcpu_ratio + ':1') + '</div><div class="sm">Memory ' + bar(mem) + (h.capacity.memory != null ? ' <span class="mut">· 95 % in ~' + esc(h.capacity.memory) + ' days</span>' : ' <span class="mut">· ' + (h.snapshots < 5 ? 'forecast after 5 daily reports' : 'not growing') + '</span>') + '</div>' + vols + vms + '</div>';
+    }).join('');
+    var A = v.actions.length ? v.actions.map(function (a) { var b = a.status === 'proposed' && can('admin') && a.proposed_by !== ME.user ? ' <button type="button" class="btn" data-dec="approved" data-id="' + esc(a.id) + '">Approve</button> <button type="button" class="btn" data-dec="rejected" data-id="' + esc(a.id) + '">Reject</button>' : '';
+      return '<div class="act ' + (a.status === 'failed' ? 'bad' : a.status === 'proposed' ? 'warn' : '') + '"><b>' + esc(a.id) + '</b> ' + esc(v.verbs[a.action] || a.action) + ' ' + esc(a.vm) + ' on ' + esc(a.host) + ' ' + pill(a.status === 'approved' ? 'approved - the host runs it on its next report' : a.status, a.status === 'done' ? 'ok' : a.status === 'failed' ? 'bad' : '') + '<div class="mut sm">' + esc(a.reason) + ' · by ' + esc(a.proposed_by) + (a.decided_by ? ' · decided by ' + esc(a.decided_by) : '') + (a.result ? ' · ' + esc(a.result) : '') + '</div>' + b + '</div>'; }).join('') : '<div class="empty">No VM actions.</div>';
+    $('body').innerHTML = '<div class="grid2"><div class="card"><h2>🧭 What needs attention</h2>' + F + '</div><div class="card"><h2>📝 VM actions <span class="c">four-eyes · run by the host itself</span></h2>' + A + '</div></div><div class="card"><h2>🖥 Hosts and VMs</h2>' + H + '</div>';
+    $('up').textContent = k.hosts + ' host(s)';
+  }
+  document.addEventListener('change', function (e) {
+    var t = e.target; if (!t.hasAttribute || !t.hasAttribute('data-vm') || !t.value) return;
+    var why = prompt('Why ' + t.options[t.selectedIndex].text.toLowerCase() + ' ' + t.getAttribute('data-vm') + '?'); if (!why) { t.value = ''; return; }
+    req('POST', '/hyperv/actions', { host: t.getAttribute('data-host'), vm: t.getAttribute('data-vm'), action: t.value, reason: why }).then(function (a) { toast(a.id + ' proposed - a different administrator approves'); load(); }).catch(function (er) { toast('Not proposed: ' + er.message); t.value = ''; });
+  });
+  document.addEventListener('click', function (e) {
+    var t = e.target, a;
+    if (t.id === 'rf') return load();
+    if ((a = t.closest('[data-dec]'))) { var d = a.getAttribute('data-dec'), cm = d === 'rejected' ? prompt('Why is it rejected?') : ''; if (d === 'rejected' && !cm) return; req('POST', '/hyperv/actions/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: d, comment: cm || undefined }).then(function (x) { toast(x.id + ' ' + x.status); load(); }).catch(function (er) { toast(er.message); }); }
+  });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* viewer */ } load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>

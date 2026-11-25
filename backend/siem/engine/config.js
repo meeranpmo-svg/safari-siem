@@ -105,12 +105,8 @@ const DEFAULTS = {
     siem_ip: ZYB_ORG.platform_addr,             // LAN IP devices send syslog to (shown in the instructions and the firewall check)
     kit_base: '/agent',                   // where nginx serves the static agent kits (install/make-agent-kit.sh)
     receiving_window_min: 15,             // a source is "receiving" when it had an event in this window
-    sites: [                              // customer sites (editable by admins in the Connect hub; devices are registered per site)
-      { id: 'riyadh-hq', name: 'Riyadh HQ', kind: 'main' },
-      { id: 'jeddah', name: 'Jeddah branch (DR)', kind: 'dr' },
-      { id: 'riyadh-olaya', name: 'Riyadh Olaya branch', kind: 'branch' },
-      { id: 'alkhobar', name: 'Alkhobar branch', kind: 'branch' },
-    ],
+    // the organisation's sites from the brand setting (brand/brand.json "sites"; editable by admins in the Connect hub)
+    sites: (ZYB_ORG.sites || []).map((x) => ({ id: x.id, name: x.name, kind: x.kind === 'hq' ? 'main' : x.kind })),
   },
   reports: {                              // Attack Summary + After-hours (engine/reports). Schedules, SMTP relay and business hours are
     scheduler: true,                      // set by admins in the portal (state store); the SMTP password goes to secrets.json

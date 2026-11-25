@@ -74,7 +74,10 @@ async function startApp(o = {}) {
   const config = Object.assign({ data_dir: dir, api: { host: '127.0.0.1', port: 0, prefix: '/api/itam', agent_prefix: '/agent' } }, o.config || {});
   config.ai = Object.assign({ provider: 'private', private_url: o.noAi ? '' : fake.url, per_user_hourly_cap: 100, daily_cap: 100, timeout_ms: 10000 }, (o.config && o.config.ai) || {});
   // discovery vault key lives in the per-test temp dir (created by the engine); the scheduler is driven by tick() in tests
-  config.discovery = Object.assign({ vault_key_file: path.join(dir, 'discovery-vault.key'), vault_create_key: true, ad_resolve_dns: false }, (o.config && o.config.discovery) || {});
+  // SYNTHETIC test sites (the product takes the organisation's sites from the brand setting)
+  const TEST_SITES = ['Riyadh HQ', 'Jeddah DR', 'Riyadh Olaya', 'Alkhobar'];
+  config.discovery = Object.assign({ vault_key_file: path.join(dir, 'discovery-vault.key'), vault_create_key: true, ad_resolve_dns: false, sites: TEST_SITES }, (o.config && o.config.discovery) || {});
+  config.discovery.siem = Object.assign({ site_map: { 'Riyadh HQ': 'riyadh-hq', 'Jeddah DR': 'jeddah', 'Riyadh Olaya': 'riyadh-olaya', Alkhobar: 'alkhobar' } }, config.discovery.siem || {});
   const app = createApp({ config, secrets: Object.assign({ proxy_secret: SECRET }, o.secrets || {}), log, netopsFetch: o.netopsFetch, vcenterFetch: o.vcenterFetch, connector: o.connector, discoveryDeps: o.discoveryDeps, noScheduler: o.scheduler !== true });
   app.__testNoLicence = true;   // tests other than the licence tests run without the built-in Citynet key enforcing (engine/licence.js)
   const { port } = await app.start();
