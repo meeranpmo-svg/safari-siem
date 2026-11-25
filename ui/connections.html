@@ -642,6 +642,31 @@
      sync:function(id){return this.test(id);},
      del:function(id){return req(this.api,'DELETE','/onboard/sources/'+encodeURIComponent(id)).then(function(){return 'Removed';});} },
 
+   { id:'fmg', icon:'shield-lock',tone:'red', name:'Fortinet FortiManager (the FortiGate fleet)', group:'Network & firewalls', api:'/api/soc', detail:'fortigate-fleet.html', svc:'sentra-siem', fix:'sudo bash "$(ls -td ~/sentra-update-*/ | head -n1)sentra-siem/install/deploy-engine.sh"',
+     // read: a read-only FortiManager API admin (Bearer key); changes: a SEPARATE write API admin, used only for approved package installs
+     load:function(){return req(this.api,'GET','/fortimanager/settings').then(function(d){if(!d.api_key_set&&!d.enabled)return [];var s=d.status||{};
+       return [{id:'fmg',name:mcHost(d.base_url),info:(d.enabled?'enabled':'saved, NOT enabled')+' · '+(s.devices||0)+' FortiGate(s) · every '+(d.poll_min||10)+' min'+(d.tls_fingerprint?' · certificate pinned':'')+(d.write_enabled?' · approved changes can run':' · read only'),
+         cred:!!d.api_key_set,last:s.last_poll_at||s.last_error?{at:s.last_poll_at?Date.parse(s.last_poll_at):null,errors:s.last_error?[s.last_error]:[]}:null}];});},
+     form:function(cur,isNew){return [
+       {k:'base_url',label:'FortiManager address',value:cur?cur.base_url||'':'',placeholder:'https://fortimanager.'+ZYB_ORG.domain,required:!!isNew,hint:'https://<address>[:port] - the SIEM calls <address>/jsonrpc'},
+       {k:'api_key',label:'Read API key',type:'password',required:!!isNew,placeholder:isNew?'':'leave empty to keep the stored one',hint:'System Settings → Administrators → Create New → REST API Admin, admin profile read-only on Device Manager and Policy & Objects, JSON API access Read; trusted host = this SIEM'},
+       {k:'tls_fingerprint',label:'Certificate fingerprint (SHA-256)',value:cur?cur.tls_fingerprint||'':'',placeholder:'AA:BB:…',hint:'recommended: pins FortiManager\'s own certificate (the browser shows it under the padlock)'},
+       {k:'adoms',label:'ADOMs',value:cur?(cur.adoms||[]).join(', '):'',placeholder:'empty = every ADOM',hint:'comma-separated; system ADOMs are skipped'},
+       {k:'firmware_targets',label:'FortiOS target per model',value:cur?(cur.firmware_targets||[]).join(', '):'',placeholder:'FortiGate-60F=7.2.10, FortiGate-100F=7.2.10',hint:'model=version; a model with none is compared with the newest build the fleet runs'},
+       {k:'poll_min',label:'Poll every (minutes)',value:cur?String(cur.poll_min||10):'10'},
+       {k:'write_key',label:'Write API key (optional)',type:'password',placeholder:cur&&cur.write_key_set?'leave empty to keep the stored one':'only to run approved package installs',hint:'a SEPARATE REST API admin with Policy & Objects install rights; never the read key'},
+       {k:'write_enabled',label:'Approved changes',type:'select',value:cur&&cur.write_enabled?'true':'false',options:[{v:'false',l:'Plans only - people carry them out in FortiManager'},{v:'true',l:'Approved package installs run from the platform'}]},
+       {k:'enabled',label:'Collect',type:'select',value:!isNew&&cur&&cur.enabled===false?'false':'true',options:[{v:'true',l:'Enabled - poll now and every interval'},{v:'false',l:'Saved, not polling'}]}];},
+     save:function(v,isNew){var self=this,L=function(x){return String(x||'').split(',').map(function(y){return y.trim();}).filter(Boolean);},b={enabled:v.enabled!=='false',write_enabled:v.write_enabled==='true'};
+       if(v.base_url)b.base_url=v.base_url.trim();if(v.api_key)b.api_key=v.api_key.trim();if(v.write_key)b.write_key=v.write_key.trim();if(v.tls_fingerprint||!isNew)b.tls_fingerprint=String(v.tls_fingerprint||'').trim();
+       if(v.adoms||!isNew)b.adoms=L(v.adoms);if(v.firmware_targets||!isNew)b.firmware_targets=L(v.firmware_targets);if(v.poll_min)b.poll_min=Number(v.poll_min);
+       return req(self.api,'PUT','/fortimanager/settings',b).then(function(){return self.test();});},
+     add:function(){var self=this;return req(self.api,'GET','/fortimanager/settings').then(function(d){if(d.api_key_set||d.enabled)return self.edit('fmg');
+       openForm('Connect FortiManager','The SIEM reads every FortiGate FortiManager manages - health, firmware, licences, VPN and SD-WAN link state - with a read-only API admin. Changes are four-eyes plans; running them needs a separate write key.',self.form(d,true),function(v){return self.save(v,true);});});},
+     edit:function(){var self=this;return req(self.api,'GET','/fortimanager/settings').then(function(d){openForm('FortiManager connection','Leave a key empty to keep the stored one.',self.form(d,false),function(v){return self.save(v,false);},null,'Save &amp; test');});},
+     test:function(){return req(this.api,'POST','/fortimanager/test',{}).then(function(r){var st=(r&&r.steps)||[],f=st.filter(function(x){return !x.ok;})[0];return f?('Stopped: '+f.text):('All '+st.length+' checks passed - '+st.map(function(x){return x.text;}).join(' · '));});},
+     sync:function(){return req(this.api,'POST','/fortimanager/poll',{}).then(function(s){return 'Polled - '+(s.devices||0)+' FortiGate(s)'+(s.last_error?' · '+s.last_error:'');});},
+     del:function(){return req(this.api,'PUT','/fortimanager/settings',{enabled:false,write_enabled:false}).then(function(){return 'FortiManager polling stopped (the keys stay stored until replaced)';});} },
    { id:'net', icon:'shield-lock',tone:'red', name:'Firewalls & network devices', group:'Network & firewalls', api:'/api/soc', detail:'ai-security-engineer.html', svc:'sentra-siem', fix:'sudo bash "$(ls -td ~/sentra-update-*/ | head -n1)sentra-siem/install/deploy-engine.sh"',
      load:function(){return req(this.api,'GET','/netops/devices').then(function(d){return (d.items||[]).map(function(x){return {id:x.id,name:x.name,info:(x.vendor||'')+' · '+(x.ip||''),cred:!!(x.credentials&&(x.credentials.api||x.credentials.snmp)),last:x.last?{at:x.last.at,errors:x.last.errors||[]}:null};});});},
      add:function(){var self=this;openForm('Add a firewall / network device','SNMP or vendor API, read-only. Firewalls appear on the AI Security Engineer.',[

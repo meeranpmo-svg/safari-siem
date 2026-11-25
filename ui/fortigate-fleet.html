@@ -1,0 +1,120 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FortiGate Fleet</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- FortiGate Fleet over /api/soc/fortimanager: every FortiGate FortiManager manages, with health and the reasons for it (offline,
+     configuration changed outside FortiManager, conserve mode, HA, tunnels, SD-WAN SLA, licences, firmware behind the target,
+     unusual against the device's own baseline), firmware by model, SD-WAN link state, and four-eyes change plans: an operator
+     proposes, a different person with the firewall approver scope approves, an operator runs (install package) or marks done. -->
+<style>
+.grid2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px}@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.act{border-left:3px solid #4299e1;padding:6px 10px;margin:6px 0;border-radius:4px;background:rgba(255,255,255,.02)}.act.bad{border-color:#e5484d}.act.warn{border-color:#f59f00}
+.chip{display:inline-block;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:2px 9px;font-size:12px;cursor:pointer;background:transparent;color:inherit}.chip.on{background:var(--accent,#5794f2);border-color:var(--accent,#5794f2);color:#fff}
+.mut{color:#8b93a4}.sm{font-size:12px}.nr{color:#8b93a4;font-style:italic}
+.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.flt input,.flt select{max-width:220px}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+.bar{display:inline-block;width:70px;height:7px;border-radius:5px;background:rgba(255,255,255,.08);vertical-align:middle;overflow:hidden;margin-right:4px}.bar i{display:block;height:100%}
+tr.sel td{background:rgba(87,148,242,.08)}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · Firewalls · FortiManager</div><h1>FortiGate Fleet</h1></div><span class="sp"></span><span class="muted" id="up"></span><a class="btn" href="connections.html#cn-fmg">Connection</a><button type="button" id="poll" hidden>⟳ Poll now</button><button type="button" id="rf">⟳ Refresh</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div id="body"></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var S = window.zybSoc, esc = S.esc, $ = function (i) { return document.getElementById(i); }, V = null, CH = null, F = { h: '', q: '', model: '' }, SEL = {};
+  var HC = { down: 'bad', attention: 'bad', watch: 'warn', ok: 'ok' }, HL = { down: 'down', attention: 'needs attention', watch: 'watch', ok: 'healthy' };
+  function pct(v) { if (v == null) return '<span class="nr">–</span>'; var c = v >= 88 ? '#e5484d' : v >= 75 ? '#f59f00' : '#2fb344'; return '<span class="bar"><i style="width:' + Math.max(2, Math.min(100, v)) + '%;background:' + c + '"></i></span>' + esc(v) + ' %'; }
+  function load() {
+    $('poll').hidden = !S.can('operator');
+    return Promise.all([S.req('GET', '/fortimanager/fleet'), S.req('GET', '/fortimanager/changes')]).then(function (r) { V = r[0]; CH = r[1]; $('up').textContent = V.status.last_poll_at ? 'polled ' + S.ago(V.status.last_poll_at) : 'not polled yet'; draw(); })
+      .catch(function (e) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card">' + (e.status === 404 ? '<div class="empty">FortiGate Fleet is not on this SIEM yet - run the platform update.</div>' : S.errHtml(e, 'FortiGate Fleet')) + '</div>'; });
+  }
+  function draw() {
+    var st = V.status, k = V.kpis;
+    if (!st.configured) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">FortiManager is not connected. An administrator adds it in the Integration Hub (address, a read-only API admin key, optionally the certificate fingerprint).</div><p><a class="btn" href="connections.html#cn-fmg">Connect FortiManager</a></p></div>'; return; }
+    $('kp').innerHTML = S.tile('FortiGates', k.devices, k.ok + ' healthy', '', 'h:')
+      + S.tile('Down', k.down, 'FortiManager cannot reach them', k.down ? 'bad' : 'ok', 'h:down')
+      + S.tile('Need attention', k.attention, k.watch + ' to watch', k.attention ? 'bad' : k.watch ? 'warn' : 'ok', 'h:attention')
+      + S.tile('Config changed outside FortiManager', k.out_of_sync, 'drift', k.out_of_sync ? 'warn' : 'ok', 'go:x-dev')
+      + S.tile('Firmware behind', k.firmware_behind, 'against the target / newest per model', k.firmware_behind ? 'warn' : 'ok', 'go:x-fw')
+      + S.tile('SD-WAN links', k.links_down + ' down', k.links_out_of_sla + ' out of SLA', k.links_down ? 'bad' : k.links_out_of_sla ? 'warn' : 'ok', 'go:x-lnk')
+      + S.tile('IPsec tunnels', k.tunnels.down + ' down', k.tunnels.up + ' up', k.tunnels.down ? 'warn' : 'ok', 'go:x-dev')
+      + S.tile('Licences due', k.licences_due, 'expired or within 30 days', k.licences_due ? 'warn' : 'ok', 'go:x-act');
+    var acts = V.findings.length ? V.findings.slice(0, 12).map(function (f) { return '<div class="act ' + (f.severity === 'critical' || f.severity === 'high' ? 'bad' : f.severity === 'medium' ? 'warn' : '') + '">' + S.sev(f.severity) + ' <b>' + esc(f.device) + '</b> - ' + esc(f.title) + '<div class="mut sm">' + esc(f.fix) + '</div></div>'; }).join('') + (V.findings.length > 12 ? '<div class="mut sm">' + esc(V.findings.length - 12) + ' more in the device list</div>' : '') : '<div class="empty">Nothing needs doing - every FortiGate is healthy.</div>';
+    var models = {}; V.devices.forEach(function (d) { models[d.model || 'unknown'] = 1; });
+    var list = V.devices.filter(function (d) { var q = F.q.toLowerCase(); return (!F.h || d.health === F.h) && (!F.model || d.model === F.model) && (!q || (d.name + ' ' + d.serial + ' ' + d.ip + ' ' + d.site + ' ' + d.adom).toLowerCase().indexOf(q) >= 0); });
+    var flt = '<div class="flt">' + [['', 'All'], ['down', 'Down'], ['attention', 'Attention'], ['watch', 'Watch'], ['ok', 'Healthy']].map(function (c) { return '<button type="button" class="chip' + (F.h === c[0] ? ' on' : '') + '" data-h="' + c[0] + '">' + esc(c[1]) + '</button>'; }).join(' ')
+      + ' <input id="q" type="search" placeholder="Name, serial, IP, site" value="' + esc(F.q) + '" aria-label="Search FortiGates"> <select id="fm" aria-label="Model"><option value="">Every model</option>' + Object.keys(models).sort().map(function (m) { return '<option' + (F.model === m ? ' selected' : '') + '>' + esc(m) + '</option>'; }).join('') + '</select>'
+      + (S.can('operator') ? ' <span class="sp"></span><span class="mut sm" id="selc"></span> <button type="button" id="plan">Plan a change for the selected…</button>' : '') + '</div>';
+    var dev = list.length ? '<div class="tw"><table><thead><tr>' + (S.can('operator') ? '<th></th>' : '') + '<th>FortiGate</th><th>Health</th><th>FortiOS</th><th>CPU</th><th>Memory</th><th>Sessions</th><th>Config</th><th>HA</th><th>Tunnels</th><th>Why</th></tr></thead><tbody>' + list.slice(0, 400).map(function (d) {
+      var m = d.metrics || {}, tun = d.tunnels || [], dn = tun.filter(function (t) { return !t.up; }).length;
+      return '<tr' + (SEL[d.name] ? ' class="sel"' : '') + '>' + (S.can('operator') ? '<td><input type="checkbox" data-sel="' + esc(d.name) + '"' + (SEL[d.name] ? ' checked' : '') + ' aria-label="Select ' + esc(d.name) + '"></td>' : '')
+        + '<td><b>' + esc(d.name) + '</b><div class="mut sm">' + esc([d.model, d.serial, d.ip, d.site, 'ADOM ' + d.adom].filter(Boolean).join(' · ')) + '</div></td><td>' + S.pill(HL[d.health], HC[d.health]) + '</td><td>' + esc(d.firmware || '–') + '</td>'
+        + '<td>' + pct(m.cpu) + '</td><td>' + pct(m.mem) + '</td><td>' + (m.sessions == null ? '<span class="nr">–</span>' : esc(S.n(m.sessions))) + '</td><td>' + S.pill(d.conf, d.conf === 'modified' ? 'warn' : d.conf === 'in-sync' ? 'ok' : '') + '</td>'
+        + '<td>' + esc(d.ha_mode) + (d.ha_members && d.ha_members.length ? ' <span class="mut sm">' + esc(d.ha_members.filter(function (x) { return x.status === 'up'; }).length + '/' + d.ha_members.length) + '</span>' : '') + '</td>'
+        + '<td>' + (tun.length ? esc((tun.length - dn) + ' up') + (dn ? ' ' + S.pill(dn + ' down', 'warn') : '') : '<span class="nr">none</span>') + '</td>'
+        + '<td class="sm">' + (d.findings.length ? d.findings.slice(0, 3).map(function (f) { return esc(f.title); }).join('<br>') : '<span class="mut">–</span>') + (d.read_errors && d.read_errors.length ? '<div class="mut">' + esc('not read: ' + d.read_errors[0]) + '</div>' : '') + '</td></tr>';
+    }).join('') + '</tbody></table></div>' : '<div class="empty">' + (V.devices.length ? 'No FortiGate matches the filter.' : 'FortiManager returned no managed FortiGate' + (st.last_error ? ': ' + esc(st.last_error) : ' yet - press Poll now') + '.') + '</div>';
+    var fw = V.models.length ? '<div class="tw"><table><thead><tr><th>Model</th><th>FortiGates</th><th>FortiOS in use</th><th>Target</th></tr></thead><tbody>' + V.models.map(function (m) {
+      return '<tr><td><b>' + esc(m.model) + '</b></td><td>' + esc(m.devices) + '</td><td class="sm">' + Object.keys(m.versions).sort().reverse().map(function (v) { var behind = (m.target || m.newest) && v !== (m.target || m.newest); return esc(v) + ' × ' + esc(m.versions[v]) + (behind ? ' ' + S.pill('behind', 'warn') : ''); }).join('<br>') + '</td><td>' + (m.target ? esc(m.target) : '<span class="mut sm">no target - newest in the fleet: ' + esc(m.newest || '–') + '</span>') + '</td></tr>';
+    }).join('') + '</tbody></table></div>' : '<div class="empty">No models yet.</div>';
+    var lk = V.links.length ? '<div class="tw"><table><thead><tr><th>FortiGate</th><th>Health check</th><th>Member</th><th>State</th><th>Latency</th><th>Jitter</th><th>Loss</th><th>SLA</th></tr></thead><tbody>' + V.links.slice().sort(function (a, b) { var r = function (x) { return x.state === 'down' ? 0 : x.sla_ok === false ? 1 : 2; }; return r(a) - r(b); }).slice(0, 400).map(function (l) {
+      return '<tr><td>' + esc(l.device) + '<div class="mut sm">' + esc(l.site || '') + '</div></td><td>' + esc(l.check) + '</td><td>' + esc(l.member) + '</td><td>' + S.pill(l.state, l.state === 'up' ? 'ok' : l.state === 'down' ? 'bad' : '') + '</td><td>' + (l.latency == null ? '–' : esc(Math.round(l.latency)) + ' ms') + '</td><td>' + (l.jitter == null ? '–' : esc(Math.round(l.jitter)) + ' ms') + '</td><td>' + (l.loss == null ? '–' : esc(l.loss) + ' %') + '</td><td>' + (l.sla_ok == null ? '<span class="mut sm">no SLA</span>' : S.pill(l.sla_ok ? 'met' : 'missed', l.sla_ok ? 'ok' : 'warn')) + '</td></tr>';
+    }).join('') + '</tbody></table></div>' : '<div class="empty">No SD-WAN health checks reported. Configure performance SLAs (Network → SD-WAN → Performance SLA) on the FortiGates to see link state here.</div>';
+    $('body').innerHTML = '<div class="grid2"><div class="card" id="x-act"><h2>🧭 What to fix first <span class="c">' + esc(V.findings.length) + ' finding(s)</span></h2>' + acts + '</div><div class="card" id="x-chg"><h2>📝 Change plans <span class="c">four-eyes: a different person approves</span></h2>' + changes() + '</div></div>'
+      + '<div class="card" id="x-dev"><h2>🛡 FortiGates <span class="c">' + esc(list.length) + ' of ' + esc(V.devices.length) + '</span></h2>' + flt + dev + '</div>'
+      + '<div class="grid2"><div class="card" id="x-lnk"><h2>🔗 SD-WAN link state <span class="c">from the FortiGates\' performance SLAs</span></h2>' + lk + '</div><div class="card" id="x-fw"><h2>📦 Firmware by model</h2>' + fw + '</div></div>'
+      + (st.last_error ? '<p class="sm" style="color:#ff8a8e">Last poll: ' + esc(st.last_error) + '</p>' : '') + '<p class="mut sm">Read through FortiManager every ' + esc((V.status.poll_min || 10)) + ' min with a read-only API admin. "Unusual" compares a FortiGate with its own last polls, not with a fixed number.</p>';
+    selCount();
+  }
+  function changes() {
+    var L = (CH && CH.changes) || [];
+    if (!L.length) return '<div class="empty">No change plans. Select FortiGates in the list and plan a change.</div>';
+    return L.slice(0, 20).map(function (c) {
+      var b = '';
+      if (c.status === 'proposed' && S.can('operator') && S.user() !== c.proposed_by) b += ' <button type="button" class="btn" data-dec="approved" data-id="' + esc(c.id) + '">Approve</button> <button type="button" class="btn" data-dec="rejected" data-id="' + esc(c.id) + '">Reject</button>';
+      if (c.status === 'approved' && S.can('operator')) b += c.executed_here ? ' <button type="button" class="btn" data-run="' + esc(c.id) + '"' + (CH.write_enabled ? '' : ' disabled title="An administrator stores a FortiManager write key and switches running changes on"') + '>Run</button>' : ' <button type="button" class="btn" data-done="' + esc(c.id) + '">Mark done</button>';
+      if (c.status === 'running' && S.can('operator')) b += ' <button type="button" class="btn" data-ref="' + esc(c.id) + '">Check progress</button>';
+      return '<div class="act ' + (c.status === 'failed' || c.status === 'rejected' ? 'bad' : c.status === 'proposed' ? 'warn' : '') + '"><b>' + esc(c.id) + '</b> ' + esc(c.title) + (c.package ? ' <b>' + esc(c.package) + '</b>' : '') + (c.version ? ' → ' + esc(c.version) : '') + ' ' + S.pill(c.status, c.status === 'done' ? 'ok' : c.status === 'failed' ? 'bad' : '')
+        + '<div class="mut sm">' + esc(c.devices.length + ' FortiGate(s): ' + c.devices.slice(0, 5).join(', ') + (c.devices.length > 5 ? ' …' : '')) + ' · proposed by ' + esc(c.proposed_by) + (c.decided_by ? ' · ' + esc(c.status === 'rejected' ? 'rejected' : 'approved') + ' by ' + esc(c.decided_by) : '') + (c.window ? ' · window ' + esc(c.window) : '') + '</div><div class="sm">' + esc(c.reason) + '</div>' + (c.error ? '<div class="sm" style="color:#ff8a8e">' + esc(c.error) + '</div>' : '') + b + '</div>';
+    }).join('');
+  }
+  function selCount() { var n = Object.keys(SEL).length, el = $('selc'); if (el) el.textContent = n ? n + ' selected' : ''; var p = $('plan'); if (p) p.disabled = !n; }
+  function planForm() {
+    var names = Object.keys(SEL);
+    var box = document.createElement('div'); box.className = 'card'; box.id = 'pf';
+    box.innerHTML = '<h2>Plan a change <span class="c">' + esc(names.length) + ' FortiGate(s)</span></h2><div class="frm"><label>Operation<select id="pt">' + Object.keys(CH.types).map(function (t) { return '<option value="' + esc(t) + '">' + esc(CH.types[t]) + '</option>'; }).join('') + '</select></label>'
+      + '<label id="lpk">Policy package<input id="pk" placeholder="as FortiManager names it"></label><label id="lvr" hidden>FortiOS version<input id="vr" placeholder="7.2.10"></label><label>Window (optional)<input id="wn" type="datetime-local"></label></div>'
+      + '<label class="sm mut" style="display:block;margin-top:8px">Why<textarea id="rs" rows="2" style="width:100%"></textarea></label><p><button type="button" id="psend">Propose</button> <button type="button" class="btn" id="pcan">Cancel</button> <span class="mut sm">A different person with the firewall approver scope approves it.</span></p>';
+    var old = $('pf'); if (old) old.remove(); $('x-dev').parentNode.insertBefore(box, $('x-dev')); box.scrollIntoView({ behavior: 'smooth' });
+    $('pt').addEventListener('change', function () { var t = $('pt').value; $('lpk').hidden = t !== 'install-package'; $('lvr').hidden = t !== 'firmware-upgrade'; });
+    $('pcan').addEventListener('click', function () { box.remove(); });
+    $('psend').addEventListener('click', function () {
+      var t = $('pt').value, b = { type: t, devices: names, reason: $('rs').value.trim() };
+      if (t === 'install-package') b.package = $('pk').value.trim(); if (t === 'firmware-upgrade') b.version = $('vr').value.trim(); if ($('wn').value) b.window = $('wn').value.slice(0, 16);
+      S.req('POST', '/fortimanager/changes', b).then(function (c) { S.toast(c.id + ' proposed - waiting for approval'); SEL = {}; load(); }).catch(function (e) { S.toast('Not proposed: ' + e.message); });
+    });
+  }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target, a;
+    if ((a = t.closest('[data-act]'))) { var v = a.getAttribute('data-act'); if (v.indexOf('h:') === 0) { F.h = v.slice(2); draw(); var x = $('x-dev'); if (x) x.scrollIntoView({ behavior: 'smooth' }); } else if (v.indexOf('go:') === 0) { var g = $(v.slice(3)); if (g) g.scrollIntoView({ behavior: 'smooth' }); } return; }
+    if ((a = t.closest('[data-h]'))) { F.h = a.getAttribute('data-h'); draw(); return; }
+    if (t.id === 'rf') { load(); return; }
+    if (t.id === 'poll') { t.disabled = true; S.req('POST', '/fortimanager/poll', {}).then(function (s) { S.toast('Polled ' + s.devices + ' FortiGate(s)' + (s.last_error ? ' - ' + s.last_error : '')); load(); }).catch(function (e) { S.toast('Poll failed: ' + e.message); }).then(function () { t.disabled = false; }); return; }
+    if (t.id === 'plan') { planForm(); return; }
+    if ((a = t.closest('[data-dec]'))) { var dec = a.getAttribute('data-dec'), cm = dec === 'rejected' ? prompt('Why is it rejected?') : ''; if (dec === 'rejected' && !cm) return;
+      S.req('POST', '/fortimanager/changes/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: dec, comment: cm || undefined }).then(function (c) { S.toast(c.id + ' ' + c.status); load(); }).catch(function (e) { S.toast(e.message); }); return; }
+    if ((a = t.closest('[data-run]'))) { if (!confirm('Install the approved package through FortiManager now?')) return; S.req('POST', '/fortimanager/changes/' + encodeURIComponent(a.getAttribute('data-run')) + '/run', {}).then(function (c) { S.toast(c.id + ': ' + c.status + (c.task != null ? ' (FortiManager task ' + c.task + ')' : '') + (c.error ? ' - ' + c.error : '')); load(); }).catch(function (e) { S.toast(e.message); }); return; }
+    if ((a = t.closest('[data-ref]'))) { S.req('POST', '/fortimanager/changes/' + encodeURIComponent(a.getAttribute('data-ref')) + '/refresh', {}).then(function (c) { S.toast(c.id + ': ' + c.status + (c.task_percent != null ? ' ' + c.task_percent + ' %' : '')); load(); }).catch(function (e) { S.toast(e.message); }); return; }
+    if ((a = t.closest('[data-done]'))) { var note = prompt('What was done in FortiManager (task, time)?'); if (!note) return; S.req('POST', '/fortimanager/changes/' + encodeURIComponent(a.getAttribute('data-done')) + '/done', { note: note }).then(function (c) { S.toast(c.id + ' done'); load(); }).catch(function (e) { S.toast(e.message); }); }
+  });
+  document.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t.hasAttribute && t.hasAttribute('data-sel')) { var n = t.getAttribute('data-sel'); if (t.checked) SEL[n] = 1; else delete SEL[n]; t.closest('tr').classList.toggle('sel', t.checked); selCount(); return; }
+    if (t.id === 'fm') { F.model = t.value; draw(); }
+  });
+  document.addEventListener('input', function (ev) { if (ev.target.id === 'q') { F.q = ev.target.value; var pos = ev.target.selectionStart; draw(); var q = $('q'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } } });
+  S.ready(load);
+  setInterval(function () { if (!document.hidden) load(); }, 5 * 60000);
+})();
+</script></body></html>

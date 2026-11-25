@@ -2240,6 +2240,7 @@ window.ZYB_NAV = [
   "hd": "infra",
   "icon": "<circle cx=\"12\" cy=\"5\" r=\"2\"/><circle cx=\"5\" cy=\"19\" r=\"2\"/><circle cx=\"19\" cy=\"19\" r=\"2\"/><path d=\"M12 7v4M12 11l-6 6M12 11l6 6\"/>",
   "pages": [
+   {"h": "fortigate-fleet.html", "s": "FortiGate Fleet", "t": "FortiGate Fleet - every FortiGate through FortiManager: health, firmware, licences, SD-WAN link state, four-eyes changes", "d": "Every FortiGate FortiManager manages, ranked by what needs doing: offline, configuration changed outside FortiManager, conserve mode, HA, IPsec tunnels, SD-WAN links out of SLA, licences expiring, firmware behind the target per model and readings unusual against each device's own baseline; change plans (install a policy package, retrieve config, firmware upgrade) proposed by an operator and approved by a different person", "fw": {"nca": ["2-5", "2-7", "2-12"], "iso": ["8.20", "8.9", "8.32"]}, "k": ["fortigate", "fortinet", "fortimanager", "firewall", "fleet", "firmware", "sd-wan", "link", "vpn", "ipsec", "licence", "ha"]},
    {
     "h": "npm-summary.html",
     "s": "NOC Summary",
