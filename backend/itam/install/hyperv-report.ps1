@@ -1,10 +1,11 @@
 # Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE.
 # hyperv-report.ps1 - run ON each Hyper-V host (scheduled task as SYSTEM, every 15 minutes). Two things, nothing else:
-#   1 READ-ONLY report: host CPU / memory / volumes and every VM (state, uptime, vCPUs, CPU, memory assigned / demand, heartbeat,
+#   1 READ-ONLY report: host CPU / memory / volumes, network speed per NIC (link and rate), disk latency and every VM (incl. its network rate) (state, uptime, vCPUs, CPU, memory assigned / demand, heartbeat,
 #     virtual disks, checkpoints, replication, IPs, MACs) -> POST <server>/agent/hyperv with this host's agent key
 #   2 APPROVED actions only: GET <server>/agent/hyperv/actions?host=<this host> returns what a person proposed and a DIFFERENT
 #     administrator approved for a VM on THIS host; only start / shutdown / turn-off / restart / checkpoint are run, each result is
 #     reported back. The platform never connects into the host; -NoActions turns part 2 off entirely.
+# Easiest: Hyper-V Servers page -> "+ Add Hyper-V hosts" gives one command per host that does all of the below.
 # First run on a host:  .\hyperv-report.ps1 -Server https://<portal host>/agent -EnrolToken <token from Settings → Agent tokens>
 #   enrols the host and keeps its agent key in C:\ProgramData\Sentra\agent.key (readable by SYSTEM and Administrators only).
 # Scheduled task (run once as an administrator):
@@ -36,6 +37,29 @@ $cpu = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentag
 $vols = @(Get-CimInstance Win32_Volume -Filter 'DriveType=3' | Where-Object { $_.Capacity -gt 0 -and $_.Name -notlike '\\?\*' } | ForEach-Object {
   @{ name = $_.Name.TrimEnd('\'); size_gb = [math]::Round($_.Capacity / 1GB, 1); free_gb = [math]::Round($_.FreeSpace / 1GB, 1); csv = ($_.Name -like '*ClusterStorage*') } })
 $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '169.254.*' -and $_.IPAddress -ne '127.0.0.1' } | Select-Object -First 1).IPAddress
+# network speed and disk: one 2-second sample of the performance counters (read-only). A counter the host does not have leaves
+# the value empty - never a 0 that reads as "idle", never a failed report.
+$nics = @(); $disk = $null; $vmNet = @{}
+try {
+  $paths = @('\Network Adapter(*)\Bytes Received/sec', '\Network Adapter(*)\Bytes Sent/sec', '\PhysicalDisk(_Total)\Avg. Disk sec/Transfer',
+             '\PhysicalDisk(_Total)\Disk Read Bytes/sec', '\PhysicalDisk(_Total)\Disk Write Bytes/sec',
+             '\Hyper-V Virtual Network Adapter(*)\Bytes Received/sec', '\Hyper-V Virtual Network Adapter(*)\Bytes Sent/sec')
+  $cs2 = (Get-Counter -Counter $paths -SampleInterval 2 -MaxSamples 1 -ErrorAction SilentlyContinue).CounterSamples
+  $val = { param($set, $inst, $cn) ($cs2 | Where-Object { $_.Path -like "*\$set(*)\$cn" -and $_.InstanceName -eq $inst } | Select-Object -First 1).CookedValue }
+  foreach ($a in @(Get-NetAdapter -Physical | Where-Object { $_.Status -eq 'Up' })) {
+    $inst = ($a.InterfaceDescription -replace '\(', '[' -replace '\)', ']' -replace '#', '_' -replace '/', '_').ToLower()
+    $rx = & $val 'network adapter' $inst 'bytes received/sec'; $tx = & $val 'network adapter' $inst 'bytes sent/sec'
+    $nics += @{ name = $a.Name; link_mbps = [math]::Round($a.ReceiveLinkSpeed / 1e6); rx_bps = $(if ($null -ne $rx) { [math]::Round($rx * 8) } else { $null }); tx_bps = $(if ($null -ne $tx) { [math]::Round($tx * 8) } else { $null }) }
+  }
+  $lat = & $val 'physicaldisk' '_total' 'avg. disk sec/transfer'
+  if ($null -ne $lat) { $disk = @{ latency_ms = [math]::Round($lat * 1000, 1); read_bps = [math]::Round((& $val 'physicaldisk' '_total' 'disk read bytes/sec')); write_bps = [math]::Round((& $val 'physicaldisk' '_total' 'disk write bytes/sec')) } }
+  foreach ($c in @($cs2 | Where-Object { $_.Path -like '*\hyper-v virtual network adapter(*' })) {
+    $vmn = $c.InstanceName -replace '_network adapter.*$', '';   # "<vm name>_network adapter_<ids>" - a VM name may itself hold '_'
+    if (-not $vmNet.ContainsKey($vmn)) { $vmNet[$vmn] = @{ rx = 0.0; tx = 0.0 } }
+    if ($c.Path -like '*bytes received/sec') { $vmNet[$vmn].rx += $c.CookedValue * 8 } else { $vmNet[$vmn].tx += $c.CookedValue * 8 }
+  }
+} catch { Write-Warning ('performance counters not read: ' + $_.Exception.Message) }   # the report still goes, without network / disk figures
+
 $vms = @(Get-VM | ForEach-Object {
   $vm = $_
   $na = @(Get-VMNetworkAdapter -VM $vm)
@@ -45,11 +69,12 @@ $vms = @(Get-VM | ForEach-Object {
   @{ vm_id = $vm.VMId.Guid; name = $vm.Name; state = "$($vm.State)"; generation = $vm.Generation; uptime_s = [int]$vm.Uptime.TotalSeconds; vcpus = $vm.ProcessorCount; cpu_pct = $vm.CPUUsage
      mem_assigned_mb = [int]($vm.MemoryAssigned / 1MB); mem_demand_mb = [int]($vm.MemoryDemand / 1MB); dynamic_memory = $vm.DynamicMemoryEnabled; heartbeat = "$hb"
      ips = @($na.IPAddresses | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' }); macs = @($na.MacAddress); vhds = $disks; checkpoints = $cps
-     replication_state = "$($vm.ReplicationState)"; replication_health = "$($vm.ReplicationHealth)" }
+     replication_state = "$($vm.ReplicationState)"; replication_health = "$($vm.ReplicationHealth)"
+     net_rx_bps = $(if ($vmNet.ContainsKey($vm.Name.ToLower())) { [math]::Round($vmNet[$vm.Name.ToLower()].rx) } else { $null }); net_tx_bps = $(if ($vmNet.ContainsKey($vm.Name.ToLower())) { [math]::Round($vmNet[$vm.Name.ToLower()].tx) } else { $null }) }
 })
 $report = @{ collected_at = (Get-Date).ToUniversalTime().ToString('o'); vms = $vms
   host = @{ name = $env:COMPUTERNAME; fqdn = "$($cs.DNSHostName).$($cs.Domain)".ToLower(); ip = $ip; os = $os.Caption; logical_processors = $cs.NumberOfLogicalProcessors; cpu_pct = $cpu
-            mem_total_mb = [int]($os.TotalVisibleMemorySize / 1KB); mem_free_mb = [int]($os.FreePhysicalMemory / 1KB); volumes = $vols } }
+            mem_total_mb = [int]($os.TotalVisibleMemorySize / 1KB); mem_free_mb = [int]($os.FreePhysicalMemory / 1KB); volumes = $vols; nics = $nics; disk = $disk } }
 Invoke-RestMethod -Method Post -Uri "$Server/hyperv" -Headers $headers -ContentType 'application/json' -Body ($report | ConvertTo-Json -Depth 6 -Compress) | Out-Null
 
 # ---- 2 approved actions for THIS host only, from a fixed list

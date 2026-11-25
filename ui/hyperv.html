@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hyper-V Servers</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hyper-V Servers</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css">
 <!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
 <!-- Hyper-V Servers over /api/itam/hyperv: every host that reports (install/hyperv-report.ps1, read-only) with its CPU, memory,
      volumes and capacity forecast; every VM with its state, CPU, memory demand against what it is assigned, heartbeat, checkpoints and
@@ -9,8 +9,13 @@
 .mut{color:#8b93a4}.sm{font-size:12px}.bar{display:inline-block;width:90px;height:7px;border-radius:5px;background:rgba(255,255,255,.08);vertical-align:middle;overflow:hidden;margin-right:4px}.bar i{display:block;height:100%}
 .host{border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;margin:10px 0}
 </style></head><body><main>
-<div class="top"><div><div class="eb">Servers · virtualization · Microsoft Hyper-V</div><h1>Hyper-V Servers</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="rf">⟳ Refresh</button></div>
-<div id="err"></div><div class="k" id="kp"></div><div id="body"></div>
+<div class="top"><div><div class="eb">Servers · virtualization · Microsoft Hyper-V</div><h1>Hyper-V Servers</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="addh" hidden>+ Add Hyper-V hosts</button> <button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div>
+<section class="card" id="onb" hidden><h2>Add Hyper-V hosts</h2>
+ <p class="sm mut">Type the host names (one per line, up to 50). Each host gets its own one-time key, valid for 24 hours, and one command. On the host, open PowerShell <b>as Administrator</b>, paste its command and press Enter. The command downloads the report script from this portal, checks its fingerprint (SHA-256), enrols the host and creates the 15-minute scheduled task. The host sends a read-only report; the portal never logs on to the host.</p>
+ <label class="sm mut" for="onbh">Host names</label><textarea id="onbh" rows="4" style="width:100%;font-family:Consolas,monospace" placeholder="HV-HOST-01&#10;HV-HOST-02"></textarea>
+ <div style="margin:8px 0"><button type="button" id="onbgo">Create the commands</button> <span class="sm mut" id="onbsha"></span></div>
+ <div id="onbout"></div><div id="onbinv"></div></section><div class="k" id="kp"></div><div id="body"></div>
 </main>
 <script>
 (function () {
@@ -25,36 +30,79 @@
   function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
   function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
   function bar(p) { if (p == null) return '<span class="mut">–</span>'; var c = p >= 90 ? '#e5484d' : p >= 75 ? '#f59f00' : '#2fb344'; return '<span class="bar"><i style="width:' + Math.max(2, Math.min(100, p)) + '%;background:' + c + '"></i></span>' + esc(Math.round(p)) + ' %'; }
+  function bps(v) { if (v == null) return '–'; return v >= 1e9 ? (Math.round(v / 1e8) / 10) + ' Gbps' : v >= 1e6 ? (Math.round(v / 1e5) / 10) + ' Mbps' : v >= 1e3 ? Math.round(v / 1e3) + ' kbps' : Math.round(v) + ' bps'; }
+  function link(m) { return m == null ? '–' : m >= 1000 ? (Math.round(m / 100) / 10) + ' Gbps' : Math.round(m) + ' Mbps'; }
+  // network speed of a host: each NIC's rate against its link (the busier direction), its link speed
+  function nicRows(h) { if (!h.nics || !h.nics.length) return '<div class="sm mut">Network: no counters in the last report (the host script sends them from this version on).</div>';
+    return '<div class="tw"><table><thead><tr><th>NIC</th><th>Link</th><th>Receive</th><th>Send</th><th>In use</th></tr></thead><tbody>' + h.nics.map(function (x) {
+      var p = x.link_mbps && (x.rx_bps != null || x.tx_bps != null) ? 100 * Math.max(x.rx_bps || 0, x.tx_bps || 0) / (x.link_mbps * 1e6) : null;
+      return '<tr><td><b>' + esc(x.name) + '</b></td><td>' + esc(link(x.link_mbps)) + (x.link_mbps != null && x.link_mbps < 1000 ? ' ' + pill('slow', 'warn') : '') + '</td><td>' + esc(bps(x.rx_bps)) + '</td><td>' + esc(bps(x.tx_bps)) + '</td><td>' + bar(p) + '</td></tr>'; }).join('') + '</tbody></table></div>'; }
+  function drawTrends() { var C = window.zybCharts; if (!C || !V) return;
+    V.hosts.forEach(function (h, i) { var T = h.trend || [], lb = T.map(function (x) { return new Date(x.t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); });
+      var a = $('hvr' + i), b = $('hvn' + i); if (!a || !b) return;
+      if (T.length < 2) { C.empty(a, 'The trend appears after two reports (every 15 minutes)'); C.empty(b, 'The trend appears after two reports'); return; }
+      C.area(a, lb, [{ label: 'CPU %', data: T.map(function (x) { return x.cpu; }), color: 'acc' }, { label: 'Memory %', data: T.map(function (x) { return x.mem_pct; }), color: 'purple' }, { label: 'Disk latency ms', data: T.map(function (x) { return x.disk_ms; }), color: 'warn' }], {});
+      C.area(b, lb, [{ label: 'Receive Mbps', data: T.map(function (x) { return x.rx_bps == null ? null : Math.round(x.rx_bps / 1e5) / 10; }), color: 'teal' }, { label: 'Send Mbps', data: T.map(function (x) { return x.tx_bps == null ? null : Math.round(x.tx_bps / 1e5) / 10; }), color: 'pink' }], {}); }); }
   function load() { req('GET', '/hyperv').then(function (v) { V = v; $('err').innerHTML = ''; draw(); }).catch(function (e) { $('kp').innerHTML = ''; $('body').innerHTML = ''; $('err').innerHTML = '<div class="card"><div class="empty">' + esc(e.status === 404 ? 'Hyper-V Servers is not on this platform yet - run the platform update.' : 'Could not load: ' + e.message) + '</div></div>'; }); }
   function draw() {
     var v = V, k = v.kpis;
-    if (!k.hosts) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(v.note) + '</div><p class="sm mut">On each Hyper-V host, as an administrator: copy hyperv-report.ps1 (on the platform server in /opt/sentra-itam/install/) to C:\\ProgramData\\Sentra\\, run it once with -Server https://&lt;portal&gt;/agent -EnrolToken &lt;token from Settings&gt;, then add the scheduled task shown at the top of the script.</p></div>'; return; }
+    if (!k.hosts) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(v.note) + '</div>' + (can('admin') ? '<p><button type="button" data-addh>+ Add Hyper-V hosts</button> - one command per host, nothing to copy by hand.</p>' : '<p class="sm mut">An administrator adds the hosts with <b>Add Hyper-V hosts</b> on this page.</p>') + '<p class="sm mut">Manual way: On each Hyper-V host, as an administrator: copy hyperv-report.ps1 (on the platform server in /opt/sentra-itam/install/) to C:\\ProgramData\\Sentra\\, run it once with -Server https://&lt;portal&gt;/agent -EnrolToken &lt;token from Settings&gt;, then add the scheduled task shown at the top of the script.</p></div>'; return; }
     $('kp').innerHTML = tile('Hosts', k.hosts, k.stale_hosts ? k.stale_hosts + ' not reporting' : 'all reporting', k.stale_hosts ? 'warn' : 'ok') + tile('VMs', k.vms, k.running + ' running', '') + tile('Need attention', k.high, 'high findings', k.high ? 'bad' : 'ok');
     var F = v.findings.length ? v.findings.slice(0, 30).map(function (f) { return '<div class="act ' + (f.severity === 'high' ? 'bad' : f.severity === 'medium' ? 'warn' : '') + '">' + pill(f.severity, f.severity === 'high' ? 'bad' : f.severity === 'medium' ? 'warn' : '') + ' <b>' + esc(f.host) + '</b> · ' + esc(f.title) + '<div class="mut sm">' + esc(f.fix) + '</div></div>'; }).join('') : '<div class="empty">Nothing needs doing.</div>';
-    var H = v.hosts.map(function (h) {
+    var H = v.hosts.map(function (h, hi) {
       var mem = h.mem_total_mb ? 100 * (h.mem_total_mb - (h.mem_free_mb || 0)) / h.mem_total_mb : null;
       var vols = h.volumes.map(function (x) { var c = (h.capacity.volumes || []).filter(function (y) { return y.name === x.name; })[0] || {}; return '<div class="sm">' + esc(x.name) + ' ' + bar(x.size_gb ? 100 * (x.size_gb - x.free_gb) / x.size_gb : null) + ' <span class="mut">' + esc(x.free_gb) + ' of ' + esc(x.size_gb) + ' GB free' + (c.days != null ? ' · full in ~' + esc(c.days) + ' days' : '') + '</span></div>'; }).join('');
-      var vms = '<div class="tw"><table><thead><tr><th>VM</th><th>State</th><th>vCPU / CPU</th><th>Memory demand / assigned</th><th>Heartbeat</th><th>Checkpoints</th><th>Replication</th>' + (can('operator') ? '<th></th>' : '') + '</tr></thead><tbody>' + h.vms.map(function (m) {
+      var vms = '<div class="tw"><table><thead><tr><th>VM</th><th>State</th><th>vCPU / CPU</th><th>Memory demand / assigned</th><th>Network in / out</th><th>Heartbeat</th><th>Checkpoints</th><th>Replication</th>' + (can('operator') ? '<th></th>' : '') + '</tr></thead><tbody>' + h.vms.map(function (m) {
         return '<tr><td><b>' + esc(m.name) + '</b></td><td>' + pill(m.state || '?', m.state === 'running' ? 'ok' : m.state === 'off' ? '' : 'warn') + '</td><td>' + esc(m.vcpus == null ? '–' : m.vcpus) + ' · ' + bar(m.cpu_pct) + '</td><td>' + (m.mem_assigned_mb ? bar(100 * (m.mem_demand_mb || 0) / m.mem_assigned_mb) + ' <span class="mut sm">' + esc(m.mem_demand_mb) + ' / ' + esc(m.mem_assigned_mb) + ' MB</span>' : '<span class="mut">–</span>') + '</td>'
-          + '<td class="sm">' + esc(m.heartbeat || '') + '</td><td>' + esc(m.checkpoints) + '</td><td class="sm">' + esc([m.replication.state, m.replication.health].filter(Boolean).join(' · ')) + '</td>'
+          + '<td class="sm">' + (m.net_rx_bps == null && m.net_tx_bps == null ? '<span class="mut">–</span>' : esc(bps(m.net_rx_bps)) + ' / ' + esc(bps(m.net_tx_bps))) + '</td><td class="sm">' + esc(m.heartbeat || '') + '</td><td>' + esc(m.checkpoints) + '</td><td class="sm">' + esc([m.replication.state, m.replication.health].filter(Boolean).join(' · ')) + '</td>'
           + (can('operator') ? '<td><select data-vm="' + esc(m.name) + '" data-host="' + esc(h.name) + '" aria-label="Action for ' + esc(m.name) + '"><option value="">propose…</option>' + Object.keys(v.verbs).map(function (a) { return '<option value="' + esc(a) + '">' + esc(v.verbs[a]) + '</option>'; }).join('') + '</select></td>' : '') + '</tr>'; }).join('') + '</tbody></table></div>';
-      return '<div class="host"><h3>' + esc(h.name) + ' ' + (h.stale ? pill('not reporting since ' + new Date(h.at).toLocaleString(), 'warn') : pill('reported ' + new Date(h.at).toLocaleTimeString(), 'ok')) + '</h3><div class="sm">CPU ' + bar(h.cpu_pct) + ' · ' + esc(h.cores || '?') + ' logical processors · vCPU ratio ' + esc(h.vcpu_ratio == null ? '–' : h.vcpu_ratio + ':1') + '</div><div class="sm">Memory ' + bar(mem) + (h.capacity.memory != null ? ' <span class="mut">· 95 % in ~' + esc(h.capacity.memory) + ' days</span>' : ' <span class="mut">· ' + (h.snapshots < 5 ? 'forecast after 5 daily reports' : 'not growing') + '</span>') + '</div>' + vols + vms + '</div>';
+      return '<div class="host"><h3>' + esc(h.name) + ' ' + (h.stale ? pill('not reporting since ' + new Date(h.at).toLocaleString(), 'warn') : pill('reported ' + new Date(h.at).toLocaleTimeString(), 'ok')) + '</h3><div class="sm">CPU ' + bar(h.cpu_pct) + ' · ' + esc(h.cores || '?') + ' logical processors · vCPU ratio ' + esc(h.vcpu_ratio == null ? '–' : h.vcpu_ratio + ':1') + '</div><div class="sm">Memory ' + bar(mem) + (h.capacity.memory != null ? ' <span class="mut">· 95 % in ~' + esc(h.capacity.memory) + ' days</span>' : ' <span class="mut">· ' + (h.snapshots < 5 ? 'forecast after 5 daily reports' : 'not growing') + '</span>') + '</div>' + vols + '<div class="sm" style="margin-top:6px"><b>Network speed</b>' + (h.disk && h.disk.latency_ms != null ? ' · disk latency <b>' + esc(h.disk.latency_ms) + ' ms</b> · read ' + esc(bps(h.disk.read_bps == null ? null : h.disk.read_bps * 8)) + ' · write ' + esc(bps(h.disk.write_bps == null ? null : h.disk.write_bps * 8)) : '') + '</div>' + nicRows(h)
+        + '<div class="grid2" style="margin:8px 0"><div><div class="sm mut">Last 24 h · CPU, memory, disk latency</div><div style="position:relative;height:170px"><canvas id="hvr' + hi + '"></canvas></div></div><div><div class="sm mut">Last 24 h · network (all NICs)</div><div style="position:relative;height:170px"><canvas id="hvn' + hi + '"></canvas></div></div></div>' + vms + '</div>';
     }).join('');
     var A = v.actions.length ? v.actions.map(function (a) { var b = a.status === 'proposed' && can('admin') && a.proposed_by !== ME.user ? ' <button type="button" class="btn" data-dec="approved" data-id="' + esc(a.id) + '">Approve</button> <button type="button" class="btn" data-dec="rejected" data-id="' + esc(a.id) + '">Reject</button>' : '';
       return '<div class="act ' + (a.status === 'failed' ? 'bad' : a.status === 'proposed' ? 'warn' : '') + '"><b>' + esc(a.id) + '</b> ' + esc(v.verbs[a.action] || a.action) + ' ' + esc(a.vm) + ' on ' + esc(a.host) + ' ' + pill(a.status === 'approved' ? 'approved - the host runs it on its next report' : a.status, a.status === 'done' ? 'ok' : a.status === 'failed' ? 'bad' : '') + '<div class="mut sm">' + esc(a.reason) + ' · by ' + esc(a.proposed_by) + (a.decided_by ? ' · decided by ' + esc(a.decided_by) : '') + (a.result ? ' · ' + esc(a.result) : '') + '</div>' + b + '</div>'; }).join('') : '<div class="empty">No VM actions.</div>';
     $('body').innerHTML = '<div class="grid2"><div class="card"><h2>🧭 What needs attention</h2>' + F + '</div><div class="card"><h2>📝 VM actions <span class="c">four-eyes · run by the host itself</span></h2>' + A + '</div></div><div class="card"><h2>🖥 Hosts and VMs</h2>' + H + '</div>';
     $('up').textContent = k.hosts + ' host(s)';
+    try { drawTrends(); } catch (er) { /* a chart that cannot draw leaves its empty box; the tables above carry the figures */ }
   }
   document.addEventListener('change', function (e) {
     var t = e.target; if (!t.hasAttribute || !t.hasAttribute('data-vm') || !t.value) return;
     var why = prompt('Why ' + t.options[t.selectedIndex].text.toLowerCase() + ' ' + t.getAttribute('data-vm') + '?'); if (!why) { t.value = ''; return; }
     req('POST', '/hyperv/actions', { host: t.getAttribute('data-host'), vm: t.getAttribute('data-vm'), action: t.value, reason: why }).then(function (a) { toast(a.id + ' proposed - a different administrator approves'); load(); }).catch(function (er) { toast('Not proposed: ' + er.message); t.value = ''; });
   });
+  // ---- adding hosts (administrators): one command per host, built here from the one-time key the server returns once
+  var AGENT = location.origin + '/agent';
+  function psq(x) { return "'" + String(x).replace(/'/g, "''") + "'"; }
+  function hostCmd(sha, token) {
+    return "$ErrorActionPreference='Stop'; $s=" + psq(AGENT) + "; $d='C:\\ProgramData\\Sentra'; $r=Invoke-RestMethod \"$s/hyperv/script\"; "
+      + "$h=([BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($r.script))) -replace '-','').ToLower(); "
+      + "if ($h -ne " + psq(sha) + ") { throw 'the downloaded script does not match its fingerprint - stopped' }; "
+      + "New-Item -ItemType Directory -Force $d | Out-Null; [IO.File]::WriteAllText(\"$d\\hyperv-report.ps1\", $r.script); "
+      + "powershell -NoProfile -ExecutionPolicy Bypass -File \"$d\\hyperv-report.ps1\" -Server $s -EnrolToken " + psq(token) + "; "
+      + "schtasks /Create /F /TN 'Sentra Hyper-V report' /SC MINUTE /MO 15 /RU SYSTEM /RL HIGHEST /TR \"powershell -NoProfile -ExecutionPolicy Bypass -File $d\\hyperv-report.ps1 -Server $s\"";
+  }
+  function onbLoad() { req('GET', '/hyperv/onboard').then(function (o) { $('onbsha').textContent = 'script fingerprint ' + o.script.sha256.slice(0, 16) + '…';
+    $('onbinv').innerHTML = o.invited.length ? '<h3 style="margin-top:14px">Hosts added</h3><div class="tw"><table><thead><tr><th>Host</th><th>State</th><th>Added</th><th>Key valid until</th></tr></thead><tbody>' + o.invited.map(function (x) {
+      return '<tr><td><b>' + esc(x.host) + '</b></td><td>' + pill(x.state, x.state === 'reporting' ? 'ok' : /expired|revoked/.test(x.state) ? 'bad' : 'warn') + '</td><td class="sm">' + esc(String(x.created_at).slice(0, 16).replace('T', ' ')) + ' · ' + esc(x.created_by || '') + '</td><td class="sm">' + esc(String(x.expires_at).slice(0, 16).replace('T', ' ')) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '';
+  }).catch(function (er) { $('onbinv').innerHTML = '<p class="err">' + esc(er.message) + '</p>'; }); }
+  function onbOpen() { $('onb').hidden = false; $('onb').scrollIntoView({ block: 'start' }); $('onbh').focus(); onbLoad(); }
+  function onbGo() {
+    var hosts = $('onbh').value.split(/[\s,;]+/).map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!hosts.length) { toast('Type at least one host name'); return; }
+    $('onbgo').disabled = true;
+    req('POST', '/hyperv/onboard', { hosts: hosts }).then(function (o) { $('onbgo').disabled = false; $('onbh').value = '';
+      $('onbout').innerHTML = '<p class="sm"><b>Copy each command now</b> - the keys are shown only once. Each works on its own host, once, within 24 hours.</p>' + o.hosts.map(function (h, i) {
+        return '<div class="host"><b>' + esc(h.host) + '</b> <button type="button" data-copy="c' + i + '">Copy</button><pre id="c' + i + '" style="white-space:pre-wrap;word-break:break-all;font-size:12px;margin:6px 0 0">' + esc(hostCmd(o.script_sha256, h.token)) + '</pre></div>'; }).join('');
+      onbLoad(); }).catch(function (er) { $('onbgo').disabled = false; toast('Not created: ' + er.message); });
+  }
   document.addEventListener('click', function (e) {
     var t = e.target, a;
     if (t.id === 'rf') return load();
+    if (t.id === 'addh' || t.closest('[data-addh]')) return onbOpen();
+    if (t.id === 'onbgo') return onbGo();
+    if ((a = t.closest('[data-copy]'))) { var pre = $(a.getAttribute('data-copy')); try { navigator.clipboard.writeText(pre.textContent).then(function () { toast('Copied'); }, function () { toast('Select the command and copy it'); }); } catch (er) { toast('Select the command and copy it'); /* no clipboard API: the text is selectable */ } return; }
     if ((a = t.closest('[data-dec]'))) { var d = a.getAttribute('data-dec'), cm = d === 'rejected' ? prompt('Why is it rejected?') : ''; if (d === 'rejected' && !cm) return; req('POST', '/hyperv/actions/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: d, comment: cm || undefined }).then(function (x) { toast(x.id + ' ' + x.status); load(); }).catch(function (er) { toast(er.message); }); }
   });
-  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* viewer */ } load(); }; w.onerror = load; w.send();
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* viewer */ } $('addh').hidden = !can('admin'); load(); }; w.onerror = load; w.send();
 })();
 </script></body></html>
