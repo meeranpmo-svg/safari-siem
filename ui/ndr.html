@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network Detection</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Network Detection & Response over /api/soc/ndr: hosts ranked by an itemised risk, and the detections behind it (beaconing,
+     unusual outbound volume, lateral movement, a new destination country) - each against the organisation's own history. Read-only;
+     a known-good pattern is suppressed only when a different person approves. Analysts and above: it names hosts. -->
+<style>
+.grid2{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:12px}@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.act{border-left:3px solid #4299e1;padding:6px 10px;margin:6px 0;border-radius:4px;background:rgba(255,255,255,.02)}.act.bad{border-color:#e5484d}.act.warn{border-color:#f59f00}
+.mut{color:#8b93a4}.sm{font-size:12px}.bar{display:inline-block;width:80px;height:7px;border-radius:5px;background:rgba(255,255,255,.08);vertical-align:middle;overflow:hidden;margin-right:4px}.bar i{display:block;height:100%;background:#e5484d}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security operations · network</div><h1>Network Detection &amp; Response</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="run" hidden>▶ Run now</button><button type="button" id="rf">⟳ Refresh</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div id="body"></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var S = window.zybSoc, esc = S.esc, $ = function (i) { return document.getElementById(i); }, V = null, SUP = [], KIND = { beacon: 'Beaconing', exfil: 'Unusual outbound volume', lateral: 'Lateral movement', country: 'New country' };
+  function load() {
+    $('run').hidden = !S.can('operator');
+    Promise.all([S.req('GET', '/ndr'), S.req('GET', '/ndr/suppressions')]).then(function (r) { V = r[0]; SUP = r[1].suppressions || []; $('up').textContent = V.ran ? 'ran ' + S.ago(V.at) : 'not run yet'; draw(); })
+      .catch(function (e) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card">' + (e.status === 404 ? '<div class="empty">NDR is not on this SIEM yet - run the platform update.</div>' : e.status === 403 ? '<div class="empty">NDR names hosts: an analyst or above opens it.</div>' : S.errHtml(e, 'NDR')) + '</div>'; });
+  }
+  function draw() {
+    if (!V.ran) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(V.note) + '</div></div>'; return; }
+    var D = V.detections, c = function (k) { return D.filter(function (d) { return d.kind === k; }).length; };
+    $('kp').innerHTML = S.tile('Hosts at risk', V.hosts.length, V.hosts.filter(function (h) { return h.risk >= 60; }).length + ' at 60 or more', V.hosts.length ? 'warn' : 'ok')
+      + S.tile('Beaconing', c('beacon'), 'regular check-ins outside', c('beacon') ? 'bad' : 'ok') + S.tile('Outbound volume', c('exfil'), 'against each host\'s usual', c('exfil') ? 'bad' : 'ok')
+      + S.tile('Lateral movement', c('lateral'), 'admin ports inside', c('lateral') ? 'bad' : 'ok') + S.tile('New countries', c('country'), 'first in 30 days', c('country') ? 'warn' : 'ok') + S.tile('Suppressed', V.suppressed, 'approved known-good', '');
+    var hosts = V.hosts.length ? V.hosts.map(function (h) { return '<div class="act ' + (h.risk >= 60 ? 'bad' : 'warn') + '"><b>' + esc(h.host) + '</b> <span class="bar"><i style="width:' + h.risk + '%"></i></span>' + esc(h.risk) + '<div class="sm">' + h.reasons.map(function (r) { return esc('+' + r.points + ' ' + (KIND[r.kind] || r.kind) + ': ' + r.why); }).join('<br>') + '</div></div>'; }).join('') : '<div class="empty">No host shows unusual network behaviour.</div>';
+    var det = D.length ? '<div class="tw"><table><thead><tr><th>Detection</th><th>Host</th><th>Why</th><th></th></tr></thead><tbody>' + D.map(function (d, i) { return '<tr><td>' + S.sev(d.severity) + ' ' + esc(KIND[d.kind] || d.kind) + '</td><td><b>' + esc(d.host) + '</b>' + (d.dst ? '<div class="mut sm">' + esc(d.dst) + '</div>' : '') + '</td><td class="sm">' + esc(d.why) + '</td><td>' + (S.can('analyst') ? '<button type="button" class="btn" data-sup="' + i + '">Propose suppression</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">No detection in the last run.</div>';
+    var sup = SUP.length ? SUP.slice(0, 30).map(function (s) { return '<div class="act ' + (s.status === 'proposed' ? 'warn' : '') + '"><b>' + esc(s.id) + '</b> ' + esc(s.host) + ' → ' + esc(s.dst || KIND[s.kind] || s.kind) + ' ' + S.pill(s.status, s.status === 'approved' ? 'ok' : s.status === 'rejected' ? 'bad' : '') + '<div class="mut sm">' + esc(s.reason) + ' · by ' + esc(s.proposed_by) + (s.expires ? ' · until ' + esc(s.expires) : '') + '</div>' + (s.status === 'proposed' && S.user() !== s.proposed_by ? '<button type="button" class="btn" data-dec="approved" data-id="' + esc(s.id) + '">Approve</button> <button type="button" class="btn" data-dec="rejected" data-id="' + esc(s.id) + '">Reject</button>' : '') + '</div>'; }).join('') : '<div class="empty">No suppression.</div>';
+    $('body').innerHTML = '<div class="grid2"><div class="card"><h2>🎯 Hosts by risk</h2>' + hosts + '</div><div class="card"><h2>🔎 Detections <span class="c">each against the organisation\'s own history</span></h2>' + det + '</div></div>'
+      + '<div class="card"><h2>🤝 Suppressions <span class="c">four-eyes: a different person approves</span></h2>' + sup + '</div>' + (V.errors.length ? '<p class="sm" style="color:#ff8a8e">' + V.errors.map(esc).join('<br>') + '</p>' : '')
+      + '<p class="mut sm">Read from the firewalls\' traffic logs every hour. Nothing is blocked from here: open a case, or plan a FortiGate change on FortiGate Fleet.</p>';
+  }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target, a;
+    if (t.id === 'rf') return load();
+    if (t.id === 'run') { t.disabled = true; S.req('POST', '/ndr/run', {}).then(function (r) { S.toast(r.detections.length + ' detection(s)'); load(); }).catch(function (e) { S.toast(e.message); }).then(function () { t.disabled = false; }); return; }
+    if ((a = t.closest('[data-sup]'))) { var d = V.detections[Number(a.getAttribute('data-sup'))], why = prompt('Why is this known-good?'); if (!why) return; var until = prompt('Until (YYYY-MM-DD, empty = no end)') || undefined;
+      S.req('POST', '/ndr/suppressions', d.dst && d.kind !== 'exfil' && d.kind !== 'lateral' ? { host: d.host, dst: d.dst, reason: why, expires: until } : { host: d.host, kind: d.kind, reason: why, expires: until }).then(function (s) { S.toast(s.id + ' proposed - waiting for approval'); load(); }).catch(function (e) { S.toast('Not proposed: ' + e.message); }); return; }
+    if ((a = t.closest('[data-dec]'))) { var dec = a.getAttribute('data-dec'), cm = dec === 'rejected' ? prompt('Why is it rejected?') : ''; if (dec === 'rejected' && !cm) return; S.req('POST', '/ndr/suppressions/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: dec, comment: cm || undefined }).then(function (s) { S.toast(s.id + ' ' + s.status); load(); }).catch(function (e) { S.toast(e.message); }); }
+  });
+  S.ready(load);
+})();
+</script></body></html>

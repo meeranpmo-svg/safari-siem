@@ -301,7 +301,8 @@ async function main({ configPath, installSignals = true } = {}) {
   if (state) routeModules.push('facilities/routes.js'); // Door access: ZKTeco ZKBioSecurity controllers, doors and 24 h door alarms (read only, no person)
   if (state) routeModules.push('printers/routes.js');
   if (state) routeModules.push('ops/questions-routes.js'); // questions from the IT Infrastructure Manager to the DBA / server / Exchange / network teams on flagged problems (last: reads their modules) // Printers: Xerox fleet health over SNMP + YSoft SAFEQ 6 usage reports
-  if (state) routeModules.push('netops/fmg-routes.js');   // FortiGate fleet through FortiManager: health, firmware, licences, SD-WAN link state, four-eyes changes
+  if (state) routeModules.push('netops/fmg-routes.js');
+  if (state) routeModules.push('soc/ndr.js');   // NDR: beaconing, unusual outbound volume, lateral movement, new countries from the traffic logs - each against its own baseline   // FortiGate fleet through FortiManager: health, firmware, licences, SD-WAN link state, four-eyes changes
   if (state) routeModules.push('soc/flow-analytics-routes.js'); // NetFlow Analytics: NetFlow v5/v9, IPFIX, sFlow collector (UDP) + traffic analytics (after netops: speeds; after reports: SMTP)
   // what happened to each route module, kept in a file for the updater's summary (journald may drop lines in a start burst)
   const routeStatus = require('./util/route-status').createRouteStatus({ file: path.join(cfg.state_dir, 'routes-status.json') });
