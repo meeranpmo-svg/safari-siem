@@ -205,6 +205,10 @@ async function main({ configPath, installSignals = true } = {}) {
   let cloudflare = cfMod.start({ config: cfg, parser, pipeline, log: log.child({ mod: 'cloudflare' }), stateDir: cfg.state_dir });
   const reloadCloudflare = async () => { await cloudflare.stop(); cloudflare = cfMod.start({ config: cfg, parser, pipeline, log: log.child({ mod: 'cloudflare' }), stateDir: cfg.state_dir }); };   // settings changed in the portal
   const cloudflareStats = () => cloudflare.stats();
+  const mcMod = require('./collect/mimecast');
+  let mimecast = mcMod.start({ config: cfg, parser, pipeline, log: log.child({ mod: 'mimecast' }), stateDir: cfg.state_dir });
+  const reloadMimecast = async () => { await mimecast.stop(); mimecast = mcMod.start({ config: cfg, parser, pipeline, log: log.child({ mod: 'mimecast' }), stateDir: cfg.state_dir }); };   // settings changed in the portal
+  const mimecastStats = () => mimecast.stats(), mimecastPoll = () => mimecast.pollNow();
   const reloadM365 = async () => { await m365.stop(); m365 = m365Mod.start({ config: cfg, parser, pipeline, log: log.child({ mod: 'm365' }), stateDir: cfg.state_dir }); };   // Exchange Online settings changed in the portal
   const lr = require('./collect/lr').start({ config: cfg, state, log: log.child({ mod: 'lr' }) });
 
@@ -224,7 +228,7 @@ async function main({ configPath, installSignals = true } = {}) {
   require('./api/lr-import').register(api, { alerts, state, config: cfg, log: log.child({ mod: 'lr-import' }) }); // before soc/routes.js (superset of its /lr/alarms); state+config enable collector-health flood remediation
   const m365Graph = require('./collect/m365-graph').createGraph({ config: cfg, log: log.child({ mod: 'm365-graph' }), stateDir: cfg.state_dir }).start();   // licences / users / Intune / posture for the portal
   const m365Files = require('./collect/m365-files').createFiles({ graph: m365Graph, config: cfg, log: log.child({ mod: 'm365-files' }), stateDir: cfg.state_dir }).start();   // SharePoint / OneDrive personal-data discovery (PDPL)
-  const deps = { hardening, piiShares, m365Files, ch, state, detector, alerts, cases, ueba, dataopt, identity, adSync, reloadM365, reloadCloudflare, cloudflareStats, m365Graph, extras: { m365: () => m365.stats() }, config: cfg, log, search, intel, scheduled, pipeline, writer, parser, api, tracker, ingest, syslog };
+  const deps = { hardening, piiShares, m365Files, ch, state, detector, alerts, cases, ueba, dataopt, identity, adSync, reloadM365, reloadCloudflare, cloudflareStats, reloadMimecast, mimecastStats, mimecastPoll, m365Graph, extras: { m365: () => m365.stats() }, config: cfg, log, search, intel, scheduled, pipeline, writer, parser, api, tracker, ingest, syslog };
   const routeModules = ['detect/routes.js', 'soc/routes.js'];
   if (dataopt) routeModules.push('dataopt/api.js');
   if (identity) routeModules.push('ad/routes.js');
@@ -290,7 +294,8 @@ async function main({ configPath, installSignals = true } = {}) {
   if (state) routeModules.push('ksc/routes.js');     // AI Endpoint Protection Engineer — Kaspersky Security Center (read-only posture) — before duty (sets deps.kscInstance)
   if (state) routeModules.push('duty/routes.js');    // AI engineers' duty desk: patrol, work items, investigation, change-plan follow-up, verification, shift reports (after netops + sysadmin + zscaler + ksc)
   if (state) routeModules.push('itaudit/routes.js'); // evidence for the AI IT / Cyber Security Auditors: AD, network devices, databases, applications (read-only; after netops + db-audit)
-  routeModules.push('collect/cloud-routes.js');      // Cloud log sources settings: Cloudflare pull (API token), status
+  routeModules.push('collect/cloud-routes.js');
+  routeModules.push('collect/mimecast-routes.js');   // Mimecast email security: API 2.0 SIEM batch pull (client ID / secret), status, test, poll now      // Cloud log sources settings: Cloudflare pull (API token), status
   if (state) routeModules.push('collect/cloud-data-routes.js'); // Data Security Posture: read-only discovery of Azure Blob / AWS S3 / OCI Object Storage (region, public, encryption, personal-data counts)
   if (state) routeModules.push('facilities/routes.js'); // Door access: ZKTeco ZKBioSecurity controllers, doors and 24 h door alarms (read only, no person)
   if (state) routeModules.push('printers/routes.js');
@@ -327,6 +332,7 @@ async function main({ configPath, installSignals = true } = {}) {
       await step('m365', () => m365.stop());
       await step('m365-graph', () => m365Graph.stop());
       await step('cloudflare', () => cloudflare.stop());
+      await step('mimecast', () => mimecast.stop());
       await step('lr', () => lr.stop());
       if (adSync) await step('ad-sync', () => adSync.stop());
       if (deps.compliance && deps.compliance.grcPush) await step('grc-push', () => deps.compliance.grcPush.stop());

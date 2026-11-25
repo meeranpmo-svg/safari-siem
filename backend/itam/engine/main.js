@@ -102,6 +102,33 @@ function createApp(opts = {}) {
   require('./backup').registerBackup(srv, app); // backup coverage: NetBackup, Veeam, Cohesity (engine/backup.js)
   require('./pentest').registerPentest(srv, app); // AI Penetration Testing Engineer: authorised attack-surface assessment (engine/pentest.js)
   require('./grc').registerGrc(srv, app); // GRC policy register + control automation: the the organisation approved IT policies (engine/grc.js)
+  // add-ons that install/add-*.sh used to add one by one: registered here so a fresh server serves every page. The service
+  // (node engine/main.js) always turns them on; tests that build the base engine and register a module themselves leave them off.
+  if (opts.addons) {
+    require('./ownership').registerOwnership(srv, app); // asset IT owner + business owner + business service (engine/ownership.js)
+    require('./inventory-facts').registerInventoryFacts(srv, app); // inventory columns: IP, VM host, VM name, power state (engine/inventory-facts.js)
+    require('./asset-links').registerAssetLinks(srv, app); // web addresses of assets (apps, management consoles) (engine/asset-links.js)
+    require('./storage').registerStorage(srv, app); // storage arrays: NetApp ONTAP, HPE MSA (engine/storage.js)
+    require('./support-contracts').registerSupportContracts(srv, app); // support contracts for every vendor (engine/support-contracts.js)
+    require('./licence-sync').registerLicenceSync(srv, app); // licence details from the assets + Microsoft 365 (engine/licence-sync.js)
+    require('./reconcile').registerReconcile(srv, app); // server & asset reconciliation (engine/reconcile.js)
+    require('./service-map').registerServiceMap(srv, app); // Business Services: what runs on every server, business-critical decisions (engine/service-map.js)
+    require('./handover').registerHandover(srv, app); // staff handover: leavers' items, successors, access removal, notes, sign-off (engine/handover.js)
+    require('./log-enrol').registerLogEnrol(srv, app); // automatic SIEM enrolment of discovered assets (engine/log-enrol.js)
+    require('./infra-sync').registerInfraSync(srv, app); // IT Asset Management <-> Infrastructure Automation targets (engine/infra-sync.js)
+    require('./sysadmin-sync').registerSysadminSync(srv, app); // Windows / Exchange servers -> AI Server Administrators (engine/sysadmin-sync.js)
+    require('./manageengine').registerManageEngine(srv, app); // ManageEngine Endpoint Central + ServiceDesk Plus (engine/manageengine.js)
+    require('./cred-posture').registerCredPosture(srv, app); // credential encryption evidence (engine/cred-posture.js)
+    require('./db-health').registerDbHealth(srv, app); // Oracle health from Asset Discovery logins → AI Oracle DBA (engine/db-health.js)
+    require('./cisco-support').registerCiscoSupport(srv, app); // Cisco support coverage (engine/cisco-support.js)
+    require('./virt-capacity').registerVirtCapacity(srv, app); // VMware / Nutanix capacity planning (engine/virt-capacity.js)
+    require('./virt-power').registerVirtPower(srv, app); // power control: host / VM restart, shutdown, start as approved plans (engine/virt-power.js)
+    require('./desksupport').registerDeskSupport(srv, app); // AI Desktop Support (engine/desksupport.js)
+    require('./duty').registerDuty(srv, app); // AI engineers' duty desk: pentest + desktop support (engine/duty.js)
+    require('./budget').registerBudget(srv, app); // next-year IT budget, CAPEX / OPEX (engine/budget.js)
+    require('./infra-overview').registerInfraOverview(srv, app); // IT Infrastructure Manager overview (engine/infra-overview.js)
+    require('./ciso').registerCiso(srv, app); // AI CISO: posture, risks, decisions, board brief (engine/ciso.js)
+  }
   require('./domains').registerDomains(srv, app); // external domains, DNS, e-mail security and certificates (engine/domains.js)
 
   let timer = null; let findingsTimer = null;
@@ -134,7 +161,7 @@ if (require.main === module) {
   const log = createLogger({ level: cfg.config.log_level });
   const major = Number(process.versions.node.split('.')[0]);
   if (major < 20) { log.error('Node.js >= 20 is required', { node: process.version }); process.exit(1); }
-  const app = createApp({ config: cfg.config, secrets: cfg.secrets, log });
+  const app = createApp({ config: cfg.config, secrets: cfg.secrets, log, addons: true });
   app.audit({ action: 'service.start', target: 'sentra-itam', detail: { version: VERSION, provider: app.provider.kind } });
   app.start().catch((e) => { log.error('start failed', { err: e.message }); process.exit(1); });
   let stopping = false;

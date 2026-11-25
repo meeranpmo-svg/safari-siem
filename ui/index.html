@@ -415,6 +415,7 @@ window.__orgApply(on,light);})();</script>
     <a class="st" id="grc-er" href="enterprise-risk.html"><span class="hd"><span class="l">Enterprise Risk</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">risk posture</span></a>
     <a class="st" id="grc-sama" href="sama-audit.html"><span class="hd"><span class="l">SAMA Cyber Security Framework</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">SAMA CSF</span></a>
     <a class="st" id="grc-nca-ecc" href="nca-ecc.html"><span class="hd"><span class="l">NCA ECC</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">Essential Cybersecurity Controls</span></a>
+    <a class="st" id="grc-iso27001" href="iso27001.html"><span class="hd"><span class="l">ISO/IEC 27001</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">information security management</span></a>
     <a class="st" id="grc-pdpl" href="pdpl-dashboard.html"><span class="hd"><span class="l">PDPL</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">Personal Data Protection Law</span></a>
     <a class="st" id="grc-ndmo" href="ndmo.html"><span class="hd"><span class="l">NDMO</span><span class="dot"></span></span><span class="v na">Loading…</span><span class="bar"><i></i></span><span class="s">data management</span></a>
   </div>
@@ -557,7 +558,7 @@ window.__orgApply(on,light);})();</script>
       areas:['soc'],eng:['siem','security'],aipage:'ai-security-engineer.html',tiles:['st-dec','st-prob','st-ai'],cta:['soc-alerts.html','Open the Alert Queue'],
       quick:[['soc-alerts.html','Alert Queue','Triage, assign and close'],['soc-cases.html','Investigations & Cases','Cases and their evidence'],['soc-hunt.html','Threat Hunting & Search','Hunt across every source'],['soc-xdr.html','XDR','One incident per attack'],['soc-ueba.html','User Behaviour (UEBA)','Unusual users and hosts'],['soc-response.html','Playbooks & Approvals','Containment waiting for a decision'],['incident-response.html','Incident Response Center','Major incidents end to end'],['soc-ti.html','Threat Intelligence','Indicators and sightings']],
       also:['email-security.html','vapt-center.html','server-availability.html','soc-sources.html']},
-    risk:{name:'Risk & Compliance',c:'#3fb950',icon:'grc',sub:'Risk register · Compliance frameworks',intro:'Enterprise risk and regulatory compliance: the risk posture and appetite, SAMA / IA / NCA standing and what is due. Data privacy and audit have their own homes.',
+    risk:{name:'Risk & Compliance',c:'#3fb950',icon:'grc',sub:'Risk register · Compliance frameworks',intro:'Enterprise risk and regulatory compliance: the risk posture and appetite, the standing against each framework that applies and what is due. Data privacy and audit have their own homes.',
       areas:['grc','cmp'],eng:['ciso'],tiles:['st-dec','st-ai'],cta:['risk-command.html','Open the Risk Command Center'],
       quick:[['my-workspace.html','My Workspace','Your brief, mail, meetings and actions'],['risk-command.html','Risk Command Center','Posture, heat map, appetite, Monte Carlo'],['risk-studio.html','Risk Register','Every risk with its evidence'],['grc-workspace.html','Risks & Actions','Treatment actions and owners'],['audit-dashboard.html','Audit Dashboard','Every framework and the assurance index'],['compliance-overview.html','Compliance Overview','SAMA, NCA ECC, ISO 27001, PDPL, NDMO'],['pdpl-studio.html','PDPL Studio','Personal data protection standing'],['report-center.html','Reporting Center','Committee and regulator reports']],
       also:['audit-command.html','roadmap.html','dept-checklist.html','live-compliance.html']},
@@ -678,12 +679,18 @@ window.__orgApply(on,light);})();</script>
       tileSet('grc-er',p.value+' / 100','risk posture'+(r.j.kpis&&r.j.kpis.over_appetite?' · '+r.j.kpis.over_appetite+' above appetite':''),grcTone(p.value));grcBar('grc-er',p.value);});
     get('/api/itam/audit-dashboard').then(function(r){var F={};((r.j&&r.j.frameworks)||[]).forEach(function(f){F[f.id]=f;});
       var LBL={compliant:'compliant',partial:'partly compliant',gaps:'gaps open'};
-      ['sama','nca-ecc','pdpl','ndmo'].forEach(function(k){var id='grc-'+k,f=F[k];
+      ['sama','nca-ecc','iso27001','pdpl','ndmo'].forEach(function(k){var id='grc-'+k,f=F[k];if(!$(id))return;
         if(r.s!==200){tileSet(id,why(r));grcBar(id,null);return;}
         if(!f||f.available===false){tileSet(id,'not connected',f&&f.reason?String(f.reason).slice(0,60):'');grcBar(id,null);return;}
         if(f.score==null){tileSet(id,'not assessed','no assessment yet');grcBar(id,null);return;}
         tileSet(id,Math.round(f.score)+'%',LBL[f.status]||f.status||'',grcTone(f.score));grcBar(id,f.score);});});
   }
+  // the strip shows only what applies to the organisation (brand setting: frameworks, pages_off): a framework it is not under, or a
+  // page switched off, has no tile
+  (function(){var o=window.ZYB_ORG||{},fw=o.frameworks||[],off=o.pages_off||[],all=!!o.frameworks_all||!fw.length;
+    var T={'grc-sama':'sama','grc-nca-ecc':'nca','grc-iso27001':'iso27001','grc-pdpl':'pdpl','grc-ndmo':'ndmo'};
+    Object.keys(T).forEach(function(id){var el=$(id);if(el&&!all&&fw.indexOf(T[id])<0)el.remove();});
+    document.querySelectorAll('#grc a.st').forEach(function(a){var h=(a.getAttribute('href')||'').replace(/\.html$/,'');if(off.indexOf(h)>=0)a.remove();});})();
   grcLoad();
   // Brand colours switch: Zyberon Sentra (the default design) or the organisation colours; saved with the dashboard preferences, which the
   // sign-in page reads too

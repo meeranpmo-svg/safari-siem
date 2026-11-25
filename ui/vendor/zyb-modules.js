@@ -52,7 +52,23 @@
     if (FULL || !window.ZYB_NAV || !window.ZYB_NAV.length) return !!FULL;
     FULL = window.ZYB_NAV.map(function (a) { return Object.assign({}, a, { pages: a.pages.slice() }); });
     FULL.forEach(function (a) { a.pages.forEach(function (p) { var k = p.h.replace(/\.html$/, ''); OF[p.h] = PAGE[k] || AREA[a.id] || null; AOF[p.h] = a.id; }); });
+    sectorPrune();
     return true;
+  }
+  // the organisation's sector (brand setting): the catalogue and the ready-made solutions offer only what applies - a module in
+  // modules_off, or one whose every page is in pages_off (and that has no portal view), is not offered on Modules & Solutions;
+  // its pages stay off. Pages in pages_off are not counted. Product builds (frameworks_all) keep the whole catalogue.
+  function sectorPrune() {
+    var O = window.ZYB_ORG || {}; if (O.frameworks_all || (!(O.modules_off || []).length && !(O.pages_off || []).length)) return;
+    var offP = {}; (O.pages_off || []).forEach(function (k) { offP[k + '.html'] = 1; });
+    Object.keys(OF).forEach(function (h) { if (offP[h]) delete OF[h]; });
+    FULL.forEach(function (a) { a.pages = a.pages.filter(function (p) { return !offP[p.h]; }); });
+    var gone = {}; (O.modules_off || []).forEach(function (id) { gone[id] = 1; });
+    CAT.forEach(function (m) { var o = m[5] || {}; if (o.core) { delete gone[m[0]]; return; } var had = false, left = false;
+      Object.keys(AOF).forEach(function (h) { var k = h.replace(/\.html$/, ''), mod = PAGE[k] || AREA[AOF[h]] || null; if (mod === m[0]) { had = true; if (!offP[h]) left = true; } });
+      if (had && !left && !(m[4] || []).length) gone[m[0]] = 1; });
+    for (var i = CAT.length - 1; i >= 0; i--) if (gone[CAT[i][0]]) { delete BY[CAT[i][0]]; CAT.splice(i, 1); }
+    Object.keys(SOLUTIONS).forEach(function (k) { if (Array.isArray(SOLUTIONS[k])) { SOLUTIONS[k] = SOLUTIONS[k].filter(function (id) { return !gone[id]; }); if (!SOLUTIONS[k].length) delete SOLUTIONS[k]; } });
   }
   function moduleOf(h) { init(); var f = file(h); return OF[f] || PAGE[f.replace(/\.html$/, '')] || null; }
   function pagesOf(id) { init(); var out = []; (FULL || []).forEach(function (a) { a.pages.forEach(function (p) { if (OF[p.h] === id) out.push(p); }); }); return out; }

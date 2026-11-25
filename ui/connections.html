@@ -35,6 +35,7 @@
 
   // ---------- modal form
   function closeModal(){$('ov').style.display='none';$('ovb').style.display='none';document.body.classList.remove('modal-open');$('modal').innerHTML='';}
+  function mcHost(u){try{return new URL(u||'https://api.services.mimecast.com').hostname;}catch(e){/* a malformed saved address is shown as typed */return String(u||'');}}
   // a step-by-step diagnosis as one message: all passed, or the first failing step with what was seen and the fix
   function diagMsg(r){var steps=(r&&r.steps)||[],f=steps.filter(function(x){return x.status==='fail';})[0],w=steps.filter(function(x){return x.status==='warn';});
     if(!f)return 'All '+steps.length+' checks passed'+(w.length?' - next: '+w.map(function(x){return x.step+': '+x.fix;}).join(' · '):'');
@@ -582,6 +583,28 @@
      test:function(){return req(this.api,'POST','/cloud/cloudflare/diagnose',{}).then(diagMsg);},
      sync:function(id){return this.test(id);},
      del:function(){return req(this.api,'PUT','/cloud/cloudflare',{enabled:false,zones:[],account_id:''}).then(function(){return 'Cloudflare collection stopped (the token stays stored until replaced)';});} },
+   { id:'mimecast', icon:'mail-cog',tone:'indigo', name:'Mimecast Email Security (API 2.0 - SIEM log batches)', group:'Email security (Mimecast cloud gateway)', api:'/api/soc', detail:'email-security.html', svc:'sentra-siem', fix:'sudo bash "$(ls -td ~/sentra-update-*/ | head -n1)sentra-siem/install/deploy-engine.sh"',
+     // read-only pull: the SIEM signs in with an API 2.0 application (client ID / secret, write-only) and downloads the SIEM log batches
+     load:function(){return req(this.api,'GET','/cloud/mimecast').then(function(d){if(!d.client_secret_set&&!d.enabled)return [];var s=d.status||{};
+       return [{id:'mimecast',name:(d.types||[]).length+' log type(s) · '+mcHost(d.base_url),info:(d.enabled?'enabled':'saved, NOT enabled')+' · every '+(d.poll_min||15)+' min'+(s.polls?' · '+s.polls+' poll(s), '+(s.records||0)+' record(s)':''),
+         cred:!!(d.client_id_set&&d.client_secret_set),last:s.last_poll_at||s.error||s.last_error?{at:s.last_poll_at?Date.parse(s.last_poll_at):null,errors:(s.error||s.last_error)?[s.error||s.last_error]:[]}:null}];});},
+     form:function(cur,isNew){var known=(cur&&cur.known_types)||['receipt','process','delivery','av','spam','impersonation protect','url protect','attachment protect','internal email protect','journal'];return [
+       {k:'base_url',label:'API gateway (your Mimecast region)',value:cur?cur.base_url||'':'https://api.services.mimecast.com',placeholder:'https://api.services.mimecast.com',hint:'global: api.services.mimecast.com - US / UK tenants use their regional API 2.0 address shown in the Mimecast console'},
+       {k:'client_id',label:'Client ID',required:!!isNew,placeholder:isNew?'':'leave empty to keep the stored one',hint:'Administration → Services → API and Platform Integrations → Your Application Integrations → Add API Application (role with SIEM / log read only)'},
+       {k:'client_secret',label:'Client secret',type:'password',required:!!isNew,placeholder:isNew?'':'leave empty to keep the stored one',hint:'shown once when the application is created; stored sealed, never shown again'},
+       {k:'types',label:'Log types',value:cur?(cur.types||[]).join(', '):known.join(', '),hint:'comma-separated, from: '+known.join(', ')},
+       {k:'poll_min',label:'Poll every (minutes)',value:cur?String(cur.poll_min||15):'15',hint:'15 - 240; Mimecast allows 50 API calls per 15 minutes'},
+       {k:'enabled',label:'Collect',type:'select',value:!isNew&&cur&&cur.enabled===false?'false':'true',options:[{v:'true',l:'Enabled - pull now and every poll'},{v:'false',l:'Saved, not collecting'}]}];},
+     save:function(v,isNew){var self=this,b={enabled:v.enabled!=='false'};if(v.client_id)b.client_id=v.client_id.trim();if(v.client_secret)b.client_secret=v.client_secret;
+       if(v.base_url)b.base_url=v.base_url.trim();if(v.types)b.types=v.types.split(',').map(function(x){return x.trim();}).filter(Boolean);if(v.poll_min)b.poll_min=Number(v.poll_min);
+       return req(self.api,'PUT','/cloud/mimecast',b).then(function(){return self.test();});},
+     add:function(){var self=this;return req(self.api,'GET','/cloud/mimecast').then(function(d){if(d.client_secret_set||d.enabled)return self.edit('mimecast');
+       openForm('Connect Mimecast','Read-only: the SIEM signs in with a Mimecast API 2.0 application and downloads the SIEM log batches (receipt, delivery, AV, spam, impersonation, URL and attachment protect). Nothing is changed in Mimecast.',self.form(d,true),function(v){return self.save(v,true);});});},
+     edit:function(){var self=this;return req(self.api,'GET','/cloud/mimecast').then(function(d){openForm('Mimecast connection','Change the region, log types or the application. Leave the client ID / secret empty to keep the stored ones.',self.form(d,false),function(v){return self.save(v,false);},null,'Save &amp; test');});},
+     test:function(){return req(this.api,'POST','/cloud/mimecast/test',{}).then(function(r){var st=(r&&r.steps)||[],f=st.filter(function(x){return !x.ok;})[0];
+       return f?('Stopped: '+f.text):('All '+st.length+' checks passed - '+st.map(function(x){return x.text;}).join(' · '));});},
+     sync:function(){return req(this.api,'POST','/cloud/mimecast/sync',{}).then(function(s){return 'Polled - '+(s.records||0)+' record(s) so far'+(s.last_error?' · '+s.last_error:'');});},
+     del:function(){return req(this.api,'PUT','/cloud/mimecast',{enabled:false}).then(function(){return 'Mimecast collection stopped (the application stays stored until replaced)';});} },
    { id:'esglog', icon:'mail-forward',tone:'teal', name:'Libraesva ESG - mail log to the SIEM (syslog)', group:'Email security (every message the gateway passed, blocked or quarantined)', api:'/api/soc', detail:'email-route-map.html', svc:'sentra-siem', fix:'sudo bash "$(ls -td ~/sentra-update-*/ | head -n1)sentra-siem/install/deploy-engine.sh"',
      // the gateway PUSHES its mail / Amavis log to the SIEM by remote syslog: a connection here is a registered sender (IP + the Libraesva parser), no password
      load:function(){return req(this.api,'GET','/onboard/sources').then(function(d){return (d.sources||[]).filter(function(x){return x.kind==='email-security-gateway'&&(!x.type||x.type==='libraesva');}).map(function(x){

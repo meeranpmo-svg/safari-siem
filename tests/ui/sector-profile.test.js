@@ -46,7 +46,7 @@ const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
     ok(offPages.length >= ZYB_ORG.pages_off.length && offPages.every((h) => !listed.has(h)), role + ': no switched-off page is left in the page registry: ' + offPages.filter((h) => listed.has(h)).join(', '));
     ok((await offOf(page, offPages)).every(Boolean), role + ': every switched-off page reports off');
     // the frameworks and the estate that DO apply stay
-    const keep = ['nca-ecc.html', 'iso27001.html', 'pdpl-dashboard.html', 'ndmo.html', 'virtualization.html', 'exchange-hybrid.html', 'network-map.html', 'soc-overview.html', 'risk-studio.html'];
+    const keep = ['nca-ecc.html', 'iso27001.html', 'pdpl-dashboard.html', 'ndmo.html', 'virtualization.html', 'm365.html', 'network-map.html', 'soc-overview.html', 'risk-studio.html'];
     ok((await offOf(page, keep)).every((x) => !x) && keep.every((h) => listed.has(h)), role + ': the pages that apply are still there');
     // the menu drawn on the page offers none of them
     const links = await page.evaluate(() => [...document.querySelectorAll('#zyb-side a[href], [data-zyb-href]')].filter((a) => (a.closest('li') || a).style.display !== 'none').map((a) => (a.getAttribute('data-zyb-href') || a.getAttribute('href') || '').split(/[?#]/)[0].split('/').pop()));
@@ -64,17 +64,14 @@ const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
   ok(await p.evaluate(() => !!document.querySelector('[data-zyb-sub-blocked]') && /Not used in this organisation/.test(document.body.textContent)), 'a switched-off page opened directly says it is not used in this organisation');
   await p.context().close();
 
-  // ---- an administrator adds a module back in Modules & Solutions: its pages return; pages_off stays off
-  const mod = ZYB_ORG.modules_off[0];
+  // ---- Modules & Solutions offers only what applies: a switched-off module, and one whose pages are all off, is not in the
+  // catalogue or in any ready-made solution; the frameworks that apply stay
   p = await open('index.html');
-  const all = await p.evaluate(() => window.ZybModules.CAT.map((m) => m[0])), modPages = await p.evaluate((id) => window.ZybModules.pagesOf(id).map((x) => x.h), mod);
-  await p.context().close();
-  ORGMODS = all.filter((id) => !ZYB_ORG.modules_off.includes(id) || id === mod);
-  p = await open('index.html');
-  const back = modPages.filter((h) => !ZYB_ORG.pages_off.includes(h.replace(/\.html$/, '')));
-  ok(back.length > 0 && (await offOf(p, back)).every((x) => !x), 'a module an administrator added back is on again: ' + mod + ' (' + back.length + ' pages)');
+  const cat = await p.evaluate(() => window.ZybModules.CAT.map((m) => m[0])), sols = await p.evaluate(() => JSON.stringify(window.ZybModules.SOLUTIONS));
+  ok(ZYB_ORG.modules_off.every((id) => !cat.includes(id)) && ZYB_ORG.modules_off.every((id) => !sols.includes('"' + id + '"')), 'switched-off modules are not offered: ' + ZYB_ORG.modules_off.filter((id) => cat.includes(id)).join(', '));
+  ok(['fw-ecc', 'fw-pdpl', 'siem-core', 'net-mon'].every((id) => cat.includes(id)), 'the modules that apply are offered');
   ok((await offOf(p, ZYB_ORG.pages_off.map((k) => k + '.html'))).every(Boolean), 'pages in pages_off stay off');
-  ok((await offOf(p, (await p.evaluate((ids) => ids.flatMap((id) => window.ZybModules.pagesOf(id).map((x) => x.h)), ZYB_ORG.modules_off.filter((id) => id !== mod))))).every(Boolean), 'the other switched-off modules stay off');
+  ok((await offOf(p, (await p.evaluate((ids) => ids.flatMap((id) => window.ZybModules.pagesOf(id).map((x) => x.h)), ZYB_ORG.modules_off)))).every(Boolean), 'the switched-off modules stay off');
 
   // ---- the brand on the home page: name, logo and frameworks come from the setting; no token is left on the page
   const home = await p.evaluate(() => ({ org: document.getElementById('orglogo') && (document.querySelector('#orglogo img') || {}).alt, foot: document.querySelector('footer').textContent, text: document.body.innerText, title: document.title, regs: document.getElementById('regs').getAttribute('aria-label') || '', look: document.documentElement.classList.contains('org-brand') }));
