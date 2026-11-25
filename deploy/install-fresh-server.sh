@@ -106,6 +106,7 @@ if bash "$TREE/backend/itam/install/install.sh" --node-bin "$NODE_BIN" --provide
 else die "the asset engine did not install - fix what it reports above and run this script again"; fi
 [ -x "$TREE/backend/siem/install/link-itam.sh" ] || chmod +x "$TREE/backend/siem/install/link-itam.sh" 2>/dev/null
 bash "$TREE/backend/siem/install/link-itam.sh" || { FAILED="$FAILED link-itam"; note "the SIEM could not be linked to the asset inventory: sudo bash /opt/sentra-siem/install/link-itam.sh"; }
+bash "$TREE/backend/itam/install/link-siem.sh" || { FAILED="$FAILED link-siem"; note "IT Asset Management could not be linked to the SIEM: sudo bash /opt/sentra-itam/install/link-siem.sh"; }
 
 # ------------------------------------------------------------------------------------------------ 4 sign-in service
 say "4/7 sign-in service"

@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CIO Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-leader.js"></script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GM IT Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-leader.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
 <style>
 :root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
@@ -17,21 +17,31 @@ button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:1px}
 table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font-weight:500;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--edge);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}.tw{overflow-x:auto}
 .muted{color:var(--mute)}.mono{font-family:Consolas,monospace;font-size:12.5px}.empty{color:var(--mute);padding:6px 0}.note{color:var(--mute);font-size:12px;margin-top:8px}.err{color:var(--bad)}
 .pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08);white-space:nowrap}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.ok{background:rgba(63,185,80,.16);color:var(--ok)}
-.bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 56px;gap:8px;align-items:center;margin:5px 0;font-size:13px}.bar .tr{height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}.bar .fl{height:100%;border-radius:5px}.bar .n{text-align:right;font-variant-numeric:tabular-nums}
+.bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 56px;gap:8px;align-items:center;margin:5px 0;font-size:13px}.bar .tr{height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}.bar .fl{display:block;height:100%;border-radius:5px}.bar .n{text-align:right;font-variant-numeric:tabular-nums}
 .na{color:var(--mute);background:var(--raise);border:1px dashed var(--border);border-radius:9px;padding:10px;font-size:13px}
 .top{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin:0 0 8px}
+/* colour: a gradient hero in the organisation's colours, an accent on every card, coloured chart panels */
+.hero{background:radial-gradient(700px 240px at 100% 0%,rgba(38,166,154,.22),transparent 70%),radial-gradient(600px 260px at 0% 100%,rgba(79,140,255,.20),transparent 70%),var(--panel);border-left:4px solid var(--org-accent,#26A69A)}
+.card{position:relative;overflow:hidden;box-shadow:inset 0 3px 0 0 var(--ca,var(--org-primary,#4f8cff))}
+.g>.card:nth-child(4n+2){--ca:#b877d9}.g>.card:nth-child(4n+3){--ca:#22c3c9}.g>.card:nth-child(4n+4){--ca:#f5a623}
+.cv{position:relative;height:190px;margin-top:6px}.cv.s{height:150px}
+.est{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:8px}
+.est a{display:block;text-decoration:none;color:inherit;border-radius:10px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--h) 45%,transparent);background:linear-gradient(150deg,color-mix(in srgb,var(--h) 22%,var(--raise)),var(--raise) 75%)}
+.est a .v{font-size:20px;font-weight:800;color:#fff}.est a .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#c9d1dc}.est a .s{font-size:11.5px;color:var(--mute)}
+.est a .d{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--st)}
 @media print{.top{display:none}body{background:#fff;color:#000}.card,.t,.hero{background:#fff;border-color:#ccc}}
 </style></head><body><main>
 <div class="top"><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button></div>
-<section class="hero"><div class="txt"><div class="eb">CIO dashboard<span class="live" id="live" hidden>LIVE DATA</span></div><h1>IT performance, spend and delivery for the business</h1>
-<p>Business service availability, the IT budget built from the asset register, renewals, licences, security posture and compliance, decisions waiting for a person and the AI engineering team. A source that is not connected says so; nothing on this page is sample data.</p></div>
+<section class="hero"><div class="txt"><div class="eb" id="ebt">GM IT dashboard<span class="live" id="live" hidden>LIVE DATA</span></div><h1>IT performance, spend and delivery for the business</h1>
+<p>Estate health (firewalls, network access, servers, voice, Aramco CCC), the IT budget built from the asset register, renewals, licences, security posture and compliance, decisions waiting for a person and the AI engineering team. A source that is not connected says so; nothing on this page is sample data.</p></div>
 <div class="rings" id="rings"></div></section>
 <div id="zl-ai"></div>
 <div class="k" id="kk"><div class="empty">Loading…</div></div>
 <div class="g">
+  <div class="card" id="estc"><h2>🛰️ Estate health <span class="c"><button type="button" class="sm" data-go="ops-wall.html?view=estate">Operations Wall →</button></span></h2><div id="est"><div class="empty">Loading…</div></div></div>
   <div class="card"><h2>💰 IT budget <span class="c"><button type="button" class="sm" data-go="budget.html">Open →</button></span></h2><div id="bud"><div class="empty">Loading…</div></div></div>
   <div class="card"><h2>🧭 Security posture &amp; compliance <span class="c"><button type="button" class="sm" data-go="ai-ciso.html">Open →</button></span></h2><div id="pos"><div class="empty">Loading…</div></div></div>
-  <div class="card"><h2>🧩 Business services <span class="c"><button type="button" class="sm" data-go="apm.html">Open →</button></span></h2><div id="apps"><div class="empty">Loading…</div></div></div>
+  <div class="card" id="appsc"><h2>🧩 Business services <span class="c"><button type="button" class="sm" data-go="apm.html">Open →</button></span></h2><div id="apps"><div class="empty">Loading…</div></div></div>
   <div class="card"><h2>✋ Waiting for a decision <span class="c"><button type="button" class="sm" data-go="ai-ciso.html">Open →</button></span></h2><div id="dec"><div class="empty">Loading…</div></div></div>
   <div class="card"><h2>🔁 Business requests to IT <span class="c"><button type="button" class="sm" data-go="workflow-automation.html">Open →</button></span></h2><div id="wf"><div class="empty">Loading…</div></div></div>
   <div class="card"><h2>📑 Renewals &amp; licences <span class="c"><button type="button" class="sm" data-go="support-contracts.html">Open →</button></span></h2><div id="ren"><div class="empty">Loading…</div></div></div>
@@ -39,7 +49,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
   <div class="card"><h2>🎯 Detection &amp; response <span class="c"><button type="button" class="sm" data-go="soc-response.html">Open →</button></span></h2><div id="soc"><div class="empty">Loading…</div></div></div>
   <div class="card"><h2>🗒️ Latest board brief <span class="c"><button type="button" class="sm" data-go="ai-ciso.html">Open →</button></span></h2><div id="brief"><div class="empty">Loading…</div></div></div>
 </div>
-<p class="note">Figures come from IT Asset Management (budget, support contracts, licences, the AI CISO overview of posture, risks, decisions and the AI engineers) and the SIEM (Applications Manager, SOC metrics through the AI CISO overview). Strategic programmes are not tracked in the platform, so none are shown.</p>
+<p class="note">Estate health is the Operations Wall's view of the FortiGate fleet, network access, Hyper-V, Call Manager and the AI engineers, with what is unusual for this time of day. Figures come from IT Asset Management (budget, support contracts, licences, the AI CISO overview of posture, risks, decisions and the AI engineers) and the SIEM (Applications Manager, SOC metrics through the AI CISO overview). Strategic programmes are not tracked in the platform, so none are shown.</p>
 </main>
 <script>
 (function(){
@@ -75,13 +85,33 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
   function dt(t){try{var d=new Date(t);return isNaN(d)?'–':d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return '–';}}
   function dur(s){return s==null?'–':s<3600?Math.round(s/60)+' min':s<172800?(s/3600).toFixed(1)+' h':Math.round(s/86400)+' d';}
 
+  var OFF=(window.ZYB_ORG&&window.ZYB_ORG.pages_off)||[], APPS_ON=OFF.indexOf('apm')<0, CH=window.zybCharts;
+  if(!APPS_ON){var ac=document.getElementById('appsc');if(ac)ac.hidden=true;}
+  // Estate health: the Operations Wall's panels (GET /api/itam/ops-wall), one coloured tile per system and the open work of the AI engineers
+  function drawEstate(r){var W=okj(r);if(!W){$('est').innerHTML=na(why(r,'the Operations Wall')||'the Operations Wall did not answer');return;}
+    var P=W.panels||{},stc=function(st){return st==='ok'?'#2fb344':st==='warn'?'#f59f00':st==='bad'?'#e5484d':'#5c6577';};
+    var T=[['firewalls','#4f8cff','FortiGates',function(f){return f.ok+'/'+f.devices;},function(f){return f.down+' down · '+f.links_down+' link(s) down';}],
+      ['access','#ff6b9a','Endpoints at risk',function(f){return f.at_risk==null?'—':f.at_risk;},function(f){return (f.endpoints==null?'':f.endpoints+' seen')+(f.ndr_high?' · '+f.ndr_high+' NDR high':'');}],
+      ['servers','#22c3c9','VMs running',function(f){return f.running+'/'+f.vms;},function(f){return f.hosts+' Hyper-V host(s)';}],
+      ['voice','#8f8ff5','Phones registered',function(f){return f.registered+'/'+f.phones;},function(f){return f.trunks_down+' trunk(s) down';}],
+      ['aramco','#f5a623','Aramco CCC',function(f){return f.score==null?'—':f.score+'%';},function(f){return f.stages_done+'/'+f.stages+' stages';}],
+      ['ai','#2fd47a','AI engineers',function(f){return f.open;},function(f){return (f.high||0)+' high / critical open';}]];
+    var h='<div class="est">'+T.filter(function(x){return P[x[0]];}).map(function(x){var p=P[x[0]],f=p.figures,nc=p.state==='not_connected'||!f;
+      return '<a href="'+esc(p.link)+'" style="--h:'+x[1]+';--st:'+stc(p.state)+'"><div class="l"><span class="d"></span>'+esc(x[2])+'</div><div class="v">'+esc(nc?'—':String(x[3](f)))+'</div><div class="s">'+esc(nc?'not connected':x[4](f))+'</div></a>';}).join('')+'</div>';
+    var an=W.anomalies||[];h+=an.length?'<div class="na" style="border-color:rgba(229,72,77,.5);color:#ffb4b4">⚡ Unusual for this time of day: '+an.slice(0,3).map(function(a){return esc(a.why);}).join(' · ')+'</div>':'<p class="note">Nothing unusual against the same time of day ('+esc(W.samples||0)+' readings learned).</p>';
+    var E=P.ai&&P.ai.by_engineer||[];h+=E.length?'<div class="cv s"><canvas id="estai"></canvas></div>':'';
+    $('est').innerHTML=h;
+    if(E.length&&CH)CH.bars($('estai'),E.map(function(e){return e.engineer.replace(/^AI /,'');}),[{label:'High / critical',data:E.map(function(e){return e.high;}),color:'crit'},{label:'Other open',data:E.map(function(e){return e.open-e.high;}),color:'purple'}],{stacked:true,horizontal:true});}
   function draw(R){
     var B=okj(R.budget), C=okj(R.ciso), SC=okj(R.contracts), LI=okj(R.licences);
     var APM=R.apmStatus.json&&R.apmStatus.json.configured&&R.apmMon.json&&Array.isArray(R.apmMon.json.items)?R.apmMon.json.items.filter(function(m){return m.managed!==false;}):null;
     var appUp=APM&&APM.length?APM.filter(function(m){return m.availability==='up';}).length:null, appPct=appUp==null?null:appUp/APM.length*100;
-    var P=C&&C.posture?C.posture:null, sama=C&&C.compliance&&C.compliance.sama?C.compliance.sama:null;
-    $('rings').innerHTML=ring(appPct,'Business services available',APM?(APM.length?appUp+' of '+APM.length+' monitors up':'no monitors'):'Applications Manager not connected',99,95)
-      +ring(sama?sama.coverage_pct:null,'SAMA CSF coverage',sama?'controls with evidence':(C?'SAMA compliance not reported by the SIEM':why(R.ciso,'the AI CISO overview')),85,70)
+    var P=C&&C.posture?C.posture:null, sama=C&&C.compliance&&C.compliance.sama?C.compliance.sama:null, FW=C&&C.compliance&&C.compliance.frameworks||(OFF.indexOf('sama-compliance')>=0?['nca','aramco']:['sama']);
+    var WL=okj(R.wall), WP=WL&&WL.panels||{}, fwp=WP.firewalls&&WP.firewalls.figures, ncc=C&&C.compliance&&C.compliance.nca, acc=C&&C.compliance&&C.compliance.aramco;
+    $('rings').innerHTML=(APPS_ON?ring(appPct,'Business services available',APM?(APM.length?appUp+' of '+APM.length+' monitors up':'no monitors'):'Applications Manager not connected',99,95)
+        :ring(fwp&&fwp.devices?Math.round(fwp.ok/fwp.devices*100):null,'FortiGates healthy',fwp&&fwp.devices?fwp.ok+' of '+fwp.devices+' firewalls':(WL?'FortiGate fleet not connected':why(R.wall,'the Operations Wall')),95,85))
+      +(FW.indexOf('sama')>=0?ring(sama?sama.coverage_pct:null,'SAMA CSF coverage',sama?'controls with evidence':(C?'SAMA compliance not reported by the SIEM':why(R.ciso,'the AI CISO overview')),85,70)
+        :ring(acc?acc.score:null,'Aramco CCC readiness',acc?acc.stages_done+' of '+acc.stages+' stages done':'not assessed yet',80,50)+ring(ncc?ncc.score:null,'NCA ECC (register)',ncc?'indicative, from the register':'not assessed yet',85,70))
       +ring(P?P.overall:null,'Security posture',P?(P.overall==null?P.withheld_why:P.grade+' · '+P.measured+' of '+P.of+' domains'):why(R.ciso,'the AI CISO overview'),85,70,'/100');
     $('live').hidden=!(B||C||SC||APM);
     // tiles
@@ -94,13 +124,14 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
       +tile('Unused licence seats',lic?unusedSeats:'–',lic?(under.length+' licence(s) under-used'+(unusedVal?' · about '+money(unusedVal,cur)+' a year':'')):why(R.licences,'licences'),lic?'':'na','licence-audit.html')
       +tile('Critical risks',crit==null?'–':crit,crit==null?why(R.ciso,'the AI CISO overview'):high+' high · from real records only',crit==null?'na':crit?'bad':'ok','ai-ciso.html')
       +tile('Waiting for a decision',C?(C.decisions||[]).length:'–',C?'approvals, sign-offs, policy reviews':why(R.ciso,'the AI CISO overview'),C?((C.decisions||[]).length?'warn':'ok'):'na','ai-ciso.html');
+    drawEstate(R.wall);
     // budget
     if(!B)$('bud').innerHTML=na(why(R.budget,'the IT budget'));
     else $('bud').innerHTML=(B.envelopes||[]).map(function(e){var p=e.envelope?e.proposed/e.envelope*100:null;return bar(e.name,p,money(e.proposed,cur)+' / '+money(e.envelope,cur),p==null?'na':p>100?'bad':p>90?'warn':'ok')+'<div class="muted" style="font-size:12px;margin:-2px 0 8px">CAPEX '+esc(money(e.capex,cur))+' · OPEX '+esc(money(e.opex,cur))+(e.unpriced?' · '+esc(e.unpriced)+' line(s) need a price':'')+(e.over?' · <span class="err">'+esc(e.over)+' line(s) do not fit</span>':'')+'</div>';}).join('')
       +'<p class="note">FY '+esc(B.fy)+' proposal generated from the register (renewals, warranty, end of life, storage, carry-over, manual lines). Decisions stay with an administrator on IT Budget.</p>';
     // posture
     if(!P)$('pos').innerHTML=na(why(R.ciso,'the AI CISO overview'));
-    else $('pos').innerHTML=P.domains.map(function(d){return bar(d.name,d.score,d.measured?d.score+'/100':'not measured',d.measured?cls(d.score,85,70):'na');}).join('')+(sama?'<p class="note">SAMA CSF: '+esc(sama.coverage_pct)+'% of controls covered by evidence.</p>':'')+(P.overall==null?'<p class="note">'+esc('Overall score withheld: '+P.withheld_why+'.')+'</p>':'');
+    else $('pos').innerHTML=P.domains.map(function(d){return bar(d.name,d.score,d.measured?d.score+'/100':'not measured',d.measured?cls(d.score,85,70):'na');}).join('')+(sama?'<p class="note">SAMA CSF: '+esc(sama.coverage_pct)+'% of controls covered by evidence.</p>':'')+(FW.indexOf('sama')<0&&(ncc||acc)?'<p class="note">'+esc('Compliance: '+[ncc?'NCA ECC register '+ncc.score+'%':null,acc?'Aramco CCC readiness '+acc.score+'%':null].filter(Boolean).join(' · ')+'.')+'</p>':'')+(P.overall==null?'<p class="note">'+esc('Overall score withheld: '+P.withheld_why+'.')+'</p>':'');
     // apps
     if(!APM)$('apps').innerHTML=na(R.apmStatus.json&&R.apmStatus.json.configured===false?'Applications Manager is not connected - set it up under Connections & Setup.':why(R.apmStatus,'Applications Manager')||'Applications Manager has not reported monitors yet.');
     else if(!APM.length)$('apps').innerHTML=na('Applications Manager is connected but reports no managed monitors.');
@@ -130,7 +161,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
   }
   var busy=false;
   function load(){if(busy)return;busy=true;
-    var Q={budget:'/api/itam/budget',ciso:'/api/itam/ciso/overview',contracts:'/api/itam/support-contracts',licences:'/api/itam/licences',apmStatus:'/api/soc/integrations/apm/status',apmMon:'/api/soc/integrations/apm/monitors',wf:'/api/itam/workflow/attention'},K=Object.keys(Q);
+    var Q={budget:'/api/itam/budget',ciso:'/api/itam/ciso/overview',contracts:'/api/itam/support-contracts',licences:'/api/itam/licences',apmStatus:'/api/soc/integrations/apm/status',apmMon:'/api/soc/integrations/apm/monitors',wf:'/api/itam/workflow/attention',wall:'/api/itam/ops-wall'},K=Object.keys(Q);
     Promise.all(K.map(function(k){return get(Q[k]);})).then(function(rs){busy=false;var R={};K.forEach(function(k,i){R[k]=rs[i];});
       try{draw(R);}catch(e){$('kk').innerHTML=na('The page could not be drawn: '+(e&&e.message||e));}});}
   document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)location.href=b.getAttribute('data-go');});

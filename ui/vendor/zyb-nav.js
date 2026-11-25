@@ -344,6 +344,7 @@ window.ZYB_NAV = [
   "hd": "overview",
   "icon": "<path d=\"M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z\"/>",
   "pages": [
+   {"h": "ops-command.html", "s": "Operations Command", "t": "Operations Command - the whole estate in one colourful view: FortiGate fleet, NAC, NDR, Hyper-V, Call Manager, Aramco CCC and the AI engineers' open work", "d": "Charts read live from each module, with the learned findings of every module ranked together. A module that is not connected says what to connect; nothing is invented."},
    {
     "h": "executive-dashboard.html",
     "s": "Executive Dashboard",

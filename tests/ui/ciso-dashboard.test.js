@@ -15,7 +15,7 @@ const XSS = '<img src=x onerror=alert(1)>';
 const DAY = 86400000;
 
 (async () => {
-  const e = await H.startApp({ noAi: true });
+  const e = await H.startApp({ noAi: true, config: { ciso: { all_frameworks: false } } });   // the organisation's frameworks (Safari: NCA ECC, Aramco CCC - not SAMA)
   const NOW = Date.now(), day = (i) => new Date(NOW - i * DAY).toISOString().slice(0, 10);
   const byDay = []; for (let i = 20; i >= 1; i--) byDay.push({ day: day(i), total: 6 + (i % 3) }); byDay.push({ day: day(0), total: 45 });
   const siem = (method, p) => {
@@ -27,7 +27,16 @@ const DAY = 86400000;
     if (p.startsWith('/approvals')) return Promise.resolve({ items: [] });
     return Promise.reject(new Error('unexpected ' + p));
   };
+  // the compliance engines (stubbed, SYNTHETIC scores) and the Operations Wall with the estate (SYNTHETIC)
+  e.app.addons = e.app.addons || {};
+  e.app.addons.ncaEcc = { view: async () => ({ score: 71, counts: {} }) };
+  e.app.addons.aramcoCcc = { view: () => ({ controls_total: 40, score: 58, assessed: 30, applicable: 40, stages: [{ done: true }, { done: true }, { done: false }], days_left: 45 }) };
   require(path.join(ITAM, 'engine/ciso')).registerCiso(e.app.srv, e.app, { siem, python: process.env.PYTHON || 'python3' });
+  { const OW = require(path.join(ITAM, 'engine/ops-wall'));
+    OW.registerOpsWall(e.app.srv, e.app, OW.createOpsWall(e.app, { noTimer: true, sources: {
+      fw: () => ({ kpis: { devices: 80, ok: 75, watch: 1, attention: 2, down: 2, links_down: 1, links_out_of_sla: 0, firmware_behind: 6, tunnels: { up: 150, down: 3 }, licences_due: 1 }, findings: [{ severity: 'critical', device: 'FGT-SYN-09', title: 'offline <img src=x onerror=window.__fwx=1>' }] }),
+      nac: () => ({ total: 300, learning: false, endpoints: [{ mac: '02:00:00:00:00:01', risk: 75 }], sites: [{ site: 'Head Office', endpoints: 200, risky: 1 }, { site: 'Project SYN-A', endpoints: 100, risky: 0 }] }),
+      ndr: () => ({ ran: true, detections: [{ kind: 'beacon', severity: 'high', host: '10.9.9.9' }, { kind: 'lateral', severity: 'medium', host: '10.9.9.8' }] }) } })); }
   { // Workflow Automation (the real engine): the CISO office's request late with the security team, another fulfilled and waiting for acceptance
     const WFM = require(path.join(ITAM, 'engine/workflow-auto')), W = WFM.createWorkflow(e.app, { noTimer: true }); WFM.registerWorkflow(e.app.srv, e.app, W);
     W.settingsSave({ version: 0, functions: { ciso: ['syed', 'deputy.syn'] }, teams: { security: ['sec.syn'], identity: ['idm.syn'] } }, { user: 'syed', role: 'admin', ip: '' });
@@ -68,7 +77,14 @@ const DAY = 86400000;
     ok(await wait(p, () => !document.getElementById('main').hidden), 'page loads');
     ok(/^\d+$/.test((await p.textContent('#ring b')).trim()) && (await p.textContent('#grade')).trim().length > 0, 'posture ring and grade');
     ok((await p.$$('#trend polyline')).length === 1 && (await p.$$('#trend line')).length === 1 && /falling/.test(await p.textContent('#fct')), 'trend with a falling forecast');
-    const k = await p.textContent('#kpis'); ok(/2critical alerts open/.test(k) && /SAMA CSF coverage/.test(k) && /68%/.test(k), 'KPIs: critical alerts, SAMA');
+    const k = await p.textContent('#kpis'); ok(/2critical alerts open/.test(k) && /58%Aramco CCC readiness/.test(k) && /71%NCA ECC/.test(k) && !/SAMA/.test(k), 'KPIs: critical alerts, Aramco CCC and NCA ECC (no SAMA): ' + k);
+    await p.waitForSelector('#fwring[role="img"]', { timeout: 10000 });
+    const fw = await p.textContent('#fwsec'), acs = await p.textContent('#acsec'), cm = await p.textContent('#cmsec');
+    ok(/2down/.test(fw) && /6firmware behind/.test(fw) && /3tunnels down/.test(fw) && /FGT-SYN-09/.test(fw), 'firewall fleet security from the wall: ' + fw.slice(0, 200));
+    ok(!(await p.evaluate(() => window.__fwx)) && !(await p.$('#fwsec img')), 'hostile device text stays text');
+    ok(/1endpoints at risk/.test(acs) && /1NDR high/.test(acs) && /2NDR detections/.test(acs), 'network access and NDR: ' + acs);
+    ok(await p.$eval('#acbar', (c) => /Head Office/.test(c.getAttribute('aria-label'))) && await p.$eval('#ndrbar', (c) => /beacon/.test(c.getAttribute('aria-label'))), 'NAC by site and NDR by kind charts');
+    ok(/2\/3 stages · 45 days to expiry/.test(cm) && /NCA ECC register/.test(cm) && await p.$eval('#arring', (c) => /58/.test(c.getAttribute('aria-label'))), 'compliance rings for NCA ECC and Aramco CCC: ' + cm);
     ok((await p.$$('#radar polygon')).length === 6, 'domain radar: grid, now and 7 days ago');
     ok(/Detection/.test(await p.textContent('#movers')) && /−|-/.test(await p.textContent('#movers')), 'what moved');
     ok(/unusual/.test(await p.textContent('#focus')) && /2 critical alert/.test(await p.textContent('#focus')), 'focus from the ML');

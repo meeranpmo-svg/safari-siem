@@ -20,10 +20,16 @@ const D = {
     decisions: [{ title: 'Approve IOS upgrade SW-SYN-01', from: 'AI network engineer', who: 'operator / admin (not the requester)' }],
     team: [{ engine: 'siem', state: 'live', name: 'AI Network Engineer', open: 4, critical: 1, resolved_24h: 6 }, { engine: 'itam', state: 'not_connected' }],
     soc: { mttd_s: 540, mttr_s: 14400, sla: { resolve_compliance_pct: 91.5, breaching_now: 2 } },
-    compliance: { sama: { coverage_pct: 78 } }, last_brief: { at: new Date(NOW).toISOString(), kind: 'ai', headline: 'Posture 72/100 - <b>1</b> critical risk' } },
+    compliance: { sama: null, frameworks: ['nca', 'aramco'], nca: { score: 66 }, aramco: { score: 78, stages_done: 3, stages: 8, days_left: null } }, last_brief: { at: new Date(NOW).toISOString(), kind: 'ai', headline: 'Posture 72/100 - <b>1</b> critical risk' } },
   '/api/itam/support-contracts': { contracts: [{ vendor: 'Cisco', product: 'SmartNet SYN', state: 'expiring', days_left: 20, end: '2026-11-13', cost: 420000 }, { vendor: 'Dell', state: 'active', days_left: 300 }], summary: { contracts: 2, expiring: 1, expired: 0, renewal_cost_90d: 420000 } },
   '/api/itam/licences': { licences: [{ product: 'Visio SYN', seats: 50, used: 30, cost: 100000, compliance: 'under' }, { product: 'Office SYN', seats: 100, used: 100, compliance: 'ok' }] },
   '/api/soc/integrations/apm/status': { configured: true },
+  // the Operations Wall (engine/ops-wall.js) in its shape, SYNTHETIC: the organisation's estate
+  '/api/itam/ops-wall': { samples: 400, anomalies: [{ metric: 'fw_down', why: 'FortiGates down is 2 - usually 0 at this time of day (21 readings over 7 days)' }], panels: {
+    firewalls: { id: 'firewalls', link: 'fortigate-fleet.html', state: 'bad', figures: { devices: 80, ok: 76, down: 2, links_down: 1 } },
+    access: { id: 'access', link: 'fortigate-nac.html', state: 'warn', figures: { endpoints: 900, at_risk: 7, ndr_high: 0 } },
+    servers: { id: 'servers', link: 'hyperv.html', state: 'not_connected', why: 'not installed or nothing reported yet', figures: null },
+    ai: { id: 'ai', link: 'ai-team.html', state: 'warn', figures: { open: 6, high: 2 }, by_engineer: [{ engineer: 'AI Firewall Engineer (FortiGate)', open: 4, high: 2 }, { engineer: 'AI Hyper-V Administrator', open: 2, high: 0 }] } } },
   '/api/soc/integrations/apm/monitors': { items: [{ name: 'IIRIS Portal', availability: 'up', managed: true }, { name: 'Claims API', availability: 'down', managed: true }] },
   // Workflow Automation attention(who), synthetic, in the engine's shape
   '/api/itam/workflow/attention': { summary: { approvals: 1, queue_open: 0, overdue: 0, at_risk: 0, to_accept: 0, raised_open: 1, raised_late: 1, functions: ['governance'], all_overdue: 3, recurring: 0,
@@ -56,7 +62,11 @@ const D = {
     ok(/RENEWALS ≤ 90 DAYS\s*SAR 420k/i.test(k), 'renewal cost for an operator');
     ok(/UNUSED LICENCE SEATS\s*20/i.test(k) && /about SAR 40k a year/.test(k), 'unused seats and their value from the licence cost');
     ok(/CRITICAL RISKS\s*1\s*2 high/i.test(k) && /WAITING FOR A DECISION\s*1/i.test(k), 'risks and decisions from the AI CISO overview');
-    ok(/50%/.test(rg) && /78%/.test(rg) && /72/.test(rg) && /adequate · 5 of 6 domains/.test(rg), 'rings: services, SAMA, posture: ' + rg.replace(/\s+/g, ' '));
+    ok(/95%/.test(rg) && /76 of 80 firewalls/.test(rg) && /78%/.test(rg) && /ARAMCO CCC/i.test(rg) && /66%/.test(rg) && /NCA ECC/i.test(rg) && !/SAMA/i.test(rg) && /72/.test(rg) && /adequate · 5 of 6 domains/.test(rg), 'rings: FortiGates, Aramco CCC, NCA ECC (no SAMA), posture: ' + rg.replace(/\s+/g, ' '));
+    const es = await T('#est');
+    ok(/FORTIGATES\s*76\/80/i.test(es) && /2 down/.test(es) && /ENDPOINTS AT RISK\s*7/i.test(es) && /not connected/.test(es) && /usually 0 at this time of day/.test(es), 'estate health from the Operations Wall: ' + es.replace(/\s+/g, ' ').slice(0, 300));
+    ok(await page.$eval('#estai', (c) => c.getAttribute('role') === 'img' && /Firewall Engineer/.test(c.getAttribute('aria-label'))), 'AI engineers open work chart');
+    ok(await page.$eval('#appsc', (c) => c.hidden), 'Applications Manager card hidden where the organisation does not use it');
     ok(/Cyber Security/.test(await T('#bud')) && /CAPEX SAR 9\.0M/.test(await T('#bud')), 'budget by envelope');
     ok(/Exposure\s*not measured/.test(await T('#pos')), 'an unmeasured domain says so');
     ok(/Claims API/.test(await T('#apps')) && /Approve IOS upgrade/.test(await T('#dec')) && /Cisco/.test(await T('#ren')) && /Visio SYN \(20 unused\)/.test(await T('#ren')), 'services, decisions, renewals, licences');

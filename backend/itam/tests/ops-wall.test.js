@@ -34,12 +34,12 @@ async function setup(t, W, extra) {
 test('panels from every source, and nothing connected is never green', async (t) => {
   const W = world(); const { e } = await setup(t, W);
   const v = (await e.req('GET', '/ops-wall', VW)).json;
-  assert.equal(v.connected, 5); assert.equal(v.panels.soc.figures.high, 2); assert.equal(v.panels.soc.figures.open, 12); assert.equal(v.panels.soc.figures.critical, 0);
+  assert.equal(v.connected, 6, 'five platform panels + the AI engineers desk (runs in every app)'); assert.equal(v.panels.ai.state, 'ok'); assert.equal(v.panels.soc.figures.high, 2); assert.equal(v.panels.soc.figures.open, 12); assert.equal(v.panels.soc.figures.critical, 0);
   assert.equal(v.panels.soc.state, 'warn', 'open high alerts'); assert.equal(v.panels.platform.state, 'ok', 'a not-connected tier does not turn the panel red');
   assert.equal(v.panels.notify.oncall[0].now, 'omar.syn'); assert.equal(v.panels.notify.state, 'warn'); assert.equal(v.panels.inventory.state, 'ok'); assert.equal(v.overall, 'warn');
   assert.equal(v.panels.soc.decisions.length, 1); assert.equal(v.can_act, false);
   // nothing installed / failing / hanging
-  const N = { soc: null, platform: () => { throw new Error('servers dashboard: boom'); }, notify: () => new Promise(() => {}), inventory: null, health: null };
+  const N = { soc: null, platform: () => { throw new Error('servers dashboard: boom'); }, notify: () => new Promise(() => {}), inventory: null, health: null, aiItam: null };
   const src = {}; for (const k of Object.keys(N)) src[k] = () => (typeof N[k] === 'function' ? N[k]() : N[k]);
   const { e: e3 } = await setup(t, N, { owSources: src, owSourceMs: 200 });
   const n = (await e3.req('GET', '/ops-wall', VW)).json;
@@ -97,4 +97,39 @@ test('AI shift analyst: read-only tools, unknown tool refused, injected incident
   const res = seen[1].messages[2].content; assert.match(String(res[0].content), /untrusted/i); assert.equal(res[1].is_error, true);
   assert.ok(r.json.injection_signals.length >= 1); assert.match(r.json.answer, /Jeddah/);
   assert.ok(e.app.store.auditTail(20).some((a) => a.action === 'ops-wall.ai.ask' && a.by === 'nora.syn'));
+});
+
+// the organisation's estate on the wall: FortiGate fleet, NAC and NDR read from the SIEM through the platform link (as the
+// read-only auditing role), Hyper-V / Call Manager / Aramco CCC from this engine, the AI engineers' open work from both; a
+// module not set up is "not connected"; a learned metric (FortiGates down) is unusual against the same time of day.
+test('estate panels: SIEM modules through the link, IT modules here, AI work from both, anomalies learned', async (t) => {
+  const W = world(); const calls = [];
+  const FLEET = { kpis: { devices: 80, ok: 76, watch: 1, attention: 2, down: 1, links_down: 1, links_out_of_sla: 0, firmware_behind: 3, tunnels: { up: 150, down: 2 }, licences_due: 0 },
+    findings: [{ severity: 'critical', device: 'FGT-SYN-07', title: 'offline' }] };
+  let fleet = FLEET;
+  const SIEM = { '/fortimanager/fleet': () => fleet, '/nac/endpoints': () => ({ total: 2, learning: false, endpoints: [{ mac: '02:00:00:00:00:01', risk: 70 }, { mac: '02:00:00:00:00:02', risk: 5 }], sites: [{ site: 'Head Office', endpoints: 2, risky: 1 }] }),
+    '/ndr': () => ({ ran: true, detections: [{ kind: 'beacon', severity: 'high', host: '10.9.9.9' }] }), '/duty/items?status=open&limit=500': () => ({ items: [{ engineer_name: 'AI Firewall Engineer (FortiGate)', severity: 'critical' }] }) };
+  const extra = { owSources: Object.assign({}, ...['soc', 'platform', 'notify', 'inventory', 'health'].map((k) => ({ [k]: () => W[k] })), { hv: () => ({ kpis: { hosts: 2, vms: 10, running: 9, high: 0, stale_hosts: 0 }, hosts: [{ name: 'HV-SYN-01', cpu_pct: 40, mem_total_mb: 100, mem_free_mb: 50 }], findings: [] }), voice: () => null, aramco: () => ({ score: 64, assessed: 90, applicable: 120, stages: [{ name: 'Scope', done: true }, { name: 'Evidence', done: false, next: 'Collect' }] }) }) };
+  const { e, clock } = await setup(t, W, extra);
+  e.app.discovery = { siem: { call: async (m, p, who) => { calls.push([m, p, who.role]); const f = SIEM[p]; return f ? { status: 200, json: f() } : { status: 404, json: { error: 'not found' } }; } } };
+  let v = (await e.req('GET', '/ops-wall', VW)).json;
+  assert.ok(calls.length && calls.every((c) => c[0] === 'GET' && c[2] === 'analyst'), 'read-only, as the auditing role: ' + JSON.stringify(calls));
+  assert.equal(v.panels.firewalls.state, 'bad'); assert.equal(v.panels.firewalls.figures.down, 1); assert.equal(v.panels.firewalls.top[0].title, 'FGT-SYN-07: offline');
+  assert.equal(v.panels.access.state, 'bad', 'a high NDR detection'); assert.equal(v.metrics.nac_risky, 1);
+  assert.equal(v.panels.servers.state, 'ok'); assert.equal(v.panels.servers.hosts[0].mem, 50);
+  assert.equal(v.panels.voice.state, 'not_connected', 'Call Manager not polled: not connected, not green'); assert.equal(v.metrics.phones_unreg, null);
+  assert.equal(v.panels.aramco.state, 'warn'); assert.equal(v.panels.aramco.figures.stages_done, 1);
+  assert.equal(v.metrics.ai_open, 1); assert.equal(v.metrics.ai_high, 1); assert.equal(v.panels.ai.by_engineer[0].engineer, 'AI Firewall Engineer (FortiGate)');
+  // no link to the SIEM: the SIEM panels say how to link, never zero
+  const keep = e.app.discovery; e.app.discovery = null;
+  v = (await e.req('GET', '/ops-wall', VW)).json;
+  assert.equal(v.panels.firewalls.state, 'not_connected'); assert.match(v.panels.firewalls.why, /link-siem\.sh/); assert.equal(v.metrics.fw_down, null);
+  e.app.discovery = keep;
+  // learning: 7 days of mornings with nothing down, then 6 FortiGates down at the same time of day → unusual
+  fleet = Object.assign({}, FLEET, { kpis: Object.assign({}, FLEET.kpis, { down: 0 }) });
+  for (let d = 7; d >= 1; d--) for (const off of [-40, 0, 40]) { clock.set(T0 - d * D + off * MIN); assert.equal((await e.req('POST', '/ops-wall/sample', OP)).status, 200); }
+  fleet = Object.assign({}, FLEET, { kpis: Object.assign({}, FLEET.kpis, { down: 6 }) }); clock.set(T0);
+  v = (await e.req('GET', '/ops-wall', VW)).json;
+  const a = v.anomalies.find((x) => x.metric === 'fw_down'); assert.ok(a, 'FortiGates down is unusual: ' + JSON.stringify(v.anomalies));
+  assert.equal(a.panel, 'firewalls'); assert.match(a.why, /usually 0 at this time of day/);
 });

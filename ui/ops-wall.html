@@ -62,6 +62,19 @@ main{padding:14px 20px 28px;max-width:2560px;margin:0 auto}
 .tcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}.tc{background:var(--pn);border:1px solid var(--ln);border-radius:16px;padding:12px 14px}.tc .h{display:flex;gap:8px;align-items:baseline}.tc .h b{margin-left:auto;font:700 24px var(--fd);font-variant-numeric:tabular-nums}.tc .h span{font-size:13px;color:var(--mu)}.tc .mm{display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-top:2px}
 .gauges{display:flex;gap:18px;flex-wrap:wrap;justify-content:space-around}.gauges figure{margin:0;text-align:center;font-size:12px;color:var(--mu)}
 svg text{font-family:var(--f)}
+/* the estate strip: one vivid hue per system, the status as a glowing dot and edge, the 24 h trace underneath */
+.est{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;margin-bottom:12px}@media(max-width:1400px){.est{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:700px){.est{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.et{position:relative;overflow:hidden;border-radius:18px;padding:12px 14px 0;text-decoration:none;color:inherit;border:1px solid color-mix(in srgb,var(--h) 45%,transparent);
+  background:radial-gradient(160px 90px at 100% 0%,color-mix(in srgb,var(--h) 38%,transparent),transparent 70%),linear-gradient(160deg,color-mix(in srgb,var(--h) 22%,var(--pn)),var(--pn) 70%);box-shadow:0 10px 30px -18px var(--h)}
+.et:hover{border-color:var(--h);transform:translateY(-1px)}.et{transition:transform .15s,border-color .15s}
+.et .l{font-size:clamp(10px,.7vw,12px);text-transform:uppercase;letter-spacing:.09em;font-weight:700;color:#c9d2e3;display:flex;gap:6px;align-items:center}
+.et .l i{color:var(--h);font-size:16px}.et .dot{width:9px;height:9px;border-radius:50%;margin-left:auto;background:var(--s);box-shadow:0 0 10px var(--s)}
+.et .n{font:700 clamp(24px,2.2vw,40px)/1.1 var(--fd);margin-top:6px;color:#fff;font-variant-numeric:tabular-nums}.et .d{font-size:12px;color:#aab3c5;min-height:16px}
+.et .sk{margin:4px -14px 0;height:34px}
+.ehue1{--h:#4f8cff}.ehue2{--h:#b877d9}.ehue3{--h:#ff6b9a}.ehue4{--h:#22c3c9}.ehue5{--h:#8f8ff5}.ehue6{--h:#f5a623}.ehue7{--h:#2fd47a}
+.eng{display:grid;grid-template-columns:minmax(120px,230px) 1fr 40px;gap:10px;align-items:center;padding:5px 0;font-size:clamp(12px,.9vw,15px)}
+.eng .bar i{background:linear-gradient(90deg,#8f8ff5,#b877d9)}.eng .bar i.h{background:linear-gradient(90deg,#ff7a45,#e5484d)}
+.aibtn{display:inline-flex;gap:6px;align-items:center;margin-top:10px;padding:8px 14px;border-radius:999px;border:0;cursor:pointer;color:#fff;font:600 13px var(--f);background:linear-gradient(90deg,#8f8ff5,#b877d9,#ff6b9a)}
 body.kiosk .chrome{display:none!important}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body><main>
@@ -84,7 +97,8 @@ body.kiosk .chrome{display:none!important}
   var esc=window.zybDetail.esc, $=function(id){return document.getElementById(id);};
   var Q=new URLSearchParams(location.search), KIOSK=Q.has('kiosk'), ROT=Math.max(15,+(Q.get('rotate')||30)||30);
   var V=null, VIEW=Q.get('view')||'command', ROTATE=Q.has('rotate')||KIOSK, RT=0, ANS=null, ROLE='viewer', ALERTS=null, ALERR=null, SEEN=null, FRESH={}, FAILS=0;
-  var VIEWS=[['command','layout-dashboard','Command'],['sites','building-broadcast-tower','Sites'],['soc','shield-half','SOC'],['infra','server','Infrastructure'],['incidents','bell-ringing','Incidents & on-call'],['trends','chart-line','Trends'],['handover','robot','Shift handover']];
+  var VIEWS=[['command','layout-dashboard','Command'],['estate','network','Estate'],['sites','building-broadcast-tower','Sites'],['soc','shield-half','SOC'],['infra','server','Infrastructure'],['incidents','bell-ringing','Incidents & on-call'],['trends','chart-line','Trends'],['handover','robot','Shift handover']];
+  var OFFP=(window.ZYB_ORG&&window.ZYB_ORG.pages_off)||[];
   var SEVN=['info','low','medium','high','critical'], SEVC=['#5c6577','#8a94a8','#f59f00','#ff7a45','#e5484d'];
   if(KIOSK)document.body.classList.add('kiosk');
   function col(st){return st==='ok'?'#2fb344':st==='warn'?'#f59f00':st==='bad'?'#e5484d':'#4a5163';}
@@ -132,7 +146,7 @@ body.kiosk .chrome{display:none!important}
       +bigStat(p?f(p.score):'—','platform health',platC,'infra',p?p.connected+' of '+p.tiers+' tiers':'',{icon:'server',metric:'platform',ring:p?p.score:null,max:100})
       +bigStat(n?f(n.open+n.acked):'—','open incidents',n?(n.critical?'#e5484d':cnt(n.open+n.acked)):'#4a5163','incidents',n&&n.critical?n.critical+' critical':'',{icon:'bell-ringing',metric:'notify_open'})
       +bigStat(f(V.metrics.decisions),'decisions waiting',cnt(V.metrics.decisions),'soc','for a named person',{icon:'gavel',metric:'decisions'});
-    threat();$('view').innerHTML=VIEW==='command'?command():VIEW==='sites'?sites():VIEW==='soc'?soc():VIEW==='infra'?infra():VIEW==='incidents'?incidents():VIEW==='trends'?trends():handover();}
+    threat();$('view').innerHTML=VIEW==='command'?command():VIEW==='estate'?estate():VIEW==='sites'?sites():VIEW==='soc'?soc():VIEW==='infra'?infra():VIEW==='incidents'?incidents():VIEW==='trends'?trends():handover();}
   function card(pn,title,icon,body,span){return '<section class="card '+(span||'s4')+'" style="--cc:'+col(pn.state)+'"><h2><i class="ti ti-'+icon+'"></i>'+esc(title)+' '+stPill(pn.state)+'<a href="'+esc(pn.link)+'" class="chrome">open ›</a></h2>'+(pn.state==='not_connected'?note((pn.why||'not connected')+' - nothing is shown rather than a zero.'):body)+'</section>';}
   function kv(k,v,c){return '<div class="kv"><span>'+esc(k)+'</span><b style="color:'+(c||'inherit')+'">'+v+'</b></div>';}
   function shiftCard(span){var sh=V.shift;return '<section class="card '+(span||'s4')+'" style="--cc:#4f8cff"><h2><i class="ti ti-clock-hour-7"></i>This shift <span class="mu sm">since '+esc(riyadh(new Date(sh.started),{hour:'2-digit',minute:'2-digit',hour12:false}))+'</span></h2>'
@@ -160,7 +174,44 @@ body.kiosk .chrome{display:none!important}
   function timeline(span){var ids=[['soc_open','#4f8cff','open alerts'],['soc_high','#ff7a45','high'],['soc_critical','#e5484d','critical'],['notify_open','#22c3c9','incidents']],any=ids.some(function(x){return series(x[0]).filter(function(v){return v!=null;}).length>1;});
     var body=!any?note('The 24-hour trace needs two samples - the wall records one every 10 minutes.'):'<div style="display:grid;gap:10px">'+ids.map(function(x){var v=series(x[0]),last=v.filter(function(y){return y!=null;}).pop();return '<div style="display:grid;grid-template-columns:110px 1fr 46px;gap:10px;align-items:center"><span class="sm"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+x[1]+';margin-right:6px"></i>'+esc(x[2])+'</span>'+area(v,600,46,x[1],{aria:x[2]+' over 24 hours'})+'<b style="text-align:right">'+f(last)+'</b></div>';}).join('')+'</div>';
     var t=V.trend||[];return '<section class="card '+(span||'s8')+'" style="--cc:#4f8cff"><h2><i class="ti ti-timeline"></i>Last 24 hours <span class="mu sm">'+(t.length?esc(riyadh(new Date(t[0].t),{hour:'2-digit',minute:'2-digit',hour12:false}))+' → now · one sample every 10 minutes':'')+'</span></h2>'+body+'</section>';}
-  function command(){return '<div class="grid">'+socCard('s4')+alertCard('s5')+sitesMini('s3')+platCard('s4')+notifyCard('s4')+decCard('s4')+timeline('s8')+shiftCard('s4')+'</div>';}
+  // ---------- the organisation's estate (FortiGate fleet, NAC / NDR, Hyper-V, Call Manager, Aramco CCC, the AI engineers)
+  function ep(id){return V.panels[id]||null;}
+  function scol(st){return st==='ok'?'#2fb344':st==='warn'?'#f59f00':st==='bad'?'#e5484d':'#5c6577';}
+  function estTile(hue,id,icon,label,val,sub,metric,go){var pn=ep(id);if(!pn)return '';var nc=pn.state==='not_connected';
+    return '<a class="et ehue'+hue+'" href="'+esc(go||pn.link)+'" style="--s:'+scol(pn.state)+'" title="'+esc(nc?(pn.why||'not connected'):stLabel(pn.state))+'"><div class="l"><i class="ti ti-'+icon+'"></i>'+esc(label)+(metric?delta(metric):'')+'<span class="dot"></span></div>'
+      +'<div class="n">'+(nc?'—':val)+'</div><div class="d">'+esc(nc?'not connected':sub||'')+'</div><div class="sk">'+(metric&&!nc?area(series(metric),300,34,'#ffffff',{aria:label+' over 24 hours'}):'')+'</div></a>';}
+  function estStrip(){var F=function(id){var p=ep(id);return (p&&p.figures)||{};},fw=F('firewalls'),ac=F('access'),hv=F('servers'),vo=F('voice'),cc=F('aramco'),ai=F('ai');
+    var t=estTile(1,'firewalls','flame','FortiGates healthy',fw.devices!=null?fw.ok+'<span style="font-size:.5em;color:#aab3c5">/'+fw.devices+'</span>':'—',fw.devices!=null?(fw.down||0)+' down · '+(fw.links_down||0)+' link(s) down':'','fw_down')
+      +estTile(3,'access','shield-lock','Endpoints at risk',f(ac.at_risk),ac.endpoints!=null?ac.endpoints+' seen'+(ac.learning?' · learning':''):'','nac_risky')
+      +estTile(2,'access','radar-2','NDR high',f(ac.ndr_high),ac.detections!=null?ac.detections+' detection(s)':'','ndr_high','ndr.html')
+      +estTile(4,'servers','server-2','VMs running',hv.vms!=null?hv.running+'<span style="font-size:.5em;color:#aab3c5">/'+hv.vms+'</span>':'—',hv.hosts!=null?hv.hosts+' Hyper-V host(s)':'','hv_high')
+      +estTile(5,'voice','phone-call','Phones registered',vo.phones!=null?vo.registered+'<span style="font-size:.5em;color:#aab3c5">/'+vo.phones+'</span>':'—',vo.phones!=null?(vo.trunks_down||0)+' trunk(s) down · '+(vo.active_calls||0)+' call(s)':'','phones_unreg')
+      +estTile(6,'aramco','certificate','Aramco CCC',cc.score!=null?cc.score+'%':'—',cc.stages!=null?cc.stages_done+'/'+cc.stages+' stages':'','accc_score')
+      +estTile(7,'ai','robot','AI engineers at work',f(ai.open),ai.open!=null?(ai.high||0)+' high / critical':'','ai_open');
+    return t?'<div class="est">'+t+'</div>':'';}
+  function aiCard(span){var pn=ep('ai');if(!pn)return '';var L=pn.by_engineer||[],mx=Math.max.apply(null,[1].concat(L.map(function(x){return x.open;})));
+    var learned=(V.anomalies||[]).length?V.anomalies.length+' unusual metric(s) learned against the same time of day':'nothing unusual against the same time of day ('+V.samples+' readings learned)';
+    return card(pn,'AI engineers - automation','robot',(L.length?L.map(function(x){return '<div class="eng"><span>'+esc(x.engineer)+'</span><div class="bar"><i class="'+(x.high?'h':'')+'" style="width:'+Math.max(4,100*x.open/mx)+'%"></i></div><b style="text-align:right">'+x.open+'</b></div>';}).join(''):note('Every AI engineer is clear - no open work.'))
+      +'<div class="mu sm" style="margin-top:8px"><i class="ti ti-brain"></i> Learning: '+esc(learned)+'. Each finding is patrolled, investigated and re-checked by its engineer; a change is only ever a proposal a named person approves.</div>'
+      +'<button type="button" class="aibtn chrome" data-view="handover"><i class="ti ti-sparkles"></i>Ask the AI shift analyst</button>',span);}
+  function fwCard(span){var pn=ep('firewalls');if(!pn)return '';var x=pn.figures||{};
+    return card(pn,'FortiGate fleet','flame',pn.figures?'<div class="split">'+donut([{v:x.ok,c:'#2fb344',l:'healthy'},{v:x.watch,c:'#4f8cff',l:'watch'},{v:x.attention,c:'#f59f00',l:'attention'},{v:x.down,c:'#e5484d',l:'down'}],150,x.ok+'/'+x.devices,'healthy')
+      +'<div>'+kv('WAN links down',f(x.links_down),x.links_down?'#ff8a8e':'')+kv('Links out of SLA',f(x.out_of_sla),x.out_of_sla?'#f5b544':'')+kv('Tunnels up / down',x.tunnels?x.tunnels.up+' / '+x.tunnels.down:'—',x.tunnels&&x.tunnels.down?'#f5b544':'')+kv('Behind on firmware',f(x.firmware_behind),x.firmware_behind?'#f5b544':'')+kv('Licences due',f(x.licences_due),x.licences_due?'#f5b544':'')+'</div></div>'
+      +(pn.top||[]).slice(0,4).map(function(t){return '<div class="al">'+pill(t.severity,t.severity==='critical'||t.severity==='high'?'v-bad':'v-warn')+'<b>'+esc(t.title)+'</b></div>';}).join(''):'',span);}
+  function accessCard(span){var pn=ep('access');if(!pn)return '';var x=pn.figures||{},S=pn.sites||[],mx=Math.max.apply(null,[1].concat(S.map(function(s){return s.endpoints;}))),K=Object.keys(pn.ndr_by_kind||{});
+    return card(pn,'Network access & detection','shield-lock',S.map(function(s){return '<div class="tier"><span>'+esc(s.site||'(no site)')+'</span><div class="bar"><i style="width:'+(100*s.endpoints/mx)+'%;background:linear-gradient(90deg,#22c3c9 0%,#22c3c9 '+(100-100*s.risky/Math.max(1,s.endpoints))+'%,#ff6b9a '+(100-100*s.risky/Math.max(1,s.endpoints))+'%)"></i></div><b style="text-align:right;color:'+(s.risky?'#ff8a8e':'#56d364')+'">'+s.risky+'</b></div>';}).join('')
+      +(K.length?'<div class="secs" style="grid-template-columns:repeat('+Math.min(4,K.length)+',minmax(0,1fr));margin-top:10px">'+K.map(function(k){return '<a href="ndr.html"><b style="color:#d6a4f0">'+pn.ndr_by_kind[k]+'</b><span>'+esc(k)+'</span></a>';}).join('')+'</div>':'')
+      +kv('Endpoints seen',f(x.endpoints))+kv('At risk now',f(x.at_risk),x.at_risk?'#ff8a8e':''),span);}
+  function hvCard(span){var pn=ep('servers');if(!pn)return '';var H=pn.hosts||[];
+    return card(pn,'Hyper-V servers','server-2',H.map(function(h){var cc=function(v){return v==null?'#4a5163':v>=90?'#e5484d':v>=75?'#f59f00':'#22c3c9';};return '<div class="tier"><span>'+esc(h.name)+(h.stale?' <span class="mu sm">not reporting</span>':'')+'</span><div style="display:grid;gap:3px"><div class="bar" title="CPU"><i style="width:'+(h.cpu||0)+'%;background:linear-gradient(90deg,#4f8cff88,'+cc(h.cpu)+')"></i></div><div class="bar" title="Memory"><i style="width:'+(h.mem||0)+'%;background:linear-gradient(90deg,#b877d988,'+cc(h.mem)+')"></i></div></div><b style="text-align:right;font-size:12px">'+(h.cpu==null?'—':h.cpu)+'/'+(h.mem==null?'—':h.mem)+'</b></div>';}).join('')
+      +'<div class="mu sm">Bars: CPU % (blue) and memory % (violet); numbers CPU / memory.</div>',span);}
+  function voiceCard(span){var pn=ep('voice');if(!pn)return '';var x=pn.figures||{};
+    return card(pn,'Call Manager','phone-call',pn.figures?'<div class="split">'+donut([{v:x.registered,c:'#2fb344',l:'registered'},{v:x.unregistered,c:'#e5484d',l:'not registered'}],150,x.registered+'/'+x.phones,'registered')+'<div>'+kv('Trunks',f(x.trunks))+kv('Trunks down',f(x.trunks_down),x.trunks_down?'#ff8a8e':'')+kv('Calls now',f(x.active_calls))+'</div></div>':'',span);}
+  function acccCard(span){var pn=ep('aramco');if(!pn)return '';var x=pn.figures||{},c=x.score==null?'#4a5163':x.score>=80?'#2fb344':x.score>=50?'#f59f00':'#e5484d';
+    return card(pn,'Aramco CCC','certificate',pn.figures?'<div class="split">'+ring(x.score,c,120,'readiness')+'<div>'+kv('Readiness',f(x.score,'%'),c)+kv('Stages done',x.stages_done+' / '+x.stages)+kv('Controls assessed',x.assessed+' / '+x.applicable)+kv('Certificate',x.days_left==null?'—':x.days_left<0?'expired':x.days_left+' days left',x.days_left!=null&&x.days_left<90?'#f5b544':'')+'</div></div>'
+      +(pn.next||[]).map(function(n){return '<div class="al">'+pill('next','v-warn')+'<b>'+esc(n.name)+'</b><span class="mu sm">'+esc(n.next||'')+'</span></div>';}).join(''):'',span);}
+  function estate(){return estStrip()+'<div class="grid">'+fwCard('s6')+accessCard('s6')+hvCard('s4')+voiceCard('s4')+acccCard('s4')+aiCard('s12')+'</div>';}
+  function command(){return estStrip()+'<div class="grid">'+aiCard('s12')+socCard('s4')+alertCard('s5')+sitesMini('s3')+platCard('s4')+notifyCard('s4')+decCard('s4')+timeline('s8')+shiftCard('s4')+'</div>';}
   function dayBars(ad){var vals=ad.map(function(x){return x.total||0;}),labels=ad.map(function(x){return x.day;}),W=900,H=200,mx=Math.max.apply(null,vals.concat([1])),bw=W/vals.length,avg=[];
     vals.forEach(function(v,k){var w=vals.slice(Math.max(0,k-6),k+1);avg.push(w.reduce(function(a,b){return a+b;},0)/w.length);});
     var Y=function(v){return H-v/mx*(H-10);},line=avg.map(function(v,k){return (k?'L':'M')+(k*bw+bw/2).toFixed(1)+' '+Y(v).toFixed(1);}).join(' ');
@@ -203,7 +254,7 @@ body.kiosk .chrome{display:none!important}
       if(V&&(VIEW==='sites'||VIEW==='command'))draw();else if(V)threat();});
     Promise.all([req('GET','/api/soc/m365/security').then(function(m){SEC.m365=m;},function(){SEC.m365=null;/* not connected or refused: shown as not read */}),
       req('GET','/api/soc/netops/rogue').then(function(r){SEC.rogue=r.kpis;},function(){SEC.rogue=null;/* rogue detection absent: not read */}),
-      req('GET','/api/soc/ksc/overview').then(function(k){var t={hosts:0,unprotected:0,infected:0},n=0;(k.servers||[]).forEach(function(s){var u=s.last&&s.last.summary;if(u){n++;t.hosts+=u.hosts||0;t.unprotected+=u.unprotected||0;t.infected+=u.infected||0;}});SEC.ep=n?t:null;},function(){SEC.ep=null;/* endpoint protection not connected */})])
+      (OFFP.indexOf('ai-ksc-engineer')>=0?Promise.resolve({servers:[]}):req('GET','/api/soc/ksc/overview')).then(function(k){var t={hosts:0,unprotected:0,infected:0},n=0;(k.servers||[]).forEach(function(s){var u=s.last&&s.last.summary;if(u){n++;t.hosts+=u.hosts||0;t.unprotected+=u.unprotected||0;t.infected+=u.infected||0;}});SEC.ep=n?t:null;},function(){SEC.ep=null;/* endpoint protection not connected */})])
       .then(function(){if(V&&VIEW==='soc')draw();else if(V)threat();});}
   function sites(){if(NOCERR)return note(NOCERR);if(!NOC)return note('Reading the sites…');if(!NOC.length)return note('No network device or monitored server yet - add them on the AI Network Engineer and Server Availability pages; each gets a site there.');
     var up=NOC.filter(function(x){return x.state==='up';}).length,bad=NOC.filter(function(x){return x.state==='critical';}).length;
@@ -217,7 +268,7 @@ body.kiosk .chrome{display:none!important}
   function secStrip(){var m=SEC.m365,r=SEC.rogue,e=SEC.ep;function c(v,l,h,col,ic){return '<a href="'+h+'"><i class="ti ti-'+ic+'" style="color:'+(col||'#8a94a8')+'"></i><b style="color:'+(col||'inherit')+'">'+esc(v==null?'—':v)+'</b><span>'+esc(l)+'</span></a>';}
     return '<section class="card" style="--cc:#22c3c9;margin-bottom:12px"><h2><i class="ti ti-shield-check"></i>Security posture <span class="mu sm">a dash means the source is not connected</span><a href="security-center.html" class="chrome">Security Center ›</a></h2><div class="secs">'
       +c(m&&m.score?m.score.pct+'%':null,'Secure Score','m365-security.html','','brand-windows')+c(m&&m.mfa?m.mfa.not_registered:null,'users without MFA','m365-security.html',m&&m.mfa&&m.mfa.not_registered?'#f5b544':'','lock-open')
-      +c(r?r.rogue:null,'rogue devices','rogue-detection.html',r&&r.rogue?'#ff8a8e':'','router')+c(e?e.unprotected+(e.infected?' · '+e.infected+' infected':''):null,'endpoints unprotected','ai-ksc-engineer.html',e&&(e.unprotected||e.infected)?'#ff8a8e':'','virus')+'</div></section>';}
+      +c(r?r.rogue:null,'rogue devices','rogue-detection.html',r&&r.rogue?'#ff8a8e':'','router')+(OFFP.indexOf('ai-ksc-engineer')<0?c(e?e.unprotected+(e.infected?' · '+e.infected+' infected':''):null,'endpoints unprotected','ai-ksc-engineer.html',e&&(e.unprotected||e.infected)?'#ff8a8e':'','virus'):c(V&&V.metrics?V.metrics.nac_risky:null,'endpoints at risk (NAC)','fortigate-nac.html',V&&V.metrics&&V.metrics.nac_risky?'#ff8a8e':'','shield-lock'))+'</div></section>';}
   function threat(){var el=$('thr');if(!el||!V)return;var s=V.panels.soc.figures||{},why=[],lvl='normal';
     if(V.panels.soc.state==='not_connected'){lvl='unknown';why.push('the SOC figures are not connected');}
     else{if(s.critical){lvl='critical';why.push(s.critical+' critical alert(s)');}if(s.high){if(lvl!=='critical')lvl='elevated';why.push(s.high+' high alert(s)');}}

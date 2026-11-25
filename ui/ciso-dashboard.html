@@ -1,4 +1,4 @@
-<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CISO Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CISO Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
 <style>
 :root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--d-acc:#5b8def}
 [hidden]{display:none!important}*{box-sizing:border-box}
@@ -29,6 +29,13 @@ svg text{font:11px Inter,"Segoe UI",system-ui,sans-serif;fill:#c9d1dc}
 .chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(139,147,164,.16);color:#aab2c2;white-space:nowrap}.chip.critical{background:rgba(229,72,77,.18);color:#ff7b80}.chip.high{background:rgba(245,120,0,.18);color:#ffa25c}.chip.medium{background:rgba(245,159,0,.16);color:#f5c544}
 .brief{white-space:pre-wrap;font-size:13px;line-height:1.55;max-height:260px;overflow:auto}
 .empty{color:var(--d-mute);font-size:13px;padding:6px 0}
+/* colour: the hero in the organisation's colours, an accent per card, the estate security tiles in one hue per system */
+.hero{background:radial-gradient(640px 220px at 100% 0%,rgba(184,119,217,.20),transparent 70%),radial-gradient(560px 240px at 0% 100%,rgba(91,141,239,.18),transparent 70%),var(--d-panel)!important}
+.card{box-shadow:inset 0 3px 0 0 var(--ca,#5b8def)}.cols3>.card:nth-child(3n+2){--ca:#b877d9}.cols3>.card:nth-child(3n+3){--ca:#22c3c9}.cols2>.card:nth-child(2){--ca:#f5a623}
+.es{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px}
+.es a{display:block;text-decoration:none;color:inherit;border-radius:12px;padding:9px 11px;border:1px solid color-mix(in srgb,var(--h) 45%,transparent);background:linear-gradient(150deg,color-mix(in srgb,var(--h) 24%,var(--d-raise)),var(--d-raise) 75%)}
+.es a b{display:block;font-size:22px;font-weight:900;color:#fff}.es a span{font-size:11px;color:#c9d1dc;text-transform:uppercase;letter-spacing:.05em}
+.cv{position:relative;height:180px}
 @media (max-width:1200px){.hero,.cols3,.cols2{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.live .dot,.al.new{animation:none}.ring circle.fg{transition:none}}
 </style></head><body><main>
@@ -37,6 +44,11 @@ svg text{font:11px Inter,"Segoe UI",system-ui,sans-serif;fill:#c9d1dc}
 <div id="err"></div>
 <div id="main" hidden>
 <section class="card hero"><div class="ring" id="ring"></div><div><div id="grade" style="font-size:22px;font-weight:900"></div><div class="sm mute" id="gradet"></div><svg id="trend" viewBox="0 0 420 120" role="img" aria-label="Posture trend and forecast" style="width:100%;margin-top:8px"></svg><div class="sm" id="fct"></div></div><div class="kpis" id="kpis"></div></section>
+<div class="cols3" id="estsec">
+ <section class="card"><h2><i class="ti ti-flame"></i>Firewall fleet security <span class="c" id="fwc"></span><a href="fortigate-fleet.html" style="margin-left:auto">open ›</a></h2><div id="fwsec"><div class="empty">Loading…</div></div></section>
+ <section class="card"><h2><i class="ti ti-shield-lock"></i>Network access &amp; detection <span class="c">learned risk · NDR</span><a href="fortigate-nac.html" style="margin-left:auto">open ›</a></h2><div id="acsec"><div class="empty">Loading…</div></div></section>
+ <section class="card"><h2><i class="ti ti-certificate"></i>Compliance <span class="c" id="cmc"></span></h2><div id="cmsec"><div class="empty">Loading…</div></div></section>
+</div>
 <div class="cols3">
  <section class="card"><h2><i class="ti ti-chart-radar"></i>Posture by domain <span class="c">solid = now · dashed = 7 days ago</span></h2><svg id="radar" viewBox="0 0 360 300" role="img" aria-label="Domains"></svg></section>
  <section class="card"><h2><i class="ti ti-arrows-up-down"></i>What moved <span class="c" id="mvs"></span></h2><div id="movers"></div></section>
@@ -85,7 +97,7 @@ svg text{font:11px Inter,"Segoe UI",system-ui,sans-serif;fill:#c9d1dc}
     function k(n2,l,c){return '<div class="kpi"><div class="n" style="color:'+(c||'inherit')+'">'+esc(n2==null?'—':n2)+'</div><div class="l">'+esc(l)+'</div></div>';}
     var crit=+(ob[4]||ob['4']||ob.critical||0),high=+(ob[3]||ob['3']||ob.high||0);
     $('kpis').innerHTML=k(s?crit:null,'critical alerts open',crit?'#ff7b80':'')+k(s?high:null,'high alerts open',high?'#ffa25c':'')+k(s&&s.sla?s.sla.breaching_now:null,'SLA breaching now',s&&s.sla&&s.sla.breaching_now?'#ff7b80':'')
-      +k(O.risks.filter(function(r){return r.severity==='critical';}).length,'critical risks','#ff7b80')+k(O.decisions.length,'decisions waiting',O.decisions.length?'#f5c544':'')+k(O.compliance&&O.compliance.sama?O.compliance.sama.coverage_pct+'%':null,'SAMA CSF coverage');}
+      +k(O.risks.filter(function(r){return r.severity==='critical';}).length,'critical risks','#ff7b80')+k(O.decisions.length,'decisions waiting',O.decisions.length?'#f5c544':'')+(O.compliance&&O.compliance.frameworks&&O.compliance.frameworks.indexOf('sama')<0?k(O.compliance.aramco?O.compliance.aramco.score+'%':null,'Aramco CCC readiness',O.compliance.aramco?(O.compliance.aramco.score>=80?'#56d364':O.compliance.aramco.score>=50?'#f5c544':'#ff7b80'):'')+k(O.compliance.nca?O.compliance.nca.score+'%':null,'NCA ECC (register)'):k(O.compliance&&O.compliance.sama?O.compliance.sama.coverage_pct+'%':null,'SAMA CSF coverage'));}
   function drawRadar(){var D=O.posture.domains,N=D.length,cx=180,cy=150,R=110,o='',old={};
     var H=O.trend||[],ref=H.length>=8?H[H.length-8]:H[0];if(ref&&ref.domains)old=ref.domains;
     for(var g=1;g<=4;g++){o+='<polygon points="'+D.map(function(d,i){var a=-Math.PI/2+i*2*Math.PI/N;return (cx+R*g/4*Math.cos(a)).toFixed(1)+','+(cy+R*g/4*Math.sin(a)).toFixed(1);}).join(' ')+'" fill="none" stroke="#232837"/>';}
@@ -122,8 +134,42 @@ svg text{font:11px Inter,"Segoe UI",system-ui,sans-serif;fill:#c9d1dc}
       h+=P.length?P.slice(0,8).map(function(x){return '<a href="'+esc(x.p.page)+'" style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid #232837;color:inherit;text-decoration:none"><span style="font:600 11px ui-monospace,Consolas,monospace;padding:1px 7px;border-radius:9px;background:'+(x.pts>=45?'rgba(229,72,77,.18);color:#e5484d':'rgba(245,181,68,.16);color:#f5b544')+'">'+esc(x.pts)+'</span><span><b>'+esc(x.p.ref)+'</b> '+esc(x.p.text)+'<span style="display:block;font-size:12px;color:#8b93a4">'+esc(x.p.kind)+' · '+esc(x.p.why.map(function(q){return q[0]+' +'+q[1];}).join(', '))+'</span></span></a>';}).join('')
         :'<div class="empty">Nothing late or waiting for you.'+(w.functions.indexOf('ciso')<0?' You are not listed under the CISO office in Workflow Automation → Settings, so only your own requests count.':'')+'</div>';
       $('wf').innerHTML=h;},function(e){if(e.status===404){$('wfcard').hidden=true;return;}$('wfcard').hidden=false;$('wf').innerHTML='<div class="empty">Workflow Automation could not be read: '+esc(e.message)+'</div>';});}
+  // ---- the organisation's estate security (the Operations Wall's view: GET /api/itam/ops-wall) and the frameworks it is under
+  var CH=window.zybCharts;
+  function na2(t){return '<div class="empty">'+esc(t)+'</div>';}
+  function drawEstate(W){
+    var P=(W&&W.panels)||{},fw=P.firewalls,ac=P.access;
+    if(!W){$('fwsec').innerHTML=na2('The Operations Wall did not answer.');$('acsec').innerHTML=na2('The Operations Wall did not answer.');}
+    else{
+      if(!fw)$('fwsec').innerHTML=na2('FortiGate fleet is not used here.');
+      else if(fw.state==='not_connected'||!fw.figures)$('fwsec').innerHTML=na2((fw.why||'not connected')+' - connect FortiManager or a standalone FortiGate in the Integration Hub.');
+      else{var f=fw.figures;$('fwc').textContent=f.devices+' FortiGates';
+        $('fwsec').innerHTML='<div class="es"><a href="fortigate-fleet.html" style="--h:#e5484d"><b>'+esc(f.down)+'</b><span>down</span></a><a href="fortigate-fleet.html" style="--h:#f5a623"><b>'+esc(f.firmware_behind)+'</b><span>firmware behind</span></a><a href="fortigate-fleet.html" style="--h:#b877d9"><b>'+esc(f.licences_due)+'</b><span>licences due</span></a><a href="fortigate-fleet.html" style="--h:#4f8cff"><b>'+esc(f.tunnels?f.tunnels.down:0)+'</b><span>tunnels down</span></a></div>'
+          +'<div class="cv"><canvas id="fwring"></canvas></div>'+(fw.top||[]).slice(0,3).map(function(t){return '<div class="sm" style="padding:4px 0;border-bottom:1px solid var(--d-line)"><b style="color:'+(t.severity==='critical'||t.severity==='high'?'#ff7b80':'#f5c544')+'">'+esc(t.severity)+'</b> '+esc(t.title)+'</div>';}).join('');
+        if(CH)CH.ring($('fwring'),['Healthy','Watch','Attention','Down'],[f.ok,f.watch,f.attention,f.down],['ok','acc','warn','crit'],{v:f.ok+'/'+f.devices,l:'healthy'});}
+      if(!ac)$('acsec').innerHTML=na2('Network access control is not used here.');
+      else if(ac.state==='not_connected')$('acsec').innerHTML=na2((ac.why||'not connected')+' - NAC learns from the FortiGates and the switch port maps; NDR runs over the firewalls\' traffic logs.');
+      else{var a=ac.figures||{},S=ac.sites||[],K=Object.keys(ac.ndr_by_kind||{});
+        $('acsec').innerHTML='<div class="es"><a href="fortigate-nac.html" style="--h:#ff6b9a"><b>'+esc(a.at_risk==null?'—':a.at_risk)+'</b><span>endpoints at risk</span></a><a href="ndr.html" style="--h:#b877d9"><b>'+esc(a.ndr_high==null?'—':a.ndr_high)+'</b><span>NDR high</span></a><a href="ndr.html" style="--h:#22c3c9"><b>'+esc(a.detections==null?'—':a.detections)+'</b><span>NDR detections</span></a></div>'
+          +(S.length?'<div class="cv"><canvas id="acbar"></canvas></div>':'')+(K.length?'<div class="cv" style="height:140px"><canvas id="ndrbar"></canvas></div>':'');
+        if(CH&&S.length)CH.bars($('acbar'),S.map(function(x){return x.site||'(no site)';}),[{label:'At risk',data:S.map(function(x){return x.risky;}),color:'crit'},{label:'Fine',data:S.map(function(x){return x.endpoints-x.risky;}),color:'teal'}],{stacked:true,horizontal:true});
+        if(CH&&K.length)CH.bars($('ndrbar'),K,[{label:'NDR detections',data:K.map(function(x){return ac.ndr_by_kind[x];}),color:'purple'}],{});}
+    }
+    // compliance: the frameworks the organisation is under (the AI CISO overview says which)
+    var C=O&&O.compliance||{},FW=C.frameworks||['sama'];
+    if(FW.indexOf('sama')>=0){$('cmc').textContent='SAMA CSF';$('cmsec').innerHTML=C.sama?'<div class="cv"><canvas id="cmring"></canvas></div><div class="sm mute">'+esc((C.sama.counts?C.sama.counts.covered+' covered, '+C.sama.counts.partial+' partial, '+C.sama.counts.gap+' gap':''))+'</div>':na2('SAMA coverage is not reported by the SIEM.');
+      if(C.sama&&CH)CH.ring($('cmring'),['Covered','Gap'],[C.sama.coverage_pct,100-C.sama.coverage_pct],['ok','mute'],{v:C.sama.coverage_pct+'%',l:'SAMA CSF'});return;}
+    $('cmc').textContent='NCA ECC · Aramco CCC';
+    var nc=C.nca,ar=C.aramco;
+    $('cmsec').innerHTML='<div style="display:grid;grid-template-columns:minmax(0,1fr);gap:10px"><div><div class="cv" style="height:150px"><canvas id="ncring"></canvas></div><div class="sm mute" style="text-align:center">'+(nc?'NCA ECC register (indicative)':'NCA ECC not assessed yet')+' · <a href="nca-ecc.html">open</a></div></div>'
+      +'<div><div class="cv" style="height:150px"><canvas id="arring"></canvas></div><div class="sm mute" style="text-align:center">'+(ar?esc(ar.stages_done+'/'+ar.stages+' stages · '+(ar.days_left==null?'no certificate yet':ar.days_left<0?'certificate expired':ar.days_left+' days to expiry')):'Aramco CCC not assessed yet')+' · <a href="aramco-ccc.html">open</a></div></div></div>';
+    var rc=function(v){return v>=80?'ok':v>=50?'warn':'crit';};
+    if(CH){if(nc)CH.ring($('ncring'),['Met','Gap'],[nc.score,100-nc.score],[rc(nc.score),'mute'],{v:nc.score+'%',l:'NCA ECC'});else CH.empty($('ncring'),'not assessed');
+      if(ar)CH.ring($('arring'),['Ready','Gap'],[ar.score,100-ar.score],[rc(ar.score),'mute'],{v:ar.score+'%',l:'Aramco CCC'});else CH.empty($('arring'),'not assessed');}
+  }
+  function loadEstate(){itam('/ops-wall').then(function(W){try{drawEstate(W);}catch(e){$('fwsec').innerHTML=na2('could not be drawn: '+e.message);}},function(){try{drawEstate(null);}catch(e){ /* the cards keep their loading text; the overview error above says why */ }});}
   function load(){drawWf();return Promise.all([itam('/ciso/overview'),itam('/ciso/insights'),itam('/ciso/briefs?limit=1').catch(function(){return {briefs:[]};})]).then(function(R){O=R[0];I=R[1];$('main').hidden=false;$('err').innerHTML='';
-      drawTop();drawRadar();drawMovers();drawAlertLine();drawLists();var b=(R[2].briefs||[])[0];if(b)itam('/ciso/briefs/'+encodeURIComponent(b.id)).then(drawBrief,function(){drawBrief(b);});else drawBrief(null);},
+      drawTop();drawRadar();drawMovers();drawAlertLine();drawLists();loadEstate();var b=(R[2].briefs||[])[0];if(b)itam('/ciso/briefs/'+encodeURIComponent(b.id)).then(drawBrief,function(){drawBrief(b);});else drawBrief(null);},
     function(e){$('main').hidden=true;$('err').innerHTML='<div class="card"><p>'+esc(e.status===404?'The CISO dashboard needs the platform update (update-platform.ps1).':e.status===409?e.message:'IT Asset Management is not reachable ('+e.message+').')+'</p></div>';});}
   // ---- live alerts: polled every 10 s while visible, at once when the tab comes back, backing off when the SOC does not answer
   function liveState(st,txt){var l=$('live');l.className='live '+st;$('livet').textContent=txt;}

@@ -38,6 +38,12 @@
     var lv = document.createElement('link'); lv.id = 'zyb-vivid-css'; lv.rel = 'stylesheet'; lv.href = dir + 'zyb-vivid.css' + (ver ? '?v=' + ver : '');
     track(lv); (document.head || document.documentElement).appendChild(lv);
   }
+  // the colourful layer (vendor/zyb-color.css) on top of Vivid: on unless the brand setting says "colourful": false
+  if (!document.getElementById('zyb-color-css') && !(window.ZYB_ORG && window.ZYB_ORG.colourful === false)) {
+    document.documentElement.classList.add('zyb-color');
+    var lc = document.createElement('link'); lc.id = 'zyb-color-css'; lc.rel = 'stylesheet'; lc.href = dir + 'zyb-color.css' + (ver ? '?v=' + ver : '');
+    track(lc); (document.head || document.documentElement).appendChild(lc);
+  }
   // the portal's theme switch (🌙 Dark NOC · ⬛ Midnight · ☀️ Light) for every screen: html[data-zyb-theme] + Tabler's
   // data-bs-theme, from localStorage noc_theme (the portal's own key), set before the page paints (vendor/zyb-theme.css)
   if (!document.getElementById('zyb-theme-css')) {

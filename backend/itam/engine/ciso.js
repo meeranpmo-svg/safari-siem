@@ -58,6 +58,10 @@ function createCiso(app, opts = {}) {
   const RUN = { timer: null, last_tick: null, last_error: null, last_snapshot: 0, auto_briefs: 0 };
   const cfg = (app.config && app.config.ciso) || {};
   const sc = ((app.config && app.config.discovery) || {}).siem || {};
+  // the compliance domain follows the organisation's frameworks (brand modules_off): SAMA CSF where it applies, otherwise
+  // NCA ECC (the platform's register) and Aramco CCC - an organisation is never scored on a framework it is not under
+  const SAMA = !!cfg.all_frameworks || !new Set(ZYB_ORG.modules_off || []).has('fw-sama');
+  const DOM = DOMAINS.map((d) => (d.id === 'compliance' && !SAMA ? Object.assign({}, d, { name: 'Regulatory compliance (NCA ECC · Aramco CCC)', page: 'nca-ecc.html' }) : d));
   const base = String(sc.base_url || 'http://127.0.0.1:9120').replace(/\/+$/, ''), prefix = sc.prefix || '/api/soc';
   let G = null; const grc = () => G || (G = (app.addons && app.addons.grc) || require('./grc').createGrc(app));
   let cache = null;
@@ -101,18 +105,20 @@ function createCiso(app, opts = {}) {
       source('pentest', 'Attack surface (pentest)', () => app.addons && app.addons.pentest ? app.addons.pentest.assessment().summary : null),
       source('siem_duty', 'AI engineers (SIEM)', async () => { const [e, i] = await Promise.all([siem('GET', '/duty/engineers'), siem('GET', '/duty/items?status=open&limit=500')]); return { engineers: e.engineers || [], items: i.items || [] }; }),
       source('soc', 'SOC metrics (30 days)', () => siem('GET', '/metrics')),
-      source('sama', 'SAMA CSF coverage', () => siem('GET', '/compliance/sama')),
+      SAMA ? source('sama', 'SAMA CSF coverage', () => siem('GET', '/compliance/sama')) : null,
+      SAMA ? null : source('nca', 'NCA ECC register', async () => { const N = app.addons && app.addons.ncaEcc; if (!N) return null; const v = await N.view(); return v && v.score != null ? { score: v.score, counts: v.counts, nca: v.nca } : null; }),
+      SAMA ? null : source('aramco', 'Aramco CCC readiness', () => { const X = app.addons && app.addons.aramcoCcc; if (!X) return null; const v = X.view({ user: 'system:ciso', role: 'viewer' }); return v.controls_total && v.score != null ? { score: v.score, assessed: v.assessed, applicable: v.applicable, stages_done: (v.stages || []).filter((x) => x.done).length, stages: (v.stages || []).length, days_left: v.days_left == null ? null : v.days_left } : null; }),
       source('approvals', 'SOC response approvals', async () => (await siem('GET', '/approvals?status=pending')).items || []),
       source('logflow', 'Log-flow assurance (SIEM)', async () => { const a = await siem('GET', '/collection/assurance'); return { summary: a.summary, inventory: a.inventory, collector: a.collector, unknown_senders: (a.unknown_senders || []).length }; }),
     ]);
-    const S = {}; for (const s of list) S[s.id] = s;
+    const S = {}; for (const s of list.filter(Boolean)) S[s.id] = s;
     return S;
   }
   const live = (S, id) => (S[id] && S[id].state === 'live' ? S[id].data : null);
 
   /* ---- posture: every point itemised; an input not held is not measured (never a free pass) */
   function domain(id, items, measured, why) {
-    const d = DOMAINS.find((x) => x.id === id);
+    const d = DOM.find((x) => x.id === id);
     const pts = items.reduce((a, x) => a + x.points, 0);
     return { id, name: d.name, weight: d.weight, page: d.page, measured, score: measured ? Math.max(0, Math.min(100, 100 + pts)) : null,
       items, not_measured_why: measured ? null : why };
@@ -142,7 +148,15 @@ function createCiso(app, opts = {}) {
     if (sm && sm.summary && sm.summary.coverage_pct != null) {
       const c = sm.summary.counts || {};
       out.push(domain('compliance', [{ label: 'SAMA CSF coverage ' + sm.summary.coverage_pct + '% (' + (c.covered || 0) + ' covered, ' + (c.partial || 0) + ' partial, ' + (c.gap || 0) + ' gap)', points: Math.round(sm.summary.coverage_pct) - 100 }], true));
-    } else out.push(domain('compliance', [], false, S.sama && S.sama.error ? S.sama.error : 'SAMA coverage not available from the SIEM'));
+    } else if (SAMA) out.push(domain('compliance', [], false, S.sama && S.sama.error ? S.sama.error : 'SAMA coverage not available from the SIEM'));
+    else {
+      // NCA ECC and Aramco CCC: each framework held is one item, the domain score is their mean (never a free pass for one not held)
+      const nc = live(S, 'nca'), ac = live(S, 'aramco'), it = [];
+      if (nc) it.push({ label: 'NCA ECC register ' + nc.score + '% (indicative, from the register)', points: Math.round(nc.score) - 100 });
+      if (ac) it.push({ label: 'Aramco CCC readiness ' + ac.score + '% (' + ac.assessed + ' of ' + ac.applicable + ' controls assessed)', points: Math.round(ac.score) - 100 });
+      if (it.length) out.push(domain('compliance', it.length === 2 ? it.map((x) => Object.assign({}, x, { points: Math.round(x.points / 2) })) : it, true));
+      else out.push(domain('compliance', [], false, 'neither the NCA ECC register nor Aramco CCC is assessed yet'));
+    }
 
     const m = live(S, 'soc');
     if (m) {
@@ -277,7 +291,7 @@ function createCiso(app, opts = {}) {
   function byArea(rs) {
     const dom = {}, site = {};
     for (const x of rs) {
-      const d = dom[x.domain] = dom[x.domain] || { domain: x.domain, name: (DOMAINS.find((z) => z.id === x.domain) || {}).name || x.domain, critical: 0, high: 0, total: 0 };
+      const d = dom[x.domain] = dom[x.domain] || { domain: x.domain, name: (DOM.find((z) => z.id === x.domain) || {}).name || x.domain, critical: 0, high: 0, total: 0 };
       d.total++; if (x.severity === 'critical') d.critical++; else if (x.severity === 'high') d.high++;
       const k = x.site || '(no site recorded)'; const s = site[k] = site[k] || { site: k, critical: 0, high: 0, total: 0 };
       s.total++; if (x.severity === 'critical') s.critical++; else if (x.severity === 'high') s.high++;
@@ -306,7 +320,9 @@ function createCiso(app, opts = {}) {
       posture: posture(S), risks: rs.slice(0, 150), risks_total: rs.length, decisions: decisions(S), team: team(S), areas: byArea(rs),
       soc: (() => { const m = live(S, 'soc'); return m ? { mttd_s: m.mttd_s, mttr_s: m.mttr_s, open_by_severity: m.open_by_severity, alerts_by_day: Array.isArray(m.alerts_by_day) ? m.alerts_by_day.slice(-60) : [], sla: m.sla ? { ack_compliance_pct: m.sla.ack_compliance_pct, resolve_compliance_pct: m.sla.resolve_compliance_pct, breaching_now: (m.sla.breaching_now || []).length, at_risk: m.sla.at_risk } : null } : null; })(),
       compliance: (() => { const sm = live(S, 'sama'), g = live(S, 'grc'), dr = live(S, 'drills');
+        const nc = live(S, 'nca'), ac = live(S, 'aramco');
         return { sama: sm && sm.summary ? { coverage_pct: sm.summary.coverage_pct, counts: sm.summary.counts, by_domain: sm.summary.by_domain } : null,
+          frameworks: SAMA ? ['sama'] : ['nca', 'aramco'], nca: nc ? { score: nc.score, counts: nc.counts } : null, aramco: ac || null,
           grc: g ? { policies: g.total, overdue: g.reviews.overdue, attested: g.attested, by_cls: g.by_cls } : null,
           drills: dr ? { total: dr.summary.total, systems: dr.systems.length, overdue: dr.systems.filter((x) => x.overdue).length, rto: dr.summary.rto, rpo: dr.summary.rpo, by_result: dr.summary.by_result, awaiting_signoff: dr.summary.awaiting_signoff } : null }; })(),
       last_brief: (() => { const b = latestBrief(); return b ? { id: b.id, at: b.at, kind: b.kind, headline: b.headline } : null; })() };
@@ -464,7 +480,7 @@ function createCiso(app, opts = {}) {
   function briefs(limit) { return briefCol.all().sort((a, b) => b.at - a.at).slice(0, Math.min(Number(limit) || 20, 100)).map((b) => ({ id: b.id, at: b.at, by: b.by, auto: !!b.auto, kind: b.kind, headline: b.headline, posture_overall: b.posture_overall })); }
   function briefGet(id) { const b = briefCol.get(id); if (!b) throw httpErr(404, 'brief not found'); return b; }
 
-  return { collect, overview, insights, posture, risks, decisions, team, patrolAll, brief, briefs, briefGet, history, status, tick, start, stop, nextBrief, DOMAINS };
+  return { collect, overview, insights, posture, risks, decisions, team, patrolAll, brief, briefs, briefGet, history, status, tick, start, stop, nextBrief, DOMAINS: DOM };
 }
 
 function registerCiso(srv, app, opts = {}) {

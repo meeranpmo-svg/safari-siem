@@ -37,7 +37,7 @@
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { labels: { color: ink, boxWidth: 10, boxHeight: 10, usePointStyle: true, font: { size: 11 } } },
         tooltip: { backgroundColor: 'rgba(17,18,23,.95)', borderColor: color('line'), borderWidth: 1, titleColor: ink, bodyColor: ink, padding: 8 } },
-      scales: { x: { grid: { color: horizontal ? grid : 'transparent' }, ticks: { color: color('mute'), font: { size: 10.5 }, maxRotation: 0, autoSkip: true } },
+      scales: { x: { grid: { color: horizontal ? grid : 'transparent' }, ticks: { color: color('mute'), font: { size: 10.5 }, maxRotation: 0, autoSkip: true, precision: 0 } },
         y: { grid: { color: horizontal ? 'transparent' : grid }, ticks: { color: color('mute'), font: { size: 10.5 }, precision: 0 }, beginAtZero: true } },
     };
   }

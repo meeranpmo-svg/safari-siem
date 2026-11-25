@@ -76,6 +76,7 @@ async function startApp(o = {}) {
   // discovery vault key lives in the per-test temp dir (created by the engine); the scheduler is driven by tick() in tests
   // the product's every-engineer duty desk in tests (the organisation's brand switches some off; tests/ai-team.test.js checks that)
   config.duty = Object.assign({ all_engineers: true }, (o.config && o.config.duty) || {});
+  config.ciso = Object.assign({ all_frameworks: true }, (o.config && o.config.ciso) || {});
   // SYNTHETIC test sites (the product takes the organisation's sites from the brand setting)
   const TEST_SITES = ['Riyadh HQ', 'Jeddah DR', 'Riyadh Olaya', 'Alkhobar'];
   config.discovery = Object.assign({ vault_key_file: path.join(dir, 'discovery-vault.key'), vault_create_key: true, ad_resolve_dns: false, sites: TEST_SITES }, (o.config && o.config.discovery) || {});

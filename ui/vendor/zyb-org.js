@@ -34,13 +34,13 @@
     var W = [], X = 'SAMA(?: CSF| Cyber Security Framework)?(?: \\d+(?:\\.\\d+)*(?:-\\d+)*)?', I = '(?:Insurance Authority|IA)(?: \\d+(?:\\.\\d+)*)?', SEP = '\\s*(?:·|,|/|\\+|&)\\s*';
     if (noS) W.push(X); if (noI) W.push(I);
     var lead = new RegExp('\\b(?:' + W.join('|') + ')' + SEP + '(?=[A-Z(])', 'g'), tail = new RegExp(SEP + '(?:' + W.join('|') + ')(?=$|[\\s).,;:])', 'g'), plusIa = /\s*\(\+ IA\)/g;
-    var clean = function (t) { if (t.indexOf('SAMA') < 0 && t.indexOf('Insurance Authority') < 0 && t.indexOf(' IA') < 0) return t; var o = noI ? t.replace(plusIa, '') : t; return o.replace(lead, '').replace(tail, ''); };
+    var clean = function (t) { if (typeof t !== 'string') return t; if (t.indexOf('SAMA') < 0 && t.indexOf('Insurance Authority') < 0 && t.indexOf(' IA') < 0) return t; var o = noI ? t.replace(plusIa, '') : t; return o.replace(lead, '').replace(tail, ''); };
     var walk = function (n) {
       if (n.nodeType === 3) { var v = n.nodeValue, c = clean(v); if (c !== v) n.nodeValue = c; return; }
       if (n.nodeType !== 1) return; var tag = n.tagName; if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA') return;
       var fw = n.getAttribute && (n.getAttribute('data-fw') || (tag === 'OPTION' ? n.getAttribute('value') : null));
       if (fw && ((noS && /^sama$/i.test(fw)) || (noI && /^ia$/i.test(fw)))) { if (tag === 'OPTION' && n.parentNode) { n.parentNode.removeChild(n); return; } n.hidden = true; n.style.display = 'none'; return; }
-      if (n.title) n.title = clean(n.title);
+      if (typeof n.title === 'string' && n.title) n.title = clean(n.title);   // a form's "title" can be its input named title: strings only
       for (var c2 = n.firstChild; c2; c2 = c2.nextSibling) walk(c2);
     };
     var run = function () { if (document.body) walk(document.body); document.title = clean(document.title); };
@@ -57,8 +57,8 @@
     var walk = function (n) {
       if (n.nodeType === 3) { re.lastIndex = 0; var v = n.nodeValue; if (re.test(v)) { re.lastIndex = 0; n.nodeValue = v.replace(re, function (m) { return T[m] || m; }); } re.lastIndex = 0; return; }
       if (n.nodeType !== 1 || n.tagName === 'SCRIPT' || n.tagName === 'STYLE' || n.tagName === 'TEXTAREA') return;
-      if (n.title) { re.lastIndex = 0; n.title = n.title.replace(re, function (m) { return T[m] || m; }); }
-      if (n.tagName === 'INPUT' && n.placeholder) n.placeholder = n.placeholder.replace(re, function (m) { return T[m] || m; });
+      if (typeof n.title === 'string' && n.title) { re.lastIndex = 0; n.title = n.title.replace(re, function (m) { return T[m] || m; }); }
+      if (n.tagName === 'INPUT' && typeof n.placeholder === 'string' && n.placeholder) n.placeholder = n.placeholder.replace(re, function (m) { return T[m] || m; });
       for (var c = n.firstChild; c; c = c.nextSibling) walk(c);
     };
     var start = function () { if (document.body) walk(document.body); document.title = document.title.replace(re, function (m) { return T[m] || m; }); try { new MutationObserver(function (L) { for (var i = 0; i < L.length; i++) { if (L[i].type === 'characterData') walk(L[i].target); var a = L[i].addedNodes; for (var j = 0; j < a.length; j++) walk(a[j]); } }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (e) { /* no observer: the first pass stands */ } };

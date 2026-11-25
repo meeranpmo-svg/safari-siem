@@ -1,0 +1,121 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Operations Command</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Operations Command: one colourful view of the whole estate, read from the modules themselves - FortiGate fleet health
+     (/api/soc/fortimanager/fleet), Network Access Control risk (/api/soc/nac/endpoints), NDR detections (/api/soc/ndr), Hyper-V
+     capacity (/api/itam/hyperv), Call Manager registration (/api/itam/cucm), Aramco CCC readiness (/api/itam/aramco-ccc) and the
+     AI engineers' open work (/api/soc|itam/duty/items). Each panel stands alone: a module that is not set up or not reachable says
+     what to connect; nothing is invented. The "what needs attention" list ranks the learned findings of every module together. -->
+<style>
+.oc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.oc-p{border-radius:10px;padding:12px 14px;min-height:250px;display:flex;flex-direction:column}
+.oc-p h2{font-size:15px;margin:0 0 6px}.oc-p .cv{position:relative;height:170px;flex:1}
+.oc-p .ft{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:#8b93a4}
+.oc-p .ft a{color:var(--org-accent,#26A69A);text-decoration:none}
+.oc-st{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#8b93a4}.oc-st.ok{background:#2fb344}.oc-st.warn{background:#f59f00}.oc-st.bad{background:#e5484d}
+.oc-note{color:#8b93a4;font-size:13px;padding:24px 4px;text-align:center}
+.act{border-left:3px solid #4299e1;padding:6px 10px;margin:6px 0;border-radius:4px;background:rgba(255,255,255,.02)}.act.bad{border-color:#e5484d}.act.warn{border-color:#f59f00}
+.mut{color:#8b93a4}.sm{font-size:12px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Command Center · the whole estate</div><h1>Operations Command</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" class="btn" id="rf">Refresh</button></div>
+<div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div class="oc-grid" id="grid"></div>
+<div class="card" style="margin-top:12px"><h2>What needs attention now</h2><div class="sm mut">The learned findings of every module, most serious first. Each one is also a work item for the AI engineer that owns it.</div><div id="att"></div></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var S = window.zybSoc, esc = S.esc, $ = function (i) { return document.getElementById(i); }, C = window.zybCharts;
+  function itam(p) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open('GET', '/api/itam' + p); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true;
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says what happened */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || 'HTTP ' + x.status), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(); }); }
+  // every source settles on its own: {ok, v} or {ok:false, e} - one module down never hides the others
+  function settle(p) { return p.then(function (v) { return { ok: true, v: v }; }, function (e) { return { ok: false, e: e }; }); }
+  var SRC = [
+    { id: 'fw', name: 'FortiGate fleet', page: 'fortigate-fleet.html', get: function () { return S.req('GET', '/fortimanager/fleet'); } },
+    { id: 'nac', name: 'Network Access Control', page: 'fortigate-nac.html', get: function () { return S.req('GET', '/nac/endpoints'); } },
+    { id: 'ndr', name: 'Network Detection (NDR)', page: 'ndr.html', get: function () { return S.req('GET', '/ndr'); } },
+    { id: 'hv', name: 'Hyper-V servers', page: 'hyperv.html', get: function () { return itam('/hyperv'); } },
+    { id: 'uc', name: 'Call Manager', page: 'cucm.html', get: function () { return itam('/cucm'); } },
+    { id: 'cc', name: 'Aramco CCC', page: 'aramco-ccc.html', get: function () { return itam('/aramco-ccc'); } },
+    { id: 'dsoc', name: 'AI engineers (security and network)', page: 'ai-team.html', get: function () { return S.req('GET', '/duty/items?status=open&limit=500'); } },
+    { id: 'ditam', name: 'AI engineers (IT)', page: 'ai-team.html', get: function () { return itam('/duty/items?status=open&limit=500'); } },
+  ];
+  var OFF = (window.ZYB_ORG && window.ZYB_ORG.pages_off) || [];
+  function on(s) { return OFF.indexOf(s.page.replace(/\.html$/, '')) < 0; }
+  function why(e) { return e.status === 404 ? 'not installed on this server yet - run the update' : e.status === 403 ? 'your role cannot see this' : e.status === 401 ? 'sign in again' : e.status === 0 ? 'the server did not answer' : e.message; }
+  function panel(id, title, st, foot, page) {
+    return '<div class="card oc-p" id="p-' + id + '"><h2><span class="oc-st ' + (st || '') + '"></span>' + esc(title) + '</h2><div class="cv"><canvas id="c-' + id + '"></canvas></div>' +
+      '<div class="ft"><span>' + esc(foot || '') + '</span><a href="' + esc(page) + '">Open →</a></div></div>';
+  }
+  function note(id, title, text, page) { return '<div class="card oc-p" id="p-' + id + '"><h2><span class="oc-st"></span>' + esc(title) + '</h2><div class="oc-note">' + esc(text) + '</div><div class="ft"><span></span><a href="' + esc(page) + '">Open →</a></div></div>'; }
+  var SEVR = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+  function draw(R) {
+    var g = [], att = [], k = { fw: '–', fwc: '', risky: '–', rc: '', ndr: '–', nc: '', vms: '–', vc: '', ph: '–', pc: '', cc: '–', ccc: '', work: 0, wc: 'ok' }, later = [];
+    var r = R.fw, src = SRC[0];
+    if (!on(src)) { /* not used by this organisation: no panel */ } else if (!r.ok) g.push(note('fw', src.name, why(r.e), src.page));
+    else if (!r.v.kpis || !r.v.kpis.devices) g.push(note('fw', src.name, 'No FortiGate polled yet - connect FortiManager or a standalone FortiGate in the Integration Hub.', src.page));
+    else { var f = r.v.kpis; k.fw = f.ok + '/' + f.devices; k.fwc = f.down ? 'bad' : f.attention ? 'warn' : 'ok';
+      g.push(panel('fw', src.name, k.fwc, f.links_down + ' link(s) down · ' + f.firmware_behind + ' behind on firmware', src.page));
+      later.push(function () { C.ring($('c-fw'), ['Healthy', 'Watch', 'Attention', 'Down'], [f.ok, f.watch, f.attention, f.down], ['ok', 'acc', 'warn', 'crit'], { v: f.ok + '/' + f.devices, l: 'healthy' }); });
+      (r.v.findings || []).slice(0, 40).forEach(function (x) { att.push({ sev: x.severity, src: 'Firewall', t: x.device + ': ' + x.title, fix: x.fix, page: src.page }); }); }
+    r = R.nac; src = SRC[1];
+    if (!on(src)) { /* not used */ } else if (!r.ok) g.push(note('nac', src.name, why(r.e), src.page));
+    else if (!r.v.total) g.push(note('nac', src.name, 'No endpoint seen yet - it learns from the FortiGates and the switch port maps.', src.page));
+    else { var eps = r.v.endpoints || [], hi = eps.filter(function (e) { return e.risk >= 60; }).length, md = eps.filter(function (e) { return e.risk >= 30 && e.risk < 60; }).length;
+      k.risky = hi + md; k.rc = hi ? 'bad' : md ? 'warn' : 'ok';
+      var sites = (r.v.sites || []).slice(0, 8);
+      g.push(panel('nac', src.name, k.rc, r.v.total + ' endpoint(s)' + (r.v.learning ? ' · still learning until ' + r.v.learning_until : ''), src.page));
+      later.push(function () { if (!sites.length) return C.empty($('c-nac'), 'No sites yet'); C.bars($('c-nac'), sites.map(function (s) { return s.site || '(no site)'; }), [{ label: 'At risk', data: sites.map(function (s) { return s.risky; }), color: C.color('warn') }, { label: 'Fine', data: sites.map(function (s) { return s.endpoints - s.risky; }), color: C.color('ok') }], { stacked: true, horizontal: true }); });
+      eps.filter(function (e) { return e.risk >= 60 && !e.authorised && !e.quarantine; }).slice(0, 20).forEach(function (e) { att.push({ sev: 'high', src: 'NAC', t: (e.host || e.mac) + ' - risk ' + e.risk, fix: (e.reasons || []).map(function (x) { return x.why; }).join('; '), page: src.page }); }); }
+    r = R.ndr; src = SRC[2];
+    if (!on(src)) { /* not used */ } else if (!r.ok) g.push(note('ndr', src.name, why(r.e), src.page));
+    else if (!r.v.ran) g.push(note('ndr', src.name, r.v.note || 'NDR has not run yet.', src.page));
+    else { var d = r.v.detections || [], by = {}; d.forEach(function (x) { by[x.kind] = (by[x.kind] || 0) + 1; });
+      var hiN = d.filter(function (x) { return x.severity === 'high' || x.severity === 'critical'; }).length; k.ndr = d.length; k.nc = hiN ? 'bad' : d.length ? 'warn' : 'ok';
+      g.push(panel('ndr', src.name, k.nc, (r.v.hosts || []).length + ' host(s) profiled · ran ' + S.ago(r.v.at), src.page));
+      var kinds = Object.keys(by); later.push(function () { if (!kinds.length) return C.empty($('c-ndr'), 'No detections in the last run - fine'); C.bars($('c-ndr'), kinds, [{ label: 'Detections', data: kinds.map(function (x) { return by[x]; }), color: C.color('purple') }], {}); });
+      d.filter(function (x) { return x.severity !== 'low'; }).slice(0, 20).forEach(function (x) { att.push({ sev: x.severity, src: 'NDR', t: x.host + ': ' + x.why, fix: '', page: src.page }); }); }
+    r = R.hv; src = SRC[3];
+    if (!on(src)) { /* not used */ } else if (!r.ok) g.push(note('hv', src.name, why(r.e), src.page));
+    else if (!r.v.hosts || !r.v.hosts.length) g.push(note('hv', src.name, r.v.note || 'No Hyper-V host has reported yet.', src.page));
+    else { var hk = r.v.kpis, hs = r.v.hosts; k.vms = hk.running + '/' + hk.vms; k.vc = hk.stale_hosts || hk.high ? 'bad' : (r.v.findings || []).length ? 'warn' : 'ok';
+      g.push(panel('hv', src.name, k.vc, hk.hosts + ' host(s) · ' + hk.stale_hosts + ' not reporting', src.page));
+      later.push(function () { C.bars($('c-hv'), hs.map(function (h) { return h.name; }), [{ label: 'CPU %', data: hs.map(function (h) { return h.cpu_pct == null ? null : Math.round(h.cpu_pct); }), color: C.color('acc') },
+        { label: 'Memory %', data: hs.map(function (h) { return h.mem_total_mb ? Math.round(100 * (h.mem_total_mb - h.mem_free_mb) / h.mem_total_mb) : null; }), color: C.color('teal') }], {}); });
+      (r.v.findings || []).slice(0, 20).forEach(function (x) { att.push({ sev: x.severity, src: 'Hyper-V', t: x.host + ' - ' + x.title, fix: x.fix, page: src.page }); }); }
+    r = R.uc; src = SRC[4];
+    if (!on(src)) { /* not used */ } else if (!r.ok) g.push(note('uc', src.name, why(r.e), src.page));
+    else if (!r.v.polled) g.push(note('uc', src.name, r.v.note || 'Call Manager not polled yet.', src.page));
+    else { var u = r.v.kpis; k.ph = u.registered + '/' + u.phones; k.pc = u.trunks_down ? 'bad' : u.unregistered ? 'warn' : 'ok';
+      g.push(panel('uc', src.name, k.pc, u.trunks + ' trunk(s), ' + u.trunks_down + ' down · ' + (u.active_calls || 0) + ' call(s) now', src.page));
+      later.push(function () { C.ring($('c-uc'), ['Registered', 'Not registered'], [u.registered, u.unregistered], ['ok', 'crit'], { v: u.registered + '/' + u.phones, l: 'registered' }); });
+      (r.v.findings || []).slice(0, 20).forEach(function (x) { att.push({ sev: x.severity, src: 'Voice', t: x.title, fix: x.fix, page: src.page }); }); }
+    r = R.cc; src = SRC[5];
+    if (!on(src)) { /* not used */ } else if (!r.ok) g.push(note('cc', src.name, why(r.e), src.page));
+    else if (!r.v.controls_total) g.push(note('cc', src.name, 'No CCC controls loaded yet - start the assessment in Aramco CCC.', src.page));
+    else { var cv = r.v, sc = cv.score == null ? 0 : cv.score, stg = cv.stages || []; k.cc = cv.score == null ? '–' : sc + '%'; k.ccc = sc >= 80 ? 'ok' : sc >= 50 ? 'warn' : 'bad';
+      g.push(panel('cc', src.name, k.ccc, stg.filter(function (s) { return s.done; }).length + '/' + stg.length + ' stages done · ' + cv.assessed + '/' + cv.applicable + ' assessed', src.page));
+      later.push(function () { C.ring($('c-cc'), ['Implemented (weighted)', 'Gap'], [sc, 100 - sc], ['ok', 'mute'], { v: sc + '%', l: 'ready' }); });
+      stg.filter(function (s) { return !s.done; }).slice(0, 3).forEach(function (s) { att.push({ sev: 'medium', src: 'Aramco CCC', t: s.name + ': ' + s.why, fix: s.next, page: src.page }); }); }
+    // the AI engineers' open work, both engines
+    var work = {}; [R.dsoc, R.ditam].forEach(function (x) { if (x.ok) (x.v.items || []).forEach(function (i) { var e = i.engineer_name || i.engineer || '?'; work[e] = work[e] || { high: 0, other: 0 }; work[e][SEVR[i.severity] >= 3 ? 'high' : 'other']++; k.work++; }); });
+    var wk = Object.keys(work).sort(function (a, b) { return (work[b].high + work[b].other) - (work[a].high + work[a].other); }).slice(0, 10);
+    k.wc = wk.some(function (e) { return work[e].high; }) ? 'bad' : k.work ? 'warn' : 'ok';
+    if (!R.dsoc.ok && !R.ditam.ok) g.push(note('wk', 'AI engineers - open work', why(R.dsoc.e), 'ai-team.html'));
+    else { g.push(panel('wk', 'AI engineers - open work', k.wc, k.work + ' open work item(s)', 'ai-team.html'));
+      later.push(function () { if (!wk.length) return C.empty($('c-wk'), 'No open work - every engineer is clear'); C.bars($('c-wk'), wk, [{ label: 'High / critical', data: wk.map(function (e) { return work[e].high; }), color: C.color('crit') }, { label: 'Other', data: wk.map(function (e) { return work[e].other; }), color: C.color('acc') }], { stacked: true, horizontal: true }); }); }
+
+    $('kp').innerHTML = S.tile('FortiGates healthy', k.fw, 'of the fleet', k.fwc) + S.tile('Endpoints at risk', k.risky, 'Network Access Control', k.rc) + S.tile('NDR detections', k.ndr, 'last run', k.nc) +
+      S.tile('VMs running', k.vms, 'Hyper-V', k.vc) + S.tile('Phones registered', k.ph, 'Call Manager', k.pc) + S.tile('Aramco CCC readiness', k.cc, 'weighted score', k.ccc) + S.tile('Open AI work', k.work, 'all engineers', k.wc);
+    $('grid').innerHTML = g.join('');
+    later.forEach(function (fn) { try { fn(); } catch (e) { /* a chart that cannot draw leaves its panel's text - logged for support */ if (window.console) console.warn('chart', e); } });
+    att.sort(function (a, b) { return (SEVR[b.sev] || 0) - (SEVR[a.sev] || 0); });
+    $('att').innerHTML = att.length ? att.slice(0, 25).map(function (a) { var c = SEVR[a.sev] >= 3 ? 'bad' : SEVR[a.sev] === 2 ? 'warn' : ''; return '<div class="act ' + c + '">' + S.sev(a.sev) + ' <b>' + esc(a.src) + '</b> · ' + esc(a.t) +
+      (a.fix ? '<div class="sm mut">' + esc(a.fix) + '</div>' : '') + ' <a class="sm" href="' + esc(a.page) + '">open</a></div>'; }).join('') : '<p class="oc-note">Nothing needs attention from the connected modules.</p>';
+    $('up').textContent = 'updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+  function load() { var R = {}; return Promise.all(SRC.map(function (s) { return settle(on(s) ? s.get() : Promise.reject(Object.assign(new Error('off'), { status: -1 }))).then(function (x) { R[s.id] = x; }); })).then(function () { draw(R); }); }
+  $('rf').addEventListener('click', function () { load(); });
+  S.ready(load); setInterval(function () { if (!document.hidden) load(); }, 120000);
+})();
+</script></body></html>

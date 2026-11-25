@@ -67,7 +67,7 @@ function createSiem({ config, log, assets, store, audit, findings, request, read
   let lastHealth = null;
 
   function secret() {
-    if (!sc.secret_file) throw bad('SIEM connection not configured (discovery.siem.secret_file)', 503);
+    if (!sc.secret_file) throw bad('SIEM connection not configured (discovery.siem.secret_file) - run the platform update, or link-siem.sh from the IT Asset Management install folder on the server', 503);
     let txt;
     try { txt = String(read(sc.secret_file)).trim(); } catch (e) { throw bad(`SIEM proxy secret file not readable (${e.code || 'error'})`, 503); }
     let v = txt;

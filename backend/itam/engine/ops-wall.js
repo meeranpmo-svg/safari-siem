@@ -30,6 +30,12 @@ const METRICS = [
   ['platform', 'Platform health', 'platform', 'down', 3], ['platform_issues', 'Platform issues', 'platform', 'up', 3],
   ['notify_open', 'Open incidents', 'notify', 'up', 2], ['notify_critical', 'Critical incidents', 'notify', 'up', 1], ['failed_deliveries', 'Failed notifications', 'notify', 'up', 1],
   ['coverage', 'Infrastructure coverage %', 'inventory', 'down', 2], ['no_logs', 'Assets not sending logs', 'inventory', 'up', 2], ['pages_down', 'Pages not working', 'health', 'up', 1],
+  // the organisation's own estate (Safari: FortiGate fleet, NAC, NDR, Hyper-V, Call Manager, Aramco CCC, the AI engineers)
+  ['fw_down', 'FortiGates down', 'firewalls', 'up', 1], ['fw_attention', 'FortiGates needing attention', 'firewalls', 'up', 2], ['links_down', 'WAN links down', 'firewalls', 'up', 1],
+  ['nac_risky', 'Endpoints at risk', 'access', 'up', 3], ['ndr_high', 'NDR high detections', 'access', 'up', 1],
+  ['hv_high', 'Hyper-V high findings', 'servers', 'up', 1], ['hv_stale', 'Hyper-V hosts not reporting', 'servers', 'up', 1],
+  ['phones_unreg', 'Phones not registered', 'voice', 'up', 5], ['trunks_down', 'Voice trunks down', 'voice', 'up', 1],
+  ['accc_score', 'Aramco CCC readiness %', 'aramco', 'down', 2], ['ai_open', 'AI engineers open work', 'ai', 'up', 3], ['ai_high', 'AI engineers high / critical work', 'ai', 'up', 1],
 ];
 const LABEL = Object.fromEntries(METRICS.map((m) => [m[0], m[1]]));
 
@@ -40,7 +46,7 @@ function createOpsWall(app, opts = {}) {
   const audit = (who, action, target, detail) => { if (app.audit) app.audit({ by: who.user, role: who.role || '', ip: who.ip || '', action, target, detail }); };
   const A = () => app.addons || {};
   const S = opts.sources || {};
-  const SYS = { user: 'system:ops-wall', role: 'viewer' };
+  const SYS = { user: 'system:ops-wall', role: 'viewer' }, ESYS = { user: 'system:ops-wall', role: 'analyst' };
   async function src(fn, ms) {
     let tm; try {
       const v = await Promise.race([Promise.resolve().then(fn), new Promise((_, bad) => { tm = setTimeout(() => bad(new Error('did not answer in ' + Math.round(ms / 1000) + ' s')), ms); })]);
@@ -56,8 +62,30 @@ function createOpsWall(app, opts = {}) {
       src(S.inventory || (() => (A().infraInventory ? A().infraInventory.model() : null)), T),
       src(S.health || (() => (A().updateHealth ? A().updateHealth.view() : null)), T),
     ]);
-    return { soc, platform, notify, inventory, health };
+    // the estate: IT modules in this engine, network and security modules in the SIEM (read through the platform link as the
+    // read-only auditing role; a missing link or an unconfigured module is "not connected", never a zero)
+    const siemGet = (p) => async () => {
+      const d = app.discovery; if (!d || !d.siem || typeof d.siem.call !== 'function') throw Object.assign(new Error('no link to the SIEM - run the platform update (link-siem.sh)'), { notConnected: true });
+      const x = await d.siem.call('GET', p, ESYS);
+      if (x && x.status === 404) throw Object.assign(new Error('not installed in the SIEM'), { notConnected: true });
+      if (!x || x.status !== 200 || !x.json) throw new Error('SIEM answered HTTP ' + (x && x.status));
+      return x.json;
+    };
+    const dutyOpen = (D) => (D ? D.allItems().filter((i) => !['resolved', 'closed', 'verified'].includes(i.status)) : null);
+    const [fw, nac, ndr, hv, voice, aramco, aiSiem, aiItam] = await Promise.all([
+      src(S.fw || (async () => { const f = await siemGet('/fortimanager/fleet')(); return f.kpis && f.kpis.devices ? f : null; }), T),
+      src(S.nac || (async () => { const v = await siemGet('/nac/endpoints')(); return v.total ? v : null; }), T),
+      src(S.ndr || (async () => { const v = await siemGet('/ndr')(); return v.ran ? v : null; }), T),
+      src(S.hv || (() => { const X = A().hypervManager; if (!X) return null; const v = X.view(); return v.hosts.length ? v : null; }), T),
+      src(S.voice || (() => { const X = A().cucm; if (!X) return null; const v = X.view(); return v.polled ? v : null; }), T),
+      src(S.aramco || (() => { const X = A().aramcoCcc; if (!X) return null; const v = X.view(SYS); return v.controls_total ? v : null; }), T),
+      src(S.aiSiem || (async () => (await siemGet('/duty/items?status=open&limit=500')()).items || []), T),
+      src(S.aiItam || (() => dutyOpen(app.duty)), T),
+    ]);
+    return { soc, platform, notify, inventory, health, fw, nac, ndr, hv, voice, aramco, aiSiem, aiItam };
   }
+  // open work of the AI engineers, both engines (null when neither answers)
+  function aiItems(g) { const a = g.aiSiem && g.aiSiem.state === 'live' ? g.aiSiem.data : null, b = g.aiItam && g.aiItam.state === 'live' ? g.aiItam.data : null; return a || b ? [].concat(a || [], b || []) : null; }
   const sum = (o) => Object.values(o || {}).reduce((n, v) => n + (+v || 0), 0);
   function metrics(g) {
     const m = {}, put = (k, v) => { m[k] = v == null || !isFinite(v) ? null : +v; };
@@ -69,6 +97,14 @@ function createOpsWall(app, opts = {}) {
     const n = g.notify.state === 'live' ? g.notify.data : null; put('notify_open', n ? n.summary.open + n.summary.acked : null); put('notify_critical', n ? n.summary.critical : null); put('failed_deliveries', n ? n.summary.failed_deliveries : null);
     const i = g.inventory.state === 'live' ? g.inventory.data : null; put('coverage', i ? i.summary.coverage : null); put('no_logs', i ? i.summary.no_logs : null);
     const h = g.health.state === 'live' ? g.health.data : null; put('pages_down', h ? h.summary.not_working : null);
+    const L_ = (x) => (x && x.state === 'live' ? x.data : null);
+    const fw = L_(g.fw); put('fw_down', fw ? fw.kpis.down : null); put('fw_attention', fw ? fw.kpis.attention : null); put('links_down', fw ? fw.kpis.links_down : null);
+    const nc = L_(g.nac); put('nac_risky', nc ? (nc.endpoints || []).filter((e) => e.risk >= 30 && !e.authorised && !e.quarantine).length : null);
+    const nd = L_(g.ndr); put('ndr_high', nd ? (nd.detections || []).filter((d) => d.severity === 'high' || d.severity === 'critical').length : null);
+    const hv = L_(g.hv); put('hv_high', hv ? hv.kpis.high : null); put('hv_stale', hv ? hv.kpis.stale_hosts : null);
+    const vo = L_(g.voice); put('phones_unreg', vo ? vo.kpis.unregistered : null); put('trunks_down', vo ? vo.kpis.trunks_down : null);
+    const ac = L_(g.aramco); put('accc_score', ac ? ac.score : null);
+    const ai = aiItems(g); put('ai_open', ai ? ai.length : null); put('ai_high', ai ? ai.filter((i) => i.severity === 'high' || i.severity === 'critical').length : null);
     return m;
   }
   const hourOf = (t) => new Date(t + RIYADH).getUTCHours() + new Date(t + RIYADH).getUTCMinutes() / 60;
@@ -81,7 +117,7 @@ function createOpsWall(app, opts = {}) {
       const mean = base.reduce((a, b) => a + b, 0) / base.length, sd = Math.max(floor, Math.sqrt(base.reduce((a, b) => a + (b - mean) ** 2, 0) / base.length));
       const z = (v - mean) / sd;
       if ((dir === 'up' && z >= 3) || (dir === 'down' && z <= -3)) out.push({ metric: id, label, panel, value: v, usual: Math.round(mean * 10) / 10, z: Math.round(z * 10) / 10, samples: base.length,
-        why: label + ' is ' + v + ' - usually ' + (Math.round(mean * 10) / 10) + ' at this time of day (' + base.length + ' samples over 7 days)' });
+        why: label + ' is ' + v + ' - usually ' + (Math.round(mean * 10) / 10) + ' at this time of day (' + base.length + ' readings over 7 days)' });
     }
     return out.sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
   }
@@ -117,6 +153,36 @@ function createOpsWall(app, opts = {}) {
       health: { id: 'health', label: 'Platform pages', link: 'update-health.html', state: h ? (h.summary.not_working ? 'warn' : 'ok') : 'not_connected', why: reason(g.health),
         figures: h ? { pages: h.summary.pages, working: h.summary.working, not_working: h.summary.not_working, last_update: h.summary.last_update } : null },
     };
+    // the estate panels (a page the organisation switched off in the brand setting has no panel)
+    const OFF = new Set(ZYB_ORG.pages_off || []), live = (x) => (x && x.state === 'live' ? x.data : null), cnt = (k) => m[k] || 0;
+    const fw = live(g.fw), nac = live(g.nac), ndr = live(g.ndr), hv = live(g.hv), vo = live(g.voice), ac = live(g.aramco), ai = aiItems(g);
+    const est = {
+      firewalls: OFF.has('fortigate-fleet') ? null : { id: 'firewalls', label: 'FortiGate fleet', link: 'fortigate-fleet.html', why: reason(g.fw),
+        state: !fw ? 'not_connected' : m.fw_down ? 'bad' : m.fw_attention || m.links_down || unusual('firewalls') ? 'warn' : 'ok',
+        figures: fw ? { devices: fw.kpis.devices, ok: fw.kpis.ok, watch: fw.kpis.watch, attention: fw.kpis.attention, down: fw.kpis.down, links_down: fw.kpis.links_down, out_of_sla: fw.kpis.links_out_of_sla, firmware_behind: fw.kpis.firmware_behind, tunnels: fw.kpis.tunnels, licences_due: fw.kpis.licences_due } : null,
+        top: fw ? (fw.findings || []).slice(0, 8).map((x) => ({ severity: x.severity, title: x.device + ': ' + x.title })) : [] },
+      access: OFF.has('fortigate-nac') && OFF.has('ndr') ? null : { id: 'access', label: 'Network access & detection', link: 'fortigate-nac.html', why: reason(g.nac) || reason(g.ndr),
+        state: !nac && !ndr ? 'not_connected' : m.ndr_high ? 'bad' : cnt('nac_risky') || (ndr && (ndr.detections || []).length) || unusual('access') ? 'warn' : 'ok',
+        figures: { endpoints: nac ? nac.total : null, at_risk: m.nac_risky, learning: nac ? !!nac.learning : null, detections: ndr ? (ndr.detections || []).length : null, ndr_high: m.ndr_high },
+        sites: nac ? (nac.sites || []).slice(0, 10).map((x) => ({ site: x.site, endpoints: x.endpoints, risky: x.risky })) : [],
+        ndr_by_kind: ndr ? (ndr.detections || []).reduce((o, d) => { o[d.kind] = (o[d.kind] || 0) + 1; return o; }, {}) : {} },
+      servers: OFF.has('hyperv') ? null : { id: 'servers', label: 'Hyper-V servers', link: 'hyperv.html', why: reason(g.hv),
+        state: !hv ? 'not_connected' : m.hv_stale || m.hv_high ? 'bad' : (hv.findings || []).length || unusual('servers') ? 'warn' : 'ok',
+        figures: hv ? { hosts: hv.kpis.hosts, vms: hv.kpis.vms, running: hv.kpis.running, high: hv.kpis.high, stale: hv.kpis.stale_hosts } : null,
+        hosts: hv ? hv.hosts.slice(0, 16).map((h) => ({ name: h.name, cpu: h.cpu_pct == null ? null : Math.round(h.cpu_pct), mem: h.mem_total_mb ? Math.round(100 * (h.mem_total_mb - h.mem_free_mb) / h.mem_total_mb) : null, stale: !!h.stale })) : [] },
+      voice: OFF.has('cucm') ? null : { id: 'voice', label: 'Call Manager', link: 'cucm.html', why: reason(g.voice),
+        state: !vo ? 'not_connected' : m.trunks_down ? 'bad' : m.phones_unreg || unusual('voice') ? 'warn' : 'ok',
+        figures: vo ? { phones: vo.kpis.phones, registered: vo.kpis.registered, unregistered: vo.kpis.unregistered, trunks: vo.kpis.trunks, trunks_down: vo.kpis.trunks_down, active_calls: vo.kpis.active_calls } : null },
+      aramco: OFF.has('aramco-ccc') ? null : { id: 'aramco', label: 'Aramco CCC', link: 'aramco-ccc.html', why: reason(g.aramco),
+        state: !ac ? 'not_connected' : ac.score == null || ac.score < 50 || (ac.days_left != null && ac.days_left < 0) ? 'bad' : ac.score < 80 || unusual('aramco') ? 'warn' : 'ok',
+        figures: ac ? { score: ac.score, assessed: ac.assessed, applicable: ac.applicable, stages_done: (ac.stages || []).filter((x) => x.done).length, stages: (ac.stages || []).length, days_left: ac.days_left == null ? null : ac.days_left } : null,
+        next: ac ? (ac.stages || []).filter((x) => !x.done).slice(0, 3).map((x) => ({ name: x.name, next: x.next })) : [] },
+      ai: { id: 'ai', label: 'AI engineers - automation', link: 'ai-team.html', why: ai ? null : reason(g.aiItam) || reason(g.aiSiem),
+        state: !ai ? 'not_connected' : m.ai_high ? 'warn' : 'ok',
+        figures: ai ? { open: ai.length, high: m.ai_high } : null,
+        by_engineer: ai ? Object.values(ai.reduce((o, i) => { const k = i.engineer_name || i.engineer || '?'; const e = o[k] = o[k] || { engineer: k, open: 0, high: 0 }; e.open++; if (i.severity === 'high' || i.severity === 'critical') e.high++; return o; }, {})).sort((x, y) => y.open - x.open).slice(0, 12) : [] },
+    };
+    for (const [k, v] of Object.entries(est)) if (v) panels[k] = v;
     const P = Object.values(panels);
     return { at: new Date(t).toISOString(), overall: state(...P.map((x) => x.state)), connected: P.filter((x) => x.state !== 'not_connected').length, of: P.length,
       panels, metrics: m, labels: LABEL, anomalies: ano, shift: shift(m, t, hist), samples: hist.length,
