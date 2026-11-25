@@ -29,7 +29,7 @@ function register(api, deps) {
   const P = prefixOf(deps), cfg = deps.config, writeJson = require('../onboard/store').writeJsonAtomic, log = deps.log || { info() {}, warn() {}, error() {} };
   if (!deps.state) throw new Error('fortimanager needs deps.state');
   const secretsObj = () => { if (!cfg.secrets) Object.defineProperty(cfg, 'secrets', { value: {}, writable: true, configurable: true }); return cfg.secrets; };
-  const F = deps.fmg || createFmg({ config: cfg, secrets: secretsObj(), state: deps.state, log, transport: deps.fmgTransport, now: deps.now });
+  const F = deps.fmg || createFmg({ config: cfg, secrets: secretsObj(), state: deps.state, log, transport: deps.fmgTransport, directTransport: deps.fortigateTransport, now: deps.now });
   deps.fmgApi = F;   // the route map and NAC read the fleet from here (netops/routemap.js)
   const sec = () => secretsObj().fortimanager || {};
   const read = (p) => { try { if (SF.isSecretsPath(p)) return SF.read(p) || {}; return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return {}; throw new HttpError(500, `cannot read ${p}`); } };
@@ -38,7 +38,7 @@ function register(api, deps) {
 
   // the poll: every poll_min while enabled; reschedules in finally so one failure never stops it
   let timer = null, stopped = false;
-  const loop = guard('netops.fortimanager.poll', async () => { if ((cfg.fortimanager || {}).enabled && sec().api_key) await F.poll(); });
+  const loop = guard('netops.fortimanager.poll', async () => { const c = cfg.fortimanager || {}; if ((c.enabled && sec().api_key) || (c.direct || []).some((d) => d.enabled !== false)) await F.poll(); });
   function schedule(ms) { if (stopped || deps.noTimer) return; timer = setTimeout(async () => { try { await loop(); } finally { schedule(Math.max(5, (cfg.fortimanager || {}).poll_min || 10) * 60000); } }, ms); if (timer.unref) timer.unref(); }
   schedule(60000);
   if (deps.onShutdown) deps.onShutdown(() => { stopped = true; if (timer) clearTimeout(timer); });
@@ -66,9 +66,36 @@ function register(api, deps) {
     audit(ctx, 'netops.fortimanager.config', c.base_url ? new URL(c.base_url).hostname : '', { enabled: !!c.enabled, adoms: (c.adoms || []).length, poll_min: c.poll_min || 10, pinned: !!c.tls_fingerprint, targets: (c.firmware_targets || []).length, write_enabled: !!c.write_enabled, api_key_changed: !!b.api_key, write_key_changed: !!b.write_key });
     return view();
   }));
+  // standalone FortiGates (not in FortiManager), reached by a DDNS name or address: admin only; the API key is write-only
+  const DHOST = /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
+  const dview = () => ((cfg.fortimanager || {}).direct || []).map((d) => Object.assign({}, d, { api_key_set: !!((sec().direct || {})[d.name]) }));
+  api.route('GET', `${P}/fortimanager/direct`, wrap(deps, 'admin', () => ({ devices: dview() })));
+  api.route('PUT', `${P}/fortimanager/direct/:name`, wrap(deps, 'admin', async (ctx) => {
+    const name = String(ctx.params.name || ''); if (!NAME.test(name)) throw new HttpError(400, 'name: the FortiGate name (letters, digits, - . _)');
+    const b = body(ctx.body).str('host', { required: true, max: 253 }).int('port', { min: 1, max: 65535, def: 443 }).str('site', { max: 80 }).str('tls_fingerprint', { required: true, max: 100 }).str('api_key', { max: 300 }).bool('enabled', { def: true }).done();
+    if (!DHOST.test(b.host) && !/^\d{1,3}(\.\d{1,3}){3}$/.test(b.host)) throw new HttpError(400, 'host: the FortiGate\'s DDNS name or address (no https://, no path)');
+    if (!FP.test(b.tls_fingerprint)) throw new HttpError(400, 'tls_fingerprint: the SHA-256 fingerprint of the FortiGate certificate, AA:BB:… (32 pairs) - required: a DDNS name can be re-pointed');
+    if (b.api_key !== undefined && /\s/.test(b.api_key)) throw new HttpError(400, 'api_key: no spaces');
+    const paths = cfg._paths || {}; if (!paths.config || !paths.secrets) throw new HttpError(409, 'config / secrets files not available');
+    const had = !!((sec().direct || {})[name]); if (!had && !b.api_key) throw new HttpError(400, 'api_key: the FortiGate REST API key (a read-only API administrator)');
+    const entry = { name, host: b.host.toLowerCase(), port: b.port, site: b.site || '', tls_fingerprint: b.tls_fingerprint.toUpperCase(), enabled: b.enabled };
+    const file = read(paths.config), fm = Object.assign({}, file.fortimanager || {}); fm.direct = (fm.direct || []).filter((x) => x.name !== name).concat(entry); file.fortimanager = fm; writeJson(paths.config, file);
+    cfg.fortimanager = Object.assign(cfg.fortimanager || {}, { direct: fm.direct });
+    if (b.api_key) { const s2 = read(paths.secrets), m = Object.assign({}, s2.fortimanager || {}); m.direct = Object.assign({}, m.direct || {}, { [name]: b.api_key }); s2.fortimanager = m; writeJson(paths.secrets, s2); secretsObj().fortimanager = Object.assign(secretsObj().fortimanager || {}, { direct: m.direct }); }
+    audit(ctx, 'netops.fortigate.direct.save', name, { host: entry.host, port: entry.port, enabled: entry.enabled, api_key_changed: !!b.api_key });
+    return { devices: dview() };
+  }));
+  api.route('POST', `${P}/fortimanager/direct/:name/remove`, wrap(deps, 'admin', async (ctx) => {
+    body(ctx.body).done(); const name = String(ctx.params.name || ''); if (!NAME.test(name)) throw new HttpError(400, 'name: the FortiGate name');
+    const paths = cfg._paths || {}; if (!paths.config || !paths.secrets) throw new HttpError(409, 'config / secrets files not available');
+    const file = read(paths.config), fm = Object.assign({}, file.fortimanager || {}); if (!(fm.direct || []).some((x) => x.name === name)) throw new HttpError(404, 'no standalone FortiGate named ' + name);
+    fm.direct = fm.direct.filter((x) => x.name !== name); file.fortimanager = fm; writeJson(paths.config, file); cfg.fortimanager = Object.assign(cfg.fortimanager || {}, { direct: fm.direct });
+    const s2 = read(paths.secrets), m = Object.assign({}, s2.fortimanager || {}); if (m.direct) { delete m.direct[name]; s2.fortimanager = m; writeJson(paths.secrets, s2); if (secretsObj().fortimanager && secretsObj().fortimanager.direct) delete secretsObj().fortimanager.direct[name]; }
+    audit(ctx, 'netops.fortigate.direct.remove', name, {}); return { devices: dview() };
+  }));
   api.route('POST', `${P}/fortimanager/test`, wrap(deps, 'admin', async (ctx) => { body(ctx.body).done(); const r = await F.testConnection(); audit(ctx, 'netops.fortimanager.test', '', { ok: r.ok }); return r; }));
   api.route('POST', `${P}/fortimanager/poll`, wrap(deps, 'operator', async (ctx) => {
-    body(ctx.body).done(); if (!sec().api_key || !(cfg.fortimanager || {}).base_url) throw new HttpError(409, 'FortiManager is not connected - an administrator adds it in the Integration Hub');
+    body(ctx.body).done(); if (!(sec().api_key && (cfg.fortimanager || {}).base_url) && !((cfg.fortimanager || {}).direct || []).length) throw new HttpError(409, 'neither FortiManager nor a standalone FortiGate is connected - an administrator adds them in the Integration Hub');
     const s = await F.poll(); audit(ctx, 'netops.fortimanager.poll', '', { devices: s.devices, error: s.last_error ? 'yes' : 'no' }); return s;
   }));
   api.route('GET', `${P}/fortimanager/fleet`, wrap(deps, null, () => F.fleet()));

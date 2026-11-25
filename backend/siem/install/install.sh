@@ -187,7 +187,13 @@ if ! command -v clickhouse-server >/dev/null 2>&1; then
     warn "ClickHouse is not installed - re-run with --with-clickhouse (or run install/ch-install.sh), then migrate"
     MIGRATE=0
   fi
-elif [ -f /etc/clickhouse-server/users.d/sentra-siem.xml ] && ! grep -q 'sentra_siem_admin' /etc/clickhouse-server/users.d/sentra-siem.xml; then
+elif [ ! -f /etc/clickhouse-server/users.d/sentra-siem.xml ]; then
+  # ClickHouse installed by hand (or an earlier run stopped before this step): the engine's users do not exist yet -
+  # "Authentication failed ... there is no user with such name". Create them from secrets.json (restarts ClickHouse).
+  say "ClickHouse is installed but has no SIEM users yet: creating them (install/ch-install.sh)"
+  bash "$APP/install/ch-install.sh"
+  fix_perms
+elif ! grep -q 'sentra_siem_admin' /etc/clickhouse-server/users.d/sentra-siem.xml; then
   # upgrade from a version where the engine user had full rights and `default` had no password
   say "ClickHouse users: engine user to SELECT/INSERT only, separate migration user, default user removed (restarts ClickHouse; the engine spools meanwhile)"
   bash "$APP/install/ch-install.sh"

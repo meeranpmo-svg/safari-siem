@@ -144,7 +144,8 @@ function assess(dev, { targets = {}, newest = {}, now = Date.now(), staleMin = 4
   return { findings: f, health: dev.conn === 'down' ? 'down' : worst === 'critical' || worst === 'high' ? 'attention' : worst ? 'watch' : 'ok' };
 }
 
-function createFmg({ config, secrets, state, log, transport, now } = {}) {
+function createFmg({ config, secrets, state, log, transport, directTransport, now } = {}) {
+  const opts = { directTransport };
   const NOW = now || Date.now, L = log || { info() {}, warn() {}, error() {} };
   const C = () => (config && config.fortimanager) || {};
   const S = () => (secrets && secrets.fortimanager) || (config && config.secrets && config.secrets.fortimanager) || {};
@@ -196,14 +197,18 @@ function createFmg({ config, secrets, state, log, transport, now } = {}) {
   async function poll() {
     const at = new Date(NOW()).toISOString(), errors = [];
     try {
-      const list = [];
-      for (const adom of await adoms()) {
+      const list = [], fmgOn = !!(C().base_url && S().api_key);
+      for (const adom of fmgOn ? await adoms() : []) {
         if (!NAME.test(adom)) continue;
         const d = await rpc('get', `/dvmdb/adom/${adom}/device`, { fields: ['name', 'sn', 'ip', 'platform_str', 'os_ver', 'mr', 'patch', 'build', 'conn_status', 'conf_status', 'ha_mode', 'ha_slave', 'hostname', 'desc'] });
         for (const x of Array.isArray(d) ? d : []) list.push(normDevice(x, adom));
       }
-      const up = list.filter((d) => d.conn === 'up'), tgt = (d) => `adom/${d.adom}/device/${d.name}`;
-      const [res, ips, sdw, lic, edv] = await Promise.all([proxy(MON.res, up.map(tgt)), proxy(MON.ipsec, up.map(tgt)), proxy(MON.sdwan, up.map(tgt)), proxy(MON.lic, up.map(tgt)), C().endpoints === false ? new Map() : proxy(MON.dev, up.map(tgt))]);
+      // standalone FortiGates (not in FortiManager): read directly, each with its own key and pinned certificate
+      const direct = await directPoll(errors);
+      for (const x of direct) list.push(x.dev);
+      const up = list.filter((d) => d.conn === 'up' && d.via !== 'direct'), tgt = (d) => (d.via === 'direct' ? 'direct/' + d.name : `adom/${d.adom}/device/${d.name}`);
+      const [res, ips, sdw, lic, edv] = fmgOn ? await Promise.all([proxy(MON.res, up.map(tgt)), proxy(MON.ipsec, up.map(tgt)), proxy(MON.sdwan, up.map(tgt)), proxy(MON.lic, up.map(tgt)), C().endpoints === false ? new Map() : proxy(MON.dev, up.map(tgt))]) : [new Map(), new Map(), new Map(), new Map(), new Map()];
+      for (const x of direct) { const k = 'direct/' + x.dev.name; res.set(k, x.R.res); ips.set(k, x.R.ips); sdw.set(k, x.R.sdwan); lic.set(k, x.R.lic); edv.set(k, x.R.dev); }
       for (const d of list) {
         const prev = devs.get(d.id) || {}, t = tgt(d), hist = prev.history || { cpu: [], mem: [], sessions: [] };
         const rr = res.get(t), ir = ips.get(t), sr = sdw.get(t), lr = lic.get(t);
@@ -245,7 +250,35 @@ function createFmg({ config, secrets, state, log, transport, now } = {}) {
       eps.put(cur);
     }
   }
-  function status() { const c = C(); return Object.assign({ enabled: !!c.enabled, configured: !!(c.base_url && S().api_key), write_enabled: !!(c.write_enabled && S().write_key) }, st); }
+  // ---- standalone FortiGates: FortiOS REST API, https://<host>[:port]/api/v2/monitor/..., an API key per device (Bearer), the
+  // device's own certificate pinned (SHA-256) - required, because a DDNS name can be re-pointed: without the pin nothing is sent
+  const DHOST = /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
+  async function dget(d, p) {
+    const key = ((S().direct || {})[d.name]) || '';
+    if (opts.directTransport) return opts.directTransport(d, p, key);
+    const r = await H.getRaw(`https://${d.host}:${d.port || 443}${p}`, { timeoutMs: 20000, headers: { Authorization: 'Bearer ' + key }, tls: { fingerprint256: d.tls_fingerprint } });
+    if (r.status === 401 || r.status === 403) throw new Error('the FortiGate refused the API key (HTTP ' + r.status + ')');
+    if (r.status !== 200 || !r.json) throw new Error('HTTP ' + r.status);
+    return r.json;
+  }
+  async function directPoll(errors) {
+    const out = [];
+    for (const d of (C().direct || []).filter((x) => x && x.enabled !== false)) {
+      if (!DHOST.test(String(d.host || '')) || !d.tls_fingerprint || !((S().direct || {})[d.name])) { errors.push(d.name + ': host, certificate fingerprint and API key are all needed'); continue; }
+      const dev = { id: 'direct:' + d.name, serial: '', name: d.name, adom: 'standalone', via: 'direct', host: d.host, hostname: '', model: '', ip: d.host, firmware: '', build: null, conn: 'down', conf: 'not managed', ha_mode: 'standalone', ha_members: [], site: d.site || '' };
+      const R = {};
+      try {
+        const st = await dget(d, '/api/v2/monitor/system/status'), r = st.results || {};
+        Object.assign(dev, { serial: String(st.serial || ''), hostname: String(r.hostname || ''), model: String(r.model_name ? 'FortiGate-' + String(r.model_number || '').replace(/^FGT|^FG/, '') : r.model || '').replace(/-$/, ''), firmware: (String(st.version || '').match(/\d+\.\d+\.\d+/) || [''])[0], build: num(st.build), conn: 'up' });
+        if (r.model_name && r.model_number) dev.model = r.model_name + '-' + r.model_number;
+        const [a, b, c, e, f] = await Promise.all([MON.res, MON.ipsec, MON.sdwan, MON.lic, MON.dev].map((pp) => dget(d, pp).then((x) => ({ response: x }), (er) => ({ error: er.message }))));
+        Object.assign(R, { res: a, ips: b, sdwan: c, lic: e, dev: C().endpoints === false ? undefined : f });
+      } catch (e) { errors.push(d.name + ': ' + e.message); L.warn('fortigate (direct): poll failed', { device: d.name, err: e.message }); }
+      out.push({ dev, R });
+    }
+    return out;
+  }
+  function status() { const c = C(); return Object.assign({ enabled: !!c.enabled, configured: !!((c.base_url && S().api_key) || (c.direct || []).length), fortimanager: !!(c.base_url && S().api_key), standalone: (c.direct || []).length, write_enabled: !!(c.write_enabled && S().write_key) }, st); }
 
   function targets() {
     const t = {}; for (const s of C().firmware_targets || []) { const m = String(s).match(/^(.+?)=(\d+\.\d+\.\d+)$/); if (m) t[m[1].trim()] = m[2]; } return t;
@@ -296,6 +329,8 @@ function createFmg({ config, secrets, state, log, transport, now } = {}) {
     const plan = { id: nextId(), type: p.type, title: TYPES[p.type], devices: names, adom: adomSet.length === 1 ? adomSet[0] : null, reason: String(p.reason || '').slice(0, 600),
       status: 'proposed', proposed_by: by, proposed_at: new Date(NOW()).toISOString(), history: [{ at: new Date(NOW()).toISOString(), by, what: 'proposed' }], executed_here: EXECUTED.has(p.type) };
     if (!plan.reason || plan.reason.length < 10) throw bad('reason: say why, in at least 10 characters');
+    const stand = names.filter((n) => known.get(n).via === 'direct');
+    if (stand.length && p.type !== 'firmware-upgrade') throw bad('devices: ' + stand.slice(0, 5).join(', ') + ' are standalone FortiGates (not in FortiManager) - plan that change on the device itself');
     if (p.type === 'install-package') {
       if (!p.package || !NAME.test(p.package)) throw bad('package: the policy package name as FortiManager shows it');
       if (!plan.adom) throw bad('devices: an install covers devices of one ADOM');

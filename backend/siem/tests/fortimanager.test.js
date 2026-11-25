@@ -175,3 +175,42 @@ test('routes: roles and the refused case, validation, write-only keys, separate 
   assert.equal((await call('POST', '/fortimanager/changes/bad id!/run', {}, 'operator')).s, 400);
   for (const act of ['netops.fortimanager.change.propose', 'netops.fortimanager.change.approve', 'netops.fortimanager.change.run', 'netops.fortimanager.change.result']) assert.ok(audits.some((x) => x.a === act && x.t === cid), 'audited: ' + act);
 });
+
+test('standalone FortiGates (not in FortiManager, reached by DDNS): settings, pin required, poll, FortiManager-only changes refused', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fgd-')), cfgFile = path.join(dir, 'config.json'), secFile = path.join(dir, 'secrets.json');
+  fs.writeFileSync(cfgFile, '{}'); fs.writeFileSync(secFile, '{}');
+  const state = createState({ dir: path.join(dir, 'st') }), config = {}; Object.defineProperty(config, '_paths', { value: { config: cfgFile, secrets: secFile } }); Object.defineProperty(config, 'secrets', { value: {}, writable: true });
+  const seen = [];
+  const fortigateTransport = async (d, p, key) => { seen.push([d.host, p, key]); if (key !== 'fg-key-syn') throw new Error('the FortiGate refused the API key (HTTP 401)');
+    if (p.startsWith('/api/v2/monitor/system/status')) return { serial: 'FGT40FTK00000077', version: 'v7.2.6', build: 1575, results: { hostname: 'SITE-77', model_name: 'FortiGate', model_number: '40F' } };
+    if (p.startsWith('/api/v2/monitor/system/resource')) return { results: { cpu: [{ current: 7 }], mem: [{ current: 92 }], session: [{ current: 300 }] } };
+    if (p.startsWith('/api/v2/monitor/vpn/ipsec')) return { results: [{ name: 'to-hq', proxyid: [{ status: 'down' }] }] };
+    if (p.startsWith('/api/v2/monitor/virtual-wan')) return { results: {} };
+    if (p.startsWith('/api/v2/monitor/license')) return { results: {} };
+    return { results: [] }; };
+  const R = {}, audits = [], RANK = { viewer: 1, analyst: 2, operator: 3, admin: 4 };
+  require('../engine/netops/fmg-routes').register({ route: (m, p, h) => { R[m + ' ' + p] = h; } }, { config, state, log: { error() {}, info() {}, warn() {} }, fortigateTransport, noTimer: true, now: () => NOW });
+  const call = async (m, p, b, role = 'admin', user) => {
+    const o = {}, u = user || role + '.syn', params = {}; let key = '/api/soc' + p; const mm = p.match(/^\/fortimanager\/direct\/([^/]+)(\/remove)?$/); if (mm) { params.name = mm[1]; key = '/api/soc/fortimanager/direct/:name' + (mm[2] || ''); }
+    const mc = p.match(/^\/fortimanager\/changes$/); if (mc) key = '/api/soc/fortimanager/changes';
+    const ctx = { role, user: u, body: b, params, audit: (a, t, d) => audits.push({ a, t, d }), ok(x) { o.s = 200; o.b = x; }, fail(c, msg) { o.s = c; o.e = msg; }, need(r) { if ((RANK[role] || 0) >= (RANK[r] || 0)) return true; this.fail(403, 'forbidden'); return false; } };
+    const rv = await R[m + ' ' + key](ctx); if (o.s === undefined) { o.s = 200; o.b = rv; } return o;
+  };
+  const FPX = Array.from({ length: 32 }, () => 'AB').join(':');
+  assert.equal((await call('PUT', '/fortimanager/direct/SITE-77', { host: 'site77.ddns.example', tls_fingerprint: FPX, api_key: 'fg-key-syn' }, 'operator')).s, 403);
+  let r = await call('PUT', '/fortimanager/direct/SITE-77', { host: 'https://site77.ddns.example/x', tls_fingerprint: FPX, api_key: 'fg-key-syn' }); assert.equal(r.s, 400); assert.match(r.e, /host/);
+  r = await call('PUT', '/fortimanager/direct/SITE-77', { host: 'site77.ddns.example', api_key: 'fg-key-syn' }); assert.equal(r.s, 400); assert.match(r.e, /tls_fingerprint/);
+  r = await call('PUT', '/fortimanager/direct/SITE-77', { host: 'site77.ddns.example', tls_fingerprint: FPX }); assert.equal(r.s, 400); assert.match(r.e, /api_key/);
+  r = await call('PUT', '/fortimanager/direct/SITE-77', { host: 'Site77.DDNS.example', port: 10443, site: 'Project site 77', tls_fingerprint: FPX.toLowerCase(), api_key: 'fg-key-syn' }); assert.equal(r.s, 200, r.e);
+  assert.ok(r.b.devices[0].api_key_set && !JSON.stringify(r.b).includes('fg-key-syn') && r.b.devices[0].host === 'site77.ddns.example');
+  assert.ok(!fs.readFileSync(cfgFile, 'utf8').includes('fg-key-syn') && JSON.parse(fs.readFileSync(secFile, 'utf8')).fortimanager.direct['SITE-77'] === 'fg-key-syn');
+  r = await call('POST', '/fortimanager/poll', {}, 'operator'); assert.equal(r.s, 200, r.e); assert.equal(r.b.devices, 1); assert.equal(r.b.standalone, 1);
+  assert.ok(seen.every((x) => x[0] === 'site77.ddns.example' && x[2] === 'fg-key-syn'), 'read by the DDNS name with its own key');
+  const fl = (await call('GET', '/fortimanager/fleet', undefined, 'viewer')).b, d = fl.devices[0];
+  assert.deepEqual([d.name, d.via, d.model, d.firmware, d.conf, d.site], ['SITE-77', 'direct', 'FortiGate-40F', '7.2.6', 'not managed', 'Project site 77']);
+  assert.ok(d.findings.some((f) => f.code === 'conserve') && d.findings.some((f) => f.code === 'vpn') && !d.findings.some((f) => f.code === 'drift'));
+  r = await call('POST', '/fortimanager/changes', { type: 'install-package', devices: ['SITE-77'], package: 'std', reason: 'synthetic reason text' }, 'operator'); assert.equal(r.s, 400); assert.match(r.e, /standalone/);
+  r = await call('POST', '/fortimanager/changes', { type: 'firmware-upgrade', devices: ['SITE-77'], version: '7.2.10', reason: 'synthetic reason text' }, 'operator'); assert.equal(r.s, 200, r.e);
+  assert.equal((await call('POST', '/fortimanager/direct/SITE-77/remove', {})).s, 200);
+  assert.ok(audits.some((a) => a.a === 'netops.fortigate.direct.save' && a.d.api_key_changed) && audits.some((a) => a.a === 'netops.fortigate.direct.remove'));
+});
