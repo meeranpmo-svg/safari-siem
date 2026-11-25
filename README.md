@@ -40,8 +40,7 @@ the portal) and `platform_ip` (the LAN address of the platform server, empty unt
 
 Safari is a group of companies, not a financial institution. Frameworks: NCA ECC, ISO/IEC 27001, PDPL, NDMO.
 `modules_off` and `pages_off` in the brand setting take the parts that do not apply out of every menu, search and the
-home page, for every role: SAMA CSF, Insurance Authority, CST, Aramco CCC, Business Risk & capital, Cisco update manager,
-Cisco collaboration, the VMware / Nutanix / Cisco-only pages, the Oracle-only pages (tuning, licences, Oracle Linux, Solaris,
+home page, for every role: SAMA CSF, Insurance Authority, CST, Aramco CCC, Business Risk & capital, Cisco update manager, the VMware / Nutanix / Cisco-only pages, the Oracle-only pages (tuning, licences, Oracle Linux, Solaris,
 Data Guard, AI Oracle DBA), the Kaspersky and Zscaler engineer pages, and three application pages Safari has no source for (Applications Manager, synthetic
 monitoring, portal traffic). Virtualisation is Hyper-V (set up as a scope in Asset
 Discovery), firewalls are Fortinet, switches are multi-vendor (SNMP / SSH), mail is hybrid Exchange, and remote sites
