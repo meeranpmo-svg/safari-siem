@@ -259,6 +259,9 @@ function registerDuty(srv, app, opts = {}) {
   if (ILM) { const IL = ILM.createIsoLifecycle(app, { now: opts.now, noTimer: opts.noTimer, sdk: opts.iaSdk, getKey: opts.iaKey }); app.addons.isoLifecycle = IL; ILM.registerIsoLifecycle(srv, app, IL); IL.start(); }
   // Saudi Aramco CCC (engine/aramco-ccc.js): scope, imported SACS-002 controls, self-assessment with four-eyes "not applicable",
   // remediation, evidence references, the audit firm's findings, the certificate and its renewal
+  // Cisco Unified CM (engine/cucm-manager.js): phones, trunks, calls with learned findings; restart / reset phones four-eyes
+  const UCM = optional('./cucm-manager');
+  if (UCM) { const UC = UCM.createCucm(app, { now: opts.now, noTimer: opts.noTimer, request: opts.cucmRequest }); app.addons.cucm = UC; UCM.registerCucm(srv, app, UC); UC.start(); }
   const ACM = optional('./aramco-ccc');
   if (ACM) { const AC = ACM.createAramcoCcc(app, { now: opts.now, noTimer: opts.noTimer }); app.addons.aramcoCcc = AC; ACM.registerAramcoCcc(srv, app, AC); AC.start(); }
   const ACE = ACM && optional('./aramco-ccc-evidence');

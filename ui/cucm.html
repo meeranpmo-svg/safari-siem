@@ -1,0 +1,68 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Call Manager</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css">
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Cisco Unified CM over /api/itam/cucm: phones and their registration by device pool, SIP trunks and gateways, live calls and the
+     failed share, learned findings (each against its own baseline), and four-eyes restart / reset of phones. Read with the AXL login
+     stored in Asset Discovery; changes only with a separate write login, approved by a different administrator. -->
+<style>
+.grid2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px}@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.act{border-left:3px solid #4299e1;padding:6px 10px;margin:6px 0;border-radius:4px;background:rgba(255,255,255,.02)}.act.bad{border-color:#e5484d}.act.warn{border-color:#f59f00}
+.mut{color:#8b93a4}.sm{font-size:12px}.bar{display:inline-block;width:90px;height:7px;border-radius:5px;background:rgba(255,255,255,.08);vertical-align:middle;overflow:hidden;margin-right:4px}.bar i{display:block;height:100%}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Voice · Cisco Unified Communications Manager</div><h1>Call Manager</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="poll" hidden>⟳ Poll now</button><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div><div class="k" id="kp"></div><div id="body"></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, PH = null, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, SEL = {};
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000); }
+  function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function load() {
+    $('poll').hidden = !can('operator');
+    req('GET', '/cucm').then(function (v) { V = v; $('err').innerHTML = ''; return can('operator') && v.polled ? req('GET', '/cucm/phones').then(function (p) { PH = p.phones; }) : null; }).then(function () { draw(); })
+      .catch(function (e) { $('kp').innerHTML = ''; $('body').innerHTML = ''; $('err').innerHTML = '<div class="card"><div class="empty">' + esc(e.status === 404 ? 'The Call Manager module is not on this platform yet - run the platform update.' : 'Could not load: ' + e.message) + '</div></div>'; });
+  }
+  function settingsCard() {
+    return can('admin') ? '<div class="card"><h2>⚙ Connection</h2><p class="sm mut">Store the CUCM logins in Asset Discovery → Credentials (kind <b>CUCM AXL</b>): a read-only AXL account (Standard AXL Read Only API Access + RIS / PerfMon read) and, only to run approved restarts, a separate account allowed to reset devices.</p><div class="frm"><label>Read login (credential id)<input id="s-ro" placeholder="cr_…"></label><label>Write login for approved changes (optional)<input id="s-rw" placeholder="cr_…"></label><label>Approved changes<select id="s-we"><option value="false">Plans only</option><option value="true">Approved restarts / resets run from here</option></select></label><label>Poll every (minutes)<input id="s-pm" value="' + esc((V.status && V.status.poll_min) || 15) + '"></label></div><p><button type="button" id="s-save">Save</button></p></div>' : '';
+  }
+  function draw() {
+    var v = V;
+    $('up').textContent = v.polled ? 'polled ' + new Date(v.at).toLocaleTimeString() : '';
+    if (!v.polled) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(v.note) + '</div></div>' + settingsCard(); return; }
+    var k = v.kpis;
+    $('kp').innerHTML = tile('Phones', k.phones, k.registered + ' registered', '') + tile('Not registered', k.unregistered, '', k.unregistered ? 'warn' : 'ok') + tile('Trunks / gateways', k.trunks, k.trunks_down + ' down', k.trunks_down ? 'bad' : 'ok')
+      + tile('Active calls', k.active_calls == null ? '–' : k.active_calls, 'now', '') + tile('Failed calls', k.failed_pct == null ? '–' : k.failed_pct + ' %', 'since the last poll', k.failed_pct >= 10 ? 'bad' : k.failed_pct >= 3 ? 'warn' : 'ok') + (v.learning ? tile('Learning', 'baseline', 'findings start after 6 polls', 'warn') : '');
+    var F = v.findings.length ? v.findings.map(function (f) { return '<div class="act ' + (f.severity === 'high' ? 'bad' : f.severity === 'medium' ? 'warn' : '') + '">' + pill(f.severity, f.severity === 'high' ? 'bad' : f.severity === 'medium' ? 'warn' : '') + ' ' + esc(f.title) + '<div class="mut sm">' + esc(f.fix) + '</div></div>'; }).join('') : '<div class="empty">' + (v.learning ? 'Learning the normal for each device pool and the call failure rate.' : 'Nothing needs doing.') + '</div>';
+    var pools = '<div class="tw"><table><thead><tr><th>Device pool</th><th>Registered</th><th>Usual</th></tr></thead><tbody>' + v.pools.map(function (p) { var c = p.pct >= 95 ? '#2fb344' : p.pct >= 80 ? '#f59f00' : '#e5484d'; return '<tr><td>' + esc(p.pool) + '</td><td><span class="bar"><i style="width:' + esc(p.pct || 0) + '%;background:' + c + '"></i></span>' + esc(p.registered + ' / ' + p.phones) + '</td><td class="sm mut">' + (p.usual != null ? esc(p.usual) + ' %' : '–') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    var tr = v.trunks.length ? v.trunks.map(function (t) { return '<div class="sm">' + esc(t.class === 'Gateway' ? 'Gateway' : 'SIP trunk') + ' <b>' + esc(t.name) + '</b> ' + pill(t.status || '?', t.status === 'Registered' ? 'ok' : 'bad') + (t.ip ? ' <span class="mut">' + esc(t.ip) + '</span>' : '') + '</div>'; }).join('') : '<div class="empty">No trunk or gateway reported.</div>';
+    var ph = PH ? '<div class="tw"><table><thead><tr><th></th><th>Phone</th><th>Pool</th><th>Status</th><th>IP</th><th>Changes 24 h</th></tr></thead><tbody>' + PH.slice().sort(function (a, b) { return (a.status === 'Registered') - (b.status === 'Registered') || b.changes_24h - a.changes_24h; }).slice(0, 500).map(function (p) {
+      return '<tr><td><input type="checkbox" data-sel="' + esc(p.name) + '"' + (SEL[p.name] ? ' checked' : '') + ' aria-label="Select ' + esc(p.name) + '"></td><td><b>' + esc(p.name) + '</b><div class="mut sm">' + esc([p.description, p.model].filter(Boolean).join(' · ')) + '</div></td><td>' + esc(p.device_pool || '') + '</td><td>' + pill(p.status || 'unknown', p.status === 'Registered' ? 'ok' : 'warn') + (p.unregistered_since ? '<div class="mut sm">since ' + esc(p.unregistered_since.slice(0, 10)) + '</div>' : '') + '</td><td class="sm">' + esc(p.ip || '') + '</td><td>' + esc(p.changes_24h) + '</td></tr>'; }).join('') + '</tbody></table></div>'
+      + '<p><select id="c-t"><option value="restart">Restart</option><option value="reset">Reset (hard)</option></select> <input id="c-r" placeholder="why" style="min-width:260px"> <button type="button" id="c-go">Propose for the selected</button> <span class="mut sm">a different administrator approves</span></p>' : '<p class="mut sm">The phone list names people: operators and above see it.</p>';
+    var ch = v.changes.length ? v.changes.map(function (c) { var b = '';
+      if (c.status === 'proposed' && can('admin') && c.proposed_by !== ME.user) b = ' <button type="button" class="btn" data-dec="approved" data-id="' + esc(c.id) + '">Approve</button> <button type="button" class="btn" data-dec="rejected" data-id="' + esc(c.id) + '">Reject</button>';
+      if (c.status === 'approved' && can('operator')) b = ' <button type="button" class="btn" data-run="' + esc(c.id) + '"' + (v.status.write_enabled ? '' : ' disabled title="An administrator chooses a separate write login and switches changes on"') + '>Run</button>';
+      return '<div class="act ' + (c.status === 'failed' ? 'bad' : c.status === 'proposed' ? 'warn' : '') + '"><b>' + esc(c.id) + '</b> ' + esc(c.type) + ' ' + esc(c.phones.length) + ' phone(s) ' + pill(c.status, c.status === 'done' ? 'ok' : c.status === 'failed' ? 'bad' : '') + '<div class="mut sm">' + esc(c.reason) + ' · by ' + esc(c.proposed_by) + (c.decided_by ? ' · decided by ' + esc(c.decided_by) : '') + '</div>' + b + '</div>'; }).join('') : '<div class="empty">No change plans.</div>';
+    $('body').innerHTML = '<div class="grid2"><div class="card"><h2>🧭 What needs attention</h2>' + F + '</div><div class="card"><h2>📞 Trunks &amp; gateways</h2>' + tr + '</div></div>'
+      + '<div class="grid2"><div class="card"><h2>🏢 Device pools</h2>' + pools + '</div><div class="card"><h2>📝 Changes <span class="c">four-eyes</span></h2>' + ch + '</div></div>'
+      + '<div class="card"><h2>☎ Phones</h2>' + ph + '</div>' + (v.errors && v.errors.length ? '<p class="sm" style="color:#ff8a8e">' + v.errors.map(esc).join('<br>') + '</p>' : '') + settingsCard();
+  }
+  document.addEventListener('change', function (e) { var t = e.target; if (t.hasAttribute && t.hasAttribute('data-sel')) { if (t.checked) SEL[t.getAttribute('data-sel')] = 1; else delete SEL[t.getAttribute('data-sel')]; } });
+  document.addEventListener('click', function (e) {
+    var t = e.target, a;
+    if (t.id === 'rf') return load();
+    if (t.id === 'poll') { t.disabled = true; return req('POST', '/cucm/poll', {}).then(function (s) { toast('Polled' + (s.last_error ? ' - ' + s.last_error : '')); load(); }).catch(function (er) { toast(er.message); }).then(function () { t.disabled = false; }); }
+    if (t.id === 's-save') { var b = { write_enabled: $('s-we').value === 'true', poll_min: Number($('s-pm').value) || 15 }; if ($('s-ro').value.trim()) b.credential_id = $('s-ro').value.trim(); if ($('s-rw').value.trim()) b.write_credential_id = $('s-rw').value.trim(); return req('PUT', '/cucm/settings', b).then(function () { toast('Saved'); load(); }).catch(function (er) { toast('Not saved: ' + er.message); }); }
+    if (t.id === 'c-go') { var ph = Object.keys(SEL); if (!ph.length) return toast('Select phones first'); return req('POST', '/cucm/changes', { type: $('c-t').value, phones: ph, reason: $('c-r').value.trim() }).then(function (c) { SEL = {}; toast(c.id + ' proposed - waiting for approval'); load(); }).catch(function (er) { toast('Not proposed: ' + er.message); }); }
+    if ((a = t.closest('[data-dec]'))) { var d = a.getAttribute('data-dec'), cm = d === 'rejected' ? prompt('Why is it rejected?') : ''; if (d === 'rejected' && !cm) return; return req('POST', '/cucm/changes/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: d, comment: cm || undefined }).then(function (c) { toast(c.id + ' ' + c.status); load(); }).catch(function (er) { toast(er.message); }); }
+    if ((a = t.closest('[data-run]'))) { if (!confirm('Restart / reset these phones in CUCM now?')) return; req('POST', '/cucm/changes/' + encodeURIComponent(a.getAttribute('data-run')) + '/run', {}).then(function (c) { toast(c.id + ': ' + c.status); load(); }).catch(function (er) { toast(er.message); }); }
+  });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* viewer */ } load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>
