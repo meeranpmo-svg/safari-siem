@@ -1785,6 +1785,7 @@ window.ZYB_NAV = [
     },
     "g": "Email security"
    },
+   {"h": "mimecast-actions.html", "s": "Mimecast Actions", "t": "Mimecast Actions - block / permit senders, release / reject held mail, block URLs, four-eyes", "d": "The Mimecast held queue and four-eyes actions in Mimecast: an operator proposes, a different person with the security approver scope approves, an operator runs it with a separate Mimecast management application", "fw": {"nca": ["2-4"], "iso": ["8.23", "5.14"]}, "k": ["mimecast", "email", "block", "sender", "held", "quarantine", "release", "url"]},
    {
     "h": "email-security.html",
     "s": "Email Security",

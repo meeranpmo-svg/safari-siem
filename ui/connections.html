@@ -594,8 +594,12 @@
        {k:'client_secret',label:'Client secret',type:'password',required:!!isNew,placeholder:isNew?'':'leave empty to keep the stored one',hint:'shown once when the application is created; stored sealed, never shown again'},
        {k:'types',label:'Log types',value:cur?(cur.types||[]).join(', '):known.join(', '),hint:'comma-separated, from: '+known.join(', ')},
        {k:'poll_min',label:'Poll every (minutes)',value:cur?String(cur.poll_min||15):'15',hint:'15 - 240; Mimecast allows 50 API calls per 15 minutes'},
+       {k:'manage_client_id',label:'Actions: management application client ID (optional)',placeholder:cur&&cur.manage_app_set?'leave empty to keep the stored one':'a SEPARATE API application',hint:'for four-eyes actions on Mimecast Actions (block / permit sender, release / reject held, block URL); never the log application'},
+       {k:'manage_client_secret',label:'Actions: management application secret',type:'password',placeholder:cur&&cur.manage_app_set?'leave empty to keep the stored one':''},
+       {k:'manage_enabled',label:'Approved actions',type:'select',value:cur&&cur.manage_enabled?'true':'false',options:[{v:'false',l:'Off - actions can be proposed and approved, not run'},{v:'true',l:'On - approved actions run in Mimecast'}]},
        {k:'enabled',label:'Collect',type:'select',value:!isNew&&cur&&cur.enabled===false?'false':'true',options:[{v:'true',l:'Enabled - pull now and every poll'},{v:'false',l:'Saved, not collecting'}]}];},
      save:function(v,isNew){var self=this,b={enabled:v.enabled!=='false'};if(v.client_id)b.client_id=v.client_id.trim();if(v.client_secret)b.client_secret=v.client_secret;
+       if(v.manage_client_id)b.manage_client_id=v.manage_client_id.trim();if(v.manage_client_secret)b.manage_client_secret=v.manage_client_secret;if(v.manage_enabled)b.manage_enabled=v.manage_enabled==='true';
        if(v.base_url)b.base_url=v.base_url.trim();if(v.types)b.types=v.types.split(',').map(function(x){return x.trim();}).filter(Boolean);if(v.poll_min)b.poll_min=Number(v.poll_min);
        return req(self.api,'PUT','/cloud/mimecast',b).then(function(){return self.test();});},
      add:function(){var self=this;return req(self.api,'GET','/cloud/mimecast').then(function(d){if(d.client_secret_set||d.enabled)return self.edit('mimecast');

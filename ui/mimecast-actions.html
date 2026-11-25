@@ -1,0 +1,56 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mimecast Actions</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Mimecast Actions over /api/soc/cloud/mimecast/{held,actions}: the held queue, and four-eyes actions in Mimecast (block / permit a
+     sender, release / reject a held message, block a URL). An operator proposes, a different person with the security approver
+     scope approves, an operator runs it with the separate Mimecast management application. Nothing runs from this page alone. -->
+<style>
+.grid2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px}@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.act{border-left:3px solid #4299e1;padding:6px 10px;margin:6px 0;border-radius:4px;background:rgba(255,255,255,.02)}.act.bad{border-color:#e5484d}.act.warn{border-color:#f59f00}
+.mut{color:#8b93a4}.sm{font-size:12px}.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Email security · Mimecast</div><h1>Mimecast Actions</h1></div><span class="sp"></span><span class="muted" id="up"></span><a class="btn" href="connections.html#cn-mimecast">Connection</a><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="state"></div>
+<div class="grid2"><div class="card" id="x-new"><h2>✍ Propose an action <span class="c">a different person approves</span></h2>
+  <div class="frm"><label>Action<select id="kind"></select></label><label id="l-sender">Sender (address or domain)<input id="sender" placeholder="someone@example.com or example.com"></label><label id="l-to">For recipient<input id="to" placeholder="person@your domain"></label>
+  <label id="l-url" hidden>URL<input id="url" placeholder="https://…"></label><label id="l-match" hidden>Match<select id="match"><option value="explicit">This exact URL</option><option value="domain">The whole domain</option></select></label></div>
+  <label class="sm mut" style="display:block;margin-top:8px">Why<textarea id="reason" rows="2" style="width:100%"></textarea></label><p><button type="button" id="send">Propose</button></p></div>
+<div class="card" id="x-plans"><h2>📝 Actions <span class="c">proposed → approved → run</span></h2><div id="plans"><div class="empty">Loading…</div></div></div></div>
+<div class="card" id="x-held"><h2>⏸ Held for review <span class="c">last 7 days</span></h2><div id="held"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var S = window.zybSoc, esc = S.esc, $ = function (i) { return document.getElementById(i); }, A = null;
+  function shape() { var k = $('kind').value, sd = k === 'block-sender' || k === 'permit-sender', u = k === 'block-url'; $('l-sender').hidden = !sd; $('l-to').hidden = !sd; $('l-url').hidden = !u; $('l-match').hidden = !u; }
+  function load() {
+    S.req('GET', '/cloud/mimecast/actions').then(function (a) { A = a; $('kind').innerHTML = Object.keys(a.kinds).filter(function (k) { return k.indexOf('held') < 0; }).map(function (k) { return '<option value="' + esc(k) + '">' + esc(a.kinds[k]) + '</option>'; }).join(''); shape();
+      $('state').innerHTML = !a.app_set ? '<div class="card"><div class="empty">No Mimecast management application is connected. An administrator adds a separate Mimecast API application for actions in the Integration Hub; until then actions can be proposed and approved but not run.</div></div>' : !a.enabled ? '<div class="card"><div class="empty">Mimecast actions are switched off - approved actions wait until an administrator switches them on.</div></div>' : '';
+      plans(); $('up').textContent = 'read ' + S.ago(new Date().toISOString()); })
+      .catch(function (e) { $('plans').innerHTML = e.status === 404 ? '<div class="empty">Mimecast actions are not on this SIEM yet - run the platform update.</div>' : S.errHtml(e, 'Mimecast actions'); });
+    S.req('GET', '/cloud/mimecast/held').then(function (h) { var L = h.held || [];
+      $('held').innerHTML = L.length ? '<div class="tw"><table><thead><tr><th>Received</th><th>From</th><th>To</th><th>Subject</th><th>Reason</th><th></th></tr></thead><tbody>' + L.map(function (m) { return '<tr><td class="sm">' + esc(m.received || '') + '</td><td>' + esc(m.from) + '</td><td>' + esc(m.to) + '</td><td>' + esc(m.subject) + (m.attachments ? ' 📎' : '') + '</td><td class="sm">' + esc(m.reason) + '</td><td class="text-nowrap"><button type="button" class="btn" data-held="release-held" data-id="' + esc(m.id) + '" data-sub="' + esc(m.subject) + '" data-from="' + esc(m.from) + '">Propose release</button> <button type="button" class="btn" data-held="reject-held" data-id="' + esc(m.id) + '" data-sub="' + esc(m.subject) + '" data-from="' + esc(m.from) + '">Propose reject</button></td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">Nothing is held for review.</div>'; })
+      .catch(function (e) { $('held').innerHTML = '<div class="empty">' + esc(e.status === 409 ? e.message : 'The held queue could not be read: ' + e.message) + '</div>'; });
+  }
+  function plans() {
+    var L = A.actions || [];
+    $('plans').innerHTML = L.length ? L.slice(0, 30).map(function (a) {
+      var b = '';
+      if (a.status === 'proposed' && S.user() !== a.proposed_by) b = ' <button type="button" class="btn" data-dec="approved" data-id="' + esc(a.id) + '">Approve</button> <button type="button" class="btn" data-dec="rejected" data-id="' + esc(a.id) + '">Reject</button>';
+      if (a.status === 'approved') b = ' <button type="button" class="btn" data-run="' + esc(a.id) + '"' + (A.enabled && A.app_set ? '' : ' disabled title="Actions are switched off"') + '>Run in Mimecast</button>';
+      var what = a.sender ? a.sender + ' → ' + a.to : a.url ? a.url + ' (' + a.match + ')' : (a.subject || a.message_id) + (a.from ? ' from ' + a.from : '');
+      return '<div class="act ' + (a.status === 'failed' || a.status === 'rejected' ? 'bad' : a.status === 'proposed' ? 'warn' : '') + '"><b>' + esc(a.id) + '</b> ' + esc(a.title) + ' ' + S.pill(a.status, a.status === 'done' ? 'ok' : a.status === 'failed' ? 'bad' : '') + '<div class="sm">' + esc(what) + '</div><div class="mut sm">' + esc(a.reason) + ' · proposed by ' + esc(a.proposed_by) + (a.decided_by ? ' · decided by ' + esc(a.decided_by) : '') + '</div>' + (a.error ? '<div class="sm" style="color:#ff8a8e">' + esc(a.error) + '</div>' : '') + b + '</div>';
+    }).join('') : '<div class="empty">No actions yet.</div>';
+  }
+  function propose(b) { return S.req('POST', '/cloud/mimecast/actions', b).then(function (a) { S.toast(a.id + ' proposed - waiting for approval'); load(); }).catch(function (e) { S.toast('Not proposed: ' + e.message); }); }
+  document.addEventListener('change', function (e) { if (e.target.id === 'kind') shape(); });
+  document.addEventListener('click', function (e) {
+    var t = e.target, a;
+    if (t.id === 'rf') { load(); return; }
+    if (t.id === 'send') { var k = $('kind').value, b = { kind: k, reason: $('reason').value.trim() }; if (k === 'block-url') { b.url = $('url').value.trim(); b.match = $('match').value; } else { b.sender = $('sender').value.trim(); b.to = $('to').value.trim(); } propose(b); return; }
+    if ((a = t.closest('[data-held]'))) { var why = prompt('Why should it be ' + (a.getAttribute('data-held') === 'release-held' ? 'released' : 'rejected') + '?'); if (!why) return; propose({ kind: a.getAttribute('data-held'), id: a.getAttribute('data-id'), subject: a.getAttribute('data-sub'), from: a.getAttribute('data-from'), reason: why }); return; }
+    if ((a = t.closest('[data-dec]'))) { var d = a.getAttribute('data-dec'), cm = d === 'rejected' ? prompt('Why is it rejected?') : ''; if (d === 'rejected' && !cm) return; S.req('POST', '/cloud/mimecast/actions/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: d, comment: cm || undefined }).then(function (x) { S.toast(x.id + ' ' + x.status); load(); }).catch(function (er) { S.toast(er.message); }); return; }
+    if ((a = t.closest('[data-run]'))) { if (!confirm('Carry out the approved action in Mimecast now?')) return; S.req('POST', '/cloud/mimecast/actions/' + encodeURIComponent(a.getAttribute('data-run')) + '/run', {}).then(function (x) { S.toast(x.id + ' done in Mimecast'); load(); }).catch(function (er) { S.toast('Failed: ' + er.message); load(); }); }
+  });
+  S.ready(load);
+})();
+</script></body></html>

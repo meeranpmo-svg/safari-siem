@@ -21,7 +21,7 @@ function register(api, deps) {
   const view = () => {
     const c = cfg.mimecast || {};
     return { enabled: !!c.enabled, base_url: c.base_url || MC.DEFAULT_BASE, types: Array.isArray(c.types) && c.types.length ? c.types : MC.DEFAULT_TYPES, poll_min: c.poll_min || 15,
-      client_id_set: !!sec().client_id, client_secret_set: !!sec().client_secret, known_types: MC.DEFAULT_TYPES, status: deps.mimecastStats ? deps.mimecastStats() : null };
+      client_id_set: !!sec().client_id, client_secret_set: !!sec().client_secret, manage_enabled: !!c.manage_enabled, manage_app_set: !!(sec().manage_client_id && sec().manage_client_secret), known_types: MC.DEFAULT_TYPES, status: deps.mimecastStats ? deps.mimecastStats() : null };
   };
   const read = (p) => { try { if (SF.isSecretsPath(p)) return SF.read(p) || {}; return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return {}; throw new HttpError(500, `cannot read ${p}`); } };
 
@@ -29,7 +29,8 @@ function register(api, deps) {
 
   api.route('PUT', `${P}/cloud/mimecast`, wrap(deps, 'admin', async (ctx) => {
     const b = body(ctx.body).bool('enabled').str('base_url', { max: 200 }).list('types', { max: 15, item: 'str', itemMax: 40 }).int('poll_min', { min: 15, max: 240 })
-      .str('client_id', { max: 200 }).str('client_secret', { max: 500 }).done();
+      .str('client_id', { max: 200 }).str('client_secret', { max: 500 })
+      .bool('manage_enabled').str('manage_client_id', { max: 200 }).str('manage_client_secret', { max: 500 }).done();
     const paths = cfg._paths || {};
     if (!paths.config || !paths.secrets) throw new HttpError(409, 'config / secrets files not available');
     const c = Object.assign({}, cfg.mimecast || {});
@@ -44,15 +45,20 @@ function register(api, deps) {
     if (b.enabled !== undefined) c.enabled = b.enabled;
     if (b.client_id !== undefined && /\s/.test(b.client_id)) throw new HttpError(400, 'client_id: no spaces');
     if (b.client_secret !== undefined && /\s/.test(b.client_secret)) throw new HttpError(400, 'client_secret: no spaces');
+    for (const k of ['manage_client_id', 'manage_client_secret']) if (b[k] !== undefined && /\s/.test(b[k])) throw new HttpError(400, k + ': no spaces');
+    if (b.manage_client_id && b.manage_client_id === (b.client_id || sec().client_id)) throw new HttpError(400, 'manage_client_id: use a separate Mimecast application for actions, not the read-only log application');
+    if (b.manage_enabled !== undefined) c.manage_enabled = b.manage_enabled;
+    if (c.manage_enabled && !((b.manage_client_id || sec().manage_client_id) && (b.manage_client_secret || sec().manage_client_secret))) throw new HttpError(400, 'manage_client_secret: enter the management application to switch Mimecast actions on');
     const newId = b.client_id || '', newSecret = b.client_secret || '';
     if (c.enabled && !((newId || sec().client_id) && (newSecret || sec().client_secret))) throw new HttpError(400, 'enter the client ID and client secret to switch the Mimecast collector on');
     const file = read(paths.config); file.mimecast = Object.assign({}, file.mimecast || {}, c); writeJson(paths.config, file); cfg.mimecast = Object.assign(cfg.mimecast || {}, c);
-    if (newId || newSecret) {
+    if (newId || newSecret || b.manage_client_id || b.manage_client_secret) {
       const s = read(paths.secrets), m = Object.assign({}, s.mimecast || {}); if (newId) m.client_id = newId; if (newSecret) m.client_secret = newSecret;
+      if (b.manage_client_id) m.manage_client_id = b.manage_client_id; if (b.manage_client_secret) m.manage_client_secret = b.manage_client_secret;
       s.mimecast = m; writeJson(paths.secrets, s); if (cfg.secrets) cfg.secrets.mimecast = Object.assign(cfg.secrets.mimecast || {}, m);
     }
     let applied = false; if (deps.reloadMimecast) { await deps.reloadMimecast(); applied = true; }
-    audit(ctx, 'cloud.mimecast.config', '', { enabled: !!c.enabled, base_host: new URL(c.base_url || MC.DEFAULT_BASE).hostname, types: (c.types || MC.DEFAULT_TYPES).length, poll_min: c.poll_min || 15, client_id_changed: !!newId, client_secret_changed: !!newSecret });
+    audit(ctx, 'cloud.mimecast.config', '', { enabled: !!c.enabled, base_host: new URL(c.base_url || MC.DEFAULT_BASE).hostname, types: (c.types || MC.DEFAULT_TYPES).length, poll_min: c.poll_min || 15, client_id_changed: !!newId, client_secret_changed: !!newSecret, manage_enabled: !!c.manage_enabled, manage_app_changed: !!(b.manage_client_id || b.manage_client_secret) });
     return Object.assign(view(), { applied });
   }));
 

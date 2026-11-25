@@ -295,7 +295,8 @@ async function main({ configPath, installSignals = true } = {}) {
   if (state) routeModules.push('duty/routes.js');    // AI engineers' duty desk: patrol, work items, investigation, change-plan follow-up, verification, shift reports (after netops + sysadmin + zscaler + ksc)
   if (state) routeModules.push('itaudit/routes.js'); // evidence for the AI IT / Cyber Security Auditors: AD, network devices, databases, applications (read-only; after netops + db-audit)
   routeModules.push('collect/cloud-routes.js');
-  routeModules.push('collect/mimecast-routes.js');   // Mimecast email security: API 2.0 SIEM batch pull (client ID / secret), status, test, poll now      // Cloud log sources settings: Cloudflare pull (API token), status
+  routeModules.push('collect/mimecast-routes.js');
+  if (state) routeModules.push('collect/mimecast-manage.js');   // Mimecast actions: held queue, block / permit sender, release / reject held, block URL - four-eyes, separate app   // Mimecast email security: API 2.0 SIEM batch pull (client ID / secret), status, test, poll now      // Cloud log sources settings: Cloudflare pull (API token), status
   if (state) routeModules.push('collect/cloud-data-routes.js'); // Data Security Posture: read-only discovery of Azure Blob / AWS S3 / OCI Object Storage (region, public, encryption, personal-data counts)
   if (state) routeModules.push('facilities/routes.js'); // Door access: ZKTeco ZKBioSecurity controllers, doors and 24 h door alarms (read only, no person)
   if (state) routeModules.push('printers/routes.js');

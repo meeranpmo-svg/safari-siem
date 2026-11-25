@@ -35,7 +35,7 @@ test('a fresh engine serves the add-on pages (Platform Map, handover, automation
     const port = app.port || (app.server && app.server.address && app.server.address().port) || (app.srv && app.srv.address && app.srv.address().port);
     assert.ok(port, 'listening');
     const H = { 'x-sentra-proxy-secret': 'syn-proxy-secret-0123456789', 'x-auth-user': 'admin.syn', 'x-auth-role': 'admin' };
-    for (const p of ['/platform-map', '/handover', '/audit-flow', '/pdpl-flow', '/duty/kpis', '/service-map', '/infra-overview', '/ownership', '/budget', '/nca-ecc-intel', '/impl/nca', '/impl/pdpl', '/impl/iso', '/impl/ndmo']) {
+    for (const p of ['/platform-map', '/handover', '/audit-flow', '/pdpl-flow', '/duty/kpis', '/service-map', '/infra-overview', '/ownership', '/budget', '/nca-ecc-intel', '/impl/nca', '/impl/pdpl', '/impl/iso', '/impl/ndmo', '/iso-lifecycle']) {
       const r = await fetch(`http://127.0.0.1:${port}/api/itam${p}`, { headers: H });
       assert.notEqual(r.status, 404, p + ' is served');
     }
