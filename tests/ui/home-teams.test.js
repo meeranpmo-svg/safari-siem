@@ -11,6 +11,9 @@ const DASH = path.resolve(__dirname, '../../ui');
 let n = 0, bad = 0;
 const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 
+// the organisation's brand setting decides what the home shows: no SAMA tile or Business Risk workspace where they are switched off
+// (modules_off), its company look on by default unless company_look is false, its own pages in place of switched-off ones (pages_off)
+const MOFF = ZYB_ORG.modules_off || [], POFF = ZYB_ORG.pages_off || [], SAMA_ON = !MOFF.includes('fw-sama'), BRISK_ON = !MOFF.includes('brisk'), LOOK_DEF = ZYB_ORG.company_look !== false;
 let GATE = 'admin', ME = null, DUTY = true, SOCOV = 'ok';
 const OVERVIEW = { generated_at: Date.now(), open: { total: 17, by_severity: [1, 4, 5, 4, 3], unassigned: 6, bands: { 'act-now': 2, investigate: 5, review: 4, low: 3, 'likely-noise': 3 }, new_24h: 9 },
   mtta_min: 42, mttr_min: 1500, act_now: [{ id: 'al-1', rule_name: '<img src=x onerror=alert(1)> Brute force on VPN (synthetic)', priority: 96, severity: 4, entities: ['vpn-gw-syn', 'user.syn'], summary: 'synthetic' }, { id: 'al/2', rule_name: 'Impossible travel (synthetic)', priority: 88, severity: 3, entities: ['user2.syn'] }],
@@ -58,9 +61,9 @@ const ENG = [{ id: 'network', name: 'AI Network Engineer' }, { id: 'security', n
   });
 
   // ---- Global Admin: every workspace, in menu order (PDPL has its own menu group and workspace since the PDPL pages split out)
-  const ALL_WS = ['cmd', 'soc', 'pt', 'eps', 'usr', 'net', 'srv', 'stor', 'db', 'eud', 'app', 'ast', 'grc', 'brisk', 'cmp', 'pdpl', 'aud', 'adm', 'ai'];
+  const ALL_WS = ['cmd', 'soc', 'pt', 'eps', 'usr', 'net', 'srv', 'stor', 'db', 'eud', 'app', 'ast', 'grc', 'brisk', 'cmp', 'pdpl', 'aud', 'adm', 'ai'].filter((w) => w !== 'brisk' || BRISK_ON);
   let page = await open(); let s = await state(page);
-  ok(s.label === 'Global Admin' && s.teams === 6 && JSON.stringify(s.ws) === JSON.stringify(ALL_WS) && s.teambar && !s.duo, 'global admin: 6 team cards (Data Privacy and Audit & Assurance separate from Risk & Compliance), 19 workspaces (Business Risk, Compliance, Data Privacy, Audit and Pentest have their own; printers and voice under Workplace), team switcher: ' + JSON.stringify({ l: s.label, t: s.teams, w: s.ws, b: s.teambar }));
+  ok(s.label === 'Global Admin' && s.teams === 6 && JSON.stringify(s.ws) === JSON.stringify(ALL_WS) && s.teambar && !s.duo, 'global admin: 6 team cards (Data Privacy and Audit & Assurance separate from Risk & Compliance), ' + ALL_WS.length + ' workspaces (Business Risk where the organisation has it, Compliance, Data Privacy, Audit and Pentest have their own; printers and voice under Workplace), team switcher: ' + JSON.stringify({ l: s.label, t: s.teams, w: s.ws, b: s.teambar }));
   ok(s.tiles.length === 5, 'global: 5 live tiles');
   ok(s.dec === '3' && s.prob === '3', 'global counts everything (2 awaiting + 1 SOC approval; 3 critical/high): ' + s.dec + ' / ' + s.prob);
   ok(JSON.stringify(s.open) === '{"infra":"3","cyber":"2","app":"2","risk":"0","privacy":"1","audit":"1"}', 'team cards: open items per team (dba counts for infra and apps): ' + JSON.stringify(s.open));
@@ -68,24 +71,32 @@ const ENG = [{ id: 'network', name: 'AI Network Engineer' }, { id: 'security', n
   ok(await page.evaluate(() => document.querySelector('#orglogo img').alt) === ZYB_ORG.name, 'logo alt text');
   const gb = await page.evaluate(() => ({ brand: document.getElementById('zsplate').textContent, title: document.title, grc: [...document.querySelectorAll('#grc .st')].map((t) => [t.id, t.getAttribute('href'), t.querySelector('.v').textContent]) }));
   ok(gb.brand === 'ZYBERON SENTRA' && /^Zyberon Sentra — IT Operations & Cyber Security Automation & Monitoring Platform$/.test(gb.title), 'brand: ZYBERON SENTRA first, the platform name in the tab: ' + gb.brand + ' | ' + gb.title);
-  ok(gb.grc.map((x) => x[0]).join() === 'grc-er,grc-sama,grc-nca-ecc,grc-pdpl,grc-ndmo' && gb.grc.map((x) => x[1]).join() === 'enterprise-risk.html,sama-audit.html,nca-ecc.html,pdpl-dashboard.html,ndmo.html', 'Enterprise Risk, SAMA, NCA, PDPL, NDMO tiles, each opening its dashboard');
+  const GRC = SAMA_ON ? [['grc-er', 'enterprise-risk.html'], ['grc-sama', 'sama-audit.html'], ['grc-nca-ecc', 'nca-ecc.html'], ['grc-pdpl', 'pdpl-dashboard.html'], ['grc-ndmo', 'ndmo.html']]
+    : [['grc-nca-ecc', 'nca-ecc.html'], ['grc-iso27001', 'iso27001.html'], ['grc-pdpl', 'pdpl-dashboard.html'], ['grc-aramco', 'aramco-ccc.html'], ['grc-ndmo', 'ndmo.html']];   // not under SAMA: NCA ECC, ISO 27001, PDPL, Aramco CCC, NDMO
+  ok(gb.grc.map((x) => x[0]).join() === GRC.map((x) => x[0]).join() && gb.grc.map((x) => x[1]).join() === GRC.map((x) => x[1]).join() && !gb.grc.some((x) => POFF.includes(x[1].replace(/\.html$/, ''))),
+    'compliance tiles for the frameworks the organisation is under, each opening its dashboard: ' + JSON.stringify(gb.grc.map((x) => x[0])));
   ok(await page.waitForFunction(() => [...document.querySelectorAll('#grc .st .v')].every((v) => v.textContent !== 'Loading…'), null, { timeout: 15000 }).then(() => true, () => false), 'every GRC tile answered');
   const gv = await page.evaluate(() => [...document.querySelectorAll('#grc .st .v')].map((v) => v.textContent));
   ok(gv.every((v) => /^(\d+%|\d+ \/ 100|not assessed|not connected|no access|not installed|not reachable)$/.test(v)) && !gv.includes('0%'), 'a real score or why there is none - never an invented 0: ' + gv.join(' | '));
   // brand colours switch: the Zyberon Sentra design by default; the organisation green when switched on, kept after a reload
   // brand colours switch (the page tests run with the platform's own design as the default; sector-profile.test.js checks
   // the organisation's default): the company look when switched on, saved, and back
-  ok(await page.evaluate(() => document.getElementById('orgBrand').media === 'not all' && document.getElementById('brandsw').getAttribute('aria-checked') === 'false'), ('brand: the platform design (' + ZYB_ORG.short + ' colours off)'));
-  await page.click('#brandsw');
-  ok(await page.evaluate(() => document.getElementById('orgBrand').media === 'all' && document.documentElement.classList.contains('org-brand') && JSON.parse(localStorage.getItem('zyb-dash-prefs') || '{}').brand === 'org'), ('brand: switched to the ' + ZYB_ORG.short + ' colours and saved'));
+  // the switch starts at the organisation's default (company_look) and flips both ways; each choice is saved
+  const look = () => page.evaluate(() => ({ media: document.getElementById('orgBrand').media + '|' + document.getElementById('orgLight').media, on: document.documentElement.classList.contains('org-brand'),
+    sw: document.getElementById('brandsw').getAttribute('aria-checked'), side: (document.querySelector('#zyb-side [data-zyb-brandsw]') || {}).getAttribute ? document.querySelector('#zyb-side [data-zyb-brandsw]').getAttribute('aria-checked') : null,
+    saved: JSON.parse(localStorage.getItem('zyb-dash-prefs') || '{}').brand }));
+  let L = await look();
+  ok(L.on === LOOK_DEF && L.sw === String(LOOK_DEF), 'brand: the ' + (LOOK_DEF ? ZYB_ORG.short + ' colours' : 'platform design') + ' by default (company_look): ' + JSON.stringify(L));
+  if (!LOOK_DEF) { await page.click('#brandsw'); L = await look(); }
+  ok(L.on && /\ball\b/.test(L.media), ('brand: the ' + ZYB_ORG.short + ' colours on'));
   ok(await page.evaluate(() => getComputedStyle(document.querySelector('main .btn.pri')).backgroundColor) === 'rgb(' + [1, 3, 5].map((i) => parseInt(ZYB_ORG.colors.primary.slice(i, i + 2), 16)).join(', ') + ')', ('brand: the primary action is in the ' + ZYB_ORG.short + ' colour (brand setting colors.primary)'));
-  await page.click('#brandsw');
-  ok(await page.evaluate(() => document.getElementById('orgBrand').media === 'not all' && JSON.parse(localStorage.getItem('zyb-dash-prefs') || '{}').brand === 'off'), 'brand: switched back to the platform design and saved');
+  await page.click('#brandsw'); L = await look();
+  ok(!L.on && L.media === 'not all|not all' && L.saved === 'off', 'brand: switched to the platform design and saved: ' + JSON.stringify(L));
   // the same switch in the menu: one choice for the menu and the page
-  await page.click('#zyb-side [data-zyb-brandsw]');
-  ok(await page.evaluate(() => document.getElementById('orgBrand').media === 'all' && document.getElementById('brandsw').getAttribute('aria-checked') === 'true' && document.documentElement.classList.contains('org-brand')), 'brand: the menu switch turns the page and the menu to the company colours, and the page switch follows');
-  await page.click('#brandsw');
-  ok(await page.evaluate(() => document.querySelector('#zyb-side [data-zyb-brandsw]').getAttribute('aria-checked') === 'false' && !document.documentElement.classList.contains('org-brand')), 'brand: the page switch turns it off in the menu too');
+  await page.click('#zyb-side [data-zyb-brandsw]'); L = await look();
+  ok(L.on && L.sw === 'true' && L.saved === 'org', 'brand: the menu switch turns the page and the menu to the company colours, the page switch follows and it is saved: ' + JSON.stringify(L));
+  await page.click('#brandsw'); L = await look();
+  ok(L.side === 'false' && !L.on, 'brand: the page switch turns it off in the menu too');
   const regs = await page.evaluate(() => { const r = document.getElementById('regs'), b = r.getBoundingClientRect(), f = document.querySelector('.foot').getBoundingClientRect();
     return { shown: !r.hidden, href: r.getAttribute('href'), alts: [...r.querySelectorAll('img')].map((i) => i.alt), h: Math.round(r.querySelector('img').getBoundingClientRect().height), right: Math.round(f.right - b.right) }; });
   ok(regs.shown && regs.href === 'compliance-map.html' && regs.alts.join('|') === (ZYB_ORG.frameworks.includes('nca') ? 'National Cybersecurity Authority (NCA)' : ''), 'the frameworks of the brand setting in the footer (a regulator mark where there is one), linking to the Compliance Map: ' + JSON.stringify(regs));
@@ -103,8 +114,10 @@ const ENG = [{ id: 'network', name: 'AI Network Engineer' }, { id: 'security', n
   ok(JSON.stringify(s.engs) === '["AI Security Engineer","AI SIEM Engineer"]', 'cyber AI engineers: ' + s.engs);
   ok(JSON.stringify(s.queue) === '["1","1","0"]', 'cyber queue: ' + s.queue);
   ok(s.teambar && (await page.evaluate(() => document.querySelector('#teambar a.on').dataset.team)) === 'cyber', 'admin keeps the switcher, cyber marked current');
-  ok(await page.evaluate(() => document.querySelectorAll('.wk[data-ws="soc"] li').length) === 25, 'team workspaces list every page (Security Operations: 25 - monitor, investigate, respond (incident response, playbooks, SOAR, DFIR) and the SIEM platform with Alarm Inbox Rules)');
-  ok(s.also.length === 4, 'also-useful links: ' + s.also);
+  { const soc = await page.evaluate(() => [...document.querySelectorAll('.wk[data-ws="soc"] li a')].map((a) => a.getAttribute('href')));
+    ok(soc.length >= 25 - POFF.length && soc.length >= 20 && !soc.some((h) => POFF.includes(h.replace(/\.html$/, ''))) && ['soc-live.html', 'incident-response.html', 'soar.html', 'dfir.html', 'alarm-rules.html'].every((h) => soc.includes(h)),
+      'team workspaces list every page the organisation uses (Security Operations: monitor, investigate, respond (incident response, playbooks, SOAR, DFIR) and the SIEM platform with Alarm Inbox Rules): ' + soc.length); }
+  ok(s.also.length >= 1 && s.also.length <= 4 && !s.also.some((h) => POFF.includes(h.replace(/\.html$/, ''))), 'also-useful links (none the organisation switched off): ' + s.also);
   ok(JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('#teambar a')].map((a) => a.dataset.team))) === '["all","infra","cyber","soc","app","risk","privacy","audit","pentest","network","virt","windows","exchange","backup"]', 'switcher offers the department homes, then each engineer home');
   await page.close();
 
@@ -127,7 +140,7 @@ const ENG = [{ id: 'network', name: 'AI Network Engineer' }, { id: 'security', n
   ok(JSON.stringify(s.engs) === '["AI Network Engineer","AI Oracle DBA","AI Windows Server Administrator"]', 'infra AI engineers: ' + s.engs);
   ok(await page.evaluate(() => document.querySelector('#engs .row:last-child span').textContent) === 'off', 'a switched-off AI engineer says off');
   ok(s.ai === '2', 'infra AI on duty: 2 of 3 active: ' + s.ai);
-  ok(s.quick.includes('capacity.html') && s.quick.includes('sdwan.html'), 'infra quick actions');
+  ok(s.quick.includes('capacity.html') && (POFF.includes('sdwan') ? !s.quick.includes('sdwan.html') : s.quick.includes('sdwan.html')), 'infra quick actions (SD-WAN only where the organisation has it): ' + s.quick);
   await page.close();
 
   ME = { role: { id: 'r-17', name: 'Application Admin', base: 'operator', functions: { servers: 'manage' } } };
@@ -168,14 +181,25 @@ const ENG = [{ id: 'network', name: 'AI Network Engineer' }, { id: 'security', n
   GATE = 'operator';
 
   // ---- engineer homes: one engineer, one home, only their own pages
+  // the organisation's estate (brand pages_off): Hyper-V instead of VMware / Nutanix, Microsoft 365 + Mimecast instead of Exchange servers
+  const OFFP = ZYB_ORG.pages_off || [], HYPERV = OFFP.includes('vsphere-studio') && OFFP.includes('nutanix-vms'), M365 = OFFP.includes('exchange-servers') && OFFP.includes('exchange-hybrid');
   const ENGHOME = [['pentest-engineer', 'vuln', 'Penetration Testing team', 'vapt-center.html'], ['network-engineer', 'network', 'Network Engineering team', 'network-dashboard.html'],
-    ['virtualization-admin', 'virtualization', 'Virtualization team', 'vsphere-studio.html'], ['windows-admin', 'windows', 'Windows Servers team', 'windows-servers.html'],
-    ['exchange-admin', 'exchange', 'Exchange & Mail team', 'exchange-servers.html'], ['backup-admin', 'backup', 'Backup & Storage team', 'backup.html']];
+    ['virtualization-admin', 'virtualization', 'Virtualization team', HYPERV ? 'hyperv.html' : 'vsphere-studio.html'], ['windows-admin', 'windows', 'Windows Servers team', 'windows-servers.html'],
+    ['exchange-admin', 'exchange', M365 ? 'Email & Microsoft 365 team' : 'Exchange & Mail team', M365 ? 'mimecast-actions.html' : 'exchange-servers.html'], ['backup-admin', 'backup', 'Backup & Storage team', 'backup.html']];
   for (const [id, fn, label, q] of ENGHOME) {
     ME = { role: { id, name: label, base: 'operator', functions: { [fn]: 'manage' } } };
     page = await open('?team=cyber'); s = await state(page);
     ok(s.label === label && !s.teambar && s.quick.includes(q), id + ': lands on its own home, no switcher, ?team ignored: ' + JSON.stringify({ l: s.label, q: s.quick }));
     await page.close();
+  }
+  if (HYPERV || M365) {   // nothing of a platform the organisation does not run on those homes
+    for (const [id, fn, bad] of [['virtualization-admin', 'virtualization', /vsphere|nutanix|vmware/i], ['exchange-admin', 'exchange', /exchange-(servers|hybrid|admin)|email-route-map|libraesva/i]]) {
+      if ((fn === 'virtualization' && !HYPERV) || (fn === 'exchange' && !M365)) continue;
+      ME = { role: { id, name: id, base: 'operator', functions: { [fn]: 'manage' } } };
+      page = await open(); const st = await state(page), txt = await page.evaluate(() => [...document.querySelectorAll('.qa'), document.getElementById('teamlabel')].map((e) => e.textContent).join(' ') + ' ' + ((document.querySelector('.greet') || {}).textContent || '')), hrefs = st.quick.concat(st.also).join(' ');
+      { const w = (fn === 'virtualization' ? /.{0,40}(VMware|Nutanix).{0,40}/ : /.{0,40}(Exchange servers|Exchange Hybrid).{0,40}/).exec(txt); ok(!bad.test(hrefs) && !w, id + ': no page or wording for a platform the organisation does not run: ' + ((hrefs.match(bad) || [])[0] || '') + ' ' + (w ? w[0] : '')); }
+      await page.close();
+    }
   }
   ME = { role: { id: 'windows-admin', name: 'Windows Server Admin', base: 'operator', functions: { windows: 'manage' } } };
   page = await open(); s = await state(page);
@@ -192,7 +216,7 @@ const ENG = [{ id: 'network', name: 'AI Network Engineer' }, { id: 'security', n
   page = await open(); ok(/No AI engineer works on this area yet/.test(await page.textContent('#engs')), 'backup home: says no AI engineer covers it (never an empty box)'); await page.close();
   GATE = 'admin'; ME = null;
   page = await open('?team=exchange'); s = await state(page);
-  ok(s.label === 'Exchange & Mail team' && s.teambar, 'an administrator can preview an engineer home'); await page.close();
+  ok(s.label === (M365 ? 'Email & Microsoft 365 team' : 'Exchange & Mail team') && s.teambar, 'an administrator can preview an engineer home: ' + s.label); await page.close();
   GATE = 'operator';
 
   ME = { role: { id: 'system-admin', name: 'System Admin', base: 'admin', functions: {} } };
