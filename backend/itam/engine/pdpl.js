@@ -78,7 +78,7 @@ const DISC_EVERY = 7 * 86400000, DAY = 86400000;
 const BASES = ['consent', 'explicit_consent', 'contract', 'legal_obligation', 'vital_interest', 'public_interest', 'legitimate_interest'];
 const CATS = ['identity', 'contact', 'financial', 'health', 'credit', 'biometric', 'genetic', 'criminal', 'religious', 'beliefs', 'ethnic', 'parentage', 'location', 'employment', 'other'];
 // what flows abroad at an insurer: reinsurance treaties, retrocession, overseas TPAs, treatment abroad, travel assistance, group services, hosting
-const FLOWS = ['reinsurance', 'retrocession', 'international_tpa', 'medical_abroad', 'assistance', 'group_service', 'cloud_hosting', 'other'];
+const FLOWS = ['reinsurance', 'retrocession', 'international_tpa', 'medical_abroad', 'assistance', 'group_service', 'cloud_hosting', 'vendor_support', 'recruitment_abroad', 'client_abroad', 'other'];   // the page offers the sector's set
 const TBASES = ['adequacy', 'bcr', 'scc', 'certification', 'code_of_conduct', 'exemption_contract', 'exemption_public', 'exemption_vital'];
 const STATUSES = ['compliant', 'partial', 'non_compliant', 'not_applicable'];
 const DT = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?)?$/;

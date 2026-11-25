@@ -111,3 +111,14 @@ test('CSV export: audited, summary first, and a cell that starts like a formula 
   assert.ok(!/(^|,)"=/.test(r.json.csv), 'no cell starts with =');
   const au = s.e.app.store.auditTail(20).find((x) => x.action === 'dept-checklist.export'); assert.equal(au.by, AUD.user); assert.ok(au.detail.rows > OBLIGATIONS.length);
 });
+
+test('departments by sector (brand setting): an operations & maintenance group gets its own departments and obligations', () => {
+  const B = require('../engine/brand'), { DEPTS, OBLIGATIONS } = require('../engine/dept-checklist');
+  const ids = DEPTS.map((d) => d[0]), insurer = /^(insurer|insurance)$/i.test(String(B.sector || ''));
+  if (insurer) { assert.ok(ids.includes('underwriting')); return; }
+  for (const d of ['operations', 'projects', 'hse', 'fleet', 'site_security', 'group_services', 'hr', 'infra']) assert.ok(ids.includes(d), d);
+  assert.ok(!ids.includes('underwriting') && !ids.includes('claims'), 'no insurer departments');
+  assert.ok(OBLIGATIONS.every((o) => ids.includes(o.dept)), 'every obligation belongs to a department that exists');
+  for (const d of ['operations', 'projects', 'hse', 'fleet', 'site_security', 'group_services']) assert.ok(OBLIGATIONS.some((o) => o.dept === d), 'obligations for ' + d);
+  assert.ok(OBLIGATIONS.filter((o) => o.dept === 'group_services').some((o) => o.pdpl.includes('Art. 8')), 'processor agreements with the group companies');
+});

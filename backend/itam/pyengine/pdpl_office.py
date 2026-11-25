@@ -343,11 +343,19 @@ def _steps(records, org, extra, now):
     ]
 
 
+try:
+    from org_brand import ORG as _ORG
+except Exception:  # noqa: BLE001 - a rules run without a brand file keeps the neutral wording
+    _ORG = {}
+# who holds the organisation's sensitive personal data (brand setting: sector)
+_SENSITIVE_STEWARDS = 'Medical, Claims, Reinsurance stewards' if str((_ORG or {}).get('sector') or '').lower() in ('insurer', 'insurance') else 'HR, HSE (medical), Site Security (biometrics, CCTV) stewards'
+
+
 PHASES = [
     (1, 'Mobilise and govern', 'Who is accountable', ['DPO', 'Privacy committee (Legal, IT, HR, Operations)', 'Function owners', 'Data steward + privacy champion per department'], 'Weeks 0-4 (estimate)'),
     (2, 'Discover and map', 'What personal data we hold, where and why', ['Data stewards', 'DBA / system owners for read-only scan accounts', 'DPO review'], 'Weeks 2-10 (estimate)'),
     (3, 'Lawful basis and transparency', 'On what basis, and what people are told', ['Legal', 'DPO', 'Marketing / Customer Service for consent'], 'Weeks 6-12 (estimate)'),
-    (4, 'Risk controls', 'Sensitive data, high-risk processing and data leaving the Kingdom', ['DPO', 'CISO / IT Security', 'Medical, Claims, Reinsurance stewards'], 'Weeks 8-16 (estimate)'),
+    (4, 'Risk controls', 'Sensitive data, high-risk processing and data leaving the Kingdom', ['DPO', 'CISO / IT Security', _SENSITIVE_STEWARDS], 'Weeks 8-16 (estimate)'),
     (5, 'Rights and breach readiness', 'Answer people in 30 days; notify in 72 hours', ['Customer Service (requests)', 'SOC / incident owner', 'Legal / Compliance for regulators'], 'Weeks 10-16 (estimate)'),
     (6, 'Vendors and retention', 'Processors, sub-processors, how long data is kept', ['Procurement', 'Legal', 'System owners for destruction'], 'Weeks 12-20 (estimate)'),
     (7, 'People and culture', 'Training and privacy by design', ['HR / training', 'Privacy champions', 'Project managers'], 'Weeks 12-24 (estimate)'),

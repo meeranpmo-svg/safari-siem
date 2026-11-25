@@ -228,7 +228,7 @@ const CY_POPS = {
 const CY_SYSTEM = IT_SYSTEM.replace('the AI IT Auditor on', 'the AI Cyber Security Auditor on').replace('(IIA standards, ISO/IEC 27001, SAMA CSF, NCA ECC)', '(IIA standards, NCA ECC-1:2018, SAMA Cyber Security Framework, ISO/IEC 27001, NIST CSF, MITRE ATT&CK)');
 // the internal audit universe of an insurer (IA / SAMA insurance regulations, IIA standards): business processes first; IT and
 // cyber security are covered by their own teams and appear here only as one coordinating area
-const IN_AREAS = [
+const IN_AREAS_INSURER = [
   { id: 'underwriting', name: 'Underwriting and pricing', base: 5, re: /\b(underwrit\w*|pricing|premium|policy issuance|quotation)\b/i, ecc: [] },
   { id: 'claims', name: 'Claims management', base: 5, re: /\b(claims?|settlement|loss adjust\w*|tpa|provider)\b/i, ecc: [] },
   { id: 'reinsurance', name: 'Reinsurance', base: 4, re: /\b(reinsur\w*|treaty|facultative|cession)\b/i, ecc: [] },
@@ -247,6 +247,27 @@ const IN_AREAS = [
   { id: 'bcm', name: 'Business continuity', base: 3, re: /\b(continuity|bcm|disaster|crisis)\b/i, ecc: ['3-1'] },
   { id: 'itcyber', name: 'IT and cyber security (coordinated with the IT and Cyber Security Audit Teams)', base: 3, re: /\b(it|cyber|information security|system|access|patch|backup)\b/i, ecc: ['2-2', '2-3'] },
 ];
+// the internal audit universe of an operations & maintenance group (brand setting: sector): its business processes first
+const IN_AREAS_OM = [
+  { id: 'service', name: 'Service delivery and maintenance (work orders, SLAs, client sign-off)', base: 5, re: /\b(maintenance|work orders?|sla|service level|breakdown|preventive|cmms|o&m|client sign.?off)\b/i, ecc: [] },
+  { id: 'projects', name: 'Projects, contracts and variations', base: 5, re: /\b(projects?|contracts?|variation|change orders?|mobili[sz]ation|tender|bid|billing|progress claim)\b/i, ecc: [] },
+  { id: 'subcontractors', name: 'Subcontractors and manpower supply', base: 4, re: /\b(subcontract\w*|manpower|labou?r supply|outsourc\w*)\b/i, ecc: ['4-1'] },
+  { id: 'hse', name: 'Health, safety and environment', base: 5, re: /\b(hse|safety|incident|injur\w*|permit to work|environment\w*|ppe)\b/i, ecc: [] },
+  { id: 'stores', name: 'Stores, spare parts and inventory', base: 4, re: /\b(stores?|spare parts?|inventory|stock|warehouse|materials)\b/i, ecc: [] },
+  { id: 'fleet', name: 'Fleet, equipment and fuel', base: 3, re: /\b(fleet|vehicles?|equipment|fuel|plant hire|tracking)\b/i, ecc: [] },
+  { id: 'procurement', name: 'Procurement and vendor management', base: 4, re: /\b(procure\w*|vendor|supplier|purchase|rfq)\b/i, ecc: ['4-1'] },
+  { id: 'finance', name: 'Finance, billing and financial reporting', base: 4, re: /\b(financ\w*|accounting|reconciliation|invoic\w*|receivables?|payables?|general ledger|zakat|vat)\b/i, ecc: [] },
+  { id: 'hr', name: 'Human resources, payroll, iqama and GOSI', base: 4, re: /\b(hr|human resources|payroll|iqama|gosi|wps|recruit\w*|saudi[sz]ation|nitaqat|joiner|leaver)\b/i, ecc: ['1-9'] },
+  { id: 'group', name: 'Services for group companies and related-party transactions', base: 4, re: /\b(group compan\w*|related.party|shared services|intercompany|recharge)\b/i, ecc: [] },
+  { id: 'clients', name: 'Client requirements (Aramco CCC, client audits)', base: 4, re: /\b(aramco|ccc|sacs|client audit|client requirements?)\b/i, ecc: ['4-1'] },
+  { id: 'fraud', name: 'Fraud risk management', base: 4, re: /\b(fraud|misappropriat\w*|collusion|kickback)\b/i, ecc: [] },
+  { id: 'compliance', name: 'Regulatory compliance (labour, NCA, licences)', base: 4, re: /\b(regulat\w*|compliance|licen[cs]e|labou?r law|nca|circular)\b/i, ecc: ['1-7'] },
+  { id: 'privacy', name: 'Data protection (PDPL)', base: 4, re: /\b(pdpl|personal data|privacy|data subject|breach)\b/i, ecc: ['2-7'] },
+  { id: 'governance', name: 'Corporate governance and risk management', base: 3, re: /\b(governance|board|committee|risk management|policy|policies|delegation)\b/i, ecc: ['1-1', '1-5'] },
+  { id: 'bcm', name: 'Business continuity', base: 3, re: /\b(continuity|bcm|disaster|crisis)\b/i, ecc: ['3-1'] },
+  { id: 'itcyber', name: 'IT and cyber security (coordinated with the IT and Cyber Security Audit Teams)', base: 3, re: /\b(it|cyber|information security|system|access|patch|backup)\b/i, ecc: ['2-2', '2-3'] },
+];
+const IN_AREAS = /^(insurer|insurance)$/i.test(String(ZYB_ORG.sector || '')) ? IN_AREAS_INSURER : IN_AREAS_OM;
 const dsrDue = (r) => { const t = Date.parse(String(r.received || '').length === 10 ? r.received + 'T00:00:00Z' : r.received); return Number.isFinite(t) ? t + (r.extended ? 60 : 30) * DAY : null; };
 const IN_POPS = {
   dsr: { name: 'Data subject requests (PDPL)', area: 'privacy', col: 'pdpl_records', filter: (r) => r.kind === 'dsr', date: (r) => String(r.received || '').slice(0, 10), label: (r) => `${r.id} ${r.ref || ''} · ${r.type || ''}`,

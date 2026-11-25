@@ -8,7 +8,8 @@ const { isHuman } = require('./approve-scopes');
  * Process Risk Assessment (Business Risk -> Risk Assessments). A STANDALONE deep-dive on a specific process - procurement, the
  * succession plan, pricing, or any process the Risk function names - separate from the risk register and from the scenario risk
  * assessment. When the team notices an issue, they open an assessment here, record what they found, rate it, and extract a report.
- *   assessment   a process (procurement / succession / pricing / outsourcing / underwriting / claims / IT change / other), an owner,
+ *   assessment   a process (procurement / succession / outsourcing / IT change / the sector's own: maintenance, projects, subcontractors,
+ *                HSE permit-to-work - or pricing / underwriting / claims for an insurer / other), an owner,
  *                the period, the objective and scope. A set of suggested focus areas per process is offered as guidance (never filled
  *                in as data). Status: draft -> in_review -> approved (a different person, Risk) -> closed. Reopened with a reason.
  *   findings     each: the area, the observation, likelihood 1-5 and impact 1-5 (rating = L x I, band low/medium/high/critical), the
@@ -30,16 +31,25 @@ const { isHuman } = require('./approve-scopes');
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const csvCell = (v) => { let t = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-const PROC = {
+const PROC_BASE = {
   procurement: { name: 'Procurement', areas: ['Vendor selection and competition', 'Conflict of interest and segregation of duties', 'Approval authority and limits', 'Contract terms and SLAs', 'Payment and three-way match', 'Single-source / emergency buys'] },
   succession: { name: 'Succession plan', areas: ['Key-person dependency', 'Identified successors and readiness', 'Knowledge transfer and documentation', 'Development plans', 'Emergency cover', 'Retention risk'] },
-  pricing: { name: 'Pricing', areas: ['Rate adequacy vs loss experience', 'Pricing governance and sign-off', 'Model and assumptions review', 'Competitive and regulatory limits', 'Deviation and override controls', 'Monitoring of actual vs expected'] },
   outsourcing: { name: 'Outsourcing', areas: ['Due diligence and approval', 'Contract and exit plan', 'Data protection (PDPL)', 'Service monitoring', 'Concentration risk', 'Regulatory notification'] },
-  underwriting: { name: 'Underwriting', areas: ['Authority and limits', 'Risk acceptance criteria', 'Accumulation control', 'Reinsurance adequacy', 'Documentation', 'Peer review'] },
-  claims: { name: 'Claims', areas: ['Reserving adequacy', 'Fraud controls', 'Settlement authority', 'Leakage', 'Turnaround and SLAs', 'Litigation management'] },
   it_change: { name: 'IT change', areas: ['Change approval and testing', 'Segregation of duties', 'Rollback', 'Emergency change', 'Documentation', 'Post-implementation review'] },
   other: { name: 'Other process', areas: [] },
 };
+// the business processes of the organisation's sector (brand setting): an insurer's, or an operations & maintenance group's
+const PROC_SECTOR = /^(insurer|insurance)$/i.test(String(ZYB_ORG.sector || '')) ? {
+  pricing: { name: 'Pricing', areas: ['Rate adequacy vs loss experience', 'Pricing governance and sign-off', 'Model and assumptions review', 'Competitive and regulatory limits', 'Deviation and override controls', 'Monitoring of actual vs expected'] },
+  underwriting: { name: 'Underwriting', areas: ['Authority and limits', 'Risk acceptance criteria', 'Accumulation control', 'Reinsurance adequacy', 'Documentation', 'Peer review'] },
+  claims: { name: 'Claims', areas: ['Reserving adequacy', 'Fraud controls', 'Settlement authority', 'Leakage', 'Turnaround and SLAs', 'Litigation management'] },
+} : {
+  maintenance: { name: 'Maintenance planning and work orders', areas: ['Preventive maintenance schedule kept', 'Work order approval and closure', 'SLA and response times', 'Spare parts issue and return', 'Client sign-off', 'Repeat failures and root cause'] },
+  projects: { name: 'Project contracts and variations', areas: ['Contract review before signing', 'Variation approval and client sign-off', 'Progress billing against work done', 'Retention and guarantees', 'Delay and penalty exposure', 'Close-out and handover'] },
+  subcontractors: { name: 'Subcontractor management', areas: ['Prequalification and HSE record', 'Contract and scope', 'Workforce lists and site access', 'Performance monitoring', 'Payment against certified work', 'Data protection (PDPL) for their staff'] },
+  hse_permit: { name: 'HSE permit-to-work', areas: ['Permit issue and authority', 'Risk assessment and method statement', 'Isolation and lock-out', 'Competence of the crew', 'Permit closure', 'Incident reporting and lessons learned'] },
+};
+const PROC = Object.assign({}, PROC_BASE, PROC_SECTOR);
 const STATUS = ['draft', 'in_review', 'approved', 'closed'];
 const FSTATUS = ['open', 'in_progress', 'closed'];
 const band = (r) => r >= 15 ? 'critical' : r >= 8 ? 'high' : r >= 4 ? 'medium' : 'low';

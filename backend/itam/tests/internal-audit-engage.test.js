@@ -9,6 +9,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { startApp } = require('./helpers');
 const { registerDuty } = require('../engine/duty');
+const INSURER = /^(insurer|insurance)$/i.test(String(require('../engine/brand').sector || ''));
 
 const ADM = { user: 'syed', role: 'admin' }, HEAD = { user: 'noura.syn', role: 'operator' }, LEAD = { user: 'faris.syn', role: 'operator' };
 const AUD2 = { user: 'lina.syn', role: 'operator' }, OWNER = { user: 'majed.syn', role: 'operator' }, VIEW = { user: 'vera.syn', role: 'viewer' }, CSHEAD = { user: 'basma.syn', role: 'operator' };
@@ -33,9 +34,13 @@ test('a separate team over the business: own profile, records and ids; the insur
   const bad = await s.post('/iad/profile', { head_of_audit: 'ai:internal' }, ADM); assert.equal(bad.status, 400); assert.match(bad.json.error, /head_of_audit/);
   for (const p of ['/iad/profile', '/iad/plans', '/iad/engagements', '/iad/findings', '/iad/brief', '/iad/areas', '/iad/populations']) assert.equal((await s.get(p, VIEW)).status, 403, p);
   const areas = (await s.get('/iad/areas')).json.map((a) => a.id);
-  assert.ok(['underwriting', 'claims', 'reinsurance', 'actuarial', 'finance', 'procurement', 'aml', 'fraud', 'conduct', 'compliance', 'itcyber'].every((a) => areas.includes(a)), 'the insurer universe');
+  // the universe follows the organisation's sector (brand setting): an insurer's processes, or an operations & maintenance group's
+  const UNIVERSE = INSURER ? ['underwriting', 'claims', 'reinsurance', 'actuarial', 'finance', 'procurement', 'aml', 'fraud', 'conduct', 'compliance', 'itcyber']
+    : ['service', 'projects', 'subcontractors', 'hse', 'stores', 'fleet', 'procurement', 'finance', 'hr', 'group', 'clients', 'fraud', 'compliance', 'itcyber'];
+  assert.ok(UNIVERSE.every((a) => areas.includes(a)), 'the universe of the sector: ' + areas.join(','));
+  if (!INSURER) assert.ok(!areas.includes('underwriting') && !areas.includes('reinsurance'), 'no insurer areas');
   assert.deepEqual((await s.get('/iad/populations')).json.map((p) => p.id).sort(), ['actions', 'breaches', 'contracts', 'dsr', 'joiners', 'leavers', 'risks']);
-  const r = await s.post('/iad/engagements', Object.assign({ title: 'Claims settlement (synthetic)', area: 'claims', auditee_dept: 'Claims' }, base), LEAD);
+  const r = await s.post('/iad/engagements', Object.assign(INSURER ? { title: 'Claims settlement (synthetic)', area: 'claims', auditee_dept: 'Claims' } : { title: 'Project variations (synthetic)', area: 'projects', auditee_dept: 'Projects' }, base), LEAD);
   assert.equal(r.status, 200, r.raw); assert.match(r.json.id, /^INE-2027-\d{3}$/);
   const wrong = await s.post('/iad/engagements', Object.assign({ title: 'x', area: 'monitoring', auditee_dept: 'IT' }, base), LEAD);
   assert.equal(wrong.status, 400); assert.match(wrong.json.error, /area/, 'a cyber-only area is not in the internal audit universe');
@@ -45,9 +50,9 @@ test('a separate team over the business: own profile, records and ids; the insur
 
 test('internal plan: risks of the business scored with their source; the team\'s Head of Audit approves, not the preparer', async (t) => {
   const s = await setup(t); await profile(s);
-  s.store('grc_risks').put({ id: 'RSK-0012', status: 'open', description: 'Claims paid without second approval above authority limits (synthetic)', category: 'Operational', likelihood: 4, impact: 5, owner: OWNER.user });
+  s.store('grc_risks').put({ id: 'RSK-0012', status: 'open', description: INSURER ? 'Claims paid without second approval above authority limits (synthetic)' : 'Project variations billed without client sign-off (synthetic)', category: 'Operational', likelihood: 4, impact: 5, owner: OWNER.user });
   const p = await s.post('/iad/plans/propose', { year: 2027 }, LEAD); assert.equal(p.status, 200, p.raw); assert.equal(p.json.id, 'INPLAN-2027');
-  const c = p.json.items.find((x) => x.area === 'claims');
+  const c = p.json.items.find((x) => x.area === (INSURER ? 'claims' : 'projects'));
   assert.ok(c.why.some((w) => w.source === 'risk register' && w.refs.includes('RSK-0012') && w.points === 24));
   assert.equal(c.score, c.why.reduce((n, w) => n + w.points, 0));
   assert.equal(p.json.items.filter((x) => x.include).length, 5);

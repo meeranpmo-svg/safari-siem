@@ -38,12 +38,15 @@ const isService = (u) => /^(duty|system|core|ai|svc|service|agent|bot)[:._-]/i.t
 const USER = { max: 80, re: /^[A-Za-z0-9][A-Za-z0-9 ._@\\-]{1,79}$/ };
 const U = (k, required) => Object.assign({ required: !!required, msg: k + ': a user name (letters, digits, space . _ - @ \\)' }, USER);
 
+// the organisation's sector (brand setting): an insurer's business departments, or an operations & maintenance group's
+const INSURER = /^(insurer|insurance)$/i.test(String(require('./brand').sector || ''));
 const DEPTS = [
   ['hr', 'Human Resources'], ['infra', 'IT Infrastructure'], ['apps', 'IT Applications'], ['cyber', 'Cyber Security'],
   ['grc', 'Governance, Risk & Compliance'], ['dpo', 'Data Protection Office'], ['data', 'Data Management Office'], ['legal', 'Legal'],
-  ['procurement', 'Procurement'], ['admin', 'Administration & Facilities'], ['finance', 'Finance'], ['underwriting', 'Underwriting'],
-  ['claims', 'Claims'], ['customer', 'Customer Service'], ['marketing', 'Marketing'],
-];
+  ['procurement', 'Procurement'], ['admin', 'Administration & Facilities'], ['finance', 'Finance'],
+].concat(INSURER ? [['underwriting', 'Underwriting'], ['claims', 'Claims'], ['customer', 'Customer Service'], ['marketing', 'Marketing']]
+  // an operations & maintenance group (brand setting: sector, departments): its own business departments
+  : [['operations', 'Operations and Maintenance'], ['projects', 'Projects and Site Workforce'], ['hse', 'Health, Safety and Environment'], ['fleet', 'Fleet and Transport'], ['site_security', 'Site Security and Access Control'], ['group_services', 'Services for Group Companies']]);
 const DEPT = Object.fromEntries(DEPTS);
 const FWS = [['sama', 'SAMA Cyber Security Framework'], ['nca', 'NCA ECC'], ['pdpl', 'PDPL (SDAIA)'], ['ndmo', 'NDMO data management'], ['ia', 'Insurance Authority (IA)']];
 const FREQ = { M: 'monthly', Q: 'quarterly', H: 'half-yearly', Y: 'yearly' };
@@ -112,7 +115,19 @@ const OBLIGATIONS = [
   O('DO-47', 'customer', 'Q', [], [], ['Art. 4'], ['PDP'], 'Customer requests about their personal data reached the Data Protection Office the same day', 'Request hand-off log'),
   O('DO-48', 'customer', 'H', ['3.1.6'], [], ['Art. 19'], ['PDP'], 'Customer service staff verify the caller\'s identity before discussing a policy or claim', 'Call quality sample results'),
   O('DO-49', 'marketing', 'Q', [], [], ['Art. 25', 'Art. 5'], ['PDP'], 'Marketing messages went only to customers who consented, and opt-outs were honoured', 'Consent check of the campaign lists; opt-out log'),
-];
+].filter((o) => INSURER || !['underwriting', 'claims', 'customer', 'marketing'].includes(o.dept)).concat(INSURER ? [] : [
+  // ---- Operations & maintenance, projects, HSE, fleet, site security, services for group companies
+  O('DO-50', 'operations', 'Q', [], ['2-2'], ['Art. 19'], ['DSP'], 'Technician and subcontractor accounts on client systems (CMMS, BMS, remote access) were reviewed and leavers removed', 'Access review of the client systems; removals list'),
+  O('DO-51', 'operations', 'H', [], [], ['Art. 11'], ['PDP'], 'Service reports and work orders sent to clients carry only the personal data the client needs', 'Sample of service reports reviewed'),
+  O('DO-52', 'projects', 'Q', [], ['2-7'], ['Art. 18', 'Art. 23'], ['PDP', 'DSP'], 'Site attendance records (biometric included) are accessible only to the people who need them, and past their retention period are deleted', 'Access list of the attendance system; retention run record'),
+  O('DO-53', 'projects', 'H', [], [], ['Art. 18'], ['DCM'], 'Subcontractor workforce lists received for a project were deleted or returned when the project closed', 'Closed-project list with deletion / return record'),
+  O('DO-54', 'hse', 'H', [], ['2-7'], ['Art. 23'], ['PDP'], 'Injury, medical and fitness-for-work records are kept apart, with access limited to HSE and the clinic', 'Access list; storage location of HSE medical records'),
+  O('DO-55', 'fleet', 'Q', [], [], ['Art. 11', 'Art. 22'], ['PDP'], 'Vehicle tracking data was used only for its stated purposes, access was reviewed, and no tracking runs off duty', 'Purpose statement; access review; tracking schedule'),
+  O('DO-56', 'site_security', 'Q', [], ['2-14'], ['Art. 18'], ['DCM'], 'CCTV recordings past their retention period were deleted, and every access to footage was logged with its reason', 'Retention setting of each recorder; footage access log'),
+  O('DO-57', 'site_security', 'Q', [], ['2-2'], [], [], 'Lost or returned site badges were disabled the same day, and badges of leavers and finished contractors were collected', 'Badge disable log; leavers / contractors reconciliation'),
+  O('DO-58', 'group_services', 'H', [], ['4-1'], ['Art. 8'], ['DSP'], 'Every group company whose personal data we process has a current data processing agreement accepted by the DPO', 'PDPL Group Companies register'),
+  O('DO-59', 'group_services', 'Q', [], [], ['Art. 20'], ['PDP'], 'Incidents touching a group company\'s data were reported to that company within the agreed hours', 'Breach notices to group companies'),
+]);
 for (const o of OBLIGATIONS) o.ia = o.sama.slice();   // IA keeps insurers on the SAMA CSF (circular UTC/277/202401)
 
 const STATUSES = ['done', 'partly', 'not_done', 'not_applicable'];

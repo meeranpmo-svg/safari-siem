@@ -487,8 +487,11 @@ function registerWorkflowRoutes(srv, app, WF) {
   const ACT = (v) => v.list('actions', { max: 30 }).rule((o) => ((o.actions || []).some((a) => !a || typeof a !== 'object' || typeof a.action !== 'string' || !a.action.trim() || a.action.length > 300 || !/^[A-Za-z0-9._@-]{1,80}$/.test(String(a.owner || '')) || !/^\d{4}-\d{2}-\d{2}$/.test(String(a.due || '')))
     ? 'each action needs {action, owner (user name), due (YYYY-MM-DD)}' : null));
   const cleanActs = (o) => { if (o.actions) o.actions = o.actions.map((a) => ({ action: a.action.trim(), owner: a.owner, due: a.due })); return o; };
+  // the departments on the privacy committee: the organisation's own (brand setting), or an insurer's
+  const B = require('./brand'), COMMITTEE_DEPTS = /^(insurer|insurance)$/i.test(String(B.sector || '')) ? ['legal', 'it', 'hr', 'operations', 'compliance', 'risk', 'finance', 'marketing', 'customer_service', 'claims', 'underwriting', 'management']
+    : [...new Set(((B.departments || []).map((d) => d.id)).concat(['compliance', 'risk']))];
   srv.route('POST', '/pdpl/committee', op((ctx) => {
-    const v = body(ctx.body).date('date', { required: true }).list('departments', { required: true, item: ['legal', 'it', 'hr', 'operations', 'compliance', 'risk', 'finance', 'marketing', 'customer_service', 'claims', 'underwriting', 'management'], unique: true, max: 12 })
+    const v = body(ctx.body).date('date', { required: true }).list('departments', { required: true, item: COMMITTEE_DEPTS, unique: true, max: 16 })
       .list('attendees', { item: 'str', itemMax: 80, max: 30, unique: true }).str('decisions', { max: 2000 });
     return WF.committee(cleanActs(ACT(v).done()), ctx.who);
   }));

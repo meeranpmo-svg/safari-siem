@@ -8,6 +8,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { startApp } = require('./helpers');
 const { registerDuty } = require('../engine/duty');
+// an internal audit area of the organisation's sector (brand setting)
+const AREA = /^(insurer|insurance)$/i.test(String(require('../engine/brand').sector || '')) ? 'claims' : 'projects';
 
 const ADM = { user: 'syed', role: 'admin' }, OP = { user: 'nora.syn', role: 'operator' }, VIEW = { user: 'vera.syn', role: 'viewer' };
 const HEAD = { user: 'noura.syn', role: 'operator' }, LEAD = { user: 'faris.syn', role: 'operator' }, OWNER = { user: 'majed.syn', role: 'operator' };
@@ -43,7 +45,7 @@ test('an assessed checklist gets its score; overdue audit findings and evidence 
   assert.equal(a.status, 200, a.raw);
   // an Internal Audit finding past its due date
   await s.post('/iad/profile', { head_of_audit: HEAD.user, auditors: [LEAD.user] }, ADM);
-  const e = (await s.post('/iad/engagements', { title: 'Claims (synthetic)', area: 'claims', auditee_dept: 'Claims', auditee_owner: OWNER.user, lead: LEAD.user, objectives: ['o'], scope: 's', start: '2027-01-10', fieldwork_end: '2027-01-31', report_due: '2027-02-15' }, LEAD)).json;
+  const e = (await s.post('/iad/engagements', { title: 'Audit (synthetic)', area: AREA, auditee_dept: 'Operations', auditee_owner: OWNER.user, lead: LEAD.user, objectives: ['o'], scope: 's', start: '2027-01-10', fieldwork_end: '2027-01-31', report_due: '2027-02-15' }, LEAD)).json;
   await (await s.post('/iad/engagements/' + e.id + '/prior-none', { note: 'first audit of this area (synthetic)' }, LEAD), s.post('/iad/engagements/' + e.id + '/advance', { to: 'fieldwork' }, LEAD));
   const f = (await s.post('/iad/engagements/' + e.id + '/findings', { title: 'Claims paid above authority', condition: 'c', criteria: 'cr', cause: 'ca', effect: 'ef', recommendation: 'r', rating: 'high', owner: OWNER.user }, LEAD)).json;
   await s.post('/iad/findings/' + f.id + '/issue', {}, LEAD);
