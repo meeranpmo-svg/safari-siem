@@ -77,6 +77,9 @@ const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
     ok(!ZYB_ORG.modules_off.includes('fw-sama') || (!/SAMA CSF 3\.3\.5 ·/.test(t) && /NCA ECC 2-2/.test(t)), f + ': SAMA citation taken off, NCA kept'); await q.context().close(); }
   { const q = await open('email-dashboard.html'); await q.waitForTimeout(800); const vals = await q.$$eval('option', (o) => o.map((x) => x.value)).catch(() => []);
     ok(!ZYB_ORG.modules_off.includes('fw-sama') || !vals.includes('sama'), 'no SAMA choice in a list: ' + vals.join(',')); await q.context().close(); }
+  // the organisation's job titles (brand setting "titles"): e.g. GM IT instead of CIO, on the page and in its title
+  if (ZYB_ORG.titles && ZYB_ORG.titles.CIO) { const q = await open('cio-dashboard.html'); await q.waitForTimeout(800); const t = await q.evaluate(() => document.title + ' ' + document.body.innerText);
+    ok(!/\bCIO\b/.test(t) && t.includes(ZYB_ORG.titles.CIO), 'CIO shown as ' + ZYB_ORG.titles.CIO); await q.context().close(); }
   p = await open('index.html');
   const cat = await p.evaluate(() => window.ZybModules.CAT.map((m) => m[0])), sols = await p.evaluate(() => JSON.stringify(window.ZybModules.SOLUTIONS));
   ok(ZYB_ORG.modules_off.every((id) => !cat.includes(id)) && ZYB_ORG.modules_off.every((id) => !sols.includes('"' + id + '"')), 'switched-off modules are not offered: ' + ZYB_ORG.modules_off.filter((id) => cat.includes(id)).join(', '));

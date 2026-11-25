@@ -48,6 +48,23 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
     window.zybFwClean = clean;
   })();
+  // the organisation's own job titles (brand setting "titles", e.g. {"CIO": "GM IT"}): the whole word on every page, also what a
+  // page draws later; role ids in the code stay as they are
+  (function () {
+    var T = ORG.titles || {}, keys = Object.keys(T).filter(function (k) { return /^[A-Za-z][A-Za-z ]{1,30}$/.test(k) && typeof T[k] === 'string' && T[k]; });
+    if (!keys.length) return;
+    var re = new RegExp('\\b(' + keys.map(function (k) { return k.replace(/ /g, '\\s'); }).join('|') + ')\\b', 'g');
+    var walk = function (n) {
+      if (n.nodeType === 3) { re.lastIndex = 0; var v = n.nodeValue; if (re.test(v)) { re.lastIndex = 0; n.nodeValue = v.replace(re, function (m) { return T[m] || m; }); } re.lastIndex = 0; return; }
+      if (n.nodeType !== 1 || n.tagName === 'SCRIPT' || n.tagName === 'STYLE' || n.tagName === 'TEXTAREA') return;
+      if (n.title) { re.lastIndex = 0; n.title = n.title.replace(re, function (m) { return T[m] || m; }); }
+      if (n.tagName === 'INPUT' && n.placeholder) n.placeholder = n.placeholder.replace(re, function (m) { return T[m] || m; });
+      for (var c = n.firstChild; c; c = c.nextSibling) walk(c);
+    };
+    var start = function () { if (document.body) walk(document.body); document.title = document.title.replace(re, function (m) { return T[m] || m; }); try { new MutationObserver(function (L) { for (var i = 0; i < L.length; i++) { if (L[i].type === 'characterData') walk(L[i].target); var a = L[i].addedNodes; for (var j = 0; j < a.length; j++) walk(a[j]); } }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (e) { /* no observer: the first pass stands */ } };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+    window.zybTitle = function (t) { return String(t).replace(re, function (m) { return T[m] || m; }); };
+  })();
   // brand colours for pages that follow the company look (home page, report headers)
   try { var r = document.documentElement.style; r.setProperty('--org-primary', ORG.colors.primary); r.setProperty('--org-accent', ORG.colors.accent); r.setProperty('--org-ink', ORG.colors.ink); r.setProperty('--org-muted', ORG.colors.muted); } catch (e) { /* colours are decoration: a page without them still works */ }
 })();
