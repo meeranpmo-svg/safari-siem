@@ -20,15 +20,24 @@
       try { window.dispatchEvent(new CustomEvent('zyb-brand', { detail: { on: !!on, look: window.zybBrandLookIs() } })); } catch (e) { /* very old browser: the page repaints on the next load */ }
     };
     // the company look has two faces: dark (the default) or light like the company website; saved in zyb-dash-prefs.brandLook
-    window.zybBrandLookIs = function () { return bp().brandLook === 'light' ? 'light' : 'dark'; };
+    // the platform's Light theme (localStorage noc_theme, vendor/zyb-look.js) always shows the light face: a dark company look on a
+    // light page mixed a navy wash into a light background (the home page in the Light theme)
+    var platLight = function () { try { return localStorage.getItem('noc_theme') === 'light' || document.documentElement.getAttribute('data-zyb-theme') === 'light'; } catch (e) { return false; /* no storage: the saved choice decides */ } };
+    window.zybBrandLookIs = function () { return bp().brandLook === 'light' || platLight() ? 'light' : 'dark'; };
     window.zybBrandLook = function (look) {
       var p = bp(); p.brandLook = look === 'light' ? 'light' : 'dark';
       try { localStorage.setItem('zyb-dash-prefs', JSON.stringify(p)); } catch (e) { /* no storage: this visit only */ }
-      var on = window.zybBrandOn(); document.documentElement.classList.toggle('org-light', on && p.brandLook === 'light');
-      [].forEach.call(document.querySelectorAll('[data-zyb-looksw]'), function (b) { b.setAttribute('aria-checked', String(p.brandLook === 'light')); });
-      try { window.dispatchEvent(new CustomEvent('zyb-brand', { detail: { on: on, look: p.brandLook } })); } catch (e) { /* very old browser: the page repaints on the next load */ }
+      var on = window.zybBrandOn(), lk = window.zybBrandLookIs(); document.documentElement.classList.toggle('org-light', on && lk === 'light');
+      [].forEach.call(document.querySelectorAll('[data-zyb-looksw]'), function (b) { b.setAttribute('aria-checked', String(lk === 'light')); if (platLight()) b.title = 'The Light theme always uses the light company look'; });
+      try { window.dispatchEvent(new CustomEvent('zyb-brand', { detail: { on: on, look: lk } })); } catch (e) { /* very old browser: the page repaints on the next load */ }
     };
     if (window.zybBrandOn()) { document.documentElement.classList.add('org-brand'); if (window.zybBrandLookIs() === 'light') document.documentElement.classList.add('org-light'); }
+    // the theme switched while the page is open: the company look follows (and the page's own handler, e.g. the home page, repaints)
+    try { new MutationObserver(function () { var on = window.zybBrandOn(), lk = window.zybBrandLookIs(); if (document.documentElement.classList.contains('org-light') === (on && lk === 'light')) return;
+      document.documentElement.classList.toggle('org-light', on && lk === 'light');
+      [].forEach.call(document.querySelectorAll('[data-zyb-looksw]'), function (b) { b.setAttribute('aria-checked', String(lk === 'light')); });
+      try { window.dispatchEvent(new CustomEvent('zyb-brand', { detail: { on: on, look: lk } })); } catch (e) { /* very old browser: the next load repaints */ } })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-zyb-theme'] }); } catch (e) { /* no MutationObserver: the next load applies the theme */ }
   } catch (e) { /* the default design */ }
   // display controls + data freshness (vendor/zyb-display.js), loaded while the head is parsed so it sees the page's
   // first data requests too
