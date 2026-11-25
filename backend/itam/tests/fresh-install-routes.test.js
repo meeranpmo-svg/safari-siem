@@ -49,3 +49,14 @@ test('install.sh copies the Python rules (pyengine) - without them ISO 27001, NC
   assert.ok(fs.readdirSync(path.join(ROOT, 'pyengine')).includes('run.py'), 'the entry point the engine runs is there');
   assert.ok(fs.readFileSync(path.join(ROOT, 'engine/pyengine.js'), 'utf8').includes("path.join(__dirname, '..', 'pyengine', 'run.py')"), 'the engine looks for it beside engine/');
 });
+
+test('the Python launcher uses the system python3 when the SIEM venv is not there, and says why the rules did not answer', () => {
+  const PE = require('../engine/pyengine');
+  assert.equal(PE.pick('/opt/sentra-siem/pyenv/bin/python3'), fs.existsSync('/opt/sentra-siem/pyenv/bin/python3') ? '/opt/sentra-siem/pyenv/bin/python3' : 'python3', 'the default venv falls back to the system python3 when it is not there');
+  assert.equal(PE.pick('/nonexistent/python3'), '/nonexistent/python3', 'a configured Python is used as given');
+  assert.equal(PE.pick('python3.12'), 'python3.12', 'a name on PATH is kept');
+  assert.equal(PE.pick(undefined), fs.existsSync('/opt/sentra-siem/pyenv/bin/python3') ? '/opt/sentra-siem/pyenv/bin/python3' : 'python3');
+  assert.match(PE.why({ ok: false, error_class: 'missing_python', error: 'Python not found (python3)' }), /Python not found .* apt-get install -y python3/);
+  assert.match(PE.why({ ok: false, error_class: 'protocol', error: 'the Python module failed (exit 1): ValueError: x' }), /\(the Python module failed \(exit 1\): ValueError: x\)/);
+  assert.match(PE.why(null), /run the update/);
+});

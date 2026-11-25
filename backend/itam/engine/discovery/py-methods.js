@@ -17,7 +17,7 @@ function configure(o = {}) {
   if (o.engine) st.engine = o.engine === 'node' ? 'node' : 'python';
   st.py = o.py || null;
 }
-const engine = () => st.py || (st.py = createPyEngine({ python: st.python, timeoutMs: 15 * 60000 }));
+const engine = () => st.py || (st.py = createPyEngine({ python: st.python, exact: true, timeoutMs: 15 * 60000 }));
 const plainCred = (c) => Object.assign({ target: (c && c.target) || {}, secret: (c && c.secret) || {} }, c && c.kind ? { kind: c.kind } : {});
 
 function wrap(name, node) {

@@ -75,7 +75,7 @@ function createIso27001(app, opts = {}) {
     const r = await py().call(op, input || {});
     if (!r || r.ok === false) {
       warn('py', 'ISO 27001: the rules (Python) did not answer', r && r.error);
-      throw httpErr(409, (r && r.error && /unknown audit unit/.test(r.error)) ? r.error : 'The ISO 27001 rules run in Python and Python did not answer - run the update so pyengine is installed');
+      throw httpErr(409, (r && r.error && /unknown audit unit/.test(r.error)) ? r.error : 'The ISO 27001 rules run in Python and Python did not answer' + require('./pyengine').why(r));
     }
     return r;
   }

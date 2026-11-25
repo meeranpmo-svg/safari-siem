@@ -58,7 +58,7 @@ function createCmdbStudio(app, opts = {}) {
   }
   async function analyse(focus) {
     const r = await py().call('cmdb.analyse', facts(focus));
-    if (!r || r.ok === false) { if (L.every) L.every('cmdb:py', 3600000, 'warn', 'CMDB Studio: the rules (Python) did not answer', { err: s(r && r.error, 200) }); throw httpErr(409, 'CMDB Studio runs in Python and Python did not answer - run the update so pyengine is installed'); }
+    if (!r || r.ok === false) { if (L.every) L.every('cmdb:py', 3600000, 'warn', 'CMDB Studio: the rules (Python) did not answer', { err: s(r && r.error, 200) }); throw httpErr(409, 'CMDB Studio runs in Python and Python did not answer' + require('./pyengine').why(r)); }
     delete r.ok; return r;
   }
   function ciLite(a) { return a ? { id: a.id, name: a.name, type: a.type, status: a.status, site: a.site, ip: a.mgmt_ip || null } : null; }

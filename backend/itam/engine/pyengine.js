@@ -22,6 +22,15 @@ const SERVE = path.join(__dirname, '..', 'pyengine', 'serve.py');
 const RESIDENT_OPS = new Set(['consent.apply', 'consent.get', 'consent.stats', 'consent.last', 'assets.create', 'ai.sanitise_pair', 'ai.validate', 'desk.config', 'desk.patch_request', 'desk.patch_endorse', 'budget.import', 'budget.line', 'budget.remove', 'budget.settings', 'support.put', 'support.verify', 'support.retire', 'support.settings', 'support.import', 'locations.create', 'locations.edit', 'locations.delete', 'ownership.assign', 'ownership.service', 'ownership.import', 'licences.save', 'licences.retire', 'stocktake.open', 'stocktake.scan', 'stocktake.close', 'findings.status', 'cmdb.add', 'assets.edit', 'assets.transition', 'assets.move', 'assets.assign', 'assets.list', 'assets.detail', 'assets.lookup', 'assets.software', 'assets.licences', 'assets.cmdb', 'roles.list', 'roles.me', 'roles.approvers', 'roles.save', 'roles.remove', 'roles.assign',
   'grc.drafts', 'grc.draft', 'grc.drills', 'grc.drill', 'grc.drill_systems', 'grc.drill_summary', 'grc.draft_put', 'grc.draft_status', 'grc.draft_upload', 'grc.draft_delete', 'grc.drill_put', 'grc.drill_result', 'grc.drill_signoff', 'grc.drill_cancel', 'grc.drill_upload', 'grc.drill_delete', 'virtplans.changes', 'virtplans.change', 'store.read', 'store.verify_audit', 'store.audit_tail']);
 const residents = new Map();
+// the Python to run: the one asked for when it exists, else the SIEM's private venv when it exists, else the system python3.
+// A fresh server has no /opt/sentra-siem/pyenv (it is made by the SIEM's network-tools setup): the rules here need the standard
+// library only, so the system python3 runs them.
+const VENV = '/opt/sentra-siem/pyenv/bin/python3';
+// A Python an administrator configured (discovery.python_bin) is used as given - when it is missing the caller says so.
+function pick(python) {
+  if (python && python !== VENV) return python;
+  return fs.existsSync(VENV) ? VENV : 'python3';
+}
 function resident(python) {
   let r = residents.get(python);
   if (r) return r;
@@ -62,7 +71,7 @@ function resident(python) {
 }
 
 function createPyEngine(o = {}) {
-  const python = o.python || '/opt/sentra-siem/pyenv/bin/python3', timeoutMs = o.timeoutMs || 120000;
+  const python = o.exact ? (o.python || VENV) : pick(o.python), timeoutMs = o.timeoutMs || 120000;   // exact: network discovery keeps its own choice (venv, else Node.js)
   // o.resident = false keeps one process per call for this caller (the device readers never use the resident service)
   async function call(op, body) {
     if (o.resident !== false && RESIDENT_OPS.has(op)) {
@@ -94,4 +103,11 @@ function createPyEngine(o = {}) {
   return { call, callOnce, ping: () => callOnce('ping', {}), RUN };
 }
 
-module.exports = { createPyEngine, RUN, SERVE, residentFor: (python) => resident(python || '/opt/sentra-siem/pyenv/bin/python3') };
+// what to tell the person when the rules did not answer: the cause Python gave (no credentials travel on this path - the answer
+// to a rules call carries only the error class and the last stderr line), and what fixes it
+function why(r) {
+  const e = String((r && r.error) || '').replace(/[\u0000-\u001f]/g, ' ').slice(0, 200), c = r && r.error_class;
+  if (c === 'missing_python') return ' (' + (e || 'Python is not installed') + ') - install python3 (sudo apt-get install -y python3) and run the update so pyengine is installed';
+  return e ? ' (' + e + ') - run the update; if it stays, send this message to the platform team' : ' - run the update so pyengine is installed';
+}
+module.exports = { createPyEngine, RUN, SERVE, residentFor: (python) => resident(pick(python)), pick, why };
