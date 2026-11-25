@@ -21,6 +21,7 @@ const P = {
   leef: require('./leef'),
   fortigate: require('./fortigate'),
   cisco: require('./cisco'),
+  h3c: require('./h3c'),                 // H3C / HPE Comware switches and routers (%%10MODULE/level/MNEMONIC)
   webaccess: require('./webaccess'),
   linux: require('./linux'),
   exchange: require('./exchange'),
@@ -42,6 +43,7 @@ const P = {
 // source type → preferred parser
 const BY_TYPE = {
   windows: P.windows, m365: P.m365, cloudflare: P.cloudflare, json: P.json, cef: P.cef, leef: P.leef, fortigate: P.fortigate, cisco: P.cisco,
+  h3c: P.h3c, comware: P.h3c, 'h3c-comware': P.h3c,
   nginx: P.webaccess, apache: P.webaccess, web: P.webaccess, webaccess: P.webaccess, linux: P.linux,
   exchange: P.exchange, msgtrk: P.exchange, iis: P.iis,
   paloalto: P.paloalto, 'pan-os': P.paloalto, panos: P.paloalto,
@@ -62,7 +64,7 @@ const BY_TYPE = {
 // sniffed only on vendor words (Silver Peak / EdgeConnect / ECOS / VXOA or a vendor tag) and sits before linux.js so its
 // sshd lines are not taken for a Linux host; sources registered with type silverpeak skip sniffing entirely.
 const JSON_ORDER = [P.windows, P.m365, P.cloudflare, P.exchange, P.iis, P.json];
-const TEXT_ORDER = [P.cef, P.leef, P.paloalto, P.netscaler, P.ciscoucs, P.ciscoasa, P.fortigate, P.cisco, P.f5, P.esxi, P.silverpeak, P.somansa, P.libraesva, P.exchange, P.iis, P.webaccess, P.linux];
+const TEXT_ORDER = [P.cef, P.leef, P.paloalto, P.netscaler, P.ciscoucs, P.ciscoasa, P.fortigate, P.cisco, P.h3c, P.f5, P.esxi, P.silverpeak, P.somansa, P.libraesva, P.exchange, P.iis, P.webaccess, P.linux];
 
 function createParser({ log, config } = {}) {
   if (config) P.exchange.configure(config.exchange || {});

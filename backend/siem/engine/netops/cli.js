@@ -27,7 +27,7 @@ const fs = require('node:fs');
 const { spawn } = require('node:child_process');
 
 const IF = '(?:[a-z][a-z-]{1,24}\\s?\\d{1,3}(?:/\\d{1,3}){0,3}(?:\\.\\d{1,5})?|vlan\\s?\\d{1,4}|po\\d{1,3})';
-const ARG = { if: IF, mac: '[0-9a-f]{4}\\.[0-9a-f]{4}\\.[0-9a-f]{4}', ip: '\\d{1,3}(?:\\.\\d{1,3}){3}', vlan: '\\d{1,4}', n: '\\d{1,4}' };
+const ARG = { if: IF, mac: '[0-9a-f]{4}\\.[0-9a-f]{4}\\.[0-9a-f]{4}', macd: '[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}', ip: '\\d{1,3}(?:\\.\\d{1,3}){3}', vlan: '\\d{1,4}', n: '\\d{1,4}' };
 // "| include text" style output filters are allowed after any command (text: letters, digits, space . / : _ -)
 const FILTER = '(?:\\s*\\|\\s*(?:include|exclude|begin|section|count)\\s+[a-z0-9 ./:_-]{1,60})?';
 
@@ -85,6 +85,36 @@ const CATALOGUE = {
     ['show license summary', 'licence state'],
     ['show boot', 'boot image settings'],
   ],
+  // H3C / HPE Comware switches and routers: "display" is Comware's read-only verb (the helper accepts it for hp_comware only)
+  'h3c-comware': [
+    ['display version', 'Comware version, model, uptime'],
+    ['display device manuinfo', 'chassis, cards, power supplies and fans with serial numbers'],
+    ['display irf', 'IRF stack members, roles and priority'],
+    ['display current-configuration', 'current configuration (passwords, keys and communities removed)'],
+    ['display current-configuration interface {if}', 'configuration of one interface'],
+    ['display interface brief', 'every port: up / down, speed, duplex, link type, PVID, description'],
+    ['display interface', 'all interface counters'],
+    ['display interface {if}', 'one interface: errors, drops, load, duplex'],
+    ['display ip interface brief', 'interfaces with IP and up / down'],
+    ['display vlan brief', 'VLANs and their ports'],
+    ['display lldp neighbor-information list', 'connected LLDP devices per port'],
+    ['display lldp neighbor-information verbose', 'LLDP neighbours with management address'],
+    ['display mac-address', 'MAC address table'],
+    ['display mac-address {macd}', 'where one MAC address is learned'],
+    ['display arp', 'ARP table'],
+    ['display ip routing-table', 'routing table'],
+    ['display link-aggregation summary', 'link aggregation groups and member ports'],
+    ['display stp brief', 'spanning tree: port roles and states'],
+    ['display transceiver interface {if}', 'optical levels of one SFP'],
+    ['display cpu-usage', 'CPU'],
+    ['display memory', 'memory'],
+    ['display power', 'power supplies'],
+    ['display fan', 'fans'],
+    ['display environment', 'temperatures'],
+    ['display logbuffer', 'local log buffer'],
+    ['display clock', 'device time'],
+    ['display ntp-service status', 'NTP synchronisation'],
+  ],
   'cisco-asa': [
     ['show version', 'ASA version, model, serial, uptime'],
     ['show inventory', 'chassis and modules with serial numbers'],
@@ -104,7 +134,7 @@ const CATALOGUE = {
     ['show running-config', 'current configuration (passwords, keys and communities removed)'],
   ],
 };
-const DEVICE_TYPE = { 'cisco-ios': 'cisco_ios', 'cisco-asa': 'cisco_asa' };
+const DEVICE_TYPE = { 'cisco-ios': 'cisco_ios', 'cisco-asa': 'cisco_asa', 'h3c-comware': 'hp_comware' };
 const MAX_CMDS = 8, HOSTKEY_TTL = 10 * 60 * 1000;
 
 class CliError extends Error { constructor(code, msg, kind) { super(msg); this.code = code; this.kind = kind || ''; } }
@@ -115,7 +145,7 @@ function patterns(vendor) {
   return compiled[vendor];
 }
 function check(vendor, cmd) {
-  if (!CATALOGUE[vendor]) throw new CliError(400, `CLI access is available for Cisco IOS switches / routers and Cisco ASA (this device is ${vendor || 'unknown'})`);
+  if (!CATALOGUE[vendor]) throw new CliError(400, `CLI access is available for Cisco IOS switches / routers, Cisco ASA and H3C / HPE Comware switches (this device is ${vendor || 'unknown'})`);
   const c = String(cmd == null ? '' : cmd).replace(/\s+/g, ' ').trim();
   if (!c || c.length > 160 || /[\r\n;`$\\]/.test(c)) throw new CliError(400, 'invalid command');
   if (!patterns(vendor).some((re) => re.test(c))) throw new CliError(400, `"${c.slice(0, 80)}" is not on the read-only list for ${vendor}. Allowed: ${CATALOGUE[vendor].map((x) => x[0]).join(', ')}`);
@@ -125,6 +155,10 @@ function check(vendor, cmd) {
 // passwords / secrets / keys / communities out of any output (running-config, show tech excerpts, logs)
 function redact(text) {
   return String(text == null ? '' : text).split('\n').map((l) => {
+    // Comware: "password hash|cipher|simple <value>", "snmp-agent community read cipher <value>", "key authentication cipher <value>",
+    // "pre-shared-key cipher <value>", usm-user "authentication-mode sha <value> privacy-mode aes128 <value>": the mode (cipher /
+    // hash / simple = stored in clear) is kept, it is the audit fact; the value is removed
+    const cw = comware(l); if (cw !== null) return cw;
     let x = l.replace(/\b(community)\s+(?:\d\s+)?\S+/gi, '$1 <removed>');
     x = x.replace(/\b(snmp-server user\s+\S+\s+\S+\s+v3).*$/i, '$1 <auth / priv keys removed>');
     // "(?![-\w])": "service password-encryption" / "password encryption aes" are settings, not secrets, and the auditor reads them
@@ -136,6 +170,13 @@ function redact(text) {
     }
     return x;
   }).join('\n');
+}
+
+function comware(l) {
+  let hit = false, x = l;
+  x = x.replace(/\b((?:password|super password(?: role \S+)?|key (?:authentication|accounting)|pre-shared-key|community (?:read|write))\s+(?:cipher|hash|simple))\s+\S+/gi, (m, a) => { hit = true; return a + ' <removed>'; });
+  x = x.replace(/\b((?:authentication|privacy)-mode\s+\S+)\s+\S+/gi, (m, a) => { hit = true; return a + ' <removed>'; });
+  return hit ? x : null;
 }
 
 function realRunner(config) {
@@ -234,6 +275,17 @@ function createCli({ inventory, state, config, log, runner } = {}) {
   // model / serial / IOS from show version + show inventory (TextFSM), stored on the device record
   async function facts(id, by) {
     const d = device(id);
+    if (d.vendor === 'h3c-comware') {
+      const r = await run(id, ['display version', 'display device manuinfo'], { by, via: 'facts' });
+      const v = (r.results[0] || {}).output || '', inv = (r.results[1] || {}).output || '';
+      const serials = [...inv.matchAll(/DEVICE_SERIAL_NUMBER\s*:\s*(\S+)/g)].map((m) => m[1]).filter((s) => !/^NONE$/i.test(s));
+      const f = { hostname: '', version: ((/Comware Software, Version ([^\r\n]+)/.exec(v) || [])[1] || '').trim(),
+        model: ((/^(?:H3C|HPE|HP)\s+(\S+)\s+uptime is/m.exec(v) || /DEVICE_NAME\s*:\s*(\S+)/.exec(inv) || [])[1] || ''),
+        serials: [...new Set(serials)].slice(0, 16), uptime: ((/uptime is ([^\r\n]+)/.exec(v) || [])[1] || '').trim(), reload_reason: ((/Last reboot reason\s*:\s*([^\r\n]+)/i.exec(v) || [])[1] || '').trim(),
+        image: '', modules: (inv.match(/DEVICE_NAME\s*:/g) || []).length, at: Date.now(), by: by || '' };
+      inventory.setFacts(d.id, f);
+      return f;
+    }
     const r = await run(id, ['show version', 'show inventory'], { by, via: 'facts', textfsm: true });
     const v = ((r.results[0] || {}).parsed || [])[0] || {}, inv = (r.results[1] || {}).parsed || [];
     const raw = (r.results[0] || {}).output || '';

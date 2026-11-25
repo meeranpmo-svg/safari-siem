@@ -203,3 +203,37 @@ test('real SSH session through cli-helper.py: host key read without login, pinne
     await assert.rejects(N.cli.run('lab-sw', ['show version']), (e) => e.code === 409 && e.kind === 'auth');
   } finally { srv.kill(); }
 });
+
+test('H3C / HPE Comware: display commands only, Comware secrets removed with the storage mode kept, the helper refuses show on Comware', () => {
+  const { check, redact, CATALOGUE, DEVICE_TYPE } = require('../engine/netops/cli');
+  assert.equal(DEVICE_TYPE['h3c-comware'], 'hp_comware');
+  assert.ok(CATALOGUE['h3c-comware'].every(([c]) => /^display /.test(c)), 'every Comware command is a display command');
+  assert.equal(check('h3c-comware', 'display interface brief'), 'display interface brief');
+  assert.equal(check('h3c-comware', 'display interface Ten-GigabitEthernet1/0/49'), 'display interface Ten-GigabitEthernet1/0/49');
+  assert.equal(check('h3c-comware', 'display mac-address 0011-2233-4455'), 'display mac-address 0011-2233-4455');
+  assert.equal(check('h3c-comware', 'display current-configuration | include sysname'), 'display current-configuration | include sysname');
+  for (const bad of ['system-view', 'undo shutdown', 'save force', 'reboot', 'display interface brief; reboot', 'show version', 'display current-configuration\nsave'])
+    assert.throws(() => check('h3c-comware', bad), /read-only list|invalid command/, bad);
+  const cfg = [
+    'local-user admin class manage', ' password hash $h$6$SyntheticHash==', ' service-type ssh',
+    'local-user old class manage', ' password simple SyntheticClear1',
+    'snmp-agent community read cipher $c$3$SyntheticCipher==', 'snmp-agent community write simple synthetic-rw',
+    'snmp-agent usm-user v3 sentra-snmp SENTRA-RO cipher authentication-mode sha $c$3$AuthSyn== privacy-mode aes128 $c$3$PrivSyn==',
+    'radius scheme rad', ' key authentication cipher $c$3$RadSyn==', 'ike keychain k1', ' pre-shared-key address 10.0.0.1 255.255.255.255 key cipher $c$3$PskSyn==',
+    'sysname test-sw-01', 'interface GigabitEthernet1/0/1', ' description uplink'].join('\n');
+  const out = redact(cfg);
+  for (const secret of ['SyntheticHash', 'SyntheticClear1', 'SyntheticCipher', 'synthetic-rw', 'AuthSyn', 'PrivSyn', 'RadSyn', 'PskSyn']) assert.ok(!out.includes(secret), 'removed: ' + secret);
+  assert.match(out, /password hash <removed>/); assert.match(out, /password simple <removed>/, 'a clear-text password is still visible as "simple" to the auditor');
+  assert.match(out, /community read cipher <removed>/); assert.match(out, /authentication-mode sha <removed> privacy-mode aes128 <removed>/);
+  assert.match(out, /sysname test-sw-01/); assert.match(out, / description uplink/);
+  // the helper's own check: on hp_comware only display, elsewhere only show / get
+  const { spawnSync } = require('node:child_process'), path = require('node:path');
+  const helper = path.join(__dirname, '../engine/netops/cli-helper.py');
+  const ask = (req) => { const r = spawnSync('python3', ['-I', helper], { input: JSON.stringify(req), encoding: 'utf8' }); try { return JSON.parse(r.stdout); } catch { return { raw: r.stdout + r.stderr }; } };
+  const base = { op: 'run', host: '192.0.2.10', port: 22, username: 'u', password: 'p', known_host: { type: 'ssh-ed25519', key: 'AAAA' } };
+  const a = ask(Object.assign({}, base, { device_type: 'hp_comware', commands: ['show version'] }));
+  const b = ask(Object.assign({}, base, { device_type: 'cisco_ios', commands: ['display version'] }));
+  const c = ask(Object.assign({}, base, { device_type: 'hp_comware', commands: ['display version; reboot'] }));
+  if (a.kind === 'missing') return;   // Netmiko not installed here: the import check runs first, the Node-side checks above still hold
+  assert.equal(a.kind, 'input', JSON.stringify(a)); assert.equal(b.kind, 'input', JSON.stringify(b)); assert.equal(c.kind, 'input', JSON.stringify(c));
+});

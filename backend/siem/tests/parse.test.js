@@ -474,3 +474,33 @@ test('router: garbage never throws for any parser', () => {
   const junk = ['<999>x', '<13>1 - - - - - -', 'CEF:0|a', 'LEEF:2.0|a|b|c|d|x|', 'date= type= logid=', '{"EventID":"x","Channel":1}', '%ASA-6-302013:', '[', '{', '"', '<13>May 99 99:99:99 x y: z', 'x'.repeat(70000)];
   for (const j of junk) for (const t of ['syslog', 'linux', 'fortigate', 'windows', 'cef', 'leef', 'json', 'm365', 'cisco', 'nginx']) valid(p(j, { src_type: t }));
 });
+
+test('h3c: Comware 7 login, failed login, command, config change and link events; Comware 5 only when registered as h3c', () => {
+  let ev = valid(p('<189>Nov 25 10:00:00 2026 test-sw-01 %%10SHELL/5/SHELL_LOGIN: admin logged in from 10.0.0.21.'));
+  assert.deepEqual([ev.src_type, ev.category, ev.action, ev.outcome, ev.user, ev.src_ip, ev.host], ['h3c', 'authentication', 'logon', 'success', 'admin', '10.0.0.21', 'test-sw-01']);
+  assert.ok(ev.tags.includes('admin'));
+  assert.equal(ev.event_code, 'SHELL-5-SHELL_LOGIN');
+  ev = valid(p('<188>Nov 25 10:01:00 2026 test-sw-01 %%10LOGIN/5/LOGIN_FAILED: guest failed to log in from 10.0.0.22.'));
+  assert.deepEqual([ev.action, ev.outcome, ev.user, ev.src_ip], ['logon-failed', 'failure', 'guest', '10.0.0.22']);
+  assert.ok(ev.tags.includes('T1110') && ev.tags.includes('admin'));
+  ev = valid(p('<190>Nov 25 10:02:00 2026 test-sw-01 %%10SSHS/6/SSHS_AUTH_FAIL: SSH user root (IP: 10.0.0.23) didn\'t pass public key authentication for wrong public key algorithm.'));
+  assert.deepEqual([ev.action, ev.user, ev.src_ip, ev.fields.service], ['logon-failed', 'root', '10.0.0.23', 'ssh']);
+  ev = valid(p('<190>Nov 25 10:03:00 2026 test-sw-01 %%10SHELL/6/SHELL_CMD: -Line=vty0-IPAddr=10.0.0.21-User=admin; Command is undo shutdown'));
+  assert.deepEqual([ev.category, ev.action, ev.user, ev.src_ip, ev.cmdline, ev.fields.line], ['system', 'config-change', 'admin', '10.0.0.21', 'undo shutdown', 'vty0']);
+  ev = valid(p('<190>Nov 25 10:03:30 2026 test-sw-01 %%10SHELL/6/SHELL_CMD: -Line=vty0-IPAddr=10.0.0.21-User=admin; Command is display interface brief'));
+  assert.equal(ev.action, 'command', 'a display command is not a change');
+  ev = valid(p('<189>Nov 25 10:04:00 2026 test-sw-01 %%10CFGMAN/5/CFGMAN_CFGCHANGED: -EventIndex=13-CommandSource=2-ConfigSource=4-ConfigDestination=2; Configuration changed.'));
+  assert.equal(ev.action, 'config-change');
+  // received a minute later (an event time far ahead of the receive time is not trusted)
+  ev = valid(p('<187>Nov 25 10:05:00 2026 test-sw-01 %%10IFNET/3/PHY_UPDOWN: Physical state on the interface GigabitEthernet1/0/1 changed to down.', { rts: Date.UTC(2026, 10, 25, 10, 6, 0) }));
+  assert.deepEqual([ev.category, ev.fields.interface, ev.fields.state, ev.severity >= 1], ['system', 'GigabitEthernet1/0/1', 'down', true]);
+  assert.equal(ev.ts, Date.UTC(2026, 10, 25, 10, 5, 0), 'Comware puts the year after the time');
+  // Comware 5 has no %% marker: recognised only on a source registered as h3c, never guessed from plain syslog
+  const c5 = '<189>Nov 25 10:06:00 2026 test-sw-02 SHELL/5/SHELL_LOGIN(l): admin logged in from 10.0.0.24.';
+  ev = valid(p(c5, { src_type: 'h3c' }));
+  assert.deepEqual([ev.src_type, ev.action, ev.user, ev.fields.comware_version], ['h3c', 'logon', 'admin', '5']);
+  assert.notEqual(valid(p(c5)).src_type, 'h3c');
+  // an unknown Comware message is kept as an event, not dropped
+  ev = valid(p('<190>Nov 25 10:07:00 2026 test-sw-01 %%10STP/6/STP_NOTIFIED_TC: Instance 0\'s port GigabitEthernet1/0/2 was notified a topology change.'));
+  assert.deepEqual([ev.src_type, ev.action, ev.event_code], ['h3c', 'event', 'STP-6-STP_NOTIFIED_TC']);
+});

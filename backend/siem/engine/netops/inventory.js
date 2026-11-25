@@ -16,7 +16,7 @@ const fs = require('node:fs');
 const net = require('node:net');
 const { writeJsonAtomic } = require('../onboard/store');
 
-const VENDORS = ['cisco-ios', 'cisco-asa', 'fortigate', 'paloalto', 'genian', 'edgeconnect', 'cisco-ucs', 'other'];
+const VENDORS = ['cisco-ios', 'cisco-asa', 'h3c-comware', 'fortigate', 'paloalto', 'genian', 'edgeconnect', 'cisco-ucs', 'other'];
 const ROLES = ['core', 'distribution', 'access', 'wan-edge', 'firewall', 'branch-router', 'nac', 'sdwan-orchestrator', 'sdwan-appliance', 'router', 'compute', 'ups', 'wlc', 'fc_switch', 'other'];   // wlc: wireless LAN controller (wlc.js, SNMP) · fc_switch: Fibre Channel SAN switch
 const ID_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
 const TYPE_TO_VENDOR = { cisco: 'cisco-ios', 'cisco-ios': 'cisco-ios', 'cisco-asa-ftd': 'cisco-asa', ciscoasa: 'cisco-asa', fortigate: 'fortigate', 'palo-alto': 'paloalto', paloalto: 'paloalto', 'genian-nac': 'genian', genian: 'genian', silverpeak: 'edgeconnect', edgeconnect: 'edgeconnect', 'cisco-ucs': 'cisco-ucs', ucs: 'cisco-ucs' };

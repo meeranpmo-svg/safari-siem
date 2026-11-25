@@ -78,7 +78,7 @@ const step = (r, k) => r.steps.find((s) => s.key === k);
 test('onboarding: validation, credentials write-only, verification per vendor, over-privileged refused, host key, route map, architecture, fixes, roles, audit', async () => {
   const { N, call, audits, SNAP, W, secrets, state } = await setup();
   const cat = (await call('GET', '/onboard/catalogue')).body;
-  assert.deepEqual(cat.vendors.map((v) => v.vendor).sort(), ['cisco-asa', 'cisco-ios', 'cisco-ucs', 'fortigate', 'genian', 'other', 'paloalto']);
+  assert.deepEqual(cat.vendors.map((v) => v.vendor).sort(), ['cisco-asa', 'cisco-ios', 'cisco-ucs', 'fortigate', 'genian', 'h3c-comware', 'other', 'paloalto']);
   assert.match(cat.vendors.find((v) => v.vendor === 'other').label, /UPS-MIB/); assert.deepEqual(cat.vendors.find((v) => v.vendor === 'other').roles, ['ups']);
   assert.ok(cat.vendors.find((v) => v.vendor === 'cisco-ucs').account.includes('create role read-only')); assert.ok(cat.vendors.find((v) => v.vendor === 'fortigate').logs.join(' ').includes('10.0.0.50'));
   // validation and roles

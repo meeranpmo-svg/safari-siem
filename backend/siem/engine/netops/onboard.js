@@ -52,6 +52,13 @@ const GUIDES = {
       'SSH login for the show commands (not privilege 15 - onboarding refuses it):', 'ip ssh version 2', 'username sentra-ro privilege 1 secret <password>',
       'For the daily configuration audit allow only "show running-config" at that level, e.g. a parser view with "commands exec include show running-config" - never configure / enable.'],
     logs: (c) => ['logging host ' + SIEM(c), 'logging trap informational', 'service timestamps log datetime msec localtime show-timezone', 'ntp server <your NTP>'] },
+  'h3c-comware': { label: 'H3C / HPE Comware switch or router', roles: ['core', 'distribution', 'access', 'router', 'branch-router'], role: 'access', creds: ['snmp', 'ssh'], poll: { ping: true, snmp: true },
+    account: ['SNMPv3 (monitoring, encrypted):', 'snmp-agent', 'snmp-agent mib-view included SENTRA-RO iso', 'snmp-agent group v3 SENTRA-RO privacy read-view SENTRA-RO',
+      'snmp-agent usm-user v3 sentra-snmp SENTRA-RO simple authentication-mode sha <auth-password> privacy-mode aes128 <priv-password>',
+      'SSH login for the display commands (role network-operator: read-only - never network-admin; the platform cannot read the role back, so check it here):', 'ssh server enable',
+      'local-user sentra-ro class manage', ' password simple <password>   (stored hashed by the switch)', ' service-type ssh', ' authorization-attribute user-role network-operator',
+      'line vty 0 63', ' authentication-mode scheme', ' protocol inbound ssh'],
+    logs: (c) => ['info-center enable', 'info-center loghost ' + SIEM(c) + ' port 5514 facility local7', 'info-center source default loghost level informational', 'info-center timestamp loghost date', 'ntp-service enable', 'ntp-service unicast-server <your NTP>'] },
   'cisco-asa': { label: 'Cisco ASA', roles: ['firewall'], role: 'firewall', creds: ['snmp', 'ssh'], poll: { ping: true, snmp: true },
     account: ['snmp-server group SENTRA-RO v3 priv', 'snmp-server user sentra-snmp SENTRA-RO v3 auth sha <auth> priv aes 128 <priv>', 'username sentra-ro password <password> privilege 2 (show only)'],
     logs: (c) => ['logging enable', 'logging host inside ' + SIEM(c), 'logging trap informational'] },
@@ -142,6 +149,13 @@ function createOnboarding({ inventory, poller, cli, tasks, changes, routemap, st
           else add('privilege', 'Read-only account', 'ok', 'privilege level ' + lvl);
         } catch (e) { add('privilege', 'Read-only account', 'warn', 'could not run show privilege: ' + e.message); }
       }
+    } else if (d.vendor === 'h3c-comware' && sum.ssh) {
+      // Comware does not report the session's role to a display command the platform can rely on: the host key is checked, the role is a person's check
+      if (!cli.hostKey(id)) {
+        let fp = ''; try { fp = (await cli.fetchHostKey(id)).fingerprint; } catch (e) { fp = ''; /* shown as not read below */ }
+        add('hostkey', 'SSH host key trusted', 'pending', fp ? 'fingerprint ' + fp + ' - an administrator compares it with the device ("display public-key local rsa public") and trusts it' : 'could not read the host key - check SSH reachability', fp ? 'AI Network Engineer → the device → SSH host key → Trust' : null);
+      } else add('hostkey', 'SSH host key trusted', 'ok', 'pinned');
+      add('privilege', 'Read-only account', 'manual', 'give the SSH user the role network-operator only ("authorization-attribute user-role network-operator"); the platform only ever sends display commands, and every command is logged on the switch');
     } else if (G) add('privilege', 'Read-only account', 'manual', 'a ' + G.label + ' does not tell its account\'s rights to a read - use the read-only role in the guide; the account is audited on the device');
     // facts, baseline, route map
     const sys = snap && snap.system;

@@ -38,6 +38,7 @@ def fp(key_b64):
 HOSTKEY_CHANGED = ("the device presented a DIFFERENT SSH host key than the trusted one - not logging in (device replaced "
                    "or re-keyed, or someone in the middle). Check the device, then read and trust the new key.")
 SAFE = re.compile(r"^(show|get) [A-Za-z0-9 ./:_\-|]+$")
+SAFE_COMWARE = re.compile(r"^display [A-Za-z0-9 ./:_\-|]+$")   # H3C / HPE Comware: "display" is the read-only verb
 # the only configuration lines an approved task may push (second check after tasks.js built them)
 IFN = r"(?:GigabitEthernet|TenGigabitEthernet|TwentyFiveGigE|FortyGigabitEthernet|HundredGigE|FastEthernet|Ethernet|Gi|Te|Tw|Fo|Hu|Fa|Eth)\d{1,2}(?:/\d{1,3}){1,3}|(?:Port-channel|Po)\d{1,3}"
 CFG_OK = [re.compile(x, re.I) for x in (
@@ -104,8 +105,9 @@ def main():
     except ImportError:
         return fail("missing", "Netmiko is not installed (run install/netops-cli-setup.sh)")
     cmds = req.get("commands") or []
-    if op == "run" and (not cmds or len(cmds) > 12 or any(not isinstance(c, str) or not SAFE.match(c) or len(c) > 200 for c in cmds)):
-        return fail("input", "only read-only show / get commands are allowed")
+    safe = SAFE_COMWARE if req.get("device_type") == "hp_comware" else SAFE
+    if op == "run" and (not cmds or len(cmds) > 12 or any(not isinstance(c, str) or not safe.match(c) or len(c) > 200 for c in cmds)):
+        return fail("input", "only read-only show / get (display on Comware) commands are allowed")
     lines = req.get("lines") or []
     if op == "config" and (not lines or len(lines) > 200 or any(not isinstance(l, str) or "\n" in l or "\r" in l or not any(r.match(l) for r in CFG_OK) for l in lines)):
         bad_line = next((l for l in lines if not isinstance(l, str) or not any(r.match(l) for r in CFG_OK)), "")

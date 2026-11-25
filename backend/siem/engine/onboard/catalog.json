@@ -1077,6 +1077,73 @@
       ]
     },
     {
+     "kind": "h3c-comware",
+     "category": "firewall",
+     "type": "h3c",
+     "parser": "h3c",
+     "parser_status": "dedicated",
+     "mode": "syslog",
+     "icon": "🔀",
+     "id_prefix": "sw-",
+     "sama": [
+      "3.3.14",
+      "3.3.8",
+      "3.3.7"
+     ],
+     "title": {
+      "en": "H3C / HPE Comware switches and routers",
+      "ar": "محوّلات وموجّهات H3C / HPE Comware"
+     },
+     "gives": {
+      "en": "Logins and failed logins, every command typed (SHELL_CMD), configuration saves, interface and spanning-tree events from Comware 5 / 7 devices (information center).",
+      "ar": "تسجيلات الدخول والمحاولات الفاشلة وكل أمر يُكتب (SHELL_CMD) وحفظ الإعدادات وأحداث الواجهات وشجرة الامتداد من أجهزة Comware 5 / 7 (مركز المعلومات)."
+     },
+     "detects": [
+      {
+       "en": "Configuration changes outside change windows",
+       "ar": "تغييرات الإعدادات خارج نوافذ التغيير"
+      },
+      {
+       "en": "Failed and off-hours admin logins, link flaps",
+       "ar": "تسجيلات دخول المسؤولين الفاشلة وخارج ساعات العمل وتذبذب الروابط"
+      }
+     ],
+     "prerequisites": [
+      {
+       "en": "Management IP of the device and NTP; for SNMP and the display commands a read-only SNMPv3 user and an SSH user with the role network-operator",
+       "ar": "عنوان IP الإداري للجهاز وNTP؛ ولـ SNMP وأوامر العرض مستخدم SNMPv3 للقراءة فقط ومستخدم SSH بدور network-operator"
+      }
+     ],
+     "network": {
+      "port": 5514,
+      "proto": "udp",
+      "from": "{{device_ip}}",
+      "to": "{{siem_ip}}",
+      "en": "UDP {{syslog_port}} from {{device_ip}} to {{siem_ip}} (the Comware information center sends syslog over UDP).",
+      "ar": "UDP {{syslog_port}} من {{device_ip}} إلى {{siem_ip}} (يرسل مركز المعلومات في Comware عبر UDP)."
+     },
+     "steps": [
+      {
+       "en": "Paste the block in system view (system-view) and save.",
+       "ar": "ألصق الكتلة في وضع النظام (system-view) واحفظ."
+      },
+      {
+       "en": "Log in once over SSH to generate a test event.",
+       "ar": "سجّل الدخول مرة عبر SSH لتوليد حدث اختبار."
+      }
+     ],
+     "instructions": [
+      {
+       "title": {
+        "en": "H3C Comware 7",
+        "ar": "H3C Comware 7"
+       },
+       "lang": "text",
+       "body": "clock timezone AST add 03:00:00\nntp-service enable\nntp-service unicast-server <your NTP>\ninfo-center enable\ninfo-center loghost {{siem_ip}} port {{syslog_port}} facility local7\ninfo-center source default loghost level informational\ninfo-center timestamp loghost date\nsave force"
+      }
+     ]
+    },
+    {
       "kind": "cisco-asa-ftd",
       "category": "firewall",
       "type": "cisco",
