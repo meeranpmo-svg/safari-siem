@@ -19,7 +19,7 @@ function derive(raw, dir) {
   b.li_ar = 'ل' + b.short_ar; b.bi_ar = 'ب' + b.short_ar;
   b.company_look = b.company_look !== false;   // the company colours are the default look of the home page, menu and sign-in page
   b.frameworks = Array.isArray(b.frameworks) ? b.frameworks.map(String) : [];
-  for (const k of ['modules_off', 'pages_off']) { b[k] = Array.isArray(b[k]) ? b[k].map(String) : []; if (b[k].some((x) => !/^[a-z0-9-]+$/.test(x))) throw new Error('brand.json: "' + k + '" holds module / page ids (lowercase letters, digits, hyphens)'); }
+  for (const k of ['modules_off', 'pages_off', 'connections_off']) { b[k] = Array.isArray(b[k]) ? b[k].map(String) : []; if (b[k].some((x) => !/^[a-z0-9-]+$/.test(x))) throw new Error('brand.json: "' + k + '" holds module / page ids (lowercase letters, digits, hyphens)'); }
   b.colors = Object.assign({ primary: '#1f4e9c', accent: '#2f7fd0', ink: '#16233b', muted: '#6f7378' }, b.colors || {});
   for (const [k, v] of Object.entries(b.colors)) if (!/^#[0-9a-fA-F]{6}$/.test(v)) throw new Error('brand.json: colors.' + k + ' must be #rrggbb');
   if (dir && b.logo && !/^data:/.test(b.logo)) {

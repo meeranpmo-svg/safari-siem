@@ -20,7 +20,7 @@ const b = derive(JSON.parse(fs.readFileSync(file, 'utf8')), path.dirname(file));
 // --all-modules: the page copy with nothing switched off and the platform's own design, for the product's page tests;
 // tools/run-tests.sh writes it before the page tests and puts the real copy back afterwards
 const ALL = process.argv.includes('--all-modules');
-if (ALL) { b.modules_off = []; b.pages_off = []; b.company_look = false; b.frameworks_all = true; }   // and the platform's own design, which the design tests describe
+if (ALL) { b.modules_off = []; b.pages_off = []; b.connections_off = []; b.company_look = false; b.frameworks_all = true; }   // and the platform's own design, which the design tests describe
 const PAGE = fs.readFileSync(path.join(__dirname, 'zyb-org.template.js'), 'utf8').replace('/*BRAND*/{}', JSON.stringify(b));
 const engine = JSON.stringify({ name: b.name, short: b.short, name_ar: b.name_ar, short_ar: b.short_ar, domain: b.domain, website: b.website, portal_host: b.portal_host, platform_ip: b.platform_ip, report_header: b.report_header, logo: b.logo, colors: b.colors, sector: b.sector, frameworks: b.frameworks, modules_off: b.modules_off, pages_off: b.pages_off }, null, 1) + '\n';
 const outs = arg('ui-out') ? [[path.resolve(arg('ui-out')), PAGE]] : ALL ? [[path.join(ROOT, 'ui/vendor/zyb-org.js'), PAGE]] : [

@@ -17,3 +17,7 @@ copy is stale. On a server the engines read `/etc/sentra/brand.json` first (`SEN
 fall back to the copy they were installed with.
 
 Values are plain text: `< > & " ' \`` and line breaks are refused, because the name is placed into pages and reports.
+
+`modules_off` / `pages_off` take modules and pages out of every menu, search and the home page; `connections_off` takes cards
+out of the Integration Hub for products the organisation does not use (ids as in `ui/connections.html`, e.g. `cloudflare`,
+`esg`, `esglog`). A card whose page is in `pages_off` is hidden too.

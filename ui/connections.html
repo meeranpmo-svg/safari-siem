@@ -664,7 +664,8 @@
      load:function(){return req(this.api,'GET','/storage').then(function(d){return (d.platforms||[]).map(platRow);});} }
   ];
   // a connection whose page the organisation's sector switches off (brand setting: pages_off) is not offered here either
-  (function(){var off=(window.ZYB_ORG&&window.ZYB_ORG.pages_off)||[];CONN=CONN.filter(function(c){return !c.detail||off.indexOf(c.detail.replace(/\.html$/,''))<0;});})();
+  // ... and a connection the organisation does not use at all (brand setting: connections_off, e.g. a product it does not own)
+  (function(){var o=window.ZYB_ORG||{},off=o.pages_off||[],cx=o.connections_off||[];CONN=CONN.filter(function(c){return cx.indexOf(c.id)<0&&(!c.detail||off.indexOf(c.detail.replace(/\.html$/,''))<0);});})();
 
   // a platform record (backup, storage) as a row: the latest of its test and sync; stale after three missed collection intervals
   function platRow(p){var y=p.last_sync,ya=y?Date.parse(y.at):0,t=p.last_test,ta=t?Date.parse(t.at):0,every=(p.interval_min||60)*60000,stale=!!(y&&y.ok&&Date.now()-ya>3*every);

@@ -68,6 +68,8 @@ let posted = null, forgot = null, ORGJS = null;
   const off = JSON.parse(fs.readFileSync(path.join(ROOT, 'brand/brand.json'), 'utf8')).pages_off;
   ok(off.includes('ai-ksc-engineer') ? !ids.includes('cn-ksc') : true, 'Kaspersky card hidden when its page is off');
   ok(off.includes('ai-zscaler-engineer') ? !ids.includes('cn-zscaler') : true, 'Zscaler card hidden when its page is off');
+  const cx = JSON.parse(fs.readFileSync(path.join(ROOT, 'brand/brand.json'), 'utf8')).connections_off || [];
+  ok(cx.every((id) => !ids.includes('cn-' + id)), 'connections the organisation does not use are not offered: ' + cx.join(','));
   ok(ids.includes('cn-edr') && ids.includes('cn-hyperv'), 'CrowdStrike and Hyper-V offered: ' + ids.join(','));
   ok(!errs.length, 'errors: ' + errs.join(' | '));
   await browser.close(); srv.close(); fs.rmSync(tmp, { recursive: true, force: true });
