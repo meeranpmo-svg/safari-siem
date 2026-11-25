@@ -66,6 +66,13 @@ id "$SVC_USER" >/dev/null 2>&1 || useradd --system --home-dir "$DATA" --shell /u
 say "code -> $APP"
 mkdir -p "$APP"
 cp -r "$SRC_ROOT/engine" "$SRC_ROOT/agent" "$APP/"
+# the rules that run in Python (engine/pyengine.js runs python3 -I pyengine/run.py): ISO 27001, NCA ECC, PDPL, NDMO, assets and the rest.
+# Standard library only. Copied every run so an update replaces them; compiled caches are not copied.
+if [ -d "$SRC_ROOT/pyengine" ]; then
+  rm -rf -- "${APP:?}/pyengine"; install -d -m 755 "$APP/pyengine"
+  find "$SRC_ROOT/pyengine" -maxdepth 1 -type f -name '*.py' -exec install -m 644 {} "$APP/pyengine/" \;
+  command -v python3 >/dev/null 2>&1 || say "WARNING: python3 is not installed - the rules that run in Python (ISO 27001, NCA ECC, PDPL ...) will not answer: sudo apt-get install -y python3"
+fi
 [ -d "$SRC_ROOT/docs" ] && cp -r "$SRC_ROOT/docs" "$APP/" || true
 cp -r "$SRC_ROOT/install" "$APP/"
 chown -R root:root "$APP"; chmod -R go-w "$APP"

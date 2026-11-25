@@ -41,3 +41,11 @@ test('a fresh engine serves the add-on pages (Platform Map, handover, automation
     }
   } finally { await app.stop(); }
 });
+
+test('install.sh copies the Python rules (pyengine) - without them ISO 27001, NCA ECC, PDPL and the rest say "Python did not answer"', () => {
+  const sh = fs.readFileSync(path.join(ROOT, 'install/install.sh'), 'utf8');
+  assert.match(sh, /find "\$SRC_ROOT\/pyengine" -maxdepth 1 -type f -name '\*\.py' -exec install -m 644 \{\} "\$APP\/pyengine\/"/, 'every pyengine/*.py is installed');
+  assert.match(sh, /rm -rf -- "\$\{APP:\?\}\/pyengine"/, 'the old copy is replaced, never with an empty APP');
+  assert.ok(fs.readdirSync(path.join(ROOT, 'pyengine')).includes('run.py'), 'the entry point the engine runs is there');
+  assert.ok(fs.readFileSync(path.join(ROOT, 'engine/pyengine.js'), 'utf8').includes("path.join(__dirname, '..', 'pyengine', 'run.py')"), 'the engine looks for it beside engine/');
+});
