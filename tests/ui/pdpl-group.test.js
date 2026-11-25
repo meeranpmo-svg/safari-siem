@@ -9,8 +9,8 @@ const DASH = path.resolve(__dirname, '../../ui');
 let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 let ROLE = 'viewer';
 const TERMS = { instructions: 'Instructions', confidentiality: 'Confidentiality', security: 'Security', subprocessors: 'Sub-processors', breach: 'Breach notice', dsr: 'Data-subject help', deletion: 'Deletion', audit: 'Audit', transfer: 'Transfer' };
-const VIEW = () => ({ org: 'Synthetic Co', dpo: 'huda.syn', can_manage: true, terms: TERMS, services: ['hr-payroll', 'it-services', 'fleet'],
-  companies: [{ id: 'GRP-0001', name: 'Synthetic Trading <img src=x onerror=alert(1)>', cr_no: '1010000001', services: ['hr-payroll'], contact: 'privacy.syn', activities: [], status: 'no agreement', dpa: null, findings: [{ severity: 'high', text: 'No data processing agreement' }] },
+const VIEW = () => ({ org: 'Synthetic Co', scope: { nca: 'Synthetic Co only - the group companies are not under the NCA ECC <b>x</b>', pdpl: 'Synthetic Co and its group companies' }, dpo: 'huda.syn', can_manage: true, terms: TERMS, services: ['hr-payroll', 'it-services', 'fleet'],
+  companies: [{ id: 'GRP-0001', name: 'Synthetic Trading <img src=x onerror=alert(1)>', cr_no: '1010000001', services: ['hr-payroll'], contact: 'privacy.syn', activities: [], frameworks: ['pdpl'], status: 'no agreement', dpa: null, findings: [{ severity: 'high', text: 'No data processing agreement' }] },
     { id: 'GRP-0002', name: 'Synthetic Logistics', services: ['fleet'], activities: ['r1'], status: 'watch', dpa: { ref: 'DPA-2', signed: '2026-01-01', breach_hours: 24, terms: ['instructions'], recorded_by: 'other.syn' }, findings: [{ severity: 'medium', text: 'not accepted' }] }],
   notices: [{ id: 'BRN-0001', company: 'GRP-0002', incident_ref: 'INC-SYN-1', detected: '2026-11-20T06:00', summary: 'Synthetic', notified_at: null }], kpis: { companies: 2, no_agreement: 1, attention: 0, ok: 0, open_notices: 1 } });
 const posts = [];
@@ -34,6 +34,7 @@ const posts = [];
   ok(true, 'viewer told why'); await p.close();
   ROLE = 'operator'; p = await open(); await p.waitForSelector('.co');
   ok(!(await p.$('img[src="x"]')), 'hostile text stays text');
+  ok(/NCA ECC: Synthetic Co only/.test(await p.textContent('#x-co')) && !(await p.$('#x-co p b b')) && /frameworks: PDPL/.test(await p.textContent('#x-co')), 'scope said, per company PDPL only');
   ok(/No data processing agreement/.test(await p.textContent('#x-co')) && /not accepted/.test(await p.textContent('#x-co')), 'status and findings');
   await p.fill('#g-n', 'Synthetic Services'); await p.fill('#g-cr', '1010000002'); await p.check('[data-gs="it-services"]'); await p.click('#g-add'); await toast(p);
   const add = posts.find((x) => x[1] === '/api/itam/pdpl/group/companies'); ok(add && add[2].name === 'Synthetic Services' && add[2].services.join() === 'it-services' && add[2].cr_no === '1010000002', 'company added: ' + JSON.stringify(add && add[2]));

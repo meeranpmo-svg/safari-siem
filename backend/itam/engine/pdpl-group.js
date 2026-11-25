@@ -66,8 +66,11 @@ function createPdplGroup(app, PD, opts = {}) {
     return { findings: f, status: !d ? 'no agreement' : f.some((x) => x.severity === 'high') ? 'attention' : f.some((x) => x.severity === 'medium') ? 'watch' : 'ok' };
   }
   function view(who) {
-    const list = comp().all().sort((a, b) => a.name.localeCompare(b.name)).map((c) => Object.assign({}, c, assess(c)));
-    return { org: ORG.name, dpo: dpo(), can_manage: isDpo(who) || who.role === 'admin', terms: TERMS, services: SERVICES, companies: list,
+    // a group company is under PDPL here; the NCA ECC covers the organisation itself only when framework_scope.nca says so
+    const ncaSelfOnly = /only/i.test(String((ORG.framework_scope || {}).nca || ''));
+    const list = comp().all().sort((a, b) => a.name.localeCompare(b.name)).map((c) => Object.assign({}, c, assess(c), { frameworks: ncaSelfOnly ? ['pdpl'] : ['pdpl', 'nca'] }));
+    const scope = (ORG.framework_scope || {});
+    return { org: ORG.name, scope: { nca: scope.nca || '', pdpl: scope.pdpl || '' }, dpo: dpo(), can_manage: isDpo(who) || who.role === 'admin', terms: TERMS, services: SERVICES, companies: list,
       notices: notes().all().sort((a, b) => String(b.detected).localeCompare(String(a.detected))).slice(0, 200),
       kpis: { companies: list.length, no_agreement: list.filter((c) => !c.dpa).length, attention: list.filter((c) => c.status === 'attention').length, ok: list.filter((c) => c.status === 'ok').length, open_notices: notes().all((n) => !n.notified_at).length } };
   }

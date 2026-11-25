@@ -66,6 +66,9 @@ const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 
   // ---- Modules & Solutions offers only what applies: a switched-off module, and one whose pages are all off, is not in the
   // catalogue or in any ready-made solution; the frameworks that apply stay
+  // who each framework covers (brand setting framework_scope): the NCA ECC page says the company only
+  { const q = await open('nca-ecc.html'); await q.waitForSelector('#ncascope:not([hidden])', { timeout: 8000 }).catch(() => {}); const t = await q.$eval('#ncascope', (x) => (x.hidden ? '' : x.textContent)).catch(() => '');
+    ok(ZYB_ORG.framework_scope && t.includes(ZYB_ORG.framework_scope.nca), 'the NCA ECC page states its scope: ' + t); await q.context().close(); }
   p = await open('index.html');
   const cat = await p.evaluate(() => window.ZybModules.CAT.map((m) => m[0])), sols = await p.evaluate(() => JSON.stringify(window.ZybModules.SOLUTIONS));
   ok(ZYB_ORG.modules_off.every((id) => !cat.includes(id)) && ZYB_ORG.modules_off.every((id) => !sols.includes('"' + id + '"')), 'switched-off modules are not offered: ' + ZYB_ORG.modules_off.filter((id) => cat.includes(id)).join(', '));

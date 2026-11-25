@@ -667,7 +667,7 @@ window.__orgApply(on,light);})();</script>
     duty();}
   // live status: each tile from its own source; a source that does not answer says so - never a made-up number
   function get(u){return new Promise(function(ok){var r=new XMLHttpRequest();r.open('GET',u);r.withCredentials=true;r.timeout=15000;r.zybQuiet=true;r.onload=function(){var j=null;try{j=JSON.parse(r.responseText);}catch(e){ /* not JSON: treated as no data */ }ok({s:r.status,j:j});};r.onerror=r.ontimeout=function(){ok({s:0,j:null});};r.send();});}
-  function tileSet(id,v,sub,cls){var el=$(id);if(!el)return;var vv=el.querySelector('.v');vv.textContent=v;vv.classList.toggle('na',v==='—'||/not |no access/.test(v));if(sub!=null)el.querySelector('.s').textContent=sub;el.classList.remove('ok','warn','bad','info');if(cls)el.classList.add(cls);}
+  function tileSet(id,v,sub,cls){var el=$(id);if(!el)return;var vv=el.querySelector('.v');vv.textContent=v;vv.classList.toggle('na',v==='—'||/not |no access/.test(v));if(sub!=null){var se=el.querySelector('.s'),sc0=se.getAttribute('data-scope');se.textContent=sub+(sc0?' · '+sc0:'');}el.classList.remove('ok','warn','bad','info');if(cls)el.classList.add(cls);}
   function why(r){return r.s===403||r.s===401?'no access':r.s===404?'not installed':'not reachable';}
   // Enterprise Risk & Compliance strip: the risk posture (Risk Command) and the SAMA / NCA ECC / PDPL / NDMO scores (Audit Dashboard),
   // read live; not assessed or not readable is said in words - never a 0 that reads as a score
@@ -698,6 +698,7 @@ window.__orgApply(on,light);})();</script>
     Object.keys(T).forEach(function(id){var el=$(id);if(el&&!all&&fw.indexOf(T[id])<0)el.remove();});
     if((o.modules_off||[]).indexOf('fw-aramco')>=0&&!o.frameworks_all){var ar=$('grc-aramco');if(ar)ar.remove();}
     document.querySelectorAll('#grc a.st').forEach(function(a){var h=(a.getAttribute('href')||'').replace(/\.html$/,'');if(off.indexOf(h)>=0)a.remove();});})();
+  (function(){var sc=(window.ZYB_ORG||{}).framework_scope||{},put=function(id,t){var el=$(id);if(el&&t){el.title=t;var s=el.querySelector('.s');if(s){var sh=t.split(' - ')[0];s.setAttribute('data-scope',sh);s.textContent+=' · '+sh;}}};put('grc-nca-ecc',sc.nca);put('grc-pdpl',sc.pdpl);})();
   grcLoad();
   // Brand colours switch: Zyberon Sentra (the default design) or the organisation colours; saved with the dashboard preferences, which the
   // sign-in page reads too

@@ -32,6 +32,7 @@ test('group companies, agreements with four-eyes acceptance, activities, breach 
   const id = r.json.id;
   assert.equal((await s.post('/pdpl/group/companies', { name: 'synthetic trading co', services: ['fleet'] })).status, 409, 'duplicate name');
   v = (await s.get('/pdpl/group')).json; const c0 = v.companies[0];
+  assert.match(v.scope.nca, /only/, 'the NCA ECC scope comes from the brand setting'); assert.deepEqual(c0.frameworks, ['pdpl'], 'a group company is under PDPL, not the NCA ECC');
   assert.equal(c0.status, 'no agreement'); assert.ok(c0.findings.some((f) => /No data processing agreement/.test(f.text)) && c0.findings.some((f) => /No RoPA activity/.test(f.text)));
   // the agreement: validated, terms checked, accepted by a different person
   assert.equal((await s.post('/pdpl/group/companies/' + id + '/dpa', { signed: '2027-01-01', ref: 'DPA-1' })).status, 400, 'signed in the future');

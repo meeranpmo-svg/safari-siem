@@ -18,6 +18,8 @@ fall back to the copy they were installed with.
 
 Values are plain text: `< > & " ' \`` and line breaks are refused, because the name is placed into pages and reports.
 
+`framework_scope` says who each framework covers (for example `nca`: the company only, `pdpl`: the company and the group companies it processes data for); the NCA ECC page, the home page tiles and PDPL Group Companies show it.
+
 `modules_off` / `pages_off` take modules and pages out of every menu, search and the home page; `connections_off` takes cards
 out of the Integration Hub for products the organisation does not use (ids as in `ui/connections.html`, e.g. `cloudflare`,
 `esg`, `esglog`). A card whose page is in `pages_off` is hidden too.
