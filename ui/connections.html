@@ -444,6 +444,22 @@
           .catch(function(x){W.err=x.message;}).then(function(){W.busy=false;draw();});return;}
     };
     draw();}
+  // ---------- Hyper-V: a guide (no password is stored; each host posts its own read-only VM list with an agent key)
+  var HV_SCOPES=[];
+  function hvGuide(self){var host=location.host,sc=HV_SCOPES.length?HV_SCOPES.map(function(x){return esc(x.name)+' ('+esc((x.targets||[]).join(', '))+')';}).join('<br>'):'<b class="text-danger">none yet</b>';
+    var ps="$AgentKey = '<agent key from step 2>'\n$vms = Get-VM | ForEach-Object {\n  $n = Get-VMNetworkAdapter -VM $_\n  [pscustomobject]@{ name = $_.Name; vm_id = \"$($_.VMId)\"; state = \"$($_.State)\"; generation = $_.Generation\n    ips = @($n.IPAddresses | Where-Object { $_ -match '^\\d+\\.\\d+\\.\\d+\\.\\d+$' }); macs = @($n.MacAddress) } }\n$body = @{ host = @{ name = $env:COMPUTERNAME; fqdn = ([System.Net.Dns]::GetHostEntry('').HostName)\n  ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.PrefixOrigin -ne 'WellKnown' } | Select-Object -First 1).IPAddress\n  os = (Get-CimInstance Win32_OperatingSystem).Caption }; vms = @($vms); collected_at = (Get-Date).ToUniversalTime().ToString('o') }\nInvoke-RestMethod -Method Post -Uri 'https://"+host+"/itam-agent/hyperv' -Headers @{ Authorization = \"Bearer $AgentKey\" } `\n  -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 5)";
+    var h='<div class="modal-header"><h5 class="modal-title">Connect Microsoft Hyper-V hosts</h5><button type="button" class="btn-close" data-close aria-label="Close"></button></div><div class="modal-body">'
+      +'<p class="text-secondary">The platform never logs in to a Hyper-V host. Each host runs a short, read-only PowerShell (<code>Get-VM</code>, <code>Get-VMNetworkAdapter</code>) on a schedule and posts its VM list with an agent key. The VMs then appear in the asset inventory and under Servers &amp; Virtualization.</p>'
+      +'<ol class="mb-3"><li class="mb-2"><b>A scope that accepts Hyper-V reports.</b> Asset Discovery → Scopes: a scope whose addresses include the hosts, with the <i>Hyper-V</i> method on. Active now: <div class="small mt-1">'+sc+'</div></li>'
+      +'<li class="mb-2"><b>An agent key.</b> IT Asset Management → Settings → Agent tokens → issue a token, then enrol each host once (the agent installer does this), or use one enrolled key for a reporting server.</li>'
+      +'<li class="mb-2"><b>On each Hyper-V host</b> (an account in <i>Hyper-V Administrators</i> is enough), save this as <code>C:\\ProgramData\\Sentra\\hyperv-report.ps1</code> and run it once to test:<pre class="mt-2 p-2 small" style="white-space:pre;overflow:auto;max-height:240px;background:var(--tblr-bg-surface-secondary,#1b2230);border-radius:6px" id="hv-ps">'+esc(ps)+'</pre><button type="button" class="btn btn-sm" id="hv-copy"><i class="ti ti-copy me-1"></i>Copy</button></li>'
+      +'<li class="mb-2"><b>Schedule it</b> every 4 hours (Task Scheduler, run whether the user is logged on or not):<pre class="mt-2 p-2 small" style="white-space:pre-wrap;background:var(--tblr-bg-surface-secondary,#1b2230);border-radius:6px">'+esc('schtasks /Create /TN "Sentra Hyper-V report" /SC HOURLY /MO 4 /RU SYSTEM /TR "powershell -NoProfile -ExecutionPolicy Bypass -File C:\\ProgramData\\Sentra\\hyperv-report.ps1"')+'</pre></li>'
+      +'<li><b>Firewall:</b> HTTPS 443 from each Hyper-V host to this platform. If the portal certificate is self-signed, the host must trust it first.</li></ol>'
+      +'<p class="small text-secondary mb-0">No network path from a host? An administrator can upload the same JSON in Asset Discovery (Hyper-V import). A host appears here after its first report.</p></div>'
+      +'<div class="modal-footer"><button type="button" class="btn" data-close>Close</button></div>';
+    $('modal').innerHTML=h;$('ov').style.display='block';$('ovb').style.display='block';document.body.classList.add('modal-open');
+    [].forEach.call($('modal').querySelectorAll('[data-close]'),function(b){b.addEventListener('click',closeModal);});
+    var c=document.getElementById('hv-copy');if(c)c.addEventListener('click',function(){var t=document.getElementById('hv-ps').textContent;try{navigator.clipboard.writeText(t).then(function(){toast('Copied');},function(){toast('Select the text and copy it');});}catch(e){toast('Select the text and copy it');}});}
   // ---------- connector definitions
   var CONN=[
    { id:'zscaler', icon:'cloud-lock',tone:'cyan', name:'Zscaler (ZIA + ZPA)', group:'Web & ZTNA security', api:'/api/soc', detail:'ai-zscaler-engineer.html', svc:'sentra-siem', fix:'sudo bash "$(ls -td ~/sentra-update-*/ | head -n1)sentra-siem/install/deploy-engine.sh"',
@@ -459,6 +475,38 @@
      test:function(id){return req(this.api,'POST','/ksc/servers/'+encodeURIComponent(id)+'/test').then(function(r){return r.ok?('OK — '+r.hostsInKsc+' hosts'):('Failed: '+r.error);});},
      sync:function(id){return req(this.api,'POST','/ksc/servers/'+encodeURIComponent(id)+'/sync').then(function(){return 'Synced';});},
      del:function(id){return req(this.api,'DELETE','/ksc/servers/'+encodeURIComponent(id)).then(function(){return 'Removed';});} },
+
+   { id:'edr', icon:'shield-check',tone:'red', name:'CrowdStrike Falcon (EDR)', group:'Endpoint protection', api:'/api/soc', detail:'soc-xdr.html', svc:'sentra-siem', fix:'sudo bash "$(ls -td ~/sentra-update-*/ | head -n1)sentra-siem/install/deploy-engine.sh"',
+     // Falcon is a cloud service: CrowdStrike's own SIEM Connector (on a Linux host) pulls its Event Streams and sends them to the SIEM as CEF syslog.
+     // A connection here is a registered log source (the connector host's IP + the Falcon parser); no Falcon secret is stored on this platform.
+     KINDS:[{v:'crowdstrike-falcon',l:'CrowdStrike Falcon (via the Falcon SIEM Connector)',p:'cs-'}],
+     load:function(){var self=this,ks=self.KINDS.map(function(k){return k.v;});return req(this.api,'GET','/onboard/sources').then(function(d){return (d.sources||[]).filter(function(x){return ks.indexOf(x.kind)>=0;}).map(function(x){
+       var seen=x.last_seen?(typeof x.last_seen==='number'?x.last_seen:Date.parse(x.last_seen)):0;
+       return {id:x.id,name:x.label||x.id,info:'Falcon SIEM Connector'+(x.match_ip?' · connector host '+x.match_ip:'')+(x.site?' · '+x.site:'')+' · '+(x.events_24h||0)+' events in 24 h',cred:'n/a',
+         last:seen?{at:seen,errors:x.state==='receiving'?[]:['no Falcon events received recently ('+x.state+') - check that the connector service runs and can reach the Falcon cloud']}:{at:Date.parse(x.created_at)||Date.now(),errors:['waiting for the first event - finish the Falcon SIEM Connector set-up on the connector host']}};});});},
+     add:function(){var self=this;openForm('Connect CrowdStrike Falcon','Falcon detections, incidents, sign-ins and console audit events reach the SIEM through CrowdStrike\'s own Falcon SIEM Connector, which runs on a Linux host you control (it may be this platform server). 1) In the Falcon console: Support and resources → API clients and keys → Add new API client with the single scope "Event streams: Read". 2) Install the Falcon SIEM Connector (Support → Tool downloads) on the connector host; it needs HTTPS 443 to your Falcon cloud region. 3) Register the connector host here; the SIEM then shows the settings for the connector. The Falcon client secret stays on the connector host - it is never entered here.',[
+       {k:'id',label:'Source id',placeholder:'cs-falcon',required:true,hint:'lower-case letters, digits and - ; it starts with cs-'},
+       {k:'label',label:'Label',placeholder:'CrowdStrike Falcon'},
+       {k:'match_ip',label:'Connector host IP',placeholder:'the IP of the Linux host running the Falcon SIEM Connector',required:true,hint:'the fixed IP the syslog comes from (the platform server itself, if the connector runs here)'},
+       {k:'site',label:'Site (optional)',placeholder:'hq'}
+     ],function(v){var id=v.id;if(id.indexOf('cs-')!==0)id='cs-'+id;
+       var body={id:id,kind:'crowdstrike-falcon',match_ip:v.match_ip,label:v.label||'CrowdStrike Falcon',site:v.site||undefined};
+       return req(self.api,'POST','/onboard/sources',body).then(function(r){var sv=r.siem||{},host=(sv.ip||sv.host||'the SIEM server'),port=(sv.syslog_port||5514);
+         setTimeout(function(){alert('CrowdStrike Falcon source '+id+' registered.\n\nOn the connector host, set these keys in /opt/crowdstrike/etc/cs.falconhoseclient.cfg:\n  client_id = <API client id>\n  client_secret = <API client secret>\n  output_format = cef\n  send_to_syslog_server = true\n  host = '+(v.match_ip===host?'127.0.0.1':host)+'\n  port = '+port+'\n  protocol = tcp\n\nthen: sudo systemctl restart cs.falconhoseclientd\n\nThe firewall must allow TCP '+port+' from '+v.match_ip+' to '+host+', and HTTPS 443 from the connector host to the Falcon cloud. Events appear within minutes of the first detection or console action.');},50);
+         return 'Registered - now configure the Falcon SIEM Connector';});});},
+     test:function(id){return req(this.api,'POST','/onboard/sources/'+encodeURIComponent(id)+'/test').then(function(r){return r.state==='receiving'?('Receiving - '+(r.events_24h||0)+' Falcon events in 24 h'):('Not receiving yet ('+r.state+') - check the connector service, its outbound HTTPS to Falcon, and the firewall to the SIEM');});},
+     sync:function(id){return this.test(id);},
+     del:function(id){return req(this.api,'DELETE','/onboard/sources/'+encodeURIComponent(id)).then(function(){return 'Removed';});} },
+
+   { id:'hyperv', icon:'server-2',tone:'blue', name:'Microsoft Hyper-V hosts', group:'Servers & capacity', api:'/api/itam', detail:'virtualization.html', svc:'sentra-itam', fix:'sudo bash "$(ls -td ~/sentra-update-*/ | head -n1)sentra-itam/install/add-virt.sh"',
+     // Hyper-V hosts REPORT their VMs (read-only Get-VM / Get-VMNetworkAdapter on the host, posted with an agent key); the platform never logs in to them.
+     // A row is a host that has reported; a report older than 2 days is shown as stale.
+     load:function(){return req(this.api,'GET','/discovery/hyperv/hosts').then(function(d){HV_SCOPES=d.scopes||[];return (d.hosts||[]).map(function(h){var at=Date.parse(h.at)||0,stale=Date.now()-at>2*86400000;
+       return {id:h.id,name:h.host,info:(h.ip||'')+(h.site?' · '+h.site:'')+' · '+(h.vms||0)+' VMs · '+(h.via==='agent'?'reported by the host':'imported by '+(h.by||'an administrator')),cred:'n/a',last:{at:at,errors:[]},stale:stale,staleWhy:stale?'last report '+ago(at)+' - check the scheduled task on the host':''};});});},
+     add:function(){hvGuide(this);},
+     test:function(){return req(this.api,'GET','/discovery/hyperv/hosts').then(function(d){return (d.hosts||[]).length+' Hyper-V host(s) have reported'+((d.scopes||[]).length?'':' - no active scope accepts Hyper-V reports yet: create one in Asset Discovery');});},
+     sync:function(id){return this.test(id);},
+     del:function(id){return req(this.api,'POST','/discovery/hyperv/hosts/'+encodeURIComponent(id)+'/forget').then(function(){return 'Forgotten - the host reappears at its next report';});} },
 
    { id:'virt', icon:'server-2',tone:'blue', name:'Virtualization (vCenter / ESXi / Nutanix)', group:'Servers & capacity', api:'/api/itam', detail:'ai-virt-admin.html', svc:'sentra-itam', fix:'sudo bash "$(ls -td ~/sentra-update-*/ | head -n1)sentra-itam/install/add-virt.sh"',
      load:function(){return req(this.api,'GET','/virt').then(function(d){return (d.platforms||[]).map(function(p){
@@ -615,6 +663,8 @@
    { id:'storage', icon:'server-cog',tone:'teal', name:'Storage arrays (NetApp, HPE MSA, Synology …)', group:'Storage & backup', api:'/api/itam', detail:'storage.html', svc:'sentra-itam', setup:'storage.html', setupLabel:'Set up on Storage',
      load:function(){return req(this.api,'GET','/storage').then(function(d){return (d.platforms||[]).map(platRow);});} }
   ];
+  // a connection whose page the organisation's sector switches off (brand setting: pages_off) is not offered here either
+  (function(){var off=(window.ZYB_ORG&&window.ZYB_ORG.pages_off)||[];CONN=CONN.filter(function(c){return !c.detail||off.indexOf(c.detail.replace(/\.html$/,''))<0;});})();
 
   // a platform record (backup, storage) as a row: the latest of its test and sync; stale after three missed collection intervals
   function platRow(p){var y=p.last_sync,ya=y?Date.parse(y.at):0,t=p.last_test,ta=t?Date.parse(t.at):0,every=(p.interval_min||60)*60000,stale=!!(y&&y.ok&&Date.now()-ya>3*every);

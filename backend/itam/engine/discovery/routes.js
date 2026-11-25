@@ -54,6 +54,8 @@ function registerDiscoveryRoutes(srv, app) {
   srv.route('POST', `${P}/results/:id/merge`, (ctx) => { admin(ctx); return D.merge(ctx.params.id, ctx.body.asset_id, ctx.who); });
 
   // Hyper-V report upload (admin) — the agent route is below
+  srv.route('GET', `${P}/hyperv/hosts`, (ctx) => void ctx.need('viewer') || D.hypervHosts());
+  srv.route('POST', `${P}/hyperv/hosts/:host/forget`, (ctx) => { admin(ctx); return D.forgetHypervHost(ctx.params.host, ctx.who); });
   srv.route('POST', `${P}/hyperv/import`, (ctx) => { admin(ctx); return D.ingestHyperv(ctx.body.report || ctx.body, ctx.who, { scope_id: ctx.body.scope_id }); }, { maxBody: 4 * 1024 * 1024 });
 
   // SIEM log-coverage confirmation (read: everyone) — are discovered/approved assets actually sending logs?

@@ -432,6 +432,18 @@ test('cancel a run; scheduler starts due scopes; window blocks active methods; H
   assert.deepEqual([vm.type, vm.vendor, vm.methods_seen], ['vm', 'Microsoft (Hyper-V)', ['hyperv']]);
   assert.equal(vm.seen_count, 2);
   assert.equal((await e.adm('POST', '/discovery/hyperv/import', { report: Object.assign({}, report, { host: { name: 'X', ip: '10.250.0.1' } }) })).status, 409, 'no scope covers that host');
+  // the hosts that reported (Integration Hub): every role reads; the last report wins; only an admin forgets a host, audited
+  const hv = await e.view('GET', '/discovery/hyperv/hosts');
+  assert.equal(hv.status, 200); assert.deepEqual(hv.json.hosts.map((h) => [h.host, h.vms, h.via, h.scope_id]), [['TEST-HV01', 1, 'agent', hvScope.id]]);
+  assert.ok(hv.json.scopes.some((s) => s.id === hvScope.id), 'the scopes that accept Hyper-V reports are listed');
+  assert.ok(!JSON.stringify(hv.json).includes(enr.agent_key), 'no agent key in the list');
+  for (const who of [e.op, e.view]) assert.equal((await who('POST', '/discovery/hyperv/hosts/test-hv01/forget', {})).status, 403);
+  assert.equal((await e.adm('POST', '/discovery/hyperv/hosts/no-such-host/forget', {})).status, 404);
+  assert.equal((await e.adm('POST', '/discovery/hyperv/hosts/' + encodeURIComponent('bad host!') + '/forget', {})).status, 400);
+  assert.equal((await e.adm('POST', '/discovery/hyperv/hosts/test-hv01/forget', {})).status, 200);
+  assert.deepEqual((await e.view('GET', '/discovery/hyperv/hosts')).json.hosts, []);
+  const fa = (await e.adm('GET', '/discovery/audit')).json.audit.find((a) => a.action === 'discovery.hyperv.forget');
+  assert.ok(fa && fa.target === 'TEST-HV01' && fa.by, 'forgetting a host is audited with who');
 });
 
 test('passive AD + global method toggle + public-range flag through the API', async (t) => {

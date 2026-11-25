@@ -49,6 +49,7 @@ function createDiscovery({ config, store, audit, log, assets, ingest, findings, 
   const scopesCol = store.collection('disc_scopes');
   const runsCol = store.collection('disc_runs');
   const setCol = store.collection('disc_settings');
+  const hvHostsCol = store.collection('disc_hyperv_hosts');   // one row per Hyper-V host that reported: when, how, how many VMs
   const active = new Map(); // run id → {run, cancelled, promise}
   const sites = Array.isArray(dc.sites) && dc.sites.length ? dc.sites : ['Riyadh HQ', 'Jeddah DR', 'Riyadh Olaya', 'Alkhobar'];
 
@@ -438,8 +439,20 @@ function createDiscovery({ config, store, audit, log, assets, ingest, findings, 
     devices.observe({ method: 'hyperv', untrusted, ip: rep.host.ip, hostname: rep.host.name, fqdn: rep.host.fqdn, os: rep.host.os, uid: `hyperv-host:${rep.host.name.toLowerCase()}`, extra: { hyperv: { kind: 'host' } } }, ctx);
     let n = 0;
     for (const v of rep.vms) { if (devices.observe({ method: 'hyperv', untrusted, ips: v.ips, macs: v.macs, hostname: v.name, os: v.os, uid: v.id ? `hyperv:${v.id.toLowerCase()}` : `hyperv:${rep.host.name.toLowerCase()}/${(v.name || '').toLowerCase()}`, extra: { hyperv: { kind: 'vm', host: rep.host.name, state: v.state, generation: v.generation } } }, ctx)) n++; }
+    hvHostsCol.put({ id: rep.host.name.toLowerCase(), host: rep.host.name, fqdn: rep.host.fqdn, ip: rep.host.ip, os: rep.host.os, scope_id: scope.id, site: scope.site || null,
+      vms: n, via: untrusted ? 'agent' : 'import', by: who.user, at: new Date().toISOString(), collected_at: rep.collected_at || null });
     A(who, 'discovery.hyperv.report', rep.host.name, { scope_id: scope.id, vms: n, untrusted });
     return { ok: true, scope_id: scope.id, host: rep.host.name, vms: n };
+  }
+
+  // the Hyper-V hosts that have reported (Integration Hub): newest first; no credentials are involved
+  function hypervHosts() { return { hosts: hvHostsCol.all().sort((a, b) => String(b.at).localeCompare(String(a.at))), scopes: scopesCol.all((s) => s.status === 'active' && s.methods.hyperv && s.methods.hyperv.enabled).map((s) => ({ id: s.id, name: s.name, site: s.site, targets: s.targets })) }; }
+  function forgetHypervHost(id, who) {
+    const k = String(id || '').toLowerCase();
+    if (!/^[a-z0-9][a-z0-9._-]{0,119}$/.test(k)) throw bad('host must be a Hyper-V host name', 400);
+    const row = hvHostsCol.get(k); if (!row) throw bad('no Hyper-V host ' + k + ' has reported', 404);
+    hvHostsCol.remove(k); A(who, 'discovery.hyperv.forget', row.host, { scope_id: row.scope_id });
+    return { ok: true, host: row.host };
   }
 
   // ---------------- SIEM connect ----------------
@@ -616,7 +629,7 @@ function createDiscovery({ config, store, audit, log, assets, ingest, findings, 
     listRuns, getRun, startRun, cancelRun, wait,
     credentials: () => vault.list(), credential: (id) => vault.get(id), createCredential, updateCredential, deleteCredential, testCredential,
     results, result, approve, ignore, restore, merge, bulkResults, rogueDevices,
-    ingestHyperv, connect, connections, connectCandidates, logCoverage, health: (now) => siem.health(now),
+    ingestHyperv, hypervHosts, forgetHypervHost, connect, connections, connectCandidates, logCoverage, health: (now) => siem.health(now),
     dashboard, tick, start, stop, auditTail,
     kinds: () => ({ table: KIND_TABLE.map((r) => ({ when: r.when, kind: r.kind })), connectable: CONNECTABLE }),
     credentialKinds: () => Object.entries(vault.KINDS).map(([k, v]) => ({ kind: k, secret_fields: Object.keys(v.secret), target_fields: Object.keys(v.target), future: !!v.future })),
