@@ -4,7 +4,7 @@ RoPA campaign (engine/pdpl-ropa.js commits what these decide).
 
 How a consultant builds a RoPA, automated: the DPO opens a campaign; each department's data steward describes the
 department's processing activities in a guided questionnaire, starting from
-  - TEMPLATES: the processing an insurer's department typically runs (a starting point - every field is confirmed or
+  - TEMPLATES: the processing a department typically runs - an insurer's or an operations & maintenance company's, by sector (a starting point - every field is confirmed or
     changed by the steward; a template is never a record), and
   - EVIDENCE: the systems the Data Catalog found holding personal data that the asset register gives to the department,
     and the categories found in them,
@@ -20,6 +20,7 @@ triggers, transfers, retention, recipients, and what the systems hold but the ac
 """
 from datetime import datetime, timezone
 from org_brand import fill as _org_fill
+from org_brand import ORG as _ORG
 
 DAY = 86400000
 # PDPL Art. 1 sensitive data. Credit data is NOT sensitive: it is its own class (Art. 24, IR Arts. 11 / 27) - explicit consent,
@@ -58,7 +59,7 @@ def A(key, name, purpose, basis, cats, subjects, recipients='', flags=(), hint='
 # Typical processing at a Saudi insurer, per department. Suggestions to start from, never records: the steward confirms or
 # changes every field, and the legal basis in particular is the DPO's call (sensitive and credit data need explicit consent
 # or another basis the law gives; legitimate interest never covers sensitive data).
-TEMPLATES = [
+TEMPLATES_INSURER = [
     ('underwriting', 'Underwriting', ['underwriting', 'motor', 'medical underwriting', 'pricing'], [
         A('uw_quote', 'Quotation and policy issuance', 'Assess the risk, price and issue the policy', 'contract', ['identity', 'contact', 'financial'], 'Applicants, policyholders, insured persons, drivers', 'Brokers / agents, reinsurers, Najm / Elm where used'),
         A('uw_medical', 'Medical underwriting', 'Assess health risk for medical / life cover', 'explicit_consent', ['identity', 'contact', 'health'], 'Applicants and insured members', 'Medical reviewers, reinsurers', ['automated_underwriting'], 'Health data: explicit consent or another basis the law gives; DPIA required.'),
@@ -102,6 +103,61 @@ TEMPLATES = [
         A('fa_cctv', 'CCTV', 'Protect premises and people', 'legitimate_interest', ['biometric', 'location'], 'Employees, visitors', 'Security provider', ('large_scale_monitoring',), 'CCTV is continuous monitoring: impact assessment; legitimate interest cannot cover biometric identification.'),
         A('fa_visitors', 'Visitor management', 'Register visitors to the premises', 'legitimate_interest', ['identity', 'contact'], 'Visitors', '')]),
 ]
+# Typical processing at an operations & maintenance company of a group (project sites, workforce, fleet, services run for the
+# group companies). Suggestions to start from, never records: the steward confirms or changes every field; the legal basis is the
+# DPO's call. Where the company processes FOR a group company (shared services), the group company is the controller and the
+# activity is recorded with that controller and a data processing agreement (PDPL Art. 8).
+TEMPLATES_OM = [
+    ('hr', 'Human Resources', ['hr', 'human resources', 'people', 'personnel'], [
+        A('hr_recruit', 'Recruitment', 'Select candidates for site and office roles', 'contract', ['identity', 'contact', 'employment'], 'Candidates', 'Recruitment agencies'),
+        A('hr_payroll', 'Payroll, GOSI and WPS', 'Pay salaries and allowances, register with GOSI, file the wage protection system', 'legal_obligation', ['identity', 'financial', 'employment'], 'Employees', 'Bank, GOSI, Mudad / Qiwa'),
+        A('hr_iqama', 'Iqama, visas and travel', 'Obtain and renew residence permits and visas, book travel', 'legal_obligation', ['identity', 'contact', 'parentage'], 'Expatriate employees and dependants', 'Muqeem / Jawazat, travel agency'),
+        A('hr_medical', 'Employee medical insurance and sick leave', 'Provide cover and manage sick leave', 'contract', ['identity', 'health', 'employment'], 'Employees and dependants', 'Insurer / TPA', (), 'Health data: tiered access.'),
+        A('hr_training', 'Training and certifications', 'Keep the competence and certificates site work needs', 'contract', ['identity', 'employment'], 'Employees, subcontractor staff', 'Training providers, clients asking for proof')]),
+    ('operations', 'Operations and Maintenance', ['operations', 'maintenance', 'o&m', 'service delivery', 'facility management'], [
+        A('om_workorders', 'Work orders and service records', 'Plan, dispatch and record maintenance work at client sites', 'contract', ['identity', 'contact', 'location', 'employment'], 'Technicians, client site contacts, occupants who report faults', 'Clients (service reports), CMMS provider'),
+        A('om_helpdesk', 'Service requests and complaints', 'Receive and resolve fault reports and complaints from sites', 'contract', ['identity', 'contact'], 'Occupants, tenants, client staff', 'Clients')]),
+    ('projects', 'Projects and Site Workforce', ['projects', 'sites', 'project sites', 'construction'], [
+        A('pj_attendance', 'Site attendance and time-keeping', 'Record who works on which site and for how long', 'contract', ['identity', 'biometric', 'location', 'employment'], 'Employees, subcontractor workers', 'Clients (manpower reports)', ('large_scale_monitoring',), 'Fingerprint or face attendance is biometric: explicit consent or another basis the law gives, and an impact assessment; offer a non-biometric option.'),
+        A('pj_subcontractor', 'Subcontractor workforce lists', 'Receive and check the workers subcontractors send to sites', 'contract', ['identity', 'employment'], 'Subcontractor workers', 'Clients, site security')]),
+    ('hse', 'Health, Safety and Environment', ['hse', 'safety', 'health and safety', 'qhse'], [
+        A('hse_incidents', 'Incident and injury reports', 'Investigate and report incidents and injuries', 'legal_obligation', ['identity', 'health', 'employment'], 'Employees, subcontractor workers, visitors', 'GOSI (occupational injury), clients, insurer', (), 'Injury details are health data: tiered access.'),
+        A('hse_fitness', 'Fitness-for-work and medical checks', 'Confirm workers are fit for high-risk work', 'legal_obligation', ['identity', 'health', 'employment'], 'Employees, subcontractor workers', 'Occupational health clinic', (), 'Keep only the fit / not-fit result outside the clinic.')]),
+    ('fleet', 'Fleet and Transport', ['fleet', 'transport', 'vehicles', 'logistics'], [
+        A('fl_tracking', 'Vehicle tracking and driver behaviour', 'Locate vehicles, plan routes and keep drivers safe', 'legitimate_interest', ['identity', 'location', 'employment'], 'Drivers', 'Telematics provider', ('telematics', 'profiling'), 'Tracking and driver scoring need an impact assessment and a written legitimate-interest assessment; no tracking off duty.'),
+        A('fl_licences', 'Driving licences and traffic violations', 'Check licences and settle violations', 'legal_obligation', ['identity', 'employment'], 'Drivers', 'Muroor / Absher, leasing company')]),
+    ('site_security', 'Site Security and Access Control', ['security', 'site security', 'access control', 'physical security'], [
+        A('ss_access', 'Site access badges and gate logs', 'Control who enters sites and offices', 'legitimate_interest', ['identity', 'biometric', 'location'], 'Employees, contractors, visitors', 'Clients (site owners), security provider', ('large_scale_monitoring',), 'Biometric gates need explicit consent or another basis the law gives; legitimate interest cannot cover biometric data.'),
+        A('ss_cctv', 'CCTV at sites and offices', 'Protect people and property', 'legitimate_interest', ['identity', 'location'], 'Employees, visitors, the public near sites', 'Security provider, police on request', ('large_scale_monitoring',), 'CCTV is continuous monitoring: impact assessment, signs, short retention.')]),
+    ('group_services', 'Services for Group Companies', ['group services', 'shared services', 'group', 'group companies'], [
+        A('gs_shared', 'Shared services run for a group company', 'Run HR, payroll, IT or maintenance for a group company under its instructions', 'contract', ['identity', 'contact', 'financial', 'employment'], 'The group company\'s employees and customers', 'The group company (controller)', (), 'Here the group company is the controller and this company the processor: record the controller and keep a data processing agreement.')]),
+    ('procurement', 'Procurement', ['procurement', 'purchasing', 'vendors', 'contracts'], [
+        A('pr_vendors', 'Vendor and subcontractor management', 'Select, contract and pay suppliers and subcontractors', 'contract', ['identity', 'contact', 'financial'], 'Supplier and subcontractor contacts', 'Finance')]),
+    ('finance', 'Finance', ['finance', 'accounts', 'treasury'], [
+        A('fi_payments', 'Payments and expense claims', 'Pay suppliers and staff expense claims', 'contract', ['identity', 'financial'], 'Employees, suppliers', 'Banks'),
+        A('fi_einvoice', 'E-invoicing', 'Issue and file e-invoices', 'legal_obligation', ['identity', 'financial'], 'Clients and suppliers (contacts)', 'ZATCA')]),
+    ('it', 'IT and Information Security', ['it', 'information technology', 'security operations', 'cyber security', 'infosec'], [
+        A('it_accounts', 'User accounts and access management', 'Give and remove system access', 'contract', ['identity', 'employment'], 'Employees, contractors', 'Directory / cloud providers (Microsoft 365)'),
+        A('it_logs', 'Security monitoring and logs (SIEM)', 'Detect and investigate security incidents', 'legal_obligation', ['identity', 'location'], 'Employees, contractors, users of online services', 'SOC provider', ('large_scale_monitoring',), 'Continuous monitoring needs an impact assessment; the NCA ECC requires it.')]),
+    ('legal', 'Legal and Compliance', ['legal', 'compliance', 'regulatory'], [
+        A('lg_cases', 'Legal cases and labour disputes', 'Defend and pursue legal claims', 'legal_obligation', ['identity', 'contact', 'financial', 'employment'], 'Employees, counterparties, witnesses', 'Lawyers, courts, labour offices'),
+        A('lg_regulator', 'Regulatory reporting', 'Report to the authorities that apply', 'legal_obligation', ['identity', 'financial'], 'Employees', 'Regulators')]),
+]
+_SECTOR = str((_ORG or {}).get('sector') or '').lower()
+
+
+def _pick(sector):
+    return TEMPLATES_INSURER if str(sector or '').lower() in ('insurer', 'insurance') else TEMPLATES_OM
+
+
+TEMPLATES = _pick(_SECTOR)
+
+
+def _use(req):
+    """the template set for this request: req.sector (the platform setting) or the brand's sector"""
+    global TEMPLATES, TPL
+    TEMPLATES = _pick((req or {}).get('sector') or _SECTOR)
+    TPL = {d[0]: d for d in TEMPLATES}
 TPL = {d[0]: d for d in TEMPLATES}
 
 
@@ -114,8 +170,9 @@ def dept_key(name):
 
 
 def templates(req):
+    _use(req)
     return {'departments': [{'key': k, 'name': label, 'aliases': aliases, 'activities': acts} for k, label, aliases, acts in TEMPLATES],
-            'note': 'Templates are the processing a department of an insurer typically runs - a starting point only. Every field is confirmed or changed by the department; a template never becomes a record by itself.'}
+            'note': 'Templates are the processing a department of ' + ('an insurer' if TEMPLATES is TEMPLATES_INSURER else 'an operations and maintenance company') + ' typically runs - a starting point only. Every field is confirmed or changed by the department; a template never becomes a record by itself.'}
 
 
 def check(d, records, scans_by_system):
@@ -186,6 +243,7 @@ def _sys_by_dept(scans, assets):
 def assist_context(req):
     """what the RoPA assistant may show the model for one activity: the steward's fields, the checks, the department's
     template activities and the systems the Data Catalog found in the department - nothing from other departments"""
+    _use(req)
     d, dept = req.get('draft') or {}, req.get('department') or ''
     scans, assets = req.get('scans') or [], req.get('assets') or []
     k = dept_key(dept)
@@ -200,6 +258,7 @@ def assist_context(req):
 
 
 def campaign_view(req):
+    _use(req)
     c, drafts, recs, now = req.get('campaign') or {}, req.get('drafts') or [], req.get('records') or [], req.get('now') or 0
     scans, assets = req.get('scans') or [], req.get('assets') or []
     sbs = _scans_by_system(scans)

@@ -2,7 +2,7 @@
 'use strict';
 /*
  * RoPA by department (PDPL Implementing Regulation Art. 33): the campaign a consultant runs to build the register,
- * automated. The rules are Python (pyengine/pdpl_ropa.py): templates per insurer department, the checks on every draft,
+ * automated. The rules are Python (pyengine/pdpl_ropa.py): templates per department (insurer or operations & maintenance, by sector), the checks on every draft,
  * suggestions from the Data Catalog and the asset register, progress and duty findings, the approval plan, the export.
  *
  *   The DPO opens a campaign {name, due, departments[]}; each department's data steward (Programme page) describes its
@@ -131,7 +131,8 @@ function createRopa(app, PD, opts) {
   function deptOf(c, name) { const k = Object.keys(c.departments || {}).find((d) => low(d) === low(name)); if (!k) throw httpErr(404, name + ' is not in campaign ' + c.id); return k; }
   const openCamp = (c) => { if (c.status !== 'open') throw httpErr(409, c.id + ' is closed'); };
 
-  const templates = () => rules('pdpl.ropa_templates', {});
+  const sector = () => (app.config && app.config.pdpl && app.config.pdpl.ropa_sector) || '';   // empty: the brand's sector decides (pyengine/pdpl_ropa.py)
+  const templates = () => rules('pdpl.ropa_templates', { sector: sector() });
   function list(who) {
     const mine = isOp(who) ? null : stewardsMine(who);
     return { campaigns: camps().all().sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).map((c) => ({ id: c.id, name: c.name, due: c.due, status: c.status, created_at: c.created_at,
@@ -142,7 +143,7 @@ function createRopa(app, PD, opts) {
     const c = camp(id), mine = isOp(who) ? null : stewardsMine(who);
     let assets = []; try { assets = store.collection('assets').all((a) => a.status !== 'disposed').map((a) => ({ name: a.name, hostname: a.hostname, mgmt_ip: a.mgmt_ip, department: a.department })); } catch (e) { assets = []; }
     const scans = store.collection('pdpl_discovery').all((x) => x.id !== '_last');
-    const r = await rules('pdpl.ropa_campaign_view', { campaign: c, drafts: drafts().all((d) => d.campaign === id), records: PD.records(), scans, assets, now: now() });
+    const r = await rules('pdpl.ropa_campaign_view', { sector: sector(), campaign: c, drafts: drafts().all((d) => d.campaign === id), records: PD.records(), scans, assets, now: now() });
     if (mine) r.departments = r.departments.filter((d) => mine.includes(low(d.department)));
     r.can_manage = isOp(who); r.me = who.user;
     return r;
@@ -257,7 +258,7 @@ function createRopa(app, PD, opts) {
     let scans = [], assets = [];
     try { assets = store.collection('assets').all((a) => a.status !== 'disposed').map((a) => ({ name: a.name, hostname: a.hostname, mgmt_ip: a.mgmt_ip, department: a.department })); } catch (e) { assets = []; /* no asset register yet: the assistant works without department systems */ }
     scans = store.collection('pdpl_discovery').all((x) => x.id !== '_last');
-    const ctxR = await rules('pdpl.ropa_assist_context', { draft, department: dept, records: PD.records('ropa'), scans, assets });
+    const ctxR = await rules('pdpl.ropa_assist_context', { sector: sector(), draft, department: dept, records: PD.records('ropa'), scans, assets });
     const known = ctxR.known_systems || [];
     const prompt = [
       'DEPARTMENT: ' + dept,

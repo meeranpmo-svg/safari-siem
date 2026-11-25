@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PDPL Group Companies</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css">
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- PDPL across the group over /api/itam/pdpl/group: the group companies this organisation processes personal data for (it is their
+     processor), the data processing agreement with each (terms, expiry, the DPO's acceptance by a different person), the RoPA activities
+     run for each, and breach notices to each company within the agreed hours. Operators and the DPO only: it names people (PDPL). -->
+<style>
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.mut{color:#8b93a4}.sm{font-size:12px}.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:6px 0}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+.co{border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;margin:8px 0}.co.attention{border-color:#e5484d}.co.watch{border-color:#f59f00}.co.ok{border-color:#2fb344}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Data privacy · PDPL · group</div><h1>PDPL Group Companies</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden><div class="k" id="kp"></div><div class="card" id="x-co"></div><div class="grid2"><div class="card" id="x-add"></div><div class="card" id="x-br"></div></div></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000); }
+  function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function load() { req('GET', '/pdpl/group').then(function (v) { V = v; $('err').innerHTML = ''; $('main').hidden = false; $('up').textContent = 'DPO: ' + (v.dpo || 'not named'); draw(); })
+    .catch(function (e) { $('main').hidden = true; $('err').innerHTML = '<div class="card"><div class="empty">' + esc(e.status === 404 ? 'PDPL Group Companies is not on this platform yet - run the platform update.' : e.status === 403 ? 'This page names people (PDPL): an operator, the DPO or an administrator opens it.' : 'Could not load: ' + e.message) + '</div></div>'; }); }
+  function draw() {
+    var v = V, k = v.kpis, mg = v.can_manage, T = v.terms;
+    $('kp').innerHTML = tile('Group companies', k.companies, k.ok + ' in order', '') + tile('No agreement', k.no_agreement, 'processing without a DPA', k.no_agreement ? 'bad' : 'ok') + tile('Need attention', k.attention, '', k.attention ? 'bad' : 'ok') + tile('Breach notices open', k.open_notices, 'company not yet told', k.open_notices ? 'warn' : 'ok');
+    $('x-co').innerHTML = '<h2>🏢 Group companies <span class="c">' + esc(v.org) + ' processes their data as their processor</span></h2>' + (v.companies.length ? v.companies.map(function (c) {
+      var d = c.dpa;
+      return '<div class="co ' + esc(c.status === 'no agreement' ? 'attention' : c.status) + '"><b>' + esc(c.name) + '</b> ' + pill(c.status, c.status === 'ok' ? 'ok' : c.status === 'watch' ? 'warn' : 'bad') + ' <span class="mut sm">' + esc([c.cr_no ? 'CR ' + c.cr_no : '', c.services.join(', '), c.contact ? 'contact ' + c.contact : ''].filter(Boolean).join(' · ')) + '</span>'
+        + '<div class="sm">' + (d ? 'Agreement <b>' + esc(d.ref) + '</b> signed ' + esc(d.signed) + (d.expires ? ' · expires ' + esc(d.expires) : '') + ' · breach notice within ' + esc(d.breach_hours) + ' h · ' + esc((d.terms || []).length) + ' of ' + esc(Object.keys(T).length) + ' terms' + (d.accepted_by ? ' · accepted by ' + esc(d.accepted_by) : ' · <b>not accepted</b>') : 'No data processing agreement') + ' · ' + esc((c.activities || []).length) + ' RoPA activit' + ((c.activities || []).length === 1 ? 'y' : 'ies') + '</div>'
+        + (c.findings.length ? '<ul class="sm">' + c.findings.map(function (f) { return '<li>' + pill(f.severity, f.severity === 'high' ? 'bad' : f.severity === 'medium' ? 'warn' : '') + ' ' + esc(f.text) + '</li>'; }).join('') + '</ul>' : '')
+        + (mg ? '<div><button type="button" class="btn" data-dpa="' + esc(c.id) + '">' + (d ? 'Update agreement' : 'Record agreement') + '</button>' + (d && !d.accepted_by ? ' <button type="button" class="btn" data-acc="' + esc(c.id) + '">Accept agreement</button>' : '') + ' <button type="button" class="btn" data-act="' + esc(c.id) + '">Link RoPA activities</button></div>' : '') + '</div>';
+    }).join('') : '<div class="empty">No group company recorded yet. The DPO adds each group company this organisation processes personal data for.</div>');
+    $('x-add').innerHTML = mg ? '<h2>➕ Add a group company</h2><div class="frm"><label>Name<input id="g-n"></label><label>Commercial registration<input id="g-cr" inputmode="numeric"></label><label>Privacy contact (user or name)<input id="g-c"></label><label>Contact e-mail<input id="g-e" type="email"></label></div><div class="sm">' + v.services.map(function (x) { return '<label style="display:inline-flex;gap:4px;margin-right:10px"><input type="checkbox" data-gs="' + esc(x) + '">' + esc(x) + '</label>'; }).join('') + '</div><p><button type="button" id="g-add">Add</button></p>'
+      + '<h3>Terms the DPO checks in each agreement</h3><ul class="sm">' + Object.keys(T).map(function (x) { return '<li>' + esc(T[x]) + '</li>'; }).join('') + '</ul>' : '<h2>Group companies</h2><p class="mut sm">The DPO (' + esc(v.dpo || 'not named') + ') or an administrator records the companies and agreements.</p>';
+    $('x-br').innerHTML = '<h2>🚨 Breach notices to group companies</h2>' + (v.notices.length ? v.notices.map(function (n) { var co = v.companies.filter(function (c) { return c.id === n.company; })[0];
+      return '<div class="sm" style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)"><b>' + esc(n.incident_ref) + '</b> · ' + esc(co ? co.name : n.company) + ' · detected ' + esc(n.detected) + ' ' + (n.notified_at ? pill((n.late ? 'told late, ' : 'told, ') + n.hours + ' h', n.late ? 'bad' : 'ok') : pill('not yet told', 'warn')) + '<div class="mut">' + esc(n.summary) + '</div>' + (!n.notified_at ? '<button type="button" class="btn" data-told="' + esc(n.id) + '">Record that the company was told</button>' : '') + '</div>'; }).join('') : '<div class="empty">No breach notice recorded.</div>')
+      + (v.companies.length ? '<h3>Record an incident touching a group company\'s data</h3><div class="frm"><label>Company<select id="b-c">' + v.companies.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>'; }).join('') + '</select></label><label>Incident reference<input id="b-r"></label><label>Detected<input id="b-d" type="datetime-local"></label></div><label class="sm mut" style="display:block">What happened<textarea id="b-s" rows="2" style="width:100%"></textarea></label><p><button type="button" id="b-add">Record</button></p>' : '');
+  }
+  function did(p) { return p.then(function () { toast('Saved'); load(); }).catch(function (e) { toast('Not saved: ' + e.message); }); }
+  function val(id) { var e = $(id); return e ? e.value.trim() : ''; }
+  function opt(o) { Object.keys(o).forEach(function (k) { if (o[k] === '' || o[k] == null) delete o[k]; }); return o; }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target, a;
+    if (t.id === 'rf') return load();
+    if (t.id === 'g-add') return did(req('POST', '/pdpl/group/companies', opt({ name: val('g-n'), cr_no: val('g-cr'), contact: val('g-c'), contact_email: val('g-e'), services: [].map.call(document.querySelectorAll('[data-gs]:checked'), function (x) { return x.getAttribute('data-gs'); }) })));
+    if (t.id === 'b-add') return did(req('POST', '/pdpl/group/notices', { company: val('b-c'), incident_ref: val('b-r'), detected: val('b-d').slice(0, 16), summary: val('b-s') }));
+    if ((a = t.closest('[data-dpa]'))) { var ref = prompt('Agreement reference'); if (!ref) return; var sg = prompt('Signed on (YYYY-MM-DD)'); if (!sg) return; var ex = prompt('Expires on (YYYY-MM-DD, empty if open-ended)') || ''; var hrs = prompt('Breach notice within how many hours?', '72'); if (!hrs) return;
+      var keys = Object.keys(V.terms), terms = keys.filter(function (k) { return confirm('Does the agreement cover: ' + V.terms[k] + '?'); });
+      did(req('POST', '/pdpl/group/companies/' + encodeURIComponent(a.getAttribute('data-dpa')) + '/dpa', opt({ ref: ref, signed: sg, expires: ex, breach_hours: Number(hrs), terms: terms }))); return; }
+    if ((a = t.closest('[data-acc]'))) { if (confirm('Accept this agreement as the DPO?')) did(req('POST', '/pdpl/group/companies/' + encodeURIComponent(a.getAttribute('data-acc')) + '/dpa/accept', {})); return; }
+    if ((a = t.closest('[data-act]'))) { var ids = prompt('RoPA activity ids run for this company, comma-separated'); if (!ids) return; did(req('POST', '/pdpl/group/companies/' + encodeURIComponent(a.getAttribute('data-act')) + '/activities', { ropa_ids: ids.split(',').map(function (x) { return x.trim(); }).filter(Boolean) })); return; }
+    if ((a = t.closest('[data-told]'))) { var at = prompt('Told on (YYYY-MM-DDTHH:MM)', new Date().toISOString().slice(0, 16)); if (!at) return; var how = prompt('How (e-mail to whom, letter, call)?'); if (!how) return; did(req('POST', '/pdpl/group/notices/' + encodeURIComponent(a.getAttribute('data-told')) + '/notified', { notified_at: at, how: how })); }
+  });
+  load();
+})();
+</script></body></html>

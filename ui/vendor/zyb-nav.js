@@ -5813,6 +5813,7 @@ window.ZYB_NAV = [
   "hd": "privacy",
   "icon": "<path d=\"M12 3l8 4v5c0 5-3.5 8-8 9c-4.5-1-8-4-8-9V7z\"/><rect x=\"9\" y=\"11\" width=\"6\" height=\"5\" rx=\"1\"/><path d=\"M10 11V9a2 2 0 0 1 4 0v2\"/>",
   "pages": [
+   {"h": "pdpl-group.html", "s": "Group Companies", "t": "PDPL Group Companies - the group companies whose data this organisation processes, their agreements and breach notices", "d": "Each group company this organisation processes personal data for: the data processing agreement (terms, expiry, acceptance by the DPO, four-eyes), the RoPA activities run for it, and breach notices to it within the agreed hours", "fw": {"pdpl": ["8", "20"]}, "k": ["pdpl", "group", "processor", "controller", "dpa", "data processing agreement", "breach", "subsidiary"]},
    {
     "h": "pdpl-roadmap.html",
     "s": "PDPL Implementation Roadmap",

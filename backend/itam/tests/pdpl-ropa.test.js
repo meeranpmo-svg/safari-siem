@@ -16,8 +16,9 @@ let clock = Date.parse('2026-10-20T08:00:00Z');
 const now = () => clock;
 const OP = { user: 'nora.syn', role: 'operator' }, ADM = { user: 'syed', role: 'admin' }, DPO = { user: 'huda.syn', role: 'operator' };
 const CLAIMS = { user: 'faisal.syn', role: 'viewer' }, HR = { user: 'reem.syn', role: 'viewer' }, NOBODY = { user: 'x.syn', role: 'viewer' };
-async function setup(t) {
+async function setup(t, sector = 'insurer') {
   const e = await startApp({ noAi: true }); t.after(() => e.close());
+  e.app.config.pdpl = Object.assign({}, e.app.config.pdpl, { ropa_sector: sector });   // these cases use the insurer templates; the O&M set has its own test
   registerDuty(e.app.srv, e.app, { noTimer: true, now, python: PY });
   const post = (p, body, who = OP) => e.req('POST', p, Object.assign({ body }, who));
   const get = (p, who = OP) => e.req('GET', p, who);
@@ -196,4 +197,17 @@ test('credit data is its own class: explicit consent, never legitimate interest,
   assert.ok(s.controls.some((x) => x.control === 'credit_notice')); assert.ok(!s.controls.some((x) => x.control === 'dpia'));
   const ex = (await get('/pdpl/ropa/register')).json; assert.ok(ex.columns.includes('Credit data'));
 
+});
+
+test('templates by sector: an operations & maintenance group gets its own departments; nothing becomes a record', async (t) => {
+  const { get } = await setup(t, 'group');
+  const r = (await get('/pdpl/ropa/templates', NOBODY)).json;
+  assert.match(r.note, /operations and maintenance company/); assert.match(r.note, /never becomes a record/);
+  const keys = r.departments.map((d) => d.key);
+  for (const k of ['hr', 'operations', 'projects', 'hse', 'fleet', 'site_security', 'group_services']) assert.ok(keys.includes(k), k);
+  assert.ok(!keys.includes('claims') && !keys.includes('underwriting') && !keys.includes('reinsurance'), 'no insurer departments');
+  const att = r.departments.find((d) => d.key === 'projects').activities.find((a) => a.key === 'pj_attendance');
+  assert.ok(att.data_categories.includes('biometric') && att.flags.includes('large_scale_monitoring'), 'biometric attendance flagged for an impact assessment');
+  assert.ok(r.departments.find((d) => d.key === 'fleet').activities[0].flags.includes('telematics'));
+  assert.match(r.departments.find((d) => d.key === 'group_services').activities[0].hint, /controller/);
 });

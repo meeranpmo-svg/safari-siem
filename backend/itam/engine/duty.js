@@ -235,6 +235,10 @@ function registerDuty(srv, app, opts = {}) {
   // the audit checklist by framework (SAMA CSF / NCA ECC / IA), filled by the AI auditors and the human auditor
   if (CLM) { const CL = CLM.createChecklist(app, { now: opts.now }); app.addons.auditChecklist = CL; CLM.registerChecklistRoutes(srv, app, CL); }
   if (PD) PDM.registerPdplRoutes(srv, app, PD);
+  // PDPL across the group (engine/pdpl-group.js): group companies, the data processing agreement with each (four-eyes acceptance),
+  // the RoPA activities run for each, breach notices to each controller within the agreed hours
+  const PGM = PD && optional('./pdpl-group');
+  if (PGM) { app.addons.pdplGroup = PGM.createPdplGroup(app, PD, { now: opts.now }); PGM.registerPdplGroup(srv, app, app.addons.pdplGroup); }
   // RoPA workflow automation (engine/pdpl-ropa-flow.js; ML in pyengine/ropa_flow_rules.py): forecast, risk + DPIA, duplicates,
   // proposed drafts from the Data Catalog, reminders to stewards, late departments to Notification & Escalation
   const RFM = PD && PD.ropaCampaigns && optional('./pdpl-ropa-flow');
