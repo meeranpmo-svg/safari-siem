@@ -65,7 +65,11 @@ function runbook(kind, vendor, ctx) {
   return { fix: F[kind] || [], diagnostics: (kind === 'site-down' ? [] : (kind === 'tunnel-down' ? d.ipsec : kind === 'node-down' ? d.node : kind === 'quality' || kind === 'congestion' ? d.quality : d.link).slice()), vendor: vendor || 'other' };
 }
 
-function createRouteMap({ inventory, poller, state, log, now, alerts, config } = {}) {
+function createRouteMap({ inventory, poller, state, log, now, alerts, config, fmg } = {}) {
+  // FortiGates managed by FortiManager (netops/fmg.js): a node names one with `fortigate`; its health, tunnels and SD-WAN members
+  // come from the FortiManager poll. fmg() returns the fleet API or null (FortiManager not connected).
+  const FM = () => { try { return typeof fmg === 'function' ? fmg() : null; } catch (e) { return null; /* FortiManager not set up: nodes are measured from the poller only */ } };
+  const fgOf = (n) => { const F = FM(); if (!F || !n || !n.fortigate) return null; try { return F.device(n.fortigate); } catch (e) { return null; /* no longer managed: the node says so */ } };
   const NOW = now || Date.now, L = log || { info() {}, warn() {} };
   const cfgC = state.collection('netops_routemap'), mlC = state.collection('netops_routemap_ml'), incC = state.collection('netops_routemap_inc');
   const acfg = Object.assign({ enabled: true, interval_s: 120 }, (config && config.netops && config.netops.routemap) || {});
@@ -85,7 +89,7 @@ function createRouteMap({ inventory, poller, state, log, now, alerts, config } =
     const devs = new Set(inventory.list().map((d) => d.id));
     const nodes = b.nodes.map((x, i) => {
       const e = check(obj('nodes', i, x)).str('id', { required: true, max: 64 }).str('label', { required: true, max: 80 }).oneOf('kind', NODE_KINDS, { required: true }).str('site', { max: 64 })
-        .str('device', { max: 80 }).str('appliance', { max: 120 }).done();
+        .str('device', { max: 80 }).str('appliance', { max: 120 }).str('fortigate', { max: 63 }).done();
       uid('nodes', i, e.id);
       if (!siteOk(e.site)) throw bad('nodes[' + i + '].site: there is no site "' + e.site + '"');
       if (e.device && !devs.has(e.device)) throw bad('nodes[' + i + '].device: "' + e.device + '" is not a device in the AI Network Engineer inventory');
@@ -132,6 +136,8 @@ function createRouteMap({ inventory, poller, state, log, now, alerts, config } =
   function nodeState(n, apps) {
     if (n.kind === 'internet' || n.kind === 'wan-cloud' || n.kind === 'isp') return { state: 'virtual', why: 'not a device - its links say whether it is reachable' };
     if (n.appliance) { const a = apps.find((x) => low(x.name) === low(n.appliance)); if (a) return { state: a.up ? 'up' : 'down', why: 'Silver Peak Orchestrator (' + a.via + '): appliance state ' + a.state, src: 'orchestrator' }; }
+    if (n.fortigate && !n.device) { const g = fgOf(n); if (!g) return { state: 'unknown', why: 'FortiGate ' + n.fortigate + ' is not in the FortiManager poll', vendor: 'fortigate' };
+      const m = g.metrics || {}; return { state: g.conn === 'down' ? 'down' : g.health === 'attention' ? 'degraded' : 'up', why: g.conn === 'down' ? 'FortiManager cannot reach it' : 'FortiManager: ' + (g.findings[0] ? g.findings[0].title : 'healthy'), vendor: 'fortigate', src: 'fortimanager', cpu: m.cpu, mem: m.mem, sessions: m.sessions }; }
     const d = devOf(n); if (!d) return { state: n.device ? 'unknown' : 'unmonitored', why: n.device ? 'device ' + n.device + ' is no longer in the inventory' : 'no device on this node - map one to measure it' };
     const s = poller.snapshot(d.id); if (!s) return { state: 'unknown', why: 'not polled yet since the engine started', vendor: d.vendor };
     const r = s.reach;
@@ -141,8 +147,10 @@ function createRouteMap({ inventory, poller, state, log, now, alerts, config } =
     return { state: 'up', why: 'answers (' + (s.sources || []).join(', ') + ')', vendor: d.vendor, at: s.at, rtt_ms: r ? r.rtt_avg_ms : null, cpu: sys.cpu_pct, mem: sys.mem_pct, sessions: sys.sessions };
   }
   function ifOf(n, name) { const d = devOf(n); if (!d || !name) return null; const s = poller.snapshot(d.id); return ((s && s.interfaces) || []).find((i) => low(i.name) === low(name) || (i.alias && low(i.alias) === low(name))) || null; }
-  function tunnelOf(n, name) { const d = devOf(n); if (!d || !name) return null; const s = poller.snapshot(d.id); return ((s && s.tunnels) || []).find((t) => low(t.name) === low(name)) || null; }
-  function pathOf(n, name) { const d = devOf(n); if (!d || !name) return null; const s = poller.snapshot(d.id); return ((s && s.paths) || []).find((p) => low(p.name + ':' + p.member) === low(name) || low(p.member) === low(name)) || null; }
+  function tunnelOf(n, name) { const g = !n.device && fgOf(n); if (g && name) { const t = (g.tunnels || []).find((x) => low(x.name) === low(name)); return t ? { name: t.name, status: t.up ? 'up' : 'down', peer: t.peer } : null; }
+    const d = devOf(n); if (!d || !name) return null; const s = poller.snapshot(d.id); return ((s && s.tunnels) || []).find((t) => low(t.name) === low(name)) || null; }
+  function pathOf(n, name) { const g = !n.device && fgOf(n); if (g && name) { const l = (g.links || []).find((x) => low(x.check + ':' + x.member) === low(name) || low(x.member) === low(name)); return l ? { name: l.check, member: l.member, latency_ms: l.latency, jitter_ms: l.jitter, loss_pct: l.loss, status: l.state === 'down' ? 'down' : l.sla_ok === false ? 'sla-missed' : 'up' } : null; }
+    const d = devOf(n); if (!d || !name) return null; const s = poller.snapshot(d.id); return ((s && s.paths) || []).find((p) => low(p.name + ':' + p.member) === low(name) || low(p.member) === low(name)) || null; }
   function linkState(l, N, th) {
     const a = N[l.a], b = N[l.b], m = { sources: [] }, why = [];
     for (const [node, nm] of [[a, l.a_if], [b, l.b_if]]) {
@@ -330,7 +338,7 @@ function createRouteMap({ inventory, poller, state, log, now, alerts, config } =
     for (const a of apps) { if (nodes.some((n) => low(n.label) === low(a.name))) { const n = nodes.find((x) => low(x.label) === low(a.name)); n.appliance = a.name; continue; } nodes.push({ id: sid('sp-' + a.name), label: String(a.name).slice(0, 80), kind: 'sdwan', site: addSite(a.site), appliance: a.name }); }
     const byDev = (id) => nodes.find((n) => n.device === id);
     const ipOwner = (ip) => devs.find((d) => d.ip === ip || d.api_host === ip);
-    const add = (a, b, kind, extra, why, confidence) => { if (!a || !b || a.id === b.id) return; const k = [a.id, b.id].sort().join('|') + kind + (extra.tunnel || ''); if (seen.has(k)) return; seen.add(k); const id = (kind + '-' + a.id + '-' + b.id).slice(0, 64).replace(/[^a-z0-9_.-]/g, '-'); links.push(Object.assign({ id, a: a.id, b: b.id, kind }, extra)); reasons.push({ link: id, why, confidence }); };
+    const add = (a, b, kind, extra, why, confidence) => { if (!a || !b || a.id === b.id) return; const k = [a.id, b.id].sort().join('|') + kind + (extra.tunnel || '') + (extra.path || ''); if (seen.has(k)) return; seen.add(k); const id = (kind + '-' + a.id + '-' + b.id + (extra.tunnel || extra.path ? '-' + low(extra.tunnel || extra.path) : '')).replace(/[^a-z0-9_.-]/g, '-').slice(0, 64); links.push(Object.assign({ id, a: a.id, b: b.id, kind }, extra)); reasons.push({ link: id, why, confidence }); };
     for (const d of devs) {
       const s = poller.snapshot(d.id), me = byDev(d.id); if (!s || !me) continue;
       for (const t of s.tunnels || []) { const o = ipOwner(t.peer); if (o && byDev(o.id)) add(me, byDev(o.id), 'ipsec', { tunnel: t.name }, 'IPsec tunnel ' + t.name + ' on ' + d.name + ' has peer ' + t.peer + ' = ' + o.name, 'high'); else if (t.peer) unmatched.push(d.name + ': tunnel ' + t.name + ' to ' + t.peer + ' (not a monitored device)'); }
@@ -340,6 +348,19 @@ function createRouteMap({ inventory, poller, state, log, now, alerts, config } =
     if (edges.length) {
       nodes.unshift({ id: 'internet', label: 'Internet', kind: 'internet', site: '' });
       for (const e of edges) { const s = poller.snapshot(e.device), wan = ((s && s.interfaces) || []).find((i) => i.oper === 'up' && /untrust|wan|isp|internet|outside|ethernet1\/1$/i.test(i.name + ' ' + (i.alias || ''))); add(nodes[0], e, 'internet', wan ? { b_if: wan.name } : {}, 'the Palo Alto ' + e.label + ' is the internet edge' + (wan ? '; its interface ' + wan.name + (wan.alias ? ' (' + wan.alias + ')' : '') + ' looks like the WAN port' : ' - name its WAN interface to measure it'), wan ? 'medium' : 'low'); }
+    }
+    // FortiGates FortiManager manages: one node each at its site; an IPsec tunnel whose peer is another managed FortiGate's address
+    // is a link (high confidence); each SD-WAN member is a link to the Internet measured by its health check
+    const F = FM(); let fl = null; if (F) { try { fl = F.fleet(); } catch (e) { fl = null; reasons.push('FortiManager fleet not readable: ' + e.message); } }
+    if (fl && fl.devices.length) {
+      for (const g of fl.devices) { const ex = nodes.find((n) => low(n.label) === low(g.name)); if (ex) { ex.fortigate = g.name; continue; } nodes.push({ id: sid('fg-' + g.name), label: String(g.name).slice(0, 80), kind: 'firewall', site: addSite(g.site || g.adom), fortigate: g.name }); }
+      const byFg = (name) => nodes.find((n) => n.fortigate === name), fgByIp = new Map(fl.devices.filter((g) => g.ip).map((g) => [g.ip, g]));
+      const pairs = new Set();   // a tunnel is named differently at each end: one link per pair of FortiGates
+      for (const g of fl.devices) for (const t of g.tunnels || []) { const o = fgByIp.get(t.peer), pk = o ? [g.name, o.name].sort().join('|') : ''; if (o && pairs.has(pk)) continue; if (o) pairs.add(pk); if (o && o.name !== g.name) add(byFg(g.name), byFg(o.name), 'ipsec', { tunnel: t.name }, 'IPsec tunnel ' + t.name + ' on ' + g.name + ' has peer ' + t.peer + ' = ' + o.name + ' (FortiManager)', 'high'); else if (t.peer) unmatched.push({ device: g.name, tunnel: t.name, peer: t.peer }); }
+      if (fl.devices.some((g) => (g.links || []).length)) {
+        let inet = nodes.find((n) => n.id === 'internet'); if (!inet) { inet = { id: 'internet', label: 'Internet', kind: 'internet', site: '' }; nodes.unshift(inet); }
+        for (const g of fl.devices) for (const l of g.links || []) add(inet, byFg(g.name), 'sdwan', { path: l.check + ':' + l.member }, 'SD-WAN member ' + l.member + ' (health check ' + l.check + ') on ' + g.name + ' (FortiManager)', 'high');
+      }
     }
     const ORDER = ['edge-firewall', 'firewall', 'sdwan', 'router', 'core', 'distribution', 'access'];
     for (const site of sites.keys()) {

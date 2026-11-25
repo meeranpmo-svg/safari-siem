@@ -36,6 +36,7 @@ function fakeFmg({ mem = { 'FGT-HQ-01': 40, 'FGT-SITE-07': 91, 'FGT-SITE-08': 30
         if (r.startsWith('/api/v2/monitor/system/resource')) return { target: t, status: { code: 0 }, response: { results: { cpu: [{ current: 12 }], mem: [{ current: mem[n] }], session: [{ current: 1000 }] } } };
         if (r.startsWith('/api/v2/monitor/vpn/ipsec')) return { target: t, status: { code: 0 }, response: { results: n === 'FGT-HQ-01' ? [{ name: 'to-site7', rgwy: '198.51.100.7', proxyid: [{ status: 'down' }] }, { name: 'to-site8', proxyid: [{ status: 'up' }] }] : [{ name: 'to-hq', proxyid: [{ status: 'up' }] }] } };
         if (r.startsWith('/api/v2/monitor/virtual-wan')) return { target: t, status: { code: 0 }, response: { results: n === 'FGT-SITE-08' ? { 'hc-internet': { wan1: { status: 'up', latency: 180.4, jitter: 20, packet_loss: 6, sla_targets_met: [] }, wan2: { status: 'down' } } } : { 'hc-internet': { wan1: { status: 'up', latency: 12, jitter: 1, packet_loss: 0, sla_targets_met: [1] } } } } };
+        if (r.startsWith('/api/v2/monitor/user/device')) return { target: t, status: { code: 0 }, response: { results: n === 'FGT-SITE-07' ? [{ mac: 'AA:BB:CC:00:00:07', ipv4_address: '10.7.0.50', hostname: 'PC-SITE7', os_name: 'Windows', hardware_vendor: 'Dell', detected_interface: 'internal' }, { mac: 'bad' }] : n === 'FGT-SITE-08' ? [{ mac: 'aa:bb:cc:00:00:07', ipv4_address: '10.8.0.50', hostname: 'PC-SITE7', os_name: 'Linux' }] : [] } };
         if (r.startsWith('/api/v2/monitor/license')) return { target: t, status: { code: 0 }, response: { results: { forticare: { status: 'licensed', expires: Math.floor((NOW + (n === 'FGT-SITE-08' ? 10 : 400) * 86400000) / 1000) } } } };
         return { target: t, status: { code: -3, message: 'unknown' } };
       }));
@@ -68,12 +69,12 @@ test('normalising FortiManager and FortiOS answers', () => {
 });
 
 test('poll: ADOMs (system ones skipped), devices, batched proxy reads, assessment and fleet KPIs', async () => {
-  const { F, fk } = mk();
+  const { F, fk, state } = mk();
   const s = await F.poll();
   assert.equal(s.devices, 4); assert.equal(s.last_error, '');
   assert.ok(!fk.calls.some((c) => c.url === '/dvmdb/adom/FortiAnalyzer/device'), 'system ADOMs are skipped');
   const prox = fk.calls.filter((c) => c.url === '/sys/proxy/json');
-  assert.equal(prox.length, 4, 'one batched proxy call per reading, not one per device'); assert.ok(prox.every((c) => c.data.target.length === 3 && !c.write), 'the offline device is not queried');
+  assert.equal(prox.length, 5, 'one batched proxy call per reading, not one per device'); assert.ok(prox.every((c) => c.data.target.length === 3 && !c.write), 'the offline device is not queried');
   const fl = F.fleet();
   assert.equal(fl.kpis.devices, 4); assert.equal(fl.kpis.down, 1); assert.equal(fl.kpis.out_of_sync, 1); assert.equal(fl.kpis.links_down, 1); assert.equal(fl.kpis.links_out_of_sla, 1); assert.deepEqual(fl.kpis.tunnels, { up: 3, down: 1 });
   const by = Object.fromEntries(fl.devices.map((d) => [d.name, d]));
@@ -86,6 +87,9 @@ test('poll: ADOMs (system ones skipped), devices, batched proxy reads, assessmen
   assert.ok(!('history' in fl.devices[0]), 'the raw history stays on the server');
   assert.equal(F.device('FGT40FTK00000007').name, 'FGT-SITE-07');
   assert.throws(() => F.device('nope'), /not found/);
+  const ep = state.collection('fmg_endpoints').get('aa:bb:cc:00:00:07');
+  assert.ok(ep && ep.sightings.length === 2 && ep.idents.length === 2, 'one MAC seen on two FortiGates as two identities: ' + JSON.stringify(ep));
+  assert.equal(state.collection('fmg_endpoints').size(), 1, 'a malformed MAC is not kept');
 });
 
 test('baseline per device: an unusual reading is flagged only against the device\'s own history', async () => {

@@ -35,6 +35,7 @@ const MON = {
   ipsec: '/api/v2/monitor/vpn/ipsec',
   sdwan: '/api/v2/monitor/virtual-wan/health-check',
   lic: '/api/v2/monitor/license/status',
+  dev: '/api/v2/monitor/user/device/query',
 };
 class FmgError extends Error { constructor(code, msg) { super(msg); this.code = code; this.errors = [msg]; } }
 const bad = (m) => new FmgError(400, m);
@@ -88,6 +89,17 @@ function normSdwan(r) {
       out.push({ check: hc, member: m, state: String(v.status || '').toLowerCase() === 'up' ? 'up' : String(v.status || '').toLowerCase() === 'down' ? 'down' : 'unknown',
         latency: num(v.latency), jitter: num(v.jitter), loss: num(v.packet_loss), sla_ok: slaOk });
     }
+  }
+  return out;
+}
+// FortiGate device detection: every endpoint the FortiGate sees on its LAN (MAC, IP, host name, OS, hardware, interface)
+function normEndpoints(r) {
+  const list = (r && r.results) || (Array.isArray(r) ? r : []), out = [];
+  for (const e of list) {
+    const mac = String(e.mac || e.master_mac || '').toLowerCase(); if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(mac)) continue;
+    out.push({ mac, ip: String(e.ipv4_address || e.ip || ''), host: String(e.hostname || e.host_name || '').slice(0, 80), os: String(e.os_name || e.os || '').slice(0, 60),
+      os_version: String(e.os_version || '').slice(0, 30), hw: String(e.hardware_vendor || e.hardware_family || '').slice(0, 60), type: String(e.hardware_type || e.type || '').slice(0, 40),
+      iface: String(e.detected_interface || e.interface || '').slice(0, 40), user: String(e.user_name || e.user || '').slice(0, 80), online: e.is_online !== false });
   }
   return out;
 }
@@ -191,7 +203,7 @@ function createFmg({ config, secrets, state, log, transport, now } = {}) {
         for (const x of Array.isArray(d) ? d : []) list.push(normDevice(x, adom));
       }
       const up = list.filter((d) => d.conn === 'up'), tgt = (d) => `adom/${d.adom}/device/${d.name}`;
-      const [res, ips, sdw, lic] = await Promise.all([proxy(MON.res, up.map(tgt)), proxy(MON.ipsec, up.map(tgt)), proxy(MON.sdwan, up.map(tgt)), proxy(MON.lic, up.map(tgt))]);
+      const [res, ips, sdw, lic, edv] = await Promise.all([proxy(MON.res, up.map(tgt)), proxy(MON.ipsec, up.map(tgt)), proxy(MON.sdwan, up.map(tgt)), proxy(MON.lic, up.map(tgt)), C().endpoints === false ? new Map() : proxy(MON.dev, up.map(tgt))]);
       for (const d of list) {
         const prev = devs.get(d.id) || {}, t = tgt(d), hist = prev.history || { cpu: [], mem: [], sessions: [] };
         const rr = res.get(t), ir = ips.get(t), sr = sdw.get(t), lr = lic.get(t);
@@ -211,6 +223,7 @@ function createFmg({ config, secrets, state, log, transport, now } = {}) {
         }
         next.history = hist; next.z = z; next.baseline = baseline;
         devs.put(next);
+        const er = edv.get(t); if (er && er.response) endpointsSeen(d, normEndpoints(er.response), at);
       }
       // a device FortiManager no longer manages is kept 7 days, marked removed, then dropped
       const seen = new Set(list.map((d) => d.id));
@@ -219,6 +232,18 @@ function createFmg({ config, secrets, state, log, transport, now } = {}) {
     } catch (e) { errors.push(e.message); L.warn('fortimanager: poll failed', { err: e.message }); }
     st.polls++; st.last_poll_at = at; st.last_error = errors.join(' · ');
     return status();
+  }
+  // endpoints: one record per MAC across the fleet, with where and as what it was seen (the NAC view reads these)
+  const eps = state.collection('fmg_endpoints');
+  function endpointsSeen(d, list, at) {
+    for (const e of list.slice(0, 5000)) {
+      const cur = eps.get(e.mac) || { id: e.mac, mac: e.mac, first_seen: at, sightings: [], idents: [] };
+      const ident = [e.os, e.host].join('|');
+      if (!cur.idents.includes(ident)) cur.idents = cur.idents.concat(ident).slice(-6);
+      cur.sightings = cur.sightings.filter((x) => x.fortigate !== d.name).concat({ fortigate: d.name, site: d.site || d.adom, at, iface: e.iface }).slice(-8);
+      Object.assign(cur, { ip: e.ip, host: e.host, os: e.os, os_version: e.os_version, hw: e.hw, type: e.type, user: e.user, last_seen: at, fortigate: d.name, site: d.site || d.adom });
+      eps.put(cur);
+    }
   }
   function status() { const c = C(); return Object.assign({ enabled: !!c.enabled, configured: !!(c.base_url && S().api_key), write_enabled: !!(c.write_enabled && S().write_key) }, st); }
 
@@ -327,4 +352,4 @@ function createFmg({ config, secrets, state, log, transport, now } = {}) {
   return { poll, status, fleet, device, testConnection, propose, decide, run, refreshTask, markDone, changes, get: (id) => chg.get(id), TYPES };
 }
 
-module.exports = { createFmg, assess, robustZ, normDevice, normRes, normIpsec, normSdwan, normLic, verCmp, NAME, TYPES, FmgError };
+module.exports = { createFmg, assess, robustZ, normDevice, normRes, normIpsec, normSdwan, normLic, normEndpoints, verCmp, NAME, TYPES, FmgError };

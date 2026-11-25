@@ -104,7 +104,7 @@ function createNetops(deps) {
   // support contracts from IT Asset Management (ticket desk: who to call for a hardware fault); absent = not installed
   const coverage = deps.coverage || (discovery && typeof discovery.coverage === 'function' ? (q) => discovery.coverage(q, { user: 'system:netops-tickets', role: 'viewer' }) : null);
   // WAN / LAN route map (routemap.js): the map an administrator draws, measured from the polls above; ML baselines, root cause
-  const routemap = createRouteMap({ inventory, poller, state, log, config, alerts: deps.alerts && typeof deps.alerts.raise === 'function' ? deps.alerts : null, now: deps.now });
+  const routemap = createRouteMap({ inventory, poller, state, log, config, fmg: () => deps.fmgApi || null, alerts: deps.alerts && typeof deps.alerts.raise === 'function' ? deps.alerts : null, now: deps.now });
   // Branch Connectivity (branchnet.js): every site's WAN paths, DC / DR reach and quality, built on the route map above
   const branches = createBranches({ routemap, state, now: deps.now });
   // WAN Optimization (wanopt.js): EdgeConnect reduction, tunnels, alarms from the Orchestrator poll (read only)

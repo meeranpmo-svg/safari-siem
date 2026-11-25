@@ -30,6 +30,7 @@ function register(api, deps) {
   if (!deps.state) throw new Error('fortimanager needs deps.state');
   const secretsObj = () => { if (!cfg.secrets) Object.defineProperty(cfg, 'secrets', { value: {}, writable: true, configurable: true }); return cfg.secrets; };
   const F = deps.fmg || createFmg({ config: cfg, secrets: secretsObj(), state: deps.state, log, transport: deps.fmgTransport, now: deps.now });
+  deps.fmgApi = F;   // the route map and NAC read the fleet from here (netops/routemap.js)
   const sec = () => secretsObj().fortimanager || {};
   const read = (p) => { try { if (SF.isSecretsPath(p)) return SF.read(p) || {}; return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return {}; throw new HttpError(500, `cannot read ${p}`); } };
   const view = () => { const c = cfg.fortimanager || {}; return { enabled: !!c.enabled, base_url: c.base_url || '', adoms: c.adoms || [], poll_min: c.poll_min || 10, tls_fingerprint: c.tls_fingerprint || '', firmware_targets: c.firmware_targets || [],
