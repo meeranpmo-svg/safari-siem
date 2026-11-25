@@ -7950,6 +7950,14 @@ window.ZYB_NAV = [
   ]
  }
 ];
+// a section's sub-menus (page field g) are each drawn once: pages of the same sub-menu are kept together, in the order the
+// sub-menus first appear, so a page listed out of place never repeats a heading in the menu
+window.ZYB_NAV.forEach(function (a) {
+  var order = [], by = {};
+  a.pages.forEach(function (p) { var k = p.g || ''; if (!by[k]) { by[k] = []; order.push(k); } by[k].push(p); });
+  if (order.length > 1) a.pages = order.reduce(function (out, k) { return out.concat(by[k]); }, []);
+});
+
 // the registry above is plain data (tools and tests read it as JSON): it names the company as {{org.*}} tokens, which are
 // filled here from the brand setting. Without a brand setting (a tool reading the file) the tokens simply stay.
 (function (o) {

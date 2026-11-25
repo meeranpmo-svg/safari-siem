@@ -22,6 +22,7 @@ done
 STAGE="$DEST.new"; rm -rf "$STAGE"; mkdir -p "$STAGE/vendor"
 cp "$HERE"/*.html "$STAGE/"; cp "$HERE"/vendor/*.js "$STAGE/vendor/"; cp "$HERE"/vendor/*.json "$STAGE/vendor/" 2>/dev/null || true; cp "$HERE"/vendor/*.css "$STAGE/vendor/" 2>/dev/null || true
 cp -r "$HERE/vendor/tabler" "$STAGE/vendor/"   # Tabler (MIT), self-hosted: theme layer, components, icon font
+[ -d "$HERE/vendor/fonts" ] && cp -r "$HERE/vendor/fonts" "$STAGE/vendor/"   # the company typeface of the light look (Raleway, OFL), self-hosted
 BUILD="$(date +%Y%m%d%H%M%S)"
 sed -i "s/__ZYB_BUILD__/$BUILD/" "$STAGE/vendor/zyb-menu.js"   # cache stamp for the add-on scripts
 printf '{"build":"%s"}\n' "$BUILD" > "$STAGE/build.json"   # vendor/zyb-update.js: open pages notice this build and refresh by themselves
