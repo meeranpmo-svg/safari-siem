@@ -68,9 +68,16 @@ if [ -n "$AUTH_SRC" ]; then
 elif [ ! -f /opt/sentra-auth/.installed ]; then
   die "--auth-src is required on the first run: the folder that holds the organisation's sign-in service"
 fi
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -q >/dev/null 2>&1 || warn "apt-get update failed - packages are installed from what is already known"
-apt-get install -y -q nginx openssl python3 python3-venv curl ca-certificates >/dev/null || die "could not install nginx / openssl / python3 (does the server reach its package mirror?)"
+# no package step may stop to ask a person something, and none reads the terminal (a hidden question would wait for ever);
+# another package run in progress (automatic updates) is waited for, up to 5 minutes, instead of failing at once
+export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1 UCF_FORCE_CONFOLD=1 APT_LISTCHANGES_FRONTEND=none
+APT='apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold -o DPkg::Lock::Timeout=300'
+BUSY="$(ps -eo pid,etime,cmd | grep -E '[a]pt-get|[d]pkg |[u]nattended-upgr' | grep -v "$$" || true)"
+[ -z "$BUSY" ] || { warn "another package operation is running - waiting up to 5 minutes for it:"; printf '%s\n' "$BUSY" >&2; }
+dpkg --audit 2>/dev/null | grep -q . && { warn "a package was left half-installed - finishing it first"; dpkg --configure -a </dev/null || die "dpkg --configure -a failed (shown above): the package system must be healthy before the platform is installed"; }
+$APT update </dev/null >/dev/null 2>/tmp/sentra-apt.$$ || { warn "apt-get update failed - packages are installed from what is already known:"; tail -n 5 /tmp/sentra-apt.$$ >&2; }
+$APT install nginx openssl python3 python3-venv curl ca-certificates </dev/null >/dev/null 2>/tmp/sentra-apt.$$ || { cat /tmp/sentra-apt.$$ >&2; rm -f /tmp/sentra-apt.$$; die "could not install nginx / openssl / python3 - the package system's own message is above"; }
+rm -f /tmp/sentra-apt.$$
 ok "nginx, openssl, python3 installed"
 # Node.js 20+: the one given, one already here, else the distribution's when it is new enough
 NODE_BIN=""
@@ -78,7 +85,7 @@ for c in "$NODE_OPT" /opt/sentra-ai/node/bin/node "$(command -v node 2>/dev/null
   [ -n "$c" ] && [ -x "$c" ] && [ "$("$c" -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -ge 20 ] && { NODE_BIN="$c"; break; }
 done
 if [ -z "$NODE_BIN" ]; then
-  apt-get install -y -q nodejs >/dev/null 2>&1 || true
+  $APT install nodejs </dev/null >/dev/null 2>&1 || true
   c="$(command -v node 2>/dev/null || true)"; [ -n "$c" ] && [ "$("$c" -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -ge 20 ] && NODE_BIN="$c"
 fi
 [ -n "$NODE_BIN" ] || die "Node.js 20 or later is needed and this Ubuntu release does not package it. Unpack the official Linux x64 build from nodejs.org into /opt/sentra-ai/node (so that /opt/sentra-ai/node/bin/node exists), check its SHA-256 against the published list, and run this script again."

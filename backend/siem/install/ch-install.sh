@@ -3,13 +3,20 @@
 # Sentra SIEM — ClickHouse (LTS) install for the build/staging host: localhost only, memory-capped, password-protected.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
+# no package step may stop to ask a person something: answers are the defaults, the 'restart services?' helper stays out
+# of the way, and nothing reads the terminal (a hidden question once left the installer waiting for ever)
+export NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1 UCF_FORCE_CONFOLD=1 APT_LISTCHANGES_FRONTEND=none
+APT='apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold -o DPkg::Lock::Timeout=300'
 mkdir -p /etc/sentra-siem /var/lib/sentra-siem && chmod 700 /etc/sentra-siem
 if ! command -v clickhouse-server >/dev/null 2>&1; then
-  apt-get install -y -q apt-transport-https ca-certificates curl gnupg >/dev/null
-  curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' | gpg --dearmor --yes -o /usr/share/keyrings/clickhouse-keyring.gpg
+  $APT install apt-transport-https ca-certificates curl gnupg </dev/null >/dev/null
+  curl -fsSL --connect-timeout 20 --max-time 120 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' | gpg --dearmor --yes -o /usr/share/keyrings/clickhouse-keyring.gpg
+  [ -s /usr/share/keyrings/clickhouse-keyring.gpg ] || { echo "could not fetch the ClickHouse signing key (does the server reach packages.clickhouse.com on 443?)" >&2; exit 1; }
   echo "deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb lts main" > /etc/apt/sources.list.d/clickhouse.list
-  apt-get update -q >/dev/null
-  apt-get install -y -q clickhouse-server clickhouse-client >/dev/null
+  $APT update </dev/null >/dev/null
+  echo "    downloading and installing ClickHouse (several hundred MB - this is the slow step; progress: tail -f /var/log/dpkg.log)"
+  $APT install clickhouse-server clickhouse-client </dev/null 2>&1 | grep -E '^(Get:|Fetched|Setting up|Unpacking|E:|W:)' || true
+  command -v clickhouse-server >/dev/null 2>&1 || { echo "ClickHouse did not install (see the lines above)" >&2; exit 1; }
 fi
 # secrets (generated once, never printed). Two ClickHouse users:
 #   sentra_siem        the engine at runtime: SELECT + INSERT on siem.* only (cannot ALTER, DELETE or DROP stored events)
@@ -30,7 +37,7 @@ APW=$(sget clickhouse_admin.password)
 HASH=$(printf '%s' "$PW" | sha256sum | cut -d' ' -f1)
 AHASH=$(printf '%s' "$APW" | sha256sum | cut -d' ' -f1)
 # credentials go to curl on stdin, never on the command line (visible in ps)
-chq() { printf 'user = "sentra_siem_admin:%s"\n' "$APW" | curl -s -K - "http://127.0.0.1:8123/?query=$1"; }
+chq() { printf 'user = "sentra_siem_admin:%s"\n' "$APW" | curl -s --max-time 30 -K - "http://127.0.0.1:8123/?query=$1"; }
 cat > /etc/clickhouse-server/config.d/sentra-siem.xml <<'XML'
 <clickhouse>
   <listen_host>127.0.0.1</listen_host>
