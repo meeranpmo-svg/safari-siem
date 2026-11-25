@@ -85,7 +85,8 @@ tr.hit td{background:rgba(121,184,255,.09)}
   <div class="minis" id="minis" role="group" aria-label="All frameworks at a glance"></div></div>
 <div class="banner" id="note"></div>
 <div class="hero2"><div class="card gauge" id="gauge"></div><div class="card"><h2>By domain<span class="c" id="dsub"></span></h2><div id="dom"></div></div></div>
-<div class="card" id="li"><h2>Live intelligence<span class="c">learned from the SIEM's daily SAMA snapshots - leverage, quick wins, reliability, regressions, forecast</span></h2><div id="li-body"><span class="muted">Loading…</span></div></div>
+<div class="card" id="ar" hidden><h2>Aramco CCC<span class="c">live from the Aramco CCC register - assessment, evidence, certificate</span></h2><div id="ar-body"></div></div>
+<div class="card" id="li"><h2>Live intelligence<span class="c">learned from the SIEM's daily control snapshots - leverage, quick wins, reliability, regressions, forecast</span></h2><div id="li-body"><span class="muted">Loading…</span></div></div>
 <div class="mix" id="mix"></div>
 <div class="legend" id="legend"></div>
 <div class="card"><h2 id="ctitle">Controls</h2><div id="map"></div><p class="note" id="foot"></p></div>
@@ -97,25 +98,28 @@ tr.hit td{background:rgba(121,184,255,.09)}
   var Z=window.zybDetail, esc=Z?Z.esc:function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
   var $=function(id){return document.getElementById(id);};
   var F=window.ZYB_FW||{}, N=window.ZYB_NAV||[], PAGES=[];N.forEach(function(a){a.pages.forEach(function(p){PAGES.push({a:a,p:p});});});
-  var KEYS=['sama','ia','nca','pdpl'].filter(function(k){return F[k];});
+  // the frameworks that apply (brand setting): SAMA / IA switched off are not offered; their live-checked controls still grade the
+  // NCA ECC and PDPL through the crosswalk, and are then named as the platform's controls, not as SAMA
+  var ORG=window.ZYB_ORG||{}, OFF=ORG.frameworks_all?[]:(ORG.modules_off||[]), SAMA_ON=OFF.indexOf('fw-sama')<0, LBL=SAMA_ON?'SAMA':'platform control';
+  var KEYS=['sama','ia','nca','pdpl'].filter(function(k){return F[k]&&!(k==='sama'&&!SAMA_ON)&&!(k==='ia'&&OFF.indexOf('fw-ia')>=0);});
   var ST={covered:{l:'Covered',c:'#3fb950',s:'every live check passes'},partial:{l:'Partial',c:'#e3b341',s:'some checks fail or cannot be read'},gap:{l:'Gap',c:'#ff7b72',s:'the live checks fail'},grc:{l:'Not measured live',c:'#8C93A1',s:'evidence is a GRC record, not a live check'}};
   var ORDER=['covered','partial','gap','grc'], SC={covered:1,partial:0.5,gap:0};
-  var V=null, ERR='', LIVE={}, POL=null, PERR='', FIL='', K=(/fw=([a-z]+)/.exec(location.hash)||[])[1];if(KEYS.indexOf(K)<0)K='sama';
+  var V=null, ERR='', LIVE={}, POL=null, PERR='', FIL='', K=(/fw=([a-z]+)/.exec(location.hash)||[])[1];if(KEYS.indexOf(K)<0)K=KEYS[0]||'nca';
   function req(p){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/soc'+p);x.withCredentials=true;x.timeout=90000;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300&&j)ok(j);else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(new Error('The SIEM is not reachable'));};x.send();});}
   // ---- model: one row per framework domain with a status derived from the SAMA controls' live checks
   function samaRow(code){var f=F.sama,l=LIVE[code];
-    if(code==='BCM')return {code:code,name:f.domains[code],st:'grc',why:['Business continuity is a separate SAMA framework; its evidence (BIA, DR tests) is a GRC record.'],src:[]};
+    if(code==='BCM')return {code:code,name:f.domains[code],st:'grc',why:['Business continuity is evidenced as a GRC record (BIA, DR tests).'],src:[]};
     if(!l)return {code:code,name:f.domains[code],st:'grc',why:[ERR?'The SIEM did not answer, so nothing is measured live.':'Not in the SIEM evidence map.'],src:[]};
     return {code:code,name:f.domains[code],st:l.status==='n/a'?'grc':l.status,why:l.reasons||[],live:l,src:[code]};}
   function derived(k,code,list){var f=F[k],rows=list.map(function(c){return samaRow(c);}),m=rows.filter(function(r){return r.st!=='grc';});
     var r={code:code,name:f.domains[code],src:list,via:rows};
-    if(!list.length){r.st='grc';r.why=['A privacy obligation with no SAMA CSF control behind it: its evidence is a GRC record (procedure, register, DPO decision).'];return r;}
-    if(!m.length){r.st='grc';r.why=['The SAMA controls it maps to ('+list.join(', ')+') are evidenced in GRC, not by a live check.'];return r;}
+    if(!list.length){r.st='grc';r.why=['A privacy obligation with no live-checked control behind it: its evidence is a GRC record (procedure, register, DPO decision).'];return r;}
+    if(!m.length){r.st='grc';r.why=['The '+LBL+'s it maps to ('+list.join(', ')+') are evidenced in GRC, not by a live check.'];return r;}
     var s=m.reduce(function(a,x){return a+SC[x.st];},0)/m.length;
     r.st=m.every(function(x){return x.st==='covered';})?'covered':m.every(function(x){return x.st==='gap';})?'gap':'partial';r.score=s;
-    r.why=m.filter(function(x){return x.st!=='covered';}).map(function(x){return 'SAMA '+x.code+' '+x.name+': '+ST[x.st].l.toLowerCase();});
+    r.why=m.filter(function(x){return x.st!=='covered';}).map(function(x){return LBL+' '+x.code+' '+x.name+': '+ST[x.st].l.toLowerCase();});
     if(m.length<rows.length)r.why.push('Partly measured: '+rows.filter(function(x){return x.st==='grc';}).map(function(x){return x.code;}).join(', ')+' are GRC evidence.');
-    if(!r.why.length)r.why=['Every mapped SAMA control passes its live checks.'];return r;}
+    if(!r.why.length)r.why=['Every mapped '+LBL+' passes its live checks.'];return r;}
   function groups(k){
     var S=F.sama, sg=function(){var g={'3.1':['3.1','Cyber Security Leadership & Governance'],'3.2':['3.2','Risk Management & Compliance'],'3.3':['3.3','Operations & Technology'],'3.4':['3.4','Third Party Cyber Security']};
       var out=Object.keys(g).map(function(d){return {id:d,name:g[d][1],rows:Object.keys(S.domains).filter(function(c){return c.indexOf(d+'.')===0;}).map(samaRow)};});
@@ -152,12 +156,17 @@ tr.hit td{background:rgba(121,184,255,.09)}
       +'<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Segoe UI,system-ui,sans-serif" font-weight="800" font-size="'+Math.round(size/4.6)+'">'+(pct==null?'—':pct+'%')+'</text></svg>';}
   function colFor(p){return p==null?'#8C93A1':p>=80?'#3fb950':p>=50?'#e3b341':'#ff7b72';}
   function stack(n,tot){return '<div class="stack">'+ORDER.map(function(s){return n[s]?'<i style="width:'+(100*n[s]/tot)+'%;background:'+ST[s].c+'" title="'+esc(ST[s].l+': '+n[s])+'"></i>':'';}).join('')+'</div>';}
+  (function aramco(){ if(OFF.indexOf('fw-aramco')>=0)return; var x=new XMLHttpRequest();x.open('GET','/api/itam/aramco-ccc');x.withCredentials=true;x.zybQuiet=true;x.timeout=60000;
+    x.onload=function(){var v=null;try{v=JSON.parse(x.responseText);}catch(e){v=null;/* not installed: the card stays hidden */}if(x.status!==200||!v)return;$('ar').hidden=false;
+      var done=v.stages.filter(function(s){return s.done;}).length,cur=v.stages.filter(function(s){return s.id===v.current;})[0],C=v.certificate;
+      $('ar-body').innerHTML='<p><b>'+(v.score==null?'not assessed yet':esc(v.score)+' % ready')+'</b> · '+esc(v.assessed)+' of '+esc(v.applicable)+' applicable controls assessed · '+esc(v.gaps)+' gap(s) · '+esc(v.evidence_missing.length)+' implemented without evidence · stage '+esc(done)+' of 8'+(cur?' - next: '+esc(cur.name)+' ('+esc(cur.next)+')':' - every stage done')+'</p><p>'+(C?'Certificate '+esc(C.number)+(v.days_left<0?' <b>expired</b>':' valid '+esc(v.days_left)+' more day(s)'):'No certificate yet')+' · <a href="aramco-ccc.html">Open Aramco CCC →</a></p>';};
+    x.send();})();
   function draw(){
     var f=F[K], G=groups(K), rows=flat(K), sc=score(rows);
     $('fw').value=K;
     $('minis').innerHTML=KEYS.map(function(k){var s=score(flat(k));return '<button type="button" class="mini'+(k===K?' on':'')+'" data-k="'+k+'" style="--c:'+esc(F[k].c)+'" title="'+esc(F[k].name)+'">'+ring(s.pct,34,5,colFor(s.pct),F[k].short)+'<span>'+esc(F[k].short)+'<small>'+(s.pct==null?'not measured':s.pct+'% live')+'</small></span></button>';}).join('');
     var note=K==='ia'?F.ia.basis:K==='sama'?'Each SAMA CSF control is graded by the SIEM’s live evidence checks (logs received, rules enabled, retention, assets reporting, incidents handled). Controls the SIEM cannot see are evidenced in GRC and shown grey, never green.'
-      :'Each '+f.short+' '+(K==='nca'?'sub-domain':'article')+' is graded through the crosswalk: the SAMA CSF controls that address the same requirement, and their live checks. The crosswalk is a draft for the compliance team to verify.';
+      :'Each '+f.short+' '+(K==='nca'?'sub-domain':'article')+' is graded through the crosswalk: the '+(SAMA_ON?'SAMA CSF controls':'platform\'s live-checked controls')+' that address the same requirement, and their live checks. The crosswalk is a draft for the compliance team to verify.';
     $('note').innerHTML=(ERR?'<b style="color:var(--bad)">'+esc(ERR)+'</b> — the framework structure is shown, nothing is graded live. ':'')+esc(note);
     $('gauge').innerHTML=ring(sc.pct,190,16,colFor(sc.pct),f.short+' live coverage')+'<div style="font-weight:700;color:var(--title);margin-top:8px">'+esc(f.name)+'</div><div class="cap">Live coverage of the '+sc.measured+' of '+sc.total+' '+(K==='nca'?'sub-domains':K==='pdpl'?'articles':'controls')+' that have a live check (covered = 1, partial = ½, gap = 0).</div>'
       +'<div class="pills3">'+PL.map(function(x){var vs=rows.map(function(r){return pillars(r)[x[0]];}).filter(function(v){return v!=null;});var v=vs.length?Math.round(vs.reduce(function(a,b){return a+b;},0)/vs.length):null;

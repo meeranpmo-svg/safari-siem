@@ -28,7 +28,24 @@ function createOverviewIntel(app, opts = {}) {
     const acts = (await K.read('GRC actions', () => GR().actionList({ status: 'open' }).items, notes)) || [];
     const val = A.validationIntel ? await K.read('control validation', () => A.validationIntel.view(SYS), notes) : null;
     const cc = A.contcompIntel ? await K.read('continuous compliance', () => A.contcompIntel.view(SYS), notes) : null;
+    if (g) sector(g);
     return { g, ra, acts, val, cc, notes };
+  }
+  // the frameworks that apply to the organisation (brand setting): a switched-off framework module (SAMA, IA) leaves the overview;
+  // the Aramco CCC joins it from its own register (engine/aramco-ccc.js) when its module is on
+  function sector(g) {
+    const O = require('./brand'), off = new Set(O.modules_off || []), FL = g.frameworks = g.frameworks || {}, names = g.names = g.names || {};
+    for (const [k, m] of [['sama', 'fw-sama'], ['ia', 'fw-ia']]) if (off.has(m)) { delete FL[k]; if (g.forecast) delete g.forecast[k]; }
+    if (g.items) g.items = g.items.map((i) => Object.assign({}, i, { frameworks: i.frameworks.filter((f) => FL[f] || f === 'aramco'), refs: (i.refs || []).filter((r) => FL[r.fw]) })).filter((i) => i.frameworks.length);
+    const A = (app.addons || {}).aramcoCcc;
+    if (!off.has('fw-aramco') && A) {
+      let v = null; try { v = A.view({ user: 'system', role: 'viewer' }); } catch (e) { v = null; /* shown as not available below */ }
+      names.aramco = 'Aramco CCC';
+      if (!v || !v.applicable) FL.aramco = { available: false, reason: v ? 'no control list imported - the CCC owner imports it on Aramco CCC' : 'Aramco CCC could not be read' };
+      else { const by = (st) => v.controls.filter((c) => (c.status || 'not-assessed') === st).length;
+        FL.aramco = { available: true, items: v.applicable, pct_fully: v.score == null ? null : Math.round(100 * by('implemented') / Math.max(1, v.applicable - by('not-applicable'))), gaps: v.gaps,
+          counts: { fully: by('implemented'), partially: by('partial'), not: by('not-implemented'), not_assessed: by('not-assessed') } }; }
+    }
   }
   function overall(g) { const fl = Object.values((g && g.frameworks) || {}).filter((f) => f.available && f.pct_fully != null); return fl.length ? Math.round(fl.reduce((t, f) => t + f.pct_fully, 0) / fl.length) : null; }
   async function view() {

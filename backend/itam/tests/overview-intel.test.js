@@ -48,4 +48,16 @@ test('visual: shares per framework add up, coverage, overlap matrix is symmetric
   assert.ok(V.backlog.every((b, i, L) => !i || L[i - 1].unknown >= b.unknown), 'backlog ranked by unknown items');
   const pdpl = V.frameworks.find((f) => f.id === 'pdpl'); assert.ok(pdpl.pct_fully == null, 'nothing assessed is never a score');
   assert.equal(V.overall.series.length, 3);
+  // the organisation's frameworks (brand setting): SAMA / IA switched off leave the overview; the Aramco CCC joins from its register
+  const ids = V.frameworks.map((f) => f.id), off = require('../engine/brand').modules_off || [];
+  if (off.includes('fw-sama')) assert.ok(!ids.includes('sama'), 'SAMA is not offered: ' + ids);
+  if (!off.includes('fw-aramco')) {
+    const ar = V.frameworks.find((f) => f.id === 'aramco'); assert.ok(ar && ar.available === false && /control list/.test(ar.reason), 'Aramco CCC listed, says what is missing: ' + JSON.stringify(ar));
+    await e.req('PUT', '/aramco-ccc/profile', { body: { ccc_owner: 'syed' }, user: 'syed', role: 'admin' });
+    await e.req('POST', '/aramco-ccc/contracts', { body: { contract_no: 'C-SYN', title: 'Synthetic', services: ['general'] }, user: 'syed', role: 'admin' });
+    await e.req('POST', '/aramco-ccc/controls/import', { body: { csv: 'id,title,applies_to\nT-1,One,all\nT-2,Two,all' }, user: 'syed', role: 'admin' });
+    await e.req('POST', '/aramco-ccc/controls/T-1/assess', { body: { status: 'implemented' }, user: 'nora.syn', role: 'operator' });
+    const A2 = (await e.req('GET', '/overview-intel', VIEW)).json.visual.frameworks.find((f) => f.id === 'aramco');
+    assert.ok(A2.available && A2.items === 2 && A2.pct_fully === 50 && A2.counts.not_assessed === 1, JSON.stringify(A2));
+  }
 });
