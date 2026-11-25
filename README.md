@@ -46,6 +46,21 @@ Discovery), firewalls are Fortinet, switches are multi-vendor (SNMP / SSH), mail
 report through the collector kits in `backend/siem/agents/`. An administrator can add a module back in Platform Admin ->
 Modules & Solutions.
 
+## Install on a new server
+
+On the server (Ubuntu 22.04 / 24.04, with this tree copied or cloned onto it):
+
+```bash
+sudo bash deploy/install-fresh-server.sh --auth-src /path/to/the/sign-in/service
+```
+
+It installs, in order: nginx and the other system packages, the SIEM engine with ClickHouse, the asset engine, the
+organisation's sign-in service (copied unchanged; the script never creates an account or touches a password or
+two-factor setting), the HTTPS site for the portal host, and the pages. The portal host and the server's address come
+from the brand setting (`portal_host`, `platform_ip`); `--host`, `--ip`, `--tls-cert` and `--tls-key` override them.
+It ends with a summary of what is running and what a person does next (DNS, the first administrator, the
+certificate, the firewall). Re-running it upgrades in place and keeps settings, secrets and data.
+
 ## Tests
 
 ```bash

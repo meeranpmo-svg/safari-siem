@@ -1,0 +1,91 @@
+# Sentra platform - the portal site. WRITTEN by deploy/install-fresh-server.sh from deploy/nginx-site.conf.tmpl:
+# re-run the installer to change it. Everything except the sign-in pages needs a session (auth_request /auth/verify);
+# the engines listen on 127.0.0.1 only and trust identity only from the headers nginx sets after that check.
+server {
+    listen 80;
+    server_name @HOST@ @IP@;
+    return 301 https://$host$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name @HOST@ @IP@;
+
+    ssl_certificate     @CERT@;
+    ssl_certificate_key @KEY@;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_cache   shared:sentra_tls:10m;
+    server_tokens off;
+
+    root /var/www/sentra;
+    client_max_body_size 25m;
+
+    # nothing hidden, no editor / backup leftovers
+    location ~ ^/\.                                          { deny all; access_log off; log_not_found off; }
+    location ~* ^/(?!api/|ingest/|agent/|auth/).*\.(bak|orig|old|swp|tmp|map|py|sh|md|conf|ini|log|sql|env|key|pem)$ { deny all; }
+
+    # ---- sign-in service (127.0.0.1:@AUTH_PORT@): it IS the gate, so these are the only locations without a session
+    location = /auth/verify {
+        internal;
+        proxy_pass http://127.0.0.1:@AUTH_PORT@;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Original-URI $request_uri;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
+    }
+    location = /login {
+        limit_req zone=sentra_login burst=20 nodelay;
+        limit_req_status 429;
+        client_max_body_size 16k;
+        proxy_pass http://127.0.0.1:@AUTH_PORT@;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Auth-User "";
+        proxy_set_header X-Auth-Role "";
+    }
+    location /login/ {
+        limit_req zone=sentra_login burst=20 nodelay;
+        limit_req_status 429;
+        client_max_body_size 16k;
+        proxy_pass http://127.0.0.1:@AUTH_PORT@;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+    location = /logout {
+        proxy_pass http://127.0.0.1:@AUTH_PORT@;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+    location /auth/ {
+        limit_req zone=sentra_api burst=40 nodelay;
+        limit_req_status 429;
+        client_max_body_size 1m;
+        proxy_pass http://127.0.0.1:@AUTH_PORT@;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 30s;
+    }
+    location @login { return 302 /login; }
+
+    # the platform opens on the dashboards home page
+    location = / { return 302 /dashboards/; }
+
+    # the company logo (public: the sign-in page shows it before a session exists). add-dashboards-nginx.sh inserts
+    # the /dashboards/ block just above this location.
+    location = /logo.webp { alias /var/www/sentra/logo; default_type @LOGO_TYPE@; expires 7d; access_log off; }
+    location = /favicon.ico { access_log off; log_not_found off; return 204; }
+
+    # ---- the engines' APIs (session required; identity headers set here, never taken from the browser)
+    include /opt/sentra-siem/install/nginx-soc.conf;
+    include /opt/sentra-itam/install/nginx-itam.conf;
+
+    location / { return 404; }
+}

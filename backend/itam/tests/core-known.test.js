@@ -15,7 +15,7 @@ test('core-known.txt is current with git history and the patches', { skip: !hasG
   assert.equal(r.status, 0, r.stderr + r.stdout);
 });
 
-test('core_upgrade: an unmodified older version is replaced (backup kept), a changed file is left alone', { skip: (!hasGit && 'no git history') || (process.getuid && process.getuid() !== 0 && 'needs root (install -o root)') }, () => {
+test('core_upgrade: an unmodified older version is replaced (backup kept), a changed file is left alone', { skip: (!hasGit && 'no git history') || (process.getuid && process.getuid() !== 0 && 'needs root (install -o root)') }, (t) => {
   const T = fs.mkdtempSync(path.join(os.tmpdir(), 'core-up-')), APP = path.join(T, 'app'), HERE = path.join(T, 'bundle', 'install');
   fs.mkdirSync(path.join(APP, 'engine'), { recursive: true }); fs.mkdirSync(path.join(T, 'bundle', 'engine-all'), { recursive: true }); fs.mkdirSync(HERE, { recursive: true });
   fs.copyFileSync(path.join(ROOT, 'install/core-known.txt'), path.join(HERE, 'core-known.txt'));
@@ -23,6 +23,8 @@ test('core_upgrade: an unmodified older version is replaced (backup kept), a cha
   // the oldest shipped http.js, with CRLF line ends (a Windows checkout); a hand-edited routes.js
   const first = cp.execFileSync('git', ['log', '--format=%H', '--reverse', '--', 'engine/http.js'], { cwd: ROOT, encoding: 'utf8' }).split('\n')[0];
   const old = cp.execFileSync('git', ['show', first + ':./engine/http.js'], { cwd: ROOT, encoding: 'utf8' });
+  // a repository whose history holds one version of the file (a new tree) has nothing older to upgrade from: say so, never pass by accident
+  if (old.replace(/\r/g, '') === fs.readFileSync(path.join(ROOT, 'engine/http.js'), 'utf8').replace(/\r/g, '')) { t.skip('engine/http.js has a single version in this repository\'s history - no earlier shipped version to upgrade from'); return; }
   fs.writeFileSync(path.join(APP, 'engine/http.js'), old.replace(/\r?\n/g, '\r\n'));
   fs.writeFileSync(path.join(APP, 'engine/routes.js'), fs.readFileSync(path.join(ROOT, 'engine/routes.js'), 'utf8') + '\n// changed on this server\n');
   const fn = fs.readFileSync(path.join(ROOT, 'install/update-discovery.sh'), 'utf8').match(/^core_upgrade\(\) \{[\s\S]*?^\}$/m)[0];
