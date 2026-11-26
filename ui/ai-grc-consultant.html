@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI GRC Consultant</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI GRC Consultant</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
 <style>
 :root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
 *{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
@@ -20,11 +20,15 @@ textarea{width:100%;min-height:72px;background:var(--raise);border:1px solid var
 .ans{background:var(--raise);border:1px solid var(--edge);border-radius:12px;padding:12px;margin-top:10px}.ans .q{font-weight:600;color:var(--title)}.ans .m{font-size:11.5px;color:var(--mute);margin:2px 0 8px}
 .ans ol{margin:8px 0 0 18px;padding:0}.ans li{margin:3px 0}
 .ref{display:inline-block;font:11px ui-monospace,Consolas,monospace;background:#17222f;border:1px solid #2b4a6b;color:#9cc7f5;border-radius:6px;padding:0 6px;margin:2px 3px 0 0;text-decoration:none}
+.aig{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:0 0 12px}.aig .card{margin:0}.cv{position:relative;height:220px}
+.ins{list-style:none;margin:0;padding:0}.ins li{padding:8px 2px;border-bottom:1px solid var(--edge)}.ins li:last-child{border-bottom:0}
 </style></head><body><main>
-<div class="top"><div><div class="eb">AI &amp; Automation · governance, risk &amp; compliance</div><h1>AI GRC Consultant</h1><div class="sub">Patrols {{org.short}}'s compliance position for SAMA CSF, NCA ECC, PDPL, the Insurance Authority and ISO 27001, opens a work item per gap with the recommendation and the clauses it touches, and follows it until the records show it closed</div></div><span class="sp"></span><a class="lk" href="grc-policies.html">GRC Policies →</a><a class="lk" href="ai-ciso.html">AI CISO →</a></div>
+<div class="top"><div><div class="eb">AI &amp; Automation · governance, risk &amp; compliance</div><h1>AI GRC Consultant</h1><div class="sub" id="sub">Patrols {{org.short}}'s compliance position for SAMA CSF, NCA ECC, PDPL, the Insurance Authority and ISO 27001, opens a work item per gap with the recommendation and the clauses it touches, and follows it until the records show it closed</div></div><span class="sp"></span><a class="lk" href="grc-policies.html">GRC Policies →</a><a class="lk" href="ai-ciso.html">AI CISO →</a></div>
 <div class="banner">The consultant advises; the CISO and policy owners decide. It never approves, publishes or retires a policy, never signs off a drill and never attests compliance. Everything it says comes from the platform's own GRC records — a control that is not measured is shown as unknown, never as compliant, and an answer can cite only records that exist.</div>
 <section data-zyb-duty="grc" data-api="/api/itam"></section>
 <section class="kpis" id="kpis"></section>
+<div class="aig" id="aiband" hidden><section class="card"><h2>Gaps by urgency <span class="c">AI · ML patrol</span></h2><div class="cv"><canvas id="cv-sev"></canvas></div></section><section class="card"><h2>Where the gaps are <span class="c">by kind</span></h2><div class="cv"><canvas id="cv-kind"></canvas></div></section><section class="card"><h2>Frameworks touched <span class="c">clauses the gaps map to</span></h2><div class="cv"><canvas id="cv-fw"></canvas></div></section></div>
+<section class="card" id="inscard" hidden><h2>What the AI noticed <span class="c">AI · ML</span></h2><ul class="ins" id="ins"></ul><p class="muted" style="font-size:12px;margin:8px 0 0">From the platform's own GRC records; a control that is not measured is unknown, never compliant. The CISO and policy owners decide.</p></section>
 <section class="card"><h2>Compliance roadmap <span class="c" id="gen"></span></h2><div class="g3" id="road"><div class="empty">Loading…</div></div></section>
 <section class="card"><h2>Ask the consultant <span class="c">answers from the GRC records only, citing them · operator</span></h2>
   <textarea id="q" maxlength="1500" placeholder="e.g. What must we close before the SAMA CSF self-assessment? Which Insurance Authority requirements have no policy?"></textarea>
@@ -52,8 +56,9 @@ textarea{width:100%;min-height:72px;background:var(--raise);border:1px solid var
       var H=j.horizons||{now:[],next:[],later:[]}, all=H.now.concat(H.next,H.later), cnt=function(s){return all.filter(function(x){return x.severity===s;}).length;};
       function k(v,l,c){return '<div class="kpi"><div class="v" style="color:'+(c||'inherit')+'">'+esc(v)+'</div><div class="l">'+esc(l)+'</div></div>';}
       var by=function(re){return all.filter(function(x){return re.test(x.kind);}).length;};
-      $('kpis').innerHTML=k(j.total,'Open gaps',j.total?'var(--warn)':'var(--ok)')+k(cnt('critical')+cnt('high'),'Critical / high',cnt('critical')+cnt('high')?'var(--bad)':'')+k(by(/^control-/),'Controls not met')+k(by(/^policy-review$/),'Policies overdue')+k(by(/^ia-/),'IA requirements open')+k(by(/^drill-/),'Drill gaps')+k(by(/^owner-/),'Ownership gaps');
+      $('kpis').innerHTML=k(j.total,'Open gaps',j.total?'var(--warn)':'var(--ok)')+k(cnt('critical')+cnt('high'),'Critical / high',cnt('critical')+cnt('high')?'var(--bad)':'')+k(by(/^control-/),'Controls not met')+k(by(/^policy-review$/),'Policies overdue')+((j.frameworks||[]).indexOf('Insurance Authority')>=0?k(by(/^ia-/),'IA requirements open'):'')+k(by(/^drill-/),'Drill gaps')+k(by(/^owner-/),'Ownership gaps');
       $('gen').textContent='updated '+when(j.generated);
+      drawAi(j,all);
       var col=function(name,hint,list){return '<div class="hz"><h3>'+esc(name)+' '+pill(list.length,list.length?'inf':'mut')+' <span class="muted" style="font-weight:400;font-size:11.5px">'+esc(hint)+'</span></h3>'
         +(list.length?list.map(function(x){return '<div class="gi"><div class="t">'+pill(x.severity,SEVK[x.severity]||'mut')+' '+esc(x.title)+'</div><div class="r">'+esc(x.recommendation)+'</div><div class="f">'+esc(x.framework)+' · <a class="ref" href="'+esc(refPage(x.ref))+'">'+esc(x.ref)+'</a></div></div>';}).join(''):'<div class="empty">Nothing here.</div>')+'</div>';};
       $('road').innerHTML=col('Now','critical and high',H.now)+col('Next','medium',H.next)+col('Later','low',H.later);
@@ -69,6 +74,37 @@ textarea{width:100%;min-height:72px;background:var(--raise);border:1px solid var
   $('ask').addEventListener('click',ask);
   $('q').addEventListener('keydown',function(e){if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))ask();});
   Array.prototype.forEach.call($('qs').querySelectorAll('button'),function(b){b.addEventListener('click',function(){$('q').value=b.textContent;$('q').focus();});});
+  /* the organisation's frameworks (from the roadmap: the brand setting) drive the subtitle and the suggested questions */
+  var KL={'control-fail':'Controls failing','control-partial':'Controls partly met','policy-review':'Policies overdue','ia-gap':'IA not covered','ia-partial':'IA partly covered','drill-overdue':'DR tests overdue','drill-failed':'DR tests failed','drill-signoff':'DR sign-off missing','owner-business':'No business owner','owner-it':'No IT owner','pentest-exposure':'Pen-test exposure','sama-gap':'SAMA CSF gaps'};
+  var FWDONE=false;
+  function frameworks(F){if(FWDONE||!F||!F.length)return;FWDONE=true;
+    $('sub').textContent='Patrols '+((window.ZYB_ORG||{}).short||'the company')+'’s compliance position for '+F.join(', ')+', opens a work item per gap with the recommendation and the clauses it touches, and follows it until the records show it closed';
+    if(F.indexOf('SAMA CSF')<0&&F.indexOf('Insurance Authority')<0){var Q=['What should we fix first, and why?','Which NCA ECC controls are failing or only partly met?','Are our DR tests up to date for NCA ECC 3-1 (resilience)?','Which policies are overdue for review and who owns them?'];
+      if(F.indexOf('PDPL')>=0)Q.push('Which gaps touch PDPL personal-data obligations?');
+      $('qs').innerHTML=Q.map(function(q){return '<button type="button">'+esc(q)+'</button>';}).join('');
+      Array.prototype.forEach.call($('qs').querySelectorAll('button'),function(b){b.addEventListener('click',function(){$('q').value=b.textContent;$('q').focus();});});
+      $('q').placeholder='e.g. What must we close before the next NCA ECC assessment? Which controls have no policy behind them?';}
+  }
+  function drawAi(j,all){
+    frameworks(j.frameworks);
+    var C=window.zybCharts,sv={critical:0,high:0,medium:0,low:0};all.forEach(function(x){if(sv[x.severity]!=null)sv[x.severity]++;});
+    var kc={};all.forEach(function(x){kc[x.kind]=(kc[x.kind]||0)+1;});var K=Object.keys(kc).sort(function(a,b){return kc[b]-kc[a];}).slice(0,8);
+    var fc={};all.forEach(function(x){String(x.framework||'').split(' · ').forEach(function(f){var m=/^(NCA ECC|ISO 27001|PDPL|NDMO|SAMA CSF|SAMA BCM|SAMA|Insurance Authority|Aramco CCC)/.exec(f.trim());if(m)fc[m[1]]=(fc[m[1]]||0)+1;});});var FK=Object.keys(fc).sort(function(a,b){return fc[b]-fc[a];});
+    $('aiband').hidden=!all.length||!C||!window.Chart;
+    if(all.length&&C&&window.Chart){
+      C.ring($('cv-sev'),['Critical','High','Medium','Low'],[sv.critical,sv.high,sv.medium,sv.low],['crit','warn','acc','mute'],{v:all.length,l:'open gaps'},{title:'Gaps by urgency'});
+      C.bars($('cv-kind'),K.map(function(k){return KL[k]||k;}),[{label:'Gaps',data:K.map(function(k){return kc[k];}),color:'purple'}],{horizontal:true,title:'Gaps by kind',onClick:function(i){$('q').value='Explain our "'+(KL[K[i]]||K[i])+'" gaps: the risk, the clauses they touch and the order to close them.';$('q').focus();}});
+      if(FK.length)C.bars($('cv-fw'),FK,[{label:'Gaps',data:FK.map(function(f){return fc[f];}),color:'teal'}],{title:'Frameworks touched'});else C.empty($('cv-fw'),'No framework clause named.');
+    }
+    var N=[],c=function(re){return all.filter(function(x){return re.test(x.kind);}).length;};
+    if(sv.critical)N.push('🔴 <b>'+sv.critical+'</b> critical gaps need action now.');
+    if(c(/^drill-/))N.push('🛟 <b>'+c(/^drill-/)+'</b> recovery-test gaps: a system whose recovery is not tested is not proven to recover.');
+    if(c(/^control-/))N.push('🧪 <b>'+c(/^control-/)+'</b> automated controls are failing or only partly met.');
+    if(c(/^policy-review$/))N.push('📄 <b>'+c(/^policy-review$/)+'</b> policies are past their review date.');
+    if(c(/^owner-/))N.push('👤 <b>'+c(/^owner-/)+'</b> ownership gaps: assets without a named business or IT owner.');
+    if(FK.length)N.push('📚 Most gaps map to <b>'+esc(FK[0])+'</b> ('+fc[FK[0]]+').');
+    $('inscard').hidden=!all.length;$('ins').innerHTML=N.map(function(x){return '<li>'+x+'</li>';}).join('');
+  }
   road();prev();setInterval(function(){if(!document.hidden)road();},120000);
 })();
 </script>

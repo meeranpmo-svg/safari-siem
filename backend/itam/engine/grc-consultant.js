@@ -39,9 +39,31 @@ const ADVICE = {
   'sama-gap': ['Close the SAMA CSF control gap: the SAMA Compliance page lists the checks that fail and the evidence missing.', 'SAMA CSF'],
 };
 
+// the organisation's frameworks (brand setting): a SAMA- or Insurance-Authority-free organisation (Safari: NCA ECC, ISO 27001,
+// PDPL, NDMO) gets no SAMA / IA gaps and no SAMA / IA clauses in the labels, and the consultant is told its own frameworks
+const FW_NAME = { nca: 'NCA ECC', iso27001: 'ISO 27001', pdpl: 'PDPL', ndmo: 'NDMO', sama: 'SAMA CSF', ia: 'Insurance Authority' };
+function orgFrameworks(org) {
+  const off = new Set((org && org.modules_off) || []), sama = !off.has('fw-sama'), ia = !off.has('fw-ia');
+  const listed = ((org && org.frameworks) || []).map((k) => FW_NAME[k] || String(k).toUpperCase());
+  const names = listed.length ? listed.slice() : ['NCA ECC', 'PDPL', 'ISO 27001'];
+  if (sama && names.indexOf('SAMA CSF') < 0) names.unshift('SAMA CSF');
+  if (ia && names.indexOf('Insurance Authority') < 0) names.push('Insurance Authority');
+  return { sama, ia, names };
+}
+// the clause label of a gap kind for this organisation: SAMA clauses dropped where SAMA does not apply, with the NCA ECC
+// equivalent named for the kinds that only cited SAMA
+const NON_SAMA = { 'policy-review': 'NCA ECC 1-3 (policies and procedures) · ISO 27001 5.2 / A.5.1', 'drill-overdue': 'NCA ECC 3-1 (cybersecurity resilience) · ISO 27001 A.5.30',
+  'drill-failed': 'NCA ECC 3-1 (cybersecurity resilience) · ISO 27001 A.5.30', 'drill-signoff': 'NCA ECC 3-1 - independent review' };
+function fwLabel(kind, F) {
+  const base = ADVICE[kind] ? ADVICE[kind][1] : '';
+  if (F.sama) return base;
+  if (NON_SAMA[kind]) return NON_SAMA[kind];
+  return base.split(' · ').filter((x) => !/SAMA/.test(x)).join(' · ') || 'NCA ECC';
+}
+
 function grcConsultantAdapter(app, G) {
   const sev = { 'control-fail': 'high', 'control-partial': 'medium', 'policy-review': 'medium', 'ia-gap': 'high', 'ia-partial': 'medium', 'drill-overdue': 'high', 'drill-failed': 'critical', 'drill-signoff': 'medium', 'owner-business': 'medium', 'owner-it': 'low', 'sama-gap': 'high', 'pentest-exposure': 'high' };
-  const mk = (kind, key, title, evidence, target, extra) => ({ key: kind + ':' + key, severity: (extra && extra.severity) || sev[kind], kind, title, evidence: [].concat(evidence || []).filter(Boolean).concat(['framework: ' + ADVICE[kind][1]]),
+  const mk = (kind, key, title, evidence, target, extra) => ({ key: kind + ':' + key, severity: (extra && extra.severity) || sev[kind], kind, title, evidence: [].concat(evidence || []).filter(Boolean).concat(['framework: ' + fwLabel(kind, orgFrameworks(ZYB_ORG))]),
     recommendation: ADVICE[kind][0], target: target || { type: 'grc', id: key, name: title } });
   async function current() {
     const out = [];
@@ -53,7 +75,7 @@ function grcConsultantAdapter(app, G) {
     }
     for (const p of G.register({}).items || []) if (p.review && p.review.overdue && !p.review.acknowledged)
       out.push(mk('policy-review', p.doc_id, p.doc_id + ' ' + clip(p.title, 90) + ': review overdue since ' + (p.review.next_review || '?'), ['owner: ' + (p.owner || '-'), 'version ' + (p.version || '-')], { type: 'policy', id: p.doc_id, name: p.doc_id }));
-    try {
+    if (orgFrameworks(ZYB_ORG).ia) try {
       const ia = G.frameworkIA();
       for (const d of ia.domains || []) if (d.required && (d.status === 'gap' || d.status === 'partial'))
         out.push(mk(d.status === 'gap' ? 'ia-gap' : 'ia-partial', d.key, 'Insurance Authority: ' + clip(d.name, 100) + (d.status === 'gap' ? ' - not covered' : ' - partly covered'), [d.note, d.policies.length ? 'policies: ' + d.policies.map((x) => x.doc_id).join(', ') : 'no policy mapped'], { type: 'requirement', id: d.key, name: d.name }));
@@ -85,7 +107,7 @@ function grcConsultantAdapter(app, G) {
       }
     }
     const ciso = app.addons && app.addons.ciso;
-    if (ciso) { let tm = null; try { const v = await Promise.race([ciso.overview(false), new Promise((_, no) => { tm = setTimeout(() => no(new Error('the CISO overview did not answer in 5 s')), 5000); })]); for (const r of v.risks.filter((x) => x.ref.indexOf('sama:') === 0)) out.push(mk('sama-gap', r.ref.slice(5), r.title, [r.source], { type: 'control', id: r.ref, name: r.ref.slice(5) })); } catch (e) { /* SIEM side not readable now, or slower than 5 s: these SAMA gaps are listed on the next pass */ } finally { clearTimeout(tm); } }
+    if (ciso) { let tm = null; try { const v = await Promise.race([ciso.overview(false), new Promise((_, no) => { tm = setTimeout(() => no(new Error('the CISO overview did not answer in 5 s')), 5000); })]); for (const r of v.risks.filter((x) => orgFrameworks(ZYB_ORG).sama && x.ref.indexOf('sama:') === 0)) out.push(mk('sama-gap', r.ref.slice(5), r.title, [r.source], { type: 'control', id: r.ref, name: r.ref.slice(5) })); } catch (e) { /* SIEM side not readable now, or slower than 5 s: these SAMA gaps are listed on the next pass */ } finally { clearTimeout(tm); } }
     return out;
   }
   return {
@@ -117,7 +139,7 @@ function createConsult(app, G, adapter, opts = {}) {
   const col = app.store.collection('grc_consults'), now = opts.now || Date.now;
   const cfg = (app.config && app.config.grc_consultant) || {};
   const SYSTEM = [
-    ('You are the AI GRC Consultant of ' + ZYB_ORG.name + ' (Saudi Arabia; SAMA CSF, NCA ECC, PDPL, Insurance Authority, ISO 27001).'),
+    ('You are the AI GRC Consultant of ' + ZYB_ORG.name + ' (Saudi Arabia; ' + orgFrameworks(ZYB_ORG).names.join(', ') + '). Do not apply frameworks the company is not under.'),
     'Answer the question from the CONTEXT only: the company\'s policy register, control results, framework coverage, DR drills, asset ownership and open gaps.',
     'Cite the record ids you rely on exactly as given (field "ref"). Never invent a policy, control, clause number, date or finding. If the context does not answer the question, say what is missing.',
     'You advise; the CISO and policy owners decide. Never state that anything was approved, attested, signed or changed.',
@@ -169,8 +191,8 @@ function createConsult(app, G, adapter, opts = {}) {
   async function roadmap() {
     const g = await adapter.current(), H = { critical: 'now', high: 'now', medium: 'next', low: 'later' };
     const by = { now: [], next: [], later: [] };
-    for (const x of g) by[H[x.severity] || 'later'].push({ ref: 'gap:' + x.key, severity: x.severity, kind: x.kind, title: x.title, recommendation: x.recommendation, framework: ADVICE[x.kind] ? ADVICE[x.kind][1] : '' });
-    return { generated: now(), total: g.length, horizons: by };
+    for (const x of g) by[H[x.severity] || 'later'].push({ ref: 'gap:' + x.key, severity: x.severity, kind: x.kind, title: x.title, recommendation: x.recommendation, framework: fwLabel(x.kind, orgFrameworks(ZYB_ORG)) });
+    return { generated: now(), total: g.length, horizons: by, frameworks: orgFrameworks(ZYB_ORG).names };
   }
   return { consult, list, roadmap, context };
 }
@@ -184,4 +206,4 @@ function registerGrcConsultantRoutes(srv, app, G, adapter, opts = {}) {
   return C;
 }
 
-module.exports = { grcConsultantAdapter, registerGrcConsultantRoutes, ADVICE };
+module.exports = { grcConsultantAdapter, registerGrcConsultantRoutes, ADVICE, orgFrameworks, fwLabel };

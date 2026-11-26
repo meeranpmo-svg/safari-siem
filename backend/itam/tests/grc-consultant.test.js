@@ -9,6 +9,8 @@ const assert = require('node:assert/strict');
 const { startApp } = require('./helpers');
 const { registerDuty } = require('../engine/duty');
 const { registerOwnership } = require('../engine/ownership');
+const { orgFrameworks, fwLabel } = require('../engine/grc-consultant');
+const BRAND = require('../engine/brand'), F = orgFrameworks(BRAND);   // the installed organisation's frameworks
 
 const ADM = { user: 'syed', role: 'admin', ip: '' };
 let clock = Date.parse('2026-10-15T08:00:00Z');
@@ -26,7 +28,8 @@ test('grc consultant: gaps become work items with advice and frameworks; fixing 
   const items = D.list({ engineer: 'grc' }).items, kind = (k) => items.filter((x) => x.kind === k);
   assert.equal(kind('drill-overdue').length, 1, 'never-tested system is overdue');
   assert.match(kind('drill-overdue')[0].recommendation, /RTO \/ RPO/);
-  assert.ok(kind('drill-overdue')[0].evidence.some((x) => /^framework: .*SAMA BCM/.test(x)));
+  assert.ok(kind('drill-overdue')[0].evidence.some((x) => x === 'framework: ' + fwLabel('drill-overdue', F)), 'the clauses of this organisation\'s frameworks');
+  if (!F.ia) assert.equal(kind('ia-gap').length + kind('ia-partial').length, 0, 'no Insurance Authority gaps where it does not apply');
   const own = kind('owner-business')[0];
   assert.ok(own, 'asset without a business owner'); assert.equal(own.severity, 'high', 'under 50% named');
   assert.ok(items.every((x) => x.recommendation && !/approved|signed off by the consultant/i.test(x.title)));
@@ -37,7 +40,9 @@ test('grc consultant: gaps become work items with advice and frameworks; fixing 
   // roadmap: now / next / later with frameworks
   const r = await e.req('GET', '/grc/roadmap', { role: 'viewer' });
   assert.equal(r.status, 200);
-  assert.ok(r.json.horizons.now.some((x) => x.kind === 'drill-overdue' && /SAMA/.test(x.framework)));
+  assert.ok(r.json.horizons.now.some((x) => x.kind === 'drill-overdue' && x.framework === fwLabel('drill-overdue', F)));
+  assert.deepEqual(r.json.frameworks, F.names);
+  if (!F.sama) assert.ok(!JSON.stringify(r.json.horizons).includes('SAMA'), 'no SAMA clause where SAMA does not apply');
   assert.ok(!r.json.horizons.now.concat(r.json.horizons.next, r.json.horizons.later).some((x) => /^owner-/.test(x.kind)));
 });
 
@@ -99,4 +104,20 @@ test('grc consultant: serious penetration-testing findings become one compliance
   findings = [findings[2]];
   clock += 600000; await D.patrol('grc');
   assert.equal(D.get(g[0].id).status, 'resolved');
+});
+
+// frameworks per organisation: a SAMA-regulated insurer keeps SAMA / IA clauses and gaps; an organisation without them (Safari:
+// NCA ECC, ISO 27001, PDPL, NDMO) gets the NCA ECC equivalents and no SAMA / IA anywhere
+test('grc consultant: clause labels and frameworks follow the organisation', () => {
+  const insurer = orgFrameworks({ frameworks: ['nca', 'iso27001', 'pdpl'], modules_off: [] });
+  assert.ok(insurer.sama && insurer.ia); assert.deepEqual(insurer.names, ['SAMA CSF', 'NCA ECC', 'ISO 27001', 'PDPL', 'Insurance Authority']);
+  assert.match(fwLabel('drill-overdue', insurer), /SAMA BCM/);
+  const safari = orgFrameworks({ frameworks: ['nca', 'iso27001', 'pdpl', 'ndmo'], modules_off: ['fw-sama', 'fw-ia'] });
+  assert.ok(!safari.sama && !safari.ia); assert.deepEqual(safari.names, ['NCA ECC', 'ISO 27001', 'PDPL', 'NDMO']);
+  for (const k of ['control-fail', 'control-partial', 'policy-review', 'drill-overdue', 'drill-failed', 'drill-signoff', 'owner-business', 'owner-it', 'pentest-exposure']) {
+    const l = fwLabel(k, safari); assert.ok(l && !/SAMA/.test(l), k + ': ' + l);
+  }
+  assert.equal(fwLabel('policy-review', safari), 'NCA ECC 1-3 (policies and procedures) · ISO 27001 5.2 / A.5.1');
+  assert.equal(fwLabel('control-fail', safari), 'NCA ECC 2 · ISO 27001 Annex A');
+  assert.equal(fwLabel('pentest-exposure', safari), 'NCA ECC 2-10 (vulnerability management) · ISO 27001 A.8.8 (technical vulnerabilities)');
 });
