@@ -74,6 +74,20 @@
     if ((m = /^Sign in with (.+)$/.exec(s))) return '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0639\u0628\u0631 ' + m[1];
     return s;
   }
+  // the organisation's colours for the decoration (brand setting colors.primary): a light tint readable on the dark panel
+  var BR = (function () {
+    var h = String((ZYB_ORG.colors && ZYB_ORG.colors.primary) || '#01579B').replace('#', ''); if (!/^[0-9a-f]{6}$/i.test(h)) h = '01579B';
+    var c = [0, 2, 4].map(function (i) { return parseInt(h.slice(i, i + 2), 16); }), mix = function (t) { return c.map(function (v) { return Math.round(v + (255 - v) * t); }); };
+    var hex = function (a) { return '#' + a.map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join(''); };
+    return { hi: hex(mix(0.55)), ink: hex(mix(0.82)), rgb: mix(0.45).join(',') };
+  })();
+  // the compliance frameworks shown under the message: the ones the organisation is under (brand setting), in a fixed order
+  function fwChips() {
+    var fw = ZYB_ORG.frameworks || [], off = ZYB_ORG.modules_off || [], out = [];
+    var L = [['sama', 'SAMA CSF', 'fw-sama'], ['nca', 'NCA ECC', ''], ['iso27001', 'ISO 27001', ''], ['pdpl', 'PDPL', ''], ['ndmo', 'NDMO', ''], ['aramco', 'Aramco CCC', 'fw-aramco']];
+    for (var i = 0; i < L.length; i++) { var k = L[i]; if (k[2] && off.indexOf(k[2]) >= 0) continue; if (fw.length ? fw.indexOf(k[0]) >= 0 || (k[0] === 'aramco' && fw.indexOf('nca') >= 0 && (ZYB_ORG.pages_off || []).indexOf('aramco-ccc') < 0) : k[0] !== 'aramco') out.push('<b>' + k[1] + '</b>'); }
+    return out.join('');
+  }
   var de = document.documentElement;
   de.classList.add('zl-pre');
   var css = document.createElement('style'); css.id = 'zl-css';
@@ -209,7 +223,7 @@
     '.zl:before{display:none!important}.zl:after{z-index:2}',
     '.zl-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:radial-gradient(1100px 620px at 50% -12%,rgba(' + RGB + ',.30),transparent 62%),radial-gradient(900px 500px at 50% 112%,rgba(' + RGB + ',.18),transparent 60%),linear-gradient(180deg,' + (ASB ? '#09244E,#071B3B 45%,#041228' : '#071331,#040B20 55%,#030817') + ')}',
     '.zl-bg i{position:absolute;border-radius:50%;filter:blur(90px);opacity:.42;animation:zl-drift 26s ease-in-out infinite alternate}',
-    '.zl-bg .b1{width:560px;height:560px;left:-180px;top:6%;background:' + C1 + '}.zl-bg .b2{width:460px;height:460px;right:-140px;top:28%;background:' + C2 + ';opacity:.28;animation-delay:-9s}.zl-bg .b3{width:420px;height:420px;left:38%;bottom:-220px;background:' + (ASB ? '#C9A227' : '#6D5DFC') + ';opacity:.26;animation-delay:-17s}',
+    '.zl-bg .b1{width:560px;height:560px;left:-180px;top:6%;background:' + C1 + '}.zl-bg .b2{width:460px;height:460px;right:-140px;top:28%;background:' + C2 + ';opacity:.28;animation-delay:-9s}.zl-bg .b3{width:420px;height:420px;left:38%;bottom:-220px;background:' + (ASB ? BR.hi : '#6D5DFC') + ';opacity:.22;animation-delay:-17s}',
     '@keyframes zl-drift{0%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-40px) scale(1.12)}100%{transform:translate(-40px,30px) scale(.94)}}',
     '.zl-dots{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1.3px);background-size:26px 26px;-webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,#000 20%,transparent 75%);mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,#000 20%,transparent 75%)}',
     '.zl-rings{position:absolute;left:50%;top:50%;width:min(1100px,150vw);height:auto;transform:translate(-50%,-50%);opacity:.9}',
@@ -327,8 +341,14 @@
     '@media(max-height:700px){.zl-shell .zl-caps{display:none!important}}',
     '@media(max-width:1080px){.zl-shell{grid-template-columns:1fr!important;max-width:520px!important;row-gap:18px!important}.zl-main{justify-self:center;order:-1}.zl-hero{align-items:center;text-align:center}.zl-eyebrow,.zl-pitch,.zl-shell .zl-caps{display:none!important}.zl-shell .zl-chips{justify-content:center!important}.zl-top .zl-title,.zl-vr{display:none!important}.zl-barrow{justify-content:center}.zl-end .zl-clock{display:none!important}}',
     '@media(max-width:560px){.zl-top,.zl-shell,.zl-end{padding-left:16px!important;padding-right:16px!important}.zl-top .zl-pill{display:none!important}.zl-top{justify-content:center}.zl-shell .zl-chips{display:none!important}.zl-end .zl-foot{justify-content:center!important;flex-wrap:wrap}}',
-    'html.zl-rtl .zl-top .zl-brand,html.zl-rtl .zl-end{text-align:right!important}'
-  ].join('');
+    'html.zl-rtl .zl-top .zl-brand,html.zl-rtl .zl-end{text-align:right!important}',
+    '.zl-cardtop .zl-logo{height:54px!important}@media(max-width:560px){.zl-cardtop .zl-logo{height:44px!important}}',
+    // the organisation's own logo on a white badge above the message (decoration only)
+    '.zl-orgbadge{display:inline-flex;align-self:flex-start;align-items:center;padding:10px 16px;border-radius:14px;background:#fff;box-shadow:0 12px 30px -14px rgba(0,0,0,.6);margin-bottom:6px}.zl-orgbadge img{display:block;height:44px;width:auto}',
+    'html.zl-rtl .zl-orgbadge{align-self:flex-end}@media(max-width:1080px){.zl-orgbadge{align-self:center}}@media(max-height:760px){.zl-orgbadge img{height:34px}}'
+  ].join('')
+    // the decoration's gold family -> the organisation's light brand blue and its tints (status / form colours untouched)
+    .replace(/#D9B95B/gi, BR.hi).replace(/#F1E3B0/gi, BR.ink).replace(/rgba\(217,185,91,/g, 'rgba(' + BR.rgb + ',');
   (document.head || de).appendChild(css);
 
   function reveal() { de.classList.remove('zl-pre'); }
@@ -431,9 +451,10 @@
       + '<header class="zl-top"><div class="zl-brand"><div class="zl-lockup" lang="en" dir="ltr">' + MARK + '<div class="zl-wm"><b>ZYBERON <i>SENTRA</i></b><span>AI \u00b7 Automation \u00b7 Monitoring</span></div></div>'
       + '<span class="zl-vr" aria-hidden="true"></span><h1 class="zl-title">' + T(NAME) + '</h1></div><span class="zl-pill">' + I.lock + T('Internal system \u00b7 authorised users only') + '</span></header>'
       + '<div class="zl-shell"><section class="zl-hero">'
+      + (ZYB_ORG.logo && /^data:image\/(png|webp|jpeg|svg\+xml);base64,/.test(ZYB_ORG.logo) ? '<span class="zl-orgbadge"><img alt="' + ZYB_ORG.name + '" src="' + ZYB_ORG.logo + '"></span>' : '')
       + ('<span class="zl-eyebrow">' + ZYB_ORG.short + ' \u00b7 ') + T('Secure access') + '</span><p class="zl-pitch">' + pitch() + '</p>'
       + '<ul class="zl-caps"><li><i>' + I.srv + '</i>' + T('IT operations and network monitoring') + '</li><li><i>' + I.shield + '</i>' + T('Security operations and automated response') + '</li><li><i>' + I.list + '</i>' + T('Enterprise risk, compliance and audit') + '</li><li><i>' + I.ai + '</i>' + T('AI and machine learning: anomalies, forecasts, insights') + '</li></ul>'
-      + '<div class="zl-chips"><span>' + T('Evidence for') + '</span><b>SAMA CSF</b><b>NCA ECC</b><b>PDPL</b><b>NDMO</b><b>' + T('Audit') + '</b></div></section>'
+      + '<div class="zl-chips"><span>' + T('Evidence for') + '</span>' + fwChips() + '<b>' + T('Audit') + '</b></div></section>'
       + '<div class="zl-main"><div class="zl-card"><div class="zl-cardtop">' + (ZYB_ORG.logo ? ('<img class="zl-logo" alt="' + ZYB_ORG.name + '" src="') + ZYB_ORG.logo + '">' : '<span></span>')
       + '<div class="zl-lang" role="group" aria-label="' + T('Language') + '"><button type="button" data-zl-lang="en" lang="en" aria-pressed="' + (LANG === 'en') + '">EN</button><button type="button" data-zl-lang="ar" lang="ar" aria-pressed="' + (LANG === 'ar') + '">\u0639\u0631\u0628\u064a</button></div></div>'
       + '<div class="zl-head"><h2></h2><p></p></div>' + steps(step) + '</div></div></div>'

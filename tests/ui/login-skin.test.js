@@ -63,7 +63,18 @@ const PAGES = {
   await page.focus('input[name=pass]'); await page.evaluate(() => { const q = document.querySelector('input[name=pass]'); const e = new KeyboardEvent('keyup', { key: 'A', bubbles: true }); Object.defineProperty(e, 'getModifierState', { value: (k) => k === 'CapsLock' }); q.dispatchEvent(e); });
   ok(await vis('.zl-capsw') && /Caps Lock is on/.test(await page.textContent('.zl-capsw')), 'Caps Lock warning');
   await page.evaluate(() => { const q = document.querySelector('input[name=pass]'); const e = new KeyboardEvent('keyup', { key: 'a', bubbles: true }); Object.defineProperty(e, 'getModifierState', { value: () => false }); q.dispatchEvent(e); }); ok(!(await vis('.zl-capsw')), 'warning goes when Caps Lock is off');
-  ok((await page.$$eval('.zl-chips b', (b) => b.map((x) => x.textContent))).join(',') === 'SAMA CSF,NCA ECC,PDPL,NDMO,Audit', 'framework badges');
+  // the frameworks the organisation is under (brand setting), then Audit - never a framework it is not under (Safari: no SAMA)
+  { const fw = ZYB_ORG.frameworks || [], off = ZYB_ORG.modules_off || [], want = [];
+    for (const [k, l, o] of [['sama', 'SAMA CSF', 'fw-sama'], ['nca', 'NCA ECC', ''], ['iso27001', 'ISO 27001', ''], ['pdpl', 'PDPL', ''], ['ndmo', 'NDMO', ''], ['aramco', 'Aramco CCC', 'fw-aramco']]) {
+      if (o && off.includes(o)) continue;
+      if (fw.length ? fw.includes(k) || (k === 'aramco' && fw.includes('nca') && !(ZYB_ORG.pages_off || []).includes('aramco-ccc')) : k !== 'aramco') want.push(l); }
+    want.push('Audit');
+    const got = (await page.$$eval('.zl-chips b', (b) => b.map((x) => x.textContent))).join(',');
+    ok(got === want.join(','), 'framework badges from the brand setting: ' + got);
+    ok(off.includes('fw-sama') ? !/SAMA/.test(got) : true, 'no badge for a framework the organisation is not under'); }
+  // the organisation's logo badge, and no gold left in the decoration (the brand blue instead)
+  ok(await page.$eval('.zl-orgbadge img', (i) => i.naturalWidth > 0 && i.alt.length > 0), 'the organisation logo badge');
+  ok(!(await page.evaluate(() => /#D9B95B|217,185,91|#C9A227/i.test(document.getElementById('zl-css').textContent))), 'no gold left in the sign-in look');
   ok(/^Sign in — Zyberon Sentra · IT Operations & Cyber Security Automation and Monitoring Platform$/.test(await page.title()), 'page title: ' + await page.title());
   ok(await page.evaluate(() => getComputedStyle(document.querySelector('.zl form button[type=submit], .zl form button:not(.zl-eye)')).backgroundColor) === 'rgb(1, 87, 155)', ('default design: the ' + ZYB_ORG.short + ' colour'));
   await page.evaluate(() => localStorage.setItem('zyb-dash-prefs', JSON.stringify({ brand: 'as' }))); await page.reload(); await page.waitForSelector('.zl-card');
