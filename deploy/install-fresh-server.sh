@@ -88,7 +88,7 @@ dpkg_configure() {
 # another package operation (automatic updates, an apt-get left in another window, its dpkg) is WAITED for - every 10 s, up to
 # 20 minutes - instead of failing at once; a holder stuck on the disk (state D, nothing written) is said plainly, because waiting
 # will not help then: the VM's storage is stalling. The lock files are never removed.
-pkg_busy() { ps -eo pid=,stat=,etime=,args= | grep -E '[a]pt-get|[d]pkg |[/]dpkg |[u]nattended-upgr|[a]pt\.systemd|[p]ackagekit' | awk -v me="$$" '$1 != me'; }
+pkg_busy() { ps -eo pid=,stat=,etime=,args= | grep -E '[a]pt-get|[d]pkg |/[d]pkg |[u]nattended-upgr|[a]pt\.systemd|[p]ackagekit' | awk -v me="$$" '$1 != me'; }
 wait_pkg_idle() {
   local i b
   for i in $(seq 1 120); do
