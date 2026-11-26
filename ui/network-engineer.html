@@ -25,6 +25,8 @@ main tbody tr:last-child td{border-bottom:0}
 .tabs .nav-link[aria-selected="true"]{color:#fff;border-bottom-color:#066fd1}
 .site{border-radius:8px!important}
 .msg{border-radius:8px}.msg.me{background:rgba(6,111,209,.12);border-color:rgba(6,111,209,.4)}
+.nek{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}.nek .t{border:1px solid var(--border,rgba(127,140,160,.25));border-radius:12px;padding:10px 12px;background:var(--panel,rgba(127,140,160,.06))}.nek .l{font-size:12px;opacity:.8}.nek .v{font-size:24px;font-weight:700;margin:2px 0}.nek .s{font-size:12px;opacity:.75}.nek .t.bad .v{color:#ff7b72}.nek .t.warn .v{color:#e3b341}.nek .t.ok .v{color:#3fb950}
+.aig{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:0 0 12px}.aig .card{margin:0}.aig .cv{position:relative;height:210px}button.askai{white-space:nowrap;font-size:12px;padding:3px 9px}
 .grid{display:grid;gap:12px}.g2{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}@media (max-width:1000px){.g2{grid-template-columns:minmax(0,1fr)}}
 .sites{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .site{text-align:left;background:var(--tblr-bg-surface-secondary);border:1px solid var(--tblr-border-color);border-left:4px solid var(--tblr-secondary);border-radius:10px;padding:11px 12px;cursor:pointer;color:var(--tblr-body-color);font:inherit}.site:hover{border-color:#4a5162}
@@ -51,7 +53,7 @@ form.f input,form.f select,form.f textarea{width:100%;min-width:0;background:var
 .cause{border:1px solid var(--tblr-border-color);border-radius:9px;padding:9px 11px;margin:8px 0}.cause b{color:#fff}
 .cli pre{background:var(--tblr-bg-forms);border:1px solid var(--tblr-border-color);border-radius:8px;padding:10px;overflow:auto;max-height:420px;font:12.5px/1.45 Consolas,monospace;white-space:pre;margin:4px 0 12px}.cli .cmd{font:600 12.5px Consolas,monospace;color:var(--info)}
 .fp{font:12.5px Consolas,monospace;word-break:break-all;background:var(--tblr-bg-forms);border:1px solid var(--tblr-border-color);border-radius:7px;padding:8px}
-</style></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
+</style><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script></head><body data-zyb-tabler><main data-zyb-fluid><div class="container-xl">
 <div class="page-header d-print-none mb-3"><div class="row align-items-center g-2">
  <div class="col"><div class="page-pretitle">Network operations · {{org.short}}</div><h2 class="page-title"><span class="avatar avatar-sm bg-azure-lt me-2"><i class="ti ti-network"></i></span>AI Network Engineer</h2></div>
  <div class="col-auto ms-auto d-flex align-items-center gap-2 flex-wrap"><span id="chips" class="d-flex gap-1 flex-wrap"></span><button type="button" class="btn" id="refresh"><i class="ti ti-refresh me-1"></i>Refresh</button></div>
@@ -61,7 +63,7 @@ form.f input,form.f select,form.f textarea{width:100%;min-width:0;background:var
   <button type="button" role="tab" aria-selected="true" data-tab="overview" class="nav-link"><i class="ti ti-layout-dashboard me-1"></i>Overview</button><button type="button" role="tab" aria-selected="false" data-tab="ask" class="nav-link"><i class="ti ti-message-chatbot me-1"></i>Ask the AI</button><button type="button" role="tab" aria-selected="false" data-tab="tickets" class="nav-link an-only"><i class="ti ti-ticket me-1"></i>Tickets</button>
   <button type="button" role="tab" aria-selected="false" data-tab="devices" class="nav-link"><i class="ti ti-router me-1"></i>Devices</button><button type="button" role="tab" aria-selected="false" data-tab="changes" class="nav-link"><i class="ti ti-git-pull-request me-1"></i>Change plans</button><button type="button" role="tab" aria-selected="false" data-tab="report" class="nav-link"><i class="ti ti-report-analytics me-1"></i>Daily report</button>
 </div>
-<section id="tab-overview" role="tabpanel"><div class="grid g2">
+<section id="tab-overview" role="tabpanel"><div class="nek" id="nek"></div><div class="aig" id="aiband"><div class="card ne"><h2>Problems by severity<small>AI · ML on every poll</small></h2><div class="cv"><canvas id="cv-sev"></canvas></div></div><div class="card ne"><h2>Reachability by site<small>devices answering now</small></h2><div class="cv"><canvas id="cv-reach"></canvas></div></div><div class="card ne"><h2>Latency by site<small>average round trip, ms</small></h2><div class="cv"><canvas id="cv-rtt"></canvas></div></div><div class="card ne"><h2>What keeps coming up<small>problems by kind · click to ask the AI</small></h2><div class="cv"><canvas id="cv-kind"></canvas></div></div></div><div class="grid g2">
   <div class="card ne"><h2>Sites<small>click a site to diagnose it</small></h2><div class="sites" id="sites"><div class="ne-empty">Loading…</div></div></div>
   <div class="card ne"><h2>Current problems<small id="fcount"></small></h2><div class="tw" id="findings"></div></div>
 </div></section>
@@ -105,14 +107,39 @@ form.f input,form.f select,form.f textarea{width:100%;min-width:0;background:var
     try{localStorage.setItem('zyb-ne-tab',t);}catch(e){ /* browser storage blocked (private window): the page works without it */ } if(t==='devices')loadDevices();if(t==='changes')loadChanges();if(t==='report')loadReport();if(t==='ask')loadConvs();if(t==='tickets')loadTickets();}
 
   /* overview */
-  function loadOverview(){return req('GET','/overview').then(function(o){OV=o;drawChips();drawSites();drawFindings();}).catch(function(e){$('sites').innerHTML='<div class="err">'+esc(e.message)+'</div>';});}
+  function loadOverview(){return req('GET','/overview').then(function(o){OV=o;drawChips();drawInsights();drawSites();drawFindings();}).catch(function(e){$('sites').innerHTML='<div class="err">'+esc(e.message)+'</div>';});}
   function drawChips(){var p=OV.poller||{},a=OV.ai||{};$('chips').innerHTML='<span class="chip"><b>'+(p.devices||0)+'</b> devices · poll every '+(p.interval_s||'?')+' s</span> <span class="chip '+(a.enabled?'ok':'bad')+'">AI <b>'+(a.enabled?'ready':'off')+'</b></span>'+(OV.changes_pending?' <span class="chip"><b>'+OV.changes_pending+'</b> change(s) to review</span>':'');}
   function drawSites(){var s=OV.sites||[];if(!s.length){$('sites').innerHTML='<div class="ne-empty">No devices yet. '+(can('admin')?'Open <b>Devices</b> to add them or import the SIEM\'s network log sources.':'An administrator needs to add the network devices.')+'</div>';return;}
     $('sites').innerHTML=s.map(function(x){var f=x.findings||{};return '<button type="button" class="site '+esc(x.status)+'" data-site="'+esc(x.site)+'"><span class="st">'+esc(x.status)+'</span><b>'+esc(x.site)+'</b><div class="m">'+x.reachable+'/'+x.devices+' reachable'+(x.rtt_avg_ms!=null?' · '+x.rtt_avg_ms+' ms':'')+(x.loss_avg_pct?' · '+x.loss_avg_pct+' % loss':'')+'</div><div class="m">'+(f.critical?f.critical+' critical · ':'')+(f.high?f.high+' high · ':'')+(f.medium||0)+' medium</div></button>';}).join('');}
   $('sites').addEventListener('click',function(e){var b=e.target.closest('[data-site]');if(b)siteDetail(b.getAttribute('data-site'));});
   function drawFindings(){var f=OV.findings||[];$('fcount').textContent=f.length?f.length+' open':'';
-    $('findings').innerHTML=f.length?'<table><thead><tr><th>Severity</th><th>Problem</th><th>Site</th></tr></thead><tbody>'+f.map(function(x,i){return '<tr data-k="'+i+'" tabindex="0"><td>'+sev(x.severity)+'</td><td>'+esc(x.title)+'</td><td class="muted">'+esc(x.site)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="ne-empty">No problems detected on the monitored devices.</div>';}
+    var askOk=askable();$('findings').innerHTML=f.length?'<table><thead><tr><th>Severity</th><th>Problem</th><th>Site</th>'+(askOk?'<th></th>':'')+'</tr></thead><tbody>'+f.map(function(x,i){return '<tr data-k="'+i+'" tabindex="0"><td>'+sev(x.severity)+'</td><td>'+esc(x.title)+'</td><td class="muted">'+esc(x.site)+'</td>'+(askOk?'<td><button type="button" class="askai" data-askf="'+i+'">✦ Ask AI</button></td>':'')+'</tr>';}).join('')+'</tbody></table>':'<div class="ne-empty">No problems detected on the monitored devices.</div>';}
+  // "Ask AI" on a problem: the Ask tab with a question about it (the AI investigates with its read-only tools); the row itself still opens the detail
+  function askable(){return !!(OV&&OV.ai&&OV.ai.enabled&&can('analyst'));}
+  function askAbout(q){if(!askable())return;show('ask');$('q').value=q;$('q').focus();}
+  $('findings').addEventListener('click',function(e){var b=e.target.closest('[data-askf]');if(!b)return;e.stopPropagation();var x=OV.findings[+b.getAttribute('data-askf')];if(x)askAbout('Investigate this problem on '+(x.device_name||x.device)+' at '+x.site+': '+x.title+'. What is the impact, the cause and the safe fix?');},true);
   $('findings').addEventListener('click',function(e){var r=e.target.closest('tr[data-k]');if(r)findingDetail(OV.findings[+r.getAttribute('data-k')]);});
+  /* AI / ML overview: tiles and four charts drawn from the poller's own readings (sites, devices, latency, loss, findings);
+     nothing invented. Without the charts library the charts hide; the tiles and tables carry every figure. */
+  function kindLabel(k){return String(k||'other').replace(/[-_]+/g,' ').replace(/^./,function(c){return c.toUpperCase();});}
+  function drawInsights(){var S=OV.sites||[],F=OV.findings||[],P=OV.poller||{},C=window.zybCharts;
+    var dev=S.reduce(function(a,x){return a+(x.devices||0);},0),up=S.reduce(function(a,x){return a+(x.reachable||0);},0);
+    var rtt=S.filter(function(x){return x.rtt_avg_ms!=null;}),avg=rtt.length?Math.round(rtt.reduce(function(a,x){return a+x.rtt_avg_ms;},0)/rtt.length):null;
+    var loss=S.filter(function(x){return x.loss_avg_pct;}).length,b={critical:0,high:0,medium:0,low:0};F.forEach(function(x){if(b[x.severity]!=null)b[x.severity]++;});
+    var down=S.filter(function(x){return x.status==='down'||x.status==='critical';}).length;
+    var T=function(l,v,sub,c){return '<div class="t '+(c||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(sub||'')+'</div></div>';};
+    $('nek').innerHTML=S.length?T('Sites',S.length,down?down+' down or critical':'all answering',down?'bad':'ok')+T('Devices reachable',up+' / '+dev,dev-up?(dev-up)+' not answering':'every device answers',dev-up?'bad':'ok')
+      +T('Average latency',avg!=null?avg+' ms':'–','across the sites',avg>=150?'bad':avg>=80?'warn':'')+T('Sites with loss',loss,'packet loss now',loss?'warn':'ok')
+      +T('Critical / high',(b.critical||0)+' / '+(b.high||0),F.length+' problems in all',b.critical?'bad':b.high?'warn':'ok')+T('Polling',P.interval_s?'every '+P.interval_s+' s':'–',(P.devices||0)+' devices'):'';
+    if(!C||!window.Chart){$('aiband').hidden=true;return;}$('aiband').hidden=!S.length;if(!S.length)return;
+    if(F.length)C.ring($('cv-sev'),['Critical','High','Medium','Low'],[b.critical,b.high,b.medium,b.low],['crit','warn','acc','mute'],{v:F.length,l:'problems'},{title:'Problems by severity'});else C.empty($('cv-sev'),'No problems detected.');
+    var SS=S.slice(0,12);
+    C.bars($('cv-reach'),SS.map(function(x){return x.site;}),[{label:'Answering',data:SS.map(function(x){return x.reachable||0;}),color:'ok'},{label:'Not answering',data:SS.map(function(x){return (x.devices||0)-(x.reachable||0);}),color:'crit'}],{stacked:true,title:'Reachability by site'});
+    var R=S.filter(function(x){return x.rtt_avg_ms!=null;}).sort(function(a,c){return c.rtt_avg_ms-a.rtt_avg_ms;}).slice(0,12);
+    if(R.length)C.bars($('cv-rtt'),R.map(function(x){return x.site;}),[{label:'Latency ms',data:R.map(function(x){return x.rtt_avg_ms;}),colors:R.map(function(x){return x.loss_avg_pct?'crit':x.rtt_avg_ms>=80?'warn':'teal';})}],{horizontal:true,title:'Latency by site'});else C.empty($('cv-rtt'),'No latency reading yet.');
+    var byK={};F.forEach(function(x){byK[x.kind]=(byK[x.kind]||0)+1;});var K=Object.keys(byK).sort(function(a,c){return byK[c]-byK[a];}).slice(0,8);
+    if(K.length)C.bars($('cv-kind'),K.map(kindLabel),[{label:'Problems',data:K.map(function(k){return byK[k];}),color:'purple'}],{horizontal:true,title:'Problems by kind',onClick:function(i){askAbout('Why do we keep seeing "'+kindLabel(K[i])+'" problems on our network, and what is the lasting fix?');}});else C.empty($('cv-kind'),'Nothing to group yet.');
+  }
   function findingDetail(f){Z.open('Problem · '+f.severity,f.title,Z.kv([['Device',esc(f.device_name||f.device)],['Site',esc(f.site)],['Vendor',esc(f.vendor||'')],['Kind',esc(f.kind)]])+(f.evidence&&f.evidence.length?Z.sec('Evidence','<ul>'+f.evidence.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'):'')+Z.sec('Recommended fix','<p>'+esc(f.recommendation)+'</p>')
     +'<p><button type="button" id="askf" class="pri">Ask the AI to investigate</button> <button type="button" id="devf">Open device</button></p>');
     $('askf').onclick=function(){Z.close();show('ask');newConv();$('q').value='Investigate this problem and tell me the root cause and the fix: "'+f.title+'" (device '+(f.device_name||f.device)+', site '+f.site+').';send();};
