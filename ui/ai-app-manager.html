@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Application Manager</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Application Manager</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
 <style>
 :root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
 *{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
@@ -12,11 +12,19 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
 .p{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;margin:1px 2px 1px 0}.ok{background:rgba(63,185,80,.15);color:var(--ok)}.warn{background:rgba(227,179,65,.15);color:var(--warn)}.bad{background:rgba(255,123,114,.16);color:var(--bad)}.mut{background:rgba(140,147,161,.16);color:#a3a9b5}.info{background:rgba(121,184,255,.15);color:var(--info)}
 a.lk{color:var(--info);text-decoration:none;font-weight:600}
 .banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
+.aig{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:0 0 12px}.aig .card{margin:0}.cv{position:relative;height:220px}
+.erp{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:stretch}.erp .side{border:1px solid var(--edge);border-radius:12px;padding:12px;min-width:0}.erp .arrow{display:flex;align-items:center;font-size:26px;color:var(--info)}
+.erp h3{margin:0 0 4px;font-size:14px}.erp .tag{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}@media (max-width:900px){.erp{grid-template-columns:1fr}.erp .arrow{justify-content:center;transform:rotate(90deg)}}
+.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid var(--edge)}.ins li:last-child{border-bottom:0}
 </style></head><body><main>
 <div class="top"><div><div class="eb">AI &amp; Automation · applications</div><h1>AI Application Manager</h1><div class="sub">Watches every business service the way an application owner would: is it up, does it still have redundancy, is there a working DR copy, are its servers under pressure</div></div><span class="sp"></span><a class="lk" href="server-availability.html">Server availability →</a></div>
 <div class="banner">Services come from Server Availability: the service an administrator set on each server, or — until set — servers grouped by name (shown as <i>inferred</i>). The AI Application Manager recommends; the application owner decides. Nothing is restarted or changed.</div>
 <section data-zyb-duty="apps" data-api="/api/soc"></section>
 <section class="kpis" id="kpis"></section>
+<section id="erpcard" class="card" hidden><h2>ERP programme <span class="c" id="erpsub"></span></h2><div class="erp"><div class="side" id="erpcur"></div><div class="arrow" aria-hidden="true">➜</div><div class="side" id="erptgt"></div></div>
+<h2 style="margin-top:14px">Migration watch <span class="c">AI · from the monitored services</span></h2><ul class="ins" id="erpwatch"></ul></section>
+<div class="aig" id="aiband" hidden><section class="card"><h2>Service health <span class="c">AI · ML</span></h2><div class="cv"><canvas id="cv-st"></canvas></div></section><section class="card"><h2>Resilience gaps <span class="c">what could take a service down</span></h2><div class="cv"><canvas id="cv-gap"></canvas></div></section><section class="card"><h2>Production servers online <span class="c">per service</span></h2><div class="cv"><canvas id="cv-prod"></canvas></div></section></div>
+<section class="card" id="inscard" hidden><h2>What the AI noticed <span class="c">AI · ML</span></h2><ul class="ins" id="ins"></ul><p class="muted" style="font-size:12px;margin:8px 0 0">Indicators from the monitored servers, not proof. The application owner decides; nothing is restarted or changed.</p></section>
 <section class="card"><h2>Business services <span class="c" id="gen"></span></h2><div class="tw"><table><thead><tr><th>Service</th><th>Status</th><th>Production online</th><th>High availability</th><th>Servers</th><th>Findings</th></tr></thead><tbody id="svc"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table></div></section>
 </main>
 <script>
@@ -40,7 +48,51 @@ a.lk{color:var(--info);text-decoration:none;font-weight:600}
           +'<td>'+pill(s[0],s[1])+'</td><td>'+esc(g.production_online)+' / '+esc(g.production)+'</td><td>'+(g.ha?pill('yes','ok'):pill('no','mut'))+'</td>'
           +'<td class="muted" style="font-size:12px">'+m.map(function(h){return esc(h.name)+(h.status==='offline'?' <span style="color:var(--bad)">(offline)</span>':'');}).join(', ')+'</td>'
           +'<td>'+(g.issues.length?g.issues.map(function(i){return pill(IS[i]||i,i==='service-down'||i==='no-redundancy-now'?'bad':'warn');}).join(''):pill('none','ok'))+'</td></tr>';}).join(''):'<tr><td colspan="6" class="empty">No servers are monitored yet — Server Availability fills from IT Asset Management (servers with a management IP).</td></tr>';
+      drawAi(G,H,j);
     };x.onerror=x.ontimeout=function(){$('svc').innerHTML='<tr><td colspan="6" class="empty">The SIEM is not reachable.</td></tr>';};x.send();}
+  /* AI / ML: charts, noticed patterns and the ERP programme, all from Server Availability's groups and servers; nothing invented */
+  var ORG=window.ZYB_ORG||{},ERP=ORG.erp||null;
+  var RX={cur:/dynamics|\bd365|\baos\d*\b|business ?central|\bnav(ision)?\b|\bcrm\b/i,tgt:/fusion|\boic\b|oracle ?(cloud|erp|integration|saas)/i};
+  function side(G,H,rx){return G.filter(function(g){return rx.test(g.name)||g.members.some(function(id){return H[id]&&rx.test(H[id].name||'');});});}
+  function sideHtml(tag,name,L,H,emptyTxt){
+    var srv=0,on=0;L.forEach(function(g){g.members.forEach(function(id){var h=H[id];if(h){srv++;if(h.status!=='offline')on++;}});});
+    return '<div class="tag">'+esc(tag)+'</div><h3>'+esc(name)+'</h3>'+(L.length?'<div class="muted" style="font-size:12px;margin:0 0 6px">'+L.length+' services · '+on+' / '+srv+' servers online</div><table><tbody>'+L.map(function(g){var s=ST[g.status]||['?','mut'];return '<tr><td><b>'+esc(g.name)+'</b></td><td>'+pill(s[0],s[1])+'</td><td>'+(g.ha?pill('HA','ok'):pill('no HA','mut'))+'</td><td>'+(g.issues.indexOf('no-dr')>=0?pill('no DR','warn'):g.issues.indexOf('dr-offline')>=0?pill('DR offline','bad'):pill('DR','ok'))+'</td></tr>';}).join('')+'</tbody></table>':'<p class="muted" style="font-size:12.5px">'+emptyTxt+'</p>');
+  }
+  function drawAi(G,H,j){
+    var C=window.zybCharts,cnt=function(f){return G.filter(f).length;};
+    var by={ok:cnt(function(g){return g.status==='ok';}),warning:cnt(function(g){return g.status==='warning';}),spof:cnt(function(g){return g.status==='spof';}),degraded:cnt(function(g){return g.status==='degraded';}),down:cnt(function(g){return g.status==='down';})};
+    var gap=['single-server','no-dr','dr-offline','no-redundancy-now','service-down'],gc=gap.map(function(k){return cnt(function(g){return g.issues.indexOf(k)>=0;});});
+    $('aiband').hidden=!G.length||!C||!window.Chart;
+    if(G.length&&C&&window.Chart){
+      C.ring($('cv-st'),['Healthy','Warning','Single server','No redundancy','Down'],[by.ok,by.warning,by.spof,by.degraded,by.down],['ok','acc','warn','pink','crit'],{v:G.length,l:'services'},{title:'Service health'});
+      if(gc.some(Boolean))C.bars($('cv-gap'),gap.map(function(k){return IS[k]||k;}),[{label:'Services',data:gc,colors:['warn','warn','crit','crit','crit']}],{horizontal:true,title:'Resilience gaps'});else C.empty($('cv-gap'),'No resilience gap: every service has redundancy and a DR copy.');
+      var P=G.filter(function(g){return g.production;}).sort(function(a,b){return b.production-a.production;}).slice(0,12);
+      if(P.length)C.bars($('cv-prod'),P.map(function(g){return g.name;}),[{label:'Online',data:P.map(function(g){return g.production_online;}),color:'teal'},{label:'Offline',data:P.map(function(g){return g.production-g.production_online;}),color:'crit'}],{stacked:true,title:'Production servers online'});else C.empty($('cv-prod'),'No production servers yet.');
+    }
+    // what the AI noticed - each line with its figure
+    var N=[],crit=G.filter(function(g){return g.critical&&(g.status!=='ok');}),inf=cnt(function(g){return g.inferred;});
+    if(by.down)N.push('🔴 <b>'+by.down+'</b> services are down now.');
+    if(crit.length)N.push('⭐ <b>'+crit.length+'</b> business-critical services are not fully healthy: '+crit.slice(0,4).map(function(g){return esc(g.name);}).join(', ')+(crit.length>4?'…':'')+'.');
+    if(gc[0])N.push('🧩 <b>'+gc[0]+'</b> services run on a single server - one failure stops them.');
+    if(gc[1])N.push('🛟 <b>'+gc[1]+'</b> services have no DR copy.');
+    if(inf)N.push('🏷️ <b>'+inf+'</b> services are grouped by server name only - set the service on each server in Server Availability so the AI judges them correctly.');
+    $('inscard').hidden=!G.length;$('ins').innerHTML=N.length?N.map(function(x){return '<li>'+x+'</li>';}).join(''):'<li class="muted">Nothing stands out: every service is healthy with redundancy and DR.</li>';
+    // the ERP programme (brand setting: erp.current -> erp.target), read from the services that match each system
+    if(ERP&&ERP.current&&ERP.target){
+      var cur=side(G,H,RX.cur),tgt=side(G,H,RX.tgt);$('erpcard').hidden=false;
+      $('erpsub').textContent=(ERP.state==='migrating'?'migrating':'')+' · '+ERP.current+' → '+ERP.target;
+      $('erpcur').innerHTML=sideHtml('Today',ERP.current,cur,H,'No service named like '+ERP.current+' is monitored yet. In Server Availability set the service "'+ERP.current+'" on its application, database and integration servers.');
+      $('erptgt').innerHTML=sideHtml('Target',ERP.target,tgt,H,ERP.target+' runs in Oracle’s cloud, so it has no servers here. Monitor what '+ORG.short+' runs for it: the integration / connector servers and the network path - set the service "'+ERP.target+'" on them in Server Availability.');
+      var W=[],cs=0,co=0;cur.forEach(function(g){g.members.forEach(function(id){var h=H[id];if(h){cs++;if(h.status!=='offline')co++;}});});
+      if(cur.length){var cbad=cur.filter(function(g){return g.status!=='ok';});
+        W.push(cbad.length?'⚠️ <b>'+cbad.length+'</b> of the '+cur.length+' '+esc(ERP.current)+' services are not fully healthy - the current system must stay reliable until the cutover.':'✅ '+esc(ERP.current)+' is healthy on all '+cur.length+' services ('+co+' / '+cs+' servers online).');
+        var nd=cur.filter(function(g){return g.issues.indexOf('no-dr')>=0;}).length;if(nd)W.push('🛟 <b>'+nd+'</b> '+esc(ERP.current)+' services have no DR copy - keep a restorable copy until the migration is signed off.');}
+      else W.push('🔍 '+esc(ERP.current)+' is not identified among the monitored services yet.');
+      W.push(tgt.length?'🔗 '+esc(ERP.target)+': <b>'+tgt.length+'</b> integration services monitored'+(tgt.some(function(g){return g.status!=='ok';})?' - some are not healthy.':', all healthy.'):'🔗 No '+esc(ERP.target)+' integration is monitored yet - add the connector / integration servers before go-live so the cutover can be watched.');
+      if(cur.length&&tgt.length)W.push('🔀 Both systems are running side by side: '+cur.length+' '+esc(ERP.current)+' and '+tgt.length+' '+esc(ERP.target)+' services.');
+      $('erpwatch').innerHTML=W.map(function(x){return '<li>'+x+'</li>';}).join('');
+    }
+  }
   load();setInterval(function(){if(!document.hidden)load();},60000);
 })();
 </script>
