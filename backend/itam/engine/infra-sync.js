@@ -189,9 +189,25 @@ function createInfraSync(app, opts = {}) {
   return { run, view, putSettings, offer, get, tick: guardOf(app, 'infra-sync.tick', tick), deviceProfile };
 }
 
+// Is Infrastructure Automation part of this installation? Its link secret was copied (add-infra-sync.sh), the service's own
+// settings are on this server, or the configuration names its address. Not every installation has it (the Safari platform runs
+// IT Asset Management and the SIEM only): then nothing runs every 10 minutes and nothing is reported as failing.
+const NOT_INSTALLED = 'Infrastructure Automation is not part of this installation - nothing to link. It is set up with the Infrastructure Automation engine (sentra-infra), then install/add-infra-sync.sh.';
+function infraInstalled(app, opts = {}) {
+  if (typeof opts.installed === 'boolean') return opts.installed;
+  const ic = (app.config && app.config.infra) || {}, ex = opts.exists || fs.existsSync;
+  return !!ic.base_url || ex(ic.secret_file || '/etc/sentra-itam/infra-proxy-secret') || ex('/etc/sentra-infra');
+}
 function registerInfraSync(srv, app, opts = {}) {
+  if (!infraInstalled(app, opts)) {
+    // the page asks; say so plainly. No timer, and no add-on: "Sync all now" and asset propagation list it as not installed
+    srv.route('GET', '/infra-sync', (ctx) => { ctx.need('operator'); return { installed: false, note: NOT_INSTALLED, settings: null, last: null, sent: [], pending: [], skipped: [] }; });
+    srv.route('POST', '/infra-sync/run', (ctx) => { ctx.need('operator'); throw bad(NOT_INSTALLED, 409); });
+    srv.route('PUT', '/infra-sync/settings', (ctx) => { ctx.need('admin'); throw bad(NOT_INSTALLED, 409); });
+    return null;
+  }
   const N = createInfraSync(app, opts);
-  srv.route('GET', '/infra-sync', (ctx) => { ctx.need('operator'); return N.view(); });
+  srv.route('GET', '/infra-sync', (ctx) => { ctx.need('operator'); return Object.assign({ installed: true }, N.view()); });
   srv.route('POST', '/infra-sync/run', async (ctx) => { ctx.need('operator'); return N.run(ctx.who); });
   srv.route('PUT', '/infra-sync/settings', (ctx) => {
     ctx.need('admin');
@@ -205,4 +221,4 @@ function registerInfraSync(srv, app, opts = {}) {
   return N;
 }
 
-module.exports = { createInfraSync, registerInfraSync, deviceProfile };
+module.exports = { createInfraSync, registerInfraSync, deviceProfile, infraInstalled };

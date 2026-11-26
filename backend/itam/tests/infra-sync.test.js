@@ -99,7 +99,7 @@ test('link problems are reported, never silent; several probes need a choice; ro
   const r0 = await bad.run(ADM); assert.equal(r0.ok, false); assert.match(r0.error, /link not set up.*add-infra-sync\.sh/);
   const wrong = createInfraSync(e.app, { request: fakeInfra(st), readFile: () => 'w'.repeat(32) });
   assert.match((await wrong.run(ADM)).error, /refused the platform credentials/);
-  const N = registerInfraSync(e.app.srv, e.app, { request: fakeInfra(st), readFile: () => SECRET, noTimer: true });
+  const N = registerInfraSync(e.app.srv, e.app, { request: fakeInfra(st), readFile: () => SECRET, noTimer: true, installed: true });
   assert.match((await N.run(ADM)).error, /2 probes are configured - choose/);
   assert.equal((await e.req('GET', '/infra-sync', { role: 'viewer' })).status, 403);
   assert.equal((await e.req('GET', '/infra-sync', { role: 'operator' })).status, 200);
@@ -111,4 +111,29 @@ test('link problems are reported, never silent; several probes need a choice; ro
   const r = await e.req('POST', '/infra-sync/run', { user: 'ali.syn', role: 'operator' });
   assert.equal(r.status, 200); assert.equal(r.json.ok, true, r.json.error); assert.ok(r.json.added.every((x) => x.kind !== 'db'), 'databases switched off');
   assert.ok(st.calls.filter((c) => c[1] === '/api/infra/targets' && c[0] === 'POST').every((c) => c[3].probe_id === 'relay-2'));
+});
+
+// an installation without Infrastructure Automation (the Safari platform): no timer, no add-on (so "Sync all now" and asset
+// propagation list it as not installed instead of failing every 10 minutes), the page is told plainly; roles still apply;
+// installed is detected from the link secret, the service's settings folder or a configured address
+test('not installed: nothing runs or fails, the page says it is not part of this installation; detection', () => {
+  const { infraInstalled } = require('../engine/infra-sync');
+  // a separate tiny server holding only these routes, so the engine's own registration does not interfere
+  const routes = []; const srv = { route: (m, p, fn) => routes.push({ m, p, fn }) };
+  const app = { config: {}, addons: {} };
+  assert.equal(registerInfraSync(srv, app, { exists: () => false }), null);
+  assert.equal(app.addons.infraSync, undefined, 'no add-on: Sync all now shows "not installed"');
+  const ctx = (role) => ({ need: (r) => { const R = { viewer: 0, operator: 2, admin: 3 }; if (R[role] < R[r]) throw Object.assign(new Error('forbidden'), { status: 403 }); }, who: { user: 'u', role } });
+  const get = routes.find((r) => r.m === 'GET').fn, run = routes.find((r) => r.m === 'POST').fn, put = routes.find((r) => r.m === 'PUT').fn;
+  const v = get(ctx('operator')); assert.equal(v.installed, false); assert.match(v.note, /not part of this installation/);
+  assert.throws(() => get(ctx('viewer')), (x) => x.status === 403, 'a viewer is refused');
+  assert.throws(() => run(ctx('operator')), (x) => x.status === 409 && /not part of this installation/.test(x.message));
+  assert.throws(() => put(ctx('operator')), (x) => x.status === 403, 'settings stay admin-only');
+  assert.throws(() => put(ctx('admin')), (x) => x.status === 409);
+  // detection
+  assert.equal(infraInstalled({ config: {} }, { exists: () => false }), false);
+  assert.equal(infraInstalled({ config: {} }, { exists: (p) => p === '/etc/sentra-itam/infra-proxy-secret' }), true, 'the link secret was copied');
+  assert.equal(infraInstalled({ config: {} }, { exists: (p) => p === '/etc/sentra-infra' }), true, 'the service is on this server');
+  assert.equal(infraInstalled({ config: { infra: { base_url: 'http://10.0.0.9:9160' } } }, { exists: () => false }), true, 'an address is configured');
+  assert.equal(infraInstalled({ config: {} }, { installed: true }), true);
 });

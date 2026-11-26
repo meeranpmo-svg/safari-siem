@@ -87,6 +87,7 @@ tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(255,255,255,.035)}.tw{
   $('sync').onclick=function(){if(!confirm('Read every connected source now (vCenter, Nutanix, standalone ESXi, storage, backup, Endpoint Central, capacity and licence facts, AD and other directory scopes, SIEM IPs, AI administrators, AI Network Engineer, Infrastructure Automation) and recheck? Scans that send packets keep their own schedule.'))return;req('POST','/reconcile/sync-all',{}).then(function(r){V.job=r.job;drawJob();toast('Sync started');}).catch(function(e){toast(e.message);});};
   // the asset register <-> Infrastructure Automation (engine/infra-sync.js): what was sent, what waits, what cannot go and why
   function drawInfra(I){
+    if(I&&I.installed===false){$('infat').textContent='not installed';$('inf').innerHTML='<p class="muted">'+esc(I.note||'Infrastructure Automation is not part of this installation.')+'</p>';return;}
     var L=I.last,P=I.pending||[],K=I.skipped||[],S=I.sent||[];
     $('infat').textContent=L?'last sync '+dt(L.at)+(L.ok?'':' · failed'):'not synced yet';
     var h='<p class="note">Network devices (Cisco IOS / NX-OS, FortiGate, Aruba), Linux servers and the PostgreSQL / MySQL databases found on them go to Infrastructure Automation as targets; targets added there come back into the register. No login is copied: add credentials in Infrastructure Automation → Settings.</p>';
