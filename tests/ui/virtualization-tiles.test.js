@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE.
 'use strict';
+// the vCenter / Nutanix view: an organisation with VMware on (Safari's brand runs Hyper-V only - virtualization-hyperv.test.js)
 // Browser test: every KPI tile on virtualization.html is clickable and filters what it counts - Hosts / VMs set the Hosts & VMs
 // list, VMs twice shows the powered-off ones, "In the inventory" shows the ones not in it yet, Failing shows only the failing
 // platforms (and "show all" clears it). Stubbed IT Asset Management API, SYNTHETIC data.
@@ -25,7 +26,7 @@ const platforms = [{ id: 'p1', label: 'VC-SYN', kind: 'vcenter', base_url: 'http
   const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
   const browser = await chromium.launch(), errs = [];
   try {
-    const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } }); page.on('pageerror', (x) => errs.push(x.message));
+    const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } }); page.on('pageerror', (x) => errs.push(x.message)); await page.addInitScript(() => { Object.defineProperty(window, 'ZYB_ORG', { configurable: true, set(v) { this._o = Object.assign({}, v, { pages_off: [] }); }, get() { return this._o; } }); }); 
     await page.goto('http://127.0.0.1:' + srv.address().port + '/dashboards/virtualization.html');
     await page.waitForFunction(() => /of 4/.test(document.getElementById('ic').textContent) && document.querySelector('#kk [data-tile]'), null, { timeout: 15000 });
     const names = () => page.evaluate(() => [].map.call(document.querySelectorAll('#inv tbody tr td:first-child b'), (b) => b.textContent).sort().join(','));

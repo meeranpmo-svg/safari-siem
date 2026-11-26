@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE.
 'use strict';
+// the vCenter / Nutanix view: an organisation with VMware on (Safari's brand runs Hyper-V only - virtualization-hyperv.test.js)
 // Browser test for "Fetch now" and the live line on the Nutanix VMs, Capacity and Virtualization pages, with the REAL ITAM
 // capacity module (backend/itam engine/virt-capacity.js) over a fake Prism whose CPU figure changes; and Fetch now on
 // Server Availability (SIEM POST /netops/avail/scan) and Node Details (POST /netops/devices/:id/poll) over stubs.
@@ -50,7 +51,7 @@ const GiB = 1024 ** 3;
   const base = 'http://127.0.0.1:' + srv.address().port + '/';
   const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1400, height: 900 } }); const errs = [];
+  const page = await browser.newPage({ viewport: { width: 1400, height: 900 } }); const errs = []; await page.addInitScript(() => { Object.defineProperty(window, 'ZYB_ORG', { configurable: true, set(v) { this._o = Object.assign({}, v, { pages_off: [] }); }, get() { return this._o; } }); }); 
   page.on('pageerror', (e) => errs.push(e.message));
   const body = () => page.evaluate(() => document.body.innerText);
 

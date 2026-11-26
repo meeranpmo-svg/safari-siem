@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE.
 'use strict';
+// the vCenter / Nutanix view: an organisation with VMware on (Safari's brand runs Hyper-V only - virtualization-hyperv.test.js)
 // virtualization.html, hosts without an address: a Discovery scope whose vCenter step did not run says why (blocked: disabled
 // globally); a filled address says where it came from (asset / DNS); "Find missing host IPs" (operator) calls the engine and
 // redraws the list with the addresses it found; a viewer has no button; an admin adds a Proxmox VE connection (API token). Stubbed IT Asset Management API, SYNTHETIC data.
@@ -30,7 +31,7 @@ const inv = (items) => ({ items, total: items.length, summary: { hosts: items.le
   const browser = await chromium.launch(), errs = [];
   const url = 'http://127.0.0.1:' + srv.address().port + '/dashboards/virtualization.html';
   try {
-    let page = await browser.newPage(); page.on('pageerror', (x) => errs.push(x.message));
+    let page = await browser.newPage(); page.on('pageerror', (x) => errs.push(x.message)); await page.addInitScript(() => { Object.defineProperty(window, 'ZYB_ORG', { configurable: true, set(v) { this._o = Object.assign({}, v, { pages_off: [] }); }, get() { return this._o; } }); }); 
     await page.goto(url); await page.waitForFunction(() => /of 3/.test(document.getElementById('ic').textContent), null, { timeout: 15000 });
     ok(/vCenter: not run/.test(await page.textContent('#dscl')) && /blocked: disabled globally/.test(await page.textContent('#dscl')), 'the scope says why vCenter did not run');
     const t = await page.$eval('#inv', (x) => x.innerText.replace(/\s+/g, ' '));
@@ -40,10 +41,10 @@ const inv = (items) => ({ items, total: items.length, summary: { hosts: items.le
     await page.click('#fillips'); await page.waitForFunction(() => /192\.168\.63\.22/.test(document.getElementById('inv').innerText));
     ok(fills === 1, 'the engine was asked once'); ok(/from dns/i.test(await page.$eval('#inv', (x) => x.innerText)), 'the found address shows it came from DNS');
     ok(/1 of 1 host addresses filled/.test(await page.evaluate(() => document.body.innerText)), 'toast says how many were filled');
-    ROLE = 'viewer'; fills = 0; await page.close(); page = await browser.newPage(); page.on('pageerror', (x) => errs.push(x.message));
+    ROLE = 'viewer'; fills = 0; await page.close(); page = await browser.newPage(); page.on('pageerror', (x) => errs.push(x.message)); await page.addInitScript(() => { Object.defineProperty(window, 'ZYB_ORG', { configurable: true, set(v) { this._o = Object.assign({}, v, { pages_off: [] }); }, get() { return this._o; } }); }); 
     await page.goto(url); await page.waitForFunction(() => /of 3/.test(document.getElementById('ic').textContent), null, { timeout: 15000 });
     ok(!(await page.isVisible('#fillips')), 'a viewer has no button');
-    ROLE = 'admin'; await page.close(); page = await browser.newPage(); page.on('pageerror', (x) => errs.push(x.message));
+    ROLE = 'admin'; await page.close(); page = await browser.newPage(); page.on('pageerror', (x) => errs.push(x.message)); await page.addInitScript(() => { Object.defineProperty(window, 'ZYB_ORG', { configurable: true, set(v) { this._o = Object.assign({}, v, { pages_off: [] }); }, get() { return this._o; } }); }); 
     await page.goto(url); await page.waitForFunction(() => /of 3/.test(document.getElementById('ic').textContent), null, { timeout: 15000 });
     await page.click('#add'); await page.waitForSelector('#f-k');
     await page.selectOption('#f-k', 'proxmox'); ok(/PVEAuditor/.test(await page.textContent('#f-hint')), 'the form says which Proxmox role the token needs');
