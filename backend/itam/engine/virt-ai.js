@@ -34,6 +34,11 @@ How you work:
 - Think like an on-duty virtualization administrator: impact first (which services / VMs are at risk), then cause, then the safe fix. Consider HA admission control, N+1, DRS, vCPU:core ratio, memory overcommit, snapshot growth, datastore free space and thin provisioning, VMware Tools, and the capacity forecast.
 - You are read-only. You cannot change vCenter or Prism. When a fix needs a change, prefer propose_standard_plan (the platform's own vetted plan for that kind of problem). Use propose_custom_plan only when no standard plan fits; write exact PowerCLI (vSphere) or acli / ncli (Nutanix) with prechecks and rollback, address objects by the IDs the tools return, and mark irreversible steps. An administrator who did not ask for it approves it and a person applies it. Never claim a change was made.
 
+Microsoft Hyper-V:
+- Hyper-V hosts report themselves (read-only PowerShell every 15 minutes). Use hyperv_overview first, then hyperv_host for the hosts that matter.
+- The findings are learned from each host's own readings (trend and p95 over 24 h, least-squares capacity forecasts): quote the figures and say they are indicators from the readings.
+- You cannot change a Hyper-V host or VM and you cannot propose a Hyper-V action. Recommend the step (with the exact PowerShell, e.g. Remove-VMSnapshot, Set-VMMemory) and say that a person proposes it on the Hyper-V Servers page and a different administrator approves it.
+
 Answer format (keep it tight; the reader is an engineer):
 1. Summary — one or two sentences.
 2. Impact and probable cause — with a confidence (high / medium / low).
@@ -58,6 +63,14 @@ const TOOLS = [
     commands: { type: 'array', items: { type: 'object', properties: { lang: { type: 'string', enum: ['powercli', 'acli', 'ncli', 'text'] }, text: { type: 'string' } }, required: ['lang', 'text'], additionalProperties: false }, maxItems: 10 },
     rollback: { type: 'string' } }, ['title', 'reason', 'steps', 'rollback']) },
 ];
+// Microsoft Hyper-V (engine/hyperv-manager.js): each host reports itself every 15 minutes. Read-only here; a change to a VM
+// (start / stop / checkpoint) is proposed by a PERSON on the Hyper-V page and approved by a different administrator - never by the AI
+TOOLS.push(
+  { name: 'hyperv_overview', description: 'Microsoft Hyper-V: every reporting host with CPU, memory, cores, vCPU:core ratio, VM counts, last report and whether it is stale; totals; the learned findings ranked by severity (capacity forecasts, CPU, memory overcommit, disk latency, NIC saturation, checkpoints, heartbeat, replication, idle / oversized VMs).', input_schema: S({}) },
+  { name: 'hyperv_host', description: 'One Hyper-V host: its VMs (state, vCPU, assigned / demanded memory, CPU %, heartbeat, checkpoints, replication, network), volumes, NICs and disk latency, capacity forecast (days until memory / each volume reaches 95 %), findings and the last 24 h of readings.', input_schema: S({ host: { type: 'string', maxLength: 120, description: 'host name (or part of it)' } }, ['host']) },
+  { name: 'hyperv_actions', description: 'Hyper-V VM actions people proposed (start, shutdown, checkpoint...) with their state, who proposed and who decided. Read-only.', input_schema: S({ status: { type: 'string', enum: ['proposed', 'approved', 'rejected', 'taken', 'done', 'failed'] } }) },
+);
+const HV_TOOLS = new Set(['hyperv_overview', 'hyperv_host', 'hyperv_actions']);
 const WRITE_TOOLS = new Set(['propose_standard_plan', 'propose_custom_plan']);
 
 function check(schema, v, at = 'input') {
@@ -109,7 +122,17 @@ function createVirtAI(app, V, opts = {}) {
   const sortSev = (a, b) => SEVR[b.severity] - SEVR[a.severity];
   const clusterSlim = (c) => ({ id: c.id, platform: c.platform, kind: c.kind, name: c.name, hosts: c.hosts, hosts_up: c.hosts_up, vms: c.vms, vms_on: c.vms_on, cores: c.cores, vcpus: c.vcpus, vcpu_ratio: c.vcpu_ratio, cpu_used_pct: c.cpu_used_pct, mem_gb: c.mem_gb, mem_used_pct: c.mem_used_pct, mem_gb_after_n1: c.mem_gb_after_n1, ha: c.ha, drs: c.drs, n_plus_1: c.n_plus_1, room: c.room });
 
+  const hv = () => { const H = (app.addons || {}).hypervManager; if (!H || typeof H.view !== 'function') throw new Error('Hyper-V monitoring is not installed'); const v = H.view(); if (!v.hosts.length) throw new Error('no Hyper-V host has reported yet - add hosts on the Hyper-V Servers page'); return v; };
+  const hvSlim = (h) => ({ name: h.name, at: h.at, stale: h.stale, cores: h.cores, cpu_pct: h.cpu_pct, mem_total_gb: h.mem_total_mb != null ? Math.round(h.mem_total_mb / 102.4) / 10 : null,
+    mem_used_pct: h.mem_total_mb && h.mem_free_mb != null ? Math.round(1000 * (h.mem_total_mb - h.mem_free_mb) / h.mem_total_mb) / 10 : null, vcpu_ratio: h.vcpu_ratio,
+    vms: h.vms.length, vms_running: h.vms.filter((v) => v.state === 'running').length, disk_latency_ms: h.disk ? h.disk.latency_ms : null, findings: h.findings.length, capacity: h.capacity });
   const run = {
+    hyperv_overview: () => { const v = hv(); return { kpis: v.kpis, hosts: v.hosts.map(hvSlim), findings_by_severity: v.findings.reduce((o, x) => { o[x.severity] = (o[x.severity] || 0) + 1; return o; }, {}),
+      top_findings: v.findings.slice().sort(sortSev).slice(0, 30) }; },
+    hyperv_host: (i) => { const v = hv(), q = lc(i.host), h = v.hosts.find((x) => lc(x.name) === q) || v.hosts.find((x) => lc(x.name).includes(q));
+      if (!h) throw new Error(`no Hyper-V host "${i.host}" - see hyperv_overview`);
+      return Object.assign(hvSlim(h), { volumes: h.volumes, nics: h.nics, disk: h.disk, vms_detail: h.vms.slice(0, 120), findings_detail: h.findings, trend_24h: h.trend.slice(-24) }); },
+    hyperv_actions: (i) => hv().actions.filter((a) => !i.status || a.status === i.status).slice(0, 40).map((a) => ({ id: a.id, host: a.host, vm: a.vm, action: a.action, status: a.status, reason: a.reason, proposed_by: a.proposed_by, proposed_at: a.proposed_at, decided_by: a.decided_by || null, decided_at: a.decided_at || null })),
     overview: () => {
       const r = needRep(), f = V.current() || [];
       return { platforms: r.platforms.map((p) => ({ label: p.label, kind: p.kind, site: p.site, origin: p.origin, collected_at: p.at, error: p.error, login_saved: p.credentials_set })),
@@ -176,7 +199,11 @@ function createVirtAI(app, V, opts = {}) {
     ctx.flags = G.injectionSignals(question);
     const Anthropic = loadSdk();
     const client = new Anthropic({ apiKey: getKey(), timeout: (cfg.timeout_s || 180) * 1000, maxRetries: 2, baseURL: cfg.base_url || undefined });
-    const tools = TOOLS.filter((t) => !WRITE_TOOLS.has(t.name) || (ctx.item && (RANK[ctx.role] || 0) >= RANK.operator));
+    // offer what this estate has: the Hyper-V tools where Hyper-V hosts report; the vCenter / Prism tools where a platform is
+    // connected (or nothing reports yet, so the model can say what to connect)
+    const hvOn = (() => { try { return hv().hosts.length > 0; } catch { return false; /* not installed / no host yet */ } })();
+    const vcOn = (() => { const r = rep(); return !!(r && r.platforms && r.platforms.length); })();
+    const tools = TOOLS.filter((t) => (HV_TOOLS.has(t.name) ? hvOn : (vcOn || !hvOn)) && (!WRITE_TOOLS.has(t.name) || (ctx.item && (RANK[ctx.role] || 0) >= RANK.operator)));
     const when = new Date(opts.now ? opts.now() : Date.now()).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
     const messages = [{ role: 'user', content: `[${when}] ${question}` }];
     const steps = [], usage = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0 };

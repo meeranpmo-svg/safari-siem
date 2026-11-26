@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Virtualization Administrator</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Virtualization Administrator</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
 <style>
 [hidden]{display:none!important}
 .banner{background:rgba(121,184,255,.07);border:1px solid #2b4a6b;border-radius:10px;padding:10px 12px;font-size:12.8px;color:#bcd6f5;margin:0 0 12px}
@@ -8,21 +8,41 @@ pre.snip{white-space:pre-wrap;background:#0b0c10;border:1px solid var(--edge);bo
 textarea{width:100%;min-height:60px;background:#0b0c10;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font:inherit}
 .aians{white-space:pre-wrap;background:#0b0c10;border:1px solid var(--edge);border-radius:8px;padding:12px;font-size:13.2px;line-height:1.5;margin-top:10px}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.chips button{border-radius:999px;padding:4px 11px;font-size:12px}.chips button.on{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.hvgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.hvgrid .card{margin:0}
+.cv{position:relative;height:230px}.cv canvas{max-width:100%}
+.mbar{display:inline-block;width:90px;height:8px;border-radius:5px;background:rgba(127,140,160,.18);vertical-align:middle;margin-right:6px;overflow:hidden}.mbar>i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--v-acc,#2f8fd8),var(--v-teal,#19a7b8))}
+.mbar.warn>i{background:linear-gradient(90deg,#d29922,#e3b341)}.mbar.bad>i{background:linear-gradient(90deg,#da3633,#ff7b72)}
+.fl{list-style:none;margin:0;padding:0}.fl li{display:flex;gap:10px;align-items:flex-start;padding:9px 4px;border-bottom:1px solid var(--edge,rgba(127,140,160,.18))}.fl li:last-child{border-bottom:0}
+.fl .ft{flex:1;min-width:0}.fl .ft b{display:block}.fl .ft span{font-size:12px}
+.sugg{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0}.sugg button{border-radius:999px;padding:4px 11px;font-size:12px}
 </style></head><body><main>
-<div class="top"><div><div class="eb">AI &amp; Automation · virtualization</div><h1>AI Virtualization Administrator</h1><div class="muted small">VMware vCenter and Nutanix Prism: hosts, clusters, datastores, snapshots and VMs checked every hour; a work item and a change plan for each problem, followed to a verified result</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button><a href="virtualization.html" style="color:var(--info);text-decoration:none;font-weight:600">Virtualization →</a><a href="licence-audit.html" style="color:var(--info);text-decoration:none;font-weight:600">Licence Audit →</a></div>
-<div class="banner">The administrator reads vCenter and Prism with read-only accounts and never changes them. For each problem it writes the change plan (PowerCLI for vSphere, acli for Nutanix, with prechecks and rollback): an administrator who did not ask for it approves it, a person applies it and records it here, and the next collection verifies it. Deleting snapshots or VMs is marked irreversible.</div>
+<div class="top"><div><div class="eb">AI &amp; Automation · virtualization</div><h1>AI Virtualization Administrator</h1><div class="muted small" id="sub">VMware vCenter and Nutanix Prism: hosts, clusters, datastores, snapshots and VMs checked every hour; a work item and a change plan for each problem, followed to a verified result</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="refresh">⟳ Refresh</button><a href="virtualization.html" style="color:var(--info);text-decoration:none;font-weight:600">Virtualization →</a><a href="licence-audit.html" style="color:var(--info);text-decoration:none;font-weight:600">Licence Audit →</a></div>
+<div class="banner" id="ban">The administrator reads vCenter and Prism with read-only accounts and never changes them. For each problem it writes the change plan (PowerCLI for vSphere, acli for Nutanix, with prechecks and rollback): an administrator who did not ask for it approves it, a person applies it and records it here, and the next collection verifies it. Deleting snapshots or VMs is marked irreversible.</div>
 <section data-zyb-duty="virt" data-api="/api/itam"></section>
 <div class="k" id="kk"></div>
+<div id="hvwrap" hidden>
+ <div class="hvgrid">
+  <div class="card"><h2>Estate health <span class="c">learned findings by severity</span></h2><div class="cv"><canvas id="hvring"></canvas></div></div>
+  <div class="card"><h2>Host load <span class="c">CPU and memory now</span></h2><div class="cv"><canvas id="hvload"></canvas></div></div>
+  <div class="card"><h2>Capacity forecast <span class="c">ML · days until 95 %</span></h2><div class="cv"><canvas id="hvcap"></canvas></div></div>
+ </div>
+ <div class="card"><h2>CPU over the last 24 h <span class="c">each host's own readings (every 15 min)</span></h2><div class="cv"><canvas id="hvtrend"></canvas></div></div>
+ <div class="card"><h2>What the AI learned <span class="c">AI · ML</span> <span class="c" id="hvfc"></span></h2><ul class="fl" id="hvf"><li class="muted">Loading…</li></ul>
+  <p class="note">Indicators from each host's readings - trends, the 24 h p95 and least-squares forecasts - not proof. Ask the AI to investigate one; a change is proposed by a person on the <a href="hyperv.html">Hyper-V Servers</a> page and approved by a different administrator.</p></div>
+ <div class="card"><h2>Hyper-V hosts <span class="c" id="hvhc"></span> <a href="hyperv.html" style="float:right;font-size:13px;font-weight:500">Manage Hyper-V →</a></h2><div class="tw" id="hvh"></div></div>
+ <div class="card"><h2>Virtual machines <span class="c" id="hvvc"></span></h2><div class="tw" id="hvv"></div></div>
+ <div class="card"><h2>VM actions <span class="c">proposed by a person, approved by a different administrator</span></h2><div class="tw" id="hva"></div></div>
+</div>
 <div class="card" id="aicard"><h2>Ask the AI Virtualization Administrator <span class="c" id="aist">checking…</span></h2>
 <div id="aibox" hidden><textarea id="aiq" maxlength="8000" placeholder="e.g. Can every cluster survive one host failure? Which VMs should we right-size first? Why is datastore DS-PROD-01 filling up?"></textarea>
-<div class="acts" style="margin-top:8px"><button type="button" id="aigo">Ask</button><span class="muted small" id="aiwait"></span></div><div id="aiout"></div>
-<p class="note">Claude reads only what the read-only collection holds (names and figures of VMs, hosts, clusters, datastores) - no passwords. It cannot change vCenter or Prism; on a work item it can record a change plan, which still needs an administrator's approval.</p></div>
+<div class="sugg" id="sugg" hidden></div><div class="acts" style="margin-top:8px"><button type="button" id="aigo">Ask</button><span class="muted small" id="aiwait"></span></div><div id="aiout"></div>
+<p class="note" id="ainote">Claude reads only what the read-only collection holds (names and figures of VMs, hosts, clusters, datastores) - no passwords. It cannot change vCenter or Prism; on a work item it can record a change plan, which still needs an administrator's approval.</p></div>
 <p class="note" id="aioff" hidden></p></div>
-<div class="card"><h2>Change plans <span class="c" id="pc"></span></h2><div class="chips" id="pchips"></div><div class="tw" id="plans"><div class="empty">Loading…</div></div></div>
-<div class="card"><h2>Platforms</h2><div class="tw" id="plats"><div class="empty">Loading…</div></div></div>
-<div class="card"><h2>Hosts <span class="c">sockets × cores per socket = cores, as read from vCenter / Prism (the core licence audit uses the same counts)</span></h2><div class="tw" id="hosts"><div class="empty">Loading…</div></div></div>
-<div class="card"><h2>Clusters</h2><div class="tw" id="clusters"><div class="empty">Loading…</div></div></div>
-<div class="card"><h2>Datastores</h2><div class="tw" id="ds"><div class="empty">Loading…</div></div></div>
+<div class="card vc"><h2>Change plans <span class="c" id="pc"></span></h2><div class="chips" id="pchips"></div><div class="tw" id="plans"><div class="empty">Loading…</div></div></div>
+<div class="card vc"><h2>Platforms</h2><div class="tw" id="plats"><div class="empty">Loading…</div></div></div>
+<div class="card vc"><h2>Hosts <span class="c">sockets × cores per socket = cores, as read from vCenter / Prism (the core licence audit uses the same counts)</span></h2><div class="tw" id="hosts"><div class="empty">Loading…</div></div></div>
+<div class="card vc"><h2>Clusters</h2><div class="tw" id="clusters"><div class="empty">Loading…</div></div></div>
+<div class="card vc"><h2>Datastores</h2><div class="tw" id="ds"><div class="empty">Loading…</div></div></div>
 </main>
 <script>
 (function(){
@@ -104,10 +124,79 @@ textarea{width:100%;min-height:60px;background:#0b0c10;color:var(--text);border:
       },function(e){$('aiout').innerHTML='<p class="err">'+esc(e.message)+'</p>';}).then(function(){$('aigo').disabled=false;$('aiwait').textContent='';});
     });
   }
-  $('refresh').addEventListener('click',load);
+  /* ---- Hyper-V estate (an organisation that runs neither VMware nor Nutanix: both pages switched off in its brand) ----
+     every figure is a host's own reading (GET /hyperv); findings are the learned indicators; nothing is invented */
+  var ORG=window.ZYB_ORG||{},OFF=ORG.pages_off||[],HVONLY=OFF.indexOf('vmware-servers')>=0&&OFF.indexOf('nutanix-vms')>=0,HV=null;
+  var C=window.zybCharts,SEVC={high:'crit',medium:'warn',low:'acc'},SEVP={high:'bad',medium:'warn',low:'inf'};
+  function gb(mb){return mb==null?'–':(Math.round(mb/102.4)/10)+' GB';}
+  function mbar(v,warn,bad){if(v==null)return '<span class="muted">–</span>';var c=v>=bad?'bad':v>=warn?'warn':'';return '<span class="mbar '+c+'"><i style="width:'+Math.max(2,Math.min(100,v))+'%"></i></span>'+esc(String(v))+'%';}
+  function memPct(h){return h.mem_total_mb&&h.mem_free_mb!=null?Math.round(1000*(h.mem_total_mb-h.mem_free_mb)/h.mem_total_mb)/10:null;}
+  function soonest(c){var d=[];if(!c)return null;if(c.memory!=null)d.push(c.memory);Object.keys(c.volumes||{}).forEach(function(k){if(c.volumes[k]!=null)d.push(c.volumes[k]);});return d.length?Math.min.apply(null,d):null;}
+  function hvPaint(){
+    var H=HV.hosts||[],K=HV.kpis||{},F=(HV.findings||[]).slice(),A=HV.actions||[];
+    var cpu=H.filter(function(h){return h.cpu_pct!=null;}),mem=H.map(memPct).filter(function(x){return x!=null;});
+    var avg=function(a){return a.length?Math.round(a.reduce(function(x,y){return x+y;},0)/a.length):null;};
+    var soon=H.map(function(h){return soonest(h.capacity);}).filter(function(x){return x!=null;}),first=soon.length?Math.min.apply(null,soon):null;
+    var waiting=A.filter(function(a){return a.status==='proposed';}).length;
+    $('kk').innerHTML=Z.tile('Hyper-V hosts',K.hosts||0,(K.stale_hosts||0)?K.stale_hosts+' not reporting':'all reporting',K.stale_hosts?'warn':'ok','')
+      +Z.tile('VMs running',(K.running||0)+' / '+(K.vms||0),'on '+(K.hosts||0)+' hosts','','')
+      +Z.tile('Average CPU',avg(cpu.map(function(h){return h.cpu_pct;}))!=null?avg(cpu.map(function(h){return h.cpu_pct;}))+'%':'–','across the hosts',avg(cpu.map(function(h){return h.cpu_pct;}))>=85?'bad':'','')
+      +Z.tile('Memory used',avg(mem)!=null?avg(mem)+'%':'–','average of the hosts',avg(mem)>=90?'bad':avg(mem)>=80?'warn':'','')
+      +Z.tile('High findings',K.high||0,F.length+' learned in all',K.high?'bad':'ok','')
+      +Z.tile('First to fill',first!=null?first+' days':'–',first!=null?'ML forecast (95 %)':'needs 5+ days of readings',first!=null&&first<7?'bad':first!=null&&first<30?'warn':'','')
+      +Z.tile('Actions waiting',waiting,'for a second administrator',waiting?'warn':'','');
+    // charts
+    var bySev={high:0,medium:0,low:0};F.forEach(function(f){bySev[f.severity]=(bySev[f.severity]||0)+1;});
+    if(!C){/* charts library missing: the tables below still carry every figure */}
+    else if(!H.length){['hvring','hvload','hvcap','hvtrend'].forEach(function(id){C.empty($(id),'No Hyper-V host has reported yet.');});}
+    else{
+      if(F.length)C.ring($('hvring'),['High','Medium','Low'],[bySev.high,bySev.medium,bySev.low],['crit','warn','acc'],{v:F.length,l:'findings'},{title:'Findings by severity'});else C.empty($('hvring'),'No findings - every host is within its limits.');
+      C.bars($('hvload'),H.map(function(h){return h.name;}),[{label:'CPU %',data:H.map(function(h){return h.cpu_pct;}),color:'acc'},{label:'Memory %',data:H.map(memPct),color:'teal'}],{title:'Host load'});
+      var cap=H.map(function(h){return {n:h.name,d:soonest(h.capacity)};}).filter(function(x){return x.d!=null;}).sort(function(a,b){return a.d-b.d;});
+      if(cap.length)C.bars($('hvcap'),cap.map(function(x){return x.n;}),[{label:'Days until 95 %',data:cap.map(function(x){return x.d;}),colors:cap.map(function(x){return x.d<7?'crit':x.d<30?'warn':'ok';})}],{horizontal:true,title:'Capacity forecast'});
+      else C.empty($('hvcap'),'The forecast starts after 5 days of readings per host.');
+      var T=H.filter(function(h){return (h.trend||[]).length;}).slice(0,6);
+      if(T.length){var lab=T.reduce(function(a,h){return h.trend.length>a.length?h.trend:a;},[]).map(function(x){return String(x.t).slice(11,16);});
+        C.area($('hvtrend'),lab,T.map(function(h){var m={};h.trend.forEach(function(x){m[String(x.t).slice(11,16)]=x.cpu;});return {label:h.name,data:lab.map(function(l){return m[l]!=null?m[l]:null;}),fill:false};}),{title:'CPU % per host'});}
+      else C.empty($('hvtrend'),'The 24 h chart fills as the hosts report (every 15 minutes).');
+    }
+    // learned findings: severity, what, fix, and "Ask AI" that hands the question to the AI box
+    F.sort(function(a,b){var r={high:3,medium:2,low:1};return (r[b.severity]||0)-(r[a.severity]||0);});
+    $('hvfc').textContent=F.length?F.length+' findings':'';
+    $('hvf').innerHTML=F.length?F.slice(0,40).map(function(f,i){return '<li>'+Z.pill(f.severity,SEVP[f.severity]||'mut')+'<div class="ft"><b>'+esc(f.title)+'</b><span class="muted">'+esc(f.host)+(f.target&&f.target!==f.host?' · '+esc(f.target):'')+(f.fix?' — '+esc(f.fix):'')+'</span></div>'+(Z.can('operator')?'<button type="button" data-askf="'+i+'">✦ Ask AI</button>':'')+'</li>';}).join(''):'<li class="muted">'+(H.length?'Nothing learned needs attention - every host is within its limits.':esc(HV.note||'No Hyper-V host has reported yet.')+' <a href="hyperv.html?add=1">Add Hyper-V hosts →</a>')+'</li>';
+    HV._f=F;
+    // hosts
+    $('hvhc').textContent=H.length+' hosts';
+    $('hvh').innerHTML=H.length?'<table><thead><tr><th>Host</th><th>Status</th><th>CPU</th><th>Memory</th><th>vCPU : core</th><th>VMs</th><th>Disk latency</th><th>Fills in</th><th>Findings</th></tr></thead><tbody>'+H.map(function(h){var d=soonest(h.capacity),lat=h.disk?h.disk.latency_ms:null;
+      return '<tr><td><b>'+esc(h.name)+'</b><div class="muted small">'+esc(String(h.cores||'–'))+' cores · '+gb(h.mem_total_mb)+'</div></td><td>'+(h.stale?Z.pill('not reporting','warn'):Z.pill('reporting','ok'))+'</td><td>'+mbar(h.cpu_pct,75,90)+'</td><td>'+mbar(memPct(h),80,90)+'</td><td>'+(h.vcpu_ratio!=null?esc(String(h.vcpu_ratio))+' : 1':'–')+'</td><td>'+(h.vms||[]).filter(function(v){return v.state==='running';}).length+' / '+(h.vms||[]).length+'</td><td>'+(lat!=null?Z.pill(lat+' ms',lat>=50?'bad':lat>=20?'warn':'ok'):'–')+'</td><td>'+(d!=null?Z.pill(d+' days',d<7?'bad':d<30?'warn':'ok'):'<span class="muted">–</span>')+'</td><td>'+((h.findings||[]).length?Z.pill(String(h.findings.length),(h.findings||[]).some(function(f){return f.severity==='high';})?'bad':'warn'):Z.pill('none','ok'))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+esc(HV.note||'No Hyper-V host has reported yet.')+' <a href="hyperv.html?add=1">Add Hyper-V hosts →</a></div>';
+    // VMs: the biggest memory demand first
+    var VM=[];H.forEach(function(h){(h.vms||[]).forEach(function(v){VM.push({h:h.name,v:v});});});
+    VM.sort(function(a,b){return (b.v.mem_demand_mb||b.v.mem_assigned_mb||0)-(a.v.mem_demand_mb||a.v.mem_assigned_mb||0);});
+    $('hvvc').textContent=VM.length?VM.length+' VMs · largest memory demand first':'';
+    $('hvv').innerHTML=VM.length?'<table><thead><tr><th>VM</th><th>Host</th><th>State</th><th>vCPU</th><th>CPU</th><th>Memory (demand / assigned)</th><th>Checkpoints</th><th>Heartbeat</th></tr></thead><tbody>'+VM.slice(0,60).map(function(x){var v=x.v;
+      return '<tr><td><b>'+esc(v.name)+'</b></td><td>'+esc(x.h)+'</td><td>'+(v.state==='running'?Z.pill('running','ok'):Z.pill(String(v.state||'–'),'mut'))+'</td><td>'+esc(String(v.vcpus!=null?v.vcpus:'–'))+'</td><td>'+(v.cpu_pct!=null?mbar(v.cpu_pct,75,90):'–')+'</td><td>'+gb(v.mem_demand_mb)+' / '+gb(v.mem_assigned_mb)+'</td><td>'+(v.checkpoints?Z.pill(String(v.checkpoints),v.checkpoints>2?'warn':'inf'):'0')+'</td><td>'+esc(String(v.heartbeat||'–'))+'</td></tr>';}).join('')+'</tbody></table>'+(VM.length>60?'<p class="note">The 60 largest of '+VM.length+' - all of them on the Hyper-V Servers page.</p>':''):'<div class="empty">No VMs reported yet.</div>';
+    // VM actions (four-eyes)
+    $('hva').innerHTML=A.length?'<table><thead><tr><th>Action</th><th>VM</th><th>Host</th><th>State</th><th>Proposed by</th><th>Decided by</th></tr></thead><tbody>'+A.slice(0,20).map(function(a){return '<tr><td>'+esc(a.action)+'</td><td>'+esc(a.vm)+'</td><td>'+esc(a.host)+'</td><td>'+Z.pill(a.status,a.status==='proposed'?'warn':a.status==='rejected'||a.status==='failed'?'bad':'ok')+'</td><td>'+esc(a.proposed_by||'')+'</td><td>'+esc(a.decided_by||'–')+'</td></tr>';}).join('')+'</tbody></table><p class="note">Decide on the <a href="hyperv.html">Hyper-V Servers</a> page.</p>':'<div class="empty">No VM action proposed. A person proposes one on the <a href="hyperv.html">Hyper-V Servers</a> page.</div>';
+    $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  function hvLoad(){itam('GET','/hyperv').then(function(j){HV=j;hvPaint();},function(e){$('hvf').innerHTML='<li class="err">'+esc(e.message)+'</li>';});}
+  if(HVONLY){
+    $('hvwrap').hidden=false;[].forEach.call(document.querySelectorAll('.card.vc'),function(c){c.hidden=true;});
+    $('sub').textContent='Microsoft Hyper-V: every host reports its CPU, memory, disks, network and VMs every 15 minutes; the AI learns each host’s normal, forecasts when it fills and explains what it finds';
+    $('ban').textContent='The AI reads the Hyper-V reports only and never changes a host or a VM. It explains each finding and recommends the exact PowerShell; a person proposes the action on the Hyper-V Servers page and a different administrator approves it.';
+    $('ainote').textContent='Claude reads only the Hyper-V reports (names and figures of hosts and VMs) - passwords and keys are masked before anything is sent. It cannot change a host or a VM, and it cannot propose an action: a person does that on the Hyper-V Servers page.';
+    $('aiq').placeholder='e.g. Which Hyper-V host runs out of memory first? Which VMs should we right-size? Are there old checkpoints to clean up?';
+    var SUG=['Which Hyper-V host runs out of memory first?','Which VMs should we right-size?','Are there old checkpoints to clean up?','Is any host’s disk or network too slow?'];
+    $('sugg').innerHTML=SUG.map(function(q){return '<button type="button" data-sugg="'+esc(q)+'">'+esc(q)+'</button>';}).join('');$('sugg').hidden=false;
+    document.addEventListener('click',function(e){var t=e.target.closest('[data-sugg],[data-askf]');if(!t)return;
+      if(t.hasAttribute('data-sugg'))$('aiq').value=t.getAttribute('data-sugg');
+      else{var f=(HV&&HV._f||[])[+t.getAttribute('data-askf')];if(!f)return;$('aiq').value='Investigate this Hyper-V finding on '+f.host+': '+f.title+'. What is the impact, the cause and the safe fix?';}
+      $('aicard').scrollIntoView({block:'start'});if($('aibox').hidden){Z.toast($('aioff').textContent||'AI analysis is off');return;}$('aiq').focus();});
+  }
+  $('refresh').addEventListener('click',function(){if(HVONLY)hvLoad();else load();});
   Z.ready(aiInit);
-  Z.ready(load);
-  setInterval(function(){if(!document.hidden)load();},120000);
+  Z.ready(function(){if(HVONLY)hvLoad();else load();});
+  setInterval(function(){if(!document.hidden){if(HVONLY)hvLoad();else load();}},120000);
 })();
 </script>
 <script src="vendor/zyb-duty.js" defer></script></body></html>
