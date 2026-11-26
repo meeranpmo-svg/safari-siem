@@ -39,6 +39,8 @@ const XSS = '<img src=x onerror="window.__xss=1">';
   const txt = (p, id) => p.evaluate((i) => document.getElementById(i).innerText, id);
   try {
     const p = await browser.newPage({ viewport: { width: 1400, height: 1000 } }); p.on('pageerror', (x) => errs.push(x.message));
+    // the vCenter connector flow: an organisation with VMware on (Safari's brand is Hyper-V only - checked at the end)
+    await p.addInitScript(() => { Object.defineProperty(window, 'ZYB_ORG', { configurable: true, set(v) { this._o = Object.assign({}, v, { pages_off: [] }); }, get() { return this._o; } }); });
     await p.goto(base + 'itam-settings.html');
     ok(await wait(p, () => /checks pass/.test(document.getElementById('scoreS').innerText)), 'score shown');
     const recs = await txt(p, 'recs');
@@ -71,6 +73,19 @@ const XSS = '<img src=x onerror="window.__xss=1">';
     // operator refused
     WHO = OP; await p.reload(); ok(await wait(p, () => /for administrators/.test(document.body.innerText)), 'operators refused');
     await p.close();
+    // Hyper-V only (the real Safari brand): no vCenter login offered unless one is already stored; the page says Hyper-V needs none
+    WHO = ADM;
+    const off = JSON.parse(fs.readFileSync(path.join(DASH, '../brand/brand.json'), 'utf8')).pages_off || [];
+    if (off.includes('vmware-servers') && off.includes('nutanix-vms')) {
+      for (const n of ['vcenter_user', 'vcenter_pass']) { try { e.app.settings.setCredential ? e.app.settings.setCredential(n, '', ADM) : null; } catch (x) { /* clearing is optional: the check below covers both */ } }
+      const h = await browser.newPage(); h.on('pageerror', (x) => errs.push(x.message)); await h.goto(base + 'itam-settings.html');
+      await h.waitForSelector('[data-tab="cr"]'); await h.click('[data-tab="cr"]'); await h.waitForSelector('#creds table');
+      const cr = await txt(h, 'creds'), stored = (k) => !!((e.app.settings.credentialStatus ? e.app.settings.credentialStatus() : {})[k] || {}).configured;
+      ok(/Hyper-V needs no credential here/.test(cr) && !!(await h.$('#creds a[href="hyperv.html?add=1"]')), 'Hyper-V only: the page says no credential is needed and links to adding hosts');
+      ok(stored('vcenter_user') || !(await h.$('[data-cv="vcenter_user"]')), 'Hyper-V only: no vCenter login offered when none is stored');
+      ok(!!(await h.$('[data-cv="private_token"]')), 'the other credentials stay');
+      await h.close();
+    }
     ok(/'itam-settings': 'itam-settings\.html'/.test(fs.readFileSync(path.join(DASH, 'vendor/zyb-early.js'), 'utf8')), 'the portal ITAM Settings view redirects here');
     ok(/ itam-settings\.html /.test(fs.readFileSync(path.join(DASH, 'install-dashboards.sh'), 'utf8')), 'in the installer');
     ok(/"h": "itam-settings.html"/.test(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8')), 'menu entry');
