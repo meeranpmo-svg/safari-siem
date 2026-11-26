@@ -69,12 +69,25 @@ elif [ ! -f /opt/sentra-auth/.installed ]; then
   die "--auth-src is required on the first run: the folder that holds the organisation's sign-in service"
 fi
 # no package step may stop to ask a person something, and none reads the terminal (a hidden question would wait for ever);
-# another package run in progress (automatic updates) is waited for, up to 5 minutes, instead of failing at once
+# another package run in progress (automatic updates) is waited for, up to 20 minutes, instead of failing at once
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1 UCF_FORCE_CONFOLD=1 APT_LISTCHANGES_FRONTEND=none
-APT='apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold -o DPkg::Lock::Timeout=300'
-BUSY="$(ps -eo pid,etime,cmd | grep -E '[a]pt-get|[d]pkg |[u]nattended-upgr' | grep -v "$$" || true)"
-[ -z "$BUSY" ] || { warn "another package operation is running - waiting up to 5 minutes for it:"; printf '%s\n' "$BUSY" >&2; }
-dpkg --audit 2>/dev/null | grep -q . && { warn "a package was left half-installed - finishing it first"; dpkg --configure -a </dev/null || die "dpkg --configure -a failed (shown above): the package system must be healthy before the platform is installed"; }
+APT='apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold -o DPkg::Lock::Timeout=1200'
+# dpkg itself has no lock timeout: while automatic updates hold the lock it is retried every 10 s for up to 20 minutes (the
+# lock is never removed - that can damage the package database); any other dpkg error stops here as before
+dpkg_configure() {
+  local i out
+  for i in $(seq 1 120); do
+    if out="$(dpkg --configure -a </dev/null 2>&1)"; then [ -n "$out" ] && printf '%s\n' "$out"; return 0; fi
+    if ! printf '%s' "$out" | grep -q 'lock'; then printf '%s\n' "$out" >&2; return 1; fi
+    [ "$i" = 1 ] && { warn "another package installer is running (usually Ubuntu's automatic updates) - waiting for it to finish, up to 20 minutes:"; printf '%s\n' "$out" | grep -m1 'locked by' >&2; }
+    [ $((i % 6)) = 0 ] && echo "   still waiting ($((i / 6)) min) - nothing to do; it continues by itself"
+    sleep 10
+  done
+  printf '%s\n' "$out" >&2; return 1
+}
+BUSY="$(ps -eo pid,etime,cmd | grep -E '[a]pt-get|[d]pkg |[u]nattended-upgr|[a]pt\.systemd|[p]ackagekit' | grep -v "$$" || true)"
+[ -z "$BUSY" ] || { warn "another package operation is running - waiting for it (up to 20 minutes):"; printf '%s\n' "$BUSY" >&2; }
+dpkg --audit 2>/dev/null | grep -q . && { warn "a package was left half-installed - finishing it first"; dpkg_configure || die "dpkg --configure -a failed (shown above): the package system must be healthy before the platform is installed. If another installer is still running, wait for it (ps -p <pid>) and run this script again"; }
 $APT update </dev/null >/dev/null 2>/tmp/sentra-apt.$$ || { warn "apt-get update failed - packages are installed from what is already known:"; tail -n 5 /tmp/sentra-apt.$$ >&2; }
 $APT install nginx openssl python3 python3-venv curl ca-certificates </dev/null >/dev/null 2>/tmp/sentra-apt.$$ || { cat /tmp/sentra-apt.$$ >&2; rm -f /tmp/sentra-apt.$$; die "could not install nginx / openssl / python3 - the package system's own message is above"; }
 rm -f /tmp/sentra-apt.$$
