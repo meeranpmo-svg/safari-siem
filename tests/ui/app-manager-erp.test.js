@@ -28,20 +28,20 @@ let AV = { groups: G(true), items, summary: { offline: 1 } };
   await new Promise((res) => srv.listen(0, '127.0.0.1', res));
   const url = 'http://127.0.0.1:' + srv.address().port + '/dashboards/ai-app-manager.html?standalone=1';
   const { chromium } = require(process.env.PLAYWRIGHT || 'playwright'); const browser = await chromium.launch(), errs = [];
-  const erp = { current: 'Microsoft Dynamics', target: 'Oracle Fusion', state: 'migrating' };
+  const erp = { current: 'Microsoft Dynamics', target: 'Oracle Fusion Cloud ERP', state: 'migrating' };
   const open = async (orgErp) => { const p = await browser.newPage({ viewport: { width: 1400, height: 1000 } }); p.on('pageerror', (e) => errs.push(e.message));
     await p.addInitScript((e) => { Object.defineProperty(window, 'ZYB_ORG', { configurable: true, set(v) { this._o = Object.assign({}, v, { erp: e }); }, get() { return this._o; } }); }, orgErp);
     await p.goto(url); await p.waitForFunction(() => /updated/.test(document.getElementById('gen').textContent), null, { timeout: 15000 }); return p; };
   try {
     // the real brand setting carries the programme
-    ok(/"erp":\{"current":"Microsoft Dynamics","target":"Oracle Fusion","state":"migrating"\}/.test(fs.readFileSync(path.join(DASH, 'vendor/zyb-org.js'), 'utf8')), 'the Safari brand names Dynamics -> Oracle Fusion');
+    ok(/"erp":\{"current":"Microsoft Dynamics","target":"Oracle Fusion Cloud ERP","state":"migrating"\}/.test(fs.readFileSync(path.join(DASH, 'vendor/zyb-org.js'), 'utf8')), 'the Safari brand names Dynamics -> Oracle Fusion Cloud ERP');
     let p = await open(erp);
-    ok(!(await p.$eval('#erpcard', (e) => e.hidden)) && /migrating · Microsoft Dynamics → Oracle Fusion/.test(await p.textContent('#erpsub')), 'the ERP programme card shows');
+    ok(!(await p.$eval('#erpcard', (e) => e.hidden)) && /migrating · Microsoft Dynamics → Oracle Fusion Cloud ERP/.test(await p.textContent('#erpsub')), 'the ERP programme card shows');
     const cur = await p.$eval('#erpcur', (e) => e.innerText), tgt = await p.$eval('#erptgt', (e) => e.innerText);
     ok(/Today/i.test(cur) && /Microsoft Dynamics 365/.test(cur) && /2 \/ 2 servers online/.test(cur) && /Single server/.test(cur) && /no DR/.test(cur), 'Dynamics side from its services: ' + cur.replace(/\s+/g, ' '));
     ok(/Target/i.test(tgt) && /Oracle Fusion integration/.test(tgt) && /0 \/ 1 servers online/.test(tgt) && /Down/.test(tgt), 'Fusion side from its integration servers: ' + tgt.replace(/\s+/g, ' '));
     const w = (await p.$eval('#erpwatch', (e) => e.innerText)).replace(/\s+/g, ' ');
-    ok(/1 of the 1 Microsoft Dynamics services are not fully healthy/.test(w) && /1 Microsoft Dynamics services have no DR copy/.test(w) && /Oracle Fusion: 1 integration services monitored - some are not healthy/.test(w) && /side by side/.test(w), 'migration watch: ' + w.replace(/\s+/g, ' '));
+    ok(/1 of the 1 Microsoft Dynamics services are not fully healthy/.test(w) && /1 Microsoft Dynamics services have no DR copy/.test(w) && /Oracle Fusion Cloud ERP: 1 integration services monitored - some are not healthy/.test(w) && /side by side/.test(w), 'migration watch: ' + w.replace(/\s+/g, ' '));
     const lab = await p.$$eval('#aiband canvas', (x) => x.map((c) => c.getAttribute('aria-label') || ''));
     ok(lab.length === 3 && /Service health/.test(lab[0]) && /Resilience gaps/.test(lab[1]) && /Production servers online/.test(lab[2]), 'three charts: ' + lab.map((l) => l.slice(0, 40)).join(' | '));
     const ins = (await p.$eval('#ins', (e) => e.innerText)).replace(/\s+/g, ' ');
@@ -50,7 +50,7 @@ let AV = { groups: G(true), items, summary: { offline: 1 } };
     await p.close();
     // no Fusion integration monitored yet: says what to add
     AV = { groups: G(false), items: items.filter((h) => h.id !== 'h3'), summary: {} }; p = await open(erp);
-    ok(/runs in Oracle’s cloud, so it has no servers here/.test(await p.$eval('#erptgt', (e) => e.innerText)) && /No Oracle Fusion integration is monitored yet/.test(await p.$eval('#erpwatch', (e) => e.innerText)), 'no Fusion integration: what to monitor before go-live');
+    ok(/runs in Oracle’s cloud, so it has no servers here/.test(await p.$eval('#erptgt', (e) => e.innerText)) && /No Oracle Fusion Cloud ERP integration is monitored yet/.test(await p.$eval('#erpwatch', (e) => e.innerText)), 'no Fusion integration: what to monitor before go-live');
     await p.close();
     // an organisation without an ERP programme: no card
     p = await open(null); ok(await p.$eval('#erpcard', (e) => e.hidden), 'no erp setting: no card'); await p.close();
