@@ -109,9 +109,12 @@ const XSS = '<img src=x onerror=alert(1)>';
     // a viewer reads only
     WHO = { user: 'vera.syn', role: 'viewer' }; await p.reload(); await p.click('[data-tab="uat"]'); await p.waitForSelector('#uatlist table', { state: 'attached' });
     ok(!(await p.$('#uatlist tr.click')) && !(await p.$('#uatnew')) && !(await p.$('#uatsign')), 'a viewer cannot record, sign off or start a round');
-    // the Exchange page has no UAT tab
-    await p.goto(base + 'exchange-admin.html?standalone=1'); await p.waitForSelector('.tabs');
+    // the Exchange page has no UAT tab. Safari's sector profile (zyb-org.js pages_off) switches exchange-admin off, so
+    // zyb-modules.js hides the built page behind its notice: the tab bar is built but not shown - check it attached.
+    await p.goto(base + 'exchange-admin.html?standalone=1'); await p.waitForSelector('.tabs', { state: 'attached' });
     ok(!(await p.$('[data-tab="uat"]')), 'no UAT tab on the Exchange page');
+    const notice = await p.waitForSelector('main [role=alert]', { timeout: 8000 }).then((e) => e.textContent(), () => '');   // '' fails the check below
+    ok(/Not used in this organisation/.test(notice) && !(await p.isVisible('.tabs')), 'Exchange is off for Safari: the page says why instead of showing it');
   } finally { await browser.close(); srv.close(); }
   ok(!errs.length, 'no page errors: ' + errs.join(' | '));
   console.log((bad ? 'FAILED ' : 'OK ') + (n - bad) + '/' + n + ' checks');
