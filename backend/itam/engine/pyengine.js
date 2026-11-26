@@ -70,6 +70,21 @@ function resident(python) {
   return r;
 }
 
+// ---- cap on one-process-per-call runs (local patch 2026-11-26): without it every background job started its own
+// python3 run.py at once (20-30 together), each paying start-up plus a full store read, which pinned the service's CPU
+// quota and made calls time out. SENTRA_ITAM_PY_MAX_PROCS (in /etc/default/sentra-itam) overrides the default of 4.
+const ONCE_MAX = Math.max(1, parseInt(process.env.SENTRA_ITAM_PY_MAX_PROCS, 10) || 4);
+let onceActive = 0;
+const onceWaiting = [];
+function onceAcquire() {
+  if (onceActive < ONCE_MAX) { onceActive++; return Promise.resolve(); }
+  return new Promise((resolve) => onceWaiting.push(resolve));
+}
+function onceRelease() {
+  const next = onceWaiting.shift();
+  if (next) next(); else onceActive--;
+}
+
 function createPyEngine(o = {}) {
   const python = o.exact ? (o.python || VENV) : pick(o.python), timeoutMs = o.timeoutMs || 120000;   // exact: network discovery keeps its own choice (venv, else Node.js)
   // o.resident = false keeps one process per call for this caller (the device readers never use the resident service)
@@ -80,7 +95,12 @@ function createPyEngine(o = {}) {
     }
     return callOnce(op, body);
   }
+  // one-process-per-call runs are capped engine-wide (ONCE_MAX at a time, the rest wait in order); the time limit starts
+  // when a run starts, not while it waits
   function callOnce(op, body) {
+    return onceAcquire().then(() => callOnceRun(op, body)).finally(onceRelease);
+  }
+  function callOnceRun(op, body) {
     return new Promise((resolve) => {
       if (!fs.existsSync(RUN)) return resolve({ ok: false, error_class: 'missing_python', error: 'pyengine/run.py is not installed' });
       // no TZ passed = the server's own time zone, like Node (an empty TZ would mean UTC)
