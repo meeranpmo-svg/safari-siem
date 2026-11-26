@@ -2533,6 +2533,7 @@ window.ZYB_NAV = [
     },
     "g": "Maps & architecture"
    },
+   {"h": "network-geomap.html", "s": "Office Map", "t": "Office Connectivity Map - the organisation offices across Saudi Arabia with firewall connectivity, live", "d": "Every office on a map of the Kingdom with its firewalls and the VPN connectivity between them, coloured by state, with ML flapping and outage detection. Offices are placed by a Saudi city in the firewall location, or by an administrator. Nothing is invented; a firewall change stays four-eyes."},
    {
     "h": "network-map.html",
     "s": "Intelligent Network Map",

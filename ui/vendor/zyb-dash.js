@@ -15,10 +15,19 @@
       var p = bp(); p.brand = on ? 'org' : 'off';
       try { localStorage.setItem('zyb-dash-prefs', JSON.stringify(p)); } catch (e) { /* no storage: this visit only */ }
       document.documentElement.classList.toggle('org-brand', !!on); document.documentElement.classList.toggle('org-light', !!on && window.zybBrandLookIs() === 'light');
+      if (on) lookTheme(bp().brandLook === 'light' ? 'light' : 'dark');
       [].forEach.call(document.querySelectorAll('[data-zyb-brandsw]'), function (b) { b.setAttribute('aria-checked', String(!!on)); });
       [].forEach.call(document.querySelectorAll('[data-zyb-looksw]'), function (b) { b.hidden = !on; });   // dark / light is a choice within the company look
       try { window.dispatchEvent(new CustomEvent('zyb-brand', { detail: { on: !!on, look: window.zybBrandLookIs() } })); } catch (e) { /* very old browser: the page repaints on the next load */ }
     };
+    // the company look drives the platform theme's surfaces too, so turning on "Light look" makes every page light - not just the
+    // accents (data-zyb-theme=light is what paints the pages light; vendor/zyb-theme.css). Only when the company look is on.
+    function curTheme() { try { return localStorage.getItem('noc_theme') || 'dark'; } catch (e) { return 'dark'; } }
+    function lookTheme(lk) { if (!window.zybBrandOn || !window.zybBrandOn()) return;
+      // light look -> light theme; dark look -> only step back from light (a Dark or Midnight theme the person chose is left alone)
+      var want = lk === 'light' ? 'light' : (curTheme() === 'light' ? 'dark' : null); if (!want) return;
+      try { localStorage.setItem('noc_theme', want); } catch (e) { /* no storage: this visit only */ }
+      try { if (window.zybTheme && window.zybTheme.apply) window.zybTheme.apply(want); } catch (e) { /* theme layer not ready: the next load applies it */ } }
     // the company look has two faces: dark (the default) or light like the company website; saved in zyb-dash-prefs.brandLook
     // the platform's Light theme (localStorage noc_theme, vendor/zyb-look.js) always shows the light face: a dark company look on a
     // light page mixed a navy wash into a light background (the home page in the Light theme)
@@ -27,11 +36,13 @@
     window.zybBrandLook = function (look) {
       var p = bp(); p.brandLook = look === 'light' ? 'light' : 'dark';
       try { localStorage.setItem('zyb-dash-prefs', JSON.stringify(p)); } catch (e) { /* no storage: this visit only */ }
+      lookTheme(look === 'light' ? 'light' : 'dark');
       var on = window.zybBrandOn(), lk = window.zybBrandLookIs(); document.documentElement.classList.toggle('org-light', on && lk === 'light');
-      [].forEach.call(document.querySelectorAll('[data-zyb-looksw]'), function (b) { b.setAttribute('aria-checked', String(lk === 'light')); if (platLight()) b.title = 'The Light theme always uses the light company look'; });
+      [].forEach.call(document.querySelectorAll('[data-zyb-looksw]'), function (b) { b.setAttribute('aria-checked', String(lk === 'light')); });
       try { window.dispatchEvent(new CustomEvent('zyb-brand', { detail: { on: on, look: lk } })); } catch (e) { /* very old browser: the page repaints on the next load */ }
     };
-    if (window.zybBrandOn()) { document.documentElement.classList.add('org-brand'); if (window.zybBrandLookIs() === 'light') document.documentElement.classList.add('org-light'); }
+    if (window.zybBrandOn()) { document.documentElement.classList.add('org-brand'); if (window.zybBrandLookIs() === 'light') document.documentElement.classList.add('org-light');
+      if (bp().brandLook === 'light') lookTheme('light'); }
     // the theme switched while the page is open: the company look follows (and the page's own handler, e.g. the home page, repaints)
     try { new MutationObserver(function () { var on = window.zybBrandOn(), lk = window.zybBrandLookIs(); if (document.documentElement.classList.contains('org-light') === (on && lk === 'light')) return;
       document.documentElement.classList.toggle('org-light', on && lk === 'light');
