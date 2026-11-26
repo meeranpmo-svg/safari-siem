@@ -183,9 +183,13 @@ function createHypervManager(app, opts = {}) {
   const reported = () => new Set(latest().all().map((r) => String(r.host.name).toLowerCase()));
   function onboardView() {
     const sc = script(), seen = reported(), toks = app.agentgw ? app.agentgw.listTokens().filter((t) => /^Hyper-V: /.test(t.note || '')) : [];
+    const names = new Map(app.agentgw && app.agentgw.listAgents ? app.agentgw.listAgents().map((a) => [a.id, String(a.name || '')]) : []);
     return { script: { name: sc.name, sha256: sc.sha256, bytes: Buffer.byteLength(sc.script) },
       invited: toks.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 100).map((t) => { const h = String(t.note).slice(9);
-        return { host: h, created_at: t.created_at, created_by: t.created_by, expires_at: t.expires_at, state: seen.has(h.toLowerCase()) ? 'reporting' : t.used_at ? 'enrolled - waiting for its first report' : t.revoked ? 'revoked' : Date.parse(t.expires_at) < now() ? 'expired' : 'waiting for the host' }; }) };
+        // the host reports under its Windows computer name, which is what it enrolled with - so a host added by its IP address
+        // (or a short / different name) is matched through the agent that used its key
+        const as = t.used_by_agent && names.get(t.used_by_agent), on = seen.has(h.toLowerCase()) || (as && seen.has(as.toLowerCase()));
+        return { host: h, reports_as: as && as.toLowerCase() !== h.toLowerCase() ? as : null, created_at: t.created_at, created_by: t.created_by, expires_at: t.expires_at, state: on ? 'reporting' : t.used_at ? 'enrolled - waiting for its first report' : t.revoked ? 'revoked' : Date.parse(t.expires_at) < now() ? 'expired' : 'waiting for the host' }; }) };
   }
   function onboard(b0, who) {
     if (!isHuman(who.user)) throw httpErr(403, 'a person adds Hyper-V hosts');

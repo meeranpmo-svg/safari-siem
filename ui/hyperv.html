@@ -14,6 +14,7 @@
 <section class="card" id="onb" hidden><h2>Add Hyper-V hosts</h2>
  <p class="sm mut">Type the host names (one per line, up to 50). Each host gets its own one-time key, valid for 24 hours, and one command. On the host, open PowerShell <b>as Administrator</b>, paste its command and press Enter. The command downloads the report script from this portal, checks its fingerprint (SHA-256), enrols the host and creates the 15-minute scheduled task. The host sends a read-only report; the portal never logs on to the host.</p>
  <label class="sm mut" for="onbh">Host names</label><textarea id="onbh" rows="4" style="width:100%;font-family:Consolas,monospace" placeholder="HV-HOST-01&#10;HV-HOST-02"></textarea>
+ <p class="sm mut" style="margin:4px 0 0">Use the Windows computer name (run <code>hostname</code> on the host). An IP address works too: once the command has run, the host is shown with the name it reports under.</p>
  <div style="margin:8px 0"><button type="button" id="onbgo">Create the commands</button> <span class="sm mut" id="onbsha"></span></div>
  <div id="onbout"></div><div id="onbinv"></div></section><div class="k" id="kp"></div><div id="body"></div>
 </main>
@@ -83,7 +84,7 @@
   }
   function onbLoad() { req('GET', '/hyperv/onboard').then(function (o) { $('onbsha').textContent = 'script fingerprint ' + o.script.sha256.slice(0, 16) + '…';
     $('onbinv').innerHTML = o.invited.length ? '<h3 style="margin-top:14px">Hosts added</h3><div class="tw"><table><thead><tr><th>Host</th><th>State</th><th>Added</th><th>Key valid until</th></tr></thead><tbody>' + o.invited.map(function (x) {
-      return '<tr><td><b>' + esc(x.host) + '</b></td><td>' + pill(x.state, x.state === 'reporting' ? 'ok' : /expired|revoked/.test(x.state) ? 'bad' : 'warn') + '</td><td class="sm">' + esc(String(x.created_at).slice(0, 16).replace('T', ' ')) + ' · ' + esc(x.created_by || '') + '</td><td class="sm">' + esc(String(x.expires_at).slice(0, 16).replace('T', ' ')) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '';
+      return '<tr><td><b>' + esc(x.host) + '</b>' + (x.reports_as ? ' <span class="sm mut">reports as ' + esc(x.reports_as) + '</span>' : '') + '</td><td>' + pill(x.state, x.state === 'reporting' ? 'ok' : /expired|revoked/.test(x.state) ? 'bad' : 'warn') + '</td><td class="sm">' + esc(String(x.created_at).slice(0, 16).replace('T', ' ')) + ' · ' + esc(x.created_by || '') + '</td><td class="sm">' + esc(String(x.expires_at).slice(0, 16).replace('T', ' ')) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '';
   }).catch(function (er) { $('onbinv').innerHTML = '<p class="err">' + esc(er.message) + '</p>'; }); }
   function onbOpen() { $('onb').hidden = false; $('onb').scrollIntoView({ block: 'start' }); $('onbh').focus(); onbLoad(); }
   function onbGo() {

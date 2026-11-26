@@ -158,3 +158,25 @@ test('network speed and disk: per-NIC utilisation against the link, p95 over 24 
   assert.deepEqual(h.nics, []); assert.equal(h.disk, null); assert.equal(h.vms[0].net_rx_bps, null); assert.equal(h.trend[0].rx_bps, null);
   assert.ok(!v.findings.some((f) => f.host === 'HV-SYN-02' && /nic|disk/.test(f.code)));
 });
+
+// a host added by its IP address (or any name other than its Windows computer name): the host enrols and reports under its
+// computer name, and the "Hosts added" list follows the key to the agent that used it - "reporting", with the name it reports as
+test('add Hyper-V hosts by IP address: the list follows the key to the reporting host and shows its name', async (t) => {
+  const e = await startApp({ noAi: true }); t.after(() => e.close());
+  registerDuty(e.app.srv, e.app, { noTimer: true, python: process.env.PYTHON || 'python3' });
+  const ADM0 = { user: 'admin.syn', role: 'admin' };
+  const call = (m, p, b, who) => e.req(m, p, Object.assign(b !== undefined ? { body: b } : {}, who));
+  const r = await call('POST', '/hyperv/onboard', { hosts: ['10.20.8.11'] }, ADM0); assert.equal(r.status, 200, r.text);
+  const st = async () => (await call('GET', '/hyperv/onboard', undefined, ADM0)).json.invited.find((x) => x.host === '10.20.8.11');
+  assert.equal((await st()).state, 'waiting for the host'); assert.equal((await st()).reports_as, null);
+  assert.equal((await e.req('POST', '/agent/enrol', { user: '', role: '', body: { token: r.json.hosts[0].token, hostname: 'HV-SYN-IP', platform: 'windows' } })).status, 200);
+  let x = await st(); assert.match(x.state, /enrolled/); assert.equal(x.reports_as, 'HV-SYN-IP');
+  const sc = (await call('POST', '/discovery/scopes', { name: 'HV', site: 'Riyadh HQ', targets: ['10.20.8.0/24'], methods: { hyperv: { enabled: true } } }, ADM0)).json.scope;
+  const rep = { collected_at: new Date().toISOString(), host: { name: 'HV-SYN-IP', logical_processors: 8, cpu_pct: 20, mem_total_mb: 65536, mem_free_mb: 30000, volumes: [] }, vms: [{ name: 'VM-SYN-1', state: 'Running', vcpus: 2 }] };
+  assert.equal((await call('POST', '/discovery/hyperv/import', { scope_id: sc.id, report: rep }, ADM0)).status, 200);
+  x = await st(); assert.equal(x.state, 'reporting', JSON.stringify(x)); assert.equal(x.reports_as, 'HV-SYN-IP');
+  // a host added by its own name shows no "reports as"
+  const r2 = await call('POST', '/hyperv/onboard', { hosts: ['HV-SYN-NAME'] }, ADM0);
+  await e.req('POST', '/agent/enrol', { user: '', role: '', body: { token: r2.json.hosts[0].token, hostname: 'hv-syn-name', platform: 'windows' } });
+  assert.equal((await call('GET', '/hyperv/onboard', undefined, ADM0)).json.invited.find((y) => y.host === 'HV-SYN-NAME').reports_as, null);
+});
