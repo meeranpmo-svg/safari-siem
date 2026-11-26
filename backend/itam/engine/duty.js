@@ -268,6 +268,9 @@ function registerDuty(srv, app, opts = {}) {
   // actions the host's report script fetches and runs
   const HVM = optional('./hyperv-manager');
   if (HVM) { app.addons.hypervManager = HVM.createHypervManager(app, { now: opts.now }); HVM.registerHypervManager(srv, app, app.addons.hypervManager); }
+  // Work From Home (engine/remote-work.js): requests, four-eyes approval by the department's approvers, today's board, VPN readiness
+  const RWM = optional('./remote-work');
+  if (RWM) RWM.registerRemoteWork(srv, app, RWM.createRemoteWork(app, { now: opts.now, noTimer: opts.noTimer }));
   const UCM = optional('./cucm-manager');
   if (UCM) { const UC = UCM.createCucm(app, { now: opts.now, noTimer: opts.noTimer, request: opts.cucmRequest }); app.addons.cucm = UC; UCM.registerCucm(srv, app, UC); UC.start(); }
   const ACM = optional('./aramco-ccc');

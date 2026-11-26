@@ -3529,6 +3529,7 @@ window.ZYB_NAV = [
   "hd": "infra",
   "icon": "<rect x=\"3\" y=\"4\" width=\"14\" height=\"10\" rx=\"1.5\"/><path d=\"M1 18h18\"/><rect x=\"18\" y=\"8\" width=\"5\" height=\"12\" rx=\"1\"/>",
   "pages": [
+   {"h": "work-from-home.html", "s": "Work From Home", "t": "Work From Home - ask for days, approval by the department approver, who works from home today with a laptop and VPN", "d": "Employees ask for their own work-from-home days; a named approver of the department or an administrator decides (never the person who asked); IT sees today's remote workers with their company laptop and VPN logon, the next working days and use by department. VPN logons without an approved day are indicators, not proof."},
    {
     "h": "desktops.html",
     "s": "User Desktops",

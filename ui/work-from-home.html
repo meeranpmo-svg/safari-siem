@@ -1,0 +1,104 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Work From Home</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Work From Home over /api/itam/remote-work: every employee asks for their own days and sees their decisions; a named approver of
+     the department (or an administrator) approves or rejects - never the person who asked; IT sees who works from home today with
+     what they need (a company laptop on record, a VPN logon seen today), the next working days and use by department; administrators
+     set the policy and see VPN logons without an approved day as INDICATORS, NOT PROOF (PDPL). -->
+<style>
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+.frm .wide{grid-column:1/-1}.mut{color:#8b93a4}.sm{font-size:12px}.cv{position:relative;height:200px}
+.note{border-left:3px solid #f59f00;padding:6px 10px;border-radius:4px;background:rgba(245,159,0,.08);font-size:12.5px;margin:6px 0}
+.nt{display:inline-block;font-size:11px;padding:1px 7px;border-radius:8px;background:rgba(245,159,0,.15);color:#f5c544;margin:2px 4px 0 0}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Workplace · people · remote work</div><h1>Work From Home</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div>
+<div class="k" id="kp"></div>
+<div class="grid2">
+ <section class="card"><h2>🏠 Ask for work-from-home days</h2><div id="mine"><div class="empty">Loading…</div></div></section>
+ <section class="card"><h2>📋 My requests</h2><div id="myreq"><div class="empty">Loading…</div></div></section>
+</div>
+<section class="card" id="waitc" hidden><h2>✋ Waiting for my decision</h2><div id="wait"></div></section>
+<div id="boardw" hidden>
+ <div class="grid2">
+  <section class="card"><h2>📅 The next 14 working days</h2><div class="cv"><canvas id="nextc"></canvas></div></section>
+  <section class="card"><h2>🏢 By department · this month</h2><div class="cv"><canvas id="deptc"></canvas></div></section>
+ </div>
+ <section class="card"><h2>🧑‍💻 At home today <span class="c" id="vpnst"></span></h2><div id="today"></div></section>
+ <section class="card"><h2>⏳ All waiting requests</h2><div id="pend"></div></section>
+ <section class="card" id="indc" hidden><h2>🔎 VPN logons today without an approved day</h2><div id="ind"></div></section>
+</div>
+<section class="card" id="polc" hidden><h2>⚙️ Policy</h2><div id="pol"></div></section>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, M = null, B = null, P = null, C = window.zybCharts;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000); }
+  function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  var ST = { pending: 'warn', approved: 'ok', rejected: 'bad', cancelled: '' };
+  function dname(id) { var d = (M && M.departments || []).filter(function (x) { return x.id === id; })[0]; return d ? d.name : id; }
+  function notes(r) { return (r.notes || []).map(function (n) { return '<span class="nt">' + esc(n) + '</span>'; }).join(''); }
+  function reqRow(r, act) { return '<tr><td><b>' + esc(r.id) + '</b>' + (act === 'decide' ? '<div class="sm">' + esc(r.user) + '</div>' : '') + '</td><td>' + esc(r.from) + (r.to !== r.from ? ' → ' + esc(r.to) : '') + '<div class="sm mut">' + esc(r.days) + ' working day(s) · ' + esc(dname(r.department)) + '</div></td><td class="sm">' + esc(r.reason) + '<div>' + notes(r) + '</div>' + (r.comment ? '<div class="mut">“' + esc(r.comment) + '” - ' + esc(r.decided_by || '') + '</div>' : '') + '</td><td>' + pill(r.status, ST[r.status]) + '</td><td>'
+    + (act === 'decide' ? '<button type="button" data-dec="approved" data-id="' + esc(r.id) + '">Approve</button> <button type="button" data-dec="rejected" data-id="' + esc(r.id) + '">Reject</button>' : act === 'mine' && (r.status === 'pending' || r.status === 'approved') && r.to >= M.today ? '<button type="button" data-cancel="' + esc(r.id) + '">Cancel</button>' : '') + '</td></tr>'; }
+  function table(rows, act) { return '<div class="tw"><table><thead><tr><th>Request</th><th>Days</th><th>Reason</th><th>Status</th><th></th></tr></thead><tbody>' + rows.map(function (r) { return reqRow(r, act); }).join('') + '</tbody></table></div>'; }
+
+  function drawMe() {
+    var m = M, p = m.policy, left = Math.max(0, p.max_days_month - m.used_this_month), deps = m.departments.filter(function (d) { return d.allowed; });
+    $('mine').innerHTML = '<p class="sm">This month you have <b>' + esc(m.used_this_month) + '</b> approved day(s) of the <b>' + esc(p.max_days_month) + '</b> the policy allows' + (left ? ' (' + esc(left) + ' left)' : ' - more can still be asked for; your approver sees it') + '. Weekends are not counted. ' + (p.notice_days ? 'Please ask at least ' + esc(p.notice_days) + ' day(s) ahead.' : '') + '</p>'
+      + (p.require_laptop ? (m.laptop.length ? '<p class="sm">Company laptop on record: <b>' + esc(m.laptop.map(function (l) { return l.name; }).join(', ')) + '</b></p>' : '<div class="note">No company laptop is on record for you. Working from home needs one - ask IT to record it, or your approver will see this.</div>') : '')
+      + '<div class="frm"><label>From<input type="date" id="wf" min="' + esc(m.today) + '" value="' + esc(m.today) + '"></label><label>To<input type="date" id="wt" min="' + esc(m.today) + '" value="' + esc(m.today) + '"></label>'
+      + '<label>Department<select id="wd">' + deps.map(function (d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + '</option>'; }).join('') + '</select></label>'
+      + '<label class="wide">Reason<textarea id="wr" rows="2" maxlength="400" placeholder="What the days are for (your approver reads it)"></textarea></label>'
+      + '<div><button type="button" id="wgo">Send the request</button></div></div>';
+    $('myreq').innerHTML = m.requests.length ? table(m.requests, 'mine') : '<div class="empty">You have not asked for any days yet.</div>';
+    $('waitc').hidden = !m.waiting_for_me.length; $('wait').innerHTML = m.waiting_for_me.length ? table(m.waiting_for_me, 'decide') : '';
+  }
+  function drawBoard() {
+    var b = B, k = b.kpis;
+    $('kp').innerHTML = tile('At home today', k.home_today, 'approved for ' + b.today, k.home_today ? '' : 'ok') + tile('Waiting for a decision', k.pending, 'requests', k.pending ? 'warn' : 'ok')
+      + tile('No company laptop', k.no_laptop, 'of those at home today', k.no_laptop ? 'bad' : 'ok') + tile('No VPN logon yet', k.no_vpn, b.vpn.connected ? 'of those at home today' : 'VPN not readable', k.no_vpn == null ? '' : k.no_vpn ? 'warn' : 'ok')
+      + tile('Over the policy', k.over_policy, 'waiting requests marked', k.over_policy ? 'warn' : 'ok');
+    $('vpnst').textContent = b.vpn.connected ? 'VPN logons from the FortiGate logs' : 'VPN: ' + (b.vpn.why || 'not readable');
+    $('today').innerHTML = b.today_list.length ? '<div class="tw"><table><thead><tr><th>Person</th><th>Department</th><th>Company laptop</th><th>VPN today</th></tr></thead><tbody>' + b.today_list.map(function (x) {
+      return '<tr><td><b>' + esc(x.user) + '</b></td><td>' + esc(dname(x.department)) + '</td><td>' + (x.laptop ? esc(x.laptop) : pill('none on record', 'bad')) + '</td><td>' + (x.vpn == null ? '<span class="mut">not readable</span>' : x.vpn ? pill('connected', 'ok') : pill('no logon yet', 'warn')) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">Nobody has an approved work-from-home day today.</div>';
+    $('pend').innerHTML = b.pending.length ? table(b.pending, can('admin') ? 'decide' : '') : '<div class="empty">No request is waiting.</div>';
+    $('indc').hidden = !b.indicators;
+    if (b.indicators) $('ind').innerHTML = '<div class="note">' + esc(b.indicators.note) + '</div>' + (b.indicators.vpn_without_approval.length ? '<p class="sm">' + b.indicators.vpn_without_approval.map(function (u) { return pill(u, ''); }).join(' ') + '</p>' : '<div class="empty">None today.</div>');
+    if (C) { var N = b.next_days; C.bars($('nextc'), N.map(function (d) { return d.day.slice(5); }), [{ label: 'Approved', data: N.map(function (d) { return d.approved; }), color: 'teal' }, { label: 'Waiting', data: N.map(function (d) { return d.pending; }), color: 'warn' }], { stacked: true });
+      var D = b.departments.filter(function (d) { return d.month_days || d.today; }); if (!D.length) C.empty($('deptc'), 'No approved day this month yet');
+      else C.bars($('deptc'), D.map(function (d) { return d.name; }), [{ label: 'Days this month', data: D.map(function (d) { return d.month_days; }), color: 'purple' }, { label: 'People', data: D.map(function (d) { return d.people_month; }), color: 'acc' }], { horizontal: true }); }
+  }
+  function drawPolicy() {
+    var p = P, rows = Object.keys(p.departments).map(function (id) { var d = p.departments[id]; return '<tr><td>' + esc(d.name) + '</td><td><input type="checkbox" data-pa="' + esc(id) + '"' + (d.allowed ? ' checked' : '') + ' aria-label="' + esc(d.name) + ' may work from home"></td><td><input data-pp="' + esc(id) + '" value="' + esc(d.approvers.join(', ')) + '" placeholder="user names, comma separated" style="width:100%"></td></tr>'; }).join('');
+    $('pol').innerHTML = '<div class="frm"><label>Days per month<input type="number" id="pm" min="0" max="23" value="' + esc(p.max_days_month) + '"></label><label>Notice (days)<input type="number" id="pn" min="0" max="30" value="' + esc(p.notice_days) + '"></label>'
+      + '<label>Company laptop required<select id="pl"><option value="1"' + (p.require_laptop ? ' selected' : '') + '>yes</option><option value="0"' + (p.require_laptop ? '' : ' selected') + '>no</option></select></label></div>'
+      + '<div class="tw" style="margin-top:8px"><table><thead><tr><th>Department</th><th>May work from home</th><th>Approvers (besides administrators)</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+      + '<p><button type="button" id="psave">Save the policy</button> <span class="sm mut">' + (p.updated_by ? 'last changed by ' + esc(p.updated_by) + ' ' + esc(String(p.updated_at).slice(0, 16).replace('T', ' ')) : 'the defaults (8 days a month, 1 day notice)') + '</span></p>';
+  }
+  function load() {
+    req('GET', '/remote-work/me').then(function (m) { M = m; $('err').innerHTML = ''; drawMe(); $('up').textContent = 'today ' + m.today;
+      if (can('operator')) req('GET', '/remote-work/board').then(function (b) { B = b; $('boardw').hidden = false; drawBoard(); }).catch(function (e) { $('boardw').hidden = true; $('kp').innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+      if (can('admin')) req('GET', '/remote-work/policy').then(function (p) { P = p; $('polc').hidden = false; drawPolicy(); }).catch(function (e) { $('pol').innerHTML = '<p class="err">' + esc(e.message) + '</p>'; });
+    }).catch(function (e) { $('mine').innerHTML = ''; $('myreq').innerHTML = ''; $('err').innerHTML = '<div class="card"><div class="empty">' + esc(e.status === 404 ? 'Work From Home is not on this platform yet - run the platform update.' : 'Work From Home could not load: ' + e.message) + '</div></div>'; });
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target, a;
+    if (t.id === 'rf') return load();
+    if (t.id === 'wgo') { t.disabled = true; req('POST', '/remote-work/requests', { from: $('wf').value, to: $('wt').value, department: $('wd').value, reason: $('wr').value.trim() })
+      .then(function (r) { toast(r.id + ' sent - waiting for your approver' + ((r.notes || []).length ? ' (' + r.notes.join('; ') + ')' : '')); load(); }).catch(function (er) { t.disabled = false; toast('Not sent: ' + er.message); }); return; }
+    if ((a = t.closest('[data-cancel]'))) { if (!confirm('Cancel ' + a.getAttribute('data-cancel') + '?')) return; req('POST', '/remote-work/requests/' + encodeURIComponent(a.getAttribute('data-cancel')) + '/cancel', {}).then(function () { toast('Cancelled'); load(); }).catch(function (er) { toast('Not cancelled: ' + er.message); }); return; }
+    if ((a = t.closest('[data-dec]'))) { var d = a.getAttribute('data-dec'), cm = d === 'rejected' ? prompt('Why is it rejected? (the person reads it)') : ''; if (d === 'rejected' && !cm) return;
+      req('POST', '/remote-work/requests/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: d, comment: cm || undefined }).then(function (x) { toast(x.id + ' ' + x.status); load(); }).catch(function (er) { toast('Not decided: ' + er.message); }); return; }
+    if (t.id === 'psave') { var deps = {}; [].forEach.call(document.querySelectorAll('[data-pa]'), function (c) { var id = c.getAttribute('data-pa'), ap = document.querySelector('[data-pp="' + id + '"]').value.split(/[\s,;]+/).filter(Boolean); deps[id] = { allowed: c.checked, approvers: ap }; });
+      req('PUT', '/remote-work/policy', { max_days_month: Number($('pm').value), notice_days: Number($('pn').value), require_laptop: $('pl').value === '1', departments: deps }).then(function (p) { P = p; drawPolicy(); toast('Policy saved'); }).catch(function (er) { toast('Not saved: ' + er.message); }); }
+  });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* viewer */ } load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>
