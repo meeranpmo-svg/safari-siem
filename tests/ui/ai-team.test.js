@@ -69,6 +69,8 @@ const ITAM = [eng('desk', 'AI Desktop Support', { open: 3, by_status: { open: 3 
   const cls = async (p, id) => (await (await node(p, id)).getAttribute('class'));
   try {
     const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); p.on('pageerror', (x) => errs.push(x.message));
+    // the database estates: an organisation that has the DBA engineers (Safari's brand switches them off - checked at the end)
+    await p.addInitScript(() => { Object.defineProperty(window, 'ZYB_ORG', { configurable: true, set(v) { this._o = Object.assign({}, v, { engineers_off: [] }); }, get() { return this._o; } }); });
     p.on('dialog', (d) => { errs.push('dialog: ' + d.message()); d.dismiss(); });
     await p.goto(base + 'ai-team.html?standalone=1');
     ok(await wait(p, () => document.querySelectorAll('#floor .tv-n').length === 8), 'all eight engineers on the floor');
@@ -164,6 +166,13 @@ const ITAM = [eng('desk', 'AI Desktop Support', { open: 3, by_status: { open: 3 
     // phone width: the floor becomes a list
     await p.setViewportSize({ width: 390, height: 900 }); await p.reload(); await wait(p, () => document.querySelectorAll('#floor .tv-n').length === 8);
     ok(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no horizontal scroll on a phone');
+    // the real brand: engineers the organisation does not have (engineers_off, Safari: no DBA) - their estate cards are gone, not read
+    const eoff = JSON.parse(fs.readFileSync(path.join(__dirname, '../../brand/brand.json'), 'utf8')).engineers_off || [];
+    const q = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); q.on('pageerror', (x) => errs.push(x.message));
+    await q.goto(base + 'ai-team.html?standalone=1'); await q.waitForSelector('#team', { state: 'attached' });
+    ok((eoff.includes('dba') ? !(await q.$('#oraov')) : !!(await q.$('#oraov'))) && (eoff.includes('sqldba') ? !(await q.$('#dbov')) : !!(await q.$('#dbov'))), 'DBA estate cards follow the brand (engineers_off: ' + eoff.join(',') + ')');
+    ok(!/Oracle estate|SQL Server · PostgreSQL/.test(await q.$eval('#atsub', (e) => e.textContent).catch(() => '')) || !eoff.includes('dba'), 'no chip for a removed estate');
+    await q.close();
   } finally { await browser.close(); srv.close(); }
   ok(!errs.length, 'no page errors: ' + errs.join(' | '));
   console.log((bad ? 'FAILED ' : 'OK ') + (n - bad) + '/' + n + ' checks');
