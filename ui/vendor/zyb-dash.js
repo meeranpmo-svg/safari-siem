@@ -428,6 +428,8 @@
     }
     var h = ('<div class="zs-brand"><a class="zs-logo" href="./" title="Zyberon Sentra — IT Operations &amp; Cyber Security Automation &amp; Monitoring Platform — ' + ZYB_ORG.short + ' — home"><span class="zs-mark">') + logo + ('</span><span><b>Zyberon Sentra</b><small>' + ZYB_ORG.name + '</small></span></a>')
       + '<button type="button" class="zs-pin" id="zs-pin" title="Collapse menu" aria-label="Collapse menu">' + ic(ICO.rail) + '</button></div>'
+      // the organisation's own logo on a card under the platform name - shown only with its colours on (vendor/zyb-color.css)
+      + (ZYB_ORG.logo && /^data:image\/(png|webp|jpeg|svg\+xml);base64,/.test(ZYB_ORG.logo) ? '<a class="zs-orgcard" href="./" aria-label="' + esc0(ZYB_ORG.name) + ' - home"><img src="' + ZYB_ORG.logo + '" alt="' + esc0(ZYB_ORG.name) + '"></a>' : '')
       + '<div class="zs-find">' + ic(ICO.search) + '<input id="zs-q" type="search" placeholder="Filter menu…" aria-label="Filter menu" autocomplete="off"></div>'
       + '<nav class="zs-nav" id="zs-nav" aria-label="Dashboards"><a class="zs-home' + (cur === 'index.html' ? ' on' : '') + '" href="./" title="Home"' + (cur === 'index.html' ? ' aria-current="page"' : '') + '>' + ic(ICO.home) + '<span>Home</span></a>'
       // start here: the pages flagged start:true in the registry (zyb-nav.js), shown once - not again inside their workspace
