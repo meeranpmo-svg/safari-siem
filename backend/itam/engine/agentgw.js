@@ -42,7 +42,7 @@ function createAgentGateway({ store, audit, config }) {
     return { token, expires_at: rec.expires_at, note: rec.note, site: rec.site, install_hint: `printf '%s\\n' '${token}' | itam-agent enrol --server https://<portal-url>${(config && config.api && config.api.agent_prefix) || '/agent'} --token-stdin` };
   }
   function listTokens() {
-    return tokens.all().map((t) => ({ token_prefix: t.prefix || String(t.id).slice(0, 8), created_by: t.created_by, created_at: t.created_at, expires_at: t.expires_at, note: t.note, site: t.site, used_at: t.used_at, used_by_agent: t.used_by_agent }));
+    return tokens.all().map((t) => ({ token_prefix: t.prefix || String(t.id).slice(0, 8), created_by: t.created_by, created_at: t.created_at, expires_at: t.expires_at, note: t.note, site: t.site, used_at: t.used_at, used_by_agent: t.used_by_agent, revoked: !!t.revoked }));
   }
   function revokeToken(prefix, who) {
     // the first 8 characters shown in the list, matching exactly one token - a short prefix could revoke the wrong one
@@ -57,6 +57,17 @@ function createAgentGateway({ store, audit, config }) {
     return { ok: true };
   }
 
+  // the note on a token (what it was issued for, e.g. "Hyper-V: HV-HOST-01"): corrected by an administrator; exact 8-character prefix
+  function setTokenNote(prefix, note, who) {
+    const p = String(prefix || '');
+    if (!/^[0-9a-f]{8}$/i.test(p)) throw bad('prefix: the first 8 characters of the token, as listed', 400);
+    const hits = tokens.all().filter((x) => String(x.prefix || '').toLowerCase() === p.toLowerCase());
+    if (hits.length !== 1) throw bad(hits.length ? 'more than one token starts with ' + p : 'token not found', hits.length ? 409 : 404);
+    const before = hits[0].note, v = asset.s(note, 300) || null;
+    tokens.patch(hits[0].id, (o) => { o.note = v; });
+    if (audit) audit({ by: who && who.user, role: who && who.role, action: 'agent.token.note', target: p, detail: { from: before, to: v } });
+    return { ok: true };
+  }
   // ---- admin: list / revoke agents ------------------------------------------------------------------------------
   function listAgents() {
     const now = Date.now();
@@ -164,7 +175,7 @@ function createAgentGateway({ store, audit, config }) {
   function getAgent(id) { return agents.get(id); }
 
   return {
-    issueToken, listTokens, revokeToken, listAgents, revokeAgent,
+    issueToken, listTokens, revokeToken, setTokenNote, listAgents, revokeAgent,
     enrol, authenticate, heartbeat, acceptReport, bindAsset, bindAgent, getAgent,
     staleH,
   };

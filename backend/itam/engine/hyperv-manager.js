@@ -182,14 +182,14 @@ function createHypervManager(app, opts = {}) {
   }
   const reported = () => new Set(latest().all().map((r) => String(r.host.name).toLowerCase()));
   function onboardView() {
-    const sc = script(), seen = reported(), toks = app.agentgw ? app.agentgw.listTokens().filter((t) => /^Hyper-V: /.test(t.note || '')) : [];
+    const sc = script(), seen = reported(), toks = app.agentgw ? app.agentgw.listTokens().filter((t) => /^Hyper-V: /.test(t.note || '') && !t.revoked) : [];
     const names = new Map(app.agentgw && app.agentgw.listAgents ? app.agentgw.listAgents().map((a) => [a.id, String(a.name || '')]) : []);
     return { script: { name: sc.name, sha256: sc.sha256, bytes: Buffer.byteLength(sc.script) },
       invited: toks.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 100).map((t) => { const h = String(t.note).slice(9);
         // the host reports under its Windows computer name, which is what it enrolled with - so a host added by its IP address
         // (or a short / different name) is matched through the agent that used its key
         const as = t.used_by_agent && names.get(t.used_by_agent), on = seen.has(h.toLowerCase()) || (as && seen.has(as.toLowerCase()));
-        return { host: h, reports_as: as && as.toLowerCase() !== h.toLowerCase() ? as : null, created_at: t.created_at, created_by: t.created_by, expires_at: t.expires_at, state: on ? 'reporting' : t.used_at ? 'enrolled - waiting for its first report' : t.revoked ? 'revoked' : Date.parse(t.expires_at) < now() ? 'expired' : 'waiting for the host' }; }) };
+        return { id: t.token_prefix, host: h, reports_as: as && as.toLowerCase() !== h.toLowerCase() ? as : null, created_at: t.created_at, created_by: t.created_by, expires_at: t.expires_at, state: on ? 'reporting' : t.used_at ? 'enrolled - waiting for its first report' : t.revoked ? 'revoked' : Date.parse(t.expires_at) < now() ? 'expired' : 'waiting for the host' }; }) };
   }
   function onboard(b0, who) {
     if (!isHuman(who.user)) throw httpErr(403, 'a person adds Hyper-V hosts');
@@ -203,7 +203,40 @@ function createHypervManager(app, opts = {}) {
     audit(who, 'onboard', 'hyperv', { hosts, script_sha256: sc.sha256 });
     return { script_sha256: sc.sha256, hosts: out };
   }
-  return { onReport, view, propose, decide, pending, result, onboardView, onboard, script, ACTIONS };
+  // ---- the "Hosts added" list: correct a host's name, or remove it (administrators, a person, audited)
+  function invite(id) {
+    param(id); if (!app.agentgw) throw httpErr(503, 'the agent gateway is not running');
+    if (!/^[0-9a-f]{8}$/i.test(String(id))) throw httpErr(400, 'id: the 8-character key reference from the list');
+    const t = app.agentgw.listTokens().find((x) => x.token_prefix === id && /^Hyper-V: /.test(x.note || '') && !x.revoked);
+    if (!t) throw httpErr(404, 'that host is not in the list'); return t;
+  }
+  function renameHost(id, b0, who) {
+    if (!isHuman(who.user)) throw httpErr(403, 'a person edits Hyper-V hosts');
+    const t = invite(id), b = body(b0).str('host', { required: true, max: 253 }).done(), h = b.host.trim();
+    if (!HOSTNAME.test(h)) throw httpErr(400, 'host: "' + s(h, 60) + '" is not a host name');
+    const from = String(t.note).slice(9);
+    app.agentgw.setTokenNote(id, 'Hyper-V: ' + h, who);
+    audit(who, 'onboard.rename', 'hyperv', { from, to: h });
+    return onboardView();
+  }
+  // removing stops the host: its one-time key is cancelled; if it already enrolled, its agent key is revoked (its next report is
+  // refused) and it leaves the Hyper-V dashboard. The 60-day capacity history stays for the record. The scheduled task on the
+  // host is removed there (schtasks /Delete /TN "Sentra Hyper-V report" /F).
+  function removeHost(id, who) {
+    if (!isHuman(who.user)) throw httpErr(403, 'a person removes Hyper-V hosts');
+    const t = invite(id), h = String(t.note).slice(9);
+    app.agentgw.revokeToken(id, who);
+    let as = null;
+    if (t.used_by_agent) {
+      const a = (app.agentgw.listAgents ? app.agentgw.listAgents() : []).find((x) => x.id === t.used_by_agent);
+      if (a && a.status !== 'revoked') app.agentgw.revokeAgent(a.id, who);
+      as = a ? String(a.name || '') : null;
+    }
+    for (const k of [h, as].filter(Boolean).map((x) => x.toLowerCase())) { latest().remove(k); for (const o of samples().all((x) => x.host === k)) samples().remove(o.id); }
+    audit(who, 'onboard.remove', 'hyperv', { host: h, reported_as: as, agent_revoked: !!t.used_by_agent });
+    return onboardView();
+  }
+  return { onReport, view, propose, decide, pending, result, onboardView, onboard, renameHost, removeHost, script, ACTIONS };
 }
 
 function registerHypervManager(srv, app, X) {
@@ -212,6 +245,8 @@ function registerHypervManager(srv, app, X) {
   srv.route('GET', '/hyperv/onboard', (ctx) => { ctx.need('admin'); return X.onboardView(); });
   srv.route('POST', '/hyperv/onboard', (ctx) => { ctx.need('admin'); return X.onboard(ctx.body, ctx.who); }, { maxBody: 16384 });
   // the report script for a host to download (agent side, no key needed: it carries no secret; the command checks its SHA-256)
+  srv.route('PUT', '/hyperv/onboard/:id', (ctx) => { ctx.need('admin'); return X.renameHost(ctx.params.id, ctx.body, ctx.who); }, { maxBody: 2048 });
+  srv.route('POST', '/hyperv/onboard/:id/remove', (ctx) => { ctx.need('admin'); return X.removeHost(ctx.params.id, ctx.who); }, { maxBody: 1024 });
   srv.route('GET', '/hyperv/script', () => X.script(), { agent: true });
   srv.route('POST', '/hyperv/actions/:id/decide', (ctx) => { ctx.need('admin'); return X.decide(ctx.params.id, ctx.body, ctx.who); }, { maxBody: 2048 });
   const agentOf = (ctx) => { const a = app.agentgw && app.agentgw.authenticate(ctx.bearer()); if (!a) throw httpErr(401, 'invalid or revoked agent key'); return 'agent:' + a.id; };

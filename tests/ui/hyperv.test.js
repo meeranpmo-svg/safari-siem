@@ -24,8 +24,11 @@ const posts = [];
     if (u === '/dashboards/whoami.json') return json(200, { user: USER, role: ROLE });
     if (u === '/api/itam/hyperv') return json(200, VIEW());
     if (u === '/api/itam/hyperv/onboard' && req.method === 'GET') return ROLE === 'admin' ? json(200, { script: { name: 'hyperv-report.ps1', sha256: 'ab'.repeat(32), bytes: 9000 }, invited: INVITED }) : json(403, { error: 'admin only' });
-    if (u === '/api/itam/hyperv/onboard') return body((b) => { INVITED = b.hosts.map((h) => ({ host: h, state: 'waiting for the host', created_at: new Date().toISOString(), created_by: USER, expires_at: new Date(Date.now() + 86400000).toISOString() }));
+    if (u === '/api/itam/hyperv/onboard') return body((b) => { INVITED = b.hosts.map((h, i) => ({ id: 'abcd000' + i, host: h, state: 'waiting for the host', created_at: new Date().toISOString(), created_by: USER, expires_at: new Date(Date.now() + 86400000).toISOString() }));
       json(200, { script_sha256: 'ab'.repeat(32), hosts: b.hosts.map((h, i) => ({ host: h, token: 'synthetic' + i + "'tok", expires_at: new Date().toISOString() })) }); });
+    { const m = /^\/api\/itam\/hyperv\/onboard\/([0-9a-f]{8})(\/remove)?$/.exec(u);
+      if (m) return body((b) => { const i = INVITED.findIndex((x) => x.id === m[1]); if (i < 0) return json(404, { error: 'that host is not in the list' });
+        if (m[2]) INVITED.splice(i, 1); else INVITED[i].host = b.host; json(200, { invited: INVITED }); }); }
     if (u === '/api/itam/hyperv/actions') return body((b) => { const a = Object.assign({ id: 'HVAC-00001', status: 'proposed', proposed_by: USER }, b); ACTS = [a]; json(200, a); });
     if (/\/decide$/.test(u)) return body((b) => { ACTS[0].status = b.decision; ACTS[0].decided_by = USER; json(200, ACTS[0]); });
     if (u.startsWith('/api/')) return json(404, { error: 'not in this test' });
@@ -62,6 +65,13 @@ const posts = [];
   ok(cmds.length === 2 && cmds.every((c, i) => c.includes("'synthetic" + i + "''tok'") && c.includes("'" + 'ab'.repeat(32) + "'") && /\/agent'; /.test(c) && /\/hyperv\/script/.test(c) && /schtasks \/Create \/F \/TN 'Sentra Hyper-V report'/.test(c) && /throw 'the downloaded script does not match/.test(c)),
     'one command per host: its own key (quoted for PowerShell), the fingerprint check, enrol, the scheduled task: ' + cmds[0]);
   ok(/Copy each command now/.test(await p.textContent('#onbout')) && /HV-SYN-02/.test(await p.textContent('#onbinv')) && /waiting for the host/.test(await p.textContent('#onbinv')), 'shown once, and the added hosts listed with their state');
+  // Hosts added: Edit corrects the name (same key), Remove asks first and takes it off the list
+  p.removeAllListeners('dialog'); let asked = '';
+  p.on('dialog', (d) => { asked = d.message(); d.type() === 'prompt' ? d.accept('HQPSUPERM01.safari.local') : d.accept(); });
+  await p.click('[data-hedit="abcd0000"]'); await p.waitForFunction(() => /HQPSUPERM01\.safari\.local/.test(document.getElementById('onbinv').textContent));
+  const ed = posts.find((x) => x[0] === 'PUT'); ok(ed && ed[1] === '/api/itam/hyperv/onboard/abcd0000' && ed[2].host === 'HQPSUPERM01.safari.local' && /computer name/.test(asked), 'Edit: the new name is sent for that key');
+  await p.click('[data-hdel="abcd0001"]'); await p.waitForFunction(() => !/HV-SYN-03/.test(document.getElementById('onbinv').textContent));
+  ok(/Remove HV-SYN-03\?/.test(asked) && /one-time key is cancelled/.test(asked) && posts.some((x) => x[1] === '/api/itam/hyperv/onboard/abcd0001/remove'), 'Remove: asks first, says what happens, the host leaves the list');
   await p.close();
   USER = 'vera.syn'; ROLE = 'viewer'; p = await open(); await p.waitForSelector('.host'); ok(!(await p.$('[data-vm]')), 'viewer: no action menu'); await p.close();
   ok(!errs.length, 'errors: ' + errs.join(' | '));

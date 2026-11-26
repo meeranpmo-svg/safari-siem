@@ -180,3 +180,42 @@ test('add Hyper-V hosts by IP address: the list follows the key to the reporting
   await e.req('POST', '/agent/enrol', { user: '', role: '', body: { token: r2.json.hosts[0].token, hostname: 'hv-syn-name', platform: 'windows' } });
   assert.equal((await call('GET', '/hyperv/onboard', undefined, ADM0)).json.invited.find((y) => y.host === 'HV-SYN-NAME').reports_as, null);
 });
+
+// the "Hosts added" list: an administrator corrects a host's name or removes it. Remove cancels the one-time key (the command no
+// longer enrols); for an enrolled host the agent key is revoked (its reports are refused) and it leaves the dashboard. Operators,
+// viewers and AI identities are refused; a bad name or id is a 400; both are audited without any key
+test('Hosts added: edit the name, remove (key cancelled, enrolled host disconnected), roles, validation, audit', async (t) => {
+  const e = await startApp({ noAi: true }); t.after(() => e.close());
+  registerDuty(e.app.srv, e.app, { noTimer: true, python: process.env.PYTHON || 'python3' });
+  const ADM0 = { user: 'admin.syn', role: 'admin' }, OP0 = { user: 'op.syn', role: 'operator' }, BOT0 = { user: 'ai:engineer', role: 'admin' };
+  const call = (m, p, b, who) => e.req(m, p, Object.assign(b !== undefined ? { body: b } : {}, who));
+  const r = (await call('POST', '/hyperv/onboard', { hosts: ['10.20.8.12', 'HV-SYN-DEL'] }, ADM0)).json;
+  const list = async () => (await call('GET', '/hyperv/onboard', undefined, ADM0)).json.invited;
+  const idOf = async (h) => (await list()).find((x) => x.host === h).id;
+  const id1 = await idOf('10.20.8.12'); assert.match(id1, /^[0-9a-f]{8}$/);
+  // edit
+  assert.equal((await call('PUT', '/hyperv/onboard/' + id1, { host: 'HQ-HV-SYN.safari.local' }, OP0)).status, 403, 'operator refused');
+  assert.equal((await call('PUT', '/hyperv/onboard/' + id1, { host: 'HQ-HV-SYN' }, BOT0)).status, 403, 'not an AI identity');
+  let x = await call('PUT', '/hyperv/onboard/' + id1, { host: 'bad name;rm' }, ADM0); assert.equal(x.status, 400); assert.match(x.json.error, /^host:/);
+  assert.equal((await call('PUT', '/hyperv/onboard/zzzz', { host: 'A' }, ADM0)).status, 400, 'bad id');
+  assert.equal((await call('PUT', '/hyperv/onboard/0000aaaa', { host: 'A' }, ADM0)).status, 404);
+  x = await call('PUT', '/hyperv/onboard/' + id1, { host: 'HQ-HV-SYN.safari.local' }, ADM0); assert.equal(x.status, 200, x.text);
+  assert.ok((await list()).some((y) => y.id === id1 && y.host === 'HQ-HV-SYN.safari.local'), 'renamed, same key');
+  // remove a host that never enrolled: the key no longer enrols
+  assert.equal((await call('POST', '/hyperv/onboard/' + id1 + '/remove', {}, OP0)).status, 403);
+  assert.equal((await call('POST', '/hyperv/onboard/' + id1 + '/remove', {}, ADM0)).status, 200);
+  assert.ok(!(await list()).some((y) => y.id === id1), 'gone from the list');
+  assert.equal((await e.req('POST', '/agent/enrol', { user: '', role: '', body: { token: r.hosts[0].token, hostname: 'HQ-HV-SYN', platform: 'windows' } })).status, 401, 'the cancelled key does not enrol');
+  // remove an enrolled, reporting host: its agent is revoked and it leaves the dashboard
+  const enr = (await e.req('POST', '/agent/enrol', { user: '', role: '', body: { token: r.hosts[1].token, hostname: 'HV-SYN-DEL', platform: 'windows' } })).json;
+  const sc = (await call('POST', '/discovery/scopes', { name: 'HV', site: 'Riyadh HQ', targets: ['10.20.8.0/24'], methods: { hyperv: { enabled: true } } }, ADM0)).json.scope;
+  await call('POST', '/discovery/hyperv/import', { scope_id: sc.id, report: { collected_at: new Date().toISOString(), host: { name: 'HV-SYN-DEL', logical_processors: 4, cpu_pct: 5, mem_total_mb: 8192, mem_free_mb: 4096, volumes: [] }, vms: [] } }, ADM0);
+  assert.ok((await call('GET', '/hyperv', undefined, ADM0)).json.hosts.some((h) => h.name === 'HV-SYN-DEL'));
+  assert.equal((await call('POST', '/hyperv/onboard/' + (await idOf('HV-SYN-DEL')) + '/remove', {}, ADM0)).status, 200);
+  assert.ok(!(await call('GET', '/hyperv', undefined, ADM0)).json.hosts.some((h) => h.name === 'HV-SYN-DEL'), 'left the dashboard');
+  assert.equal(e.app.agentgw.authenticate(enr.agent_key), null, 'its agent key no longer works');
+  const au = e.app.store.auditTail(300).filter((y) => /^hyperv\.onboard\.(rename|remove)$/.test(y.action)).reverse();   // oldest first
+  assert.deepEqual(au.map((y) => y.action), ['hyperv.onboard.rename', 'hyperv.onboard.remove', 'hyperv.onboard.remove']);
+  assert.equal(au[0].detail.to, 'HQ-HV-SYN.safari.local'); assert.equal(au[2].detail.agent_revoked, true); assert.equal(au[2].by, 'admin.syn');
+  const all = JSON.stringify(e.app.store.auditTail(300)); assert.ok(!all.includes(r.hosts[0].token) && !all.includes(enr.agent_key), 'no key in the audit');
+});

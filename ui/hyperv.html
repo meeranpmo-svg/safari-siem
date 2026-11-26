@@ -83,8 +83,8 @@
       + "schtasks /Create /F /TN 'Sentra Hyper-V report' /SC MINUTE /MO 15 /RU SYSTEM /RL HIGHEST /TR \"powershell -NoProfile -ExecutionPolicy Bypass -File $d\\hyperv-report.ps1 -Server $s\"";
   }
   function onbLoad() { req('GET', '/hyperv/onboard').then(function (o) { $('onbsha').textContent = 'script fingerprint ' + o.script.sha256.slice(0, 16) + '…';
-    $('onbinv').innerHTML = o.invited.length ? '<h3 style="margin-top:14px">Hosts added</h3><div class="tw"><table><thead><tr><th>Host</th><th>State</th><th>Added</th><th>Key valid until</th></tr></thead><tbody>' + o.invited.map(function (x) {
-      return '<tr><td><b>' + esc(x.host) + '</b>' + (x.reports_as ? ' <span class="sm mut">reports as ' + esc(x.reports_as) + '</span>' : '') + '</td><td>' + pill(x.state, x.state === 'reporting' ? 'ok' : /expired|revoked/.test(x.state) ? 'bad' : 'warn') + '</td><td class="sm">' + esc(String(x.created_at).slice(0, 16).replace('T', ' ')) + ' · ' + esc(x.created_by || '') + '</td><td class="sm">' + esc(String(x.expires_at).slice(0, 16).replace('T', ' ')) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '';
+    $('onbinv').innerHTML = o.invited.length ? '<h3 style="margin-top:14px">Hosts added</h3><div class="tw"><table><thead><tr><th>Host</th><th>State</th><th>Added</th><th>Key valid until</th><th></th></tr></thead><tbody>' + o.invited.map(function (x) {
+      return '<tr><td><b>' + esc(x.host) + '</b>' + (x.reports_as ? ' <span class="sm mut">reports as ' + esc(x.reports_as) + '</span>' : '') + '</td><td>' + pill(x.state, x.state === 'reporting' ? 'ok' : /expired|revoked/.test(x.state) ? 'bad' : 'warn') + '</td><td class="sm">' + esc(String(x.created_at).slice(0, 16).replace('T', ' ')) + ' · ' + esc(x.created_by || '') + '</td><td class="sm">' + esc(String(x.expires_at).slice(0, 16).replace('T', ' ')) + '</td><td style="white-space:nowrap"><button type="button" class="sm" data-hedit="' + esc(x.id) + '" data-host="' + esc(x.host) + '">✎ Edit</button> <button type="button" class="sm" data-hdel="' + esc(x.id) + '" data-host="' + esc(x.host) + '" data-used="' + (/enrolled|reporting/.test(x.state) ? '1' : '') + '">🗑 Remove</button></td></tr>'; }).join('') + '</tbody></table></div>' : '';
   }).catch(function (er) { $('onbinv').innerHTML = '<p class="err">' + esc(er.message) + '</p>'; }); }
   function onbOpen() { $('onb').hidden = false; $('onb').scrollIntoView({ block: 'start' }); $('onbh').focus(); onbLoad(); }
   function onbGo() {
@@ -101,6 +101,12 @@
     if (t.id === 'rf') return load();
     if (t.id === 'addh' || t.closest('[data-addh]')) return onbOpen();
     if (t.id === 'onbgo') return onbGo();
+    // Hosts added: correct the name, or remove the host (its key is cancelled; an enrolled host is disconnected)
+    if ((a = t.closest('[data-hedit]'))) { var nh = prompt('Host name (the Windows computer name, or its IP address):', a.getAttribute('data-host')); if (!nh || nh.trim() === a.getAttribute('data-host')) return;
+      req('PUT', '/hyperv/onboard/' + encodeURIComponent(a.getAttribute('data-hedit')), { host: nh.trim() }).then(function () { toast('Host name saved'); onbLoad(); }, function (er) { toast(er.message); }); return; }
+    if ((a = t.closest('[data-hdel]'))) { var used = a.getAttribute('data-used') === '1';
+      if (!confirm('Remove ' + a.getAttribute('data-host') + '?\n\n' + (used ? 'The host is disconnected: its reports are refused from now on and it leaves the Hyper-V dashboard. On the host, also delete the scheduled task:\nschtasks /Delete /TN "Sentra Hyper-V report" /F' : 'Its one-time key is cancelled; the command made for it no longer works.'))) return;
+      req('POST', '/hyperv/onboard/' + encodeURIComponent(a.getAttribute('data-hdel')) + '/remove', {}).then(function () { toast('Removed'); onbLoad(); load(); }, function (er) { toast(er.message); }); return; }
     if ((a = t.closest('[data-copy]'))) { var pre = $(a.getAttribute('data-copy')); try { navigator.clipboard.writeText(pre.textContent).then(function () { toast('Copied'); }, function () { toast('Select the command and copy it'); }); } catch (er) { toast('Select the command and copy it'); /* no clipboard API: the text is selectable */ } return; }
     if ((a = t.closest('[data-dec]'))) { var d = a.getAttribute('data-dec'), cm = d === 'rejected' ? prompt('Why is it rejected?') : ''; if (d === 'rejected' && !cm) return; req('POST', '/hyperv/actions/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: d, comment: cm || undefined }).then(function (x) { toast(x.id + ' ' + x.status); load(); }).catch(function (er) { toast(er.message); }); }
   });
