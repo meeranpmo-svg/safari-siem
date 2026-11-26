@@ -54,6 +54,9 @@ const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinit
 const first = (r) => (Array.isArray(r) ? r[0] : r);
 
 /* ---------- normalising FortiManager / FortiOS answers (tolerant: fields differ between versions) ---------- */
+// a configured geographic position (FortiManager device latitude / longitude, FortiOS gui-device-latitude / -longitude): kept
+// only when it is a real point inside Saudi Arabia's bounds (an unset 0,0 is not a position)
+function gps(lat, lng) { const a = Number(lat), o = Number(lng); return Number.isFinite(a) && Number.isFinite(o) && a >= 16 && a <= 33 && o >= 34 && o <= 56 ? { lat: a, lng: o } : null; }
 function normDevice(d, adom) {
   const ver = d.os_ver != null && d.mr != null ? `${String(d.os_ver).replace(/\D.*$/, '')}.${d.mr}.${d.patch != null ? d.patch : 0}` : (String(d.version || '').match(/\d+\.\d+\.\d+/) || [''])[0];
   const conn = d.conn_status === 1 || /^(?:up|1|connected)$/i.test(String(d.conn_status)) ? 'up' : d.conn_status === 2 || /^(?:down|2)$/i.test(String(d.conn_status)) ? 'down' : 'unknown';
@@ -63,7 +66,7 @@ function normDevice(d, adom) {
   return { id: String(d.sn || d.name), serial: String(d.sn || ''), name: String(d.name || d.hostname || d.sn), adom, hostname: String(d.hostname || ''),
     model: String(d.platform_str || d.platform || ''), ip: String(d.ip || ''), firmware: ver, build: num(d.build),
     conn, conf, ha_mode: Number(d.ha_mode) ? (String(d.ha_mode) === '1' ? 'a-p' : String(d.ha_mode) === '2' ? 'a-a' : String(d.ha_mode)) : (typeof d.ha_mode === 'string' && d.ha_mode !== '0' ? d.ha_mode : 'standalone'), ha_members: members,
-    site: String(d.desc || d.location || '').slice(0, 80) };
+    site: String(d.desc || d.location || '').slice(0, 80), geo: gps(d.latitude, d.longitude) };
 }
 function normRes(r) {
   const res = (r && r.results) || r || {}, at = (k) => { const x = res[k]; const v = Array.isArray(x) ? (x[0] && (x[0].current != null ? x[0].current : x[0].historical && x[0].historical['1-min'] && x[0].historical['1-min'].avg)) : x; return num(v); };
@@ -200,7 +203,7 @@ function createFmg({ config, secrets, state, log, transport, directTransport, no
       const list = [], fmgOn = !!(C().base_url && S().api_key);
       for (const adom of fmgOn ? await adoms() : []) {
         if (!NAME.test(adom)) continue;
-        const d = await rpc('get', `/dvmdb/adom/${adom}/device`, { fields: ['name', 'sn', 'ip', 'platform_str', 'os_ver', 'mr', 'patch', 'build', 'conn_status', 'conf_status', 'ha_mode', 'ha_slave', 'hostname', 'desc'] });
+        const d = await rpc('get', `/dvmdb/adom/${adom}/device`, { fields: ['name', 'sn', 'ip', 'platform_str', 'os_ver', 'mr', 'patch', 'build', 'conn_status', 'conf_status', 'ha_mode', 'ha_slave', 'hostname', 'desc', 'latitude', 'longitude'] });
         for (const x of Array.isArray(d) ? d : []) list.push(normDevice(x, adom));
       }
       // standalone FortiGates (not in FortiManager): read directly, each with its own key and pinned certificate
@@ -271,6 +274,7 @@ function createFmg({ config, secrets, state, log, transport, directTransport, no
         const st = await dget(d, '/api/v2/monitor/system/status'), r = st.results || {};
         Object.assign(dev, { serial: String(st.serial || ''), hostname: String(r.hostname || ''), model: String(r.model_name ? 'FortiGate-' + String(r.model_number || '').replace(/^FGT|^FG/, '') : r.model || '').replace(/-$/, ''), firmware: (String(st.version || '').match(/\d+\.\d+\.\d+/) || [''])[0], build: num(st.build), conn: 'up' });
         if (r.model_name && r.model_number) dev.model = r.model_name + '-' + r.model_number;
+        try { const g = await dget(d, '/api/v2/cmdb/system/global'), gr = (g && g.results) || {}; dev.geo = gps(gr['gui-device-latitude'], gr['gui-device-longitude']); } catch (e) { dev.geo = null; /* the position is optional: the map places this FortiGate by its names instead */ }
         const [a, b, c, e, f] = await Promise.all([MON.res, MON.ipsec, MON.sdwan, MON.lic, MON.dev].map((pp) => dget(d, pp).then((x) => ({ response: x }), (er) => ({ error: er.message }))));
         Object.assign(R, { res: a, ips: b, sdwan: c, lic: e, dev: C().endpoints === false ? undefined : f });
       } catch (e) { errors.push(d.name + ': ' + e.message); L.warn('fortigate (direct): poll failed', { device: d.name, err: e.message }); }

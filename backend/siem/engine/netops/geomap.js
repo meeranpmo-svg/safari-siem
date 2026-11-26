@@ -35,6 +35,20 @@ const CITIES = [
   ['Qurayyat', 31.33, 37.34], ['Rafha', 29.63, 43.50], ['NEOM', 27.90, 35.20], ['Umluj', 25.02, 37.27], ['Rabigh', 22.80, 39.03], ['Duba', 27.35, 35.69],
   ['Sharurah', 17.47, 47.11], ['Wadi Dawasir', 20.47, 44.80], ['Al Qatif', 26.52, 49.99], ['Qatif', 26.52, 49.99], ['Hafr', 28.43, 45.97], ['Baha', 20.01, 41.47],
 ].sort((a, b) => b[0].length - a[0].length);
+// the same cities in Arabic, for a location written in Arabic in FortiManager
+const CITIES_AR = [['الرياض', 'Riyadh'], ['جدة', 'Jeddah'], ['جده', 'Jeddah'], ['مكة', 'Makkah'], ['المدينة', 'Madinah'], ['الدمام', 'Dammam'], ['الخبر', 'Khobar'],
+  ['الظهران', 'Dhahran'], ['الجبيل', 'Jubail'], ['الأحساء', 'Al-Ahsa'], ['الاحساء', 'Al-Ahsa'], ['الهفوف', 'Hofuf'], ['بريدة', 'Buraidah'], ['عنيزة', 'Unaizah'], ['القصيم', 'Qassim'],
+  ['حائل', 'Hail'], ['تبوك', 'Tabuk'], ['أبها', 'Abha'], ['ابها', 'Abha'], ['خميس مشيط', 'Khamis Mushait'], ['جازان', 'Jazan'], ['جيزان', 'Jazan'], ['نجران', 'Najran'],
+  ['الطائف', 'Taif'], ['ينبع', 'Yanbu'], ['عرعر', 'Arar'], ['سكاكا', 'Sakaka'], ['القريات', 'Qurayyat'], ['رفحاء', 'Rafha'], ['نيوم', 'NEOM'], ['أملج', 'Umluj'],
+  ['رابغ', 'Rabigh'], ['ضباء', 'Duba'], ['شرورة', 'Sharurah'], ['وادي الدواسر', 'Wadi Dawasir'], ['القطيف', 'Qatif'], ['حفر الباطن', 'Hafar Al-Batin'], ['الخرج', 'Al Kharj'], ['الباحة', 'Al Bahah']]
+  .sort((a, b) => b[0].length - a[0].length);
+// Saudi airport / city codes as they appear in firewall names (FGT-JED-01, RUH-HQ-FW): a whole token only, so "MED" in "MEDIA" is
+// not a match
+const CODES = { RUH: 'Riyadh', JED: 'Jeddah', DMM: 'Dammam', DHA: 'Dhahran', KHO: 'Khobar', MED: 'Madinah', MAK: 'Makkah', MKH: 'Makkah', TIF: 'Taif', TUU: 'Tabuk',
+  AHB: 'Abha', ABH: 'Abha', GIZ: 'Jazan', JZN: 'Jazan', EAM: 'Najran', NJR: 'Najran', HAS: 'Hail', HAIL: 'Hail', ELQ: 'Qassim', QSM: 'Qassim', BUR: 'Buraidah', YNB: 'Yanbu',
+  RAE: 'Arar', AJF: 'Sakaka', URY: 'Qurayyat', RAH: 'Rafha', NUM: 'NEOM', NEOM: 'NEOM', ULH: 'Umluj', HOF: 'Hofuf', JUB: 'Jubail', JBL: 'Jubail', HBT: 'Hafar Al-Batin',
+  KMX: 'Khamis Mushait', SHW: 'Sharurah', KJ: 'Al Kharj', QTF: 'Qatif', RBG: 'Rabigh' };
+const CITY = Object.fromEntries(CITIES.map(([n, lat, lng]) => [n, { lat, lng }]));
 // a simplified outline of Saudi Arabia (longitude, latitude) for the page to draw; the offices are projected the same way, so
 // they sit in the right place on it. A schematic map, not a survey.
 const OUTLINE = [
@@ -49,12 +63,24 @@ function createGeomap(deps) {
   const coords = () => state.collection('geomap_coords'), hist = () => state.collection('geomap_hist');
   const cfgSites = ((deps.config && deps.config.netops && deps.config.netops.geomap) || {}).sites || {};
 
-  // where an office sits: an administrator's saved coordinates, then the brand / config coordinates, then a Saudi city in its name
-  function locate(siteName) {
+  // where an office sits, strongest signal first:
+  //   set     an administrator's coordinates          config  netops.geomap.sites in the SIEM config
+  //   gps     the FortiGates' own configured position (FortiManager Device Manager latitude / longitude, FortiOS
+  //           gui-device-latitude / -longitude) - the average of the office's firewalls that have one
+  //   city    a Saudi city named in the office's site, any firewall's name / hostname or its ADOM - in English or Arabic
+  //   code    a Saudi city / airport code as a token in a firewall name (FGT-JED-01)
+  // An office none of these places is listed beside the map - never guessed onto it.
+  function locate(siteName, devs) {
+    devs = devs || [];
     const key = slug(siteName), lk = low(siteName).trim();
     const saved = coords().get(key); if (saved && isFinite(saved.lat) && isFinite(saved.lng)) return { lat: saved.lat, lng: saved.lng, by: 'set' };
     const c = cfgSites[siteName] || cfgSites[lk]; if (c && isFinite(c.lat) && isFinite(c.lng)) return { lat: Number(c.lat), lng: Number(c.lng), by: 'config' };
-    for (const [name, lat, lng] of CITIES) if (lk.includes(low(name))) return { lat, lng, city: name, by: 'city' };
+    const g = devs.map((d) => d.geo).filter((x) => x && isFinite(x.lat) && isFinite(x.lng));
+    if (g.length) return { lat: +(g.reduce((n, x) => n + x.lat, 0) / g.length).toFixed(4), lng: +(g.reduce((n, x) => n + x.lng, 0) / g.length).toFixed(4), by: 'gps' };
+    const texts = [siteName].concat(devs.map((d) => d.name), devs.map((d) => d.hostname), devs.map((d) => d.adom)).filter(Boolean).map(String);
+    for (const t of texts) { const tl = low(t); for (const [name, lat, lng] of CITIES) if (tl.includes(low(name))) return { lat, lng, city: name, by: 'city' }; }
+    for (const t of texts) for (const [ar, en] of CITIES_AR) if (t.includes(ar) && CITY[en]) return { lat: CITY[en].lat, lng: CITY[en].lng, city: en, by: 'city' };
+    for (const d of devs) for (const tok of String(d.name || '').toUpperCase().split(/[^A-Z]+/)) { const en = CODES[tok]; if (en && CITY[en]) return { lat: CITY[en].lat, lng: CITY[en].lng, city: en, by: 'code' }; }
     return null;
   }
   const isHub = (name) => /head ?office|\bhq\b|data ?cent|\bdc\b|core|main office/i.test(name);
@@ -73,8 +99,8 @@ function createGeomap(deps) {
   function build() {
     const F = deps.fmgApi; const connected = !!(F && F.status && F.status().configured && F.status().last_poll_at);
     const bySite = {};
-    if (connected) for (const d of F.fleet().devices) { const s = (d.site || '').trim() || 'Unassigned'; (bySite[s] = bySite[s] || []).push(d); }
-    const all = Object.entries(bySite).map(([name, devs]) => { const loc = locate(name), base = siteFrom(name, devs);
+    if (connected) for (const d of F.fleet().devices) { const s = (d.site || '').trim() || d.hostname || d.name || 'Unassigned'; (bySite[s] = bySite[s] || []).push(d); }
+    const all = Object.entries(bySite).map(([name, devs]) => { const loc = locate(name, devs), base = siteFrom(name, devs);
       return Object.assign(base, { id: slug(name), hub: isHub(name), lat: loc ? loc.lat : null, lng: loc ? loc.lng : null, placed: !!loc, located_by: loc ? loc.by : null, city: loc ? loc.city || null : null }); });
     all.sort((a, b) => ({ down: 0, degraded: 1, online: 2, unknown: 3, up: 4 }[a.state] - { down: 0, degraded: 1, online: 2, unknown: 3, up: 4 }[b.state]) || a.name.localeCompare(b.name));
     return { connected, sites: all };
@@ -107,10 +133,11 @@ function createGeomap(deps) {
     const placed = sites.filter((s) => s.placed), hub = placed.find((s) => s.hub) || placed.slice().sort((a, b) => b.firewalls - a.firewalls)[0] || null;
     const links = hub ? placed.filter((s) => s.id !== hub.id).map((s) => ({ from: s.id, to: hub.id, state: s.state,
       reason: s.state === 'up' ? 'firewall online, VPN up' : s.state === 'degraded' ? 'firewall online, VPN tunnels down' : s.state === 'online' ? 'firewall online, no VPN tunnel seen' : s.state === 'down' ? 'firewall offline' : 'no firewall data' })) : [];
-    const kpis = { offices: sites.length, placed: placed.length, unplaced: sites.length - placed.length, firewalls: sites.reduce((n, s) => n + s.firewalls, 0),
+    const by = (k) => placed.filter((s) => s.located_by === k).length;
+    const kpis = { located: { gps: by('gps'), city: by('city'), code: by('code'), set: by('set') + by('config') }, offices: sites.length, placed: placed.length, unplaced: sites.length - placed.length, firewalls: sites.reduce((n, s) => n + s.firewalls, 0),
       up: sites.filter((s) => s.state === 'up').length, degraded: sites.filter((s) => s.state === 'degraded').length, down: sites.filter((s) => s.state === 'down').length };
     return { connected, at: new Date(t).toISOString(), hub: hub ? hub.id : null, sites, links, kpis, anomalies: connected ? anomalies(sites, t) : [], outline: OUTLINE, cities: CITIES.map(([name, lat, lng]) => ({ name, lat, lng })),
-      note: connected ? '' : 'No FortiGate is connected yet - connect FortiManager or a standalone FortiGate in the Integration Hub. Name each firewall\'s location with its Saudi city so its office appears on the map.' };
+      note: connected ? '' : 'No FortiGate is connected yet - connect FortiManager or a standalone FortiGate in the Integration Hub. Each FortiGate is placed on the map by itself: its configured position, or a Saudi city in its location, name or ADOM.' };
   }
 
   function setSite(id, b0, who) {

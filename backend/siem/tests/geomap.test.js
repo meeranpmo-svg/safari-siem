@@ -74,3 +74,35 @@ test('nothing connected: says so, no fabricated office', () => {
   const v = empty.g.view(); assert.equal(v.connected, false); assert.equal(v.sites.length, 0); assert.match(v.note, /No FortiGate is connected/); assert.deepEqual(v.anomalies, []);
   assert.ok(v.outline.length > 10, 'the map outline is still returned');
 });
+
+// every FortiGate placed by itself: its configured GPS (FortiManager / FortiOS), a Saudi city in its location, name, hostname or ADOM
+// (English or Arabic), or a city code token in its name (FGT-JED-01); a FortiGate with no location is its own office; "MEDIA" is not
+// "MED"; nothing matched stays beside the map
+test('every FortiGate placed automatically: GPS, city in any name (EN / AR), city code, own office, never guessed', () => {
+  const d = (name, site, extra) => Object.assign({ name, site, conn: 'up', health: 'ok', model: 'FortiGate-60F', tunnels: [{ up: true }] }, extra || {});
+  const { g } = mk([
+    d('FGT-HQ-01', 'Riyadh Head Office'),
+    d('FGT-SITE-17', 'Project 17', { geo: { lat: 21.62, lng: 39.11 } }),             // GPS from FortiManager
+    d('FGT-JED-02', ''),                                                              // no location: own office, code JED
+    d('FW-CAMP-9', 'Camp 9', { hostname: 'tabuk-camp-fw' }),                         // city in the hostname
+    d('FGT-A', 'مكتب الدمام'),                                                        // Arabic location (Dammam office)
+    d('FGT-B', 'Site B', { adom: 'Abha-Region' }),                                   // city in the ADOM
+    d('FGT-MEDIA-01', 'Media Lab'),                                                   // MEDIA is not MED
+  ]);
+  const v = g.view(), s = (re) => v.sites.find((x) => re.test(x.name));
+  const p17 = s(/Project 17/); assert.equal(p17.located_by, 'gps'); assert.equal(p17.lat, 21.62);
+  const jed = s(/FGT-JED-02/); assert.ok(jed, 'a FortiGate with no location is its own office'); assert.equal(jed.located_by, 'code'); assert.equal(jed.city, 'Jeddah');
+  assert.equal(s(/Camp 9/).city, 'Tabuk'); assert.equal(s(/Camp 9/).located_by, 'city');
+  assert.equal(s(/الدمام/).city, 'Dammam');
+  assert.equal(s(/Site B/).city, 'Abha');
+  assert.equal(s(/Media Lab/).placed, false, 'MEDIA is not the code MED - left beside the map');
+  assert.equal(v.kpis.located.gps, 1); assert.ok(v.kpis.located.city >= 3); assert.equal(v.kpis.located.code, 1);
+});
+
+test('the fleet keeps a FortiGate\'s configured position only when it is inside Saudi Arabia', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'engine', 'netops', 'fmg.js'), 'utf8');
+  assert.match(src, /'latitude', 'longitude'\]/, 'FortiManager is asked for each device\'s position');
+  assert.match(src, /gui-device-latitude/, 'a standalone FortiGate\'s own GUI position is read');
+  const gps = new Function(src.match(/function gps\(lat, lng\) \{[^\n]*\}/)[0] + '; return gps;')();
+  assert.deepEqual(gps('24.7', '46.7'), { lat: 24.7, lng: 46.7 }); assert.equal(gps(0, 0), null, 'unset 0,0 is not a position'); assert.equal(gps(51.5, -0.1), null, 'outside the Kingdom ignored');
+});
