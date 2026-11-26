@@ -18,11 +18,15 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
 .banner{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.3);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--info);margin:0 0 12px}
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
 .sev{font-weight:700}.sev.Urgent{color:#ff5b6b}.sev.High{color:var(--bad)}.sev.Medium{color:var(--warn)}.sev.Low{color:var(--info)}
-</style></head><body><main>
+.aig{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:0 0 12px}.aig .card{margin:0}.aig .cv{position:relative;height:210px}
+.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;align-items:flex-start;padding:8px 2px;border-bottom:1px solid var(--edge,rgba(127,140,160,.18))}.ins li:last-child{border-bottom:0}.ins .ic{font-size:16px;line-height:1.2}
+</style><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script></head><body><main>
 <div class="top"><div><div class="eb">IT service management · automation</div><h1>AI Desktop Support Engineer</h1></div><span class="sp"></span><span id="mode"></span><span class="muted" id="up"></span><button type="button" id="scan" hidden>▶ Run triage now</button><button type="button" id="refresh">⟳ Refresh</button></div>
 <div data-zyb-duty="desktop" data-api="/api/itam"></div>
 <div class="banner">Automates ServiceDesk Plus: sets priority, assigns the technician / group, moves status and posts a first response — and monitors desktops from Endpoint Central. In <b>suggest</b> mode it proposes; in <b>auto</b> it applies. Patch installs change devices, so they stay <b>approval-gated</b> (four-eyes) unless an admin arms auto-approval.</div>
 <div class="k" id="kk"></div>
+<div id="aiwrap" hidden><div class="aig"><div class="card"><h2>Desktop health <span class="c">AI · ML from Endpoint Central</span></h2><div class="cv"><canvas id="cv-health"></canvas></div></div><div class="card"><h2>What keeps coming up <span class="c">issues across the computers</span></h2><div class="cv"><canvas id="cv-iss"></canvas></div></div><div class="card"><h2>Attention by branch <span class="c">computers per site</span></h2><div class="cv"><canvas id="cv-br"></canvas></div></div><div class="card"><h2>Operating systems <span class="c">the estate mix</span></h2><div class="cv"><canvas id="cv-os"></canvas></div></div></div>
+<div class="card"><h2>What the AI noticed <span class="c">AI · ML</span></h2><ul class="ins" id="ins"></ul><p class="note">Indicators from the computers' own reports, not proof. A patch install still needs a person to request it and a different administrator to approve it.</p></div></div>
 <div class="tabs" role="tablist"><button type="button" role="tab" data-tab="triage" class="on">🎫 Ticket triage</button><button type="button" role="tab" data-tab="desktops">🖥️ Desktops</button><button type="button" role="tab" data-tab="patch">🩹 Patching</button><button type="button" role="tab" data-tab="set" hidden>⚙️ Settings</button></div>
 
 <div id="tab-triage"><div class="card"><h2>Triage queue <span class="c" id="tqc"></span></h2><div class="tw" id="triage"><div class="empty">Loading…</div></div>
@@ -58,10 +62,40 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
       +tile('Need patching',d?d.needs_patch:'—','critical patches missing',(d&&d.needs_patch)?'bad':'ok')
       +tile('Offline agents',d?d.offline:'—','not reporting',(d&&d.offline)?'warn':'ok');
     $('scan').hidden=!can('admin')||!me.sdp;
-    drawTriage();drawDesktops();drawPatch();
+    drawTriage();drawDesktops();drawPatch();drawInsights();
     document.querySelector('[data-tab=set]').hidden=!can('admin');
     if(can('admin'))drawSettings();
     $('up').textContent='updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  /* AI / ML insight band: charts and noticed patterns from the computers' own reports (Endpoint Central, the asset register) and the
+     triage queue; nothing invented. No computers: hidden. Without the charts library only the noticed list shows. */
+  function osName(o){o=String(o||'').toLowerCase();var m=/windows\s*(server\s*)?(\d+|xp|vista)/.exec(o);if(m)return 'Windows '+(m[1]?'Server ':'')+m[2].toUpperCase();if(/mac|darwin/.test(o))return 'macOS';if(/linux|ubuntu|red hat|rhel/.test(o))return 'Linux';return o?'Other':'Unknown';}
+  function issueKey(t){return String(t||'').replace(/\d+(\.\d+)?/g,'#').replace(/\s+/g,' ').trim().slice(0,48);}
+  function drawInsights(){
+    var dd=V.desktops||{},L=dd.items||[],C=window.zybCharts,T=V.triage||[];
+    $('aiwrap').hidden=!L.length;if(!L.length)return;
+    var st={ok:0,watch:0,att:0,na:0};L.forEach(function(i){if(i.source==='asset register')st.na++;else if(i.worst==='high')st.att++;else if(i.worst==='medium')st.watch++;else st.ok++;});
+    var iss={};L.forEach(function(i){(i.issues||[]).forEach(function(x){var k=issueKey(x);if(k)iss[k]=(iss[k]||0)+1;});});var IK=Object.keys(iss).sort(function(a,b){return iss[b]-iss[a];}).slice(0,7);
+    var br={};L.forEach(function(i){var b=i.branch||'Unknown site';br[b]=br[b]||{ok:0,att:0};if(i.worst==='high'||i.worst==='medium')br[b].att++;else br[b].ok++;});var BK=Object.keys(br).sort(function(a,b){return br[b].att-br[a].att||(br[b].ok+br[b].att)-(br[a].ok+br[a].att);}).slice(0,10);
+    var os={};L.forEach(function(i){var k=osName(i.os);os[k]=(os[k]||0)+1;});var OK=Object.keys(os).sort(function(a,b){return os[b]-os[a];}).slice(0,6);
+    if(C&&window.Chart){
+      C.ring($('cv-health'),['Healthy','Watch','Attention','No agent'],[st.ok,st.watch,st.att,st.na],['ok','warn','crit','mute'],{v:L.length,l:'computers'},{title:'Desktop health'});
+      if(IK.length)C.bars($('cv-iss'),IK,[{label:'Computers',data:IK.map(function(k){return iss[k];}),color:'purple'}],{horizontal:true,title:'Issues across the computers'});else C.empty($('cv-iss'),'No issue reported.');
+      C.bars($('cv-br'),BK,[{label:'OK',data:BK.map(function(b){return br[b].ok;}),color:'teal'},{label:'Needs attention',data:BK.map(function(b){return br[b].att;}),color:'crit'}],{stacked:true,title:'Attention by branch'});
+      C.ring($('cv-os'),OK,OK.map(function(k){return os[k];}),null,{v:OK.length,l:'kinds'},{title:'Operating systems'});
+    } else [].forEach.call(document.querySelectorAll('#aiwrap .aig'),function(g){g.hidden=true;});
+    // noticed patterns, each with its own figure
+    var N=[],now=Date.now(),old=L.filter(function(i){var t=Date.parse(i.last_contact||'');return i.source!=='asset register'&&t&&now-t>7*86400000;}).length;
+    var crit=L.filter(function(i){return (i.critical||0)>0;}),eol=L.filter(function(i){return /windows\s*(7|8|xp|vista)\b|server\s*20(03|08|12)\b/i.test(i.os||'');}).length;
+    if(st.att||st.watch)N.push(['⚠️',(st.att?'<b>'+st.att+'</b> of '+L.length+' computers need attention now':'No computer needs attention now')+(st.watch?(st.att?' and ':'; ')+'<b>'+st.watch+'</b> more to watch':'')+'.']);
+    if(crit.length)N.push(['🩹','<b>'+crit.length+'</b> computers miss critical patches ('+crit.reduce(function(a,i){return a+(i.critical||0);},0)+' patches in all). Request an install from the Desktops tab.']);
+    if(old)N.push(['📴','<b>'+old+'</b> computers have not reported for more than 7 days - switched off, away, or the agent stopped.']);
+    if(st.na)N.push(['🔌','<b>'+st.na+'</b> computers in the asset register have no Endpoint Central agent, so their health and patches are not seen.']);
+    if(eol)N.push(['⏳','<b>'+eol+'</b> computers run an operating system past its end of support.']);
+    if(IK.length)N.push(['🔁','The most common issue is <b>'+esc(IK[0])+'</b> on '+iss[IK[0]]+' computers.']);
+    if(BK.length&&br[BK[0]].att){var b0=br[BK[0]];N.push(['📍','<b>'+esc(BK[0])+'</b> has the most computers needing attention ('+b0.att+' of '+(b0.ok+b0.att)+').']);}
+    var hp=T.filter(function(t){return /high|urgent/i.test((t.proposed||{}).priority||'');}).length;if(hp)N.push(['🎫','<b>'+hp+'</b> waiting tickets were triaged as high or urgent priority.']);
+    $('ins').innerHTML=N.length?N.map(function(x){return '<li><span class="ic">'+x[0]+'</span><span>'+x[1]+'</span></li>';}).join(''):'<li class="muted">Nothing stands out: every reporting computer is healthy.</li>';
   }
   function drawTriage(){
     var L=V.triage||[];$('tqc').textContent=L.length?L.length+' proposed':'';
