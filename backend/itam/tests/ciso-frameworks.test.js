@@ -31,3 +31,18 @@ test('compliance domain from NCA ECC and Aramco CCC when SAMA is off for the org
   assert.equal(d.score, 70, 'the mean of the two'); assert.equal(d.items.length, 2);
   assert.deepEqual(v.compliance.frameworks, ['nca', 'aramco']); assert.equal(v.compliance.nca.score, 80); assert.equal(v.compliance.aramco.stages_done, 1); assert.equal(v.compliance.sama, null);
 });
+
+// the register reads this overview's records and the overview reads the register's score: no endless loop (a fresh engine hung on
+// /nca-ecc-intel and /iso-lifecycle); the register still gets the overview's other records, the overview still gets the score
+test('NCA ECC register and the CISO overview read each other without looping', async (t) => {
+  const e = await startApp({ noAi: true, config: { ciso: { all_frameworks: false } } }); t.after(() => e.close());
+  e.app.addons = e.app.addons || {};
+  const C = createCiso(e.app, { siem: notConnected, noTimer: true }); e.app.addons.ciso = C;
+  let views = 0, seen = null;
+  e.app.addons.ncaEcc = { view: async () => { views++; if (views > 3) throw new Error('loop'); const S = await C.collect(); seen = Object.keys(S).sort(); return { score: 66, counts: {} }; } };
+  const v = await Promise.race([C.overview(true), new Promise((_, bad) => setTimeout(() => bad(new Error('timed out - the two loop')), 5000))]);
+  assert.equal(views, 1, 'the register is read once');
+  assert.ok(seen.includes('grc') && !seen.includes('nca'), 'inside the register the overview skips the register: ' + seen);
+  assert.equal(v.compliance.nca.score, 66);
+});
+

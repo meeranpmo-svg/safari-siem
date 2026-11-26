@@ -36,6 +36,10 @@ const guardSanitise = async (app, system, prompt, terms) => { try { return await
 const { extractJson } = require('./ai/validate');
 
 const SEV = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+// the NCA ECC register reads this overview's records (engine/nca-ecc.js facts -> collect), and the overview reads the register's
+// score: a collect() that runs INSIDE the register's view, for this overview, skips the register (no endless loop)
+const { AsyncLocalStorage } = require('node:async_hooks');
+const inNcaView = new AsyncLocalStorage();
 const TERMINAL = new Set(['resolved', 'closed']);
 const ENGINEER_PAGE = { network: 'network-engineer.html', security: 'ai-security-engineer.html', windows: 'windows-admin.html',
   exchange: 'exchange-admin.html', pentest: 'pentest.html', desktop: 'desk-support.html', dba: 'ai-dba.html', sqldba: 'ai-sql-dba.html', apps: 'ai-app-manager.html', grc: 'ai-grc-consultant.html', siem: 'log-assurance.html', virt: 'ai-virt-admin.html' };
@@ -106,7 +110,7 @@ function createCiso(app, opts = {}) {
       source('siem_duty', 'AI engineers (SIEM)', async () => { const [e, i] = await Promise.all([siem('GET', '/duty/engineers'), siem('GET', '/duty/items?status=open&limit=500')]); return { engineers: e.engineers || [], items: i.items || [] }; }),
       source('soc', 'SOC metrics (30 days)', () => siem('GET', '/metrics')),
       SAMA ? source('sama', 'SAMA CSF coverage', () => siem('GET', '/compliance/sama')) : null,
-      SAMA ? null : source('nca', 'NCA ECC register', async () => { const N = app.addons && app.addons.ncaEcc; if (!N) return null; const v = await N.view(); return v && v.score != null ? { score: v.score, counts: v.counts, nca: v.nca } : null; }),
+      SAMA || inNcaView.getStore() ? null : source('nca', 'NCA ECC register', async () => { const N = app.addons && app.addons.ncaEcc; if (!N) return null; const v = await inNcaView.run(true, () => N.view()); return v && v.score != null ? { score: v.score, counts: v.counts, nca: v.nca } : null; }),
       SAMA ? null : source('aramco', 'Aramco CCC readiness', () => { const X = app.addons && app.addons.aramcoCcc; if (!X) return null; const v = X.view({ user: 'system:ciso', role: 'viewer' }); return v.controls_total && v.score != null ? { score: v.score, assessed: v.assessed, applicable: v.applicable, stages_done: (v.stages || []).filter((x) => x.done).length, stages: (v.stages || []).length, days_left: v.days_left == null ? null : v.days_left } : null; }),
       source('approvals', 'SOC response approvals', async () => (await siem('GET', '/approvals?status=pending')).items || []),
       source('logflow', 'Log-flow assurance (SIEM)', async () => { const a = await siem('GET', '/collection/assurance'); return { summary: a.summary, inventory: a.inventory, collector: a.collector, unknown_senders: (a.unknown_senders || []).length }; }),
