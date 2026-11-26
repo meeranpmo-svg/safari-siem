@@ -21,7 +21,7 @@ if [ "${1:-}" = "--remove" ]; then
   rm -f /etc/systemd/system/zyb-health.{service,timer} /etc/systemd/system/zyb-backup.{service,timer,path} /etc/systemd/system/zyb-backup-settings.{service,path} /usr/local/sbin/zyb-health /usr/local/sbin/zyb-backup /usr/local/sbin/zyb-restore /usr/local/lib/zyb/zyb-health.js
   systemctl daemon-reload; echo "removed (kept /etc/zyb-backup.conf, /etc/zyb-backup/backup.key and the backups in /var/backups/zyb)"; exit 0
 fi
-for f in zyb-health.js zyb-backup.sh zyb-restore.sh zyb-svcctl.js; do [ -f "$HERE/$f" ] || { echo "$f not found next to this script"; exit 1; }; done
+for f in zyb-health.js zyb-health-io.js zyb-backup.sh zyb-restore.sh zyb-svcctl.js; do [ -f "$HERE/$f" ] || { echo "$f not found next to this script"; exit 1; }; done
 
 NODE="$(systemctl show -p ExecStart --value sentra-siem 2>/dev/null | sed -n 's/.*argv\[\]=\([^ ;]*\).*/\1/p' | head -n1)"
 [ -x "${NODE:-}" ] || NODE=/opt/sentra-ai/node/bin/node; [ -x "$NODE" ] || NODE="$(command -v node || true)"
@@ -30,11 +30,12 @@ install -d -m 755 /usr/local/lib/zyb; echo "$NODE" > /usr/local/lib/zyb/node-pat
 
 say "health monitor"
 install -m 755 "$HERE/zyb-health.js" /usr/local/lib/zyb/zyb-health.js; sed -i 's/\r$//' /usr/local/lib/zyb/zyb-health.js
+install -m 644 "$HERE/zyb-health-io.js" /usr/local/lib/zyb/zyb-health-io.js; sed -i 's/\r$//' /usr/local/lib/zyb/zyb-health-io.js
 printf '#!/bin/sh\nexec "%s" /usr/local/lib/zyb/zyb-health.js "$@"\n' "$NODE" > /usr/local/sbin/zyb-health; chmod 755 /usr/local/sbin/zyb-health
 [ -f /etc/zyb-health.conf ] || cat > /etc/zyb-health.conf <<'CONF'
 {
   "disk_warn": 85, "disk_crit": 95, "inode_warn": 85, "temp_warn": 80, "temp_crit": 90, "cert_warn_days": 30, "backup_max_h": 26,
-  "services": ["sentra-siem", "sentra-itam", "clickhouse-server", "nginx", "docker"],
+  "services": ["sentra-siem", "sentra-itam", "sentra-auth", "clickhouse-server", "nginx", "docker"],
   "containers": ["noc-m365"],
   "cert": ""
 }

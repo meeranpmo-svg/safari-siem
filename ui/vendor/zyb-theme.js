@@ -91,7 +91,8 @@
     for (var i = 0; i < document.styleSheets.length; i++) {
       var s = document.styleSheets[i], href = s.href || '', own = s.ownerNode;
       if (own && own.id === STYLE_ID) continue;
-      if (/tabler\.min\.css|zyb-theme\.css|fonts\.googleapis/.test(href)) continue;
+      // zyb-color.css (the company colour layer) carries its own light-look rules: darkening its white banner text would undo them
+      if (/tabler\.min\.css|zyb-theme\.css|zyb-color\.css|fonts\.googleapis/.test(href)) continue;
       rulesOf(s, out);
     }
     return out.join('\n');

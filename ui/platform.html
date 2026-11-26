@@ -26,7 +26,7 @@ tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(255,255,255,.035)}.tw{
 <div class="tabs" role="tablist"><button type="button" role="tab" data-tab="iss" class="on">⚠️ Issues <span id="ni"></span></button><button type="button" role="tab" data-tab="hw">🖥️ Hardware</button><button type="button" role="tab" data-tab="sto">💽 Storage</button><button type="button" role="tab" data-tab="svc">⚙️ Services &amp; network</button><button type="button" role="tab" data-tab="bk">🗄️ Backup</button><button type="button" role="tab" data-tab="err">🧯 Errors &amp; jobs <span id="ne"></span></button></div>
 <div id="tab-iss" class="card"><h2>What needs attention <span class="c">checked every minute</span></h2><div class="tw" id="iss"><div class="empty">Loading…</div></div></div>
 <div id="tab-hw" class="card" hidden><h2>Hardware <span class="c" id="hwc"></span></h2><div id="hw"></div></div>
-<div id="tab-sto" class="card" hidden><h2>File systems</h2><div class="tw" id="sto"></div></div>
+<div id="tab-sto" class="card" hidden><h2>Disk speed <span class="c" id="ioc"></span></h2><div class="tw" id="dio"></div><h2 style="margin-top:16px">File systems</h2><div class="tw" id="sto"></div></div>
 <div id="tab-svc" class="card" hidden><h2>Services</h2><div class="tw" id="svc"></div><div id="svcctl"></div><h2 style="margin-top:16px">Network interfaces</h2><div class="tw" id="net"></div><h2 style="margin-top:16px">Time &amp; certificate</h2><div id="misc"></div></div>
 <div id="tab-err" class="card" hidden><h2>Errors &amp; background jobs <span class="c">every failure is caught, counted and kept here - the engines keep running</span></h2><div id="err"><div class="empty">Loading…</div></div></div>
 <div id="tab-bk" class="card" hidden><h2>Backup of the whole platform <span class="c">encrypted · daily, time in Backup settings</span></h2><div id="bk"></div></div>
@@ -47,6 +47,21 @@ tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(255,255,255,.035)}.tw{
   function tile(l,v,s,cls,go){return '<button type="button" class="t '+(cls||'')+'" data-go="'+go+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(s||'')+'</div></button>';}
   function tab(t){[].forEach.call(document.querySelectorAll('[data-tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===t);});['iss','hw','sto','svc','bk','err'].forEach(function(x){$('tab-'+x).hidden=x!==t;});if(t==='err')loadErr();}
   function pill(t,c){return '<span class="pill '+(c||'')+'">'+esc(t)+'</span>';}
+  /* disk speed: write / read latency per disk (ms per request, iostat "await"), MB/s, busy %, CPU iowait */
+  function ioWorst(d){return ((d&&d.disks)||[]).reduce(function(m,x){var v=Math.max(x.write_ms||0,x.read_ms||0);return x.ops>=10&&v>m.v?{v:v,dev:x.dev}:m;},{v:null,dev:''});}
+  function msCls(v){return v==null?'':v>=200?'bad':v>=50?'warn':'ok';}
+  function ioTile(d){
+    if(!d)return tile('Disk speed','–','not measured yet (update the platform)','','tab:sto');
+    var w=ioWorst(d),iw=d.iowait_pct;
+    var cls=w.v==null?(iw>=40?'bad':iw>=20?'warn':'ok'):msCls(w.v);if(iw>=40)cls='bad';
+    return tile('Disk speed',w.v!=null?Math.round(w.v)+' ms':'idle',(w.dev?w.dev+' · ':'')+'I/O wait '+(iw!=null?iw+'%':'–'),cls,'tab:sto');
+  }
+  function drawIO(d){
+    if(!d){$('ioc').textContent='';$('dio').innerHTML='<div class="empty">Disk speed is measured by the health check from this version on - run the platform update, then wait a minute.</div>';return;}
+    $('ioc').textContent='last '+d.window_s+' s · I/O wait '+(d.iowait_pct!=null?d.iowait_pct+'%':'–')+' · healthy latency is under 20 ms';
+    var ms=function(v){return v==null?'<span class="muted">no requests</span>':pill(v+' ms',msCls(v));};
+    $('dio').innerHTML=(d.disks||[]).length?'<table><thead><tr><th>Disk</th><th>Write latency</th><th>Read latency</th><th>Writes/s</th><th>Reads/s</th><th>Write MB/s</th><th>Read MB/s</th><th>Busy</th><th>Queued</th></tr></thead><tbody>'+d.disks.map(function(x){return '<tr><td><b>'+esc(x.dev)+'</b></td><td>'+ms(x.write_ms)+'</td><td>'+ms(x.read_ms)+'</td><td>'+esc(String(x.write_iops))+'</td><td>'+esc(String(x.read_iops))+'</td><td>'+esc(String(x.write_mbs))+'</td><td>'+esc(String(x.read_mbs))+'</td><td>'+bar(x.busy_pct)+esc(String(x.busy_pct))+'%</td><td>'+esc(String(x.queued))+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">No disks reported.</div>';
+  }
   function draw(){
     var h=H, s=h.system||{}, hw=h.hardware||{}, B=h.backup||null, L=B&&B.last;
     var worst=(h.storage||[]).reduce(function(m,f){return f.pct>m.pct?f:m;},{pct:0,mount:'–'});
@@ -59,6 +74,7 @@ tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(255,255,255,.035)}.tw{
       +tile('CPU',(s.cpu_pct!=null?s.cpu_pct+'%':'–'),'load '+(s.load||[]).join(' / ')+' · '+s.cores+' cores',s.cpu_pct>=90?'bad':s.cpu_pct>=75?'warn':'','sys:cpu')
       +tile('Memory',(s.mem&&s.mem.pct!=null?s.mem.pct+'%':'–'),s.mem?gb(s.mem.total)+' · swap '+s.mem.swap_pct+'%':'',s.mem&&s.mem.pct>=95?'bad':s.mem&&s.mem.pct>=90?'warn':'','sys:mem')
       +tile('Fullest disk',worst.pct+'%',worst.mount,worst.pct>=95?'bad':worst.pct>=85?'warn':'ok','tab:sto')
+      +ioTile(h.diskio)
       +tile('Temperature',hw.temp_max!=null?hw.temp_max+' °C':'–',hw.virtual?'virtual machine ('+hw.virt+')':(hw.temps||[]).length+' sensors',hw.temp_max>=90?'bad':hw.temp_max>=80?'warn':'','tab:hw')
       +tile('Services',up+' / '+(h.services||[]).length,'running',up<(h.services||[]).length?'bad':'ok','tab:svc')
       +tile('Last backup',L?(L.ok?'OK':'FAILED'):'none',L?ago(L.at)+(L.remote==='ok'?' · copied off':L.remote==='failed'?' · copy failed':' · on this server only'):'no backup yet',!L||L.ok===false?'bad':L.remote!=='ok'?'warn':'ok','tab:bk')
@@ -71,6 +87,7 @@ tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(255,255,255,.035)}.tw{
       +Z.sec('Temperatures',(hw.temps||[]).length?Z.tbl(['Sensor','°C'],hw.temps.map(function(t){return [esc(t.sensor),'<span style="color:'+(t.c>=90?'#ff7b72':t.c>=80?'#e3b341':'inherit')+'">'+t.c+'</span>'];})):'<p class="muted">'+(hw.virtual?'A virtual machine has no temperature sensors - check the host in vCenter.':'No sensors found.')+'</p>')
       +Z.sec('Disks','<div class="tw"><table><thead><tr><th>Disk</th><th>Model</th><th>Type</th><th>Size</th><th>SMART health</th><th>Temp</th><th>Power-on</th><th>Bad sectors / wear</th></tr></thead><tbody>'+(hw.disks||[]).map(function(d,n){var m=d.smart;return '<tr data-disk="'+n+'" tabindex="0"><td><b>'+esc(d.dev)+'</b></td><td>'+esc(d.model||'–')+'</td><td>'+esc(d.type)+'</td><td>'+esc(d.size||'')+'</td><td>'+(m?(m.passed?pill('PASSED','ok'):pill('FAILED','bad')):'<span class="muted">'+(hw.virtual?'virtual disk':hw.smart_available?'no data':'install smartmontools')+'</span>')+'</td><td>'+(m&&m.temp!=null?m.temp+' °C':'–')+'</td><td>'+(m&&m.hours!=null?Math.round(m.hours/24)+' days':'–')+'</td><td>'+(m?[m.realloc!=null?'reallocated '+m.realloc:'',m.pending!=null?'pending '+m.pending:'',m.wear_pct!=null?'wear '+m.wear_pct+'%':'',m.media_errors!=null?'media errors '+m.media_errors:''].filter(Boolean).join(' · ')||'–':'–')+'</td></tr>';}).join('')+'</tbody></table></div>')
       +((hw.raid||[]).length?Z.sec('RAID',Z.tbl(['Array','Level','State','Disks'],hw.raid.map(function(r){return [esc(r.dev),esc(r.level),r.degraded?pill('DEGRADED','bad'):pill(r.state,'ok'),r.up+' / '+r.disks+' ['+esc(r.map)+']'];}))):'');
+    drawIO(h.diskio);
     $('sto').innerHTML='<table><thead><tr><th>Mount</th><th>Device</th><th>Size</th><th>Used</th><th>Free</th><th>Used %</th><th>Inodes</th><th></th></tr></thead><tbody>'+(h.storage||[]).map(function(f,n){return '<tr data-fs="'+n+'" tabindex="0"><td><b>'+esc(f.mount)+'</b></td><td class="mono">'+esc(f.dev)+'</td><td>'+gb(f.total)+'</td><td>'+gb(f.used)+'</td><td>'+gb(f.avail)+'</td><td>'+bar(f.pct)+f.pct+'%</td><td>'+(f.inode_pct!=null?f.inode_pct+'%':'–')+'</td><td>'+(f.readonly?pill('read-only','bad'):'')+'</td></tr>';}).join('')+'</tbody></table>';
     drawSvc();
     $('net').innerHTML=(h.network||[]).length?'<table><thead><tr><th>Interface</th><th>Link</th><th>Speed</th><th>Errors (rx / tx)</th><th>Dropped</th><th>MAC</th></tr></thead><tbody>'+h.network.map(function(x){return '<tr><td><b>'+esc(x.name)+'</b></td><td>'+(x.state==='up'?pill('up','ok'):pill(x.state,'bad'))+'</td><td>'+(x.speed>0?x.speed+' Mb/s':'–')+'</td><td>'+x.rx_err+' / '+x.tx_err+'</td><td>'+x.rx_drop+'</td><td class="mono">'+esc(x.mac)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">–</div>';
@@ -201,6 +218,8 @@ tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(255,255,255,.035)}.tw{
   document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.matches&&e.target.matches('tr[tabindex]'))e.target.click();});
   $('refresh').onclick=function(){load();if(!$('tab-err').hidden)loadErr();};
   var w=new XMLHttpRequest();w.open('GET','/dashboards/whoami.json');w.onload=function(){try{var j=JSON.parse(w.responseText);var rl=String(j.role||'').toLowerCase();if(RANK[rl]!=null)ROLE=rl;}catch(e){ /* not JSON: treated as no data */ }load();};w.onerror=load;w.send();
+  /* the menu's Platform Server entry opens on disk speed & space (?tab=sto); only the known tab names are accepted */
+  (function(){var m=/[?&]tab=(iss|hw|sto|svc|bk|err)\b/.exec(location.search);if(m)tab(m[1]);})();
   setInterval(function(){if(!document.hidden)load();},60000);
 })();
 </script></body></html>

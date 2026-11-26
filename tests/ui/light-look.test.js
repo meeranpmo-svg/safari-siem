@@ -36,6 +36,15 @@ let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FA
   // the platform Light theme, chosen directly, still makes the company look light (the other direction)
   s = await state({ 'noc_theme': 'light', 'zyb-dash-prefs': JSON.stringify({ brand: 'org' }) });
   ok(s.theme === 'light' && /org-light/.test(s.cls), 'the Light theme chosen directly -> the light company look: ' + JSON.stringify({ t: s.theme, l: /org-light/.test(s.cls) }));
+  // the brand banner on a Tabler-style page in the light look: every word on it is light (the bug was dark blue on blue)
+  { const ctx = await browser.newContext({ viewport: { width: 1300, height: 800 } });
+    await ctx.addInitScript(() => { try { localStorage.setItem('zyb-dash-prefs', JSON.stringify({ brand: 'org', brandLook: 'light' })); } catch (e) { /* */ } });
+    const p = await ctx.newPage(); await p.goto('http://127.0.0.1:' + srv.address().port + '/dashboards/connections.html'); await p.waitForTimeout(1200);
+    const dark = await p.evaluate(() => { const h = document.querySelector('.page-header'); if (!h) return ['no banner'];
+      const out = []; for (const el of h.querySelectorAll('*')) { if (el.closest('button,.btn,svg')) continue; let t = ''; for (const n of el.childNodes) if (n.nodeType === 3) t += n.nodeValue; if (!t.trim()) continue;
+        const m = (getComputedStyle(el).color.match(/[\d.]+/g) || []).map(Number); const L = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]; if (L < 180) out.push(t.trim().slice(0, 30) + ' ' + getComputedStyle(el).color); }
+      return out; });
+    ok(!dark.length, 'light look: every word on the brand banner is light: ' + dark.join(' | ')); await ctx.close(); }
   ok(!errs.length, 'no page errors: ' + errs.join(' | '));
   await browser.close(); srv.close();
   console.log((bad ? 'FAILED ' : 'OK ') + (n - bad) + '/' + n + ' checks'); process.exit(bad ? 1 : 0);

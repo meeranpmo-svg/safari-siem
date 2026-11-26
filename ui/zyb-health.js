@@ -6,7 +6,7 @@
 // /var/www/sentra/dashboards/health.json (no secrets). New / cleared problems are also written to the system log
 // (tag zyb-health), so the SIEM sees them when it collects this server's logs.
 //   hardware   vendor / model, virtual or physical, CPU temperatures, ECC memory errors, RAID (mdraid), SMART per disk
-//   storage    every real file system: used %, inodes, read-only
+//   storage    every real file system: used %, inodes, read-only; disk speed (latency, MB/s, busy %, iowait)
 //   system     CPU, load, memory, swap, uptime, kernel I/O / hardware errors in 24 h, NTP sync, failed systemd units
 //   services   sentra-siem, sentra-itam, clickhouse, nginx, docker + the portal sync container, with since-when
 //   network    interfaces: link, speed, errors / drops
@@ -21,7 +21,7 @@ const OUT = process.env.ZYB_HEALTH_OUT || '/var/www/sentra/dashboards/health.jso
 const STATE = process.env.ZYB_HEALTH_STATE || '/var/lib/zyb-health';
 const BACKUP_STATUS = process.env.ZYB_BACKUP_STATUS || '/var/lib/zyb-backup/status.json';
 let C = { disk_warn: 85, disk_crit: 95, inode_warn: 85, temp_warn: 80, temp_crit: 90, cert_warn_days: 30, backup_max_h: 26,
-  services: ['sentra-siem', 'sentra-itam', 'clickhouse-server', 'nginx', 'docker'], containers: ['noc-m365'], cert: '' };
+  services: ['sentra-siem', 'sentra-itam', 'sentra-auth', 'clickhouse-server', 'nginx', 'docker'], containers: ['noc-m365'], cert: '' };
 try { C = Object.assign(C, JSON.parse(fs.readFileSync('/etc/zyb-health.conf', 'utf8'))); } catch { /* defaults */ }
 
 const read = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch { return ''; } };
@@ -33,7 +33,11 @@ const issue = (sev, area, key, text, fix) => issues.push({ sev, area, key, text,
 
 // ---- system
 function cpuSample() { const l = read('/proc/stat').split('\n')[0].trim().split(/\s+/).slice(1).map(Number); return { idle: l[3] + (l[4] || 0), total: l.reduce((a, b) => a + b, 0) }; }
+// disk speed (zyb-health-io.js next to this file): counters before and after the 1 s CPU sample, and since the last run
+let IO = null; try { IO = require(path.join(__dirname, 'zyb-health-io.js')); } catch { IO = null; /* older install without it: no disk speed figures */ }
+const io1 = IO ? { stat: read('/proc/stat'), disk: IO.parseDiskstats(read('/proc/diskstats')), t: Date.now() } : null;
 const s1 = cpuSample(); run('sleep', ['1']); const s2 = cpuSample();
+const io2 = IO ? { stat: read('/proc/stat'), disk: IO.parseDiskstats(read('/proc/diskstats')), t: Date.now() } : null;
 const cpuPct = s2.total > s1.total ? Math.round((1 - (s2.idle - s1.idle) / (s2.total - s1.total)) * 1000) / 10 : null;
 const cores = (read('/proc/cpuinfo').match(/^processor/mg) || []).length || 1;
 const load = read('/proc/loadavg').split(' ').slice(0, 3).map(Number);
@@ -45,6 +49,18 @@ if (mem.pct >= 95) issue('crit', 'system', 'mem', `Memory ${mem.pct}% used`, 'Fi
 else if (mem.pct >= 90) issue('warn', 'system', 'mem', `Memory ${mem.pct}% used`, 'Watch it; add memory if it stays high.');
 if (mem.swap_pct >= 50) issue('warn', 'system', 'swap', `Swap ${mem.swap_pct}% used`, 'The server is short of memory - add RAM.');
 if (load[1] > cores * 2) issue('warn', 'system', 'load', `Load ${load[1]} on ${cores} cores (5 min)`, 'Check what is busy (top); the SIEM may be ingesting a burst or a query is running long.');
+let diskio = null;
+if (IO) {
+  // the minute since the last run is a steadier figure than one second; use it when it is there and recent
+  const pf = path.join(STATE, 'diskstats.json');
+  let prev = null; try { prev = JSON.parse(read(pf)); } catch { prev = null; /* first run */ }
+  const age = prev ? io2.t - prev.t : 0, steady = prev && prev.disk && age >= 20000 && age <= 600000;
+  const rates = steady ? IO.ioRates(prev.disk, io2.disk, age) : IO.ioRates(io1.disk, io2.disk, io2.t - io1.t);
+  const iow = steady && prev.stat ? IO.iowaitPct(prev.stat, io2.stat) : IO.iowaitPct(io1.stat, io2.stat);
+  diskio = { window_s: Math.round((steady ? age : io2.t - io1.t) / 1000), iowait_pct: iow, disks: rates };
+  IO.ioIssues(rates, iow, C).forEach((i) => issue(i.sev, i.area, i.key, i.text, i.fix));
+  try { fs.mkdirSync(STATE, { recursive: true }); fs.writeFileSync(pf, JSON.stringify({ t: io2.t, stat: io2.stat.split('\n')[0], disk: io2.disk })); } catch { /* read-only state dir: next run uses the 1 s window */ }
+}
 const uptime = Math.round(num(read('/proc/uptime').split(' ')[0]) || 0);
 const os = (/PRETTY_NAME="?([^"\n]+)/.exec(read('/etc/os-release')) || [])[1] || 'Linux';
 const kernel = run('uname', ['-r']).trim();
@@ -200,7 +216,7 @@ const status = issues.some((i) => i.sev === 'crit') ? 'critical' : issues.some((
 const out = { time: Math.floor(Date.now() / 1000), host: run('hostname', []).trim(), os, kernel, uptime, status, issues,
   hardware: Object.assign(hw, { temps, temp_max: tmax, ecc, raid, disks, smart_available: smartctl && !hw.virtual }),
   system: { cpu_pct: cpuPct, cores, load, mem, ntp, failed_units: failedUnits, kernel_errors_24h: { io: kio.length, hardware: kmce.length, fs: kfs.length, sample: kio.concat(kmce, kfs).slice(0, 5) } },
-  storage: fsl, services, network: nics, tls, backup };
+  storage: fsl, diskio, services, network: nics, tls, backup };
 try {
   const tmp = OUT + '.tmp'; fs.mkdirSync(path.dirname(OUT), { recursive: true }); fs.writeFileSync(tmp, JSON.stringify(out)); fs.chmodSync(tmp, 0o644); fs.renameSync(tmp, OUT);
   const pf = path.join(STATE, 'issues.json'), prev = (() => { try { return JSON.parse(read(pf)); } catch { return {}; } })(), now = {};
