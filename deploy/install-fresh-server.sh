@@ -85,8 +85,23 @@ dpkg_configure() {
   done
   printf '%s\n' "$out" >&2; return 1
 }
-BUSY="$(ps -eo pid,etime,cmd | grep -E '[a]pt-get|[d]pkg |[u]nattended-upgr|[a]pt\.systemd|[p]ackagekit' | grep -v "$$" || true)"
-[ -z "$BUSY" ] || { warn "another package operation is running - waiting for it (up to 20 minutes):"; printf '%s\n' "$BUSY" >&2; }
+# another package operation (automatic updates, an apt-get left in another window, its dpkg) is WAITED for - every 10 s, up to
+# 20 minutes - instead of failing at once; a holder stuck on the disk (state D, nothing written) is said plainly, because waiting
+# will not help then: the VM's storage is stalling. The lock files are never removed.
+pkg_busy() { ps -eo pid=,stat=,etime=,args= | grep -E '[a]pt-get|[d]pkg |[/]dpkg |[u]nattended-upgr|[a]pt\.systemd|[p]ackagekit' | awk -v me="$$" '$1 != me'; }
+wait_pkg_idle() {
+  local i b
+  for i in $(seq 1 120); do
+    b="$(pkg_busy)"; [ -z "$b" ] && return 0
+    if [ "$i" = 1 ]; then warn "another package operation is running - waiting for it to finish (up to 20 minutes):"; printf '   %s\n' "$b" | cut -c1-160 >&2; fi
+    [ $((i % 6)) = 0 ] && echo "   still waiting ($((i / 6)) min) - nothing to do; it continues by itself"
+    sleep 10
+  done
+  b="$(pkg_busy)"; [ -z "$b" ] && return 0
+  printf '%s\n' "$b" | awk '$2 ~ /^D/' | grep -q . && warn "the package process is stuck waiting on the disk (state D) - the virtual machine's storage is stalling, not Ubuntu. Restart the VM from the Hyper-V host (Turn Off, Start), then: sudo dpkg --configure -a; and run this script again"
+  return 1
+}
+wait_pkg_idle || die "another package operation is still running after 20 minutes (shown above) - let it finish (or restart the VM from the Hyper-V host if it is stuck), then run this script again. The lock files are never removed: that can damage the package database"
 dpkg --audit 2>/dev/null | grep -q . && { warn "a package was left half-installed - finishing it first"; dpkg_configure || die "dpkg --configure -a failed (shown above): the package system must be healthy before the platform is installed. If another installer is still running, wait for it (ps -p <pid>) and run this script again"; }
 $APT update </dev/null >/dev/null 2>/tmp/sentra-apt.$$ || { warn "apt-get update failed - packages are installed from what is already known:"; tail -n 5 /tmp/sentra-apt.$$ >&2; }
 $APT install nginx openssl python3 python3-venv curl ca-certificates </dev/null >/dev/null 2>/tmp/sentra-apt.$$ || { cat /tmp/sentra-apt.$$ >&2; rm -f /tmp/sentra-apt.$$; die "could not install nginx / openssl / python3 - the package system's own message is above"; }
