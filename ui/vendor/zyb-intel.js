@@ -17,6 +17,7 @@
     + '.zi-eb{font:600 11px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:#8b93a4;text-transform:uppercase}.zi-sp{flex:1}.zi-m{color:#8b93a4}.zi-s{font-size:12px}.zi-mono{font-family:ui-monospace,Consolas,monospace;font-size:12.3px}'
     + '.zi-btn{font:600 13px Inter,"Segoe UI",sans-serif;background:#181c25;color:#e7eaf0;border:1px solid #232837;border-radius:9px;padding:6px 12px;cursor:pointer}.zi-btn:hover{border-color:#3d63b5}.zi-btn.pri{background:#2b4a8f;border-color:#3d63b5}.zi-btn[aria-pressed="true"]{border-color:#3d63b5;background:rgba(61,99,181,.25)}'
     + '.zi-card{background:#12151c;border:1px solid #232837;border-radius:14px;padding:16px;margin-bottom:14px;min-width:0}.zi-card h2{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.zi-card h2 .c{font-weight:400;font-size:12px;color:#8b93a4}'
+    + '.zi-band{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:14px}.zi-band .zi-card{margin:0}.zi-cv{position:relative;height:220px}'
     + '.zi-hero{display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:center}@media(max-width:900px){.zi-hero{grid-template-columns:1fr}}.zi-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}'
     + '.zi-kpi{background:#181c25;border:1px solid #232837;border-radius:12px;padding:10px 12px}.zi-kpi .n{font-size:24px;font-weight:800}.zi-kpi .l{font-size:12px;color:#8b93a4}.t-bad .n,.t-bad.n{color:#ff7b80}.t-warn .n{color:#f5b544}.t-ok .n{color:#5fd27a}'
     + '.zi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}@media(max-width:1100px){.zi-grid{grid-template-columns:1fr}}.zi-wide{grid-column:1/-1}'
@@ -89,9 +90,39 @@
     }
     function chips(s) { if (!s.chips && !s.search) return ''; return '<div class="zi-chips">' + (s.chips || []).map(function (c) { var n = c.key === 'all' ? (s.items || s.rows || []).length : (s.items || s.rows || []).filter(function (it) { return (it.tags || []).indexOf(c.key) >= 0; }).length; return '<button type="button" class="zi-btn" data-chip="' + esc(s.id) + '|' + esc(c.key) + '" aria-pressed="' + ((F[s.id] || 'all') === c.key) + '">' + esc(c.label) + ' <span class="zi-m">' + n + '</span></button>'; }).join('') + (s.search ? '<input type="search" data-q="' + esc(s.id) + '" value="' + esc(Q[s.id] || '') + '" placeholder="Search" aria-label="Search ' + esc(s.title) + '">' : '') + '</div>'; }
     function sect(s) { return '<div class="zi-card' + (s.wide ? ' zi-wide' : '') + '" id="sec-' + esc(s.id) + '"><h2>' + esc(s.title) + (s.caption ? ' <span class="c">' + esc(s.caption) + '</span>' : '') + '</h2>' + chips(s) + '<div data-body="' + esc(s.id) + '">' + body(s) + '</div></div>'; }
+    /* AI / ML chart band (every intel page): drawn from the page's own sections - the state of every item (by its tone), the
+       first "bars" section and the first trend - in the company colours. The charts library is loaded on first use; without it,
+       or with nothing to chart, there is no band and the sections below carry every figure. Nothing is invented. */
+    var CH = null;
+    function charts(cb) { if (window.zybCharts && window.Chart) return cb(); if (CH) return CH.push(cb); CH = [cb];
+      var src = ['vendor/chart.umd.js', 'vendor/zyb-charts.js'], i = 0;
+      (function next() { if (i >= src.length) { var q = CH; CH = null; q.forEach(function (f) { try { f(); } catch (e) { /* a chart that cannot draw leaves the sections as they are */ } }); return; }
+        var sc = document.createElement('script'); sc.src = src[i++]; sc.onload = next; sc.onerror = function () { CH = null; /* no charts library: the sections show every figure */ }; document.head.appendChild(sc); })(); }
+    var TONE_C = { bad: 'crit', warn: 'warn', ok: 'ok', info: 'acc', na: 'mute' };
+    function band() {
+      var el = $('zi-band'); if (!el) { el = document.createElement('div'); el.id = 'zi-band'; el.className = 'zi-band'; $('zi-hero').parentNode.insertBefore(el, $('zi-hero').nextSibling); }
+      var secs = V.sections || [], T = { bad: 0, warn: 0, ok: 0, info: 0 }, n = 0;
+      secs.forEach(function (s) { if (s.type === 'list' || s.type === 'cards') (s.items || []).forEach(function (it) { if (T[it.tone] != null) { T[it.tone]++; n++; } }); });
+      var bars = secs.filter(function (s) { return s.type === 'bars' && (s.items || []).some(function (b) { return b.value != null; }); })[0];
+      var tr = secs.filter(function (s) { return s.type === 'trend' && (s.points || []).filter(function (x) { return x.value != null; }).length > 1; })[0];
+      var parts = [];
+      if (n >= 3) parts.push(['st', 'State of everything', 'AI · ML · by tone']);
+      if (bars) parts.push(['bars', bars.title, bars.caption ? 'top 10' : 'top 10']);
+      if (tr) parts.push(['tr', tr.title, 'over time']);
+      if (!parts.length) { el.hidden = true; return; }
+      el.hidden = true;
+      el.innerHTML = parts.map(function (p) { return '<div class="zi-card"><h2>' + esc(p[1]) + ' <span class="c">' + esc(p[2]) + '</span></h2><div class="zi-cv"><canvas id="zi-cv-' + p[0] + '"></canvas></div></div>'; }).join('');
+      charts(function () { var C = window.zybCharts; if (!C) return; el.hidden = false;
+        if (n >= 3) C.ring($('zi-cv-st'), ['Needs action', 'Watch', 'Good', 'Information'], [T.bad, T.warn, T.ok, T.info], ['crit', 'warn', 'ok', 'acc'], { v: n, l: 'items' }, { title: 'State of everything' });
+        if (bars) { var B = bars.items.filter(function (b) { return b.value != null; }).slice().sort(function (a, b) { return b.value - a.value; }).slice(0, 10);
+          C.bars($('zi-cv-bars'), B.map(function (b) { return String(b.title || '').slice(0, 40); }), [{ label: bars.title, data: B.map(function (b) { return b.value; }), colors: B.map(function (b) { return TONE_C[b.tone] || 'acc'; }) }], { horizontal: true, title: bars.title }); }
+        if (tr) { var P = tr.points.filter(function (x) { return x.value != null; }); C.area($('zi-cv-tr'), P.map(function (x) { return String(x.date || x.label || x.t || '').slice(5, 10) || ''; }), [{ label: tr.title, data: P.map(function (x) { return x.value; }), color: 'acc' }], { title: tr.title }); }
+      });
+    }
     function draw() {
       IDX = {}; $('zi-notes').hidden = !(V.notes && V.notes.length); $('zi-notes').textContent = (V.notes || []).join(' · ');
       $('zi-hero').innerHTML = '<div class="zi-hero"><div style="text-align:center">' + ring(V.ring) + '</div><div><div class="zi-kpis">' + (V.kpis || []).map(kpi).join('') + '</div><div class="zi-s zi-m" style="margin-top:8px">' + esc(V.note || '') + '</div>' + (V.actions || []).filter(function (x) { return can(x.role || 'operator'); }).map(function (x, i) { return '<form class="zi-frm" data-gact="' + i + '">' + (x.fields || []).map(field).join('') + '<button class="zi-btn pri" type="submit">' + esc(x.label) + '</button>' + (x.note ? '<span class="zi-s zi-m">' + esc(x.note) + '</span>' : '') + '</form>'; }).join('') + '</div></div>';
+      band();
       $('zi-secs').innerHTML = (V.sections || []).map(sect).join(''); bindTiles();
       var S = V.settings; $('zi-set').innerHTML = !S ? '' : '<div class="zi-card"><h2>Settings <span class="c">' + esc(S.caption || 'administrators') + '</span></h2>' + (can(S.role || 'admin') ? '<form class="zi-frm" id="zi-sform">' + S.fields.map(field).join('') + '<button class="zi-btn" type="submit">Save</button><span class="zi-s zi-m">version ' + esc(S.version) + (S.by ? ' · ' + esc(S.by) : '') + '</span></form>' : '<div class="zi-s zi-m">' + S.fields.map(function (f) { return esc(f.label) + ': ' + esc(f.value == null ? '—' : f.value); }).join(' · ') + ' - ' + esc(S.role === 'operator' ? 'operators' : 'administrators') + ' set it.</div>') + '</div>';
       $('zi-ai').innerHTML = !cfg.ask ? '' : '<div class="zi-card"><h2>' + esc(cfg.aiTitle || 'AI advisor') + ' <span class="c">read-only: it reads this page through its tools - it cannot change anything</span></h2>' + (!can('operator') ? '<div class="zi-empty">The advisor works for operators and administrators.</div>' : !V.ai || !V.ai.enabled ? '<div class="zi-empty">Not available: ' + esc(V.ai && V.ai.reason) + '</div>' : '<div class="zi-frm"><input id="zi-q" style="flex:1" maxlength="2000" placeholder="' + esc(cfg.aiHint || 'Ask about this page') + '"><button class="zi-btn pri" type="button" id="zi-go">Ask</button></div><div id="zi-out"></div>') + '</div>';

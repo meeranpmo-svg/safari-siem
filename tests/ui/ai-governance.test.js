@@ -23,6 +23,13 @@ async (h) => {
   h.ok(/mitigated, not solved/.test(await h.text(p, '#sec-controls')), 'controls stated honestly');
   await h.openCard(p, 'systems', 'roadmap'); h.ok(!(await p.$('#zi-dlgb form')) && /Tools/.test(await h.text(p, '#zi-dlgb')), 'an operator sees tools, cannot record a review'); await h.closeDlg(p);
   h.ok(/Not available/.test(await h.text(p, '#zi-ai')), 'advisor off until allowed');
+  // the AI / ML chart band (vendor/zyb-intel.js, every intel page): from this page's own sections, charts library loaded on use
+  h.ok(await h.wait(p, () => { const b = document.getElementById('zi-band'); return b && !b.hidden && b.querySelectorAll('canvas[aria-label]').length >= 2; }), 'the chart band is drawn');
+  const lab = await p.$$eval('#zi-band canvas', (x) => x.map((c) => c.getAttribute('aria-label') || ''));
+  h.ok(/State of everything/.test(lab[0]) && lab.some((l) => /Risk per agent/.test(l)), 'state by tone and the first bars section: ' + lab.map((l) => l.slice(0, 50)).join(' | '));
+  { const q = await h.page(); await q.route('**/chart.umd.js', (r) => r.fulfill({ status: 404, body: '' })); await q.reload();
+    await h.wait(q, () => document.querySelectorAll('#zi-hero .zi-kpi').length > 0); await q.waitForTimeout(800);
+    h.ok(await q.evaluate(() => { const b = document.getElementById('zi-band'); return !b || b.hidden; }) && (await q.$$('#sec-systems .zi-it')).length >= 10, 'no charts library: no band, the sections stay'); await q.close(); }
   h.who('syed', 'admin'); p = await h.page(); await h.openCard(p, 'systems', 'roadmap');
   await p.fill('#zi-dlgb [name=note]', 'tools, data and results reviewed (synthetic)'); await p.click('#zi-dlgb form:has([name=note]) button[type=submit]');
   h.ok(await h.toast(p, 'Review of roadmap recorded'), 'the administrator records the review');
