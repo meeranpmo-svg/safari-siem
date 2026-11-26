@@ -75,4 +75,14 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', unmount); else unmount();
 
   window.zybLook = { get: function () { return cur; }, set: set, theme: function () { return themeNow(); } };
+  // AI / ML labels on every page get one recognisable badge (vendor/zyb-color.css .zyb-ai): short labels only - a section's small
+  // tag, a pill, an eyebrow - whose words say AI, ML, machine learning, learned, anomaly or forecast. Decoration only.
+  (function () {
+    var RX = /(^|[^a-z])(ai|ml|ai\s*\/\s*ml|machine learning|learned|anomal\w*|forecast\w*)([^a-z]|$)/i, SEL = 'h2 .c, h2 .tag, .pill, .chip, .badge, .eb .ai, [class*="-ml"], [data-ai]';
+    function tag(root) { var L = (root || document).querySelectorAll ? (root || document).querySelectorAll(SEL) : [];
+      for (var i = 0; i < L.length; i++) { var e = L[i], t = (e.textContent || '').trim(); if (t && t.length <= 48 && !e.classList.contains('zyb-ai') && RX.test(t) && !e.querySelector('button,input,select,a')) e.classList.add('zyb-ai'); } }
+    var pend = false; function soon() { if (pend) return; pend = true; (window.requestAnimationFrame || setTimeout)(function () { pend = false; try { tag(document); } catch (e) { /* decoration only */ } }); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', soon); else soon();
+    try { new MutationObserver(soon).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) { /* no MutationObserver: tagged once at load */ }
+  })();
 })();
