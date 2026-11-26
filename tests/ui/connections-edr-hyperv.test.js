@@ -3,7 +3,8 @@
 // Connections & Setup: the CrowdStrike Falcon card lists Falcon log sources (the connector host that sends CEF syslog),
 // receiving vs waiting, no password; Add registers the connector host through POST /onboard/sources and shows the
 // connector settings (never asking for the Falcon secret). The Hyper-V card lists the hosts that reported, stale after
-// two days, opens a set-up guide with the read-only PowerShell for THIS portal, and an admin can forget a host. With the
+// two days, Add connection opens the one-command set-up on the Hyper-V page, and an admin can forget a host; the vCenter /
+// Nutanix card is not offered to a Hyper-V-only organisation. With the
 // organisation's real brand setting, cards whose page the sector switches off (Kaspersky, Zscaler, Oracle) are not offered.
 // Stub APIs; names and addresses are SYNTHETIC. Run: PLAYWRIGHT=/opt/node22/lib/node_modules/playwright node connections-edr-hyperv.test.js
 const http = require('http'), fs = require('fs'), os = require('os'), path = require('path'), { execFileSync } = require('child_process');
@@ -54,11 +55,10 @@ let posted = null, forgot = null, ORGJS = null;
   t = await page.$eval('#cn-hyperv', (x) => x.innerText.replace(/\s+/g, ' '));
   ok(/HV-SYN-01/.test(t) && /12 VMs/.test(t) && /reported by the host/.test(t) && /HV-SYN-02/.test(t) && /imported by admin\.syn/.test(t), 'reporting hosts listed: ' + t.slice(0, 300));
   ok(/last report .* ago/.test(t) || /stale/i.test(t), 'a host silent for days is flagged');
-  await page.click('#cn-hyperv [data-act=add]'); await page.waitForSelector('#hv-ps');
-  const g = await page.evaluate(() => ({ ps: document.getElementById('hv-ps').textContent, body: document.querySelector('#modal').innerText }));
-  ok(/Get-VM/.test(g.ps) && g.ps.includes('https://' + new URL(base).host + '/itam-agent/hyperv') && /Servers \(synthetic\)/.test(g.body), 'the guide carries the read-only script for this portal and the scopes that accept reports');
-  ok(!/Set-VM|Stop-VM|Remove-VM|New-VM/.test(g.ps), 'the script only reads');
-  await page.click('#modal [data-close]'); await page.waitForTimeout(200);
+  // Add connection opens the one-command set-up on the Hyper-V page (key, fingerprint check, scheduled task)
+  await Promise.all([page.waitForURL(/hyperv\.html\?add=1$/, { timeout: 10000 }), page.click('#cn-hyperv [data-act=add]')]);
+  ok(/\/hyperv\.html\?add=1$/.test(page.url()), 'Add connection -> the Hyper-V page set-up: ' + page.url());
+  await page.goto(base); await page.waitForSelector('#cn-hyperv');
   const del = await page.$('#cn-hyperv [data-act=del][data-id="hv-syn-02"]');
   ok(!!del, 'an admin can forget a host'); if (del) { await del.click(); await page.waitForTimeout(800); }
   ok(forgot === 'hv-syn-02', 'forget called for that host: ' + forgot);
@@ -71,6 +71,7 @@ let posted = null, forgot = null, ORGJS = null;
   const cx = JSON.parse(fs.readFileSync(path.join(ROOT, 'brand/brand.json'), 'utf8')).connections_off || [];
   ok(cx.every((id) => !ids.includes('cn-' + id)), 'connections the organisation does not use are not offered: ' + cx.join(','));
   ok(ids.includes('cn-edr') && ids.includes('cn-hyperv'), 'CrowdStrike and Hyper-V offered: ' + ids.join(','));
+  ok(off.includes('vmware-servers') && off.includes('nutanix-vms') ? !ids.includes('cn-virt') : ids.includes('cn-virt'), 'vCenter / Nutanix card only where VMware or Nutanix is used: ' + ids.join(','));
   ok(!errs.length, 'errors: ' + errs.join(' | '));
   await browser.close(); srv.close(); fs.rmSync(tmp, { recursive: true, force: true });
   console.log((bad ? 'FAILED ' : 'OK ') + (n - bad) + '/' + n + ' checks'); process.exit(bad ? 1 : 0);

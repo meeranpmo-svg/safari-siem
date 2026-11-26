@@ -504,7 +504,9 @@
      // A row is a host that has reported; a report older than 2 days is shown as stale.
      load:function(){return req(this.api,'GET','/discovery/hyperv/hosts').then(function(d){HV_SCOPES=d.scopes||[];return (d.hosts||[]).map(function(h){var at=Date.parse(h.at)||0,stale=Date.now()-at>2*86400000;
        return {id:h.id,name:h.host,info:(h.ip||'')+(h.site?' · '+h.site:'')+' · '+(h.vms||0)+' VMs · '+(h.via==='agent'?'reported by the host':'imported by '+(h.by||'an administrator')),cred:'n/a',last:{at:at,errors:[]},stale:stale,staleWhy:stale?'last report '+ago(at)+' - check the scheduled task on the host':''};});});},
-     add:function(){hvGuide(this);},
+     // one command per host, made on the Hyper-V page (key, fingerprint check, scheduled task); the older manual guide stays for a host without a network path
+     add:function(){location.href='hyperv.html?add=1';},
+     guide:function(){hvGuide(this);},
      test:function(){return req(this.api,'GET','/discovery/hyperv/hosts').then(function(d){return (d.hosts||[]).length+' Hyper-V host(s) have reported'+((d.scopes||[]).length?'':' - no active scope accepts Hyper-V reports yet: create one in Asset Discovery');});},
      sync:function(id){return this.test(id);},
      del:function(id){return req(this.api,'POST','/discovery/hyperv/hosts/'+encodeURIComponent(id)+'/forget').then(function(){return 'Forgotten - the host reappears at its next report';});} },
@@ -734,6 +736,8 @@
   ];
   // a connection whose page the organisation's sector switches off (brand setting: pages_off) is not offered here either
   // ... and a connection the organisation does not use at all (brand setting: connections_off, e.g. a product it does not own)
+  // ... and VMware / Nutanix when the organisation runs neither (both their pages switched off, e.g. a Hyper-V-only estate)
+  (function(){var o=window.ZYB_ORG||{},off=o.pages_off||[];if(off.indexOf('vmware-servers')>=0&&off.indexOf('nutanix-vms')>=0)CONN=CONN.filter(function(c){return c.id!=='virt';});})();
   (function(){var o=window.ZYB_ORG||{},off=o.pages_off||[],cx=o.connections_off||[];CONN=CONN.filter(function(c){return cx.indexOf(c.id)<0&&(!c.detail||off.indexOf(c.detail.replace(/\.html$/,''))<0);});})();
 
   // a platform record (backup, storage) as a row: the latest of its test and sync; stale after three missed collection intervals

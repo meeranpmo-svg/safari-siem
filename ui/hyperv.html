@@ -110,6 +110,6 @@
     if ((a = t.closest('[data-copy]'))) { var pre = $(a.getAttribute('data-copy')); try { navigator.clipboard.writeText(pre.textContent).then(function () { toast('Copied'); }, function () { toast('Select the command and copy it'); }); } catch (er) { toast('Select the command and copy it'); /* no clipboard API: the text is selectable */ } return; }
     if ((a = t.closest('[data-dec]'))) { var d = a.getAttribute('data-dec'), cm = d === 'rejected' ? prompt('Why is it rejected?') : ''; if (d === 'rejected' && !cm) return; req('POST', '/hyperv/actions/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: d, comment: cm || undefined }).then(function (x) { toast(x.id + ' ' + x.status); load(); }).catch(function (er) { toast(er.message); }); }
   });
-  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* viewer */ } $('addh').hidden = !can('admin'); load(); }; w.onerror = load; w.send();
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* viewer */ } $('addh').hidden = !can('admin'); load(); if (/[?&]add=1\b/.test(location.search) && can('admin')) onbOpen(); }; w.onerror = load; w.send();
 })();
 </script></body></html>

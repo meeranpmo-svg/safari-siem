@@ -73,6 +73,10 @@ const posts = [];
   await p.click('[data-hdel="abcd0001"]'); await p.waitForFunction(() => !/HV-SYN-03/.test(document.getElementById('onbinv').textContent));
   ok(/Remove HV-SYN-03\?/.test(asked) && /one-time key is cancelled/.test(asked) && posts.some((x) => x[1] === '/api/itam/hyperv/onboard/abcd0001/remove'), 'Remove: asks first, says what happens, the host leaves the list');
   await p.close();
+  // from Connections (Add connection on the Hyper-V card): ?add=1 opens the set-up for an administrator, not for a viewer
+  p = await browser.newPage(); p.on('pageerror', (x) => errs.push(x.message)); await p.goto(URL0 + (URL0.includes('?') ? '&' : '?') + 'add=1');
+  await p.waitForFunction(() => !document.getElementById('onb').hidden, null, { timeout: 10000 }).catch(() => {}); ok(!(await p.$eval('#onb', (e) => e.hidden)), '?add=1 opens Add Hyper-V hosts for an admin'); await p.close();
+  ROLE = 'viewer'; p = await browser.newPage(); await p.goto(URL0 + (URL0.includes('?') ? '&' : '?') + 'add=1'); await p.waitForSelector('.host'); ok(await p.$eval('#onb', (e) => e.hidden), '... and not for a viewer'); await p.close();
   USER = 'vera.syn'; ROLE = 'viewer'; p = await open(); await p.waitForSelector('.host'); ok(!(await p.$('[data-vm]')), 'viewer: no action menu'); await p.close();
   ok(!errs.length, 'errors: ' + errs.join(' | '));
   await browser.close(); srv.close();
