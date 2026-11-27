@@ -1271,7 +1271,7 @@ window.ZYB_NAV = [
     "h": "hardening.html",
     "s": "Baseline Hardening",
     "t": "Baseline Hardening",
-    "d": "Every IT asset against its CIS benchmark: Windows Server, Windows 11, Active Directory, Exchange, IIS, Hyper-V, Oracle / SQL Server / PostgreSQL, Oracle Linux, Solaris, Hyper-V, Cisco, FortiGate, Palo Alto (PAN-OS); score, coverage, not-scanned assets with what to connect, fix and rollback script per asset",
+    "d": "Every IT asset against its CIS benchmark: Windows Server, Windows 11, Active Directory, Exchange, IIS, Hyper-V, SQL Server / PostgreSQL, Linux, Cisco, FortiGate, Palo Alto (PAN-OS); score, coverage, not-scanned assets with what to connect, fix and rollback script per asset",
     "fw": {
      "nca": [
       "2-3",
@@ -1427,7 +1427,7 @@ window.ZYB_NAV = [
     "h": "cloud-stores.html",
     "s": "Cloud Data Stores",
     "t": "Cloud Data Stores",
-    "d": "Azure Blob, AWS S3 and Oracle Cloud Object Storage read-only: public stores, encryption, stores outside the Kingdom, personal data and credentials found in objects (counts only); connect providers and scan",
+    "d": "Azure Blob and AWS S3 read-only: public stores, encryption, stores outside the Kingdom, personal data and credentials found in objects (counts only); connect providers and scan",
     "fw": {
      "nca": [
       "2-7",
@@ -2057,7 +2057,7 @@ window.ZYB_NAV = [
     "s": "Add Server / Device",
     "g": "Servers",
     "t": "Add a Server or Network Device",
-    "d": "One form for a Linux / Solaris / AIX server (SSH) or a firewall / switch / router (SNMP v2c or v3), with its web addresses: IP, site, a read-only SSH login (optional SNMP and Oracle), the scan approval - then it scans, asks you to confirm the SSH key, and adds the server to IT Asset Management.",
+    "d": "One form for a Linux / Solaris / AIX server (SSH) or a firewall / switch / router (SNMP v2c or v3), with its web addresses: IP, site, a read-only SSH login (optional SNMP), the scan approval - then it scans, asks you to confirm the SSH key, and adds the server to IT Asset Management.",
     "fw": {
      "nca": [
       "2-1"
@@ -2746,7 +2746,7 @@ window.ZYB_NAV = [
     "h": "business-services.html",
     "s": "Business Services",
     "t": "Business Services",
-    "d": "What runs on every server, found automatically: Oracle, SQL Server and other databases, IIS / Apache / nginx, Tomcat / WebLogic, SAP, Exchange, Active Directory - with the evidence, who could look, and business-critical proposed for an administrator to confirm",
+    "d": "What runs on every server, found automatically: SQL Server and other databases, IIS / Apache / nginx, Tomcat / WebLogic, SAP, Exchange, Active Directory - with the evidence, who could look, and business-critical proposed for an administrator to confirm",
     "fw": {
      "nca": [
       "2-1",
@@ -4259,7 +4259,7 @@ window.ZYB_NAV = [
     "h": "pdpl-catalog.html",
     "s": "Data Catalog",
     "t": "Data Catalog",
-    "d": "Personal data found in every Oracle, SQL Server and PostgreSQL database with a read-only login - by attribute, source and column; identifier columns that let a verified data subject request find the person everywhere",
+    "d": "Personal data found in every SQL Server and PostgreSQL database with a read-only login - by attribute, source and column; identifier columns that let a verified data subject request find the person everywhere",
     "fw": {
      "nca": [
       "2-7"
@@ -4794,7 +4794,7 @@ window.ZYB_NAV = [
     "h": "licence-audit.html",
     "s": "Licensing Audit",
     "t": "Licensing Audit",
-    "d": "Oracle Database and Oracle Data Integrator (processor / socket), Windows Server Standard / Datacenter cores; Microsoft 365 unused, disabled and inactive licences; software installs vs licences",
+    "d": "Windows Server Standard / Datacenter cores; Microsoft 365 unused, disabled and inactive licences; software installs vs licences",
     "fw": {
      "nca": [
       "2-1",
@@ -4875,7 +4875,7 @@ window.ZYB_NAV = [
     "s": "Integration Hub",
     "k": ["integrations", "connectors", "setup", "credentials", "api", "connections & setup", "vcenter", "nutanix"],
     "t": "Integration Hub - every connection the platform reads, its health and a guided set-up",
-    "d": "One place to add and check every data source the platform reads - Hyper-V hosts with a guided set-up (read-only account, connect, trust the certificate, first sync), Zscaler, Kaspersky, Oracle, e-mail security, DLP, Cloudflare, firewalls and network devices - with what needs attention first (failing, stale, never read), what each connection feeds and a consistent Test and Sync (read-only connections; admin to add)",
+    "d": "One place to add and check every data source the platform reads - Hyper-V hosts with a guided set-up (read-only account, connect, trust the certificate, first sync), Zscaler, Kaspersky, e-mail security, DLP, Cloudflare, firewalls and network devices - with what needs attention first (failing, stale, never read), what each connection feeds and a consistent Test and Sync (read-only connections; admin to add)",
     "fw": {
      "nca": [
       "2-8",
