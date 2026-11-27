@@ -35,6 +35,8 @@ function register(api, deps) {
   const elevated = (ctx) => /^(operator|admin)$/i.test(String(ctx.role || ''));
   const err = (e) => { throw new HttpError(e.status || e.code || 500, e.message); };
   const run = (fn) => async (ctx) => { try { return await fn(ctx); } catch (e) { if (e instanceof HttpError) throw e; err(e); } };
+  // Print to Digital (digital.js): registered before /printers/:id so its path is not taken for a printer id
+  deps.printDigital = require('./digital').register(api, deps, PR);
 
   api.route('GET', `${P}/printers`, wrap(deps, null, run(async () => { const v = await PR.view(); v.safeq_console = SQ.settings().console_url || ''; return v; })));
   api.route('GET', `${P}/printers/usage`, wrap(deps, null, run((ctx) => PR.usage({ users: elevated(ctx) }))));

@@ -3855,6 +3855,7 @@ window.ZYB_NAV = [
     },
     "g": "Printers"
    },
+   {"h": "print-digital.html", "s": "Print to Digital", "t": "Print to Digital - where the printing is, what it costs, and what each department can move to digital workflows", "d": "Pages, cost and paper by department, site and printer; the trend and progress against a reduction target; for each department what replaces printing (Oracle Fusion approvals, e-signature, SharePoint forms, tablets at project sites) with its estimated saving; printers to consolidate; a six-month roadmap. Departments only, never a person's printing."},
    {"h": "cucm.html", "s": "Call Manager", "t": "Call Manager - Cisco Unified CM: phones, trunks, calls, learned findings, four-eyes restarts", "d": "Every phone with its registration by device pool, SIP trunks and gateways, active calls and the failed share, findings each against its own baseline (a pool losing phones, flapping, trunk down, failed calls up), and restart / reset of phones approved by a different administrator", "fw": {"nca": ["2-3"], "iso": ["8.20"]}, "k": ["cucm", "call manager", "cisco", "phones", "voice", "sip trunk", "gateway", "telephony", "uc"]},
    {
     "h": "uc.html",

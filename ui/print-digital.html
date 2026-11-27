@@ -1,0 +1,72 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Print to Digital</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Print to Digital over /api/soc/printers/digital (engine/printers/digital.js): where the printing is (department, site, printer), what
+     it costs, the paper, the trend and progress against the target, what replaces printing in each department's work with its
+     estimated saving, the printers to consolidate, a three-phase roadmap, the cost settings (administrators). Departments only -
+     never a person's printing. Read-only: it changes no printer. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:250px}
+.mut{color:#8b93a4}.sm{font-size:12px}.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.crit{background:#ff7b72}.dot.warn{background:#e3b341}.dot.info{background:#58a6ff}
+.idea{border:1px solid rgba(127,140,160,.25);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}.idea h3{margin:0;font-size:14px}.idea .save{font-size:20px;font-weight:800;color:#2fd47a}.ideas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.ph{border-left:4px solid #58a6ff;padding:8px 12px;margin:8px 0;border-radius:6px;background:rgba(88,166,255,.06)}.ph:nth-child(2){border-color:#bc8cff;background:rgba(188,140,255,.06)}.ph:nth-child(3){border-color:#2fd47a;background:rgba(47,212,122,.06)}.ph ul{margin:4px 0 0;padding-left:18px;font-size:13px}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+.tgt{height:14px;border-radius:8px;background:rgba(127,140,160,.18);overflow:hidden;position:relative}.tgt i{display:block;height:100%;background:linear-gradient(90deg,#2fd47a,#58a6ff)}.tgt b{position:absolute;top:-3px;width:2px;height:20px;background:#f5a623}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Printers · digital transformation · sustainability</div><h1>Print to Digital</h1><div class="mut sm">Where the printing is, what it costs, and what each department can move to digital workflows instead</div></div><span class="sp"></span><span class="muted" id="up"></span><a class="btn" href="printers.html">Printer fleet</a><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+ <div class="k" id="kp"></div>
+ <section class="card"><h2>Reduction target <span class="c" id="tgtc"></span></h2><div class="tgt" id="tgt"></div><div class="mut sm" id="tgtn" style="margin-top:6px"></div></section>
+ <div class="g3">
+  <section class="card"><h2>Pages by department <span class="c">a month · and what could go</span></h2><div class="cv"><canvas id="cv-dept"></canvas></div></section>
+  <section class="card"><h2>Trend <span class="c">pages each period</span></h2><div class="cv"><canvas id="cv-trend"></canvas></div></section>
+  <section class="card"><h2>What the AI noticed</h2><ul class="ins" id="ins"></ul></section>
+ </div>
+ <section class="card"><h2>What replaces printing, department by department <span class="c">estimated saving when adopted</span></h2><div class="ideas" id="ideas"></div></section>
+ <div class="g3">
+  <section class="card"><h2>Roadmap <span class="c">six months</span></h2><div id="road"></div></section>
+  <section class="card"><h2>Printers to consolidate <span class="c" id="flc"></span></h2><div class="tw" id="fleet"></div></section>
+ </div>
+ <section class="card" id="setc" hidden><h2>Costs and target <span class="c">administrators</span></h2><form id="sf" class="frm"><label>Cost per mono page<input name="cost_mono" type="number" step="0.01" min="0"></label><label>Cost per colour page<input name="cost_colour" type="number" step="0.01" min="0"></label><label>Currency<input name="currency" maxlength="3"></label><label>Reduction target %<input name="target_pct" type="number" min="5" max="90"></label><label>Baseline pages a month<input name="baseline_month_pages" type="number" min="0"></label><button type="submit" class="pri">Save</button></form></section>
+ <p class="mut sm" id="note"></p>
+</div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var S = window.zybSoc || null, $ = function (i) { return document.getElementById(i); }, ME = { role: 'viewer' }, V = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/soc' + u); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('the SIEM is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  var num = function (n) { return n == null ? '–' : Number(n).toLocaleString('en-US'); };
+  function draw() {
+    var v = V, K = v.kpis, cur = v.settings.currency || '', C = window.zybCharts;
+    $('up').textContent = 'from ' + v.source;
+    $('kp').innerHTML = tile('Pages a month', num(K.pages_month), K.printers + ' printers') + tile('Cost a month (' + cur + ')', num(K.cost_month), 'at the set cost per page') + tile('Paper a year (reams)', num(K.reams_year), num(K.paper_kg_year) + ' kg of paper')
+      + tile('Colour', K.colour_pct == null ? '–' : K.colour_pct + '%', 'of pages', K.colour_pct > 25 ? 'warn' : '') + tile('Could save (pages a month)', num(K.can_save_pages_month), 'when the ideas below are adopted', 'ok') + tile('Could save a year (' + cur + ')', num(K.can_save_cost_year), 'estimate', 'ok');
+    var pr = K.progress_pct; $('tgtc').textContent = pr == null ? 'set a baseline to measure progress' : pr + '% below the baseline · target ' + K.target_pct + '%';
+    $('tgt').innerHTML = '<i style="width:' + Math.max(0, Math.min(100, pr == null ? 0 : pr / Math.max(K.target_pct, 1) * 100)) + '%"></i>'; $('tgtn').textContent = K.baseline ? 'Baseline ' + num(K.baseline) + ' pages a month; now ' + num(K.pages_month) + '.' : 'The baseline is the average of the first three months imported, or set by an administrator below.';
+    if (C) {
+      var D = v.departments.slice(0, 10); if (D.length) C.bars($('cv-dept'), D.map(function (d) { return d.name; }), [{ label: 'Stays', data: D.map(function (d) { return d.pages - d.can_save_pages; }), color: 'acc' }, { label: 'Could go digital', data: D.map(function (d) { return d.can_save_pages; }), color: 'ok' }], { stacked: true, horizontal: true, title: 'Pages by department' }); else C.empty($('cv-dept'), 'No printer reports pages yet.');
+      var T = v.trend; if (T.length > 1) C.area($('cv-trend'), T.map(function (t) { return t.period; }), [{ label: 'Pages', data: T.map(function (t) { return t.pages; }) }], { title: 'Pages' }); else C.empty($('cv-trend'), 'The trend appears with the second period.');
+    }
+    $('ins').innerHTML = v.insights.length ? v.insights.map(function (i) { return '<li><span class="dot ' + esc(i.level) + '"></span><div><b>' + esc(i.title) + '</b><div class="mut sm">' + esc(i.detail) + '</div></div></li>'; }).join('') : '<li><span class="dot info"></span><div>Nothing stands out.</div></li>';
+    $('ideas').innerHTML = v.departments.length ? v.departments.slice(0, 12).map(function (d) { return '<div class="idea"><h3>' + esc(d.name) + '</h3><div class="mut sm">' + num(d.pages) + ' pages a month · ' + num(d.cost) + ' ' + esc(cur) + (d.colour_pct != null ? ' · ' + d.colour_pct + '% colour' : '') + '</div><div>' + esc(d.idea) + '</div><div><span class="save">−' + num(d.can_save_pages) + '</span> <span class="mut sm">pages a month (' + d.can_save_pct + '%) · ' + num(d.can_save_cost * 12) + ' ' + esc(cur) + ' a year</span></div></div>'; }).join('') : '<div class="empty">No department prints yet - give the printers their department in the printer fleet.</div>';
+    $('road').innerHTML = v.roadmap.map(function (r) { return '<div class="ph"><b>' + esc(r.phase) + '</b> <span class="mut sm">' + esc(r.effect) + '</span><ul>' + r.actions.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul></div>'; }).join('');
+    $('flc').textContent = v.fleet.length + ' suggestion(s)';
+    $('fleet').innerHTML = v.fleet.length ? '<table><thead><tr><th>Printer</th><th>Site</th><th>Why</th></tr></thead><tbody>' + v.fleet.map(function (f) { return '<tr><td><b>' + esc(f.printer) + '</b></td><td>' + esc(f.site) + '</td><td class="sm">' + esc(f.why) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">Every printer is well used.</div>';
+    $('setc').hidden = ME.role !== 'admin'; var f = $('sf').elements; ['cost_mono', 'cost_colour', 'currency', 'target_pct', 'baseline_month_pages'].forEach(function (k) { if (document.activeElement !== f[k]) f[k].value = v.settings[k] == null ? '' : v.settings[k]; });
+    $('note').textContent = v.note;
+  }
+  function load() { return req('GET', '/printers/digital').then(function (j) { V = j; $('main').hidden = false; $('err').innerHTML = ''; draw(); }, function (e) { $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'Print to Digital is not on this SIEM yet - run the platform update.' : e.message) + '</div></div>'; }); }
+  document.addEventListener('submit', function (e) { if (e.target.getAttribute('id') !== 'sf') return; e.preventDefault(); var f = e.target.elements, b = { cost_mono: Number(f.cost_mono.value), cost_colour: Number(f.cost_colour.value), target_pct: Number(f.target_pct.value), currency: f.currency.value.trim().toUpperCase() || undefined };
+    if (f.baseline_month_pages.value !== '') b.baseline_month_pages = Number(f.baseline_month_pages.value);
+    req('PUT', '/printers/digital/settings', b).then(function () { toast('Saved'); return load(); }, function (x) { toast(x.message); }); });
+  $('rf').addEventListener('click', function () { load(); });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>
