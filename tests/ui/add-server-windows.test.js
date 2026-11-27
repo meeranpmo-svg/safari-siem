@@ -11,6 +11,10 @@ const H = require(path.join(ITAM, 'tests/helpers'));
 let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 (async () => {
   const e = await H.startApp({ noAi: true }), WHO = { user: 'admin.syn', role: 'admin' };
+  // the name behind an IP with a SYNTHETIC DNS: 10.0.1.12 has a confirmed PTR, 10.0.1.40 a stale one, the rest none
+  const NR = require(path.join(ITAM, 'engine/net-resolve')), nf = (c) => Object.assign(new Error(c), { code: c });
+  NR.registerResolve(e.app.srv, e.app, NR.createResolve({ resolver: { reverse: async (ip) => { if (ip === '10.0.1.12') return ['hqdc02.safari-syn.example']; if (ip === '10.0.1.40') return ['old.safari-syn.example']; throw nf('ENOTFOUND'); },
+    resolve4: async (n) => (n === 'hqdc02.safari-syn.example' ? ['10.0.1.12'] : ['10.0.1.99']), resolve6: async () => { throw nf('ENODATA'); } } }));
   const srv = http.createServer((req, res) => { const u = new URL(req.url, 'http://x');
     if (u.pathname === '/dashboards/whoami.json') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(WHO)); }
     if (u.pathname.startsWith('/api/itam/')) { const h = Object.assign({}, req.headers, { 'x-sentra-proxy-secret': H.SECRET, 'x-auth-user': WHO.user, 'x-auth-role': WHO.role });
@@ -25,6 +29,13 @@ let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FA
     await p.selectOption('#dtype', 'windows');
     ok(await p.isVisible('#winp') && !(await p.isVisible('#ip')) && !(await p.isVisible('#go')), 'Windows: its own panel, no SSH / SNMP scan form');
     const t = await p.textContent('#winp'); ok(/Register it now/.test(t) && /asset agent/.test(t) && /Active Directory/.test(t) && !!(await p.$('#winp a[href="agents.html"]')), 'the three ways in');
+    // the computer name comes from DNS when the IP is typed; a stale PTR is said; a name a person typed is never replaced
+    await p.fill('#wip', '10.0.1.12'); await p.dispatchEvent('#wip', 'change'); await p.waitForFunction(() => document.getElementById('wname').value === 'HQDC02', null, { timeout: 8000 }).catch(() => {});
+    ok(await p.inputValue('#wname') === 'HQDC02' && /from DNS: hqdc02\.safari-syn\.example/.test(await p.textContent('[data-dns-hint="wname"]')), 'the name filled from DNS, confirmed');
+    await p.fill('#wip', '10.0.1.40'); await p.dispatchEvent('#wip', 'change'); await p.waitForFunction(() => /stale/.test(document.querySelector('[data-dns-hint="wname"]').textContent), null, { timeout: 8000 }).catch(() => {});
+    ok(await p.inputValue('#wname') === 'OLD' && /may be stale/.test(await p.textContent('[data-dns-hint="wname"]')), 'a PTR that does not point back is said');
+    await p.fill('#wname', 'MY-OWN-NAME'); await p.fill('#wip', '10.0.1.12'); await p.dispatchEvent('#wip', 'change'); await p.waitForTimeout(900);
+    ok(await p.inputValue('#wname') === 'MY-OWN-NAME', 'a typed name is never replaced');
     await p.fill('#wname', 'bad name;'); await p.click('#wgo'); ok(/Computer name/.test(await p.textContent('#wmsg')), 'a bad name is refused on the page');
     await p.fill('#wname', 'HQ-FS-SYN01'); await p.fill('#wip', '10.0.1.300x'); await p.click('#wgo'); ok(/IP address/.test(await p.textContent('#wmsg')), 'a bad IP is refused on the page');
     await p.fill('#wip', '10.0.1.25'); await p.fill('#wos', 'Windows Server 2022'); await p.fill('#wsite', 'Riyadh HQ'); await p.click('#wgo');

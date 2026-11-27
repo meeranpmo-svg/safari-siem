@@ -569,6 +569,9 @@ function registerDuty(srv, app, opts = {}) {
   if (SQ) { app.addons.sqldba = SQ; SQM.registerSqlDba(srv, app, SQ); }
   // Scope Studio (engine/discovery-advisor.js; ML in pyengine/scope_rules.py): Asset Discovery coverage, gaps as proposals, scope
   // health and tuning learned from the platform's own scans, and an agentic AI advisor that drafts proposals a System Admin accepts
+  // the name behind an IP for the add-server / add-device forms: reverse DNS confirmed by a forward lookup (engine/net-resolve.js)
+  const NRS = optional('./net-resolve');
+  if (NRS) NRS.registerResolve(srv, app, NRS.createResolve({ resolver: opts.dnsResolver }));
   const DAM = optional('./discovery-advisor');
   if (DAM) DAM.registerDiscoveryAdvisor(srv, app, DAM.createDiscoveryAdvisor(app, { now: opts.now, python: opts.python, sdk: opts.advisorSdk || opts.iaSdk, getKey: opts.advisorKey || opts.iaKey }));
   // DR Studio (engine/dr-studio.js; ML in pyengine/dr_studio_rules.py): Main <-> DR replication health from Nutanix protection

@@ -123,6 +123,16 @@ body.win #f > :not(.trow),body.win .net-only,body:not(.win) #winp,body:not(.net)
   function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
   var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
   var IPV4=/^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+  function autoName(ipId,nameId){var ip=$(ipId),nm=$(nameId);if(!ip||!nm)return;var auto='',last='',tm=null;
+    var hint=document.createElement('span');hint.className='sm';hint.setAttribute('data-dns-hint',nameId);hint.style.cssText='display:block;margin-top:3px;font-size:11.5px;color:var(--mute,#8b93a4)';nm.parentNode.appendChild(hint);
+    nm.addEventListener('input',function(){if(nm.value.trim()!==auto){auto='';hint.textContent='';}});
+    var go=function(){var v=ip.value.trim();if(!IPV4.test(v)||v===last)return;last=v;if(nm.value.trim()&&nm.value.trim()!==auto)return;
+      hint.textContent='Looking up the name in DNS…';
+      req('GET','/resolve?ip='+encodeURIComponent(v)).then(function(r){if(ip.value.trim()!==v)return;
+        if(r.found&&(!nm.value.trim()||nm.value.trim()===auto)){nm.value=r.name;auto=r.name;}
+        hint.style.color=r.found?(r.confirmed?'#56d364':'#f5b544'):'var(--mute,#8b93a4)';hint.textContent=r.found?(r.confirmed?'✓ from DNS: '+r.fqdn:'⚠ '+r.why):r.why;},
+        function(e){hint.textContent=e.status===404?'The DNS name lookup is not on this server yet - run the platform update.':e.status===403?'':'DNS lookup failed: '+e.message;});};
+    ip.addEventListener('change',go);ip.addEventListener('blur',go);ip.addEventListener('input',function(){clearTimeout(tm);tm=setTimeout(go,700);});}
 
   // engine messages → what to do, in plain words
   function plain(msg){
@@ -379,6 +389,9 @@ body.win #f > :not(.trow),body.win .net-only,body:not(.win) #winp,body:not(.net)
     if(USER&&!$('appr').value)$('appr').value=USER;
     if(/[?&]type=network/.test(location.search))$('dtype').value='network';dview();
     var q=/[?&]ip=([0-9.]+)/.exec(location.search);if(q&&IPV4.test(q[1]))$('ip').value=q[1];
+    // the name behind the IP, from the domain DNS (reverse lookup confirmed by a forward lookup on the platform server): filled
+    // while the name is empty or still the one filled here - never over what a person typed
+    autoName('ip','nm');autoName('wip','wname');if($('ip').value)$('ip').dispatchEvent(new Event('change'));
     req('GET','/scopes').then(function(j){var s=j.sites||[];$('site').innerHTML=s.length?'<option value="">Choose…</option>'+s.map(function(x){return '<option>'+esc(x)+'</option>';}).join(''):'<option value="">No sites defined - add one in Asset Discovery settings</option>';if(s.length===1)$('site').value=s[0];})
       .catch(function(e){$('site').innerHTML='<option value="">'+esc(e.status===403?'administrators only':e.message)+'</option>';});
     req('GET','/credentials').then(function(j){CREDS=(j.credentials||[]).filter(function(c){return c.kind==='ssh';});$('sshuse').innerHTML='<option value="new">New login</option>'+CREDS.map(function(c){return '<option value="'+esc(c.id)+'">Existing: '+esc(c.label)+'</option>';}).join('');}).catch(function(){ /* a background refresh: the panel keeps its last state and the next refresh retries */ });
