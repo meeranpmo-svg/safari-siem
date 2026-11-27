@@ -17,7 +17,28 @@
     if (String(method || 'GET').toUpperCase() !== 'GET') return { status: 403, body: { error: 'POC mode: nothing is changed - switch POC data off in the menu to work on live data' } };
     var L = window.ZYB_POC || [];
     for (var i = 0; i < L.length; i++) { if (L[i].re.test(u.pathname)) { var d = typeof L[i].data === 'function' ? L[i].data(u) : L[i].data; hits++; mark(); return { status: 200, body: JSON.parse(JSON.stringify(d)) }; } }
+    var R = window.ZYB_POC_REC; if (R && (R.common || []).indexOf(u.pathname) >= 0) return null;   // a platform call every page makes: live
+    if (R && R.map && Object.prototype.hasOwnProperty.call(R.map, u.pathname)) { hits++; mark(); return { status: 200, body: shift(JSON.parse(JSON.stringify(R.map[u.pathname])), R.recorded_at) }; }
+    // a page that draws from illustrative data never mixes in live answers: what the data does not cover is refused, said plainly
+    if (pocPage()) return { status: 503, body: { error: 'POC: no illustrative data for this part of the page' } };
     pass++; return null;
+  }
+  function pocPage() {
+    var pg = location.pathname.split('/').pop() || 'index.html', R = window.ZYB_POC_REC;
+    if (R && R.pages && R.pages[pg]) return true;
+    return (window.ZYB_POC || []).some(function (e) { return (e.pages || []).indexOf(pg) >= 0; });
+  }
+  // recorded answers carry the dates of the day they were recorded: moved forward by the same amount so the pages look current
+  var ISO = /^(\d{4}-\d{2}-\d{2})(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+  function shift(v, at) {
+    var d = Date.now() - Date.parse(at || ''); if (!(d > 86400000)) return v;
+    var walk = function (x) {
+      if (typeof x === 'string') { var m = ISO.exec(x); if (!m) return x; var t = Date.parse(m[2] ? x : m[1] + 'T00:00:00Z'); if (isNaN(t)) return x; var n = new Date(t + d).toISOString(); return m[2] ? n : n.slice(0, 10); }
+      if (Array.isArray(x)) return x.map(walk);
+      if (x && typeof x === 'object') { for (var k in x) if (Object.prototype.hasOwnProperty.call(x, k)) x[k] = walk(x[k]); return x; }
+      return x;
+    };
+    return walk(v);
   }
   // XMLHttpRequest: answered from the illustrative data without a network call
   var open0 = XMLHttpRequest.prototype.open, send0 = XMLHttpRequest.prototype.send;
@@ -54,6 +75,7 @@
     if (document.body) go(); else document.addEventListener('DOMContentLoaded', go);
   }
   // a page with no illustrative data says so, once it has loaded
+  if (pocPage()) mark();
   window.addEventListener('load', function () { setTimeout(function () { if (hits || document.getElementById('zyb-poc-nodata')) return; var main = document.querySelector('main'); if (!main) return;
     var n = document.createElement('div'); n.id = 'zyb-poc-nodata'; n.className = 'zyb-poc-b'; n.style.cssText = 'border:1px dashed #8b93a4;background:transparent;border-radius:10px;padding:6px 12px;margin:0 0 12px;font-size:12px;color:#8b93a4';
     n.textContent = 'POC data is on, but this page has no illustrative data - it shows LIVE data.'; main.insertBefore(n, main.firstChild); }, 2500); });

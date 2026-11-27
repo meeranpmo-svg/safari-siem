@@ -31,7 +31,7 @@
     { id: 'SUP-00004', host: '10.50.1.8', dst: '192.0.2.77:53', reason: 'Site gateway DNS forwarder? (POC)', status: 'proposed', proposed_by: 'analyst.poc', expires: iso(now + 30 * D).slice(0, 10) }] };
 
   window.ZYB_POC = (window.ZYB_POC || []).concat([
-    { re: /^\/api\/soc\/ndr$/, data: NDR },
-    { re: /^\/api\/soc\/ndr\/suppressions$/, data: SUP },
+    { re: /^\/api\/soc\/ndr$/, data: NDR, pages: ['ndr.html'] },
+    { re: /^\/api\/soc\/ndr\/suppressions$/, data: SUP, pages: ['ndr.html'] },
   ]);
 })();
