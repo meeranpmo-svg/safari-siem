@@ -1,0 +1,69 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Departments</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css">
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Departments over /api/itam/org/departments (engine/org-departments.js): the organisation's own register - per company of the
+     group, with head, code, cost centre, branches and the joiner template HR onboarding fills from. Administrators add, edit,
+     rename (the asset records follow), merge, and add or merge the department names found in the data. -->
+<style>
+.mut{color:#8b93a4}.sm{font-size:12px}.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}.frm .wide{grid-column:1/-1}
+.chk{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}.chk label{flex-direction:row;align-items:center;gap:6px;color:inherit}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Organisation · departments</div><h1>Departments</h1><div class="mut sm">The group's own department register - HR onboarding, Work From Home and the asset register use it; each department's joiner template fills a new joiner's defaults</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="addd" class="pri" hidden>+ Add department</button></div>
+<div id="err"></div>
+<div class="k" id="kp"></div>
+<section class="card" id="formc" hidden><h2 id="formh">Department</h2><form id="df" class="frm" autocomplete="off"></form><p class="mut sm" id="dfm"></p></section>
+<section class="card"><h2>The register <span class="c" id="dc"></span></h2><div class="tw" id="dl"></div><p class="mut sm" id="src"></p></section>
+<section class="card" id="sugc" hidden><h2>Found in the data, not in the register <span class="c">AI · learned from the asset register and onboarding requests</span></h2><div class="tw" id="sug"></div></section>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, V = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(new Error('IT Asset Management is not reachable')); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000); }
+  function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function slug(n) { var s = String(n || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40); return /^[a-z]/.test(s) ? s : 'd_' + s; }
+  function draw() { var D = V.departments, act = D.filter(function (d) { return d.active !== false; });
+    $('up').textContent = 'updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); $('addd').hidden = !can('admin');
+    $('kp').innerHTML = tile('Departments', act.length, D.length - act.length ? (D.length - act.length) + ' merged / inactive' : 'all active') + tile('Companies', V.companies.length || 1, V.companies.slice(0, 3).join(' · ')) + tile('With a head', act.filter(function (d) { return d.head; }).length + ' / ' + act.length, 'approves joiners and remote work', act.some(function (d) { return !d.head; }) ? 'warn' : 'ok')
+      + tile('Found in the data', V.suggestions.length, 'names not in the register', V.suggestions.length ? 'warn' : 'ok') + tile('Register', V.enforced ? 'in use' : 'company setting', V.enforced ? 'onboarding only accepts these' : 'saved on the first edit');
+    $('dc').textContent = act.length + ' active';
+    $('dl').innerHTML = '<table><thead><tr><th>Department</th><th>Company</th><th>Head</th><th>Code · cost centre</th><th>Branches</th><th>Joiner template</th><th>Assets</th><th></th></tr></thead><tbody>' + D.map(function (d) { var t = d.template || {};
+      return '<tr' + (d.active === false ? ' style="opacity:.55"' : '') + '><td><b>' + esc(d.name) + '</b>' + (d.name_ar ? '<div class="mut sm" dir="rtl">' + esc(d.name_ar) + '</div>' : '') + (d.active === false ? ' ' + pill(d.merged_into ? 'merged into ' + d.merged_into : 'inactive', '') : '') + '</td><td>' + esc(d.company || '') + '</td><td>' + esc(d.head || '–') + '</td><td class="sm">' + esc([d.code, d.cost_center].filter(Boolean).join(' · ') || '–') + '</td><td class="sm">' + esc((d.branches || []).join(', ') || '–') + '</td>'
+        + '<td class="sm">' + esc((t.laptop_profile || 'standard') + ' laptop' + (t.vpn ? ' · VPN' : '') + (t.m365 !== false ? ' · M365' : '') + ((t.groups || []).length ? ' · ' + t.groups.length + ' group(s)' : '') + ((t.licences || []).length ? ' · ' + t.licences.join(', ') : '')) + '</td><td>' + (d.assets || 0) + '</td><td style="white-space:nowrap">' + (can('admin') && d.active !== false ? '<button type="button" class="sm" data-ed="' + esc(d.id) + '">Edit</button> <button type="button" class="sm" data-mg="' + esc(d.id) + '">Merge…</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>';
+    $('src').textContent = V.from_company_setting ? 'These come from the company setting. The first change saves them as the register; from then on HR onboarding accepts only these departments.' : 'Renaming a department moves the asset records with it; a merge moves them into the other department and keeps this one inactive.';
+    $('sugc').hidden = !V.suggestions.length;
+    $('sug').innerHTML = '<table><thead><tr><th>Name in the data</th><th>Assets</th><th>Onboarding requests</th><th></th></tr></thead><tbody>' + V.suggestions.map(function (x, i) {
+      return '<tr><td><b>' + esc(x.name) + '</b></td><td>' + x.assets + '</td><td>' + x.onboarding + '</td><td style="white-space:nowrap">' + (can('admin') ? '<button type="button" class="sm" data-sa="' + i + '">Add as a department</button> <select class="sm" data-sm="' + i + '"><option value="">Merge into…</option>' + act.map(function (d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + '</option>'; }).join('') + '</select>' : '') + '</td></tr>'; }).join('') + '</tbody></table>'; }
+  function form(d) { var t = (d && d.template) || {}, I = function (n, l, v, x) { return '<label' + (x && x.wide ? ' class="wide"' : '') + '>' + esc(l) + '<input name="' + n + '" value="' + esc(v == null ? '' : v) + '"' + (x && x.req ? ' required' : '') + (x && x.dir ? ' dir="' + x.dir + '"' : '') + '></label>'; };
+    $('formc').hidden = false; $('formh').textContent = d && d.id ? 'Edit ' + d.name : 'Add a department';
+    $('df').innerHTML = I('name', 'Name *', d && d.name, { req: 1 }) + I('name_ar', 'Name in Arabic', d && d.name_ar, { dir: 'rtl' }) + I('code', 'Code', d && d.code) + '<label>Company<input name="company" list="cos" value="' + esc(d && d.company || '') + '"><datalist id="cos">' + V.companies.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist></label>'
+      + I('head', 'Head (platform user)', d && d.head) + I('cost_center', 'Cost centre', d && d.cost_center) + I('branches', 'Branches (comma-separated)', d && (d.branches || []).join(', '), { wide: 1 })
+      + '<div class="wide"><b class="sm">Joiner template</b> <span class="mut sm">- the defaults HR onboarding fills for a new joiner of this department</span></div>'
+      + '<label>Laptop profile<select name="laptop_profile">' + V.profiles.map(function (p) { return '<option' + (p === (t.laptop_profile || 'standard') ? ' selected' : '') + '>' + p + '</option>'; }).join('') + '</select></label>'
+      + '<div class="chk"><label><input type="checkbox" name="mailbox"' + (t.mailbox !== false ? ' checked' : '') + '> Mailbox</label><label><input type="checkbox" name="m365"' + (t.m365 !== false ? ' checked' : '') + '> Microsoft 365</label><label><input type="checkbox" name="vpn"' + (t.vpn ? ' checked' : '') + '> VPN</label></div>'
+      + I('groups', 'AD groups (comma-separated, never privileged)', (t.groups || []).join(', '), { wide: 1 }) + I('licences', 'Licences (comma-separated)', (t.licences || []).join(', '), { wide: 1 })
+      + '<div class="wide"><button type="submit" class="pri">Save</button> <button type="button" id="dfx">Cancel</button></div>';
+    $('df').setAttribute('data-id', d && d.id ? d.id : ''); $('dfm').textContent = ''; $('formc').scrollIntoView({ block: 'start' }); }
+  var list = function (v) { return String(v || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); };
+  document.addEventListener('submit', function (e) { if (e.target.id !== 'df') return; e.preventDefault(); var f = e.target, id = f.getAttribute('data-id') || slug(f.name.value);
+    var b = { name: f.name.value.trim(), name_ar: f.name_ar.value.trim(), code: f.code.value.trim(), company: f.company.value.trim(), head: f.head.value.trim(), cost_center: f.cost_center.value.trim(), branches: list(f.branches.value), active: true,
+      template: { laptop_profile: f.laptop_profile.value, mailbox: f.mailbox.checked, m365: f.m365.checked, vpn: f.vpn.checked, groups: list(f.groups.value), licences: list(f.licences.value) } };
+    req('PUT', '/org/departments/' + encodeURIComponent(id), b).then(function (r) { V = r; $('formc').hidden = true; draw(); toast('Saved' + (r.records_moved ? ' - ' + r.records_moved + ' asset record(s) follow the new name' : '')); }, function (er) { $('dfm').textContent = er.message; }); });
+  document.addEventListener('click', function (e) { var t = e.target.closest('[data-ed],[data-mg],[data-sa],#addd,#dfx'); if (!t) return;
+    if (t.id === 'addd') return form(null); if (t.id === 'dfx') { $('formc').hidden = true; return; }
+    if (t.hasAttribute('data-ed')) return form(V.departments.filter(function (d) { return d.id === t.getAttribute('data-ed'); })[0]);
+    if (t.hasAttribute('data-sa')) { var s = V.suggestions[+t.getAttribute('data-sa')]; return form({ name: s.name, template: {} }); }
+    if (t.hasAttribute('data-mg')) { var from = t.getAttribute('data-mg'), opts = V.departments.filter(function (d) { return d.active !== false && d.id !== from; }), into = prompt('Merge into which department? Type its id:\n' + opts.map(function (d) { return d.id + '  (' + d.name + ')'; }).join('\n')); if (!into) return;
+      var why = prompt('Why are they merged? (at least 5 characters)'); if (!why) return;
+      req('POST', '/org/departments/' + encodeURIComponent(from) + '/merge', { into: into.trim(), reason: why }).then(function (r) { V = r; draw(); toast('Merged - ' + r.records_moved + ' asset record(s) moved'); }, function (er) { toast(er.message); }); } });
+  document.addEventListener('change', function (e) { var t = e.target; if (!t.hasAttribute || !t.hasAttribute('data-sm') || !t.value) return; var s = V.suggestions[+t.getAttribute('data-sm')];
+    req('POST', '/org/departments-merge-name', { name: s.name, into: t.value }).then(function (r) { V = r; draw(); toast(r.records_moved + ' record(s) now in the department'); }, function (er) { toast(er.message); }); });
+  function load() { return req('GET', '/org/departments').then(function (r) { V = r; $('err').innerHTML = ''; draw(); }, function (e) { $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'Departments is not installed in IT Asset Management yet - run the update.' : e.message) + '</div></div>'; }); }
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>

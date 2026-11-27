@@ -380,6 +380,9 @@ function registerDuty(srv, app, opts = {}) {
   if (NH) NHM.registerNhiRoutes(srv, app, NH);
   // HR onboarding (engine/onboarding.js, User Desktops -> HR Onboarding): joiner request, manager approval, laptop from stock,
   // account proposed and approved by a second person, created in the directory by a person - the platform never holds a password
+  // Departments (engine/org-departments.js): the organisation's own register - HR onboarding and Work From Home read it
+  const ODM = optional('./org-departments');
+  if (ODM) ODM.registerDepartments(srv, app, ODM.createDepartments(app, { now: opts.now }));
   const ONM = optional('./onboarding');
   if (ONM) { app.addons.onboarding = ONM.createOnboarding(app, { now: opts.now, noTimer: opts.noTimer, adWriter: opts.adWriter, graphRequest: opts.graphRequest, graphLogin: opts.graphLogin, graphBase: opts.graphBase }); ONM.registerOnboarding(srv, app, app.addons.onboarding); }
   // HR offboarding (engine/offboarding.js, User Desktops -> HR Offboarding): leaver confirmed by the manager, the AD disable approved

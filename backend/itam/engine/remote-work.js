@@ -31,12 +31,16 @@ const { guardOf } = require('./errors');
 
 const DAY = 86400000, RIYADH = 3 * 3600000, MAX_SPAN = 31;
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
-const DEPTS = () => (Array.isArray(ZYB_ORG.departments) ? ZYB_ORG.departments : []).map((d) => (typeof d === 'string' ? { id: d, name: d } : { id: String(d.id), name: String(d.name || d.id) }));
+// the department register (engine/org-departments.js) when installed; else the company setting
+let APP = null;
+const DEPTS = () => { const R = APP && APP.addons && APP.addons.departments; if (R) return R.list(false).map((d) => ({ id: d.id, name: d.name }));
+  return (Array.isArray(ZYB_ORG.departments) ? ZYB_ORG.departments : []).map((d) => (typeof d === 'string' ? { id: d, name: d } : { id: String(d.id), name: String(d.name || d.id) })); };
 // the organisation's weekend (getUTCDay numbers); Saudi Arabia: Friday and Saturday
 const WEEKEND = () => (Array.isArray(ZYB_ORG.weekend) && ZYB_ORG.weekend.length ? ZYB_ORG.weekend.map(Number) : [5, 6]);
 const low = (u) => String(u || '').trim().toLowerCase().replace(/^.*\\/, '').replace(/@.*$/, '');
 
 function createRemoteWork(app, opts = {}) {
+  APP = app;
   const now = opts.now || Date.now, C = (x) => app.store.collection(x);
   const reqs = () => C('rw_requests'), pol = () => C('rw_policy');
   const audit = (who, action, target, detail) => { if (app.audit) app.audit({ by: who.user, role: who.role || '', ip: who.ip || '', action: 'remote-work.' + action, target, detail }); };

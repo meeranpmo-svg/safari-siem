@@ -3696,6 +3696,7 @@ window.ZYB_NAV = [
     },
     "g": "Desktops"
    },
+   {"h": "departments.html", "s": "Departments", "t": "Departments - the group's department register and each department's joiner template", "d": "Add, rename and merge departments per company of the group, with head, code, cost centre and branches; the joiner template HR onboarding fills from; department names found in the data, to add or merge.", "g": "People lifecycle"},
    {
     "h": "hr-onboarding.html",
     "s": "HR Onboarding",

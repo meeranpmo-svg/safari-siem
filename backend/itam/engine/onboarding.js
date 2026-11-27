@@ -129,13 +129,29 @@ function createOnboarding(app, opts = {}) {
     note: 'In-stock laptops and desktops from the asset register that are not reserved for another joiner. Add or restock one in Assets if the list is empty.' };
   }
 
+  // the joiner template of the request's department (Departments), or nothing
+  function tpl(input) { const DEP = app.addons && app.addons.departments, d = DEP && input && input.department ? DEP.find(input.department) : null; return (d && d.template) || {}; }
+  // several joiners at once (a pasted list): each row is a normal request (same validation, template defaults); errors per row
+  function bulk(input, who) {
+    person(who, 'raise onboarding requests');
+    if (!input || !Array.isArray(input.rows) || !input.rows.length || input.rows.length > 100) throw httpErr(400, 'rows: 1 - 100 joiners');
+    const out = { created: [], failed: [] };
+    input.rows.forEach((r, i) => { try { const v = create(r, who); out.created.push({ row: i + 1, id: v.id || (v.request && v.request.id), name: r && r.name }); } catch (e) { out.failed.push({ row: i + 1, name: r && typeof r.name === 'string' ? r.name.slice(0, 120) : '', error: 'rows[' + i + ']: ' + String(e.message).slice(0, 200) }); } });
+    audit(who, 'onboarding.bulk', 'onboarding', { created: out.created.length, failed: out.failed.length });
+    return out;
+  }
   function create(input, who) {
     person(who, 'raise an onboarding request');
+    { const DEP = app.addons && app.addons.departments, dn = input && input.department;   // an unknown department is named first, before the fields its template would fill
+      if (DEP && DEP.enforced() && typeof dn === 'string' && dn.trim()) { const d = DEP.find(dn); if (!d || d.active === false) throw httpErr(400, 'department: "' + dn.slice(0, 80) + '" is not in the department register (Departments) - pick one of it'); } }
     const b = body(input || {}).str('name', { required: true, max: 120, min: 3 }).str('employee_id', { required: true, max: 20, re: /^[A-Za-z0-9-]{1,20}$/, msg: 'employee_id must be the HR employee number (letters, digits, -)' })
       .str('job_title', { required: true, max: 120 }).str('department', { required: true, max: 120 }).str('branch', { max: 120 }).date('start_date', { required: true })
-      .str('manager', Object.assign({ required: true }, USER)).oneOf('laptop_profile', PROFILES, { required: true }).bool('mailbox', { def: true }).bool('vpn', { def: false }).bool('m365', { def: true }).str('note', { max: 1000 })
+      .str('manager', Object.assign({ required: true }, USER)).oneOf('laptop_profile', PROFILES, { def: tpl(input).laptop_profile || undefined, required: !tpl(input).laptop_profile }).bool('mailbox', { def: tpl(input).mailbox !== false }).bool('vpn', { def: !!tpl(input).vpn }).bool('m365', { def: tpl(input).m365 !== false }).str('note', { max: 1000 })
       .rule((o) => (o.start_date < today() ? 'start_date cannot be in the past' : null)).done();
     if (!/[A-Za-z]/.test(b.name)) throw httpErr(400, 'name must be written in English letters as it will appear in the directory (Arabic name can go in the note)');
+    // the department register (engine/org-departments.js): the department must be one of it; its canonical name is kept
+    const DEP = app.addons && app.addons.departments;
+    if (DEP) { const d = DEP.find(b.department); if (d && d.active !== false) b.department = d.name; else if (DEP.enforced()) throw httpErr(400, 'department: "' + String(b.department).slice(0, 80) + '" is not in the department register (Departments) - pick one of it'); }
     noSecret(b, ['note']);
     if (col().all((r) => open(r) && same(r.employee_id, b.employee_id)).length) throw httpErr(409, 'an open onboarding request already exists for employee ' + b.employee_id);
     const n = col().all(() => true).length + 1, id = 'ONB-' + String(n).padStart(3, '0');
@@ -413,7 +429,7 @@ function createOnboarding(app, opts = {}) {
   }
   start();
 
-  return { list, laptops, one: (id) => view(get(id)), create, approve, laptop, suggest, account, accountDecide, created, credentials, handover, cancel,
+  return { list, laptops, one: (id) => view(get(id)), create, bulk, approve, laptop, suggest, account, accountDecide, created, credentials, handover, cancel,
     provision, reveal, reissueRequest, reissueDecide, licencesRetry, licencesManual, licensingTick, ad: AD, lic: LIC, PRIVILEGED };
 }
 
@@ -425,6 +441,7 @@ function registerOnboarding(srv, app, O) {
   srv.route('GET', '/onboarding/:id', (ctx) => { ctx.need('operator'); return O.one(ctx.params.id); });
   srv.route('GET', '/onboarding/:id/username', (ctx) => { ctx.need('operator'); return O.suggest(ctx.params.id); });
   srv.route('POST', '/onboarding', (ctx) => { ctx.need('operator'); return O.create(ctx.body, ctx.who); });
+  srv.route('POST', '/onboarding-bulk', (ctx) => { ctx.need('operator'); return O.bulk(ctx.body, ctx.who); }, { maxBody: 262144 });
   srv.route('POST', '/onboarding/:id/approve', (ctx) => { ctx.need('operator'); return O.approve(ctx.params.id, ctx.body, ctx.who); });
   srv.route('POST', '/onboarding/:id/laptop', (ctx) => { ctx.need('operator'); return O.laptop(ctx.params.id, ctx.body, ctx.who); });
   srv.route('POST', '/onboarding/:id/account', (ctx) => { ctx.need('operator'); return O.account(ctx.params.id, ctx.body, ctx.who); });

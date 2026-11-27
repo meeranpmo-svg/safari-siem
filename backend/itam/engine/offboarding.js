@@ -311,8 +311,22 @@ function createOffboarding(app, opts = {}) {
       groups: u.member_of.map(cnOf).slice(0, 100), last_logon: u.last_logon, blockers };
   }
 
+  // several leavers at once (a pasted list, e.g. the end of a project): each row is a normal leaver request - same validation,
+  // the same four-eyes approval before anything is disabled; an error per row
+  async function bulk(input, who) {
+    person(who, 'raise leaver requests');
+    if (!input || !Array.isArray(input.rows) || !input.rows.length || input.rows.length > 100) throw httpErr(400, 'rows: 1 - 100 leavers');
+    const out = { created: [], failed: [] };
+    for (let i = 0; i < input.rows.length; i++) { const r = input.rows[i];
+      try { const v = await create(r, who); out.created.push({ row: i + 1, id: v.id || (v.request && v.request.id), name: r && r.name }); }
+      catch (e) { out.failed.push({ row: i + 1, name: r && typeof r.name === 'string' ? r.name.slice(0, 120) : '', error: 'rows[' + i + ']: ' + String(e.message).slice(0, 200) }); } }
+    audit(who, 'offboarding.bulk', 'offboarding', { created: out.created.length, failed: out.failed.length });
+    return out;
+  }
   async function create(input, who) {
     person(who, 'raise a leaver request');
+    { const DEP = app.addons && app.addons.departments, dn = input && input.department;   // the department register, once saved
+      if (DEP && typeof dn === 'string' && dn.trim()) { const d = DEP.find(dn); if (d && d.active !== false) input = Object.assign({}, input, { department: d.name }); else if (DEP.enforced()) throw httpErr(400, 'department: "' + dn.slice(0, 80) + '" is not in the department register (Departments) - pick one of it'); } }
     const b = body(input || {}).str('name', { required: true, max: 120, min: 3 }).str('employee_id', { required: true, max: 20, re: /^[A-Za-z0-9-]{1,20}$/, msg: 'employee_id must be the HR employee number (letters, digits, -)' })
       .str('username', { required: true, max: 20, re: SAM, msg: 'username must be the Active Directory user name (sAMAccountName), e.g. sara.ghamdi' })
       .str('department', { required: true, max: 120 }).date('last_day', { required: true }).str('manager', Object.assign({ required: true }, USER))
@@ -1791,7 +1805,7 @@ function createOffboarding(app, opts = {}) {
     if (t.unref) t.unref();
   }
   start();
-  return { list, one: (id) => view(get(id), true), create, relook, confirm, approve, retry, manualDisabled, equipment, cancel, reenableRequest, reenableDecide, runDue,
+  return { list, one: (id) => view(get(id), true), create, bulk, relook, confirm, approve, retry, manualDisabled, equipment, cancel, reenableRequest, reenableDecide, runDue,
     refreshReclaim, decideReclaim, manualReclaim, reclaimTick, decideMailbox, retryMailbox, manualMailbox, mailboxTick, checkForwarding, decideForwarding, retryForwarding, manualForwarding, forwardingTick,
     decideOneDrive, extendOneDrive, endOneDriveNow, retryOneDrive, manualOneDrive, onedriveTick, decideTeams, retryTeams, manualTeams, teamsTick,
     checkCalendar, decideCalendar, retryCalendar, manualCalendar, calendarTick, requestLegal, decideLegal, retryLegal, requestRelease, decideRelease, legalTick,
@@ -1832,6 +1846,7 @@ function registerOffboarding(srv, app, O) {
   srv.route('POST', '/offboarding/run', async (ctx) => { ctx.need('admin'); body(ctx.body).done(); if (isService(ctx.who.user)) throw httpErr(403, 'a person runs it'); return O.runDue(ctx.who); });
   srv.route('GET', '/offboarding/:id', (ctx) => { ctx.need('operator'); return O.one(ctx.params.id); });
   srv.route('POST', '/offboarding', (ctx) => { ctx.need('operator'); return O.create(ctx.body, ctx.who); });
+  srv.route('POST', '/offboarding-bulk', (ctx) => { ctx.need('operator'); if (!O.bulk) throw httpErr(404, 'offboarding is not installed'); return O.bulk(ctx.body, ctx.who); }, { maxBody: 262144 });
   srv.route('POST', '/offboarding/:id/lookup', (ctx) => { ctx.need('operator'); body(ctx.body).done(); return O.relook(ctx.params.id, ctx.who); });
   srv.route('POST', '/offboarding/:id/confirm', (ctx) => { ctx.need('operator'); return O.confirm(ctx.params.id, ctx.body, ctx.who); });
   srv.route('POST', '/offboarding/:id/approve', (ctx) => { ctx.need('admin'); return O.approve(ctx.params.id, ctx.body, ctx.who); });

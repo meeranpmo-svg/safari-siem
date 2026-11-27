@@ -58,7 +58,7 @@ async function setup(t, o = {}) {
     r = await post('/offboarding/' + id + '/confirm', { decision: 'confirm' }, MGR); assert.equal(r.status, 200, JSON.stringify(r.json));
     return id;
   }
-  return { e, A, dir, ldap, clock, post, get, leaver };
+  return { e, A, dir, ldap, clock, post, get, call, leaver };
 }
 const auditOf = (e, action) => e.app.store.auditTail(500).filter((x) => x.action === action);
 const acct = (dir, sam) => dir.all().find((x) => dir.vals(x, 'sAMAccountName')[0] === sam);
@@ -172,4 +172,19 @@ test('without directory settings: manual record after the same two approvals', a
   assert.equal((await post('/offboarding/' + id + '/disabled', { directory_ref: 'CHG-1' }, DESK)).status, 409, 'not before approval');
   const r = await post('/offboarding/' + id + '/approve', { decision: 'approve' }, ADM); assert.equal(r.json.disable.mode, 'manual');
   assert.equal((await post('/offboarding/' + id + '/disabled', { directory_ref: 'disabled in ADUC, CHG-4412' }, DESK)).status, 200);
+});
+
+// several leavers at once (the end of a project): each row a normal request with its own validation, an error per row, the same
+// confirmation afterwards; the department register is applied; roles and audit
+test('several leavers at once: an error per row, the department register, roles, audit', async (t) => {
+  const { e, post, call } = await setup(t);
+  const rows = [LEAVER, Object.assign({}, LEAVER, { name: 'Other Person', username: 'other.person', employee_id: 'E-99999' }), Object.assign({}, LEAVER, { name: 'Bad Row', username: 'not valid!', employee_id: 'E-1' })];
+  assert.equal((await post('/offboarding-bulk', { rows }, { user: 'vera.syn', role: 'viewer' })).status, 403);
+  assert.equal((await post('/offboarding-bulk', { rows: [] }, HR)).status, 400);
+  const r = await post('/offboarding-bulk', { rows }, HR); assert.equal(r.status, 200, JSON.stringify(r.json));
+  assert.equal(r.json.created.length, 2); assert.equal(r.json.failed.length, 1); assert.match(r.json.failed[0].error, /^rows\[2\]: username/);
+  assert.ok(e.app.store.auditTail(50).some((x) => x.action === 'offboarding.bulk' && x.detail.created === 2));
+  // once the department register is saved, an unknown department is refused and a known one takes its canonical name
+  assert.equal((await call('PUT', '/org/departments/claims_syn', { name: 'Claims Synthetic' }, ADM)).status, 200);
+  const bad = await post('/offboarding', Object.assign({}, LEAVER, { username: 'admin.person', employee_id: 'E-20003', department: 'Nowhere' }), HR); assert.equal(bad.status, 400); assert.match(bad.json.error, /^department/);
 });
