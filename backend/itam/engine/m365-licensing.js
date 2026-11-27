@@ -156,6 +156,7 @@ function createM365Licensing(app, opts = {}) {
     return { skus, users, apps, act, errors };
   }
   const skuRows = (j) => (j.value || []).map((s) => ({ sku_id: s.skuId, part: s.skuPartNumber, enabled: (s.prepaidUnits || {}).enabled || 0, consumed: s.consumedUnits || 0, free: ((s.prepaidUnits || {}).enabled || 0) - (s.consumedUnits || 0),
+    warning: (s.prepaidUnits || {}).warning || 0, suspended: (s.prepaidUnits || {}).suspended || 0, applies_to: s.appliesTo || '',
     plans: (s.servicePlans || []).map((p) => ({ id: p.servicePlanId, name: p.servicePlanName })).slice(0, 80) }));
 
   async function test(who) {

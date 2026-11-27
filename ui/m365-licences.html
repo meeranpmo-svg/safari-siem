@@ -1,0 +1,109 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Microsoft 365 Licences</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Microsoft 365 Licences & Security over /api/itam/m365-licences (engine/m365-licence-intel.js), READ-ONLY: every subscription with
+     bought / assigned / free / expiring seats and the ML forecast; the waste (disabled, inactive, never used, overlapping, desktop
+     Office unused) with its cost from the prices an administrator enters; the security the licences buy (Entra ID P1 / P2, Defender
+     for Office 365 / Endpoint, Intune, Purview) and who is without it; what the AI noticed. Names for operators and above (PDPL);
+     reclaiming is done through HR Offboarding (four-eyes) or the Microsoft 365 admin centre - never from here. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:230px}
+.mut{color:#8b93a4}.sm{font-size:12px}.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.bad{background:#ff7b72}.dot.warn{background:#e3b341}.dot.info{background:#58a6ff}.dot.ok{background:#3fb950}
+.mbar{display:inline-block;width:90px;height:8px;border-radius:5px;background:rgba(127,140,160,.18);vertical-align:middle;margin-right:6px;overflow:hidden}.mbar>i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--v-acc,#2f8fd8),var(--v-teal,#19a7b8))}.mbar.warn>i{background:#e3b341}.mbar.bad>i{background:#ff7b72}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.chips button{border-radius:999px;padding:4px 11px;font-size:12px}.chips button[aria-pressed="true"]{background:var(--v-acc,#1f6feb);border-color:var(--v-acc,#1f6feb);color:#fff}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+.note{border-left:3px solid #f59f00;padding:6px 10px;border-radius:4px;background:rgba(245,159,0,.08);font-size:12.5px;margin:6px 0}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Microsoft 365 · licences · security</div><h1>Microsoft 365 Licences &amp; Security</h1><div class="mut sm">Every subscription, what is wasted and what it costs, when seats run out, and the security the licences buy - learned from the tenant, read-only</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="conn" hidden class="card"></div>
+<div id="main" hidden>
+ <div class="k" id="kp"></div>
+ <div class="g3">
+  <section class="card"><h2>Seats per licence <span class="c">assigned and free</span></h2><div class="cv"><canvas id="cv-seats"></canvas></div></section>
+  <section class="card"><h2>Where the waste is <span class="c">AI · ML · paid licences</span></h2><div class="cv"><canvas id="cv-waste"></canvas></div></section>
+  <section class="card"><h2>Security the licences buy <span class="c">% of licensed people covered</span></h2><div class="cv"><canvas id="cv-sec"></canvas></div></section>
+ </div>
+ <section class="card"><h2>Assigned seats over time <span class="c">the daily history behind the forecast</span></h2><div class="cv"><canvas id="cv-trend"></canvas></div></section>
+ <section class="card"><h2>What the AI noticed <span class="c">AI · ML</span></h2><ul class="ins" id="ins"></ul><p class="mut sm" style="margin:8px 0 0">Indicators from the tenant's own data, not proof. Reclaim a licence through HR Offboarding (a second administrator approves) or the Microsoft 365 admin centre - this page never changes the tenant.</p></section>
+ <section class="card"><h2>Licences <span class="c" id="lc"></span></h2><div class="tw" id="lic"></div></section>
+ <section class="card" id="wastec"><h2>Reclaim candidates <span class="c" id="wc"></span></h2><div class="chips" id="wchips"></div><div class="tw" id="waste"></div></section>
+ <section class="card"><h2>Security coverage <span class="c">what each licensed person is protected by</span></h2><div class="tw" id="sec"></div><div id="nop1"></div></section>
+ <section class="card" id="setc" hidden><h2>Settings <span class="c">administrators</span></h2><div id="set"></div></section>
+ <p class="mut sm" id="foot"></p>
+</div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, V = null, WF = 'all';
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 180000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('IT Asset Management is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000); }
+  function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function mbar(v) { if (v == null) return '–'; var c = v > 100 ? 'bad' : v >= 95 ? 'warn' : ''; return '<span class="mbar ' + c + '"><i style="width:' + Math.max(2, Math.min(100, v)) + '%"></i></span>' + esc(v) + '%'; }
+  var RS = { disabled: ['Disabled account', 'bad'], inactive: ['Inactive', 'warn'], 'never-used': ['Never used', 'warn'], overlap: ['Overlapping', 'warn'], 'right-size': ['Right-size', 'info'] };
+  var num = function (n) { return n == null ? '–' : Number(n).toLocaleString('en-US'); };
+
+  function draw() {
+    var v = V, C = window.zybCharts; $('up').textContent = v.read ? 'read ' + String(v.read.at).replace('T', ' ').slice(0, 16) + ' UTC' : '';
+    $('rf').hidden = !can('operator') || !v.connected;
+    if (!v.read) { $('main').hidden = true; $('conn').hidden = false; $('conn').innerHTML = '<h2>' + (v.connected ? 'Not read yet' : 'Connect Microsoft 365') + '</h2><p>' + esc(v.note) + '</p>' + (!v.connected && can('admin') ? '<p><a href="hr-onboarding.html">Open HR Onboarding → Microsoft 365 →</a></p>' : ''); return; }
+    $('conn').hidden = true; $('main').hidden = false;
+    var T = v.totals, W = v.waste, B = W.by_reason, flagged = B.disabled + B.inactive + B['never-used'] + B.overlap + B['right-size'];
+    var p1 = (v.security || []).filter(function (s) { return s.key === 'p1'; })[0], soon = v.licences.filter(function (l) { return l.days_to_full != null; }).sort(function (a, b) { return a.days_to_full - b.days_to_full; })[0];
+    $('kp').innerHTML = tile('Paid seats bought', num(T.bought), v.licences.filter(function (l) { return !l.free_sku; }).length + ' paid subscriptions')
+      + tile('Assigned', num(T.assigned), T.util != null ? T.util + '% used' : '', T.util >= 95 ? 'warn' : '')
+      + tile('Free seats', num(T.free), 'bought, not assigned', T.free < 0 ? 'bad' : T.free > T.bought * 0.15 ? 'warn' : 'ok')
+      + tile('Reclaimable', num(flagged), 'paid licences flagged', flagged ? 'warn' : 'ok')
+      + tile('Waste a month', W.monthly != null ? num(W.monthly) + ' ' + W.currency : '–', W.monthly != null ? num(W.monthly * 12) + ' ' + W.currency + ' a year' : 'enter prices in Settings', W.monthly ? 'bad' : '')
+      + tile('Entra ID P1 coverage', p1 && p1.pct != null ? p1.pct + '%' : '–', p1 ? p1.covered + ' / ' + p1.users + ' licensed people' : '', p1 && p1.pct < 100 ? 'bad' : 'ok')
+      + tile('First to run out', soon ? soon.days_to_full + ' days' : '–', soon ? soon.name + ' · ML forecast' : 'needs 5+ days of history', soon && soon.days_to_full <= 30 ? 'bad' : '');
+    // charts
+    var paid = v.licences.filter(function (l) { return !l.free_sku && l.bought; }).slice(0, 10);
+    if (C && window.Chart) {
+      if (paid.length) C.bars($('cv-seats'), paid.map(function (l) { return l.name; }), [{ label: 'Assigned', data: paid.map(function (l) { return l.assigned; }), color: 'acc' }, { label: 'Free', data: paid.map(function (l) { return Math.max(0, l.free); }), color: 'teal' }], { stacked: true, horizontal: true, title: 'Seats per licence' }); else C.empty($('cv-seats'), 'No paid subscription.');
+      if (flagged) C.ring($('cv-waste'), ['Disabled account', 'Inactive', 'Never used', 'Overlapping', 'Right-size'], [B.disabled, B.inactive, B['never-used'], B.overlap, B['right-size']], ['crit', 'warn', 'pink', 'purple', 'acc'], { v: flagged, l: 'licences' }, { title: 'Where the waste is' }); else C.empty($('cv-waste'), 'No waste found - every paid licence is in use.');
+      var S = (v.security || []).filter(function (s) { return s.users; });
+      if (S.length) C.bars($('cv-sec'), S.map(function (s) { return s.label.replace(/ \(.*\)$/, ''); }), [{ label: '% covered', data: S.map(function (s) { return s.pct; }), colors: S.map(function (s) { return s.pct >= 100 ? 'ok' : s.pct >= 50 ? 'warn' : 'crit'; }) }], { horizontal: true, title: 'Security the licences buy' }); else C.empty($('cv-sec'), 'No licensed people.');
+      var H = (v.history || []); if (H.length > 1) C.area($('cv-trend'), H.map(function (h) { return h.date.slice(5); }), (v.trend_parts || []).map(function (p) { return { label: p.name, data: H.map(function (h) { return h.v[p.part] != null ? h.v[p.part] : null; }), fill: false }; }), { title: 'Assigned seats over time' });
+      else C.empty($('cv-trend'), 'The history fills one point a day; the forecast starts after 5 days.');
+    }
+    $('ins').innerHTML = (v.noticed || []).length ? v.noticed.map(function (n) { return '<li><span class="dot ' + esc(n.tone) + '"></span><span>' + esc(n.text) + '</span></li>'; }).join('') : '<li class="mut">Nothing stands out: every paid licence is used and everyone is covered.</li>';
+    // licences
+    $('lc').textContent = v.licences.length + ' subscriptions';
+    $('lic').innerHTML = '<table><thead><tr><th>Licence</th><th>Bought</th><th>Assigned</th><th>Free</th><th>Used</th><th>Expiring / suspended</th><th>Runs out in</th><th>Unusual</th>' + (W.currency ? '<th>Price / month</th>' : '') + '</tr></thead><tbody>' + v.licences.map(function (l) {
+      return '<tr><td><b>' + esc(l.name) + '</b><div class="mut sm">' + esc(l.part) + (l.free_sku ? ' · free' : '') + '</div></td><td>' + num(l.bought) + '</td><td>' + num(l.assigned) + '</td><td>' + (l.free < 0 ? pill(num(l.free), 'bad') : num(l.free)) + '</td><td>' + (l.free_sku ? '–' : mbar(l.util)) + '</td><td>'
+        + (l.expiring ? pill(l.expiring + ' expiring', 'warn') : '') + (l.suspended ? pill(l.suspended + ' suspended', 'bad') : '') + (!l.expiring && !l.suspended ? '–' : '') + '</td><td>' + (l.days_to_full != null ? pill(l.days_to_full + ' days', l.days_to_full <= 30 ? 'bad' : 'warn') : '<span class="mut sm">' + (l.history < 5 ? 'learning' : 'not filling') + '</span>') + '</td><td>'
+        + (l.jump ? pill(l.jump.from + ' → ' + l.jump.to, 'warn') : '–') + '</td>' + (W.currency ? '<td>' + (l.price != null ? esc(l.price + ' ' + W.currency) : '<span class="mut sm">–</span>') + '</td>' : '') + '</tr>'; }).join('') + '</tbody></table>';
+    // reclaim candidates (operators: names; viewers: counts only)
+    $('wc').textContent = flagged ? flagged + ' paid licences' : '';
+    $('wchips').innerHTML = v.names ? ['all'].concat(Object.keys(RS)).map(function (k) { var n = k === 'all' ? flagged : B[k]; return '<button type="button" data-wf="' + k + '" aria-pressed="' + (WF === k) + '">' + esc(k === 'all' ? 'All' : RS[k][0]) + ' <span class="mut">' + n + '</span></button>'; }).join('') : '';
+    var L = (W.items || []).filter(function (w) { return WF === 'all' || w.reason === WF; });
+    $('waste').innerHTML = !v.names ? '<div class="empty">' + flagged + ' paid licences are flagged. Operators and administrators see who holds them.</div>' : L.length ? '<table><thead><tr><th>Person</th><th>Licence</th><th>Why</th><th>Evidence</th>' + (W.priced ? '<th>Per month</th>' : '') + '</tr></thead><tbody>' + L.slice(0, 500).map(function (w) {
+      var r = RS[w.reason] || [w.reason, '']; return '<tr><td><b>' + esc(w.name) + '</b><div class="mut sm">' + esc(w.upn) + '</div></td><td>' + esc(w.licence) + '</td><td>' + pill(r[0], r[1]) + '</td><td class="sm">' + esc(w.why) + '</td>' + (W.priced ? '<td>' + (w.monthly != null ? esc(w.monthly + ' ' + W.currency) : '–') + '</td>' : '') + '</tr>'; }).join('') + '</tbody></table>' : '<div class="empty">Nothing in this group.</div>';
+    // security coverage
+    $('sec').innerHTML = '<table><thead><tr><th>Capability</th><th>Covered</th><th>Coverage</th><th>In the tenant</th></tr></thead><tbody>' + (v.security || []).map(function (s) {
+      return '<tr><td><b>' + esc(s.label) + '</b></td><td>' + num(s.covered) + ' / ' + num(s.users) + '</td><td>' + mbar(s.pct) + '</td><td>' + (s.licensed_in_tenant ? pill('licensed', 'ok') : pill('not bought', '')) + '</td></tr>'; }).join('') + '</tbody></table>';
+    $('nop1').innerHTML = v.names && (v.no_p1 || []).length ? '<p class="note" style="margin-top:10px">' + v.no_p1.length + ' licensed people have no Entra ID P1, so Conditional Access cannot protect their sign-in: ' + v.no_p1.slice(0, 30).map(function (x) { return esc(x.name || x.upn); }).join(', ') + (v.no_p1.length > 30 ? '…' : '') + '</p>' : '';
+    // settings (administrators)
+    $('setc').hidden = !can('admin') || !v.settings || v.settings.prices === undefined;
+    if (!$('setc').hidden) { var st = v.settings; $('set').innerHTML = '<form id="sf" class="frm"><label>Inactive after (days)<input name="inactive_days" type="number" min="14" max="365" value="' + esc(st.inactive_days) + '"></label><label>Currency<input name="currency" maxlength="3" value="' + esc(st.currency) + '"></label>'
+      + v.licences.filter(function (l) { return !l.free_sku; }).map(function (l) { return '<label>' + esc(l.name) + ' · price / month<input data-price="' + esc(l.part) + '" type="number" min="0" step="0.01" value="' + esc(st.prices && st.prices[l.part] != null ? st.prices[l.part] : '') + '" placeholder="not set"></label>'; }).join('')
+      + '<div><button type="submit" class="pri">Save</button> <span class="mut sm" id="sfm"></span></div></form><p class="mut sm">Prices are what ' + esc((window.ZYB_ORG || {}).short || 'the company') + ' pays per seat a month - only to put a cost on the waste; nothing is bought or changed.</p>'; }
+    $('foot').textContent = (v.read.errors || []).length ? 'Not everything could be read: ' + v.read.errors.join(' · ') : (v.read.reports && v.read.reports.concealed ? 'The usage reports hide user names: in the Microsoft 365 admin centre turn off "Display concealed user, group and site names" so inactive and right-size can be matched.' : '');
+  }
+  function load() { return req('GET', '/m365-licences').then(function (j) { V = j; $('err').innerHTML = ''; draw(); }, function (e) { $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'Microsoft 365 Licences is not installed in IT Asset Management yet - run the update.' : e.message) + '</div></div>'; }); }
+  document.addEventListener('click', function (e) { var t = e.target.closest('[data-wf]'); if (t) { WF = t.getAttribute('data-wf'); draw(); } });
+  document.addEventListener('submit', function (e) { if (e.target.id !== 'sf') return; e.preventDefault(); var f = e.target, prices = {};
+    [].forEach.call(f.querySelectorAll('[data-price]'), function (i) { if (i.value !== '') prices[i.getAttribute('data-price')] = Number(i.value); });
+    req('PUT', '/m365-licences/settings', { inactive_days: Number(f.inactive_days.value), currency: f.currency.value.trim().toUpperCase(), prices: prices }).then(function (j) { V = Object.assign(V, j); toast('Settings saved'); draw(); }, function (er) { $('sfm').textContent = er.message; }); });
+  $('rf').addEventListener('click', function () { var b = this; b.disabled = true; b.textContent = 'Reading the tenant…'; req('POST', '/m365-licences/refresh', {}).then(function (j) { V = j; draw(); toast('Read from Microsoft 365'); }, function (e) { toast(e.message); }).then(function () { b.disabled = false; b.textContent = '⟳ Refresh'; }); });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } load(); }; w.onerror = load; w.send();
+  setInterval(function () { if (!document.hidden) load(); }, 300000);
+})();
+</script></body></html>

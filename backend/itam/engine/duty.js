@@ -268,6 +268,9 @@ function registerDuty(srv, app, opts = {}) {
   // actions the host's report script fetches and runs
   const HVM = optional('./hyperv-manager');
   if (HVM) { app.addons.hypervManager = HVM.createHypervManager(app, { now: opts.now }); HVM.registerHypervManager(srv, app, app.addons.hypervManager); }
+  // Microsoft 365 Licences & Security (engine/m365-licence-intel.js): licence waste, forecast and the security the licences buy, read-only
+  const MLI = optional('./m365-licence-intel');
+  if (MLI) MLI.registerM365LicenceIntel(srv, app, MLI.createM365LicenceIntel(app, { now: opts.now, source: opts.m365Source }), { noTimer: opts.noTimer });
   // Work From Home (engine/remote-work.js): requests, four-eyes approval by the department's approvers, today's board, VPN readiness
   const RWM = optional('./remote-work');
   if (RWM) RWM.registerRemoteWork(srv, app, RWM.createRemoteWork(app, { now: opts.now, noTimer: opts.noTimer }));

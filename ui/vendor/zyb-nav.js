@@ -2041,6 +2041,7 @@ window.ZYB_NAV = [
     },
     "g": "Microsoft 365"
    },
+   {"h": "m365-licences.html", "s": "M365 Licences & Security", "t": "Microsoft 365 Licences & Security - every subscription, the waste and its cost, when seats run out, and the security the licences buy", "d": "Read-only from the tenant: bought / assigned / free / expiring seats, licences on disabled, inactive or never-used accounts, overlapping licences, desktop Office unused, the ML forecast and unusual jumps, Entra ID P1 / P2, Defender and Intune coverage with who is without it.", "g": "Microsoft 365"},
    {
     "h": "m365-security.html",
     "s": "Microsoft 365 Security",
