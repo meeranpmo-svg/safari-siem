@@ -44,6 +44,10 @@ let WHO = { user: 'admin.syn', role: 'admin' }; const POSTS = [];
     await p.fill('#sf [name=sid]', 'win-jubail-01'); await p.selectOption('#sf [name=site]', 'jubail'); await p.click('#sf button[type=submit]'); await p.waitForSelector('#sout pre');
     const so = await p.textContent('#sout'); ok(/synthetic-ingest-token/.test(so) && /install-agent\.ps1/.test(so) && /once/.test(so), 'Windows SIEM source: token and command shown once');
     ok(POSTS.some((x) => x[0] === '/api/soc/onboard/sources' && x[1].kind === 'windows' && x[1].id === 'win-jubail-01' && x[1].site === 'jubail'), 'the source is created as a Windows source on its site');
+    // a domain controller: the role is chosen and sent as its own kind (its steps carry the AD audit policy and continuous mode)
+    await p.selectOption('#sf [name=kind]', 'dc'); await p.fill('#sf [name=sid]', 'dc-hq-01'); await p.selectOption('#sf [name=site]', 'hq'); await p.click('#sf button[type=submit]'); await p.waitForTimeout(500);
+    ok(POSTS.some((x) => x[0] === '/api/soc/onboard/sources' && x[1].kind === 'dc' && x[1].id === 'dc-hq-01'), 'a domain controller is created as a DC source');
+    ok(/Default Domain Controllers Policy/.test(await p.textContent('#siem')), 'the page says how domain controllers are set up');
     await p.waitForSelector('#ag table'); const ag = await p.textContent('#ag');
     ok(/SITE-PC-SYN-01/.test(ag) && /reporting/.test(ag) && /silent/.test(ag) && /2 agents · 1 silent/.test(await p.textContent('#agn')), 'connected agents with the silent one');
     ok(!(await p.evaluate(() => window.PWN)) && /<img src=x/.test(ag), 'a hostile name stays text');
