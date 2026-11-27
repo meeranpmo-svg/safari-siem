@@ -241,6 +241,7 @@ async function main({ configPath, installSignals = true } = {}) {
   routeModules.push('ops/server-capacity.js');   // Capacity Planning: server CPU / memory / disk trends from the agent heartbeat   // SIEM cutover: NewEvol vs ours, readiness gates, four-eyes switch
   routeModules.push('ops/canary.js');   // SIEM pipeline canary + Pipeline Health: a labelled test line through parse -> pipeline -> detect -> alert -> store every 15 min   // SharePoint & OneDrive activity from the unified audit log (sharing, mass downloads, after hours)   // SharePoint & OneDrive insights over that discovery (exposure, retention, trend)
   routeModules.push('hardening/routes.js');    // baseline-hardening snapshots from the Windows agent (ITAM baseline scan)
+  routeModules.push('soc/nextgen.js');        // Sentra Next-Gen SIEM: unify / hunt & detect / respond, measured on this installation
   routeModules.push('soc/platform.js');       // "Run backup now" (queues zyb-backup via a systemd path unit) + backup status
   routeModules.push('soc/departments.js');    // threats by AD department (alerts → account / host last logon → department)
   routeModules.push('soc/credposture.js');   // credential encryption evidence (SAMA 3.3.9): sealed secrets, key custody, self-test, transport, disk scan

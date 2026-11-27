@@ -681,6 +681,7 @@ window.ZYB_NAV = [
   "icon": "<path d=\"M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z\"/><path d=\"m9 12 2 2 4-4\"/>",
   "pages": [
    {"h": "ndr.html", "s": "Network Detection (NDR)", "t": "Network Detection & Response - beaconing, unusual outbound volume, lateral movement and new countries from the firewalls' traffic logs", "d": "Hosts ranked by an itemised risk from machine-learning detections over the FortiGate traffic logs, each against the organisation's own history: regular check-ins to the same outside address, outbound volume above a host's usual, admin-port reach inside, first traffic to a country; four-eyes suppressions", "fw": {"nca": ["2-12", "2-13"], "iso": ["8.16", "8.20"]}, "k": ["ndr", "network detection", "beacon", "c2", "exfiltration", "lateral movement", "machine learning", "linkshadow"]},
+   {"h": "sentra-nextgen.html", "s": "Sentra Next-Gen SIEM", "t": "Sentra Next-Gen SIEM - unify, hunt & detect, respond", "d": "The platform at a glance as one wheel: first and third-party data, the real-time pipeline, agents and collectors; search, threat intelligence and detections; case management, agentic investigations and governed SOAR - each with its live figure and what to do next, and the headline figures measured on this installation (noise removed, time to resolve, false-positive share, events per second)", "fw": {"nca": ["2-12"], "iso": ["8.16"]}, "k": ["next-gen siem", "nextgen", "sentra", "agentic soc", "platform", "unify", "hunt", "detect", "respond", "soar"]},
    {
     "h": "soc-overview.html",
     "s": "SOC Overview",
