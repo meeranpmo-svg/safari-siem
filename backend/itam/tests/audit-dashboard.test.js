@@ -29,7 +29,8 @@ test('every framework on one page; nothing assessed is never a score; roles', as
   assert.equal((await s.get('/audit-dashboard/export', VIEW)).status, 403);
   const r = await s.get('/audit-dashboard'); assert.equal(r.status, 200, r.raw);
   const v = r.json, fw = (id) => v.frameworks.find((f) => f.id === id);
-  assert.deepEqual(v.frameworks.map((f) => f.id), ['pdpl', 'nca-ecc', 'ndmo', 'sama', 'ia', 'iso27001']);
+  assert.deepEqual(v.frameworks.map((f) => f.id), ['pdpl', 'nca-ecc', 'ndmo', 'sama', 'ia', 'iso27001', 'aramco']);
+  assert.equal(fw('aramco').page, 'aramco-ccc.html'); assert.equal(fw('aramco').score, null, 'Aramco CCC: no score before controls are imported and assessed'); assert.match(fw('aramco').extra, /no control list imported/);
   assert.equal(fw('iso27001').page, 'iso27001.html', 'ISO 27001 sits beside the regulators'); assert.match(fw('iso27001').extra, /readiness/);
   for (const id of ['pdpl', 'sama', 'ia']) { assert.equal(fw(id).status, 'not_assessed', id); assert.equal(fw(id).score, null, id + ' has no score until assessed'); }
   assert.ok(fw('nca-ecc').available && fw('ndmo').available);

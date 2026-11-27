@@ -94,6 +94,19 @@ function createAuditDashboard(app, opts = {}) {
       extra: (v.levels && v.levels.applicable ? 'fully compliant ' + v.levels.pct.fully + '%, partially ' + v.levels.pct.partially + '%, not compliant ' + v.levels.pct.not + '%, not assessed ' + v.levels.pct.not_assessed + '%; ' : '') + (v.maturity || []).filter((m) => m.level !== null && m.level !== undefined).length + ' of 15 domains with a maturity level',
       top: gaps.slice(0, 8).map((x) => ({ id: x.id, title: x.title, ref: x.domain + ' ' + x.domain_name, result: x.result, why: s(x.why, 240), severity: x.severity })) };
   }
+  // Saudi Aramco CCC (engine/aramco-ccc.js): the imported SACS-002 controls that apply to the active Aramco contracts, the
+  // self-assessment, the audit firm's findings and the certificate dates
+  async function aramco() {
+    const X = A().aramcoCcc; if (!X) return null;
+    const v = X.view({ user: 'system:audit-dashboard', role: 'viewer' }), st = (c) => c.status || 'not-assessed';
+    const rows = v.controls || [], gaps = rows.filter((c) => st(c) === 'not-implemented' || st(c) === 'partial');
+    const cert = v.certificate ? 'certificate ' + (v.certificate.number || '') + ' expires ' + String(v.certificate.expires || '').slice(0, 10) + (v.days_left !== null && v.days_left !== undefined ? ' (' + v.days_left + ' days)' : '') : 'no certificate recorded';
+    return { available: true, id: 'aramco', name: 'Saudi Aramco CCC (SACS-002)', page: 'aramco-ccc.html', owner: v.profile && v.profile.ccc_owner ? 'CCC owner ' + v.profile.ccc_owner : 'no CCC owner named',
+      score: v.assessed ? v.score : null, status: !rows.length ? 'not_assessed' : v.assessed ? (gaps.length ? 'gaps' : 'partial') : 'not_assessed',
+      counts: { controls: rows.length, met: rows.filter((c) => st(c) === 'implemented').length, gaps: rows.filter((c) => st(c) === 'not-implemented').length, partial: rows.filter((c) => st(c) === 'partial').length, not_assessed: rows.filter((c) => st(c) === 'not-assessed').length },
+      extra: (rows.length ? v.applicable + ' of ' + v.controls_total + ' imported control(s) apply; ' : 'no control list imported - import your copy of SACS-002; ') + cert + (v.overdue ? '; ' + v.overdue + ' action(s) overdue' : '') + ((v.findings || []).filter((f) => f.status !== 'closed').length ? '; ' + (v.findings || []).filter((f) => f.status !== 'closed').length + ' open audit finding(s)' : ''),
+      top: gaps.slice(0, 8).map((x) => ({ id: x.id, title: x.title, ref: x.domain || '', result: st(x) === 'partial' ? 'partial' : 'gap', why: s(x.requirement || '', 240), severity: 'high' })) };
+  }
   function checklist(fw, name) {
     return async () => {
       const C = A().auditChecklist; if (!C) return null;
@@ -154,9 +167,10 @@ function createAuditDashboard(app, opts = {}) {
     const [cc, dl] = await Promise.all([source('ccm', ccm), source('deadlines', deadlines)]);
     const [p, e, n, sa, ia, pg, tm, dp, io] = await Promise.all([source('pdpl', pdpl), source('nca-ecc', ecc), source('ndmo', ndmo),
       source('sama', checklist('sama', 'SAMA Cyber Security Framework')), source('ia', checklist('ia', 'Insurance Authority (IA)')), source('programmes', programmes), source('teams', teams), source('departments', departments), source('iso27001', iso27001)]);
-    const frameworks = [['pdpl', 'PDPL (SDAIA)', p], ['nca-ecc', 'NCA ECC-1:2018', e], ['ndmo', 'NDMO data management', n], ['sama', 'SAMA Cyber Security Framework', sa], ['ia', 'Insurance Authority (IA)', ia], ['iso27001', 'ISO/IEC 27001:2022', io]]
+    const ac = await source('aramco', aramco);
+    const frameworks = [['pdpl', 'PDPL (SDAIA)', p], ['nca-ecc', 'NCA ECC-1:2018', e], ['ndmo', 'NDMO data management', n], ['sama', 'SAMA Cyber Security Framework', sa], ['ia', 'Insurance Authority (IA)', ia], ['iso27001', 'ISO/IEC 27001:2022', io], ['aramco', 'Saudi Aramco CCC (SACS-002)', ac]]
       // a framework the organisation is not under (its module switched off in the brand setting) is not listed at all
-      .filter(([id]) => (app.config && app.config.audit_dashboard && app.config.audit_dashboard.all_frameworks) || !((id === 'sama' && OFF.has('fw-sama')) || (id === 'ia' && OFF.has('fw-ia'))))
+      .filter(([id]) => (app.config && app.config.audit_dashboard && app.config.audit_dashboard.all_frameworks) || !((id === 'sama' && OFF.has('fw-sama')) || (id === 'ia' && OFF.has('fw-ia')) || (id === 'aramco' && OFF.has('fw-aramco'))))
       .map(([id, name, x]) => (x.available ? x : { available: false, id, name, reason: x.reason, status: 'not_available', score: null }));
     // what needs an auditor's attention first: overdue audit findings, overdue evidence requests, framework gaps
     const att = [];
@@ -240,7 +254,7 @@ function createAuditDashboard(app, opts = {}) {
       return { summary: v.summary, index: v.insight.index, projection: v.insight.projection, frameworks: v.frameworks.map((f) => ({ id: f.id, name: f.name, status: f.status, score: f.score, counts: f.counts, reason: f.reason })),
         movement: v.insight.frameworks.map((f) => ({ id: f.id, move_30d: f.move_30d, projection: f.projection.why })), attention: v.attention.slice(0, 20).map((a) => ({ ref: a.ref, source: a.source, severity: a.severity, priority: a.priority, text: s(a.text, 200) })),
         delivery: v.insight.delivery, analytics: v.analytics.available ? v.analytics.kpis : null }; } },
-    { name: 'gaps', description: 'The top gaps of one framework (pdpl, nca-ecc, ndmo, sama, ia, iso27001) with result and why.', input_schema: { type: 'object', properties: { framework: { type: 'string', enum: ['pdpl', 'nca-ecc', 'ndmo', 'sama', 'ia', 'iso27001'] } }, required: ['framework'], additionalProperties: false },
+    { name: 'gaps', description: 'The top gaps of one framework (pdpl, nca-ecc, ndmo, sama, ia, iso27001, aramco) with result and why.', input_schema: { type: 'object', properties: { framework: { type: 'string', enum: ['pdpl', 'nca-ecc', 'ndmo', 'sama', 'ia', 'iso27001', 'aramco'] } }, required: ['framework'], additionalProperties: false },
       run: async (inp) => { const v = await view(), f = v.frameworks.find((x) => x.id === inp.framework); if (!f || !f.available) return { error: (f && f.reason) || 'not available' }; return { name: f.name, top: f.top, pbc_overdue: f.pbc ? f.pbc.overdue : [] }; } }] });
 
   async function exportCsv(who) {
