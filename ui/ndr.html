@@ -13,11 +13,21 @@
 .ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
 .dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.crit{background:#ff7b72}.dot.warn{background:#e3b341}.dot.info{background:#58a6ff}
 .ttp{display:inline-block;font:600 11px ui-monospace,Consolas,monospace;border:1px solid rgba(188,140,255,.5);color:#bc8cff;border-radius:6px;padding:0 6px;margin-top:3px}
+.kc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 12px}@media(max-width:800px){.kc{grid-template-columns:repeat(2,minmax(0,1fr))}}.kc>div{position:relative;border:1px solid rgba(127,140,160,.25);border-radius:10px;padding:10px 12px 10px 14px;background:rgba(127,140,160,.05)}.kc>div.on{border-color:#ff7b72;background:linear-gradient(135deg,rgba(255,123,114,.16),rgba(255,123,114,.03))}.kc .n{font-size:22px;font-weight:700}.kc .h{font-size:11.5px;color:#8b93a4}.kc>div:not(:last-child)::after{content:"\25B6";position:absolute;right:-12px;top:40%;color:#8b93a4;font-size:12px;z-index:1}
+.hm{border-collapse:separate;border-spacing:3px;width:100%}.hm td,.hm th{text-align:center;font-size:12px;padding:6px 4px;border-radius:6px}.hm td.c0{background:rgba(127,140,160,.08);color:#5c6370}.hm td.c1{background:rgba(227,179,65,.4)!important}.hm td.c2{background:#c93c37!important;color:#fff!important;font-weight:700}.hm th{color:#8b93a4;font-weight:500}.hm tr[data-host]{cursor:pointer}.hm tr[data-host]:hover td:first-child{text-decoration:underline}
+.pb{border-left:3px solid #ff7b72;padding:8px 12px;border-radius:6px;background:rgba(255,123,114,.06);margin:6px 0}.pb ol{margin:4px 0 0;padding-left:20px;font-size:13px}.pb a{color:#79b8ff}
+#graph{width:100%;height:340px}#graph text{fill:#c9d1d9;font:11px "Segoe UI",system-ui,sans-serif}
 .chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid rgba(127,140,160,.3);border-radius:999px;padding:3px 10px;font-size:12px}
 </style></head><body><main>
 <div class="top"><div><div class="eb">Security operations · network · NDR</div><h1>Network Detection &amp; Response</h1><div class="mut sm">Beaconing, unusual outbound volume, lateral movement and new countries - each host against its own history, from the firewalls' traffic logs</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="run" hidden>▶ Run now</button><button type="button" id="rf">⟳ Refresh</button></div>
 <div class="k" id="kp"><div class="empty">Loading…</div></div>
 <div id="charts" hidden>
+ <section class="card"><h2>Attack stages <span class="c">where the behaviours sit on the attack chain</span></h2><div class="kc" id="kc"></div></section>
+ <div class="grid2">
+  <section class="card"><h2>Hosts × behaviours <span class="c">click a host for its response</span></h2><div class="tw" id="hm"></div></section>
+  <section class="card"><h2>Who talks to what outside <span class="c">beaconing and new countries</span></h2><svg id="graph" viewBox="0 0 760 340" role="img" aria-label="Internal hosts and the outside destinations they reach"></svg></section>
+ </div>
+ <section class="card" id="pbc"><h2>Response playbook <span class="c" id="pbh">select a host</span></h2><div id="pb"><div class="mut sm">Click a host in the heatmap or the risk list. Every step is done by a person through the four-eyes pages - nothing is blocked from here.</div></div></section>
  <div class="g3">
   <section class="card"><h2>Detections by behaviour</h2><div class="cv"><canvas id="cv-kind"></canvas></div></section>
   <section class="card"><h2>Last 14 days <span class="c">detections per day</span></h2><div class="cv"><canvas id="cv-trend"></canvas></div></section>
@@ -55,6 +65,40 @@
     var ct = D.filter(function (d) { return d.kind === 'country'; }); if (ct.length) out.push(['info', 'New countries: ' + ct.map(function (d) { return d.dst; }).filter(function (x, i, a) { return a.indexOf(x) === i; }).join(', '), 'Usually a new SaaS or CDN; confirm with the business before allowing it on the firewall geo policy.']);
     return out;
   }
+  // ---------- response graphics ----------
+  var STAGES = [['beacon', 'Command & control', 'regular check-ins outside'], ['lateral', 'Lateral movement', 'admin ports inside'], ['exfil', 'Exfiltration', 'data out above usual'], ['country', 'New destinations', 'first time in 30 days']];
+  var PLAY = {
+    beacon: ['Check the process making the connections on the host (EDR / Task Manager / netstat -b).', 'If unknown: isolate the host - propose a FortiGate quarantine on <a href="fortigate-nac.html">Network Access Control</a> (a second person approves).', 'Plan a block of the destination on <a href="fortigate-fleet.html">FortiGate Fleet</a> (four-eyes).', 'Open a case on <a href="incident-response.html">Incident Response</a> and keep the evidence.'],
+    exfil: ['Find what was sent: top destinations and applications for the host on <a href="network-flows.html">Network Flows</a>.', 'If it is not a known backup or upload: isolate the host and reset the user\'s password and sessions.', 'Check whether personal data left - the PDPL 72-hour clock may start (<a href="pdpl-dashboard.html">PDPL</a>).', 'Open a case on <a href="incident-response.html">Incident Response</a>.'],
+    lateral: ['Confirm with IT whether an administrator or a tool (deployment, scanner) did this today.', 'If not: isolate the host, disable the account it used, and look for the same account on other hosts (SIEM sign-ins).', 'Check the targets for new services, scheduled tasks and admin shares.', 'Open a case on <a href="incident-response.html">Incident Response</a> - ransomware spreads this way.'],
+    country: ['Look up the destination: a new SaaS / CDN is common.', 'If the business does not need it: propose a geo-block on <a href="fortigate-fleet.html">FortiGate Fleet</a> (four-eyes).', 'If it is known-good: propose a suppression here (a second person approves).'] };
+  function respond(host) {
+    var D = V.detections.filter(function (d) { return d.host === host; }), H = V.hosts.filter(function (h) { return h.host === host; })[0];
+    if (!D.length) return;
+    var kinds = []; D.forEach(function (d) { if (kinds.indexOf(d.kind) < 0) kinds.push(d.kind); });
+    $('pbh').textContent = host + (H ? ' · risk ' + H.risk : '') + ' · ' + kinds.map(function (k) { return KIND[k]; }).join(', ');
+    $('pb').innerHTML = (kinds.length > 1 ? '<div class="pb" style="border-color:#bc8cff;background:rgba(188,140,255,.08)"><b>Several behaviours on one host</b> - treat it as compromised until shown otherwise: isolate first, investigate second.</div>' : '')
+      + kinds.map(function (k) { var tp = TTP[k], ev = D.filter(function (d) { return d.kind === k; }); return '<div class="pb"><b>' + esc(KIND[k]) + '</b>' + (tp ? ' <span class="ttp">' + esc(tp[0]) + '</span>' : '') + '<div class="mut sm">' + ev.map(function (d) { return esc(d.why); }).join(' · ') + '</div><ol>' + PLAY[k].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol></div>'; }).join('');
+    $('pbc').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function graphics(D) {
+    $('kc').innerHTML = STAGES.map(function (s) { var n = D.filter(function (d) { return d.kind === s[0]; }), hs = n.map(function (d) { return d.host; }).filter(function (x, i, a) { return a.indexOf(x) === i; });
+      return '<div class="' + (n.length ? 'on' : '') + '"><div class="h">' + esc(s[1]) + '</div><div class="n">' + n.length + '</div><div class="h">' + esc(hs.length ? hs.slice(0, 3).join(', ') + (hs.length > 3 ? ' +' + (hs.length - 3) : '') : s[2]) + '</div></div>'; }).join('');
+    var hosts = V.hosts.slice(0, 15);
+    $('hm').innerHTML = hosts.length ? '<table class="hm"><thead><tr><th style="text-align:left">Host</th>' + STAGES.map(function (s) { return '<th>' + esc(s[1]) + '</th>'; }).join('') + '<th>Risk</th></tr></thead><tbody>' + hosts.map(function (h) {
+      return '<tr data-host="' + esc(h.host) + '" tabindex="0"><td style="text-align:left"><b>' + esc(h.host) + '</b></td>' + STAGES.map(function (s) { var x = D.filter(function (d) { return d.host === h.host && d.kind === s[0]; }), sev = x.some(function (d) { return d.severity === 'high'; }) ? 2 : x.length ? 1 : 0; return '<td class="c' + sev + '" title="' + esc(x.map(function (d) { return d.why; }).join(' | ')) + '">' + (x.length ? x.length : '·') + '</td>'; }).join('') + '<td><b>' + esc(h.risk) + '</b></td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No host at risk.</div>';
+    // the graph: internal hosts left, outside destinations right
+    var NS = 'http://www.w3.org/2000/svg', svg = $('graph'); svg.innerHTML = '';
+    var E = D.filter(function (d) { return (d.kind === 'beacon' || d.kind === 'country') && d.dst; }), L = [], R = [];
+    E.forEach(function (d) { if (L.indexOf(d.host) < 0) L.push(d.host); var t = d.dst; if (R.indexOf(t) < 0) R.push(t); });
+    if (!E.length) { var tx = document.createElementNS(NS, 'text'); tx.setAttribute('x', 380); tx.setAttribute('y', 170); tx.setAttribute('text-anchor', 'middle'); tx.textContent = 'No host reaches an unusual outside destination.'; svg.appendChild(tx); return; }
+    var y = function (i, n) { return 30 + (n === 1 ? 140 : i * (280 / (n - 1))); }, el = function (tag, a) { var e = document.createElementNS(NS, tag); for (var k in a) e.setAttribute(k, a[k]); svg.appendChild(e); return e; };
+    E.forEach(function (d) { var y1 = y(L.indexOf(d.host), L.length), y2 = y(R.indexOf(d.dst), R.length), c = d.kind === 'beacon' ? (d.severity === 'high' ? '#ff7b72' : '#e3b341') : '#58a6ff';
+      el('path', { d: 'M150 ' + y1 + ' C 380 ' + y1 + ', 380 ' + y2 + ', 610 ' + y2, stroke: c, 'stroke-width': d.kind === 'beacon' ? 2.5 : 1.5, fill: 'none', opacity: '.85', 'stroke-dasharray': d.kind === 'country' ? '5 4' : '' }); });
+    L.forEach(function (h, i) { var yy = y(i, L.length), x = D.some(function (d) { return d.host === h && d.kind === 'exfil'; }); el('circle', { cx: 150, cy: yy, r: 7, fill: x ? '#ff7b72' : '#bc8cff' }); var t = el('text', { x: 138, y: yy + 4, 'text-anchor': 'end' }); t.textContent = h + (x ? ' ⬆' : ''); });
+    R.forEach(function (r, i) { var yy = y(i, R.length); el('rect', { x: 604, y: yy - 6, width: 12, height: 12, rx: 3, fill: '#58a6ff' }); var t = el('text', { x: 624, y: yy + 4 }); t.textContent = r; });
+    var lg = el('text', { x: 380, y: 334, 'text-anchor': 'middle' }); lg.textContent = 'solid = beaconing (red high, amber medium) · dashed = new country · ⬆ = also unusual outbound volume';
+  }
   function draw() {
     if (!V.ran) { $('kp').innerHTML = ''; $('charts').hidden = true; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(V.note) + '</div></div>'; return; }
     var D = V.detections, c = function (k) { return D.filter(function (d) { return d.kind === k; }).length; }, C = window.zybCharts;
@@ -71,9 +115,10 @@
       var B = D.filter(function (d) { return d.kind === 'beacon' && d.evidence; }); if (B.length) C.bars($('cv-beacon'), B.map(function (d) { return d.host + ' → ' + d.dst; }), [{ label: 'Interval (s)', data: B.map(function (d) { return d.evidence.period_s; }), colors: B.map(function (d) { return d.severity === 'high' ? 'crit' : 'warn'; }) }], { horizontal: true, title: 'Beacon intervals' }); else C.empty($('cv-beacon'), 'No beaconing.');
       var Lt = D.filter(function (d) { return d.kind === 'lateral' && d.evidence; }); if (Lt.length) C.bars($('cv-lat'), Lt.map(function (d) { return d.host; }), [{ label: 'Usual', data: Lt.map(function (d) { return d.evidence.usual || 0; }), color: 'mute' }, { label: 'Today', data: Lt.map(function (d) { return d.evidence.today || 0; }), color: 'purple' }], { title: 'Lateral reach' }); else C.empty($('cv-lat'), 'No lateral movement.');
     }
+    graphics(D);
     var ct = D.filter(function (d) { return d.kind === 'country'; }); $('ctry').innerHTML = ct.length ? ct.map(function (d) { return '<span class="chip">🌍 <b>' + esc(d.dst) + '</b> · ' + esc(d.host) + ' · ' + esc((d.evidence && d.evidence.connections) || '') + ' connections</span>'; }).join('') : '<span class="mut sm">No new country.</span>';
     var I = insights(D); $('ins').innerHTML = I.length ? I.map(function (x) { return '<li><span class="dot ' + x[0] + '"></span><div><b>' + esc(x[1]) + '</b><div class="mut sm">' + esc(x[2]) + '</div></div></li>'; }).join('') : '<li><span class="dot info"></span><div>Nothing stands out.</div></li>';
-    var hosts = V.hosts.length ? V.hosts.map(function (h) { return '<div class="act ' + (h.risk >= 60 ? 'bad' : 'warn') + '"><b>' + esc(h.host) + '</b> <span class="bar"><i style="width:' + h.risk + '%"></i></span>' + esc(h.risk) + '<div class="sm">' + h.reasons.map(function (r) { return esc('+' + r.points + ' ' + (KIND[r.kind] || r.kind) + ': ' + r.why); }).join('<br>') + '</div></div>'; }).join('') : '<div class="empty">No host shows unusual network behaviour.</div>';
+    var hosts = V.hosts.length ? V.hosts.map(function (h) { return '<div data-host="' + esc(h.host) + '" style="cursor:pointer" class="act ' + (h.risk >= 60 ? 'bad' : 'warn') + '"><b>' + esc(h.host) + '</b> <span class="bar"><i style="width:' + h.risk + '%"></i></span>' + esc(h.risk) + '<div class="sm">' + h.reasons.map(function (r) { return esc('+' + r.points + ' ' + (KIND[r.kind] || r.kind) + ': ' + r.why); }).join('<br>') + '</div></div>'; }).join('') : '<div class="empty">No host shows unusual network behaviour.</div>';
     var det = D.length ? '<div class="tw"><table><thead><tr><th>Detection</th><th>Host</th><th>Why</th><th></th></tr></thead><tbody>' + D.map(function (d, i) { var tp = TTP[d.kind]; return '<tr><td>' + S.sev(d.severity) + ' ' + esc(KIND[d.kind] || d.kind) + (tp ? '<div><span class="ttp" title="' + esc(tp[1]) + '">' + esc(tp[0]) + '</span> <span class="mut sm">' + esc(tp[1]) + '</span></div>' : '') + '</td><td><b>' + esc(d.host) + '</b>' + (d.dst ? '<div class="mut sm">' + esc(d.dst) + '</div>' : '') + '</td><td class="sm">' + esc(d.why) + '</td><td>' + (S.can('analyst') ? '<button type="button" class="btn" data-sup="' + i + '">Propose suppression</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">No detection in the last run.</div>';
     var sup = SUP.length ? SUP.slice(0, 30).map(function (s) { return '<div class="act ' + (s.status === 'proposed' ? 'warn' : '') + '"><b>' + esc(s.id) + '</b> ' + esc(s.host) + ' → ' + esc(s.dst || KIND[s.kind] || s.kind) + ' ' + S.pill(s.status, s.status === 'approved' ? 'ok' : s.status === 'rejected' ? 'bad' : '') + '<div class="mut sm">' + esc(s.reason) + ' · by ' + esc(s.proposed_by) + (s.expires ? ' · until ' + esc(s.expires) : '') + '</div>' + (s.status === 'proposed' && S.user() !== s.proposed_by ? '<button type="button" class="btn" data-dec="approved" data-id="' + esc(s.id) + '">Approve</button> <button type="button" class="btn" data-dec="rejected" data-id="' + esc(s.id) + '">Reject</button>' : '') + '</div>'; }).join('') : '<div class="empty">No suppression.</div>';
     $('body').innerHTML = '<div class="grid2"><div class="card"><h2>🎯 Hosts by risk</h2>' + hosts + '</div><div class="card"><h2>🔎 Detections <span class="c">each against the organisation\'s own history · MITRE ATT&amp;CK as an indication</span></h2>' + det + '</div></div>'
@@ -82,6 +127,7 @@
   }
   document.addEventListener('click', function (ev) {
     var t = ev.target, a;
+    if ((a = t.closest('[data-host]'))) { respond(a.getAttribute('data-host')); return; }
     if (t.id === 'rf') { t.disabled = true; load().then(function () { t.disabled = false; S.toast('Refreshed'); }); return; }
     if (t.id === 'run') { t.disabled = true; S.req('POST', '/ndr/run', {}).then(function (r) { S.toast(r.detections.length + ' detection(s)'); load(); }).catch(function (e) { S.toast(e.message); }).then(function () { t.disabled = false; }); return; }
     if ((a = t.closest('[data-sup]'))) { var d = V.detections[Number(a.getAttribute('data-sup'))], why = prompt('Why is this known-good?'); if (!why) return; var until = prompt('Until (YYYY-MM-DD, empty = no end)') || undefined;
