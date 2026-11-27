@@ -21,7 +21,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:9px;background:rgba(255,255,255,.08)}.pill.ok{background:rgba(63,185,80,.16);color:#56d364}.pill.warn{background:rgba(227,179,65,.16);color:var(--warn)}.pill.bad{background:rgba(248,81,73,.18);color:var(--bad)}
 .box{border:1px solid var(--warn);background:rgba(227,179,65,.07);border-radius:10px;padding:12px;margin:10px 0}
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f242d;border:1px solid #2e3440;border-radius:9px;padding:9px 14px;z-index:9999}
-body.net .srv-only,body:not(.net) .net-only,body.v3 .v2c,body:not(.v3) .v3,body.nopriv .v3priv{display:none!important}
+body.win #f > :not(.trow),body.win .net-only,body:not(.win) #winp,body:not(.net) .net-only,body.v3 .v2c,body:not(.v3) .v3,body.nopriv .v3priv{display:none!important}
 @media (max-width:600px){.kv{grid-template-columns:1fr}}
 </style></head><body><main>
 <div class="top"><div><div class="eb">Asset discovery</div><h1>Add a server</h1></div><span class="sp"></span><a href="#" id="back" class="muted" style="color:var(--info)">← Asset Discovery</a></div>
@@ -29,9 +29,9 @@ body.net .srv-only,body:not(.net) .net-only,body.v3 .v2c,body:not(.v3) .v3,body.
 <div id="noadmin" class="card" hidden><h2>Administrators only</h2><p class="sub">Adding a server stores a login and scans the network, so it needs the System Admin role.</p></div>
 
 <form id="f" class="card" autocomplete="off">
-  <h2>1 · What are you adding?</h2>
-  <div class="grid" style="margin-bottom:10px">
-    <label><b>Device</b><select id="dtype"><option value="server">Server - Linux, Solaris, AIX (SSH login)</option><option value="network">Firewall, switch or router (SNMP)</option></select></label>
+  <h2 class="trow">1 · What are you adding?</h2>
+  <div class="grid trow" style="margin-bottom:10px">
+    <label><b>Device</b><select id="dtype"><option value="windows">Windows server or PC (agent / Active Directory)</option><option value="server">Server - Linux, Solaris, AIX (SSH login)</option><option value="network">Firewall, switch or router (SNMP)</option></select></label>
     <label class="net-only"><b>Role</b><select id="drole"><option value="firewall">Firewall</option><option value="switch">Switch</option><option value="router">Router</option><option value="wireless">Wireless controller / access point</option><option value="load-balancer">Load balancer</option><option value="network">Other network device</option></select></label>
   </div>
   <p class="sub srv-only">Nothing is installed on the server; discovery only reads.</p><p class="sub net-only" style="margin:0 0 6px">Adding many devices? Use <a href="network-discovery.html" style="color:var(--info)">Network Discovery</a> (IP range, subnets or a CSV list).</p><p class="sub net-only">Discovery reads the device over SNMP (read-only): name, model, serial, firmware, location and its LLDP / CDP neighbours. Nothing is changed on the device.</p>
@@ -92,6 +92,23 @@ body.net .srv-only,body:not(.net) .net-only,body.v3 .v2c,body:not(.v3) .v3,body.
   </div>
   <div class="row"><button type="submit" class="pri" id="go">Add and scan</button><span class="muted" id="hint"></span></div>
 </form>
+<div id="winp" class="card"><h2>2 · The Windows server or PC</h2>
+ <p class="sub">Windows is not scanned over the network from here. It joins the platform in one of three ways - use one, or all three:</p>
+ <div class="grid">
+  <label><b>Computer name *</b><input id="wname" maxlength="63" placeholder="HQ-FS01"></label>
+  <label><b>IP address</b><input id="wip" inputmode="decimal" placeholder="10.0.1.25"></label>
+  <label><b>Role</b><select id="wrole"><option value="server">Server</option><option value="dc">Domain controller</option><option value="workstation">Workstation / laptop</option></select></label>
+  <label><b>Windows version</b><input id="wos" maxlength="80" placeholder="Windows Server 2022"></label>
+  <label><b>Site / branch</b><input id="wsite" maxlength="120" placeholder="Riyadh HQ"></label>
+ </div>
+ <div class="row"><button type="button" class="pri" id="wgo">Add to IT Asset Management</button><span class="muted" id="wmsg"></span></div>
+ <ol class="sub" style="margin-top:12px">
+  <li><b>Register it now</b> (above): the record appears in IT Asset Management at once; a Windows server with an IP is picked up by the AI Windows Administrator automatically.</li>
+  <li><b>Install the asset agent</b> - nothing to install besides one PowerShell script; it fills hardware, software and patches and keeps them current, also from project sites off the network: <a href="agents.html" style="color:var(--info)">Agents &amp; Downloads →</a></li>
+  <li><b>Every computer from Active Directory at once</b> - a read-only LDAPS account lists all servers and workstations of the domain, by OU: <a href="discovery-studio.html" style="color:var(--info)">Asset Discovery → a scope with the Active Directory method →</a></li>
+ </ol>
+ <p class="sub">Security events from this server go to the SIEM with the Windows agent (same page, "SIEM agent for Windows").</p>
+</div>
 
 <div class="card" id="prog" hidden><h2>Progress</h2><ul class="steps" id="steps"></ul><div id="act"></div></div>
 <div class="card" id="res" hidden><h2>What was found</h2><div id="found"></div></div>
@@ -336,8 +353,16 @@ body.net .srv-only,body:not(.net) .net-only,body.v3 .v2c,body:not(.v3) .v3,body.
   $('urladd').onclick=function(){urlRow();};urlRow();
 
   // ---- wiring
-  function dview(){var n=$('dtype').value==='network';document.body.classList.toggle('net',n);document.body.classList.toggle('v3',$('nver').value==='v3');document.body.classList.toggle('nopriv',$('npriv').value==='none');
+  function dview(){var n=$('dtype').value==='network';document.body.classList.toggle('win',$('dtype').value==='windows');document.body.classList.toggle('net',n);document.body.classList.toggle('v3',$('nver').value==='v3');document.body.classList.toggle('nopriv',$('npriv').value==='none');
     document.querySelector('.top h1').textContent=n?'Add a network device':'Add a server';}
+  // Windows: register the computer in IT Asset Management now (the agent and Active Directory keep it current)
+  $('wgo').onclick=async function(){var b=this,nm=$('wname').value.trim(),ip=$('wip').value.trim(),role=$('wrole').value,os=$('wos').value.trim(),site=$('wsite').value.trim();
+    if(!/^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/.test(nm)){$('wmsg').textContent='Computer name: letters, digits, . _ - (up to 63)';return;}
+    if(ip&&!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)){$('wmsg').textContent='IP address: like 10.0.1.25';return;}
+    b.disabled=true;$('wmsg').textContent='Adding…';
+    try{var r=await req('POST','/api/itam/assets',{name:nm,type:role==='workstation'?'workstation':'server',os:os||(role==='workstation'?'Windows':'Windows Server'),mgmt_ip:ip||undefined,site:site||undefined,status:'in_use',tags:['windows'].concat(role==='dc'?['domain-controller']:[])});
+      var id=(r.asset&&r.asset.id)||r.id;$('wmsg').innerHTML='Added'+(id?' - <a href="inventory.html#asset='+encodeURIComponent(id)+'" style="color:var(--info)">open the record</a>':'')+'. Next: install the asset agent on it.';}
+    catch(e){$('wmsg').textContent=e.message;}b.disabled=false;};
   $('dtype').onchange=dview;$('nver').onchange=dview;$('npriv').onchange=dview;
   $('sshuse').onchange=function(){var nw=this.value==='new';[].forEach.call(document.querySelectorAll('.ssh-new'),function(el){el.style.display=nw?'':'none';});};
   $('f').onsubmit=function(ev){ev.preventDefault();var r=form();if(r.miss.length){$('hint').textContent='Still needed: '+r.miss.join(', ')+'.';return;}$('hint').textContent='';
