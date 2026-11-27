@@ -307,6 +307,7 @@ async function main({ configPath, installSignals = true } = {}) {
   if (state) routeModules.push('ops/questions-routes.js'); // questions from the IT Infrastructure Manager to the DBA / server / Exchange / network teams on flagged problems (last: reads their modules) // Printers: Xerox fleet health over SNMP + YSoft SAFEQ 6 usage reports
   if (state) routeModules.push('netops/fmg-routes.js');
   if (state) routeModules.push('netops/fmg-nac.js');   // Network Access Control from FortiGate device detection: endpoints per MAC, explainable risk, four-eyes authorise / quarantine
+  if (state) routeModules.push('netops/nac-sites.js');   // NAC by site: head office / branches / project sites - VLAN roles, device classes, contractor access, per-site ML
   if (state) routeModules.push('soc/ndr.js');
   if (state) routeModules.push('netops/geomap.js');
   if (state) routeModules.push('netops/fw-audit.js');   // Firewall & Security Device Audit: FortiGate (through FortiManager) and H3C / Cisco switch configuration against a fixed audit programme (read; after fmg-routes and netops)

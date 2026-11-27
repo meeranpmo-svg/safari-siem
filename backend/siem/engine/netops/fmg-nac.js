@@ -19,7 +19,7 @@
  * firewall approver scope approves. A quarantine is carried out in FortiManager / on the FortiGate by a person (add the MAC to the
  * quarantine address group or the NAC policy) and marked done here - the platform never blocks on its own.
  *   GET  {P}/nac/endpoints                       analyst (names devices and users)
- *   POST {P}/nac/decisions                       operator  {mac, action: authorise | quarantine, owner?, reason}
+ *   POST {P}/nac/decisions                       operator  {mac, action: authorise | quarantine, owner?, reason, expires? (authorise, <= 90 days)}
  *   POST {P}/nac/decisions/:id/decide            approve:eng:security  {decision, comment}
  *   POST {P}/nac/decisions/:id/done              operator  {note}   (quarantine carried out)
  */
@@ -33,7 +33,9 @@ const randomMac = (m) => /^.[26ae]/.test(m);
 
 function assess(list, decisions, now) {
   const oldest = list.reduce((a, e) => Math.min(a, Date.parse(e.first_seen) || now), now), learning = now - oldest < 7 * DAY;
-  const auth = new Set(decisions.filter((d) => d.action === 'authorise' && d.status === 'approved').map((d) => d.mac));
+  // an authorisation may carry an end date (a contractor at a project site): after it the device is not authorised any more
+  const today = new Date(now + 3 * 3600000).toISOString().slice(0, 10), okAuth = decisions.filter((d) => d.action === 'authorise' && d.status === 'approved');
+  const auth = new Set(okAuth.filter((d) => !d.expires || d.expires >= today).map((d) => d.mac)), until = new Map(okAuth.map((d) => [d.mac, d.expires || null]));
   const quar = new Map(decisions.filter((d) => d.action === 'quarantine' && ['approved', 'done'].includes(d.status)).map((d) => [d.mac, d.status]));
   const bySite = new Map(); for (const e of list) { const s = bySite.get(e.site) || { n: 0, os: {} }; s.n++; const f = family(e.os) || '?'; s.os[f] = (s.os[f] || 0) + 1; bySite.set(e.site, s); }
   return list.map((e) => {
@@ -52,7 +54,7 @@ function assess(list, decisions, now) {
     if (sw && sw.moves24 >= 3) add(25, 'flapping', sw.moves24 + ' port moves in 24 h - a loop or a spoofed MAC'); else if (sw && sw.moves24 >= 1) add(10, 'moved', 'moved to ' + sw.switch + ' ' + sw.port + ' in the last 24 h');
     const notes = randomMac(e.mac) ? ['privacy (random) MAC - the same device may appear under another MAC'] : [];
     if (sw && !e.fortigate) notes.push('on a switch port but never seen by a FortiGate - a static address, or its traffic stays local');
-    return Object.assign({}, e, { risk: Math.min(100, r.reduce((a, x) => a + x.points, 0)), reasons: r, notes, authorised: auth.has(e.mac), quarantine: quar.get(e.mac) || null });
+    return Object.assign({}, e, { risk: Math.min(100, r.reduce((a, x) => a + x.points, 0)), reasons: r, notes, authorised: auth.has(e.mac), auth_expires: until.get(e.mac) || null, auth_expired: until.has(e.mac) && !auth.has(e.mac), quarantine: quar.get(e.mac) || null });
   }).concat([]).sort((a, b) => b.risk - a.risk || String(b.last_seen).localeCompare(String(a.last_seen)));
 }
 
@@ -98,13 +100,17 @@ function register(api, deps) {
   }
   api.route('GET', `${P}/nac/endpoints`, wrap(deps, 'analyst', () => nacView()));
   api.route('POST', `${P}/nac/decisions`, wrap(deps, 'operator', async (ctx) => {
-    const b = body(ctx.body).str('mac', { required: true, max: 17 }).oneOf('action', ['authorise', 'quarantine'], { required: true }).str('owner', { max: 120 }).str('reason', { required: true, max: 400 }).done();
+    const b = body(ctx.body).str('mac', { required: true, max: 17 }).oneOf('action', ['authorise', 'quarantine'], { required: true }).str('owner', { max: 120 }).str('reason', { required: true, max: 400 }).date('expires', {}).done();
     const mac = b.mac.toLowerCase(); if (!MAC.test(mac)) throw new HttpError(400, 'mac: aa:bb:cc:dd:ee:ff');
     if (!eps.get(mac)) throw new HttpError(404, 'mac: not seen by any FortiGate');
     if (b.reason.length < 10) throw new HttpError(400, 'reason: say why, in at least 10 characters');
     if (b.action === 'authorise' && !b.owner) throw new HttpError(400, 'owner: who the device belongs to');
+    if (b.expires) {   // time-limited access (contractors, visitors at a project site): within 90 days, only for an authorisation
+      if (b.action !== 'authorise') throw new HttpError(400, 'expires: only an authorisation ends on a date');
+      const t = Date.parse(b.expires + 'T23:59:59Z'), n0 = NOW(); if (!(t > n0)) throw new HttpError(400, 'expires: a date in the future'); if (t - n0 > 90 * DAY) throw new HttpError(400, 'expires: at most 90 days ahead');
+    }
     if (dec.all((d) => d.mac === mac && d.action === b.action && d.status === 'proposed').length) throw new HttpError(409, 'a ' + b.action + ' for ' + mac + ' is already waiting for approval');
-    const d = dec.put({ id: nextId(), mac, action: b.action, owner: b.owner || '', reason: b.reason, status: 'proposed', proposed_by: ctx.user, proposed_at: new Date(NOW()).toISOString() });
+    const d = dec.put({ id: nextId(), mac, action: b.action, owner: b.owner || '', reason: b.reason, expires: b.expires || null, status: 'proposed', proposed_by: ctx.user, proposed_at: new Date(NOW()).toISOString() });
     audit(ctx, 'nac.decision.propose', d.id, { mac, action: d.action }); return d;
   }));
   api.route('POST', `${P}/nac/decisions/:id/decide`, wrap(deps, 'approve:eng:security', async (ctx) => {
