@@ -65,6 +65,9 @@ const posts = [];
   ok(cmds.length === 2 && cmds.every((c, i) => c.includes("'synthetic" + i + "''tok'") && c.includes("'" + 'ab'.repeat(32) + "'") && /\/agent'; /.test(c) && /\/hyperv\/script/.test(c) && /schtasks \/Create \/F \/TN 'Sentra Hyper-V report'/.test(c) && /throw 'the downloaded script does not match/.test(c)),
     'one command per host: its own key (quoted for PowerShell), the fingerprint check, enrol, the scheduled task: ' + cmds[0]);
   ok(/Copy each command now/.test(await p.textContent('#onbout')) && /HV-SYN-02/.test(await p.textContent('#onbinv')) && /waiting for the host/.test(await p.textContent('#onbinv')), 'shown once, and the added hosts listed with their state');
+  // a host still waiting: the help says how to check it from the host; every command switches on TLS 1.2 and keeps a log
+  ok(/still says "waiting for the host"/.test(await p.textContent('#onbhelp')) && /Test-NetConnection/.test(await p.textContent('#onbtest')) && /Trusted Root/.test(await p.textContent('#onbhelp')), 'help for a host that stays waiting');
+  ok(/Tls12/.test(await p.textContent('#onbout')) && /hyperv-enrol\.log/.test(await p.textContent('#onbout')) && /1\/4 Reaching/.test(await p.textContent('#onbout')), 'the command uses TLS 1.2, says each step and keeps a log');
   // Hosts added: Edit corrects the name (same key), Remove asks first and takes it off the list
   p.removeAllListeners('dialog'); let asked = '';
   p.on('dialog', (d) => { asked = d.message(); d.type() === 'prompt' ? d.accept('HQPSUPERM01.safari.local') : d.accept(); });

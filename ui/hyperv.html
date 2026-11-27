@@ -75,16 +75,34 @@
   var AGENT = location.origin + '/agent';
   function psq(x) { return "'" + String(x).replace(/'/g, "''") + "'"; }
   function hostCmd(sha, token) {
-    return "$ErrorActionPreference='Stop'; $s=" + psq(AGENT) + "; $d='C:\\ProgramData\\Sentra'; $r=Invoke-RestMethod \"$s/hyperv/script\"; "
-      + "$h=([BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($r.script))) -replace '-','').ToLower(); "
-      + "if ($h -ne " + psq(sha) + ") { throw 'the downloaded script does not match its fingerprint - stopped' }; "
-      + "New-Item -ItemType Directory -Force $d | Out-Null; [IO.File]::WriteAllText(\"$d\\hyperv-report.ps1\", $r.script); "
-      + "powershell -NoProfile -ExecutionPolicy Bypass -File \"$d\\hyperv-report.ps1\" -Server $s -EnrolToken " + psq(token) + "; "
-      + "schtasks /Create /F /TN 'Sentra Hyper-V report' /SC MINUTE /MO 15 /RU SYSTEM /RL HIGHEST /TR \"powershell -NoProfile -ExecutionPolicy Bypass -File $d\\hyperv-report.ps1 -Server $s\"";
+    // TLS 1.2 first (Windows PowerShell 5.1 may offer only 1.0 / 1.1); every step says what it did; a failure says why in plain words
+    // and the whole run is kept in C:\ProgramData\Sentra\hyperv-enrol.log for the administrator to read or send
+    return "[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $ErrorActionPreference='Stop'; $s=" + psq(AGENT) + "; $d='C:\\ProgramData\\Sentra'; "
+      + "New-Item -ItemType Directory -Force $d | Out-Null; Start-Transcript -Path \"$d\\hyperv-enrol.log\" -Force | Out-Null; try { "
+      + "Write-Host \"1/4 Reaching $s ...\"; try { $r=Invoke-RestMethod \"$s/hyperv/script\" } catch { $m=\"$_\"; if ($m -match 'trust|certificate|SSL') { throw \"the host does not trust the portal certificate - import the organisation CA into Local Machine > Trusted Root, then run again. ($m)\" } elseif ($m -match 'resolve|remote name') { throw \"the host cannot resolve the portal name - check DNS. ($m)\" } else { throw \"the host cannot reach the portal on HTTPS 443 - check the firewall / proxy. ($m)\" } }; "
+      + "Write-Host '2/4 Checking the script fingerprint ...'; $h=([BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($r.script))) -replace '-','').ToLower(); "
+      + "if ($h -ne " + psq(sha) + ") { throw 'the downloaded script does not match its fingerprint - stopped' }; [IO.File]::WriteAllText(\"$d\\hyperv-report.ps1\", $r.script); "
+      + "Write-Host '3/4 Enrolling and sending the first report ...'; powershell -NoProfile -ExecutionPolicy Bypass -File \"$d\\hyperv-report.ps1\" -Server $s -EnrolToken " + psq(token) + "; if (-not (Test-Path \"$d\\agent.key\")) { throw 'not enrolled - read the red line above' }; "
+      + "Write-Host '4/4 Scheduling the report every 15 minutes ...'; schtasks /Create /F /TN 'Sentra Hyper-V report' /SC MINUTE /MO 15 /RU SYSTEM /RL HIGHEST /TR \"powershell -NoProfile -ExecutionPolicy Bypass -File $d\\hyperv-report.ps1 -Server $s\" | Out-Null; "
+      + "Write-Host 'DONE - the host shows as reporting on the Hyper-V Servers page within a minute' -ForegroundColor Green } catch { Write-Host ('FAILED: ' + $_) -ForegroundColor Red } finally { Stop-Transcript | Out-Null }";
   }
+  // the one-line check to run on a host that stays "waiting for the host": can it reach and trust the portal?
+  function testCmd() { return "[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; Test-NetConnection " + psq(location.hostname) + " -Port " + (location.port || 443) + " | Select-Object ComputerName,RemoteAddress,TcpTestSucceeded; try { (Invoke-WebRequest -UseBasicParsing " + psq(AGENT + '/hyperv/script') + ").StatusCode } catch { 'FAILED: ' + $_ }"; }
+
   function onbLoad() { req('GET', '/hyperv/onboard').then(function (o) { $('onbsha').textContent = 'script fingerprint ' + o.script.sha256.slice(0, 16) + '…';
     $('onbinv').innerHTML = o.invited.length ? '<h3 style="margin-top:14px">Hosts added</h3><div class="tw"><table><thead><tr><th>Host</th><th>State</th><th>Added</th><th>Key valid until</th><th></th></tr></thead><tbody>' + o.invited.map(function (x) {
       return '<tr><td><b>' + esc(x.host) + '</b>' + (x.reports_as ? ' <span class="sm mut">reports as ' + esc(x.reports_as) + '</span>' : '') + '</td><td>' + pill(x.state, x.state === 'reporting' ? 'ok' : /expired|revoked/.test(x.state) ? 'bad' : 'warn') + '</td><td class="sm">' + esc(String(x.created_at).slice(0, 16).replace('T', ' ')) + ' · ' + esc(x.created_by || '') + '</td><td class="sm">' + esc(String(x.expires_at).slice(0, 16).replace('T', ' ')) + '</td><td style="white-space:nowrap"><button type="button" class="sm" data-hedit="' + esc(x.id) + '" data-host="' + esc(x.host) + '">✎ Edit</button> <button type="button" class="sm" data-hdel="' + esc(x.id) + '" data-host="' + esc(x.host) + '" data-used="' + (/enrolled|reporting/.test(x.state) ? '1' : '') + '">🗑 Remove</button></td></tr>'; }).join('') + '</tbody></table></div>' : '';
+    if (o.invited.some(function (x) { return /waiting|expired/.test(x.state); })) {
+      var ipish = /^(\d+\.){3}\d+$|^localhost$/.test(location.hostname);
+      $('onbinv').insertAdjacentHTML('beforeend', '<div class="card" id="onbhelp" style="margin-top:10px;border-left:4px solid #e3b341"><h3 style="margin:0 0 6px">A host still says &quot;waiting for the host&quot;?</h3>'
+        + '<p class="sm">Its one-time key has not been used: the command did not run, or stopped before it reached the portal. On the host, PowerShell <b>as Administrator</b>:</p>'
+        + '<ol class="sm" style="margin:0 0 6px;padding-left:18px"><li>Run this check - it must show <code>TcpTestSucceeded True</code> and <code>200</code>: <button type="button" data-copy="onbtest">Copy</button><pre id="onbtest" style="white-space:pre-wrap;word-break:break-all;font-size:11px">' + esc(testCmd()) + '</pre></li>'
+        + '<li><b>False</b> = the firewall between the host and ' + esc(location.hostname) + ' blocks port ' + esc(location.port || '443') + '. <b>trust / certificate</b> error = import the organisation CA (or the portal certificate) into <i>Local Machine &gt; Trusted Root Certification Authorities</i>. <b>could not be resolved</b> = DNS on the host.</li>'
+        + '<li>If the Hyper-V module is missing: <code>Install-WindowsFeature Hyper-V-PowerShell</code>.</li>'
+        + '<li>Remove the host here, <b>Create the commands</b> again (the latest command switches on TLS 1.2 and says what failed), and run the new command. Its log: <code>C:\\ProgramData\\Sentra\\hyperv-enrol.log</code>.</li></ol>'
+        + (ipish ? '<p class="sm" style="color:#e3b341">You opened the portal by ' + esc(location.hostname) + ': the commands use that address. If the host reaches the portal by its name (and the certificate is issued to the name), open the portal by its name and create the commands again.</p>' : '')
+        + '</div>');
+    }
   }).catch(function (er) { $('onbinv').innerHTML = '<p class="err">' + esc(er.message) + '</p>'; }); }
   function onbOpen() { $('onb').hidden = false; $('onb').scrollIntoView({ block: 'start' }); $('onbh').focus(); onbLoad(); }
   function onbGo() {

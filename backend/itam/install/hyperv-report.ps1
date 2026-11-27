@@ -18,18 +18,33 @@ param(
   [switch]$NoActions
 )
 $ErrorActionPreference = 'Stop'
-Import-Module Hyper-V -ErrorAction Stop
+# Windows PowerShell 5.1 on older Windows Server offers only TLS 1.0 / 1.1 by default; the portal needs TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+# what went wrong, in words an administrator can act on (the full error follows it)
+function Explain($err) {
+  $m = "$err"
+  if ($m -match 'trust relationship|SSL/TLS secure channel|certificate') { return "the host does not trust the portal's certificate - import the organisation's CA (or the portal certificate) into Local Machine > Trusted Root Certification Authorities, then run the command again" }
+  if ($m -match 'could not be resolved|No such host|remote name') { return "the host cannot resolve the portal's name - check DNS on the host, or create the commands from the portal opened by an address the host can reach" }
+  if ($m -match 'Unable to connect|actively refused|timed out|timeout|connection was closed|underlying connection') { return "the host cannot reach the portal on HTTPS (443) - check the firewall between the host and the portal and any proxy (Test-NetConnection <portal> -Port 443)" }
+  if ($m -match '\(401\)|\(403\)|Unauthorized|Forbidden|token') { return "the one-time key was refused - it is used, expired or removed: remove the host on the Hyper-V Servers page and create its command again" }
+  return "see the error below"
+}
 
 if (-not (Test-Path $KeyFile)) {
   if (-not $EnrolToken) { throw "no agent key at $KeyFile - run once with -EnrolToken <token>" }
   $dir = Split-Path $KeyFile; New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  Write-Host "Enrolling $env:COMPUTERNAME with $Server ..."
+  try {
   $enr = Invoke-RestMethod -Method Post -Uri "$Server/enrol" -ContentType 'application/json' -Body (@{ token = $EnrolToken; hostname = $env:COMPUTERNAME; platform = 'windows' } | ConvertTo-Json -Compress)
+  } catch { Write-Host ('NOT ENROLLED: ' + (Explain $_)) -ForegroundColor Red; throw }
   Set-Content -Path $KeyFile -Value $enr.agent_key -NoNewline
   $acl = New-Object System.Security.AccessControl.FileSecurity; $acl.SetAccessRuleProtection($true, $false)
   foreach ($who in @('NT AUTHORITY\SYSTEM', 'BUILTIN\Administrators')) { $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($who, 'FullControl', 'Allow'))) }
   Set-Acl -Path $KeyFile -AclObject $acl
 }
 $headers = @{ Authorization = 'Bearer ' + (Get-Content -Raw $KeyFile).Trim() }
+if (-not (Get-Module -ListAvailable -Name Hyper-V)) { Write-Host 'Enrolled, but the Hyper-V PowerShell module is missing on this host: run  Install-WindowsFeature Hyper-V-PowerShell  (or add "Hyper-V Module for Windows PowerShell" in Server Manager) - the report starts on the next run' -ForegroundColor Yellow; exit 2 }
+Import-Module Hyper-V -ErrorAction Stop
 
 # ---- 1 the report (read-only)
 $cs = Get-CimInstance Win32_ComputerSystem; $os = Get-CimInstance Win32_OperatingSystem
