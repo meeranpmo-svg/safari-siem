@@ -144,12 +144,34 @@ function unified(o) {
   return ev;
 }
 
+// Exchange Online MESSAGE TRACE record (Microsoft Graph admin/exchange/tracing/messageTraces, collect/m365-mailtrace.js):
+// {id, senderAddress, recipientAddress, receivedDateTime, subject, size, status, fromIP, toIP, messageId}. Mail flow metadata
+// only - there is no body. The subject is hashed like every other Exchange subject unless subjects are kept in clear.
+const MT_ACTION = { delivered: 'mail-delivered', failed: 'mail-failed', quarantined: 'mail-quarantined', filteredasspam: 'mail-spam', expanded: 'mail-expanded', pending: 'mail-pending', gettingstatus: 'mail-pending', none: 'mail-pending' };
+function messageTrace(o) {
+  const status = String(o.status || '').toLowerCase(), from = clean(o.senderAddress).toLowerCase(), to = clean(o.recipientAddress).toLowerCase();
+  const blocked = status === 'quarantined' || status === 'filteredasspam', failed = status === 'failed';
+  const subj = String(o.subject == null ? '' : o.subject);
+  const ev = {
+    src_type: 'm365', ts: parseTime(o.receivedDateTime), category: 'email', action: MT_ACTION[status] || 'mail-' + (status.replace(/[^a-z]/g, '') || 'unknown'),
+    outcome: failed || blocked ? 'failure' : 'success', user: from, domain: from.includes('@') ? from.split('@').pop() : '', target_user: to,
+    src_ip: ipOrEmpty(o.fromIP), dst_ip: ipOrEmpty(o.toIP), event_code: o.status ? String(o.status) : 'unknown', severity: blocked ? 1 : 0, host: 'exchange-mailflow',
+    message: `Mail ${status || 'traced'} from ${from || '?'} to ${to || '?'}`.slice(0, 300),
+    fields: { m365_type: 'mailtrace', record_id: o.id, sender: from, recipient: to, status: o.status, size: o.size === undefined ? undefined : String(Number(o.size) || 0),
+      message_id: o.messageId, subject_len: String(subj.length) },
+  };
+  if (subj) { if (exchange.subjectsInClear()) ev.fields.subject = subj.slice(0, 300); else { ev.fields.subject_sha256 = exchange.sha256(subj); ev.raw_body = JSON.stringify(Object.assign({}, o, { subject: 'sha256:' + ev.fields.subject_sha256 })); } }
+  if (blocked) ev.tags = ['T1566'];
+  return ev;
+}
+
 function parse(line, meta = {}) {
   const o = meta.obj || safeJson(line);
   if (!o || Array.isArray(o)) return null;
   if (o.userPrincipalName !== undefined && o.createdDateTime !== undefined && (o.status !== undefined || o.appDisplayName !== undefined)) return signIn(o);
   if (o.activityDisplayName !== undefined && o.activityDateTime !== undefined) return directoryAudit(o);
   if (o.Operation !== undefined && o.CreationTime !== undefined && (o.Workload !== undefined || o.RecordType !== undefined)) return unified(o);
+  if (o.senderAddress !== undefined && o.recipientAddress !== undefined && o.receivedDateTime !== undefined) return messageTrace(o);
   return null;
 }
 
@@ -157,7 +179,7 @@ module.exports = {
   name: 'm365',
   sniff(line, meta = {}) {
     const o = meta.obj || safeJson(line);
-    return !!o && ((o.userPrincipalName !== undefined && o.createdDateTime !== undefined) || (o.activityDisplayName !== undefined && o.activityDateTime !== undefined) || (o.Operation !== undefined && o.CreationTime !== undefined && (o.Workload !== undefined || o.RecordType !== undefined)));
+    return !!o && ((o.userPrincipalName !== undefined && o.createdDateTime !== undefined) || (o.activityDisplayName !== undefined && o.activityDateTime !== undefined) || (o.Operation !== undefined && o.CreationTime !== undefined && (o.Workload !== undefined || o.RecordType !== undefined)) || (o.senderAddress !== undefined && o.recipientAddress !== undefined && o.receivedDateTime !== undefined));
   },
   parse,
 };

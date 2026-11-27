@@ -1,0 +1,87 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Logs</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Office 365 email logs over /api/soc/m365/mail (engine/collect/m365-mailtrace.js): Exchange Online message trace collected by the
+     SIEM - mail flow by direction and day, delivery status, blocked inbound by sender domain, where outbound mail goes, mail to
+     personal webmail, large attachments, each sender's outbound volume against their own history, and the latest messages.
+     Metadata only (no body, subject hashed). Analysts and above (personal data - PDPL); indicators, not proof. Read-only. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:250px}
+.mut{color:#8b93a4}.sm{font-size:12px}.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none;background:#58a6ff}
+.hm{display:grid;grid-template-columns:repeat(24,1fr);gap:3px}.hm i{display:block;height:34px;border-radius:4px;background:#58a6ff}.hm span{font-size:10px;color:#8b93a4;text-align:center}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(127,140,160,.18)}.pill.bad{background:rgba(255,123,114,.18);color:#ff7b72}.pill.warn{background:rgba(227,179,65,.18);color:#e3b341}.pill.ok{background:rgba(47,212,122,.15);color:#2fd47a}
+#rec{max-height:560px;overflow:auto}.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.flt input,.flt select{min-width:160px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Microsoft 365 · Exchange Online · SIEM</div><h1>Email Logs</h1><div class="mut sm">Every message in and out of the tenant from the Exchange Online message trace - what was blocked, what failed, where mail goes, and who is sending unusually</div></div><span class="sp"></span>
+ <span class="muted" id="up"></span><select id="days" aria-label="Window"><option value="1">24 hours</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select><a class="btn" href="sharepoint.html">SharePoint &amp; OneDrive</a><button type="button" id="poll" hidden>Pull now</button><button type="button" id="refresh">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+ <div class="k" id="kp"></div>
+ <div class="g3">
+  <section class="card"><h2>Mail flow <span class="c">messages a day by direction</span></h2><div class="cv"><canvas id="cv-flow"></canvas></div></section>
+  <section class="card"><h2>Delivery status</h2><div class="cv"><canvas id="cv-status"></canvas></div></section>
+  <section class="card"><h2>What the AI noticed</h2><ul class="ins" id="ins"></ul></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>Where outbound mail goes <span class="c">top external domains</span></h2><div class="cv"><canvas id="cv-ext"></canvas></div></section>
+  <section class="card"><h2>Blocked inbound <span class="c">quarantined and spam by sender domain</span></h2><div class="cv"><canvas id="cv-blk"></canvas></div></section>
+  <section class="card"><h2>When mail moves <span class="c">messages by hour, Riyadh time</span></h2><div class="hm" id="hm"></div></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>Unusual outbound volume <span class="c">against the sender's own 14 days</span></h2><div class="tw" id="spk"></div></section>
+  <section class="card"><h2>Mail to personal webmail <span class="c">company data to private mailboxes</span></h2><div class="tw" id="pers"></div></section>
+  <section class="card"><h2>Large outbound mail <span class="c">20 MB or more</span></h2><div class="tw" id="lrg"></div></section>
+ </div>
+ <section class="card"><h2>Latest messages <span class="c" id="rc"></span></h2><div class="flt"><input id="q" type="search" placeholder="Filter by address or domain" aria-label="Filter"><select id="fs" aria-label="Status"><option value="">Any status</option><option>Delivered</option><option>Failed</option><option>Quarantined</option><option>FilteredAsSpam</option><option>Pending</option></select><select id="fd" aria-label="Direction"><option value="">Any direction</option><option>inbound</option><option>outbound</option><option>internal</option></select></div><div class="tw" id="rec" style="margin-top:8px"></div></section>
+ <p class="mut sm" id="note"></p>
+</div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { role: 'viewer' }, V = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/soc' + u); x.withCredentials = true; x.timeout = 90000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('the SIEM is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  var num = function (n) { return n == null ? '–' : Number(n).toLocaleString('en-US'); };
+  var pill = function (s) { var k = String(s || '').toLowerCase(); return '<span class="pill ' + (k === 'delivered' ? 'ok' : k === 'failed' ? 'warn' : /quarantined|spam/.test(k) ? 'bad' : '') + '">' + esc(s || '?') + '</span>'; };
+  function table(head, rows, emptyText) { return rows.length ? '<table><thead><tr>' + head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>' : '<div class="empty">' + esc(emptyText) + '</div>'; }
+  function draw() {
+    var v = V, K = v.kpis, C = window.zybCharts, col = v.collector || {};
+    $('up').textContent = col.last_poll_at ? 'last pull ' + new Date(col.last_poll_at).toLocaleString() : (col.ready ? '' : 'collector: ' + (col.missing || []).join('; '));
+    $('kp').innerHTML = tile('Messages', num(K.messages), num(K.senders) + ' senders · ' + num(K.mb) + ' MB') + tile('Inbound', num(K.inbound), 'from outside') + tile('Outbound', num(K.outbound), 'to ' + num(K.external_domains) + ' external domains')
+      + tile('Internal', num(K.internal), 'inside the tenant') + tile('Blocked', num(K.blocked), 'quarantined or spam', K.blocked ? 'warn' : '') + tile('Failed', num(K.failed), 'not delivered', K.failed ? 'warn' : '')
+      + tile('Unusual senders', num(K.spikes), 'against their own history', K.spikes ? 'crit' : 'ok') + tile('To personal webmail', num(K.personal_senders), 'senders', K.personal_senders ? 'crit' : 'ok');
+    if (C) {
+      var S = v.series; if (v.messages) C.area($('cv-flow'), S.map(function (s) { return s.day.slice(5); }), [{ label: 'Inbound', data: S.map(function (s) { return s.inbound; }), color: 'acc' }, { label: 'Outbound', data: S.map(function (s) { return s.outbound; }), color: 'purple' }, { label: 'Internal', data: S.map(function (s) { return s.internal; }), color: 'teal' }, { label: 'Blocked', data: S.map(function (s) { return s.blocked; }), color: 'crit', type: 'bar' }], { title: 'Mail flow' }); else C.empty($('cv-flow'), 'No mail traced in this window yet.');
+      var st = Object.keys(v.by_status || {}).sort(function (a, b) { return v.by_status[b] - v.by_status[a]; }), cmap = { delivered: 'ok', failed: 'warn', quarantined: 'crit', filteredasspam: 'purple', pending: 'mute', expanded: 'teal' };
+      if (st.length) C.ring($('cv-status'), st, st.map(function (k) { return v.by_status[k]; }), st.map(function (k) { return cmap[k] || 'acc'; }), { v: num(K.delivered), l: 'delivered' }, { title: 'Delivery status' }); else C.empty($('cv-status'), 'No status yet.');
+      var E = v.external_domains.slice(0, 10); if (E.length) C.bars($('cv-ext'), E.map(function (d) { return d.domain; }), [{ label: 'Messages', data: E.map(function (d) { return d.messages; }), colors: E.map(function (d) { return d.personal ? 'crit' : 'acc'; }) }], { horizontal: true, title: 'External domains' }); else C.empty($('cv-ext'), 'No outbound mail in this window.');
+      var B = v.blocked_domains.slice(0, 10); if (B.length) C.bars($('cv-blk'), B.map(function (d) { return d.domain; }), [{ label: 'Quarantined', data: B.map(function (d) { return d.quarantined; }), color: 'crit' }, { label: 'Spam', data: B.map(function (d) { return d.spam; }), color: 'warn' }], { horizontal: true, stacked: true, title: 'Blocked inbound' }); else C.empty($('cv-blk'), 'Nothing blocked in this window.');
+    }
+    var mx = Math.max.apply(null, v.hours.map(function (h) { return h.messages; }).concat([1]));
+    $('hm').innerHTML = v.hours.map(function (h) { return '<i title="' + h.hour + ':00 - ' + num(h.messages) + ' messages" style="opacity:' + (0.12 + 0.88 * h.messages / mx).toFixed(2) + '"></i>'; }).join('') + v.hours.map(function (h) { return '<span>' + (h.hour % 3 ? '' : h.hour) + '</span>'; }).join('');
+    $('ins').innerHTML = v.insights.length ? v.insights.map(function (i) { return '<li><span class="dot"></span><div>' + esc(i) + '</div></li>'; }).join('') : '<li><span class="dot"></span><div>Nothing stands out in this window.</div></li>';
+    $('spk').innerHTML = table(['Sender', 'Day', 'Messages', 'Why'], v.spikes.slice(0, 10).map(function (s) { return '<tr><td><b>' + esc(s.user) + '</b></td><td>' + esc(s.day) + '</td><td>' + num(s.messages) + '</td><td class="sm">' + esc(s.why) + '</td></tr>'; }), 'No sender is far above their own usual.');
+    $('pers').innerHTML = table(['Sender', 'Messages', 'MB', 'To'], v.personal.slice(0, 10).map(function (p) { return '<tr><td><b>' + esc(p.user) + '</b></td><td>' + num(p.messages) + '</td><td>' + num(p.mb) + '</td><td class="sm">' + esc(p.domains.join(', ')) + '</td></tr>'; }), 'No mail to personal webmail.');
+    $('lrg').innerHTML = table(['When', 'Sender', 'To', 'MB'], v.large.slice(0, 10).map(function (l) { return '<tr><td class="sm">' + esc(new Date(l.at).toLocaleString()) + '</td><td>' + esc(l.user) + '</td><td class="sm">' + esc(l.recipient) + '</td><td>' + num(l.mb) + '</td></tr>'; }), 'No large outbound mail.');
+    recent(); $('note').textContent = v.note + (v.truncated ? ' The window holds more messages than one read - the newest are shown.' : '');
+  }
+  function recent() {
+    var q = $('q').value.trim().toLowerCase(), fs = $('fs').value.toLowerCase(), fd = $('fd').value;
+    var R = V.recent.filter(function (r) { return (!q || (r.sender + ' ' + r.recipient).toLowerCase().indexOf(q) >= 0) && (!fs || String(r.status).toLowerCase() === fs) && (!fd || r.direction === fd); });
+    $('rc').textContent = R.length + ' of the latest ' + V.recent.length;
+    $('rec').innerHTML = table(['Received', 'From', 'To', 'Status', 'Direction', 'KB', 'Sender IP'], R.slice(0, 100).map(function (r) { return '<tr><td class="sm">' + esc(new Date(r.at).toLocaleString()) + '</td><td>' + esc(r.sender) + '</td><td>' + esc(r.recipient) + '</td><td>' + pill(r.status) + '</td><td class="sm">' + esc(r.direction) + '</td><td>' + num(r.kb) + '</td><td class="sm">' + esc(r.from_ip) + '</td></tr>'; }), 'No message matches.');
+  }
+  function load() { return req('GET', '/m365/mail?days=' + encodeURIComponent($('days').value)).then(function (j) { V = j; $('main').hidden = false; $('err').innerHTML = ''; draw(); }, function (e) {
+    $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'Email logs are not on this SIEM yet - run the platform update.' : e.status === 403 ? 'Email logs carry personal data - analysts and above only.' : e.message) + '</div></div>'; }); }
+  ['q', 'fs', 'fd'].forEach(function (id) { $(id).addEventListener('input', function () { if (V) recent(); }); });
+  $('days').addEventListener('change', function () { load(); });
+  $('refresh').addEventListener('click', function () { load(); });
+  $('poll').addEventListener('click', function () { var b = $('poll'); b.disabled = true; req('POST', '/m365/mail/poll', {}).then(function (r) { toast('Pulled ' + r.records + ' new message(s)'); return load(); }, function (x) { toast(x.message); }).then(function () { b.disabled = false; }); });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } $('poll').hidden = ME.role !== 'admin'; load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>

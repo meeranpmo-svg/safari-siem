@@ -228,13 +228,15 @@ async function main({ configPath, installSignals = true } = {}) {
   require('./api/lr-import').register(api, { alerts, state, config: cfg, log: log.child({ mod: 'lr-import' }) }); // before soc/routes.js (superset of its /lr/alarms); state+config enable collector-health flood remediation
   const m365Graph = require('./collect/m365-graph').createGraph({ config: cfg, log: log.child({ mod: 'm365-graph' }), stateDir: cfg.state_dir }).start();   // licences / users / Intune / posture for the portal
   const m365Files = require('./collect/m365-files').createFiles({ graph: m365Graph, config: cfg, log: log.child({ mod: 'm365-files' }), stateDir: cfg.state_dir }).start();   // SharePoint / OneDrive personal-data discovery (PDPL)
-  const deps = { hardening, piiShares, m365Files, ch, state, detector, alerts, cases, ueba, dataopt, identity, adSync, reloadM365, reloadCloudflare, cloudflareStats, reloadMimecast, mimecastStats, mimecastPoll, m365Graph, extras: { m365: () => m365.stats() }, config: cfg, log, search, intel, scheduled, pipeline, writer, parser, api, tracker, ingest, syslog };
+  const m365Mail = require('./collect/m365-mailtrace').createMailTrace({ graph: m365Graph, parser, pipeline, config: cfg, log: log.child({ mod: 'm365-mailtrace' }), stateDir: cfg.state_dir }).start();   // Exchange Online message trace -> SIEM email events (read-only)
+  const deps = { hardening, piiShares, m365Files, m365Mail, ch, state, detector, alerts, cases, ueba, dataopt, identity, adSync, reloadM365, reloadCloudflare, cloudflareStats, reloadMimecast, mimecastStats, mimecastPoll, m365Graph, extras: { m365: () => m365.stats() }, config: cfg, log, search, intel, scheduled, pipeline, writer, parser, api, tracker, ingest, syslog };
   const routeModules = ['detect/routes.js', 'soc/routes.js'];
   if (dataopt) routeModules.push('dataopt/api.js');
   if (identity) routeModules.push('ad/routes.js');
   routeModules.push('pii/routes.js');          // SharePoint / OneDrive and file-share personal-data discovery (ITAM Data Catalog)
   routeModules.push('collect/m365-files-insights.js');
   routeModules.push('collect/m365-files-activity.js');
+  routeModules.push('collect/m365-mailtrace.js');   // Office 365 email logs: message trace analysis
   routeModules.push('ops/canary.js');   // SIEM pipeline canary + Pipeline Health: a labelled test line through parse -> pipeline -> detect -> alert -> store every 15 min   // SharePoint & OneDrive activity from the unified audit log (sharing, mass downloads, after hours)   // SharePoint & OneDrive insights over that discovery (exposure, retention, trend)
   routeModules.push('hardening/routes.js');    // baseline-hardening snapshots from the Windows agent (ITAM baseline scan)
   routeModules.push('soc/platform.js');       // "Run backup now" (queues zyb-backup via a systemd path unit) + backup status
@@ -337,6 +339,7 @@ async function main({ configPath, installSignals = true } = {}) {
       await step('m365-files', () => m365Files.stop());
       await step('api', () => api.stop());
       await step('m365', () => m365.stop());
+      await step('m365-mailtrace', () => m365Mail.stop());
       await step('m365-graph', () => m365Graph.stop());
       await step('cloudflare', () => cloudflare.stop());
       await step('mimecast', () => mimecast.stop());

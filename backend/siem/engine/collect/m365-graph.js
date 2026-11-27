@@ -85,7 +85,7 @@ function createGraph({ config = {}, log, stateDir, fetchImpl, now = Date.now } =
       }
       if (!Array.isArray(j.value)) return j;
       out = out.concat(j.value); url = j['@odata.nextLink'] || '';
-      if (!url.startsWith(GRAPH)) url = '';   // never follow a link off Graph with the token
+      if (!/^https:\/\/graph\.microsoft\.com\/(v1\.0|beta)\//.test(url)) url = '';   // never follow a link off Graph with the token (v1.0 or beta: message trace is on beta)
     }
     return out;
   }

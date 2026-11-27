@@ -2087,6 +2087,18 @@ window.ZYB_NAV = [
     }
    },
    {
+    "h": "m365-mail.html",
+    "s": "Email Logs",
+    "t": "Email Logs - Office 365 mail flow in the SIEM",
+    "d": "Exchange Online message trace collected by the SIEM (read-only, metadata only, subject hashed): mail flow by direction and day, delivery status, blocked inbound by sender domain, failures, where outbound mail goes, mail to personal webmail, large attachments, each sender's outbound volume against their own history, the latest messages with filters",
+    "fw": {
+     "nca": [
+      "2-4",
+      "2-12"
+     ]
+    }
+   },
+   {
     "h": "sharepoint.html",
     "s": "SharePoint & OneDrive",
     "t": "SharePoint & OneDrive - personal data, sharing and file activity",
