@@ -9,6 +9,9 @@
  *   AI Network Access Engineer         netops/fmg-nac.js        endpoints at risk (identity change, cloned MAC, shared port, flapping)
  *   AI NDR Analyst                     soc/ndr.js               beaconing, unusual outbound volume, lateral movement
  *   AI Email Security Engineer         collect/mimecast*.js     the Mimecast collector failing or not polling
+ *   AI Email Flow Analyst              collect/m365-mailtrace.js  Exchange Online mail: a sender far above their own usual, mail to
+ *                                                               personal webmail, a phishing wave, the mail trace collector failing
+ *   AI SIEM Migration Engineer         soc/cutover.js           NewEvol cutover blockers (sources missing or silent, detections missed)
  */
 const SEV = (s) => (['critical', 'high', 'medium', 'low'].includes(s) ? s : 'medium');
 const inv = (it, prefix) => ({ summary: prefix + it.title, checks: (it.evidence || []).map((e) => ({ name: 'Evidence', status: 'info', detail: String(e) })), causes: [{ cause: it.title, confidence: 'high', fix: it.recommendation }] });
@@ -39,11 +42,30 @@ function estateAdapters(deps) {
     if (st.last_poll_at && now - Date.parse(st.last_poll_at) > 2 * 3600000) out.push({ key: 'mimecast:stale', severity: 'medium', kind: 'collector', title: 'Mimecast has not been polled since ' + st.last_poll_at, evidence: ['collector status'], recommendation: 'Check the SIEM service and outbound HTTPS to the Mimecast API', target: { type: 'collector', id: 'mimecast', name: 'Mimecast' }, site: '' });
     return out;
   };
+  const mailFind = async () => {
+    const MT = deps.m365Mail; if (!MT || !MT.status().ready || !deps.search || typeof deps.search.fetchEvents !== 'function') return null;
+    const st = MT.status(), now = (deps.now || Date.now)(), out = [];
+    if (st.last_error) out.push({ key: 'mail:collector', severity: 'high', kind: 'collector', title: 'Mail trace collector: ' + String(st.last_error).slice(0, 200), evidence: ['collector status'], recommendation: 'Grant ExchangeMessageTrace.Read.All to the Microsoft 365 app registration (admin consent)', target: { type: 'collector', id: 'm365-mailtrace', name: 'Mail trace' } });
+    const evs = await deps.search.fetchEvents({ q: 'src_type:m365 AND host:exchange-mailflow', from: now - 15 * 86400000, to: now, limit: 150000 });
+    const r = require('../collect/m365-mailtrace').analyse(evs, now, { days: 1, internal: ((deps.config || {}).m365 || {}).internal_domains });
+    for (const x of r.spikes) out.push({ key: 'mail:spike:' + x.user + ':' + x.day, severity: 'high', kind: 'outbound-spike', title: x.user + ': ' + x.why, evidence: [x.domains + ' domain(s), ' + x.mb + ' MB'], recommendation: 'Check what was sent (indicator, not proof) - a person reviews before any step', target: { type: 'mailbox', id: x.user, name: x.user } });
+    for (const p of r.personal) out.push({ key: 'mail:personal:' + p.user, severity: 'medium', kind: 'personal-webmail', title: p.user + ' mailed personal webmail ' + p.messages + ' time(s)', evidence: [p.domains.join(', ')], recommendation: 'Confirm with the line manager whether company data left (PDPL / NDMO)', target: { type: 'mailbox', id: p.user, name: p.user } });
+    if (r.kpis.blocked >= 50) out.push({ key: 'mail:phish:' + new Date(now).toISOString().slice(0, 10), severity: 'medium', kind: 'phishing-wave', title: r.kpis.blocked + ' inbound messages blocked in a day' + (r.blocked_domains[0] ? ', most from ' + r.blocked_domains[0].domain : ''), evidence: ['Exchange Online message trace'], recommendation: 'Warn the users targeted and block the sender domain on the gateway', target: { type: 'domain', id: r.blocked_domains[0] ? r.blocked_domains[0].domain : 'inbound', name: 'inbound mail' } });
+    return out;
+  };
+  const cutFind = async () => {
+    if (!deps.state) return null; const C = require('../soc/cutover'); if (!deps.state.collection('cutover').get('sources')) return null;   // nothing imported: not connected
+    const X = C.createCutover({ state: deps.state, alerts: deps.alerts, rules: () => (deps.detector && typeof deps.detector.rules === 'function' ? deps.detector.rules() : []), volumes: C.ourVolumes(deps.ch, deps.config), now: deps.now || Date.now });
+    const v = await X.view(14);
+    return v.blockers.filter((b) => b.level !== 'info').map((b) => ({ key: 'cutover:' + b.what, severity: b.level === 'crit' ? 'high' : 'medium', kind: 'cutover-blocker', title: b.what, evidence: [b.why, 'readiness ' + v.score + '/100'], recommendation: 'Close it before the NewEvol cutover, or accept it in writing on SIEM Cutover', target: { type: 'cutover', id: b.what.slice(0, 120), name: 'NewEvol cutover' } }));
+  };
   return [
     { id: 'fortigate', name: 'AI Firewall Engineer (FortiGate)', findings: fwFind, investigate: (it) => inv(it, 'FortiGate fleet: '), verify: verifyBy(fwFind) },
     { id: 'nac', name: 'AI Network Access Engineer', findings: nacFind, investigate: (it) => inv(it, 'Network Access Control: '), verify: verifyBy(nacFind) },
     { id: 'ndr', name: 'AI NDR Analyst', findings: ndrFind, investigate: (it) => inv(it, 'NDR: '), verify: verifyBy(ndrFind) },
     { id: 'mimecast', name: 'AI Email Security Engineer (Mimecast)', findings: mcFind, investigate: (it) => inv(it, 'Mimecast: '), verify: verifyBy(mcFind) },
+    { id: 'mailflow', name: 'AI Email Flow Analyst (Exchange Online)', findings: mailFind, investigate: (it) => inv(it, 'Email logs: '), verify: verifyBy(mailFind) },
+    { id: 'cutover', name: 'AI SIEM Migration Engineer (NewEvol cutover)', findings: cutFind, investigate: (it) => inv(it, 'SIEM cutover: '), verify: verifyBy(cutFind) },
   ];
 }
 

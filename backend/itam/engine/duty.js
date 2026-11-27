@@ -280,14 +280,14 @@ function registerDuty(srv, app, opts = {}) {
   // Compliance AI Assistant (engine/compliance-copilot.js): the group's companies, the realistic position per company and framework, remediation
   // and control-activity workflows with four-eyes verification, bilingual policy drafts to GRC, and questions in English or Arabic
   const CCP = optional('./compliance-copilot');
-  if (CCP) CCP.registerCopilot(srv, app, CCP.createCopilot(app, { now: opts.now, sdk: opts.copilotSdk, getKey: opts.copilotKey, aiOff: opts.copilotAiOff, registers: opts.copilotRegisters, budget: opts.copilotBudget }));
+  if (CCP) { app.addons.complianceCopilot = CCP.createCopilot(app, { now: opts.now, sdk: opts.copilotSdk, getKey: opts.copilotKey, aiOff: opts.copilotAiOff, registers: opts.copilotRegisters, budget: opts.copilotBudget }); CCP.registerCopilot(srv, app, app.addons.complianceCopilot); }
   // Azure Cloud Servers (engine/azure-cloud.js): Azure VMs read-only through Resource Graph - backup, Defender, patches, exposure,
   // cost - with start / stop / deallocate / restart as four-eyes changes sent with a separate action credential
   const AZC = optional('./azure-cloud');
   if (AZC) { app.addons.azureCloud = AZC.createAzureCloud(app, { now: opts.now, request: opts.azureRequest, login_base: opts.azureLogin, arm_base: opts.azureArm }); AZC.registerAzureCloud(srv, app, app.addons.azureCloud, { noTimer: opts.noTimer }); }
   // Capacity Planning (engine/capacity-plan.js): Hyper-V host groups with N+1 and Azure right-sizing, from the two modules above
   const CAPP = optional('./capacity-plan');
-  if (CAPP) CAPP.registerCapacityPlan(srv, app, CAPP.createCapacityPlan(app));
+  if (CAPP) { app.addons.capacityPlan = CAPP.createCapacityPlan(app); CAPP.registerCapacityPlan(srv, app, app.addons.capacityPlan); }
   // Work From Home (engine/remote-work.js): requests, four-eyes approval by the department's approvers, today's board, VPN readiness
   const RWM = optional('./remote-work');
   if (RWM) RWM.registerRemoteWork(srv, app, RWM.createRemoteWork(app, { now: opts.now, noTimer: opts.noTimer }));
@@ -493,7 +493,7 @@ function registerDuty(srv, app, opts = {}) {
   // PAM Center (engine/pam-center.js): privileged accounts with risk, the safe for shared / break-glass accounts (checkout approved by
   // another person, reveal to the requester only, rotation after use), ML on checkout patterns, maturity, the read-only advisor
   const PCTR = optional('./pam-center');
-  if (PCTR) PCTR.registerPamCenter(srv, app, PCTR.createPamCenter(app, { now: opts.now, sdk: opts.pamSdk, getKey: opts.pamKey, sealer: opts.pamSealer }));
+  if (PCTR) { app.addons.pamCenter = PCTR.createPamCenter(app, { now: opts.now, sdk: opts.pamSdk, getKey: opts.pamKey, sealer: opts.pamSealer }); PCTR.registerPamCenter(srv, app, app.addons.pamCenter); }
   // the guided PDPL self-assessment (engine/pdpl-assessment.js; questions in pyengine/pdpl_assessment.py) - writes back to the requirements above
   const PAM = PD && optional('./pdpl-assessment');
   if (PAM) { app.addons.pdplAssessment = PAM.createPdplAssessment(app, { now: opts.now, python: opts.python }); PAM.registerPdplAssessmentRoutes(srv, app, app.addons.pdplAssessment); }

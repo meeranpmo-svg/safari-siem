@@ -166,7 +166,7 @@ test('duty routes: reads open, actions need operator, policy needs admin; Servic
   const list = (await call('GET /api/soc/duty/items', ctx('viewer', {}, {}, { status: 'open' }))).r;
   assert.equal(list.total, 1); const id = list.items[0].id;
   const ids = (await call('GET /api/soc/duty/engineers', ctx('viewer'))).r.engineers.map((e) => e.id), offE = require('../engine/util/brand').engineers_off || [];
-  assert.deepEqual(ids.filter((x) => !['fortigate', 'nac', 'ndr', 'mimecast'].includes(x)), ['network', 'security'], 'no server administrators onboarded in this test');
+  assert.deepEqual(ids.filter((x) => !['fortigate', 'nac', 'ndr', 'mimecast', 'mailflow', 'cutover'].includes(x)), ['network', 'security'], 'no server administrators onboarded in this test');
   assert.deepEqual(ids.filter((x) => ['fortigate', 'nac', 'ndr', 'mimecast'].includes(x)), ['fortigate', 'nac', 'ndr', 'mimecast'].filter((x) => !offE.includes(x)), 'the organisation\'s own estate engineers');
   let x = await call('POST /api/soc/duty/items/:id/snooze', ctx('viewer', { hours: 2, reason: 'x' }, { id })); assert.equal(x.c.code, 403);
   x = await call('POST /api/soc/duty/items/:id/snooze', ctx('operator', { hours: 2 }, { id })); assert.equal(x.c.code, 400);

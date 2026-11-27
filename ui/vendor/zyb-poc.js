@@ -24,7 +24,15 @@
     pass++; return null;
   }
   // what the organisation does not run or is not under (brand: SAMA, VMware, Nutanix...) never appears in the illustrative data either
-  function off(v) { try { return typeof window.zybOffScrub === 'function' ? window.zybOffScrub(v) : v; } catch (e) { return v; /* the page shows the data as recorded */ } }
+  function off(v) { try { return engOff(typeof window.zybOffScrub === 'function' ? window.zybOffScrub(v) : v); } catch (e) { return v; /* the page shows the data as recorded */ } }
+  // the AI engineers the organisation does not have (brand engineers_off) leave the team and their work items with them
+  var EOFF = ((window.ZYB_ORG || {}).engineers_off || []);
+  function engOff(v) {
+    if (!EOFF.length) return v;
+    if (Array.isArray(v)) return v.filter(function (x) { return !(x && typeof x === 'object' && ((typeof x.engineer === 'string' && EOFF.indexOf(x.engineer) >= 0) || (typeof x.id === 'string' && EOFF.indexOf(x.id) >= 0 && ('on_duty' in x || 'patrols' in x || 'last_patrol' in x)))); }).map(engOff);
+    if (v && typeof v === 'object') { for (var k in v) if (Object.prototype.hasOwnProperty.call(v, k)) { if (EOFF.indexOf(k) >= 0 && /engineer|by_engineer|kpis/i.test(Object.keys(v).join(' ') + k) && typeof v[k] === 'object') { delete v[k]; continue; } v[k] = engOff(v[k]); } }
+    return v;
+  }
   function pocPage() {
     var pg = location.pathname.split('/').pop() || 'index.html', R = window.ZYB_POC_REC;
     if (R && R.pages && R.pages[pg]) return true;
