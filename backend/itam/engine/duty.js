@@ -267,7 +267,10 @@ function registerDuty(srv, app, opts = {}) {
   // Hyper-V servers (engine/hyperv-manager.js): metrics in the hosts' own reports → capacity, right-sizing, health; four-eyes VM
   // actions the host's report script fetches and runs
   const HVM = optional('./hyperv-manager');
-  if (HVM) { app.addons.hypervManager = HVM.createHypervManager(app, { now: opts.now }); HVM.registerHypervManager(srv, app, app.addons.hypervManager); }
+  // Hyper-V Virtual Network Map (engine/hyperv-netmap.js): switches, uplinks, VLANs and VM adapters from the same reports
+  const HVN = optional('./hyperv-netmap');
+  if (HVN) { app.addons.hypervNetmap = HVN.createHypervNetmap(app, { now: opts.now }); HVN.registerHypervNetmap(srv, app, app.addons.hypervNetmap); }
+  if (HVM) { app.addons.hypervManager = HVM.createHypervManager(app, { now: opts.now, netmap: app.addons.hypervNetmap }); HVM.registerHypervManager(srv, app, app.addons.hypervManager); }
   // Asset Onboarding (engine/asset-onboard.js): the AI helper for adding assets from any pasted list, and the accuracy per branch
   const AOB = optional('./asset-onboard');
   if (AOB) AOB.registerAssetOnboard(srv, app, AOB.createAssetOnboard(app, { now: opts.now }));

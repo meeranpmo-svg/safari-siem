@@ -1,114 +1,54 @@
-// Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE.
+// Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE.
 'use strict';
-// Browser test for the Virtual Network Map (dashboards/server/virtual-network-map.html) against the REAL ITAM engine
-// (engine/virt-network.js; the vCenter / Prism read stubbed with SYNTHETIC facts): with nothing connected it says what to
-// connect; the map shows each host's uplinks (link / no link), switches and port groups with VLANs, the odd one marked; the VLAN
-// matrix marks a differing VLAN and a missing port group; a finding shows the learned confidence, the fix and the rollback; an
-// operator proposes it, cannot approve it, a second administrator approves, the operator marks it run, the next read verifies it
-// and records the change; Trace a VM shows the path and the problem on it; Nutanix networks; a hostile port-group name stays text;
-// a viewer reads only; the menu entry.
+// Hyper-V Virtual Network Map (virtual-network-map.html) over the REAL engine (backend/itam engine/hyperv-netmap.js) and SYNTHETIC host
+// reports: tiles, insights, two charts, the host topology drawing (switches, uplinks, the down uplink in red), the findings with
+// the fix, the learned baseline per group, the VLAN x host matrix, a VM trace with the down uplink marked, the adapter filter, a
+// hostile VM name stays text, nothing reported says what to do, POC mode draws the illustrative hosts with one ribbon, menu entry.
 // Run: PLAYWRIGHT=/opt/node22/lib/node_modules/playwright node virtual-network-map.test.js
 const http = require('http'), fs = require('fs'), path = require('path');
-const ITAM = path.join(__dirname, '..', '..', 'backend', 'itam'), DASH = path.join(__dirname, '..', '..', 'ui');
-const H = require(path.join(ITAM, 'tests', 'helpers'));
+const DASH = path.resolve(__dirname, '../../ui'), ITAM = path.resolve(__dirname, '../../backend/itam');
+const N = require(path.join(ITAM, 'engine/hyperv-netmap')), { normMetrics } = require(path.join(ITAM, 'engine/hyperv-manager'));
 let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
-const ADM = { user: 'syed', role: 'admin' }, ADM2 = { user: 'asif.syn', role: 'admin' }, OP = { user: 'nora.syn', role: 'operator' }, VW = { user: 'vera.syn', role: 'viewer' };
-const XSS = '<img src=x onerror="window.__xss=1">';
-const pn = (d, up = true) => ({ device: d, mac: '00:50:56:00:00:0' + d.slice(-1), up, speed_mb: up ? 10000 : null });
-function host(id) { return { id, name: id + '.syn', cluster_id: 'c1', state: 'connected', pnics: [pn('vmnic0'), pn('vmnic1')], switches: [{ id: 'vss:vSwitch0', kind: 'standard', name: 'vSwitch0', mtu: 1500, uplinks: ['vmnic0', 'vmnic1'], active: [], standby: [], security: { promiscuous: false, mac_changes: false, forged: false } }],
-  portgroups: [{ name: 'Servers', vlan: 20, switch: 'vss:vSwitch0' }, { name: 'DMZ', vlan: 30, switch: 'vss:vSwitch0' }, { name: 'Lab ' + XSS, vlan: 99, switch: 'vss:vSwitch0' }], vmks: [{ device: 'vmk0', portgroup: 'Management', ip: '10.0.0.1', mtu: 1500, services: ['management'] }] }; }
-function facts(fixed) {
-  const h = ['esx1', 'esx2', 'esx3'].map(host);
-  if (!fixed) h[2].portgroups[0] = { name: 'Servers', vlan: 21, switch: 'vss:vSwitch0' };
-  h[1].portgroups = h[1].portgroups.filter((p) => p.name !== 'DMZ'); h[1].pnics[1] = pn('vmnic1', false);
-  return [{ id: 'vc1', label: 'VC-SYN', kind: 'vsphere', at: new Date().toISOString(), clusters: [{ id: 'c1', name: 'PROD-SYN' }], hosts: h, dvs: [], read_errors: [],
-    networks: [{ id: 'network-1', name: 'Servers', kind: 'standard' }], vms: [{ id: 'vm-1', name: 'app01-syn', host_id: 'esx3', power: 'on', network_ids: ['network-1'], nics: [{ network: 'Servers', mac: '00:50:56:aa:00:01', connected: true, ips: ['10.0.20.5'] }], guest_read: true }] },
-  { id: 'ntx1', label: 'PRISM-SYN', kind: 'nutanix', at: new Date().toISOString(), clusters: [{ id: 'n1', name: 'NTX-SYN' }], read_errors: [], hosts: [{ id: 'a1', name: 'ahv1', cluster_id: 'n1', state: 'connected', pnics: [{ device: 'eth0', up: true, speed_mb: 10000 }, { device: 'eth1', up: true, speed_mb: 1000 }] }],
-    networks: [{ id: 'n-1', name: 'VLAN20-Servers', kind: 'ahv', vlan: 20 }, { id: 'n-2', name: 'Old-Servers', kind: 'ahv', vlan: 20 }], vms: [] }];
-}
-
+const XSS = '<img src=x onerror=window.PWN=1>';
+const rep = (name, i, o = {}) => normMetrics({ collected_at: new Date().toISOString(), host: { name, network: {
+  physical: [{ name: 'NIC1', desc: 'X #1', status: 'Up', link_mbps: 10000 }, { name: 'NIC2', desc: 'X #2', status: o.down ? 'Disconnected' : 'Up', link_mbps: 10000 }],
+  switches: [{ name: 'vSW-Prod', type: 'External', set: true, mgmt_os: true, uplinks: ['X #1', 'X #2'] }].concat(o.noB ? [] : [{ name: 'vSW-Backup', type: 'External', uplinks: ['X #2'] }]),
+  adapters: [{ mgmt_os: true, name: 'Management', switch: 'vSW-Prod', vlan_mode: 'Access', vlan: 8, mac: '00155D0' + i + '0001' },
+    { vm: 'APP-SYN-0' + i, name: 'NA', switch: 'vSW-Prod', vlan_mode: 'Access', vlan: 110, mac: '00155D0' + i + '0002', ips: ['10.1.' + i + '.21'] },
+    { vm: (o.x ? XSS : 'DB-SYN-0' + i), name: 'NA', switch: 'vSW-Prod', vlan_mode: 'Access', vlan: 120, mac: '00155D0' + i + '0003' }] } }, vms: [] });
 (async () => {
-  const e = await H.startApp({ noAi: true });
-  let F = [], sources = [];
-  const capacity = { networkFacts: () => F, networkRead: async () => F.map((p) => ({ platform_id: p.id, label: p.label, ok: true })), networkSources: () => sources };
-  require(path.join(ITAM, 'engine/duty')).registerDuty(e.app.srv, e.app, { noTimer: true, vnCapacity: capacity });
-  if (e.app.addons.updateHealth) e.app.addons.updateHealth.view = () => ({ pages: [] });
-  let WHO = ADM;
-  const srv = http.createServer((req, res) => {
-    const u = new URL(req.url, 'http://x'), json = (c, b) => { res.writeHead(c, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(b)); };
-    if (u.pathname === '/dashboards/whoami.json') return json(200, WHO);
-    if (u.pathname.startsWith('/api/itam/')) {
-      const h = Object.assign({}, req.headers, { 'x-sentra-proxy-secret': H.SECRET, 'x-auth-user': WHO.user, 'x-auth-role': WHO.role });
-      const up = http.request({ host: '127.0.0.1', port: e.port, method: req.method, path: req.url, headers: h }, (r) => { res.writeHead(r.statusCode, r.headers); r.pipe(res); });
-      req.pipe(up); return;
-    }
-    if (u.pathname.startsWith('/api/')) return json(404, { error: 'not in this test' });
-    const f = path.join(DASH, u.pathname.replace(/^\/dashboards\//, '/')); if (!f.startsWith(DASH)) { res.writeHead(403); return res.end(); }
-    fs.readFile(f, (err, d) => { if (err) { res.writeHead(404); res.end(); return; } res.writeHead(200, { 'Content-Type': u.pathname.endsWith('.js') ? 'application/javascript' : u.pathname.endsWith('.css') ? 'text/css' : 'text/html' }); res.end(d); });
-  });
+  let V = N.analyse([rep('HV-SYN-01', 1), rep('HV-SYN-02', 2, { down: true, x: true }), rep('HV-SYN-03', 3, { noB: true })], {}); V.changes = [];
+  const srv = http.createServer((req, res) => { const u = new URL(req.url, 'http://x'), json = (c, b) => { res.writeHead(c, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(b)); };
+    if (u.pathname === '/dashboards/whoami.json') return json(200, { user: 'vera.syn', role: 'viewer' });
+    if (u.pathname === '/api/itam/hyperv/network') return json(200, V);
+    if (u.pathname === '/api/itam/hyperv/network/trace') { try { return json(200, N.trace(V, u.searchParams.get('vm'))); } catch (e) { return json(e.status || 500, { error: e.message }); } }
+    if (u.pathname.startsWith('/api/')) return json(500, { error: 'down (synthetic)' });
+    fs.readFile(path.join(DASH, u.pathname.replace(/^\/dashboards\//, '/')), (err, d) => { if (err) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': u.pathname.endsWith('.js') ? 'application/javascript' : u.pathname.endsWith('.css') ? 'text/css' : 'text/html' }); res.end(d); }); });
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
-  const url = 'http://127.0.0.1:' + srv.address().port + '/dashboards/virtual-network-map.html';
-  const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
-  const browser = await chromium.launch(), errs = [];
-  const wait = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 15000 }).then(() => true, () => false);
-  const tab = (p, t) => p.click('#tabs [data-tab="' + t + '"]');
+  const base = 'http://127.0.0.1:' + srv.address().port + '/dashboards/virtual-network-map.html';
+  const { chromium } = require(process.env.PLAYWRIGHT || 'playwright'); const browser = await chromium.launch(), errs = [];
+  const open = async (q) => { const p = await browser.newPage({ viewport: { width: 1500, height: 1100 } }); p.on('pageerror', (x) => errs.push(x.message)); await p.goto(base + (q || '?standalone=1')); await p.waitForSelector('#main:not([hidden])', { timeout: 15000 }); return p; };
   try {
-    const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); p.on('pageerror', (x) => errs.push(x.message));
-    p.on('dialog', (d) => d.accept());
-    await p.goto(url);
-    ok(await wait(p, () => /No vCenter or Nutanix Prism is connected/.test(document.body.textContent)), 'nothing connected: says what to connect, nothing invented');
-    F = facts(); sources = [{ id: 'vc1', label: 'VC-SYN', kind: 'vcenter', has_login: true }];
-    WHO = OP; await p.goto(url);
-    await wait(p, () => !document.getElementById('read').hidden); await p.click('#read');   // the first read: the baseline the next read is compared with
-    ok(await wait(p, () => /Read 2 platform/.test(document.body.textContent)), 'first read');
-    ok(await wait(p, () => document.querySelectorAll('.host').length === 3), 'map: the 3 hosts of PROD-SYN');
-    ok(!(await p.$eval('#read', (b) => b.hidden)), 'operator: Read now offered');
-    ok(/vmnic1 no link/.test(await p.textContent('#view')), 'uplink without link shown');
-    ok(await p.$$eval('.host .chip.c-bad', (L) => L.some((c) => /Servers · VLAN 21/.test(c.textContent))), 'the odd VLAN marked on its host');
-    await tab(p, 'matrix');
-    ok(await wait(p, () => document.querySelector('td.mx.bad') && /21/.test(document.querySelector('td.mx.bad').textContent)), 'matrix: the differing VLAN in red');
-    ok(await p.$$eval('td.mx.miss', (L) => L.length >= 1), 'matrix: the missing port group in orange');
-    ok(/VLAN 20 \(2\/3\)/.test(await p.textContent('#view')), 'matrix: the learned value with its agreement');
-    await tab(p, 'findings');
-    await p.click('[data-f^="vlan-mismatch:"]');
-    ok(await wait(p, () => /Learned from the peer hosts: 67%/.test(document.getElementById('fdet').textContent)), 'finding: the learned confidence');
-    const det = await p.textContent('#fdet');
-    ok(/esxcli network vswitch standard portgroup set -p "Servers" -v 20/.test(det) && /-v 21/.test(det), 'fix and rollback shown');
-    await p.click('[data-prop]');
-    ok(await wait(p, () => /proposed - another administrator approves/.test(document.body.textContent)), 'operator proposed the fix');
-    await tab(p, 'proposals');
-    ok(!(await p.$('[data-dec]')), 'operator cannot approve');
-    WHO = ADM; await p.goto(url); await tab(p, 'proposals');
-    ok(await wait(p, () => document.querySelector('[data-dec^="approve:"]')), 'admin sees Approve');
-    // the requester's own proposal is refused for the requester: here the requester is the operator, so a second admin approves
-    WHO = ADM2; await p.goto(url); await tab(p, 'proposals'); await p.click('[data-dec^="approve:"]');
-    ok(await wait(p, () => /Approved/.test(document.body.textContent)), 'second administrator approved');
-    WHO = OP; await p.goto(url); await tab(p, 'proposals');
-    ok(await wait(p, () => document.querySelector('[data-done]')), 'operator: I ran it');
-    await p.click('[data-done]');
-    ok(await wait(p, () => /Marked as run/.test(document.body.textContent)), 'marked as run');
-    F = facts(true); await p.click('#read');
-    ok(await wait(p, () => /Read 2 platform/.test(document.body.textContent)), 'read now');
-    await tab(p, 'proposals');
-    ok(await wait(p, () => /verified/.test(document.getElementById('view').textContent)), 'the next read verified the fix');
-    await tab(p, 'changes');
-    ok(/"Servers" VLAN 21 -> 20/.test(await p.textContent('#view')), 'the change is recorded');
-    F = facts(); await p.click('#read'); await wait(p, () => /Read 2 platform/.test(document.body.textContent));
-    await tab(p, 'trace'); await p.fill('#vmq', 'app01'); await p.click('#trgo');
-    ok(await wait(p, () => /VLAN 21/.test(document.getElementById('trout').textContent) && /vSwitch0/.test(document.getElementById('trout').textContent)), 'trace: the path with its VLAN and switch');
-    ok(/Problems on this path/i.test(await p.textContent('#trout')), 'trace: the problem on the path');
-    await tab(p, 'map'); await p.selectOption('#pl', 'ntx1');
-    ok(await wait(p, () => /AHV networks/.test(document.body.textContent) && /Old-Servers/.test(document.body.textContent)), 'Nutanix networks');
-    WHO = VW; await p.goto(url);
-    ok(await wait(p, () => document.querySelectorAll('.host').length === 3), 'viewer reads the map');
-    ok(await p.$eval('#read', (b) => b.hidden) && !(await p.$('#tabs [data-tab="ai"]')), 'viewer: no Read now, no AI');
-    await tab(p, 'findings'); await p.click('[data-f^="vlan-mismatch:"]');
-    ok(await wait(p, () => /Fix/.test(document.getElementById('fdet').textContent)) && !(await p.$('[data-prop]')), 'viewer: no Propose');
-    ok(!(await p.evaluate(() => window.__xss)), 'a hostile port-group name stayed text');
-    const nav = fs.readFileSync(path.join(DASH, 'vendor', 'zyb-nav.js'), 'utf8');
-    ok(/"h": "virtual-network-map.html"/.test(nav) && /virtual-network-map\.html/.test(fs.readFileSync(path.join(DASH, 'install-dashboards.sh'), 'utf8')), 'menu entry and installer');
+    let p = await open();
+    const kp = (await p.$eval('#kp', (x) => x.innerText)).replace(/\s+/g, ' ');
+    ok(/Hosts 3/.test(kp) && /Uplinks down 2/.test(kp), 'tiles: ' + kp);
+    ok((await p.$$('.g3 canvas')).length === 2 && /baseline/.test(await p.textContent('#ins')), 'charts and what the AI noticed');
+    ok((await p.$$('#topo svg rect')).length >= 5 && /vSW-Prod/.test(await p.textContent('#topo')), 'the host topology');
+    await p.selectOption('#host', 'HV-SYN-02'); ok((await p.$$('#topo path[stroke="#ff7b72"]')).length >= 1, 'the down uplink drawn in red');
+    ok(/HV-SYN-03 has no switch "vSW-Backup"/.test(await p.textContent('#fl')) && /create the switch with the same name/.test(await p.textContent('#fl')), 'a finding with its fix');
+    ok(/vSW-Backup/.test(await p.textContent('#bl')), 'the learned baseline');
+    ok((await p.$$('#mx tbody tr')).length === 2, 'VLAN x host matrix');
+    await p.fill('#vm', 'APP-SYN-02'); await p.click('#tr'); await p.waitForSelector('#trace .hop'); ok((await p.$$('#trace .hop.bad')).length === 1 && /vSW-Prod/.test(await p.textContent('#trace')), 'trace with the down uplink marked');
+    await p.fill('#q', '10.1.3.21'); await p.dispatchEvent('#q', 'input'); ok((await p.$$('#ad tbody tr')).length === 1, 'filter the adapters');
+    ok(!(await p.evaluate(() => window.PWN)), 'hostile text stays text'); await p.close();
+    V = N.analyse([normMetrics({ collected_at: new Date().toISOString(), host: { name: 'OLD-SYN' } })], {}); V.changes = [];
+    p = await open(); ok(/not their virtual network yet/.test(await p.textContent('#ins')) && /No Hyper-V host reports its network/.test(await p.textContent('#topo')), 'an older script: what to do'); await p.close();
+    p = await open('?poc=1'); await p.waitForTimeout(600);
+    ok((await p.$$('.zyb-poc-r.br')).length === 1 && /HQPSUPERM01/.test(await p.textContent('#host')), 'POC: the illustrative hosts, one ribbon');
+    if (process.env.SHOT) { await p.waitForTimeout(800); await p.screenshot({ path: process.env.SHOT, fullPage: true }); }
+    await p.close();
+    ok(fs.readFileSync(path.join(DASH, 'vendor/zyb-nav.js'), 'utf8').includes('"h": "virtual-network-map.html"'), 'menu entry');
     ok(!errs.length, 'no page errors: ' + errs.join(' | '));
-  } finally { await browser.close(); srv.close(); await e.close(); }
-  console.log((bad ? 'FAILED ' : 'ok ') + (n - bad) + '/' + n);
-  process.exit(bad ? 1 : 0);
+  } finally { await browser.close(); srv.close(); }
+  console.log((bad ? 'FAILED ' : 'ok ') + (n - bad) + '/' + n + ' virtual-network-map checks'); process.exit(bad ? 1 : 0);
 })().catch((x) => { console.error(x); process.exit(1); });

@@ -45,7 +45,9 @@ function normMetrics(raw) {
     // network speed: each physical NIC's link speed and its receive / send rate at the time of the report (bits per second)
     nics: (Array.isArray(h.nics) ? h.nics : []).slice(0, 32).map((x) => ({ name: s(x.name, 120), link_mbps: n(x.link_mbps, 1e6), rx_bps: n(x.rx_bps, 1e12), tx_bps: n(x.tx_bps, 1e12) })).filter((x) => x.name),
     // disk: average latency per transfer (ms) and throughput (bytes per second) over all physical disks
-    disk: h.disk && typeof h.disk === 'object' ? { latency_ms: n(h.disk.latency_ms, 1e5), read_bps: n(h.disk.read_bps, 1e12), write_bps: n(h.disk.write_bps, 1e12) } : null };
+    disk: h.disk && typeof h.disk === 'object' ? { latency_ms: n(h.disk.latency_ms, 1e5), read_bps: n(h.disk.read_bps, 1e12), write_bps: n(h.disk.write_bps, 1e12) } : null,
+    // virtual networking for the Virtual Network Map (hyperv-netmap.js); null when the host's script does not send it yet
+    network: require('./hyperv-netmap').normNetwork(h.network) };
   const vms = (Array.isArray(b.vms) ? b.vms : []).slice(0, 2000).map((v) => ({ id: s(v.vm_id || v.id, 64), name: s(v.name, 200), state: s(v.state, 20).toLowerCase(), uptime_s: n(v.uptime_s),
     vcpus: n(v.vcpus, 1024), cpu_pct: n(v.cpu_pct, 100), mem_assigned_mb: n(v.mem_assigned_mb), mem_demand_mb: n(v.mem_demand_mb), dynamic: !!v.dynamic_memory, heartbeat: s(v.heartbeat, 40),
     vhds: (Array.isArray(v.vhds) ? v.vhds : []).slice(0, 32).map((d) => ({ path: s(d.path, 260), size_gb: n(d.size_gb), max_gb: n(d.max_gb) })),
@@ -113,6 +115,7 @@ function createHypervManager(app, opts = {}) {
     const prev = latest().get(k), was = new Map(((prev && prev.vms) || []).map((v) => [v.name, v.off_since]));
     for (const v of r.vms) v.off_since = v.state === 'off' ? (v.off_since || was.get(v.name) || r.at) : null;
     latest().put(Object.assign({ id: k }, r));
+    if (opts.netmap) { try { opts.netmap.onReport(prev, r); } catch (e) { if (app.log) app.log.warn('hyperv: network changes not recorded', { host: r.host.name, err: e.message }); } }   // the report itself is kept either way
     const used = r.host.mem_total_mb != null && r.host.mem_free_mb != null ? r.host.mem_total_mb - r.host.mem_free_mb : null;
     daily().put({ id: k + '|' + day, mem_used_mb: used, volumes: Object.fromEntries(r.host.volumes.map((v) => [v.name, v.size_gb - (v.free_gb || 0)])),
       vms: Object.fromEntries(r.vms.map((v) => [v.name, { mem_demand_mb: v.mem_demand_mb, cpu_pct: v.cpu_pct }])) });

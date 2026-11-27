@@ -87,10 +87,27 @@ $vms = @(Get-VM | ForEach-Object {
      replication_state = "$($vm.ReplicationState)"; replication_health = "$($vm.ReplicationHealth)"
      net_rx_bps = $(if ($vmNet.ContainsKey($vm.Name.ToLower())) { [math]::Round($vmNet[$vm.Name.ToLower()].rx) } else { $null }); net_tx_bps = $(if ($vmNet.ContainsKey($vm.Name.ToLower())) { [math]::Round($vmNet[$vm.Name.ToLower()].tx) } else { $null }) }
 })
+# virtual networking (read-only): virtual switches and their uplinks (SET or NIC team), the physical NICs, every VM and
+# management-OS network adapter with its VLAN - for the Virtual Network Map. A host without these cmdlets still sends the rest.
+$net = $null
+try {
+  $phy = @(Get-NetAdapter -Physical | ForEach-Object { @{ name = $_.Name; desc = $_.InterfaceDescription; status = "$($_.Status)"; link_mbps = [math]::Round($_.ReceiveLinkSpeed / 1e6); mac = "$($_.MacAddress)" } })
+  $sw = @(Get-VMSwitch | ForEach-Object {
+    $x = $_; $up = @()
+    try { $t = Get-VMSwitchTeam -Name $x.Name -ErrorAction Stop; $up = @($t.NetAdapterInterfaceDescription) } catch { $up = @($x.NetAdapterInterfaceDescription | Where-Object { $_ }) }   # not a SET switch: its one uplink
+    @{ name = $x.Name; type = "$($x.SwitchType)"; mgmt_os = [bool]$x.AllowManagementOS; set = [bool]$x.EmbeddedTeamingEnabled; uplinks = $up } })
+  $ad = @(Get-VMNetworkAdapter -All | ForEach-Object {
+    $a = $_; $vl = $null; try { $vl = Get-VMNetworkAdapterVlan -VMNetworkAdapter $a } catch { $vl = $null }   # no VLAN setting readable: shown as untagged
+    @{ vm = $(if ($a.IsManagementOs) { '' } else { "$($a.VMName)" }); mgmt_os = [bool]$a.IsManagementOs; name = "$($a.Name)"; switch = "$($a.SwitchName)"; mac = "$($a.MacAddress)"; status = "$($a.Status)"
+       ips = @($a.IPAddresses | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' }); vlan_mode = $(if ($vl) { "$($vl.OperationMode)" } else { '' })
+       vlan = $(if ($vl -and $vl.AccessVlanId) { [int]$vl.AccessVlanId } else { $null }); allowed = $(if ($vl) { "$($vl.AllowedVlanIdListString)" } else { '' }); native = $(if ($vl -and $vl.NativeVlanId) { [int]$vl.NativeVlanId } else { $null }) } })
+  $net = @{ switches = $sw; physical = $phy; adapters = $ad }
+} catch { Write-Warning ('virtual network not read: ' + $_.Exception.Message) }   # the report still goes, without the network map
+
 $report = @{ collected_at = (Get-Date).ToUniversalTime().ToString('o'); vms = $vms
   host = @{ name = $env:COMPUTERNAME; fqdn = "$($cs.DNSHostName).$($cs.Domain)".ToLower(); ip = $ip; os = $os.Caption; logical_processors = $cs.NumberOfLogicalProcessors; cpu_pct = $cpu
-            mem_total_mb = [int]($os.TotalVisibleMemorySize / 1KB); mem_free_mb = [int]($os.FreePhysicalMemory / 1KB); volumes = $vols; nics = $nics; disk = $disk } }
-Invoke-RestMethod -Method Post -Uri "$Server/hyperv" -Headers $headers -ContentType 'application/json' -Body ($report | ConvertTo-Json -Depth 6 -Compress) | Out-Null
+            mem_total_mb = [int]($os.TotalVisibleMemorySize / 1KB); mem_free_mb = [int]($os.FreePhysicalMemory / 1KB); volumes = $vols; nics = $nics; disk = $disk; network = $net } }
+Invoke-RestMethod -Method Post -Uri "$Server/hyperv" -Headers $headers -ContentType 'application/json' -Body ($report | ConvertTo-Json -Depth 8 -Compress) | Out-Null
 
 # ---- 2 approved actions for THIS host only, from a fixed list
 if ($NoActions) { return }
