@@ -91,9 +91,12 @@ function createNdr({ ch, db, alerts, state, log, now } = {}) {
     for (const o of last.all((x) => Date.parse(x.at) < NOW() - 3 * 86400000)) last.remove(o.id);
     const res = { id: 'last', at, detections: out, hosts: [...hosts.values()].sort((a, b) => b.risk - a.risk).slice(0, 200), suppressed: det.length - out.length, errors };
     state.collection('ndr_run').put(res);
+    // the day's detections by kind (the last run of the day wins: each run looks at the last 24 hours), for the 14-day trend
+    const cnt = { id: day, date: day, beacon: 0, exfil: 0, lateral: 0, country: 0 }; for (const d of out) if (cnt[d.kind] !== undefined) cnt[d.kind]++;
+    const daily = state.collection('ndr_daily'); daily.put(cnt); for (const o of daily.all((x) => x.date < new Date(NOW() - 40 * 86400000).toISOString().slice(0, 10))) daily.remove(o.id);
     return res;
   }
-  function view() { const r = state.collection('ndr_run').get('last'); return r ? Object.assign({ ran: true }, r) : { ran: false, detections: [], hosts: [], suppressed: 0, errors: [], note: 'NDR has not run yet - it runs every hour over the firewalls\' traffic logs, or press Run now.' }; }
+  function view() { const r = state.collection('ndr_run').get('last'), trend = state.collection('ndr_daily').all().sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-14).map((x) => ({ date: x.date, beacon: x.beacon, exfil: x.exfil, lateral: x.lateral, country: x.country })); return r ? Object.assign({ ran: true, trend }, r) : { ran: false, detections: [], hosts: [], suppressed: 0, errors: [], note: 'NDR has not run yet - it runs every hour over the firewalls\' traffic logs, or press Run now.' }; }
   function nextId() { let m = 0; for (const s of sup.all()) { const n = Number(String(s.id).slice(4)); if (n > m) m = n; } return 'SUP-' + String(m + 1).padStart(5, '0'); }
   function propose(p, by) {
     if (!/^[0-9.]{7,15}$/.test(p.host)) throw new HttpError(400, 'host: the internal IPv4 address');

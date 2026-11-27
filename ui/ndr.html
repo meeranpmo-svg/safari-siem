@@ -1,42 +1,88 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network Detection</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network Detection</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
 <!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
 <!-- Network Detection & Response over /api/soc/ndr: hosts ranked by an itemised risk, and the detections behind it (beaconing,
-     unusual outbound volume, lateral movement, a new destination country) - each against the organisation's own history. Read-only;
-     a known-good pattern is suppressed only when a different person approves. Analysts and above: it names hosts. -->
+     unusual outbound volume, lateral movement, a new destination country) - each against the organisation's own history - with the
+     charts (by kind, 14-day trend, hosts, beacon intervals, outbound volume against usual, lateral reach), the MITRE ATT&CK technique
+     of each detection, and what the AI noticed (several behaviours on one host). Read-only; a known-good pattern is suppressed only
+     when a different person approves. Analysts and above: it names hosts. -->
 <style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:240px}
 .grid2{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:12px}@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
 .act{border-left:3px solid #4299e1;padding:6px 10px;margin:6px 0;border-radius:4px;background:rgba(255,255,255,.02)}.act.bad{border-color:#e5484d}.act.warn{border-color:#f59f00}
 .mut{color:#8b93a4}.sm{font-size:12px}.bar{display:inline-block;width:80px;height:7px;border-radius:5px;background:rgba(255,255,255,.08);vertical-align:middle;overflow:hidden;margin-right:4px}.bar i{display:block;height:100%;background:#e5484d}
+.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.crit{background:#ff7b72}.dot.warn{background:#e3b341}.dot.info{background:#58a6ff}
+.ttp{display:inline-block;font:600 11px ui-monospace,Consolas,monospace;border:1px solid rgba(188,140,255,.5);color:#bc8cff;border-radius:6px;padding:0 6px;margin-top:3px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid rgba(127,140,160,.3);border-radius:999px;padding:3px 10px;font-size:12px}
 </style></head><body><main>
-<div class="top"><div><div class="eb">Security operations · network</div><h1>Network Detection &amp; Response</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="run" hidden>▶ Run now</button><button type="button" id="rf">⟳ Refresh</button></div>
+<div class="top"><div><div class="eb">Security operations · network · NDR</div><h1>Network Detection &amp; Response</h1><div class="mut sm">Beaconing, unusual outbound volume, lateral movement and new countries - each host against its own history, from the firewalls' traffic logs</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="run" hidden>▶ Run now</button><button type="button" id="rf">⟳ Refresh</button></div>
 <div class="k" id="kp"><div class="empty">Loading…</div></div>
+<div id="charts" hidden>
+ <div class="g3">
+  <section class="card"><h2>Detections by behaviour</h2><div class="cv"><canvas id="cv-kind"></canvas></div></section>
+  <section class="card"><h2>Last 14 days <span class="c">detections per day</span></h2><div class="cv"><canvas id="cv-trend"></canvas></div></section>
+  <section class="card"><h2>What the AI noticed</h2><ul class="ins" id="ins"></ul></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>Hosts by risk <span class="c">0-100, itemised</span></h2><div class="cv"><canvas id="cv-host"></canvas></div></section>
+  <section class="card"><h2>Outbound volume <span class="c">today against each host's usual (MB)</span></h2><div class="cv"><canvas id="cv-exfil"></canvas></div></section>
+  <section class="card"><h2>Beaconing <span class="c">check-in interval (seconds) · regular = suspicious</span></h2><div class="cv"><canvas id="cv-beacon"></canvas></div></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>Lateral reach <span class="c">internal hosts on admin ports, today vs usual</span></h2><div class="cv"><canvas id="cv-lat"></canvas></div></section>
+  <section class="card"><h2>New destination countries <span class="c">first time in 30 days</span></h2><div class="chips" id="ctry"></div></section>
+ </div>
+</div>
 <div id="body"></div>
 </main>
 <script>
 (function () {
   'use strict';
   var S = window.zybSoc, esc = S.esc, $ = function (i) { return document.getElementById(i); }, V = null, SUP = [], KIND = { beacon: 'Beaconing', exfil: 'Unusual outbound volume', lateral: 'Lateral movement', country: 'New country' };
+  // the MITRE ATT&CK technique each behaviour usually is (an indication for the analyst, not a verdict)
+  var TTP = { beacon: ['T1071', 'Application Layer Protocol (C2)'], exfil: ['T1041', 'Exfiltration Over C2 Channel'], lateral: ['T1021', 'Remote Services'], country: ['TA0011', 'Command and Control'] };
   function load() {
     $('run').hidden = !S.can('operator');
-    Promise.all([S.req('GET', '/ndr'), S.req('GET', '/ndr/suppressions')]).then(function (r) { V = r[0]; SUP = r[1].suppressions || []; $('up').textContent = V.ran ? 'ran ' + S.ago(V.at) : 'not run yet'; draw(); })
-      .catch(function (e) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card">' + (e.status === 404 ? '<div class="empty">NDR is not on this SIEM yet - run the platform update.</div>' : e.status === 403 ? '<div class="empty">NDR names hosts: an analyst or above opens it.</div>' : S.errHtml(e, 'NDR')) + '</div>'; });
+    return Promise.all([S.req('GET', '/ndr'), S.req('GET', '/ndr/suppressions')]).then(function (r) { V = r[0]; SUP = r[1].suppressions || []; $('up').textContent = V.ran ? 'ran ' + S.ago(V.at) : 'not run yet'; draw(); })
+      .catch(function (e) { $('kp').innerHTML = ''; $('charts').hidden = true; $('body').innerHTML = '<div class="card">' + (e.status === 404 ? '<div class="empty">NDR is not on this SIEM yet - run the platform update.</div>' : e.status === 403 ? '<div class="empty">NDR names hosts: an analyst or above opens it.</div>' : S.errHtml(e, 'NDR')) + '</div>'; });
+  }
+  function insights(D) {
+    var out = [], by = {}; D.forEach(function (d) { (by[d.host] = by[d.host] || []).push(d.kind); });
+    Object.keys(by).forEach(function (h) { var k = by[h]; if (k.indexOf('beacon') >= 0 && k.indexOf('exfil') >= 0) out.push(['crit', h + ': regular check-ins outside AND unusual outbound volume', 'Together this looks like a compromised host sending data out. Isolate it (EDR / FortiGate quarantine through the four-eyes plan) and open a case.']); });
+    Object.keys(by).forEach(function (h) { var k = by[h]; if (k.indexOf('lateral') >= 0 && k.length > 1) out.push(['crit', h + ': lateral movement with ' + k.filter(function (x) { return x !== 'lateral'; }).map(function (x) { return KIND[x].toLowerCase(); }).join(', '), 'An attacker moving inside the network often shows more than one behaviour. Check the sign-ins of this host in the SIEM.']); });
+    var lat = D.filter(function (d) { return d.kind === 'lateral' && d.severity === 'high'; }); if (lat.length && !out.length) out.push(['crit', lat.length + ' host(s) reaching many internal hosts on admin ports', 'Ransomware spreads this way. Confirm whether an administrator or a tool did it.']);
+    var bc = D.filter(function (d) { return d.kind === 'beacon'; }); if (bc.length) out.push(['warn', bc.length + ' beaconing pattern(s)', 'Updaters and monitoring agents beacon too - suppress the known-good ones (four-eyes) so the rest stands out.']);
+    var ct = D.filter(function (d) { return d.kind === 'country'; }); if (ct.length) out.push(['info', 'New countries: ' + ct.map(function (d) { return d.dst; }).filter(function (x, i, a) { return a.indexOf(x) === i; }).join(', '), 'Usually a new SaaS or CDN; confirm with the business before allowing it on the firewall geo policy.']);
+    return out;
   }
   function draw() {
-    if (!V.ran) { $('kp').innerHTML = ''; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(V.note) + '</div></div>'; return; }
-    var D = V.detections, c = function (k) { return D.filter(function (d) { return d.kind === k; }).length; };
+    if (!V.ran) { $('kp').innerHTML = ''; $('charts').hidden = true; $('body').innerHTML = '<div class="card"><div class="empty">' + esc(V.note) + '</div></div>'; return; }
+    var D = V.detections, c = function (k) { return D.filter(function (d) { return d.kind === k; }).length; }, C = window.zybCharts;
     $('kp').innerHTML = S.tile('Hosts at risk', V.hosts.length, V.hosts.filter(function (h) { return h.risk >= 60; }).length + ' at 60 or more', V.hosts.length ? 'warn' : 'ok')
       + S.tile('Beaconing', c('beacon'), 'regular check-ins outside', c('beacon') ? 'bad' : 'ok') + S.tile('Outbound volume', c('exfil'), 'against each host\'s usual', c('exfil') ? 'bad' : 'ok')
       + S.tile('Lateral movement', c('lateral'), 'admin ports inside', c('lateral') ? 'bad' : 'ok') + S.tile('New countries', c('country'), 'first in 30 days', c('country') ? 'warn' : 'ok') + S.tile('Suppressed', V.suppressed, 'approved known-good', '');
+    $('charts').hidden = !D.length && !(V.trend && V.trend.length > 1);
+    if (C && !$('charts').hidden) {
+      var kinds = ['beacon', 'exfil', 'lateral', 'country'];
+      if (D.length) C.ring($('cv-kind'), kinds.map(function (k) { return KIND[k]; }), kinds.map(c), ['crit', 'warn', 'purple', 'acc'], { v: D.length, l: 'detections' }, { title: 'Detections by behaviour' }); else C.empty($('cv-kind'), 'No detection now.');
+      var T = V.trend || []; if (T.length > 1) C.bars($('cv-trend'), T.map(function (x) { return String(x.date).slice(5); }), kinds.map(function (k, i) { return { label: KIND[k], data: T.map(function (x) { return x[k] || 0; }), color: ['crit', 'warn', 'purple', 'acc'][i] }; }), { stacked: true, title: 'Detections per day' }); else C.empty($('cv-trend'), 'The trend fills one day at a time.');
+      var Hs = V.hosts.slice(0, 10); if (Hs.length) C.bars($('cv-host'), Hs.map(function (h) { return h.host; }), [{ label: 'Risk', data: Hs.map(function (h) { return h.risk; }), colors: Hs.map(function (h) { return h.risk >= 60 ? 'crit' : 'warn'; }) }], { horizontal: true, title: 'Hosts by risk' }); else C.empty($('cv-host'), 'No host at risk.');
+      var E = D.filter(function (d) { return d.kind === 'exfil' && d.evidence; }); if (E.length) C.bars($('cv-exfil'), E.map(function (d) { return d.host; }), [{ label: 'Usual MB', data: E.map(function (d) { return Math.round((d.evidence.usual || 0) / 1e6); }), color: 'mute' }, { label: 'Today MB', data: E.map(function (d) { return Math.round((d.evidence.today || 0) / 1e6); }), color: 'crit' }], { title: 'Outbound volume' }); else C.empty($('cv-exfil'), 'No unusual outbound volume.');
+      var B = D.filter(function (d) { return d.kind === 'beacon' && d.evidence; }); if (B.length) C.bars($('cv-beacon'), B.map(function (d) { return d.host + ' → ' + d.dst; }), [{ label: 'Interval (s)', data: B.map(function (d) { return d.evidence.period_s; }), colors: B.map(function (d) { return d.severity === 'high' ? 'crit' : 'warn'; }) }], { horizontal: true, title: 'Beacon intervals' }); else C.empty($('cv-beacon'), 'No beaconing.');
+      var Lt = D.filter(function (d) { return d.kind === 'lateral' && d.evidence; }); if (Lt.length) C.bars($('cv-lat'), Lt.map(function (d) { return d.host; }), [{ label: 'Usual', data: Lt.map(function (d) { return d.evidence.usual || 0; }), color: 'mute' }, { label: 'Today', data: Lt.map(function (d) { return d.evidence.today || 0; }), color: 'purple' }], { title: 'Lateral reach' }); else C.empty($('cv-lat'), 'No lateral movement.');
+    }
+    var ct = D.filter(function (d) { return d.kind === 'country'; }); $('ctry').innerHTML = ct.length ? ct.map(function (d) { return '<span class="chip">🌍 <b>' + esc(d.dst) + '</b> · ' + esc(d.host) + ' · ' + esc((d.evidence && d.evidence.connections) || '') + ' connections</span>'; }).join('') : '<span class="mut sm">No new country.</span>';
+    var I = insights(D); $('ins').innerHTML = I.length ? I.map(function (x) { return '<li><span class="dot ' + x[0] + '"></span><div><b>' + esc(x[1]) + '</b><div class="mut sm">' + esc(x[2]) + '</div></div></li>'; }).join('') : '<li><span class="dot info"></span><div>Nothing stands out.</div></li>';
     var hosts = V.hosts.length ? V.hosts.map(function (h) { return '<div class="act ' + (h.risk >= 60 ? 'bad' : 'warn') + '"><b>' + esc(h.host) + '</b> <span class="bar"><i style="width:' + h.risk + '%"></i></span>' + esc(h.risk) + '<div class="sm">' + h.reasons.map(function (r) { return esc('+' + r.points + ' ' + (KIND[r.kind] || r.kind) + ': ' + r.why); }).join('<br>') + '</div></div>'; }).join('') : '<div class="empty">No host shows unusual network behaviour.</div>';
-    var det = D.length ? '<div class="tw"><table><thead><tr><th>Detection</th><th>Host</th><th>Why</th><th></th></tr></thead><tbody>' + D.map(function (d, i) { return '<tr><td>' + S.sev(d.severity) + ' ' + esc(KIND[d.kind] || d.kind) + '</td><td><b>' + esc(d.host) + '</b>' + (d.dst ? '<div class="mut sm">' + esc(d.dst) + '</div>' : '') + '</td><td class="sm">' + esc(d.why) + '</td><td>' + (S.can('analyst') ? '<button type="button" class="btn" data-sup="' + i + '">Propose suppression</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">No detection in the last run.</div>';
+    var det = D.length ? '<div class="tw"><table><thead><tr><th>Detection</th><th>Host</th><th>Why</th><th></th></tr></thead><tbody>' + D.map(function (d, i) { var tp = TTP[d.kind]; return '<tr><td>' + S.sev(d.severity) + ' ' + esc(KIND[d.kind] || d.kind) + (tp ? '<div><span class="ttp" title="' + esc(tp[1]) + '">' + esc(tp[0]) + '</span> <span class="mut sm">' + esc(tp[1]) + '</span></div>' : '') + '</td><td><b>' + esc(d.host) + '</b>' + (d.dst ? '<div class="mut sm">' + esc(d.dst) + '</div>' : '') + '</td><td class="sm">' + esc(d.why) + '</td><td>' + (S.can('analyst') ? '<button type="button" class="btn" data-sup="' + i + '">Propose suppression</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">No detection in the last run.</div>';
     var sup = SUP.length ? SUP.slice(0, 30).map(function (s) { return '<div class="act ' + (s.status === 'proposed' ? 'warn' : '') + '"><b>' + esc(s.id) + '</b> ' + esc(s.host) + ' → ' + esc(s.dst || KIND[s.kind] || s.kind) + ' ' + S.pill(s.status, s.status === 'approved' ? 'ok' : s.status === 'rejected' ? 'bad' : '') + '<div class="mut sm">' + esc(s.reason) + ' · by ' + esc(s.proposed_by) + (s.expires ? ' · until ' + esc(s.expires) : '') + '</div>' + (s.status === 'proposed' && S.user() !== s.proposed_by ? '<button type="button" class="btn" data-dec="approved" data-id="' + esc(s.id) + '">Approve</button> <button type="button" class="btn" data-dec="rejected" data-id="' + esc(s.id) + '">Reject</button>' : '') + '</div>'; }).join('') : '<div class="empty">No suppression.</div>';
-    $('body').innerHTML = '<div class="grid2"><div class="card"><h2>🎯 Hosts by risk</h2>' + hosts + '</div><div class="card"><h2>🔎 Detections <span class="c">each against the organisation\'s own history</span></h2>' + det + '</div></div>'
+    $('body').innerHTML = '<div class="grid2"><div class="card"><h2>🎯 Hosts by risk</h2>' + hosts + '</div><div class="card"><h2>🔎 Detections <span class="c">each against the organisation\'s own history · MITRE ATT&amp;CK as an indication</span></h2>' + det + '</div></div>'
       + '<div class="card"><h2>🤝 Suppressions <span class="c">four-eyes: a different person approves</span></h2>' + sup + '</div>' + (V.errors.length ? '<p class="sm" style="color:#ff8a8e">' + V.errors.map(esc).join('<br>') + '</p>' : '')
-      + '<p class="mut sm">Read from the firewalls\' traffic logs every hour. Nothing is blocked from here: open a case, or plan a FortiGate change on FortiGate Fleet.</p>';
+      + '<p class="mut sm">Read from the firewalls\' traffic logs every hour. Nothing is blocked from here: open a case, or plan a FortiGate change on FortiGate Fleet. Behaviours are indicators, not proof.</p>';
   }
   document.addEventListener('click', function (ev) {
     var t = ev.target, a;
-    if (t.id === 'rf') return load();
+    if (t.id === 'rf') { t.disabled = true; load().then(function () { t.disabled = false; S.toast('Refreshed'); }); return; }
     if (t.id === 'run') { t.disabled = true; S.req('POST', '/ndr/run', {}).then(function (r) { S.toast(r.detections.length + ' detection(s)'); load(); }).catch(function (e) { S.toast(e.message); }).then(function () { t.disabled = false; }); return; }
     if ((a = t.closest('[data-sup]'))) { var d = V.detections[Number(a.getAttribute('data-sup'))], why = prompt('Why is this known-good?'); if (!why) return; var until = prompt('Until (YYYY-MM-DD, empty = no end)') || undefined;
       S.req('POST', '/ndr/suppressions', d.dst && d.kind !== 'exfil' && d.kind !== 'lateral' ? { host: d.host, dst: d.dst, reason: why, expires: until } : { host: d.host, kind: d.kind, reason: why, expires: until }).then(function (s) { S.toast(s.id + ' proposed - waiting for approval'); load(); }).catch(function (e) { S.toast('Not proposed: ' + e.message); }); return; }

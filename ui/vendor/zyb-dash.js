@@ -68,6 +68,9 @@
   // the Tabler look (vendor/zyb-tabler.css, under html.zyb-tb): loaded here so it is in place before the page draws
   var VER = encodeURIComponent((document.currentScript && /[?&]v=([^&]+)/.exec(document.currentScript.src) || [])[1] || '1');
   try { if (document.head && !document.getElementById('zyb-tabler-css')) { var tl = document.createElement('link'); tl.id = 'zyb-tabler-css'; tl.rel = 'stylesheet'; tl.href = 'vendor/zyb-tabler.css?v=' + VER; document.head.appendChild(tl); } } catch (e) { /* original look */ }
+  // POC mode (vendor/zyb-poc.js): only while the menu's "POC data" switch is on in this browser, or ?poc=1 - pages that have
+  // illustrative data draw from it with the POC ribbon, every change is refused; loaded before the page's own requests
+  try { var pocOn = /[?&]poc=1(&|$)/.test(location.search) || localStorage.getItem('zyb-poc') === '1'; if (pocOn && !window.zybPoc && document.readyState === 'loading') document.write('<script src="vendor/zyb-poc-data.js?v=' + VER + '"><\/script><script src="vendor/zyb-poc.js?v=' + VER + '"><\/script>'); } catch (e) { /* storage blocked: POC stays off, the page shows live data */ }
   // error handling for the page (vendor/zyb-errors.js): first, so an error while the page draws is already caught
   // menu hide / show (Ctrl+B), full screen and an easy-to-grab menu scrollbar (vendor/zyb-fullview.js)
   try { if (!window.zybFullview) { var zf = document.createElement('script'); zf.src = 'vendor/zyb-fullview.js?v=' + VER; zf.defer = true; (document.head || document.documentElement).appendChild(zf); } } catch (e) { /* the page works without it */ }
@@ -455,9 +458,11 @@
           + '<div class="zs-items">' + sgItems(a, pages) + '</div></div>';
       }).join('') + '<div class="zs-empty" id="zs-empty" hidden>No page matches.</div></nav>'
       + '<div class="zs-foot"><button type="button" class="zs-brandsw" data-zyb-brandsw role="switch" aria-checked="' + (!!(window.zybBrandOn && window.zybBrandOn())) + ('" title="Brand colours: Zyberon Sentra or ' + ZYB_ORG.short + '"><i></i><span>' + ZYB_ORG.short + ' colours</span></button>') + '<button type="button" class="zs-brandsw" data-zyb-looksw role="switch" aria-checked="' + (!!(window.zybBrandLookIs && window.zybBrandLookIs() === 'light')) + '" title="Company look: dark, or light like the company website"' + (window.zybBrandOn && window.zybBrandOn() ? '' : ' hidden') + '><i></i><span>Light look</span></button>'
+      + '<button type="button" class="zs-brandsw" data-zyb-pocsw role="switch" aria-checked="' + !!window.zybPoc + '" title="POC data: illustrative data with a POC ribbon for presentations - nothing can be changed while it is on"><i></i><span>POC data</span></button>'
       + '<a href="/?zybportal=1" title="Portal home">' + ic(ICO.back) + '<span>Portal home</span></a></div>';
     var el = document.createElement('aside'); el.id = 'zyb-side'; el.setAttribute('aria-label', 'Dashboards menu'); el.innerHTML = h;
     var bsw = el.querySelector('[data-zyb-brandsw]'); if (bsw) bsw.addEventListener('click', function () { if (window.zybBrand) window.zybBrand(!window.zybBrandOn()); });
+    var psw = el.querySelector('[data-zyb-pocsw]'); if (psw) psw.addEventListener('click', function () { try { if (window.zybPoc) localStorage.removeItem('zyb-poc'); else localStorage.setItem('zyb-poc', '1'); } catch (e) { /* storage blocked: nothing to switch */ } location.href = location.href.replace(/([?&])poc=1(&|$)/, '$1').replace(/[?&]$/, ''); });
     var lsw = el.querySelector('[data-zyb-looksw]'); if (lsw) lsw.addEventListener('click', function () { if (window.zybBrandLook) window.zybBrandLook(window.zybBrandLookIs() === 'light' ? 'dark' : 'light'); });
     var scrim = document.createElement('div'); scrim.id = 'zyb-scrim';
     document.body.insertBefore(scrim, document.body.firstChild); document.body.insertBefore(el, document.body.firstChild);

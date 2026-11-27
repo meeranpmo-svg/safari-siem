@@ -57,6 +57,7 @@ test('run: detections against each host\'s own history, risk itemised, alerts on
   assert.equal(raised.length, 3, 'beacon, exfil, lateral raise; a new country does not');
   assert.ok(raised.every((a) => a.rule_type === 'ndr' && a.tags.includes('ndr')) && raised.find((a) => a.rule_id === 'ndr-beacon').tags.includes('T1071'));
   await X.run(); assert.equal(raised.length, 3, 'not raised again the same day');
+  const tr = X.view().trend; assert.equal(tr.length, 1, 'one day of history'); assert.equal(tr[0].date, new Date(NOW).toISOString().slice(0, 10)); assert.equal(tr[0].beacon + tr[0].exfil + tr[0].lateral + tr[0].country, r.detections.length, 'the day counts every detection by kind');
   const f = mk({ failOn: 'exfil' }), r2 = await f.X.run();
   assert.match(r2.errors.join(), /exfil: synthetic ClickHouse error/); assert.ok(r2.detections.some((d) => d.kind === 'beacon'), 'the other detections still run');
 });
