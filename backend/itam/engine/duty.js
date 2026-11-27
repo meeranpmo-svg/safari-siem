@@ -268,6 +268,9 @@ function registerDuty(srv, app, opts = {}) {
   // actions the host's report script fetches and runs
   const HVM = optional('./hyperv-manager');
   if (HVM) { app.addons.hypervManager = HVM.createHypervManager(app, { now: opts.now }); HVM.registerHypervManager(srv, app, app.addons.hypervManager); }
+  // Asset Onboarding (engine/asset-onboard.js): the AI helper for adding assets from any pasted list, and the accuracy per branch
+  const AOB = optional('./asset-onboard');
+  if (AOB) AOB.registerAssetOnboard(srv, app, AOB.createAssetOnboard(app, { now: opts.now }));
   // Microsoft 365 Licences & Security (engine/m365-licence-intel.js): licence waste, forecast and the security the licences buy, read-only
   const MLI = optional('./m365-licence-intel');
   if (MLI) MLI.registerM365LicenceIntel(srv, app, MLI.createM365LicenceIntel(app, { now: opts.now, source: opts.m365Source }), { noTimer: opts.noTimer });

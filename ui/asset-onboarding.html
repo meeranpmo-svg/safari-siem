@@ -1,0 +1,106 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Asset Onboarding</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Asset Onboarding over /api/itam/asset-onboard (engine/asset-onboard.js): the system administrator's one place to add assets -
+     the AI helper reads any pasted list (type and branch guessed with the reason, duplicates matched, nothing written until a
+     person adds), the other ways in (Active Directory, agents, network discovery, one server), the inventory accuracy per branch,
+     and VAPT coverage per branch from Scanned Assets. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:230px}
+.mut{color:#8b93a4}.sm{font-size:12px}.ways{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.way{border:1px solid rgba(127,140,160,.25);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}.way b{font-size:14px}
+textarea#tx{width:100%;min-height:150px;font:12.5px ui-monospace,Consolas,monospace;border-radius:10px;padding:10px}
+.why{font-size:11.5px;color:#8b93a4}.iss{font-size:11.5px;color:#e3b341}.ins{list-style:none;margin:0;padding:0}.ins li{padding:7px 2px;border-bottom:1px solid rgba(127,140,160,.18);font-size:13px}.ins li:last-child{border-bottom:0}
+select.sm2,input.sm2{font-size:12px;padding:3px 6px;max-width:150px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">IT Asset Management · onboarding · branches</div><h1>Asset Onboarding</h1><div class="mut sm">Add every workstation, server and device quickly - paste any list and the AI helper reads it - and keep the inventory accurate for each branch</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div>
+<div class="k" id="kp"></div>
+<section class="card"><h2>Ways to add assets</h2><div class="ways">
+ <div class="way"><b>✦ AI helper - paste a list</b><span class="sm mut">A CSV, an Excel copy, an AD export or just names / IPs - below.</span></div>
+ <div class="way"><b>🗂️ Active Directory</b><span class="sm mut">Every computer of the domain, servers and workstations, by OU - read-only LDAPS.</span><a class="sm" href="discovery-studio.html">Set up the AD scope →</a></div>
+ <div class="way"><b>🧩 Agents</b><span class="sm mut">Hardware, software and patches kept current - also project sites off the network.</span><a class="sm" href="agents.html">Agents &amp; Downloads →</a></div>
+ <div class="way"><b>📡 Network discovery</b><span class="sm mut">A range, subnets or a CSV of IPs - switches, printers, servers.</span><a class="sm" href="network-discovery.html">Network Discovery →</a></div>
+ <div class="way"><b>🖥️ One server or device</b><span class="sm mut">Windows, Linux / Unix or a network device, step by step.</span><a class="sm" href="add-server.html">Add a server →</a></div>
+</div></section>
+<section class="card" id="helper"><h2>AI helper <span class="c">AI · ML - reads any list, guesses type and branch with the reason, finds what is already there; nothing is added until you press Add</span></h2>
+ <textarea id="tx" placeholder="Paste here, for example:&#10;name,ip,serial,branch&#10;JED-PC-0142,10.20.1.42,5CG1234XYZ,Jeddah&#10;&#10;or one per line:  RUH-SRV-DB01 10.10.5.20"></textarea>
+ <div class="row" style="margin-top:8px"><button type="button" class="pri" id="rd">✦ Read the list</button><span class="mut sm" id="rdm"></span></div>
+ <div id="prev"></div></section>
+<div class="g3" id="band" hidden>
+ <section class="card"><h2>Assets by branch <span class="c">where each record comes from</span></h2><div class="cv"><canvas id="cv-src"></canvas></div></section>
+ <section class="card"><h2>Accuracy by branch <span class="c">AI · ML · completeness less the issues</span></h2><div class="cv"><canvas id="cv-acc"></canvas></div></section>
+ <section class="card"><h2>VAPT coverage by branch <span class="c">scanned in the scan window / not</span></h2><div class="cv"><canvas id="cv-vapt"></canvas></div></section>
+</div>
+<section class="card" id="insc" hidden><h2>What the AI noticed <span class="c">AI · ML</span></h2><ul class="ins" id="ins"></ul></section>
+<section class="card"><h2>Inventory by branch <span class="c" id="bc"></span></h2><div class="tw" id="br"></div></section>
+<section class="card" id="issc" hidden><h2>Records to fix <span class="c" id="ic"></span></h2><div class="tw" id="iss"></div></section>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, V = null, SA = null, P = null;
+  var TYPES = ['server', 'vm', 'workstation', 'laptop', 'network', 'printer', 'phone', 'storage', 'ups', 'mobile', 'peripheral', 'other'];
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(new Error('IT Asset Management is not reachable')); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000); }
+  function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function sc(n) { return n == null ? '–' : pill(n + ' %', n >= 85 ? 'ok' : n >= 60 ? 'warn' : 'bad'); }
+  // ---- the AI helper
+  function drawPrev() { if (!P) { $('prev').innerHTML = ''; return; } var S = P.summary, sites = (V && V.branches || []).map(function (b) { return b.site; }).filter(function (x) { return x !== '(no site)'; });
+    $('rdm').textContent = S.read + ' read' + (S.header ? ' (columns: ' + S.columns.join(', ') + ')' : '') + ' · ' + S.create + ' new · ' + S.already + ' already in the register · ' + S.fix + ' to fix' + (S.truncated ? ' · only the first 2,000 rows' : '');
+    $('prev').innerHTML = '<datalist id="sites">' + sites.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('') + '</datalist><div class="tw"><table><thead><tr><th><input type="checkbox" id="all" checked aria-label="Select all new"></th><th>Name</th><th>IP</th><th>Type</th><th>Branch</th><th>Why / issues</th><th>In the register</th></tr></thead><tbody>'
+      + P.rows.map(function (r, i) { var on = r.action === 'create';
+        return '<tr><td><input type="checkbox" data-k="' + i + '"' + (on ? ' checked' : '') + (r.action === 'skip' ? ' disabled' : '') + ' aria-label="Add ' + esc(r.name || r.ip) + '"></td><td><b>' + esc(r.name || '–') + '</b>' + (r.serial ? '<div class="why">S/N ' + esc(r.serial) + '</div>' : '') + '</td><td>' + esc(r.ip || '–') + '</td>'
+          + '<td><select class="sm2" data-t="' + i + '">' + TYPES.map(function (t) { return '<option' + (t === r.type ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select></td><td><input class="sm2" list="sites" data-s="' + i + '" value="' + esc(r.site) + '" placeholder="branch"></td>'
+          + '<td>' + r.why.map(function (w) { return '<div class="why">✦ ' + esc(w) + '</div>'; }).join('') + r.issues.map(function (w) { return '<div class="iss">⚠ ' + esc(w) + '</div>'; }).join('') + '</td><td>' + (r.match ? pill(r.match.name + ' (' + r.match.by + ')', 'info') : r.action === 'fix' ? pill('fix first', 'warn') : pill('new', 'ok')) + '</td></tr>'; }).join('')
+      + '</tbody></table></div><div class="row" style="margin-top:8px">' + (can('operator') ? '<button type="button" class="pri" id="add">Add the selected assets</button>' : '<span class="mut sm">Operators and administrators add assets.</span>') + ' <span class="mut sm" id="addm"></span></div>'; }
+  // ---- branch accuracy, charts, noticed
+  function draw() { var v = V, T = v.totals, C = window.zybCharts, B = v.branches.filter(function (b) { return b.site !== '(no site)'; });
+    $('up').textContent = 'updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    var never = SA && SA.coverage ? SA.coverage.never.length : null;
+    $('kp').innerHTML = tile('Assets', T.assets, T.branches + ' branches') + tile('Accuracy', T.score != null ? T.score + ' %' : '–', 'completeness less the issues', T.score >= 85 ? 'ok' : T.score >= 60 ? 'warn' : 'bad')
+      + tile('No branch', T.no_site, 'records without a site', T.no_site ? 'bad' : 'ok') + tile('Duplicates', T.duplicates, 'same serial or MAC', T.duplicates ? 'warn' : 'ok') + tile('Site conflicts', T.conflicts, 'network says another branch', T.conflicts ? 'warn' : 'ok')
+      + tile('Not seen 30+ days', T.stale, 'gone, off or not reporting', T.stale ? 'warn' : 'ok') + tile('From agents / AD', T.agent + ' / ' + T.ad, T.discovery + ' discovery · ' + T.manual + ' manual') + tile('Never scanned (VAPT)', never == null ? '–' : never, SA ? 'in the scan scope' : 'operators see VAPT coverage', never ? 'bad' : never === 0 ? 'ok' : '');
+    $('band').hidden = !B.length || !C || !window.Chart;
+    if (B.length && C && window.Chart) { var BB = B.slice(0, 12);
+      C.bars($('cv-src'), BB.map(function (b) { return b.site; }), [{ label: 'Agent', data: BB.map(function (b) { return b.agent; }), color: 'teal' }, { label: 'Active Directory', data: BB.map(function (b) { return b.ad; }), color: 'acc' }, { label: 'Discovery', data: BB.map(function (b) { return b.discovery; }), color: 'purple' }, { label: 'Manual', data: BB.map(function (b) { return b.manual; }), color: 'mute' }], { stacked: true, title: 'Assets by branch' });
+      var BS = B.slice().sort(function (a, b) { return a.score - b.score; }).slice(0, 12); C.bars($('cv-acc'), BS.map(function (b) { return b.site; }), [{ label: 'Accuracy %', data: BS.map(function (b) { return b.score; }), colors: BS.map(function (b) { return b.score >= 85 ? 'ok' : b.score >= 60 ? 'warn' : 'crit'; }) }], { horizontal: true, title: 'Accuracy by branch' });
+      if (SA && SA.coverage) { var nv = {}, sc2 = {}; (SA.coverage.never || []).forEach(function (x) { var k = x.site || '(no site)'; nv[k] = (nv[k] || 0) + 1; }); (SA.coverage.stale || []).forEach(function (x) { var k = x.site || '(no site)'; sc2[k] = (sc2[k] || 0) + 1; });
+        var VB = BB.map(function (b) { return b.site; }); C.bars($('cv-vapt'), VB, [{ label: 'Never scanned', data: VB.map(function (k) { return nv[k] || 0; }), color: 'crit' }, { label: 'Scan too old', data: VB.map(function (k) { return sc2[k] || 0; }), color: 'warn' }], { stacked: true, title: 'VAPT coverage by branch' }); }
+      else C.empty($('cv-vapt'), SA === false ? 'Operators and administrators see the VAPT coverage.' : 'No scanner has reported yet - connect Greenbone or Tenable in Vulnerability Scans.'); }
+    var N = [], worst = B.slice().sort(function (a, b) { return a.score - b.score; })[0];
+    if (T.no_site) N.push('📍 <b>' + T.no_site + '</b> assets have no branch - the branch reports cannot count them.');
+    if (worst && worst.score < 85) N.push('📉 The least accurate branch is <b>' + esc(worst.site) + '</b> (' + worst.score + ' %): ' + worst.pct.serial + ' % with a serial, ' + worst.pct.owner + ' % with an owner.');
+    if (T.duplicates) N.push('🧬 <b>' + T.duplicates + '</b> records share a serial number or MAC with another - likely the same device twice.');
+    if (T.conflicts) N.push('🧭 <b>' + T.conflicts + '</b> assets sit on a network that mostly belongs to another branch - moved, or the branch is wrong.');
+    if (T.stale) N.push('💤 <b>' + T.stale + '</b> assets were not seen for 30+ days - retired, switched off, or their agent stopped.');
+    if (T.manual && T.assets && T.manual / T.assets > 0.4) N.push('✍️ ' + Math.round(100 * T.manual / T.assets) + ' % of the records are manual - connect Active Directory and the agents so they stay current.');
+    if (never) N.push('🛡️ <b>' + never + '</b> assets in the scan scope were never scanned - add them to the next VAPT run.');
+    $('insc').hidden = !N.length; $('ins').innerHTML = N.map(function (x) { return '<li>' + x + '</li>'; }).join('');
+    $('bc').textContent = v.branches.length + ' branches';
+    $('br').innerHTML = v.branches.length ? '<table><thead><tr><th>Branch</th><th>Assets</th><th>Accuracy</th><th>IP / serial / owner / OS</th><th>Agent · AD · discovery · manual</th><th>Not seen 30d</th><th>Duplicates</th><th>Conflicts</th></tr></thead><tbody>' + v.branches.map(function (b) {
+      return '<tr><td><b>' + esc(b.site) + '</b><div class="why">' + Object.keys(b.types).map(function (k) { return b.types[k] + ' ' + k; }).join(' · ') + '</div></td><td>' + b.assets + '</td><td>' + sc(b.score) + '</td><td class="sm">' + [b.pct.ip, b.pct.serial, b.pct.owner, b.pct.os].join(' / ') + ' %</td><td class="sm">' + [b.agent, b.ad, b.discovery, b.manual].join(' · ') + '</td><td>' + (b.stale || '–') + '</td><td>' + (b.dup || '–') + '</td><td>' + (b.conflict || '–') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No asset yet - add them with the AI helper above or from Active Directory.</div>';
+    var I = []; v.branches.forEach(function (b) { b.issues.forEach(function (x) { I.push([b.site, x]); }); });
+    $('issc').hidden = !v.names || !I.length; $('ic').textContent = I.length + ' records';
+    $('iss').innerHTML = '<table><thead><tr><th>Asset</th><th>Branch</th><th>IP</th><th>To fix</th><th></th></tr></thead><tbody>' + I.slice(0, 300).map(function (r) { var x = r[1];
+      return '<tr><td><b>' + esc(x.name) + '</b></td><td>' + esc(r[0]) + '</td><td>' + esc(x.ip) + '</td><td class="sm">' + x.issues.map(esc).join(' · ') + '</td><td><a class="sm" href="inventory.html#asset=' + encodeURIComponent(x.asset_id) + '">Open →</a></td></tr>'; }).join('') + '</tbody></table>'; }
+  function load() { return Promise.all([req('GET', '/asset-onboard/overview'), can('operator') ? req('GET', '/scanned-assets').catch(function () { return null; /* VAPT not installed: the chart says so */ }) : Promise.resolve(false)]).then(function (r) { V = r[0]; SA = r[1]; $('err').innerHTML = ''; draw(); if (P) drawPrev(); },
+    function (e) { $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'Asset Onboarding is not installed in IT Asset Management yet - run the update.' : e.message) + '</div></div>'; }); }
+  $('rd').addEventListener('click', function () { var b = this; if (!$('tx').value.trim()) { $('rdm').textContent = 'Paste a list first.'; return; } b.disabled = true; $('rdm').textContent = 'Reading…';
+    req('POST', '/asset-onboard/parse', { text: $('tx').value }).then(function (r) { P = r; drawPrev(); }, function (e) { $('rdm').textContent = e.message; }).then(function () { b.disabled = false; }); });
+  document.addEventListener('change', function (e) { var t = e.target; if (!P) return;
+    if (t.id === 'all') [].forEach.call(document.querySelectorAll('[data-k]'), function (c) { if (!c.disabled && P.rows[+c.getAttribute('data-k')].action !== 'fix') c.checked = t.checked; });
+    if (t.hasAttribute('data-t')) P.rows[+t.getAttribute('data-t')].type = t.value; if (t.hasAttribute('data-s')) P.rows[+t.getAttribute('data-s')].site = t.value.trim(); });
+  document.addEventListener('click', function (e) { if (!e.target.closest('#add')) return; var rows = [];
+    [].forEach.call(document.querySelectorAll('[data-k]:checked'), function (c) { var r = P.rows[+c.getAttribute('data-k')]; rows.push({ name: r.name || undefined, ip: r.ip || undefined, mac: r.mac || undefined, serial: r.serial || undefined, os: r.os || undefined, model: r.model || undefined, vendor: r.vendor || undefined, owner: r.owner || undefined, department: r.department || undefined, site: r.site || undefined, type: r.type, tags: r.tags }); });
+    if (!rows.length) { $('addm').textContent = 'Select at least one asset.'; return; }
+    $('add').disabled = true; $('addm').textContent = 'Adding ' + rows.length + '…';
+    req('POST', '/asset-onboard/commit', { rows: rows }).then(function (r) { toast(r.created.length + ' assets added'); $('addm').innerHTML = '<b>' + r.created.length + ' added</b>' + (r.skipped.length ? ' · ' + r.skipped.length + ' skipped: ' + r.skipped.slice(0, 5).map(function (x) { return esc((x.name ? x.name + ': ' : '') + x.reason); }).join('; ') : ''); P = null; $('tx').value = ''; load(); },
+      function (er) { $('addm').textContent = er.message; $('add').disabled = false; }); });
+  $('rf').addEventListener('click', load);
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } $('helper').hidden = !can('operator'); load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>

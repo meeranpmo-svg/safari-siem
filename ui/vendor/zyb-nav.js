@@ -2876,6 +2876,7 @@ window.ZYB_NAV = [
      ]
     }
    },
+   {"h": "asset-onboarding.html", "s": "Asset Onboarding", "t": "Asset Onboarding - add assets fast with the AI helper and keep the inventory accurate per branch", "d": "Paste any list (CSV, Excel copy, AD export, names / IPs) and the AI helper reads it - type and branch guessed with the reason, duplicates matched; Active Directory, agents and network discovery in one place; accuracy and VAPT coverage per branch.", "g": "Servers"},
    {
     "h": "add-server.html",
     "s": "Add Server / Device",
