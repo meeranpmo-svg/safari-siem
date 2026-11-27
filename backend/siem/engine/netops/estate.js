@@ -65,7 +65,7 @@ function createEstate(deps) {
       if (cpu != null && cpu >= 85) why.push({ points: 10, reason: 'CPU ' + cpu + ' %' }); if (mem != null && mem >= 90) why.push({ points: 10, reason: 'memory ' + mem + ' %' });
       const risk = Math.min(100, why.reduce((a, w) => a + w.points, 0));
       R.push({ kind: 'switch', name: d.name, site: d.site || '', model: (s && s.system && s.system.model) || d.vendor, risk, why });
-      sw.push({ name: d.name, ip: d.ip, site: d.site || '', vendor: d.vendor, role: d.role || '', model: (s && s.system && s.system.model) || '', version: (s && s.system && s.system.version) || '', up, polled: s ? s.at : null,
+      sw.push({ id: d.id, name: d.name, ip: d.ip, site: d.site || '', vendor: d.vendor, role: d.role || '', model: (s && s.system && s.system.model) || '', version: (s && s.system && s.system.version) || '', up, polled: s ? s.at : null,
         cpu, mem, ports: phys.length, ports_up: phys.filter((i) => i.oper === 'up').length, err_ports: errs, hot_ports: hot, risk });
     }
     // ---- licences: every FortiCare / FortiGuard item with its end date
@@ -99,7 +99,8 @@ function createEstate(deps) {
     if (risk.length) N2.push({ tone: risk[0].risk >= 50 ? 'bad' : 'warn', text: 'Highest risk: ' + risk[0].name + ' (' + risk[0].risk + '/100 - ' + risk[0].why.slice(0, 2).map((w) => w.reason).join('; ') + ').' });
     // ---- automation: what is waiting for a person, and suggested change plans (a person proposes them in FortiGate Fleet)
     const sug = [];
-    for (const m of behind) sug.push({ kind: 'firmware', title: 'Upgrade ' + (m.devices - m.on_target) + ' ' + m.model + ' to ' + m.target, where: 'fortigate-fleet.html', note: 'FortiGate Fleet -> Changes: propose the upgrade; a second administrator approves; run in a maintenance window.' });
+    for (const m of behind) sug.push({ kind: 'firmware', title: 'Upgrade ' + (m.devices - m.on_target) + ' ' + m.model + ' to ' + m.target, where: 'fortigate-fleet.html', note: 'Propose it here or in FortiGate Fleet; a second administrator approves; run it in a maintenance window.',
+      action: { type: 'firmware-upgrade', version: m.target, devices: fw.filter((d) => d.model === m.model && d.firmware && d.firmware !== m.target).map((d) => d.name).slice(0, 100) } });
     if (lic.expired + lic.due30) sug.push({ kind: 'renewal', title: 'Renew ' + (lic.expired + lic.due30) + ' FortiCare / FortiGuard licences', where: 'support-contracts.html', note: 'Support Contracts: record the renewal with its reference; the dates refresh from the devices after the renewal is applied.' });
     if (errSw.length) sug.push({ kind: 'switch', title: 'Check ' + errSw.length + ' switches with port errors', where: 'switch-port-map.html', note: 'Switch Port Map shows the port and what is connected.' });
     return { at: new Date(t).toISOString(), fortimanager: { connected: !!FL, status: FL ? FL.status : null },
