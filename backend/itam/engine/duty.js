@@ -274,6 +274,10 @@ function registerDuty(srv, app, opts = {}) {
   // Microsoft 365 Licences & Security (engine/m365-licence-intel.js): licence waste, forecast and the security the licences buy, read-only
   const MLI = optional('./m365-licence-intel');
   if (MLI) MLI.registerM365LicenceIntel(srv, app, MLI.createM365LicenceIntel(app, { now: opts.now, source: opts.m365Source }), { noTimer: opts.noTimer });
+  // Compliance AI Assistant (engine/compliance-copilot.js): the group's companies, the realistic position per company and framework, remediation
+  // and control-activity workflows with four-eyes verification, bilingual policy drafts to GRC, and questions in English or Arabic
+  const CCP = optional('./compliance-copilot');
+  if (CCP) CCP.registerCopilot(srv, app, CCP.createCopilot(app, { now: opts.now, sdk: opts.copilotSdk, getKey: opts.copilotKey, aiOff: opts.copilotAiOff, registers: opts.copilotRegisters, budget: opts.copilotBudget }));
   // Azure Cloud Servers (engine/azure-cloud.js): Azure VMs read-only through Resource Graph - backup, Defender, patches, exposure,
   // cost - with start / stop / deallocate / restart as four-eyes changes sent with a separate action credential
   const AZC = optional('./azure-cloud');

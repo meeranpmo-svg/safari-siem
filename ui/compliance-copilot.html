@@ -1,0 +1,141 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Compliance AI Assistant</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Compliance AI Assistant over /api/itam/copilot/* and /api/itam/org/companies (engine/compliance-copilot.js): per company of the
+     group, the realistic position for NCA ECC, ISO 27001, PDPL, NDMO and Aramco CCC (not measured counts as not met), priorities
+     weighed by what the company does with why in English and Arabic, the 90-day plan; remediation actions and control activities
+     with four-eyes verification; bilingual policy drafts sent to GRC; questions in Arabic or English; the company register. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:250px}
+.mut{color:#8b93a4}.sm{font-size:12px}.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.crit{background:#ff7b72}.dot.warn{background:#e3b341}.dot.info{background:#58a6ff}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tabs button[aria-selected="true"]{background:var(--v-acc,#1f6feb);border-color:var(--v-acc,#1f6feb);color:#fff}
+.st{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:600}.st.gap,.st.overdue,.st.never,.st.returned{background:rgba(255,123,114,.2);color:#ff7b72}.st.partial,.st.due,.st.submitted,.st.waiting,.st.in-review{background:rgba(227,179,65,.2);color:#e3b341}.st.unknown,.st.draft,.st.open{background:rgba(139,147,164,.2);color:#8b93a4}.st.ok,.st.closed,.st.approved{background:rgba(63,185,80,.18);color:#3fb950}
+.month{border:1px solid rgba(127,140,160,.25);border-radius:10px;padding:10px}.month h3{margin:0 0 6px;font-size:14px}.month ul{margin:0;padding-left:18px;font-size:13px}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+.pv{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.pv{grid-template-columns:1fr}}.doc{white-space:pre-wrap;font-size:13px;line-height:1.6;background:rgba(127,140,160,.08);border-radius:10px;padding:12px;max-height:520px;overflow:auto}.doc[dir=rtl]{font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic",sans-serif;font-size:14px}
+.ans{white-space:pre-wrap;line-height:1.6;background:rgba(127,140,160,.08);border-radius:10px;padding:12px;margin-top:10px}
+textarea{width:100%;min-height:70px}.why{font-size:12px;color:#8b93a4;max-width:420px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Compliance · AI consultant · NCA ECC · ISO 27001 · PDPL · NDMO · Aramco CCC</div><h1>Compliance AI Assistant</h1><div class="mut sm">The realistic position of each company, what to fix first and why, the controls to operate, and policies in English and Arabic - with four-eyes workflows</div></div><span class="sp"></span><select id="co" aria-label="Company"></select><label class="sm"><input type="checkbox" id="lang"> عربي</label><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div>
+<div class="tabs" role="tablist" id="tabs"><button type="button" role="tab" data-t="pos" aria-selected="true">Position &amp; priorities</button><button type="button" role="tab" data-t="act">Remediation</button><button type="button" role="tab" data-t="duty">Control calendar</button><button type="button" role="tab" data-t="pol">Policy builder</button><button type="button" role="tab" data-t="ask">Ask the consultant</button><button type="button" role="tab" data-t="cos">Companies</button></div>
+<div id="v-pos">
+ <div class="k" id="kp"></div>
+ <div class="g3">
+  <section class="card"><h2>Recorded vs realistic <span class="c">not measured counts as not met</span></h2><div class="cv"><canvas id="cv-fw"></canvas></div></section>
+  <section class="card"><h2>Where the open work is <span class="c">themes across frameworks</span></h2><div class="cv"><canvas id="cv-th"></canvas></div></section>
+  <section class="card"><h2>What the AI noticed</h2><ul class="ins" id="ins"></ul></section>
+ </div>
+ <section class="card"><h2>90-day plan <span class="c">heaviest themes first, about a small team's capacity</span></h2><div class="g3" id="plan" style="margin:0"></div></section>
+ <section class="card"><h2>What to fix first <span class="c" id="pc"></span></h2><div class="tw" id="pri"></div><p class="mut sm">Indicators from the registers, weighed by what this company does - not an audit opinion.</p></section>
+</div>
+<div id="v-act" hidden><section class="card"><h2>Remediation actions <span class="c">owner submits evidence · another administrator verifies</span></h2><div class="tw" id="acts"></div></section></div>
+<div id="v-duty" hidden><section class="card"><h2>Control calendar <span class="c">done with an evidence reference · verified by another person</span></h2><div class="tw" id="duties"></div></section></div>
+<div id="v-pol" hidden>
+ <section class="card" id="pform"><h2>Build a policy <span class="c">English and Arabic, filled with the company's values</span></h2>
+  <div class="frm"><label>Policy<select id="ptpl"></select></label><label>Password minimum<input id="o-pw" type="number" min="8" max="64" value="12"></label><label>Access review (months)<input id="o-ar" type="number" min="1" max="12" value="3"></label><label>Retention (years)<input id="o-ret" type="number" min="1" max="30" value="5"></label><label>Log retention (days)<input id="o-log" type="number" min="90" max="3650" value="365"></label><label>Critical patch (days)<input id="o-pat" type="number" min="1" max="60" value="14"></label><label>Review every (months)<input id="o-rev" type="number" min="6" max="36" value="12"></label>
+  <button type="button" id="pprev">Preview</button><button type="button" id="pdraft" class="pri" disabled>Send to GRC for approval</button></div>
+  <div id="prefs" class="sm mut" style="margin-top:8px"></div>
+  <div class="pv" style="margin-top:10px"><div class="doc" id="den" dir="ltr"></div><div class="doc" id="dar" dir="rtl" lang="ar"></div></div></section>
+ <section class="card"><h2>Policy drafts <span class="c">approved in GRC by someone other than the author</span></h2><div class="tw" id="pdrafts"></div></section>
+</div>
+<div id="v-ask" hidden><section class="card"><h2>Ask the consultant <span class="c">Arabic or English</span></h2><textarea id="q" placeholder="What should we fix first for PDPL? · ما هي أولويات الضوابط الأساسية للأمن السيبراني؟" dir="auto"></textarea><div class="bar" style="margin-top:8px"><button type="button" id="ask" class="pri">Ask</button><span class="mut sm" id="askn"></span></div><div class="ans" id="ans" dir="auto" hidden></div></section></div>
+<div id="v-cos" hidden><section class="card"><h2>Group companies <span class="c">used by the audit and compliance reports</span></h2><div class="tw" id="cos"></div><div id="cform"></div></section></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, V = null, CO = '', TAB = 'pos', AR = false, PV = null, COS = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 180000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('IT Asset Management is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 6000); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function st(t) { var c = { 'never done': 'never', 'due soon': 'due', 'awaiting verification': 'waiting', 'on track': 'ok' }[t] || t; return '<span class="st ' + esc(c) + '">' + esc(t) + '</span>'; }
+  var TN = { privacy: 'Personal data', iam: 'Access control', third_party: 'Third parties', network: 'Network', logging: 'Logging & monitoring', governance: 'Governance', physical: 'Sites & physical', backup: 'Backup & continuity', vuln: 'Vulnerabilities & patching', incident: 'Incidents', endpoint: 'Devices & email', hr: 'People & awareness', risk: 'Risk', crypto: 'Cryptography', classification: 'Classification', data_mgmt: 'Data management', ot: 'Operational systems', appsec: 'Applications' };
+  var tn = function (k) { return TN[k] || k; };
+
+  function drawPos() {
+    var v = V, K = v.kpis, C = window.zybCharts;
+    $('kp').innerHTML = tile('Realistic position', K.realistic == null ? '–' : K.realistic + '%', 'average across frameworks', K.realistic != null && K.realistic < 50 ? 'bad' : K.realistic < 80 ? 'warn' : 'ok') + tile('As recorded', K.recorded == null ? '–' : K.recorded + '%', 'over what was assessed') + tile('Open requirements', K.open_gaps, 'gap, partial or not measured', K.open_gaps ? 'warn' : 'ok')
+      + tile('Control activities', K.duties_overdue, 'overdue or never done · ' + K.duties_waiting + ' to verify', K.duties_overdue ? 'bad' : 'ok') + tile('Remediation', K.actions_open, K.actions_overdue + ' overdue · ' + K.actions_waiting + ' to verify', K.actions_overdue ? 'warn' : '');
+    if (C) {
+      var F = v.frameworks; C.bars($('cv-fw'), F.map(function (f) { return AR ? f.name_ar : f.name; }), [{ label: 'As recorded %', data: F.map(function (f) { return f.recorded; }), color: 'acc' }, { label: 'Realistic %', data: F.map(function (f) { return f.realistic; }), color: 'warn' }], { title: 'Recorded vs realistic' });
+      var T = v.themes.slice(0, 7); if (T.length) C.ring($('cv-th'), T.map(function (t) { return tn(t.topic); }), T.map(function (t) { return t.items; }), ['crit', 'warn', 'purple', 'acc', 'teal', 'ok', 'mute'], { v: v.total_open, l: 'open' }, { title: 'Themes' }); else C.empty($('cv-th'), 'Nothing open.');
+    }
+    $('ins').innerHTML = v.insights.length ? v.insights.map(function (i) { return '<li><span class="dot ' + esc(i.level) + '"></span><div><b>' + esc(i.title) + '</b><div class="mut sm">' + esc(i.detail) + '</div></div></li>'; }).join('') : '<li><span class="dot info"></span><div>Nothing stands out.</div></li>';
+    $('plan').innerHTML = v.plan.map(function (m) { return '<div class="month"><h3>Month ' + m.month + '</h3>' + (m.work.length ? '<ul>' + m.work.map(function (w) { return '<li><b>' + esc(tn(w.topic)) + '</b> · ' + esc(w.items) + ' requirement(s) · effort ' + esc(w.effort) + '<div class="mut sm">' + esc(w.frameworks.join(', ')) + (w.policy ? ' · policy: <a href="#" data-pol="' + esc(w.policy) + '">draft it</a>' : '') + '</div></li>'; }).join('') + '</ul>' : '<div class="mut sm">Capacity free.</div>') + '</div>'; }).join('');
+    $('pc').textContent = v.priorities.length + ' of ' + v.total_open + ' open';
+    $('pri').innerHTML = v.priorities.length ? '<table><thead><tr><th>Framework</th><th>Requirement</th><th>State</th><th>Theme</th><th>Why for this company</th><th></th></tr></thead><tbody>' + v.priorities.map(function (p, i) {
+      return '<tr><td>' + esc(p.fw_name) + '<div class="mono sm">' + esc(p.id) + '</div></td><td>' + esc(p.title) + (p.hint ? '<div class="mut sm">' + esc(p.hint) + '</div>' : '') + '</td><td>' + st(p.state === 'unknown' ? 'unknown' : p.state) + '</td><td>' + esc(tn(p.topic)) + ' · ' + esc(p.effort) + '</td><td class="why" ' + (AR ? 'dir="rtl"' : '') + '>' + esc(AR ? p.why_ar : p.why) + '</td><td>'
+        + (can('operator') ? '<button type="button" class="sm" data-raise="' + i + '">Raise action…</button>' : '') + (p.policy ? ' <button type="button" class="sm" data-pol="' + esc(p.policy) + '">Policy</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">' + (v.frameworks.length ? 'Nothing open in the registers.' : 'No framework applies to this company - set them under Companies.') + '</div>';
+  }
+  function drawAct() {
+    var A = V.actions;
+    $('acts').innerHTML = A.length ? '<table><thead><tr><th>Action</th><th>Framework</th><th>Owner</th><th>Due</th><th>State</th><th>Evidence</th><th></th></tr></thead><tbody>' + A.map(function (a) {
+      var mine = a.owner && a.owner.toLowerCase() === ME.user.toLowerCase(), b = '';
+      if ((a.state === 'open' || a.state === 'returned') && can('operator') && (mine || (a.raised_by || '').toLowerCase() === ME.user.toLowerCase() || can('admin'))) b = '<button type="button" class="sm" data-sub="' + esc(a.id) + '">Submit evidence…</button>';
+      if (a.state === 'submitted' && can('admin') && !mine && (a.submitted_by || '').toLowerCase() !== ME.user.toLowerCase()) b = '<button type="button" class="sm" data-ver="' + esc(a.id) + '" data-d="accept">Verify &amp; close</button> <button type="button" class="sm" data-ver="' + esc(a.id) + '" data-d="return">Return…</button>';
+      return '<tr><td>' + esc(a.title) + '</td><td>' + esc((a.fw || '').toUpperCase()) + ' <span class="mono sm">' + esc(a.req_id || '') + '</span></td><td>' + esc(a.owner || '–') + '</td><td>' + esc(a.due) + (a.overdue ? ' ' + st('overdue') : '') + '</td><td>' + st(a.state) + '</td><td class="sm">' + esc(a.evidence_ref || '') + '</td><td>' + b + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No remediation action yet - raise one from "What to fix first".</div>';
+  }
+  function drawDuty() {
+    var D = V.duties;
+    $('duties').innerHTML = '<table><thead><tr><th>Control activity</th><th>Every</th><th>Owner</th><th>Next due</th><th>Status</th><th>Frameworks</th><th></th></tr></thead><tbody>' + D.map(function (d) {
+      var b = ''; if (!d.pending && can('operator')) b = '<button type="button" class="sm" data-done="' + esc(d.id) + '">Record done…</button>';
+      if (d.pending && can('admin') && d.pending.by.toLowerCase() !== ME.user.toLowerCase()) b = '<button type="button" class="sm" data-dv="' + esc(d.id) + '" data-d="accept">Verify</button> <button type="button" class="sm" data-dv="' + esc(d.id) + '" data-d="return">Return…</button>';
+      if (d.pending && d.pending.by.toLowerCase() === ME.user.toLowerCase()) b = '<span class="mut sm">another person verifies</span>';
+      return '<tr><td>' + esc(AR ? d.title_ar : d.title) + (d.pending ? '<div class="mut sm">evidence: ' + esc(d.pending.evidence_ref) + ' · by ' + esc(d.pending.by) + '</div>' : '') + '</td><td>' + esc(d.every_days) + ' days</td><td>' + esc(d.owner_dept) + '</td><td>' + esc(d.next_due) + '</td><td>' + st(d.status) + '</td><td class="sm">' + esc(d.refs.join(', ')) + '</td><td>' + b + '</td></tr>'; }).join('') + '</tbody></table>';
+  }
+  function drawPol() {
+    var P = V.policies; if (!$('ptpl').options.length) $('ptpl').innerHTML = P.templates.map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.title.en + ' · ' + t.title.ar) + '</option>'; }).join('');
+    $('pform').hidden = !can('operator');
+    $('pdrafts').innerHTML = P.drafts.length ? '<table><thead><tr><th>Policy</th><th>GRC draft</th><th>By</th><th>Status</th><th>Approved by</th></tr></thead><tbody>' + P.drafts.map(function (d) { return '<tr><td>' + esc(d.title.en) + '<div class="sm" dir="rtl">' + esc(d.title.ar) + '</div></td><td><a href="grc-policies.html">' + esc(d.grc_draft) + '</a> v' + esc(d.version || '') + '</td><td>' + esc(d.by) + '</td><td>' + st(d.status) + '</td><td>' + esc(d.approved_by || '–') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No policy drafted here yet.</div>';
+  }
+  function drawCos() {
+    var L = (COS && COS.companies) || [], adm = can('admin');
+    $('cos').innerHTML = '<table><thead><tr><th>Company</th><th>Arabic name</th><th>Frameworks</th><th>What it does</th><th></th></tr></thead><tbody>' + L.map(function (c) { return '<tr><td><b>' + esc(c.name) + '</b>' + (c.parent ? '<div class="mut sm">part of ' + esc(c.parent) + '</div>' : '') + (c.active === false ? ' <span class="st unknown">inactive</span>' : '') + '</td><td dir="rtl">' + esc(c.name_ar || '') + '</td><td>' + esc((c.frameworks || []).map(function (f) { return COS.frameworks[f]; }).join(', ')) + '</td><td class="sm">' + esc((c.lines || []).map(function (l) { return COS.lines[l]; }).join(', ')) + '</td><td>' + (adm ? '<button type="button" class="sm" data-edco="' + esc(c.id) + '">Edit</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>'
+      + (adm ? '<p><button type="button" id="addco">+ Add a company</button></p>' : '');
+  }
+  function coForm(c) {
+    var F = COS.frameworks, Ln = COS.lines, x = c || { id: '', name: '', name_ar: '', frameworks: [], lines: [], parent: 'main', active: true };
+    $('cform').innerHTML = '<form id="cf" class="card" style="margin-top:10px"><div class="frm"><label>Id (a-z, 0-9, _)<input name="cid" value="' + esc(x.id) + '"' + (c ? ' readonly' : '') + ' required></label><label>Name<input name="cname" value="' + esc(x.name) + '" required></label><label>Arabic name<input name="name_ar" dir="rtl" value="' + esc(x.name_ar || '') + '"></label><label>Part of<input name="parent" value="' + esc(x.parent || '') + '"></label></div>'
+      + '<div class="sm" style="margin-top:8px">Frameworks: ' + Object.keys(F).map(function (k) { return '<label><input type="checkbox" name="fw" value="' + k + '"' + ((x.frameworks || []).indexOf(k) >= 0 ? ' checked' : '') + '> ' + esc(F[k]) + '</label>'; }).join(' ') + '</div>'
+      + '<div class="sm" style="margin-top:6px">What it does: ' + Object.keys(Ln).map(function (k) { return '<label><input type="checkbox" name="ln" value="' + k + '"' + ((x.lines || []).indexOf(k) >= 0 ? ' checked' : '') + '> ' + esc(Ln[k]) + '</label>'; }).join(' ') + '</div>'
+      + '<div class="bar" style="margin-top:8px"><label class="sm"><input type="checkbox" name="active"' + (x.active !== false ? ' checked' : '') + '> active</label><button type="submit" class="pri">Save</button></div></form>';
+  }
+  function draw() {
+    $('co').innerHTML = V.companies.map(function (c) { return '<option value="' + esc(c.id) + '"' + (c.id === V.company.id ? ' selected' : '') + '>' + esc(AR && c.name_ar ? c.name_ar : c.name) + '</option>'; }).join('');
+    ['pos', 'act', 'duty', 'pol', 'ask', 'cos'].forEach(function (t) { $('v-' + t).hidden = t !== TAB; }); [].forEach.call(document.querySelectorAll('[data-t]'), function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-t') === TAB)); });
+    if (TAB === 'pos') drawPos(); if (TAB === 'act') drawAct(); if (TAB === 'duty') drawDuty(); if (TAB === 'pol') drawPol(); if (TAB === 'cos') drawCos();
+  }
+  function load() { return Promise.all([req('GET', '/copilot/overview' + (CO ? '?company=' + encodeURIComponent(CO) : '')), req('GET', '/org/companies')]).then(function (r) { V = r[0]; COS = r[1]; CO = V.company.id; $('err').innerHTML = ''; draw(); }, function (e) { $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'The Compliance AI Assistant is not installed in IT Asset Management yet - run the update.' : e.message) + '</div></div>'; }); }
+  function opts() { return { pw_min: Number($('o-pw').value), access_review_months: Number($('o-ar').value), retention_years: Number($('o-ret').value), log_days: Number($('o-log').value), patch_critical_days: Number($('o-pat').value), review_months: Number($('o-rev').value) }; }
+  function preview() { req('POST', '/copilot/policies/preview', { template: $('ptpl').value, company: CO, options: opts() }).then(function (d) { PV = d; $('den').textContent = d.text_en; $('dar').textContent = d.text_ar; $('pdraft').disabled = false;
+    $('prefs').textContent = 'Serves: ' + [d.refs.nca.length ? 'NCA ECC ' + d.refs.nca.join(', ') : '', d.refs.iso.length ? 'ISO 27001 ' + d.refs.iso.join(', ') : '', d.refs.pdpl.length ? 'PDPL Art. ' + d.refs.pdpl.join(', ') : '', d.refs.ndmo.length ? 'NDMO ' + d.refs.ndmo.join(', ') : '', d.refs.aramco ? 'Aramco CCC: ' + d.refs.aramco : ''].filter(Boolean).join(' · ') + '. A starting draft - check every reference against the current framework text before approval.'; }, function (x) { toast(x.message); }); }
+  document.addEventListener('click', function (e) {
+    var t = e.target, a;
+    if ((a = t.closest('[data-t]'))) { TAB = a.getAttribute('data-t'); draw(); return; }
+    if ((a = t.closest('[data-pol]'))) { e.preventDefault(); TAB = 'pol'; draw(); $('ptpl').value = a.getAttribute('data-pol'); if (can('operator')) preview(); return; }
+    if ((a = t.closest('[data-raise]'))) { var p = V.priorities[Number(a.getAttribute('data-raise'))], owner = window.prompt('Owner of the action (platform user name):', ME.user); if (!owner) return; var due = window.prompt('Due (YYYY-MM-DD):', new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)); if (!due) return;
+      req('POST', '/copilot/actions', { company: CO, fw: p.fw, req_id: p.id, title: (p.title || p.id).slice(0, 280), owner: owner, due: due, topic: p.topic === 'other' ? undefined : p.topic }).then(function () { toast('Action raised - the owner submits the evidence'); return load(); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-sub]'))) { var ev = window.prompt('Evidence reference (document, system, date - where it is kept):'); if (!ev) return; req('POST', '/copilot/actions/' + encodeURIComponent(a.getAttribute('data-sub')) + '/submit', { evidence_ref: ev }).then(function () { toast('Submitted - another administrator verifies'); return load(); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-ver]'))) { var d = a.getAttribute('data-d'), note = d === 'return' ? window.prompt('What is missing?') : ''; if (d === 'return' && !note) return; req('POST', '/copilot/actions/' + encodeURIComponent(a.getAttribute('data-ver')) + '/verify', { decision: d, note: note || undefined }).then(function (j) { toast('Action ' + j.state); return load(); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-done]'))) { var er = window.prompt('Evidence reference (report, ticket, document and where it is kept):'); if (!er) return; req('POST', '/copilot/duties/' + encodeURIComponent(a.getAttribute('data-done')) + '/done', { evidence_ref: er }).then(function () { toast('Recorded - another person verifies'); return load(); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-dv]'))) { var dd = a.getAttribute('data-d'), nt = dd === 'return' ? window.prompt('What is missing?') : ''; if (dd === 'return' && !nt) return; req('POST', '/copilot/duties/' + encodeURIComponent(a.getAttribute('data-dv')) + '/verify', { decision: dd, note: nt || undefined }).then(function (j) { toast(dd === 'accept' ? 'Verified - next due ' + j.next_due : 'Returned'); return load(); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-edco]'))) { coForm(COS.companies.filter(function (c) { return c.id === a.getAttribute('data-edco'); })[0]); return; }
+    if (t.id === 'addco') { coForm(null); return; }
+    if (t.id === 'pprev') { preview(); return; }
+    if (t.id === 'pdraft') { t.disabled = true; req('POST', '/copilot/policies/draft', { template: $('ptpl').value, company: CO, options: opts() }).then(function (j) { toast('Sent to GRC as ' + j.grc_draft + ' - another person approves it'); return load(); }, function (x) { toast(x.message); t.disabled = false; }); return; }
+    if (t.id === 'ask') { var q = $('q').value.trim(); if (!q) return; t.disabled = true; $('askn').textContent = 'Thinking…'; req('POST', '/copilot/ask', { question: q, company: CO }).then(function (j) { $('ans').hidden = false; $('ans').textContent = j.answer; $('askn').textContent = j.ai ? 'AI consultant · read-only tools' : (j.note || 'answered from the registers on this server'); }, function (x) { $('askn').textContent = x.message; }).then(function () { t.disabled = false; }); return; }
+  });
+  document.addEventListener('submit', function (e) { if (e.target.getAttribute('id') !== 'cf') return; e.preventDefault(); var f = e.target, ck = function (n) { return [].filter.call(f.querySelectorAll('[name=' + n + ']'), function (x) { return x.checked; }).map(function (x) { return x.value; }); };
+    var el = function (n) { return f.elements[n]; }; req('PUT', '/org/companies/' + encodeURIComponent(el('cid').value.trim()), { name: el('cname').value.trim(), name_ar: el('name_ar').value.trim(), parent: el('parent').value.trim(), frameworks: ck('fw'), lines: ck('ln'), active: el('active').checked }).then(function (j) { COS.companies = j.companies; $('cform').innerHTML = ''; toast('Saved'); return load(); }, function (x) { toast(x.message); }); });
+  $('co').addEventListener('change', function () { CO = this.value; PV = null; load(); });
+  $('lang').addEventListener('change', function () { AR = this.checked; draw(); });
+  $('rf').addEventListener('click', function () { var b = this; b.disabled = true; load().then(function () { b.disabled = false; toast('Refreshed'); }); });
+  ['o-pw', 'o-ar', 'o-ret', 'o-log', 'o-pat', 'o-rev', 'ptpl'].forEach(function (i) { $(i).addEventListener('change', function () { $('pdraft').disabled = true; }); });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>
