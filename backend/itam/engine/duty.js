@@ -274,6 +274,10 @@ function registerDuty(srv, app, opts = {}) {
   // Microsoft 365 Licences & Security (engine/m365-licence-intel.js): licence waste, forecast and the security the licences buy, read-only
   const MLI = optional('./m365-licence-intel');
   if (MLI) MLI.registerM365LicenceIntel(srv, app, MLI.createM365LicenceIntel(app, { now: opts.now, source: opts.m365Source }), { noTimer: opts.noTimer });
+  // Azure Cloud Servers (engine/azure-cloud.js): Azure VMs read-only through Resource Graph - backup, Defender, patches, exposure,
+  // cost - with start / stop / deallocate / restart as four-eyes changes sent with a separate action credential
+  const AZC = optional('./azure-cloud');
+  if (AZC) AZC.registerAzureCloud(srv, app, AZC.createAzureCloud(app, { now: opts.now, request: opts.azureRequest, login_base: opts.azureLogin, arm_base: opts.azureArm }), { noTimer: opts.noTimer });
   // Work From Home (engine/remote-work.js): requests, four-eyes approval by the department's approvers, today's board, VPN readiness
   const RWM = optional('./remote-work');
   if (RWM) RWM.registerRemoteWork(srv, app, RWM.createRemoteWork(app, { now: opts.now, noTimer: opts.noTimer }));

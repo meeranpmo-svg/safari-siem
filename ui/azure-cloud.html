@@ -1,0 +1,125 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Azure Cloud Servers</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Azure Cloud Servers over /api/itam/azure-cloud (engine/azure-cloud.js): every Azure VM read through Resource Graph with a
+     Reader-only credential - power, size, IPs, exposure (management ports open to the internet), Azure Backup, patches, Defender
+     for Cloud, Advisor cost; a risk score with its reasons; what the AI noticed (rules over the data); servers missing from the
+     asset register added by an operator; start / stop / deallocate / restart proposed by an operator and approved by a different
+     administrator (four-eyes), sent with a separate action credential. Tags only for operators and above. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:230px}
+.mut{color:#8b93a4}.sm{font-size:12px}.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.crit{background:#ff7b72}.dot.warn{background:#e3b341}.dot.info{background:#58a6ff}
+.risk{display:inline-block;min-width:34px;text-align:center;border-radius:6px;padding:1px 6px;font-weight:600;font-size:12px}.risk.h{background:rgba(255,123,114,.2);color:#ff7b72}.risk.m{background:rgba(227,179,65,.2);color:#e3b341}.risk.l{background:rgba(63,185,80,.18);color:#3fb950}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.chips button{border-radius:999px;padding:4px 11px;font-size:12px}.chips button[aria-pressed="true"]{background:var(--v-acc,#1f6feb);border-color:var(--v-acc,#1f6feb);color:#fff}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+.note{border-left:3px solid #f59f00;padding:6px 10px;border-radius:4px;background:rgba(245,159,0,.08);font-size:12.5px;margin:6px 0}
+.why{font-size:11.5px;color:#8b93a4;max-width:360px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Azure · cloud servers · four-eyes</div><h1>Azure Cloud Servers</h1><div class="mut sm">Every Azure virtual machine: exposure, backup, patches, Defender and cost - read-only through Resource Graph; power changes approved by a second person</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="rf" hidden>⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="conn" hidden class="card"></div>
+<div id="main" hidden>
+ <div class="k" id="kp"></div>
+ <div class="g3">
+  <section class="card"><h2>Power state <span class="c">running, stopped, deallocated</span></h2><div class="cv"><canvas id="cv-power"></canvas></div></section>
+  <section class="card"><h2>Risk drivers <span class="c">servers affected</span></h2><div class="cv"><canvas id="cv-risk"></canvas></div></section>
+  <section class="card"><h2>Servers per region <span class="c">Azure locations</span></h2><div class="cv"><canvas id="cv-region"></canvas></div></section>
+ </div>
+ <section class="card"><h2>What the AI noticed <span class="c">rules over the data</span></h2><ul class="ins" id="ins"></ul></section>
+ <section class="card"><h2>Servers <span class="c" id="vc"></span></h2><div class="chips" id="chips"></div><div class="tw" id="vms"></div><div id="regb"></div></section>
+ <section class="card"><h2>Changes &amp; approvals <span class="c">four-eyes: an operator proposes, another administrator approves</span></h2><div id="actn"></div><div class="tw" id="acts"></div></section>
+ <section class="card"><h2>Paid for nothing <span class="c">disks and public IPs attached to nothing</span></h2><div class="tw" id="orph"></div></section>
+ <section class="card"><h2>Defender secure score <span class="c">per subscription</span></h2><div class="tw" id="score"></div></section>
+ <p class="mut sm" id="foot"></p>
+</div>
+<section class="card" id="setc" hidden><h2>Settings <span class="c">administrators</span></h2><div id="set"></div></section>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, V = null, F = 'all';
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 180000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('IT Asset Management is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 5000); }
+  function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  var PW = { running: 'ok', stopped: 'warn', deallocated: '', starting: 'info', stopping: 'info', deallocating: 'info' };
+  var FL = { all: ['All', function () { return true; }], exposed: ['Exposed', function (v) { return v.public_ips.length && v.open_ports.length; }], nobackup: ['No backup', function (v) { return !v.backup; }],
+    patches: ['Critical patches', function (v) { return v.patches && v.patches.critical > 0; }], billed: ['Stopped, billed', function (v) { return v.power === 'stopped'; }], unreg: ['Not in register', function (v) { return !v.in_register; }] };
+
+  function settings() {
+    var v = V, c = $('setc'); c.hidden = !can('admin'); if (!can('admin')) return;
+    var opts = function (sel, empty) { return '<option value="">' + esc(empty) + '</option>' + (v.credentials || []).map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === sel ? ' selected' : '') + '>' + esc(x.label) + ' (' + esc(x.subscriptions || 'all') + ' subscriptions)</option>'; }).join(''); };
+    var s = v.settings || {};
+    $('set').innerHTML = (v.vault ? '' : '<div class="note">The credential vault is not available on this server.</div>')
+      + ((v.credentials || []).length ? '' : '<div class="note">No Azure credential yet. Add one in <a href="discovery-studio.html">Asset Discovery → Credentials</a> (kind Azure: tenant id, app client id, client secret, subscriptions). Give the app registration the <b>Reader</b> role.</div>')
+      + '<form id="sf" class="frm"><label>Read credential (Reader role)<select name="credential_id">' + opts(s.credential_id, '- choose -') + '</select></label>'
+      + '<label>Action credential (Virtual Machine Contributor, optional)<select name="action_credential_id">' + opts(s.action_credential_id, '- none: changes cannot be sent -') + '</select></label>'
+      + '<label>Read every (hours)<input name="refresh_hours" type="number" min="1" max="24" value="' + esc(s.refresh_hours || 6) + '"></label><button type="submit">Save</button></form>'
+      + '<p class="mut sm">Two separate app registrations: the read one stays Reader-only; the action one is used only after a second administrator approves a change.</p>';
+  }
+
+  function draw() {
+    var v = V, C = window.zybCharts; settings();
+    $('up').textContent = v.at ? 'read ' + String(v.at).replace('T', ' ').slice(0, 16) + ' UTC' : ''; $('rf').hidden = !can('operator') || !v.configured;
+    if (!v.totals) { $('main').hidden = true; $('conn').hidden = false; $('conn').innerHTML = '<h2>' + (v.configured ? 'Not read yet' : 'Connect Azure') + '</h2><p>' + (v.configured ? 'Press Refresh to read the subscriptions.' : 'An administrator chooses the Azure credential below. Nothing is shown until Azure has been read - no sample servers.') + '</p>'; return; }
+    $('conn').hidden = true; $('main').hidden = false;
+    var T = v.totals, cur = T.currency || '';
+    $('kp').innerHTML = tile('Servers', T.vms, T.subscriptions + ' subscription(s) · ' + T.regions + ' region(s)') + tile('Running', T.running, T.deallocated + ' deallocated')
+      + tile('Exposed to the internet', T.exposed, 'management port on a public IP', T.exposed ? 'crit' : 'ok') + tile('No backup', T.no_backup, 'not in Azure Backup', T.no_backup ? 'warn' : 'ok')
+      + tile('Critical patches', T.critical_patches, 'servers waiting', T.critical_patches ? 'crit' : 'ok') + tile('Secure score', T.secure_score == null ? '–' : T.secure_score + '%', 'Defender for Cloud', T.secure_score != null && T.secure_score < 60 ? 'warn' : '')
+      + tile('Advisor savings', T.advisor_savings ? T.advisor_savings + ' ' + cur : '0', 'a month') + tile('Paid for nothing', T.orphan_disks + T.orphan_ips, T.orphan_disk_gb + ' GB of disks, ' + T.orphan_ips + ' IP(s)', T.orphan_disks + T.orphan_ips ? 'warn' : '');
+    if (C) {
+      C.ring($('cv-power'), v.by_power.map(function (x) { return x.name; }), v.by_power.map(function (x) { return x.n; }), v.by_power.map(function (x) { return x.name === 'running' ? 'ok' : x.name === 'stopped' ? 'warn' : 'mute'; }), { v: T.vms, l: 'servers' }, { title: 'Power state' });
+      var RD = [['Exposed', T.exposed, 'crit'], ['No backup', T.no_backup, 'warn'], ['Critical patches', T.critical_patches, 'crit'], ['Defender high', T.defender_high, 'pink'], ['Stopped, billed', T.stopped_billed, 'purple'], ['Not in register', T.not_in_register, 'acc']];
+      C.bars($('cv-risk'), RD.map(function (x) { return x[0]; }), [{ label: 'Servers', data: RD.map(function (x) { return x[1]; }), colors: RD.map(function (x) { return x[2]; }) }], { horizontal: true, title: 'Risk drivers' });
+      C.bars($('cv-region'), v.by_region.map(function (x) { return x.name; }), [{ label: 'Servers', data: v.by_region.map(function (x) { return x.n; }), color: 'teal' }], { title: 'Servers per region' });
+    }
+    $('ins').innerHTML = v.insights.length ? v.insights.map(function (i) { return '<li><span class="dot ' + esc(i.level) + '"></span><div><b>' + esc(i.title) + '</b><div class="mut sm">' + esc(i.detail) + '</div>' + (i.servers.length ? '<div class="sm">' + i.servers.map(function (s) { return pill(s); }).join(' ') + '</div>' : '') + '</div></li>'; }).join('') : '<li><span class="dot info"></span><div>Nothing stands out.</div></li>';
+    $('chips').innerHTML = Object.keys(FL).map(function (k) { return '<button type="button" data-f="' + k + '" aria-pressed="' + (F === k) + '">' + esc(FL[k][0]) + ' (' + v.vms.filter(FL[k][1]).length + ')</button>'; }).join('');
+    var L = v.vms.filter(FL[F][1]), op = can('operator'); $('vc').textContent = L.length + ' of ' + v.vms.length;
+    $('vms').innerHTML = L.length ? '<table><thead><tr>' + (op ? '<th><input type="checkbox" id="all" aria-label="select all not in the register"></th>' : '') + '<th>Risk</th><th>Server</th><th>Power</th><th>Size</th><th>OS</th><th>IPs</th><th>Backup</th><th>Patches</th><th>Why</th>' + (op ? '<th></th>' : '') + '</tr></thead><tbody>'
+      + L.map(function (x) { var rc = x.risk >= 40 ? 'h' : x.risk >= 15 ? 'm' : 'l';
+        return '<tr>' + (op ? '<td>' + (x.in_register ? '' : '<input type="checkbox" data-reg="' + esc(x.id) + '" aria-label="add ' + esc(x.name) + ' to the register">') + '</td>' : '')
+          + '<td><span class="risk ' + rc + '">' + esc(x.risk) + '</span></td><td><b>' + esc(x.name) + '</b><div class="mut sm">' + esc(x.subscription_name || x.subscription) + ' · ' + esc(x.resource_group) + ' · ' + esc(x.location) + '</div>' + (x.in_register ? '' : pill('not in register', 'warn')) + (op && x.owner ? ' ' + pill('owner ' + x.owner) : '') + '</td>'
+          + '<td>' + pill(x.power, PW[x.power] || '') + '</td><td>' + esc(x.size || '–') + '</td><td>' + esc(x.os || x.os_type || '–') + (x.hybrid_benefit ? ' ' + pill('AHB', 'ok') : '') + '</td>'
+          + '<td>' + esc(x.ips.join(', ') || '–') + (x.public_ips.length ? '<div>' + pill('public ' + x.public_ips.join(', '), x.open_ports.length ? 'bad' : 'warn') + '</div>' : '') + '</td>'
+          + '<td>' + (x.backup ? pill(x.backup.age_days != null ? x.backup.age_days + ' d' : (x.backup.health || 'yes'), x.backup.age_days != null && x.backup.age_days <= 2 ? 'ok' : 'warn') : pill('none', 'bad')) + '</td>'
+          + '<td>' + (x.patches ? (x.patches.critical ? pill(x.patches.critical + ' critical', 'bad') + ' ' : '') + (x.patches.security ? pill(x.patches.security + ' security', 'warn') : '') + (!x.patches.critical && !x.patches.security ? pill('up to date', 'ok') : '') : '<span class="mut">not assessed</span>') + '</td>'
+          + '<td class="why">' + esc(x.reasons.join('; ') || '–') + '</td>'
+          + (op ? '<td><select data-act="' + esc(x.id) + '" aria-label="propose a change for ' + esc(x.name) + '"><option value="">Propose…</option><option value="start">Start</option><option value="restart">Restart</option><option value="stop">Stop</option><option value="deallocate">Deallocate</option></select></td>' : '') + '</tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No server matches.</div>';
+    $('regb').innerHTML = op && v.totals.not_in_register ? '<p><button type="button" id="reg">Add the selected servers to the asset register</button> <span class="mut sm">site "Azure &lt;region&gt;", type server</span></p>' : '';
+    $('actn').innerHTML = v.actions_enabled ? '' : '<div class="note">Changes can be proposed and decided, but an administrator must choose an action credential (Settings) before an approved change can be sent to Azure.</div>';
+    $('acts').innerHTML = v.actions.length ? '<table><thead><tr><th>When</th><th>Server</th><th>Change</th><th>Reason</th><th>Proposed by</th><th>State</th><th></th></tr></thead><tbody>' + v.actions.map(function (a) {
+      var mine = a.proposed_by === ME.user, dec = a.state === 'pending' && can('admin') && !mine;
+      return '<tr><td>' + esc(String(a.at).replace('T', ' ').slice(0, 16)) + '</td><td>' + esc(a.vm_name) + '</td><td>' + esc(a.action) + '</td><td>' + esc(a.reason || '') + '</td><td>' + esc(a.proposed_by) + '</td><td>' + pill(a.state, a.state === 'sent' ? 'ok' : a.state === 'failed' ? 'bad' : a.state === 'pending' ? 'warn' : '') + (a.error ? '<div class="mut sm">' + esc(a.error) + '</div>' : '') + (a.decided_by ? '<div class="mut sm">by ' + esc(a.decided_by) + '</div>' : '') + '</td>'
+        + '<td>' + (dec ? '<button type="button" data-dec="approve" data-id="' + esc(a.id) + '">Approve</button> <button type="button" data-dec="reject" data-id="' + esc(a.id) + '">Reject</button>' : a.state === 'pending' && mine ? '<span class="mut sm">another administrator approves</span>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No changes proposed.</div>';
+    var O = v.orphan_disks.map(function (d) { return '<tr><td>Disk</td><td>' + esc(d.name) + '</td><td>' + esc(d.size_gb + ' GB · ' + (d.sku || '')) + '</td><td>' + esc(d.resource_group || '') + '</td></tr>'; })
+      .concat(v.orphan_ips.map(function (p) { return '<tr><td>Public IP</td><td>' + esc(p.name) + '</td><td>' + esc(p.ip || '') + '</td><td>' + esc(p.resource_group || '') + '</td></tr>'; }));
+    $('orph').innerHTML = O.length ? '<table><thead><tr><th>Kind</th><th>Name</th><th>Detail</th><th>Resource group</th></tr></thead><tbody>' + O.join('') + '</tbody></table><p class="mut sm">Delete in the Azure portal after checking - this page never deletes.</p>' : '<div class="empty">Nothing unattached.</div>';
+    $('score').innerHTML = v.scores.length ? '<table><thead><tr><th>Subscription</th><th>Secure score</th></tr></thead><tbody>' + v.scores.map(function (s) { return '<tr><td>' + esc(s.name || s.subscription) + '</td><td>' + esc(s.pct == null ? '–' : s.pct + '%') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">' + (v.sections.score && !v.sections.score.ok ? 'Defender for Cloud not readable (' + esc(v.sections.score.error) + ') - give the app the Security Reader role.' : 'No secure score - Defender for Cloud not enabled.') + '</div>';
+    var failed = Object.keys(v.sections || {}).filter(function (k) { return !v.sections[k].ok; });
+    $('foot').textContent = 'Read-only through Azure Resource Graph.' + (failed.length ? ' Not readable with this credential: ' + failed.join(', ') + '.' : '') + ' Risk is a score from the reasons shown - indicators, not proof.';
+  }
+
+  function load() { return req('GET', '/azure-cloud').then(function (j) { V = j; $('err').innerHTML = ''; draw(); }, function (e) { $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'Azure Cloud Servers is not installed in IT Asset Management yet - run the update.' : e.message) + '</div></div>'; }); }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-f]'); if (t) { F = t.getAttribute('data-f'); draw(); return; }
+    if (e.target.id === 'all') { document.querySelectorAll('[data-reg]').forEach(function (c) { c.checked = e.target.checked; }); return; }
+    if (e.target.id === 'reg') { var ids = [].map.call(document.querySelectorAll('[data-reg]:checked'), function (c) { return c.getAttribute('data-reg'); }); if (!ids.length) return toast('Select the servers first');
+      req('POST', '/azure-cloud/register', { ids: ids }).then(function (j) { toast(j.created.length + ' added to the asset register'); return load(); }, function (x) { toast(x.message); }); return; }
+    var d = e.target.closest('[data-dec]'); if (d) { var dec = d.getAttribute('data-dec'), note = window.prompt(dec === 'approve' ? 'Approve - note (optional)' : 'Reject - why?') ; if (note === null) return; d.disabled = true;
+      req('POST', '/azure-cloud/actions/' + encodeURIComponent(d.getAttribute('data-id')) + '/decide', { decision: dec, note: note }).then(function (j) { toast('Change ' + j.state); return load(); }, function (x) { d.disabled = false; toast(x.message); }); }
+  });
+  document.addEventListener('change', function (e) { var s = e.target.closest('[data-act]'); if (!s || !s.value) return; var act = s.value, reason = window.prompt('Why ' + act + ' this server? (a second administrator approves)'); s.value = ''; if (!reason) return;
+    req('POST', '/azure-cloud/actions', { vm_id: s.getAttribute('data-act'), action: act, reason: reason }).then(function () { toast('Proposed - waiting for another administrator'); return load(); }, function (x) { toast(x.message); }); });
+  document.addEventListener('submit', function (e) { if (e.target.id !== 'sf') return; e.preventDefault(); var f = e.target;
+    req('PUT', '/azure-cloud/settings', { credential_id: f.credential_id.value, action_credential_id: f.action_credential_id.value, refresh_hours: Number(f.refresh_hours.value) }).then(function (j) { V = j; draw(); toast('Saved'); }, function (x) { toast(x.message); }); });
+  $('rf').addEventListener('click', function () { var b = this; b.disabled = true; b.textContent = 'Reading Azure…'; req('POST', '/azure-cloud/refresh', {}).then(function (j) { V = j; draw(); toast('Read from Azure'); }, function (x) { toast(x.message); }).then(function () { b.disabled = false; b.textContent = '⟳ Refresh'; }); });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } load(); }; w.onerror = load; w.send();
+  setInterval(function () { if (!document.hidden) load(); }, 300000);
+})();
+</script></body></html>

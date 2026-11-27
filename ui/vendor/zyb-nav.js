@@ -2764,6 +2764,7 @@ window.ZYB_NAV = [
   "icon": "<rect x=\"3\" y=\"3\" width=\"18\" height=\"7\" rx=\"2\"/><rect x=\"3\" y=\"14\" width=\"18\" height=\"7\" rx=\"2\"/><path d=\"M7 6.5h.01M7 17.5h.01\"/>",
   "pages": [
    {"h": "hyperv.html", "s": "Hyper-V Servers", "t": "Hyper-V Servers - hosts and VMs with capacity forecasts, right-sizing, health and four-eyes VM actions", "d": "Every Hyper-V host that reports (a read-only script on the host) with CPU, memory, volumes and the days until they fill; every VM's memory demand against what it is assigned (14-day p95), heartbeat, checkpoints, replication, zombies; start / shut down / turn off / restart / checkpoint approved by a different administrator and run by the host itself", "fw": {"nca": ["2-3", "2-9"], "iso": ["8.6", "8.14"]}, "k": ["hyper-v", "hyperv", "virtual machines", "vm", "capacity", "rightsizing", "checkpoint", "replication", "servers"]},
+   {"h": "azure-cloud.html", "s": "Azure Cloud Servers", "t": "Azure Cloud Servers - every Azure VM with exposure, backup, patches, Defender and cost, and four-eyes power changes", "d": "Read-only through Azure Resource Graph (Reader role): power, size, IPs, management ports open to the internet, Azure Backup, Update Manager patches, Defender for Cloud, Advisor savings, disks and IPs paid for nothing; a risk score with reasons; add missing servers to the asset register; start / stop / deallocate / restart proposed by an operator and approved by another administrator."},
    {
     "h": "server-availability.html",
     "s": "Server Availability",
