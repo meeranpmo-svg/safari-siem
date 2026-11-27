@@ -1,0 +1,119 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Firewall &amp; Security Device Audit</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Firewall & Security Device Audit over /api/soc/netops/fw-audit (engine/netops/fw-audit.js): every FortiGate (through FortiManager,
+     read-only) and every H3C / Cisco switch whose configuration is captured, tested against a fixed audit programme mapped to NCA ECC,
+     ISO 27001, Aramco CCC and the CIS benchmark topic. Pass / fail with the evidence / not checked (never a pass); the fix as text;
+     risk acceptance with a reason and an end date by a person with the firewall approval scope; sign-off of a run by a person who
+     did not run it; CSV export. Analysts and above (the rule base is sensitive). -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:240px}
+.mut{color:#8b93a4}.sm{font-size:12px}.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.crit{background:#ff7b72}.dot.warn{background:#e3b341}.dot.info{background:#58a6ff}
+.sbar{display:inline-block;width:110px;height:9px;border-radius:5px;background:rgba(127,140,160,.18);vertical-align:middle;margin-right:6px;overflow:hidden}.sbar>i{display:block;height:100%;border-radius:5px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.chips button{border-radius:999px;padding:4px 11px;font-size:12px}.chips button[aria-pressed="true"]{background:var(--v-acc,#1f6feb);border-color:var(--v-acc,#1f6feb);color:#fff}
+.sev{display:inline-block;border-radius:6px;padding:1px 7px;font-size:11.5px;font-weight:600}.sev.critical{background:rgba(255,123,114,.2);color:#ff7b72}.sev.high{background:rgba(255,166,87,.2);color:#ffa657}.sev.medium{background:rgba(227,179,65,.2);color:#e3b341}.sev.low{background:rgba(88,166,255,.18);color:#58a6ff}
+.res{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:600}.res.pass{background:rgba(63,185,80,.18);color:#3fb950}.res.fail{background:rgba(255,123,114,.2);color:#ff7b72}.res.not_checked{background:rgba(139,147,164,.2);color:#8b93a4}.res.na{background:rgba(139,147,164,.12);color:#8b93a4}.res.accepted{background:rgba(188,140,255,.2);color:#bc8cff}
+.fix{white-space:pre-wrap;font:12px ui-monospace,Consolas,monospace;background:rgba(127,140,160,.1);border-radius:6px;padding:6px 8px;margin:4px 0}
+.ev{margin:2px 0 0;padding-left:16px;font-size:12px}.refs{font-size:11px;color:#8b93a4}
+tr[data-dev]{cursor:pointer}tr[data-dev]:hover td{background:rgba(127,140,160,.06)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(760px,100%);background:var(--panel,#13151b);border-left:1px solid rgba(127,140,160,.25);box-shadow:-20px 0 60px rgba(0,0,0,.45);z-index:80;overflow:auto;padding:16px;display:none}.drawer.open{display:block}
+.area{margin:12px 0 4px;font-weight:600}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network security · audit · FortiGate · H3C</div><h1>Firewall &amp; Security Device Audit</h1><div class="mut sm">Every FortiGate and switch tested against a fixed audit programme - evidence, the fix, NCA ECC / ISO 27001 / Aramco CCC references - read-only</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="csv" hidden>⭳ Export CSV</button><button type="button" id="rf" hidden>▶ Run the audit</button></div>
+<div id="err"></div>
+<div id="none" hidden class="card"></div>
+<div id="main" hidden>
+ <div class="k" id="kp"></div>
+ <div class="g3">
+  <section class="card"><h2>Score per device <span class="c">weighted by severity, over what was checked</span></h2><div class="cv"><canvas id="cv-score"></canvas></div></section>
+  <section class="card"><h2>Open findings <span class="c">by severity</span></h2><div class="cv"><canvas id="cv-sev"></canvas></div></section>
+  <section class="card"><h2>Results by audit area <span class="c">pass · fail · not checked</span></h2><div class="cv"><canvas id="cv-area"></canvas></div></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>What the AI noticed <span class="c">from this run</span></h2><ul class="ins" id="ins"></ul></section>
+  <section class="card"><h2>Most common failures <span class="c">fix once, everywhere</span></h2><div class="tw" id="top"></div></section>
+ </div>
+ <section class="card"><h2>Devices <span class="c" id="dc"></span></h2><div class="tw" id="devs"></div></section>
+ <section class="card"><h2>Findings <span class="c" id="fc"></span></h2><div class="chips" id="chips"></div><div class="tw" id="finds"></div></section>
+ <section class="card"><h2>Audit runs &amp; sign-off <span class="c">a person who did not run the audit signs it off</span></h2><div class="tw" id="runs"></div></section>
+ <p class="mut sm" id="foot"></p>
+</div>
+</main>
+<div class="drawer" id="drw" role="dialog" aria-modal="true" aria-labelledby="dt"><div class="bar" style="display:flex;gap:8px;align-items:center"><h3 id="dt" style="margin:0;flex:1"></h3><button type="button" id="dclose">Close</button></div><div id="db"></div></div>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, V = null, SF = 'open';
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/soc' + u); x.withCredentials = true; x.timeout = 300000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('the SIEM is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 6000); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function sbar(v) { if (v == null) return '<span class="mut">not checked</span>'; var c = v >= 85 ? '#3fb950' : v >= 60 ? '#e3b341' : '#ff7b72'; return '<span class="sbar"><i style="width:' + Math.max(3, v) + '%;background:' + c + '"></i></span>' + esc(v) + '%'; }
+  function sev(s) { return '<span class="sev ' + esc(s) + '">' + esc(s) + '</span>'; }
+  function res(t) { var r = t.accepted ? 'accepted' : t.result; return '<span class="res ' + esc(r) + '">' + esc(r === 'not_checked' ? 'not checked' : r === 'na' ? 'n/a' : r) + '</span>'; }
+  function refs(r) { return '<div class="refs">NCA ECC ' + esc(r.nca) + ' · ISO 27001 ' + esc(r.iso) + ' · Aramco CCC: ' + esc(r.aramco) + ' · CIS: ' + esc(r.cis) + '</div>'; }
+  var approver = function () { return can('admin'); };
+
+  function draw() {
+    var v = V, L = v.last, C = window.zybCharts;
+    $('rf').hidden = !can('operator'); $('csv').hidden = !L;
+    if (!L) { $('main').hidden = true; $('none').hidden = false; $('none').innerHTML = '<h2>' + (v.connected ? 'No audit yet' : 'Connect the devices') + '</h2><p>' + esc(v.note || '') + '</p><p class="mut sm">FortiGates are read through FortiManager (Integration Hub → FortiManager, a read-only API admin with Device Manager and Policy &amp; Objects read). Switches are read from the daily configuration capture (an SSH login with a trusted host key in Network Operations).</p>'; return; }
+    $('none').hidden = true; $('main').hidden = false; var K = L.kpis;
+    $('up').textContent = 'run ' + String(L.at).replace('T', ' ').slice(0, 16) + ' UTC by ' + L.by + (L.signed_by ? ' · signed off by ' + L.signed_by : ' · not signed off');
+    $('kp').innerHTML = tile('Devices audited', K.devices, K.firewalls + ' firewall(s) · ' + K.switches + ' switch(es)') + tile('Audit score', K.score == null ? '–' : K.score + '%', 'average, weighted by severity', K.score != null && K.score < 60 ? 'bad' : K.score != null && K.score < 85 ? 'warn' : 'ok')
+      + tile('Coverage', K.coverage + '%', 'tests that could be checked', K.coverage < 70 ? 'warn' : 'ok') + tile('Open findings', K.open, K.accepted + ' risk-accepted', K.open ? 'warn' : 'ok') + tile('Critical', K.critical, 'fix first', K.critical ? 'bad' : 'ok') + tile('High', K.high, '', K.high ? 'warn' : 'ok')
+      + tile('Rules analysed', K.rules, K.any_any + ' any-any · ' + K.shadowed + ' shadowed · ' + K.unused + ' unused', K.any_any ? 'bad' : '');
+    if (C) {
+      var D = L.devices.filter(function (d) { return d.score != null; }).sort(function (a, b) { return a.score - b.score; }).slice(0, 20);
+      if (D.length) C.bars($('cv-score'), D.map(function (d) { return d.name; }), [{ label: 'Score %', data: D.map(function (d) { return d.score; }), colors: D.map(function (d) { return d.score >= 85 ? 'ok' : d.score >= 60 ? 'warn' : 'crit'; }) }], { horizontal: true, title: 'Score per device' }); else C.empty($('cv-score'), 'No device could be checked.');
+      var op = L.findings.filter(function (f) { return !f.accepted; }), n = function (s) { return op.filter(function (f) { return f.severity === s; }).length; };
+      if (op.length) C.ring($('cv-sev'), ['Critical', 'High', 'Medium', 'Low'], [n('critical'), n('high'), n('medium'), n('low')], ['crit', 'warn', 'purple', 'acc'], { v: op.length, l: 'open' }, { title: 'Open findings' }); else C.empty($('cv-sev'), 'No open finding.');
+      var A = L.by_area; C.bars($('cv-area'), A.map(function (a) { return a.area; }), [{ label: 'Pass', data: A.map(function (a) { return a.pass; }), color: 'ok' }, { label: 'Fail', data: A.map(function (a) { return a.fail; }), color: 'crit' }, { label: 'Not checked', data: A.map(function (a) { return a.not_checked; }), color: 'mute' }], { stacked: true, horizontal: true, title: 'Results by area' });
+    }
+    $('ins').innerHTML = L.insights.length ? L.insights.map(function (i) { return '<li><span class="dot ' + esc(i.level) + '"></span><div><b>' + esc(i.title) + '</b><div class="mut sm">' + esc(i.detail) + '</div></div></li>'; }).join('') : '<li><span class="dot info"></span><div>Nothing stands out.</div></li>';
+    $('top').innerHTML = L.top_failures.length ? '<table><thead><tr><th>Test</th><th>Severity</th><th>Devices</th></tr></thead><tbody>' + L.top_failures.map(function (t) { return '<tr><td><b>' + esc(t.test) + '</b> ' + esc(t.title) + '</td><td>' + sev(t.severity) + '</td><td>' + esc(t.devices) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No failures.</div>';
+    $('dc').textContent = L.devices.length + ' device(s)';
+    $('devs').innerHTML = '<table><thead><tr><th>Device</th><th>Kind</th><th>Site</th><th>Score</th><th>Coverage</th><th>Critical</th><th>High</th><th>Rules</th></tr></thead><tbody>' + L.devices.slice().sort(function (a, b) { return (a.score == null ? 101 : a.score) - (b.score == null ? 101 : b.score); }).map(function (d) {
+      return '<tr data-dev="' + esc(d.id) + '" tabindex="0"><td><b>' + esc(d.name) + '</b><div class="mut sm">' + esc([d.model, d.firmware].filter(Boolean).join(' · ')) + '</div></td><td>' + esc(d.kind === 'firewall' ? 'FortiGate' : d.vendor === 'h3c-comware' ? 'H3C switch' : 'Cisco switch') + '</td><td>' + esc(d.site || '–') + '</td><td>' + sbar(d.score) + '</td><td>' + esc(d.coverage) + '%</td><td>' + (d.fails.critical ? sev('critical') + ' ' + esc(d.fails.critical) : '0') + '</td><td>' + esc(d.fails.high) + '</td><td>' + (d.rulebase ? esc(d.rulebase.total) + ' (' + esc(d.rulebase.any_any) + ' any-any, ' + esc(d.rulebase.shadowed) + ' shadowed)' : '–') + '</td></tr>'; }).join('') + '</tbody></table>';
+    var FL = { open: ['Open', function (f) { return !f.accepted; }], critical: ['Critical', function (f) { return !f.accepted && f.severity === 'critical'; }], high: ['High', function (f) { return !f.accepted && f.severity === 'high'; }], accepted: ['Risk accepted', function (f) { return !!f.accepted; }], all: ['All', function () { return true; }] };
+    $('chips').innerHTML = Object.keys(FL).map(function (k) { return '<button type="button" data-sf="' + k + '" aria-pressed="' + (SF === k) + '">' + esc(FL[k][0]) + ' (' + L.findings.filter(FL[k][1]).length + ')</button>'; }).join('');
+    var F = L.findings.filter(FL[SF][1]); $('fc').textContent = F.length + ' shown';
+    $('finds').innerHTML = F.length ? '<table><thead><tr><th>Severity</th><th>Device</th><th>Test</th><th>Evidence</th><th>Fix</th></tr></thead><tbody>' + F.slice(0, 300).map(function (f) {
+      return '<tr><td>' + sev(f.severity) + (f.accepted ? '<div><span class="res accepted">accepted to ' + esc(f.accepted.until) + '</span></div>' : '') + '</td><td>' + esc(f.device) + '<div class="mut sm">' + esc(f.site || '') + '</div></td><td><b>' + esc(f.test) + '</b> ' + esc(f.title) + refs(f.refs) + '</td><td><ul class="ev">' + f.evidence.slice(0, 6).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + (f.evidence.length > 6 ? '<li class="mut">… ' + (f.evidence.length - 6) + ' more</li>' : '') + '</ul></td><td><div class="fix">' + esc(f.fix) + '</div>'
+        + (approver() && !f.accepted ? '<button type="button" class="sm" data-acc="' + esc(f.device_id) + '" data-test="' + esc(f.test) + '">Accept the risk…</button>' : '') + (approver() && f.accepted ? '<button type="button" class="sm" data-unacc="' + esc(f.device_id) + '" data-test="' + esc(f.test) + '">Withdraw acceptance</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">Nothing here.</div>';
+    $('runs').innerHTML = '<table><thead><tr><th>Run</th><th>When</th><th>By</th><th>Devices</th><th>Evidence SHA-256</th><th>Sign-off</th></tr></thead><tbody>' + v.runs.map(function (r) {
+      var mine = String(r.by).toLowerCase() === ME.user.toLowerCase();
+      return '<tr><td class="mono">' + esc(r.id) + '</td><td>' + esc(String(r.at).replace('T', ' ').slice(0, 16)) + '</td><td>' + esc(r.by) + '</td><td>' + esc(r.devices) + '</td><td class="mono sm">' + esc(String(r.sha256).slice(0, 16)) + '…</td><td>'
+        + (r.signed_by ? '<span class="res pass">signed by ' + esc(r.signed_by) + '</span>' : approver() && !mine ? '<button type="button" class="sm" data-sign="' + esc(r.id) + '">Sign off…</button>' : mine ? '<span class="mut sm">another person signs off</span>' : '<span class="mut sm">not signed off</span>') + '</td></tr>'; }).join('') + '</tbody></table>';
+    var S = L.sources || {}; $('foot').textContent = 'Sources: FortiManager ' + (S.fortimanager && S.fortimanager.ok ? S.fortimanager.devices + ' FortiGate(s)' : 'not read (' + ((S.fortimanager && S.fortimanager.error) || '') + ')') + ' · switch configurations ' + ((S.switches && S.switches.devices) || 0) + '. Not checked is never a pass. Rules are compared by object name; address groups are not expanded. Read-only - fixes go through the FortiManager four-eyes change or the network change process.';
+  }
+  function device(id) {
+    var d = V.last.devices.filter(function (x) { return x.id === id; })[0]; if (!d) return;
+    $('dt').textContent = d.name + ' · ' + (d.score == null ? 'not checked' : d.score + '%') + ' · coverage ' + d.coverage + '%';
+    var areas = []; d.tests.forEach(function (t) { if (areas.indexOf(t.area) < 0) areas.push(t.area); });
+    $('db').innerHTML = (d.rulebase ? '<p class="sm">Rule base: ' + esc(d.rulebase.total) + ' rules, ' + esc(d.rulebase.accept) + ' accept, ' + esc(d.rulebase.disabled) + ' disabled, ' + esc(d.rulebase.no_log) + ' without logging, ' + esc(d.rulebase.unused) + ' without hits' + (d.rulebase.hits_known ? '' : ' (hit counts not read)') + '.</p>' : '')
+      + areas.map(function (a) { return '<div class="area">' + esc(a) + '</div><table><tbody>' + d.tests.filter(function (t) { return t.area === a; }).map(function (t) {
+        return '<tr><td style="width:70px">' + res(t) + '</td><td><b>' + esc(t.id) + '</b> ' + esc(t.title) + ' ' + sev(t.severity) + (t.evidence.length ? '<ul class="ev">' + t.evidence.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + (t.more ? '<li class="mut">… ' + t.more + ' more</li>' : '') + '</ul>' : '') + (t.fix ? '<div class="fix">' + esc(t.fix) + '</div>' : '') + refs(t.refs) + '</td></tr>'; }).join('') + '</tbody></table>'; }).join('');
+    $('drw').classList.add('open'); $('dclose').focus();
+  }
+  function load() { return req('GET', '/netops/fw-audit').then(function (j) { V = j; $('err').innerHTML = ''; draw(); }, function (e) { $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 403 ? 'The audit shows firewall rules and accounts - analysts and above.' : e.status === 404 ? 'The Firewall & Security Device Audit is not installed in the SIEM yet - run the update.' : e.message) + '</div></div>'; }); }
+  document.addEventListener('click', function (e) {
+    var t = e.target, a;
+    if ((a = t.closest('[data-sf]'))) { SF = a.getAttribute('data-sf'); draw(); return; }
+    if ((a = t.closest('tr[data-dev]'))) { device(a.getAttribute('data-dev')); return; }
+    if (t.id === 'dclose') { $('drw').classList.remove('open'); return; }
+    if ((a = t.closest('[data-acc]'))) { var reason = window.prompt('Accept the risk of ' + a.getAttribute('data-test') + ' - the reason (what compensates, who owns it):'); if (!reason) return; var until = window.prompt('Until (YYYY-MM-DD, at most a year; three months for a critical finding):', new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)); if (!until) return;
+      req('POST', '/netops/fw-audit/accept', { device: a.getAttribute('data-acc'), test: a.getAttribute('data-test'), reason: reason, until: until }).then(function (j) { V = j; draw(); toast('Risk accepted until ' + until); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-unacc]'))) { req('POST', '/netops/fw-audit/accept/remove', { device: a.getAttribute('data-unacc'), test: a.getAttribute('data-test') }).then(function (j) { V = j; draw(); toast('Acceptance withdrawn'); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-sign]'))) { var note = window.prompt('Sign off ' + a.getAttribute('data-sign') + ' - note (optional):', ''); if (note === null) return;
+      req('POST', '/netops/fw-audit/signoff', { run: a.getAttribute('data-sign'), note: note }).then(function (j) { V = j; draw(); toast('Signed off'); }, function (x) { toast(x.message); }); return; }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.matches && e.target.matches('tr[data-dev]')) device(e.target.getAttribute('data-dev')); if (e.key === 'Escape') $('drw').classList.remove('open'); });
+  $('rf').addEventListener('click', function () { var b = this; b.disabled = true; b.textContent = 'Reading the devices…'; req('POST', '/netops/fw-audit/run', {}).then(function (j) { V = j; draw(); toast('Audit complete: ' + j.last.kpis.open + ' open finding(s)'); }, function (x) { toast(x.message); }).then(function () { b.disabled = false; b.textContent = '▶ Run the audit'; }); });
+  $('csv').addEventListener('click', function () { req('GET', '/netops/fw-audit/export').then(function (j) { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([j.csv], { type: 'text/csv' })); a.download = j.filename; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }, function (x) { toast(x.message); }); });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>

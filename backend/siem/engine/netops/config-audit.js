@@ -15,9 +15,11 @@
  */
 const crypto = require('node:crypto');
 
-const VENDORS = new Set(['cisco-ios', 'cisco-asa']);
+const VENDORS = new Set(['cisco-ios', 'cisco-asa', 'h3c-comware']);
+// the read-only command that shows the whole configuration, per vendor (Comware's read-only verb is "display")
+const SHOW = { 'cisco-ios': 'show running-config', 'cisco-asa': 'show running-config', 'h3c-comware': 'display current-configuration' };
 const DAY = 86400000, MAX_PER_RUN = 30, MAX_TEXT = 200000, MAX_HIST = 30;
-const VOLATILE = /^\s*(?:!|ntp clock-period\b|Building configuration|Current configuration\s*:|: Saved|: Written by|Cryptochecksum:)/;
+const VOLATILE = /^\s*(?:!|#\s*$|ntp clock-period\b|Building configuration|Current configuration\s*:|: Saved|: Written by|Cryptochecksum:)/;
 const normalise = (text) => String(text || '').split('\n').map((l) => l.replace(/\s+$/, '')).filter((l) => l && !VOLATILE.test(l)).join('\n');
 
 function createConfigAudit({ inventory, cli, state, log, now = Date.now }) {
@@ -36,7 +38,7 @@ function createConfigAudit({ inventory, cli, state, log, now = Date.now }) {
         out.skipped++; continue;
       }
       try {
-        const r = await cli.run(d.id, ['show running-config'], { by: 'system:it-auditor', via: 'audit' });
+        const r = await cli.run(d.id, [SHOW[d.vendor]], { by: 'system:it-auditor', via: 'audit' });
         const res = r.results[0] || {};
         if (res.error || !res.output) throw new Error(res.error || 'empty output');
         const text = String(res.output).slice(0, MAX_TEXT);
@@ -59,4 +61,4 @@ function createConfigAudit({ inventory, cli, state, log, now = Date.now }) {
   return { run, list: () => col.all(), get: (id) => col.get(id) || null };
 }
 
-module.exports = { createConfigAudit, normalise, VENDORS };
+module.exports = { createConfigAudit, normalise, VENDORS, SHOW };

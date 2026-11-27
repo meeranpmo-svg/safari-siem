@@ -37,6 +37,22 @@ const MON = {
   lic: '/api/v2/monitor/license/status',
   dev: '/api/v2/monitor/user/device/query',
 };
+// the configuration the audit reads (GET only), and what is removed from it before it is kept
+const AUDIT_PATHS = {
+  global: '/api/v2/cmdb/system/global', admins: '/api/v2/cmdb/system/admin', password_policy: '/api/v2/cmdb/system/password-policy',
+  interfaces: '/api/v2/cmdb/system/interface', policies: '/api/v2/cmdb/firewall/policy', hits: '/api/v2/monitor/firewall/policy',
+  ntp: '/api/v2/cmdb/system/ntp', log_setting: '/api/v2/cmdb/log/setting', syslog: '/api/v2/cmdb/log.syslogd/setting', faz: '/api/v2/cmdb/log.fortianalyzer/setting',
+  snmp_community: '/api/v2/cmdb/system.snmp/community', snmp_user: '/api/v2/cmdb/system.snmp/user', ha: '/api/v2/cmdb/system/ha',
+  autoupdate: '/api/v2/cmdb/system.autoupdate/schedule', phase1: '/api/v2/cmdb/vpn.ipsec/phase1-interface', sslvpn: '/api/v2/cmdb/vpn.ssl/settings',
+};
+const SECRET_KEY = /^(password\d?|passwd|.*-pwd|psksecret.*|ppk-secret|authpasswd|.*private-key.*|key|.*-key\d?|token|.*secret|community)$/i;
+function scrubAudit(section, v) {
+  const walk = (x) => Array.isArray(x) ? x.map(walk) : x && typeof x === 'object' ? Object.fromEntries(Object.entries(x).filter(([k]) => !SECRET_KEY.test(k)).map(([k, y]) => [k, walk(y)])) : x;
+  let r = walk(v);
+  // an SNMP community's NAME is the community string itself: keep only whether it is on and how many hosts may use it
+  if (section === 'snmp_community') r = (Array.isArray(r) ? r : []).map((c) => ({ id: c.id, status: c.status, 'query-v1-status': c['query-v1-status'], 'query-v2c-status': c['query-v2c-status'], hosts: Array.isArray(c.hosts) ? c.hosts.length : 0 }));
+  return r;
+}
 class FmgError extends Error { constructor(code, msg) { super(msg); this.code = code; this.errors = [msg]; } }
 const bad = (m) => new FmgError(400, m);
 
@@ -282,6 +298,23 @@ function createFmg({ config, secrets, state, log, transport, directTransport, no
     }
     return out;
   }
+  // AUDIT (read-only): each FortiGate's configuration for the Firewall & Security Device Audit (netops/fw-audit.js), a FIXED list of
+  // FortiOS GET paths through FortiManager's proxy (or directly for a standalone FortiGate). Secrets are removed here, before
+  // anything is kept: passwords, pre-shared keys, private keys, tokens and SNMP community strings never leave this function.
+  async function readAudit() {
+    const up = devs.all().filter((d) => d.conn === 'up'), out = [];
+    const fmgOn = !!(C().base_url && S().api_key), tgt = (d) => `adom/${d.adom}/device/${d.name}`;
+    const viaFmg = fmgOn ? up.filter((d) => d.via !== 'direct' && NAME.test(String(d.adom || '')) && NAME.test(String(d.name || ''))) : [];
+    const got = {};
+    for (const [k, p] of Object.entries(AUDIT_PATHS)) got[k] = viaFmg.length ? await proxy(p, viaFmg.map(tgt)) : new Map();
+    for (const d of viaFmg) { const r = { dev: d, sections: {}, unread: {} }; for (const k of Object.keys(AUDIT_PATHS)) { const x = got[k].get(tgt(d)); if (x && x.response && x.response.results !== undefined) r.sections[k] = scrubAudit(k, x.response.results); else r.unread[k] = (x && x.error) || 'no answer'; } out.push(r); }
+    for (const d of up.filter((x) => x.via === 'direct')) {
+      const cfg = (C().direct || []).find((x) => x && x.name === d.name), r = { dev: d, sections: {}, unread: {} };
+      for (const [k, p] of Object.entries(AUDIT_PATHS)) { if (!cfg) { r.unread[k] = 'not configured'; continue; } try { const j = await dget(cfg, p); r.sections[k] = scrubAudit(k, j.results); } catch (e) { r.unread[k] = e.message; } }
+      out.push(r);
+    }
+    return out;
+  }
   function status() { const c = C(); return Object.assign({ enabled: !!c.enabled, configured: !!((c.base_url && S().api_key) || (c.direct || []).length), fortimanager: !!(c.base_url && S().api_key), standalone: (c.direct || []).length, write_enabled: !!(c.write_enabled && S().write_key) }, st); }
 
   function targets() {
@@ -388,7 +421,7 @@ function createFmg({ config, secrets, state, log, transport, directTransport, no
     return chg.patch(id, (x) => { x.status = 'done'; x.done_by = by; x.done_at = new Date(NOW()).toISOString(); x.note = String(note || '').slice(0, 400); x.history.push({ at: x.done_at, by, what: 'done in FortiManager' }); return x; });
   }
   const changes = () => chg.all().sort((a, b) => String(b.id).localeCompare(String(a.id)));
-  return { poll, status, fleet, device, testConnection, propose, decide, run, refreshTask, markDone, changes, get: (id) => chg.get(id), TYPES };
+  return { poll, readAudit, status, fleet, device, testConnection, propose, decide, run, refreshTask, markDone, changes, get: (id) => chg.get(id), TYPES };
 }
 
-module.exports = { createFmg, assess, robustZ, normDevice, normRes, normIpsec, normSdwan, normLic, normEndpoints, verCmp, NAME, TYPES, FmgError };
+module.exports = { createFmg, AUDIT_PATHS, scrubAudit, assess, robustZ, normDevice, normRes, normIpsec, normSdwan, normLic, normEndpoints, verCmp, NAME, TYPES, FmgError };
