@@ -268,6 +268,9 @@ function registerDuty(srv, app, opts = {}) {
   // actions the host's report script fetches and runs
   const HVM = optional('./hyperv-manager');
   // Hyper-V Virtual Network Map (engine/hyperv-netmap.js): switches, uplinks, VLANs and VM adapters from the same reports
+  // Hyper-V Optimization (engine/hyperv-optimize.js): rightsizing, idle VMs, storage, balance, network, anomalies from the same reports
+  const HVO = optional('./hyperv-optimize');
+  if (HVO) HVO.registerHypervOptimize(srv, app, HVO.createHypervOptimize(app, { now: opts.now }));
   const HVN = optional('./hyperv-netmap');
   if (HVN) { app.addons.hypervNetmap = HVN.createHypervNetmap(app, { now: opts.now }); HVN.registerHypervNetmap(srv, app, app.addons.hypervNetmap); }
   if (HVM) { app.addons.hypervManager = HVM.createHypervManager(app, { now: opts.now, netmap: app.addons.hypervNetmap }); HVM.registerHypervManager(srv, app, app.addons.hypervManager); }

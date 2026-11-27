@@ -1,0 +1,99 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hyper-V Optimization</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css">
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Hyper-V Optimization over /api/itam/hyperv/optimize (engine/hyperv-optimize.js): from the hosts' own reports - the optimization score,
+     memory / vCPU / disk to give back, host balance and the move that evens the hosts, 48 h CPU and memory per host, every VM's size
+     against its own 95th-percentile use, storage fill and thin-provisioning, NIC peaks, anomalies against each host's own 48 h, and the
+     recommendations with why. Read-only: each recommendation is a change a person makes. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.g2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;margin:0 0 12px}.g2 .card{margin:0}@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+.cv{position:relative;height:260px}.cv.t{height:300px}.mut{color:#8b93a4}.sm{font-size:12px}
+.hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.hero svg{flex:none}
+.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:7px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}.ins i{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none;background:#58a6ff}
+.mv{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}.mv .h{border:1px solid rgba(127,140,160,.3);border-radius:12px;padding:10px}.mv .bar{height:12px;border-radius:7px;background:rgba(127,140,160,.18);overflow:hidden;position:relative;margin:4px 0}.mv .bar i{display:block;height:100%}.mv .bar b{position:absolute;top:0;height:100%;border-right:2px dashed #fff}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(127,140,160,.18)}.pill.high{background:rgba(255,123,114,.18);color:#ff7b72}.pill.medium{background:rgba(227,179,65,.18);color:#e3b341}.pill.low{background:rgba(88,166,255,.15);color:#58a6ff}
+.tw{max-height:520px;overflow:auto}.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Servers & VMs · Hyper-V · optimization</div><h1>Hyper-V Optimization</h1><div class="mut sm">What to give back, move or plan across the Hyper-V hosts - CPU, memory, storage and network - each from the hosts' own history</div></div><span class="sp"></span>
+ <span class="muted" id="up"></span><a class="btn" href="hyperv.html">Hyper-V Servers</a><a class="btn" href="capacity.html">Capacity Planning</a><button type="button" id="refresh">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+ <div class="g2">
+  <section class="card"><div class="hero"><div id="gauge"></div><div style="flex:1;min-width:260px"><div class="k" id="kp" style="margin:0"></div></div></div></section>
+  <section class="card"><h2>What the AI noticed</h2><ul class="ins" id="ins"></ul></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>Host balance <span class="c">memory used and CPU p95 (48 h)</span></h2><div class="cv"><canvas id="cv-bal"></canvas></div></section>
+  <section class="card"><h2>CPU over 48 h <span class="c">per host</span></h2><div class="cv"><canvas id="cv-cpu"></canvas></div></section>
+  <section class="card"><h2>Memory over 48 h <span class="c">per host</span></h2><div class="cv"><canvas id="cv-mem"></canvas></div></section>
+ </div>
+ <section class="card" id="mvc" hidden><h2>Even the hosts <span class="c">the one VM move that best balances memory (it must fit under 85 %)</span></h2><div class="mv" id="mv"></div></section>
+ <div class="g2">
+  <section class="card"><h2>VM size against its use <span class="c">memory assigned (x) and its own p95 demand (y) · below the line = give back · above = add</span></h2><div class="cv t"><canvas id="cv-fit"></canvas></div></section>
+  <section class="card"><h2>What can be given back <span class="c">memory per VM (GB)</span></h2><div class="cv t"><canvas id="cv-back"></canvas></div></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>Storage <span class="c">used and free per volume · days to 95 %</span></h2><div class="cv"><canvas id="cv-vol"></canvas></div></section>
+  <section class="card"><h2>Thin provisioning <span class="c">VHD maximum against the volume</span></h2><div class="cv"><canvas id="cv-over"></canvas></div></section>
+  <section class="card"><h2>Network <span class="c">each NIC's peak in 48 h against its link</span></h2><div class="cv"><canvas id="cv-nic"></canvas></div></section>
+ </div>
+ <section class="card"><h2>Recommendations <span class="c" id="rc"></span></h2><div class="flt"><select id="fp" aria-label="Priority"><option value="">Every priority</option><option>high</option><option>medium</option><option>low</option></select><select id="fk" aria-label="Kind"><option value="">Every kind</option><option value="memory-down">Give back memory</option><option value="memory-up">Add memory</option><option value="vcpu-down">Fewer vCPUs</option><option value="vcpu-up">More vCPUs</option><option value="idle">Idle VMs</option><option value="checkpoint">Old checkpoints</option><option value="vhd-full">Virtual disk near full</option><option value="volume-full">Volume full</option><option value="volume-trend">Volume filling</option><option value="overcommit">Overcommitted volume</option><option value="nic-busy">Busy NIC</option><option value="balance">Balance</option></select></div><div class="tw" id="rec"></div></section>
+ <section class="card"><h2>Unusual readings <span class="c">a host's latest against its own last 48 h (robust z)</span></h2><div id="anom"></div></section>
+ <p class="mut sm" id="note"></p>
+</div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function req(u) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open('GET', '/api/itam' + u); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true;
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('IT Asset Management is not reachable'), { status: 0 })); }; x.send(); }); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function table(head, rows, emptyText) { return rows.length ? '<table><thead><tr>' + head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>' : '<div class="empty">' + esc(emptyText) + '</div>'; }
+  var PAL = ['acc', 'purple', 'teal', 'warn', 'ok', 'crit'];
+  function raw(id, cfg) { var Ch = window.Chart, cv = $(id); if (!Ch) return; var o = Ch.getChart && Ch.getChart(cv); if (o) o.destroy(); cv.hidden = false; var em = cv.parentNode.querySelector('.zyb-chart-empty'); if (em) em.hidden = true; new Ch(cv.getContext('2d'), cfg); }
+  function draw() {
+    var v = V, K = v.kpis, C = window.zybCharts, sc = v.score, col = sc == null ? '#4a5162' : sc >= 85 ? '#2fd47a' : sc >= 60 ? '#e3b341' : '#ff7b72', R = 54, L = 2 * Math.PI * R;
+    $('up').textContent = 'as of ' + new Date(v.at).toLocaleString();
+    $('gauge').innerHTML = '<svg width="150" height="150" viewBox="0 0 150 150" role="img" aria-label="Optimization score ' + (sc == null ? 'not measured' : sc) + '"><circle cx="75" cy="75" r="' + R + '" fill="none" stroke="rgba(127,140,160,.2)" stroke-width="13"/><circle cx="75" cy="75" r="' + R + '" fill="none" stroke="' + col + '" stroke-width="13" stroke-linecap="round" stroke-dasharray="' + (L * (sc || 0) / 100).toFixed(1) + ' ' + L.toFixed(1) + '" transform="rotate(-90 75 75)"/><text x="75" y="80" text-anchor="middle" fill="#e7eaf0" font-size="34" font-weight="800">' + (sc == null ? '–' : sc) + '</text><text x="75" y="100" text-anchor="middle" fill="#8b93a4" font-size="11">optimized</text></svg>';
+    $('kp').innerHTML = tile('Hosts', K.hosts, K.vms + ' VMs · ' + K.running + ' running') + tile('Memory to give back', K.mem_back_gb == null ? '–' : K.mem_back_gb + ' GB', 'oversized VMs', K.mem_back_gb ? 'ok' : '') + tile('Memory needed', K.mem_need_gb ? K.mem_need_gb + ' GB' : '0', 'VMs running short', K.mem_need_gb ? 'crit' : '')
+      + tile('vCPUs to remove', K.vcpu_back, 'idle vCPUs', K.vcpu_back ? 'ok' : '') + tile('Disk to reclaim', K.disk_back_gb ? K.disk_back_gb + ' GB' : '0', 'VMs off 30+ days') + tile('Recommendations', K.recommendations, K.high + ' high' + (K.learning ? ' · ' + K.learning + ' VM(s) learning' : ''), K.high ? 'warn' : '');
+    $('ins').innerHTML = v.insights.map(function (t) { return '<li><i></i><div>' + esc(t) + '</div></li>'; }).join('');
+    var H = v.hosts;
+    if (!C) return;
+    if (H.length) C.bars($('cv-bal'), H.map(function (h) { return h.name; }), [{ label: 'Memory used %', data: H.map(function (h) { return h.mem_pct; }), color: 'purple' }, { label: 'CPU p95 %', data: H.map(function (h) { return h.cpu_p95; }), color: 'acc' }], { title: 'Host balance' }); else C.empty($('cv-bal'), 'No host reports yet.');
+    var series = function (key) { var T = H.filter(function (h) { return h.trend.length; }); if (!T.length) return null; var labels = T[0].trend.map(function (p) { return new Date(p.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); });
+      return { labels: labels, sets: T.map(function (h, i) { return { label: h.name, data: h.trend.map(function (p) { return p[key]; }), color: PAL[i % PAL.length], fill: false }; }) }; };
+    var sc1 = series('cpu'), sc2 = series('mem');
+    if (sc1) C.area($('cv-cpu'), sc1.labels, sc1.sets, { title: 'CPU %' }); else C.empty($('cv-cpu'), 'The 48-hour trend builds from the 15-minute reports.');
+    if (sc2) C.area($('cv-mem'), sc2.labels, sc2.sets, { title: 'Memory %' }); else C.empty($('cv-mem'), 'The 48-hour trend builds from the 15-minute reports.');
+    var M = v.move; $('mvc').hidden = !M;
+    if (M) { var hf = H.filter(function (h) { return h.name === M.from; })[0] || {}, ht = H.filter(function (h) { return h.name === M.to; })[0] || {}, side = function (h, now, after) { return '<div class="h"><b>' + esc(h.name) + '</b><div class="sm mut">memory now ' + Math.round(now) + '% → after ' + Math.round(after) + '%</div><div class="bar"><i style="width:' + Math.min(100, now) + '%;background:' + (now >= 85 ? '#ff7b72' : now >= 70 ? '#e3b341' : '#2fd47a') + '"></i><b style="left:' + Math.min(100, after) + '%"></b></div></div>'; };
+      $('mv').innerHTML = side(hf, hf.mem_pct, M.from_after) + '<div style="text-align:center"><b>' + esc(M.vm) + '</b><div class="sm mut">' + esc(M.gb) + ' GB · live migration</div><div style="font-size:26px">→</div></div>' + side(ht, ht.mem_pct, M.to_after); }
+    var VM = v.vms.filter(function (m) { return m.state === 'running' && m.mem_assigned_mb && m.mem_p95_mb != null; });
+    if (VM.length && window.Chart) { var mx = Math.max.apply(null, VM.map(function (m) { return m.mem_assigned_mb / 1024; }).concat([4])) * 1.1;
+      raw('cv-fit', { type: 'scatter', data: { datasets: [{ label: 'VMs', data: VM.map(function (m) { return { x: Math.round(m.mem_assigned_mb / 102.4) / 10, y: Math.round(m.mem_p95_mb / 102.4) / 10, m: m }; }), backgroundColor: VM.map(function (m) { var r = m.mem_p95_mb / m.mem_assigned_mb; return C.alpha(C.color(r < 0.6 ? 'ok' : r > 0.9 ? 'crit' : 'acc'), .8); }), pointRadius: 6 },
+        { type: 'line', label: 'used = assigned', data: [{ x: 0, y: 0 }, { x: mx, y: mx }], borderColor: 'rgba(139,147,164,.6)', borderDash: [5, 5], pointRadius: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { var m = c.raw.m; return m ? m.name + ' · assigned ' + c.raw.x + ' GB · p95 demand ' + c.raw.y + ' GB' + (m.advice ? ' · ' + m.advice : '') : ''; } } } },
+          scales: { x: { min: 0, max: mx, title: { display: true, text: 'Assigned GB', color: C.color('mute') }, ticks: { color: C.color('mute') }, grid: { color: 'rgba(127,140,160,.12)' } }, y: { min: 0, max: mx, title: { display: true, text: 'p95 demand GB', color: C.color('mute') }, ticks: { color: C.color('mute') }, grid: { color: 'rgba(127,140,160,.12)' } } } } }); }
+    else C.empty($('cv-fit'), 'VM sizing needs 5 days of each VM\'s history.');
+    var B = v.recommendations.filter(function (r) { return r.kind === 'memory-down'; }).slice(0, 12);
+    if (B.length) C.bars($('cv-back'), B.map(function (r) { return r.target; }), [{ label: 'GB to give back', data: B.map(function (r) { return r.gain.mem_gb; }), color: 'ok' }], { horizontal: true, title: 'Memory to give back' }); else C.empty($('cv-back'), 'No VM is oversized for its use.');
+    var VO = v.volumes; if (VO.length) { C.bars($('cv-vol'), VO.map(function (x) { return x.host + ' ' + x.name.replace(/^C:\\ClusterStorage\\/i, 'CSV ') + (x.days_to_95 != null ? ' · 95% in ' + x.days_to_95 + ' d' : ''); }), [{ label: 'Used GB', data: VO.map(function (x) { return x.used_gb; }), color: 'purple' }, { label: 'Free GB', data: VO.map(function (x) { return Math.max(0, x.size_gb - x.used_gb); }), color: 'teal' }], { stacked: true, horizontal: true, title: 'Storage' });
+      var OV = VO.filter(function (x) { return x.overcommit != null; }); if (OV.length) C.bars($('cv-over'), OV.map(function (x) { return x.host + ' ' + x.name.replace(/^C:\\ClusterStorage\\/i, 'CSV '); }), [{ label: 'VHD maximum % of the volume', data: OV.map(function (x) { return Math.round(x.overcommit * 100); }), colors: OV.map(function (x) { return x.overcommit > 1.5 ? 'crit' : x.overcommit > 1 ? 'warn' : 'ok'; }) }], { horizontal: true, title: 'Thin provisioning' }); else C.empty($('cv-over'), 'No VHD on a reported volume.'); }
+    else { C.empty($('cv-vol'), 'No volume reported.'); C.empty($('cv-over'), 'No volume reported.'); }
+    var N = v.nics.filter(function (n) { return n.peak_pct != null; }); if (N.length) C.bars($('cv-nic'), N.map(function (n) { return n.host + ' ' + n.name; }), [{ label: 'Peak % of link', data: N.map(function (n) { return n.peak_pct; }), colors: N.map(function (n) { return n.peak_pct >= 90 ? 'crit' : n.peak_pct >= 70 ? 'warn' : 'ok'; }) }], { horizontal: true, title: 'NIC peaks' }); else C.empty($('cv-nic'), 'No NIC readings yet.');
+    recs();
+    $('anom').innerHTML = table(['Host', 'Reading', 'Now', 'Usually', 'Robust z', 'When'], v.anomalies.map(function (a) { return '<tr><td><b>' + esc(a.host) + '</b></td><td>' + esc(a.metric) + '</td><td>' + esc(a.value) + '</td><td>' + esc(a.usual) + '</td><td>' + esc(a.z) + '</td><td class="sm">' + esc(new Date(a.at).toLocaleString()) + '</td></tr>'; }), 'Every host is within its own last 48 hours.');
+    $('note').textContent = v.note;
+  }
+  function recs() { var fp = $('fp').value, fk = $('fk').value, L = V.recommendations.filter(function (r) { return (!fp || r.priority === fp) && (!fk || r.kind === fk); });
+    $('rc').textContent = L.length + ' of ' + V.recommendations.length + ' · most important first';
+    $('rec').innerHTML = table(['', 'What', 'Why', 'Host'], L.map(function (r) { return '<tr><td><span class="pill ' + esc(r.priority) + '">' + esc(r.priority) + '</span></td><td><b>' + esc(r.title) + '</b></td><td class="sm">' + esc(r.why) + '</td><td class="sm">' + esc(r.host) + '</td></tr>'; }), 'Nothing to optimize in this view.'); }
+  function load() { return req('/hyperv/optimize').then(function (j) { V = j; $('main').hidden = false; $('err').innerHTML = ''; draw(); }, function (e) {
+    $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'Hyper-V Optimization is not on this server yet - run the platform update.' : e.message) + '</div></div>'; }); }
+  $('fp').addEventListener('change', recs); $('fk').addEventListener('change', recs); $('refresh').addEventListener('click', function () { load(); });
+  load();
+})();
+</script></body></html>
