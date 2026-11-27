@@ -35,11 +35,12 @@
   (function () {
     var off = ORG.frameworks_all ? [] : (ORG.modules_off || []), plat = ORG.frameworks_all ? [] : (ORG.platforms_off || []);
     var noS = off.indexOf('fw-sama') >= 0, noI = off.indexOf('fw-ia') >= 0, noV = plat.indexOf('vmware') >= 0, noN = plat.indexOf('nutanix') >= 0;
-    if (!noS && !noI && !noV && !noN) return;
+    if (!noS && !noI && !noV && !noN && plat.indexOf('libraesva') < 0) return;
     var W = [], H = [], K = [], NUM = '(?: \\d+(?:\\.\\d+)*(?:-\\d+)*)?';
     if (noS) { W.push('Saudi Central Bank(?: \\(SAMA\\))?', 'SAMA(?: CSF| Cyber Security Framework| ITGF| BCM| IT Governance Framework)?' + NUM); H.push('SAMA', 'Saudi Central Bank'); K.push('sama'); }
     if (noI) { W.push('(?:Insurance Authority|IA)' + NUM); H.push('Insurance Authority'); K.push('ia'); }
     if (noV) { W.push('VMware(?: vCenter| ESXi| vSphere| VMs?| hosts?| per-core| cluster rules)?(?: [\\d.]+)?', 'vCenter(?: Server)?', 'ESXi(?: hosts?)?(?: [\\d.]+)?', 'vSphere(?: Client)?', 'vMotion', 'PowerCLI', 'esxcli'); H.push('VMware', 'vCenter', 'ESXi', 'vSphere', 'vMotion', 'PowerCLI', 'esxcli'); K.push('vmware', 'vcenter', 'esxi', 'vsphere'); }
+    if (plat.indexOf('libraesva') >= 0) { W.push('Libraesva(?: ESG| gateway)?', 'LibraESG(?:-\\d+)?'); H.push('Libraesva', 'LibraESG'); K.push('libraesva'); }
     if (noN) { W.push('Nutanix(?: AHV| Prism| Leap| protection domains?| nodes?| clusters?| VMs?)?', 'Prism(?: Central| Element)?', 'AHV(?: hosts?)?', 'acli'); H.push('Nutanix', 'Prism', 'AHV', 'acli'); K.push('nutanix', 'prism', 'ahv'); }
     var ANY = '(?:' + W.join('|') + ')', SEP = '\\s*(?:·|,|/|\\+|&|\\band\\b|\\bor\\b|↔)\\s*';
     var lead = new RegExp('\\b' + ANY + SEP + '(?=[A-Za-z(])', 'g'), tail = new RegExp(SEP + ANY + '(?=$|[\\s).,;:])', 'g'), plusIa = /\s*\(\+ IA\)/g, paren = new RegExp('\\s*\\(' + ANY + '\\)', 'g');

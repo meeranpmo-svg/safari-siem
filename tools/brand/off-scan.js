@@ -14,6 +14,7 @@ const off = new Set(B.pages_off || []), mods = new Set(B.modules_off || []), pla
 const W = [];
 if (mods.has('fw-sama')) W.push('SAMA');
 if (plat.has('vmware')) W.push('VMware', 'vCenter', 'ESXi', 'vSphere', 'vMotion');
+if (plat.has('libraesva')) W.push('Libraesva', 'LibraESG');
 if (plat.has('nutanix')) W.push('Nutanix', 'Prism Central', 'AHV');
 const RE = new RegExp('\\b(' + W.join('|') + ')\\b', 'i');
 const nav = fs.readFileSync(path.join(D, 'vendor/zyb-nav.js'), 'utf8');
