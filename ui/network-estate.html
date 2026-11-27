@@ -1,0 +1,92 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network Estate &amp; Licensing</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Network Estate & Licensing over /api/soc/netops/estate (engine/netops/estate.js), read-only: FortiGates (FortiManager and
+     standalone), switches, every FortiCare / FortiGuard licence with its end date, an explainable risk score per device, the
+     renewal calendar, firmware compliance, what the AI noticed and suggested change plans - which a person proposes in FortiGate
+     Fleet and a second administrator approves. Nothing on this page changes a device. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:230px}
+.mut{color:#8b93a4}.sm{font-size:12px}.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.bad{background:#ff7b72}.dot.warn{background:#e3b341}.dot.info{background:#58a6ff}.dot.ok{background:#3fb950}
+.rk{display:inline-block;min-width:34px;text-align:center;font-weight:700;border-radius:8px;padding:1px 6px}.rk.h{background:rgba(255,123,114,.18);color:#ff7b72}.rk.m{background:rgba(227,179,65,.18);color:#e3b341}.rk.l{background:rgba(63,185,80,.15);color:#3fb950}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.chips button{border-radius:999px;padding:4px 11px;font-size:12px}.chips button[aria-pressed="true"]{background:var(--v-acc,#1f6feb);border-color:var(--v-acc,#1f6feb);color:#fff}
+.sug{border:1px solid rgba(127,140,160,.25);border-radius:12px;padding:10px 12px;margin:0 0 8px}.sug b{display:block}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · firewalls · switches · licensing</div><h1>Network Estate &amp; Licensing</h1><div class="mut sm">Every FortiGate and switch, every FortiCare / FortiGuard licence and when it ends, an explainable risk score per device, and what to do next - learned from the polls, read-only</div></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="none" class="card" hidden></div>
+<div id="main" hidden>
+ <div class="k" id="kp"></div>
+ <div class="g3">
+  <section class="card"><h2>Firewall health <span class="c">AI · ML · FortiGate fleet</span></h2><div class="cv"><canvas id="cv-fw"></canvas></div></section>
+  <section class="card"><h2>Renewal calendar <span class="c">licences ending, next 12 months</span></h2><div class="cv"><canvas id="cv-cal"></canvas></div></section>
+  <section class="card"><h2>Firmware compliance <span class="c">on the target per model</span></h2><div class="cv"><canvas id="cv-fwv"></canvas></div></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>Highest risk <span class="c">explainable score 0-100</span></h2><div class="cv"><canvas id="cv-risk"></canvas></div></section>
+  <section class="card"><h2>Switches by site <span class="c">answering / not</span></h2><div class="cv"><canvas id="cv-sw"></canvas></div></section>
+  <section class="card"><h2>Licence status <span class="c">FortiCare and FortiGuard</span></h2><div class="cv"><canvas id="cv-lic"></canvas></div></section>
+ </div>
+ <section class="card"><h2>What the AI noticed <span class="c">AI · ML</span></h2><ul class="ins" id="ins"></ul></section>
+ <section class="card"><h2>Next steps <span class="c">suggested change plans - a person proposes, a second administrator approves</span></h2><div id="sug"></div></section>
+ <section class="card"><h2>Risk by device <span class="c">each point with its reason</span></h2><div class="tw" id="risk"></div></section>
+ <section class="card"><h2>Licences &amp; support <span class="c" id="lc"></span></h2><div class="chips" id="lchips"></div><div class="tw" id="lic"></div><div id="nosup"></div></section>
+ <section class="card"><h2>FortiGates <span class="c" id="fc"></span></h2><div class="tw" id="fw"></div></section>
+ <section class="card"><h2>Switches <span class="c" id="sc"></span></h2><div class="tw" id="sw"></div></section>
+</div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, LF = 'due';
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pill(t, c) { return '<span class="pill ' + (c || '') + '">' + esc(t) + '</span>'; }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function rk(n) { return '<span class="rk ' + (n >= 50 ? 'h' : n >= 20 ? 'm' : 'l') + '">' + esc(n) + '</span>'; }
+  function days(d) { return d == null ? '<span class="mut sm">no date</span>' : d < 0 ? pill('expired ' + (-d) + ' d ago', 'bad') : d <= 30 ? pill(d + ' days', 'bad') : d <= 90 ? pill(d + ' days', 'warn') : pill(d + ' days', 'ok'); }
+  function draw() {
+    var v = V, K = v.kpis, C = window.zybCharts, L = v.licences; $('up').textContent = 'updated ' + String(v.at).slice(11, 16) + ' UTC';
+    var empty = !K.firewalls && !K.switches && !L.items.length; $('none').hidden = !empty; $('main').hidden = empty;
+    if (empty) { $('none').innerHTML = '<h2>Nothing connected yet</h2><p>' + esc(v.note) + '</p><p><a href="connections.html">Open Connections →</a></p>'; return; }
+    $('kp').innerHTML = tile('FortiGates', K.firewalls, K.fw_down ? K.fw_down + ' not connected' : 'all connected', K.fw_down ? 'bad' : 'ok') + tile('Out of sync', K.out_of_sync, 'with FortiManager', K.out_of_sync ? 'warn' : 'ok')
+      + tile('Switches', K.switches ? K.sw_up + ' / ' + K.switches : 0, K.sw_down ? K.sw_down + ' not answering' : 'answering', K.sw_down ? 'bad' : 'ok') + tile('Licences', K.licences, 'FortiCare + FortiGuard')
+      + tile('Expired', K.expired, 'licences', K.expired ? 'bad' : 'ok') + tile('Ending ≤ 30 days', K.due30, (L.due90 || 0) + ' more within 90', K.due30 ? 'warn' : 'ok')
+      + tile('Tunnels', K.tunnels ? K.tunnels.up + ' up' : '–', K.tunnels && K.tunnels.down ? K.tunnels.down + ' down' : '', K.tunnels && K.tunnels.down ? 'warn' : '') + tile('Changes waiting', K.changes_open, 'for approval / run', K.changes_open ? 'warn' : '');
+    if (C && window.Chart) {
+      var hb = { ok: 0, watch: 0, attention: 0, down: 0 }; v.firewalls.forEach(function (d) { if (hb[d.health] != null) hb[d.health]++; });
+      if (v.firewalls.length) C.ring($('cv-fw'), ['Healthy', 'Watch', 'Attention', 'Down'], [hb.ok, hb.watch, hb.attention, hb.down], ['ok', 'acc', 'warn', 'crit'], { v: v.firewalls.length, l: 'FortiGates' }, { title: 'Firewall health' }); else C.empty($('cv-fw'), 'FortiManager not connected.');
+      if (L.calendar.some(function (c) { return c.support + c.security; })) C.bars($('cv-cal'), L.calendar.map(function (c) { return c.month; }), [{ label: 'Support (FortiCare)', data: L.calendar.map(function (c) { return c.support; }), color: 'purple' }, { label: 'Security (FortiGuard)', data: L.calendar.map(function (c) { return c.security; }), color: 'teal' }], { stacked: true, title: 'Renewal calendar' }); else C.empty($('cv-cal'), 'No licence ends in the next 12 months.');
+      var M = v.models.filter(function (m) { return m.target; }).slice(0, 10);
+      if (M.length) C.bars($('cv-fwv'), M.map(function (m) { return m.model; }), [{ label: 'On target', data: M.map(function (m) { return m.on_target; }), color: 'ok' }, { label: 'Behind', data: M.map(function (m) { return m.devices - m.on_target; }), color: 'crit' }], { stacked: true, horizontal: true, title: 'Firmware compliance' }); else C.empty($('cv-fwv'), 'No firmware target set per model.');
+      var R = v.risk.slice(0, 10); if (R.length) C.bars($('cv-risk'), R.map(function (r) { return r.name; }), [{ label: 'Risk', data: R.map(function (r) { return r.risk; }), colors: R.map(function (r) { return r.risk >= 50 ? 'crit' : r.risk >= 20 ? 'warn' : 'ok'; }) }], { horizontal: true, title: 'Highest risk' }); else C.empty($('cv-risk'), 'No device carries risk now.');
+      var S = {}; v.switches.forEach(function (s) { var k = s.site || 'Unassigned'; S[k] = S[k] || { up: 0, down: 0 }; S[k][s.up === false ? 'down' : 'up']++; }); var SK = Object.keys(S).slice(0, 12);
+      if (SK.length) C.bars($('cv-sw'), SK, [{ label: 'Answering', data: SK.map(function (k) { return S[k].up; }), color: 'ok' }, { label: 'Not answering', data: SK.map(function (k) { return S[k].down; }), color: 'crit' }], { stacked: true, title: 'Switches by site' }); else C.empty($('cv-sw'), 'No switches added yet.');
+      var ok = L.items.filter(function (l) { return l.days != null && l.days > 90; }).length;
+      if (L.items.length) C.ring($('cv-lic'), ['Expired', '≤ 30 days', '31-90 days', 'Over 90 days', 'No date'], [L.expired, L.due30, L.due90, ok, L.items.filter(function (l) { return l.days == null; }).length], ['crit', 'warn', 'pink', 'ok', 'mute'], { v: L.items.length, l: 'licences' }, { title: 'Licence status' }); else C.empty($('cv-lic'), 'No licence read yet.');
+    }
+    $('ins').innerHTML = v.noticed.length ? v.noticed.map(function (n) { return '<li><span class="dot ' + esc(n.tone) + '"></span><span>' + esc(n.text) + '</span></li>'; }).join('') : '<li class="mut">Nothing stands out: every device answers and every licence is current.</li>';
+    $('sug').innerHTML = v.suggestions.length ? v.suggestions.map(function (s) { return '<div class="sug"><b>' + esc(s.title) + '</b><span class="mut sm">' + esc(s.note) + '</span> <a class="sm" href="' + esc(s.where) + '">Open →</a></div>'; }).join('') : '<div class="empty">Nothing to plan now.</div>';
+    $('risk').innerHTML = v.risk.length ? '<table><thead><tr><th>Device</th><th>Kind</th><th>Site</th><th>Risk</th><th>Why</th></tr></thead><tbody>' + v.risk.map(function (r) { return '<tr><td><b>' + esc(r.name) + '</b><div class="mut sm">' + esc(r.model) + '</div></td><td>' + esc(r.kind) + '</td><td>' + esc(r.site) + '</td><td>' + rk(r.risk) + '</td><td class="sm">' + r.why.map(function (w) { return esc('+' + w.points + ' ' + w.reason); }).join('<br>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No device carries risk now.</div>';
+    // licences with filter chips
+    var F = { due: function (l) { return l.days != null && l.days <= 90; }, expired: function (l) { return l.days != null && l.days < 0; }, support: function (l) { return l.kind === 'support'; }, security: function (l) { return l.kind === 'security'; }, all: function () { return true; } };
+    var LN = { due: 'Expired or ending ≤ 90 days', expired: 'Expired', support: 'Support (FortiCare)', security: 'Security (FortiGuard)', all: 'All' };
+    $('lc').textContent = L.items.length + ' licences on ' + (v.firewalls.length) + ' FortiGates' + (L.coterm.length ? ' · most renewals in ' + L.coterm.join(', ') : '');
+    $('lchips').innerHTML = Object.keys(F).map(function (k) { return '<button type="button" data-lf="' + k + '" aria-pressed="' + (LF === k) + '">' + esc(LN[k]) + ' <span class="mut">' + L.items.filter(F[k]).length + '</span></button>'; }).join('');
+    var LL = L.items.filter(F[LF]);
+    $('lic').innerHTML = LL.length ? '<table><thead><tr><th>Device</th><th>Site</th><th>Licence</th><th>Kind</th><th>Ends</th><th>Left</th></tr></thead><tbody>' + LL.slice(0, 600).map(function (l) { return '<tr><td><b>' + esc(l.device) + '</b><div class="mut sm">' + esc(l.model) + '</div></td><td>' + esc(l.site) + '</td><td>' + esc(l.name) + '</td><td>' + pill(l.kind, l.kind === 'support' ? 'info' : '') + '</td><td>' + esc(l.expires || '–') + '</td><td>' + days(l.days) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">Nothing in this group.</div>';
+    $('nosup').innerHTML = (L.devices_without_support.length ? '<p class="note">No active FortiCare support: ' + L.devices_without_support.map(esc).join(', ') + '</p>' : '') + (L.devices_unknown.length ? '<p class="mut sm">No licence information yet for ' + L.devices_unknown.length + ' FortiGates - FortiManager reads it on its next poll.</p>' : '');
+    $('fc').textContent = v.firewalls.length + ' FortiGates';
+    $('fw').innerHTML = v.firewalls.length ? '<table><thead><tr><th>FortiGate</th><th>Site</th><th>Model / firmware</th><th>Health</th><th>Sync</th><th>HA</th><th>CPU / memory</th><th>Risk</th><th></th></tr></thead><tbody>' + v.firewalls.slice(0, 400).map(function (d) {
+      var hc = { ok: 'ok', watch: 'info', attention: 'warn', down: 'bad' }[d.health] || ''; var z = (Math.abs(d.z.cpu || 0) >= 3 || Math.abs(d.z.mem || 0) >= 3) ? ' ' + pill('unusual', 'warn') : '';
+      return '<tr><td><b>' + esc(d.name) + '</b><div class="mut sm">' + esc(d.serial) + '</div></td><td>' + esc(d.site) + '</td><td>' + esc(d.model) + '<div class="mut sm">' + esc(d.firmware) + '</div></td><td>' + pill(d.health || '?', hc) + '</td><td>' + (d.conf === 'modified' ? pill('out of sync', 'warn') : esc(d.conf || '')) + '</td><td>' + esc(d.ha || '') + '</td><td>' + esc(d.cpu != null ? d.cpu + ' %' : '–') + ' / ' + esc(d.mem != null ? d.mem + ' %' : '–') + z + '</td><td>' + rk(d.risk) + '</td><td><a class="sm" href="fortigate-fleet.html" title="FortiGate Fleet: propose a change (firmware, policy, interface...) - a second administrator approves">Manage →</a></td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">FortiManager is not connected - set it on Connections.</div>';
+    $('sc').textContent = v.switches.length + ' switches';
+    $('sw').innerHTML = v.switches.length ? '<table><thead><tr><th>Switch</th><th>Site</th><th>Model / version</th><th>State</th><th>Ports up</th><th>Errors / hot</th><th>CPU / memory</th><th>Risk</th><th></th></tr></thead><tbody>' + v.switches.map(function (s) {
+      return '<tr><td><b>' + esc(s.name) + '</b><div class="mut sm">' + esc(s.ip) + ' · ' + esc(s.role) + '</div></td><td>' + esc(s.site) + '</td><td>' + esc(s.model || s.vendor) + '<div class="mut sm">' + esc(s.version) + '</div></td><td>' + (s.up === false ? pill('not answering', 'bad') : s.up ? pill('up', 'ok') : pill('not polled', '')) + '</td><td>' + esc(s.ports_up + ' / ' + s.ports) + '</td><td>' + (s.err_ports ? pill(s.err_ports + ' errors', 'warn') : '') + (s.hot_ports ? pill(s.hot_ports + ' hot', 'warn') : '') + (!s.err_ports && !s.hot_ports ? '–' : '') + '</td><td>' + esc(s.cpu != null ? s.cpu + ' %' : '–') + ' / ' + esc(s.mem != null ? s.mem + ' %' : '–') + '</td><td>' + rk(s.risk) + '</td><td><a class="sm" href="network-engineer.html" title="AI Network Engineer: diagnose, back up the configuration, propose a change - a second administrator approves">Manage →</a></td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No switches added yet - add them on the AI Network Engineer → Devices.</div>';
+  }
+  function load() { var x = new XMLHttpRequest(); x.open('GET', '/api/soc/netops/estate'); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true;
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status === 200 && j) { V = j; $('err').innerHTML = ''; draw(); } else $('err').innerHTML = '<div class="card"><div class="err">' + esc(x.status === 404 ? 'Network Estate is not installed in the SIEM yet - run the update.' : (j && j.error) || ('HTTP ' + x.status)) + '</div></div>'; };
+    x.onerror = x.ontimeout = function () { $('err').innerHTML = '<div class="card"><div class="err">The SIEM is not reachable.</div></div>'; }; x.send(); }
+  document.addEventListener('click', function (e) { var t = e.target.closest('[data-lf]'); if (t) { LF = t.getAttribute('data-lf'); draw(); } });
+  $('rf').addEventListener('click', load); load(); setInterval(function () { if (!document.hidden) load(); }, 120000);
+})();
+</script></body></html>

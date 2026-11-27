@@ -304,7 +304,8 @@ async function main({ configPath, installSignals = true } = {}) {
   if (state) routeModules.push('netops/fmg-routes.js');
   if (state) routeModules.push('netops/fmg-nac.js');   // Network Access Control from FortiGate device detection: endpoints per MAC, explainable risk, four-eyes authorise / quarantine
   if (state) routeModules.push('soc/ndr.js');
-  if (state) routeModules.push('netops/geomap.js');   // Network Map: the organisation's offices on a map of Saudi Arabia with firewall connectivity and ML flapping / outage (after fmg-routes: reads the fleet)   // NDR: beaconing, unusual outbound volume, lateral movement, new countries from the traffic logs - each against its own baseline   // FortiGate fleet through FortiManager: health, firmware, licences, SD-WAN link state, four-eyes changes
+  if (state) routeModules.push('netops/geomap.js');
+  if (state) routeModules.push('netops/estate.js');   // Network Estate & Licensing: firewalls, switches, FortiCare / FortiGuard licences, risk and renewals (read; after fmg-routes and netops)   // Network Map: the organisation's offices on a map of Saudi Arabia with firewall connectivity and ML flapping / outage (after fmg-routes: reads the fleet)   // NDR: beaconing, unusual outbound volume, lateral movement, new countries from the traffic logs - each against its own baseline   // FortiGate fleet through FortiManager: health, firmware, licences, SD-WAN link state, four-eyes changes
   if (state) routeModules.push('soc/flow-analytics-routes.js'); // NetFlow Analytics: NetFlow v5/v9, IPFIX, sFlow collector (UDP) + traffic analytics (after netops: speeds; after reports: SMTP)
   // what happened to each route module, kept in a file for the updater's summary (journald may drop lines in a start burst)
   const routeStatus = require('./util/route-status').createRouteStatus({ file: path.join(cfg.state_dir, 'routes-status.json') });
