@@ -53,6 +53,7 @@ function normMetrics(raw) {
     vhds: (Array.isArray(v.vhds) ? v.vhds : []).slice(0, 32).map((d) => ({ path: s(d.path, 260), size_gb: n(d.size_gb), max_gb: n(d.max_gb) })),
     checkpoints: (Array.isArray(v.checkpoints) ? v.checkpoints : []).slice(0, 64).map((c) => ({ name: s(c.name, 120), created: iso(c.created) })).filter((c) => c.created),
     replication: { state: s(v.replication_state, 40), health: s(v.replication_health, 40) }, off_since: iso(v.off_since),
+    os: s(v.os, 200) || null, fqdn: s(v.fqdn, 255).toLowerCase() || null, ips: (Array.isArray(v.ips) ? v.ips : []).map((x) => s(x, 15)).filter((x) => /^\d{1,3}(\.\d{1,3}){3}$/.test(x)).slice(0, 8),
     net_rx_bps: n(v.net_rx_bps, 1e12), net_tx_bps: n(v.net_tx_bps, 1e12) })).filter((v) => v.name);
   return { host, vms, at: iso(b.collected_at) || new Date().toISOString() };
 }
@@ -133,7 +134,7 @@ function createHypervManager(app, opts = {}) {
       const days = daily().all((x) => x.id.startsWith(r.id + '|')).sort((a, b) => a.id.localeCompare(b.id)).slice(-60), sm = samples().all((x) => x.host === r.id && t - x.t <= DAY).sort((a, b) => a.t - b.t), a = assess(r, days, t, sm);
       return { name: r.host.name, ip: r.host.ip || null, at: r.at, stale: t - Date.parse(r.at) > 2 * 3600000, cores: r.host.cores, cpu_pct: r.host.cpu_pct, mem_total_mb: r.host.mem_total_mb, mem_free_mb: r.host.mem_free_mb, volumes: r.host.volumes, nics: r.host.nics || [], disk: r.host.disk || null,
         trend: sm.map((x) => ({ t: new Date(x.t).toISOString(), cpu: x.cpu, mem_pct: x.mem_pct, rx_bps: x.rx_bps, tx_bps: x.tx_bps, disk_ms: x.disk_ms })),
-        vms: r.vms.map((v) => ({ name: v.name, state: v.state, vcpus: v.vcpus, cpu_pct: v.cpu_pct, mem_assigned_mb: v.mem_assigned_mb, mem_demand_mb: v.mem_demand_mb, heartbeat: v.heartbeat, checkpoints: v.checkpoints.length, replication: v.replication, uptime_s: v.uptime_s, net_rx_bps: v.net_rx_bps == null ? null : v.net_rx_bps, net_tx_bps: v.net_tx_bps == null ? null : v.net_tx_bps })),
+        vms: r.vms.map((v) => ({ name: v.name, state: v.state, os: v.os || null, fqdn: v.fqdn || null, ips: v.ips || [], vcpus: v.vcpus, cpu_pct: v.cpu_pct, mem_assigned_mb: v.mem_assigned_mb, mem_demand_mb: v.mem_demand_mb, heartbeat: v.heartbeat, checkpoints: v.checkpoints.length, replication: v.replication, uptime_s: v.uptime_s, net_rx_bps: v.net_rx_bps == null ? null : v.net_rx_bps, net_tx_bps: v.net_tx_bps == null ? null : v.net_tx_bps })),
         findings: a.findings, capacity: a.capacity, vcpu_ratio: a.vcpu_ratio, snapshots: days.length };
     });
     const all = hosts.flatMap((h) => h.findings);
