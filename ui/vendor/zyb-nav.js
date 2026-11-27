@@ -344,6 +344,7 @@ window.ZYB_NAV = [
   "hd": "overview",
   "icon": "<path d=\"M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z\"/>",
   "pages": [
+   {"h": "agents.html", "s": "Agents & Downloads", "t": "Agents & Downloads - every agent from the platform with its fingerprint, and how to connect it", "d": "Asset agent for Windows in plain PowerShell (nothing to install) for project-site computers off the network, the SIEM agent for Windows event logs, the Linux forwarder and the Node.js asset agent; one-time enrolment keys and SIEM sources created here; connected agents and the silent ones."},
    {"h": "platform.html?tab=sto", "s": "Platform Server", "t": "Platform Server - the server this platform runs on: CPU, memory, disk speed (write latency, I/O wait), disk space, services and backup", "d": "Checked every minute on the server itself. A slow virtual disk (a Hyper-V checkpoint, a busy HDD) is shown with what to fix on the host."},
    {"h": "ops-command.html", "s": "Operations Command", "t": "Operations Command - the whole estate in one colourful view: FortiGate fleet, NAC, NDR, Hyper-V, Call Manager, Aramco CCC and the AI engineers' open work", "d": "Charts read live from each module, with the learned findings of every module ranked together. A module that is not connected says what to connect; nothing is invented."},
    {

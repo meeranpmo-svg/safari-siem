@@ -1,0 +1,86 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agents &amp; Downloads</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css">
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Agents & Downloads: every agent the platform offers, downloaded from the platform itself (agents/manifest.json, built by
+     build-agents.py at install time, each file with its SHA-256), and how to connect it: an administrator creates a one-time
+     enrolment key (asset agent, /api/itam/settings/agent-tokens) or a Windows source with its ingest token (SIEM agent,
+     /api/soc/onboard/sources) - shown ONCE, never stored here. Remote project sites: the agents only make outbound HTTPS. -->
+<style>
+.pk{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin:0 0 12px}.pk .card{margin:0;display:flex;flex-direction:column;gap:6px}
+.mut{color:#8b93a4}.sm{font-size:12px}.mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;word-break:break-all}
+pre.cmd{white-space:pre-wrap;word-break:break-all;background:rgba(127,140,160,.1);border:1px solid rgba(127,140,160,.25);border-radius:8px;padding:10px;font:12px ui-monospace,Consolas,monospace;margin:6px 0}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+.note{border-left:3px solid #f59f00;padding:6px 10px;border-radius:4px;background:rgba(245,159,0,.08);font-size:12.5px;margin:6px 0}.ok{color:#3fb950}
+.steps li{margin:0 0 6px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Platform · agents · downloads</div><h1>Agents &amp; Downloads</h1><div class="mut sm">Download an agent from the platform, check its fingerprint, connect it with a one-time key - for servers, desktops and the computers at project sites that are not on the company network</div></div><span class="sp"></span><span class="muted" id="up"></span></div>
+<div id="err"></div>
+<div class="k" id="kp"></div>
+<section class="card"><h2>How the agents reach the platform</h2>
+ <ul class="steps sm">
+  <li><b>Outbound only.</b> Every agent opens an HTTPS connection to <code id="host1"></code> on port 443 - it never listens and needs no inbound firewall rule. A computer at a project site connects over the internet or a site VPN.</li>
+  <li><b>From the internet</b>, publish only <code>/agent/</code> (asset agents) and <code>/ingest/</code> (SIEM agents) of the portal - for example a FortiGate virtual IP with a policy that allows HTTPS to those paths only. The rest of the portal stays internal.</li>
+  <li><b>Certificate:</b> a computer outside the domain does not trust an internal certificate - use a public certificate for the published name, or import the portal certificate on each computer first.</li>
+  <li><b>Offline:</b> the SIEM agent keeps events on disk while the platform cannot be reached; the asset agent sends a fresh, complete inventory on its next run.</li>
+ </ul></section>
+<div class="pk" id="pk"><div class="card"><div class="empty">Loading…</div></div></div>
+<section class="card" id="assetc"><h2>Connect asset agents <span class="c">IT Asset Management · one-time enrolment keys</span></h2><div id="asset"></div></section>
+<section class="card" id="siemc"><h2>Connect a Windows server or PC to the SIEM <span class="c">a source and its ingest token</span></h2><div id="siem"></div></section>
+<section class="card" id="agc"><h2>Connected asset agents <span class="c" id="agn"></span></h2><div class="tw" id="ag"></div></section>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, M = null, SITES = [];
+  var ORG = window.ZYB_ORG || {}, HOST = ORG.portal_host || location.host, SERVER = 'https://' + HOST;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, u); x.withCredentials = true; x.timeout = 60000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && (j.error || (j.errors && j.errors.join('; ')))) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(new Error('not reachable')); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  function kb(n) { return n > 1048576 ? (Math.round(n / 104857.6) / 10) + ' MB' : Math.round(n / 1024) + ' KB'; }
+  function sha(file) { var i = (M && M.items || []).filter(function (x) { return x.file === file; })[0]; return i ? i.sha256 : ''; }
+  function drawPk() {
+    var L = (M && M.items) || [];
+    $('pk').innerHTML = L.length ? L.map(function (i) { return '<div class="card"><h2 style="margin:0">' + esc(i.title) + ' <span class="c">' + esc(i.kind === 'siem' ? 'SIEM' : 'IT assets') + '</span></h2><div class="sm">' + esc(i.purpose) + '</div><div class="sm mut">' + esc(i.platform) + ' · needs ' + esc(i.needs) + '</div>'
+      + '<div class="sm">SHA-256 <span class="mono">' + esc(i.sha256) + '</span></div><div><a class="btn pri" href="agents/' + encodeURIComponent(i.file) + '" download data-dl="' + esc(i.id) + '">⬇ Download ' + esc(i.file) + '</a> <span class="mut sm">' + esc(kb(i.bytes)) + '</span></div></div>'; }).join('')
+      : '<div class="card"><div class="empty">No agent package on this server yet - the platform update builds them (install-dashboards.sh).</div></div>';
+    var na = L.filter(function (i) { return i.kind === 'asset'; }).length, ns = L.filter(function (i) { return i.kind === 'siem'; }).length;
+    $('kp').innerHTML = tile('Agent packages', L.length, M && M.built ? 'built ' + String(M.built).slice(0, 10) : '') + tile('Asset agents', na, 'Windows · Linux · macOS') + tile('SIEM agents', ns, 'Windows events · Linux syslog') + tile('Portal', HOST, 'agents connect here, outbound 443');
+    $('host1').textContent = HOST + ' (443)';
+  }
+  function drawAsset() {
+    var h = sha('sentra-asset-agent.ps1');
+    var steps = '<ol class="steps sm"><li>Download <b>sentra-asset-agent.ps1</b> above and copy it to the computer.</li><li>On the computer, in PowerShell <b>as Administrator</b>, check the fingerprint:<pre class="cmd">(Get-FileHash .\\sentra-asset-agent.ps1 -Algorithm SHA256).Hash</pre>It must be <span class="mono">' + esc(h.toUpperCase() || '(not built yet)') + '</span>.</li>'
+      + '<li>Install it - it asks for the one-time key below, enrols and sends the inventory every 6 hours:<pre class="cmd">powershell -ExecutionPolicy Bypass -File .\\sentra-asset-agent.ps1 -Server ' + esc(SERVER) + '/agent -Install</pre></li><li>The computer appears in IT Asset Management within minutes, tagged <i>agent-reported</i>, and in the list below.</li></ol>';
+    $('asset').innerHTML = steps + (can('admin') ? '<form id="tf" class="frm"><label>Site / project<input name="site" maxlength="120" required placeholder="e.g. Jubail project site"></label><label>How many keys<input name="n" type="number" min="1" max="50" value="1"></label><div><button type="submit" class="pri">Create one-time keys</button></div></form><div id="tout"></div><p class="mut sm">Each key works once, for 24 hours. It is shown here once and not kept by the platform - hand it to the person installing, separately from the script.</p>'
+      : '<p class="mut sm">An administrator creates the one-time keys here.</p>');
+  }
+  function drawSiem() {
+    $('siem').innerHTML = '<ol class="steps sm"><li>Download <b>sentra-siem-windows-agent.zip</b> above, unzip it on the server (SHA-256 <span class="mono">' + esc((sha('sentra-siem-windows-agent.zip') || '').toUpperCase()) + '</span>).</li><li>An administrator creates the source below and copies the token and the command shown once.</li><li>On the server, in PowerShell as Administrator, run the command: it installs the forwarder as a scheduled task that sends the event logs over HTTPS.</li></ol>'
+      + (can('admin') ? '<form id="sf" class="frm"><label>Source name (letters, digits, -)<input name="sid" required pattern="[a-z0-9][a-z0-9-]{1,40}" maxlength="41" placeholder="win-site-jubail-01"></label><label>Label<input name="label" maxlength="120" placeholder="Jubail site file server"></label><label>Site<select name="site">' + SITES.map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.name || s.id) + '</option>'; }).join('') + '</select></label><div><button type="submit" class="pri">Create the source</button></div></form><div id="sout"></div>'
+      : '<p class="mut sm">An administrator creates the source and its token here.</p>');
+  }
+  function drawAgents() { if (!can('operator')) { $('agc').hidden = true; return; }
+    req('GET', '/api/itam/agents').then(function (r) { var A = r.agents || []; $('agn').textContent = A.length + ' agents · ' + A.filter(function (a) { return a.stale; }).length + ' silent';
+      $('ag').innerHTML = A.length ? '<table><thead><tr><th>Computer</th><th>Platform</th><th>Site</th><th>Enrolled</th><th>Last report</th><th>State</th></tr></thead><tbody>' + A.slice(0, 500).map(function (a) { return '<tr><td><b>' + esc(a.name) + '</b></td><td>' + esc(a.platform || '') + '</td><td>' + esc(a.site || '') + '</td><td class="sm">' + esc(String(a.enrolled_at || '').slice(0, 16).replace('T', ' ')) + '</td><td class="sm">' + esc(String(a.last_report_at || '–').slice(0, 16).replace('T', ' ')) + '</td><td>' + (a.status === 'revoked' ? '<span class="pill">revoked</span>' : a.stale ? '<span class="pill warn">silent</span>' : '<span class="pill ok">reporting</span>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No asset agent has enrolled yet.</div>';
+    }, function (e) { $('ag').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }); }
+  document.addEventListener('submit', function (e) {
+    var f = e.target, fid = f.getAttribute('id'); if (fid !== 'tf' && fid !== 'sf') return; e.preventDefault();
+    if (fid === 'tf') { var n = Math.max(1, Math.min(50, Number(f.n.value) || 1)), site = f.site.value.trim(), out = [], i = 0;
+      (function next() { if (i++ >= n) { $('tout').innerHTML = '<p class="note">Copy these now - they are not shown again. Each works once, until ' + esc(String(out[0].expires_at).slice(0, 16).replace('T', ' ')) + ' UTC.</p><pre class="cmd">' + out.map(function (t) { return esc(t.token); }).join('\n') + '</pre>'; return; }
+        req('POST', '/api/itam/settings/agent-tokens', { note: 'Asset agent: ' + site, site: site }).then(function (t) { out.push(t); next(); }, function (er) { $('tout').innerHTML = '<div class="err">' + esc(er.message) + '</div>'; }); })(); return; }
+    req('POST', '/api/soc/onboard/sources', { kind: 'windows', id: f.sid.value.trim(), label: f.label.value.trim() || undefined, site: f.site.value }).then(function (r) {
+      $('sout').innerHTML = '<p class="note">Source <b>' + esc(r.source.id) + '</b> created. The token is shown <b>once</b> - copy it now.</p>' + (r.token ? '<div class="sm">Token</div><pre class="cmd">' + esc(r.token) + '</pre>' : '')
+        + (r.instructions || []).filter(function (x) { return !x.lang || x.lang === 'en'; }).map(function (x) { return '<div class="sm"><b>' + esc(x.title) + '</b></div><pre class="cmd">' + esc(x.body) + '</pre>'; }).join('');
+    }, function (er) { $('sout').innerHTML = '<div class="err">' + esc(er.message) + '</div>'; }); });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } start(); }; w.onerror = start; w.send();
+  function start() {
+    req('GET', 'agents/manifest.json').then(function (m) { M = m; }, function () { M = null; /* not built yet: the page says so */ }).then(function () {
+      drawPk(); drawAsset();
+      (can('admin') ? req('GET', '/api/soc/onboard/sources').then(function (r) { SITES = r.sites || []; }, function () { SITES = []; /* the SIEM onboarding is not reachable: the form says so on submit */ }) : Promise.resolve()).then(drawSiem);
+      drawAgents(); $('up').textContent = M ? 'packages built ' + String(M.built).replace('T', ' ').slice(0, 16) + ' UTC' : '';
+    });
+  }
+})();
+</script></body></html>
