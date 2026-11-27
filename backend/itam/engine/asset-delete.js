@@ -4,6 +4,7 @@
 // to an existing install with one registration line (install/add-asset-delete.sh) whatever version the rest is.
 //   POST /assets/:id/delete     {reason, discovery: 'review'|'ignore', force}          (admin)
 //   POST /bulk/assets/delete    {ids[], reason, discovery, force}                      (admin, max 500)
+//   POST /assets/:id/merge      {from, reason, force}   the duplicate 'from' merged into :id, then removed (admin)
 // The record and its relationships are removed; the audit entry keeps who deleted what, when and why (a snapshot of the
 // identifying fields). A SIEM log source is stopped first; if the SIEM cannot be reached the delete is refused (409,
 // code siem_stop_failed) unless force:true. Discovery results linked to the asset go back to review, or are ignored by
@@ -90,13 +91,55 @@ function createAssetDelete(app) {
     return { total: ids.length, ok, failed: ids.length - ok, results };
   }
 
-  return { remove, bulk, BULK_MAX };
+  // MERGE a duplicate into the record that stays: the empty fields of the one kept are filled from the duplicate (nothing the kept
+  // record already says is overwritten), tags and sources are joined, discovery results, agents and relationships move to it, then
+  // the duplicate is removed like a delete (its SIEM log source stopped). Audited with both records' identifying fields.
+  const FILL = ['mgmt_ip', 'mac', 'serial', 'asset_tag', 'model', 'vendor', 'manufacturer', 'os', 'os_version', 'site', 'location', 'department', 'owner', 'custodian', 'warranty_end', 'eol', 'purchase_date', 'cpu', 'ram_gb', 'disk_gb', 'fqdn', 'domain', 'description'];
+  async function merge(keepId, body, who) {
+    const keep = assets.get(String(keepId || '')), fromId = s(body.from, 120), src = assets.get(fromId);
+    if (!keep) throw bad('asset not found', 404);
+    if (!fromId) throw bad('from is required: the duplicate to merge into this asset');
+    if (!src) throw bad('from: no asset ' + fromId, 404);
+    if (src.id === keep.id) throw bad('from: an asset cannot be merged into itself');
+    const reason = s(body.reason, 500); if (reason.length < 3) throw bad('a reason is required to merge assets (min 3 characters)');
+    const filled = [];
+    assets.patch(keep.id, (o) => {
+      for (const f of FILL) if ((o[f] == null || o[f] === '') && src[f] != null && src[f] !== '') { o[f] = src[f]; filled.push(f); }
+      o.tags = [...new Set([].concat(o.tags || [], src.tags || []))];
+      const k = (x) => (x && (x.source || x)) + ''; const have = new Set((o.sources || []).map(k)); o.sources = (o.sources || []).concat((src.sources || []).filter((x) => !have.has(k(x))));
+      if (!o.siem && src.siem) { o.siem = src.siem; filled.push('siem'); }
+      o.merged_from = [].concat(o.merged_from || [], [{ id: src.id, name: src.name || null, at: new Date().toISOString(), by: who.user }]).slice(-20);
+      o.updated_at = new Date().toISOString(); return o;
+    });
+    // what pointed at the duplicate now points at the record that stays
+    let moved = 0;
+    for (const d of devices.all((x) => x.asset_id === src.id)) { devices.patch(d.id, (x) => { x.asset_id = keep.id; }); moved++; }
+    for (const ag of agents.all((x) => x.asset_id === src.id)) { agents.patch(ag.id, (o) => { o.asset_id = keep.id; }); moved++; }
+    const seen = new Set(rels.all((r) => r.from === keep.id || r.to === keep.id).map((r) => [r.from, r.to, r.type].join('|')));
+    for (const r of rels.all((x) => x.from === src.id || x.to === src.id)) {
+      const n = { from: r.from === src.id ? keep.id : r.from, to: r.to === src.id ? keep.id : r.to }; const key = [n.from, n.to, r.type].join('|');
+      if (n.from === n.to || seen.has(key)) continue; seen.add(key); rels.put(Object.assign({}, r, { id: r.id + '-m', from: n.from, to: n.to })); moved++;
+    }
+    // the SIEM source moved to the record that stays is not stopped with the duplicate
+    const srcCopy = assets.get(src.id); if (filled.includes('siem')) assets.patch(src.id, (o) => { delete o.siem; if (o.log_collection) o.log_collection = Object.assign({}, o.log_collection, { state: 'stopped' }); return o; });
+    const r = await remove(src.id, { reason: 'merged into ' + (keep.name || keep.id) + ': ' + reason, discovery: 'review', force: body.force === true }, who);
+    audit({ by: who.user, role: who.role, ip: who.ip, action: 'asset.merge', target: keep.id, detail: { reason, merged: { id: srcCopy.id, name: srcCopy.name || null, mgmt_ip: srcCopy.mgmt_ip || null, serial: srcCopy.serial || null }, filled, links_moved: moved } });
+    return { kept: keep.id, merged: src.id, filled, links_moved: moved, deleted: r.asset };
+  }
+
+  return { remove, bulk, merge, BULK_MAX };
 }
 
 function registerAssetDelete(srv, app) {
   const del = createAssetDelete(app);
   srv.route('POST', '/assets/:id/delete', async (ctx) => { ctx.need('admin'); return del.remove(ctx.params.id, ctx.body || {}, ctx.who); });
   srv.route('POST', '/bulk/assets/delete', async (ctx) => { ctx.need('admin'); return del.bulk(ctx.body || {}, ctx.who); });
+  srv.route('POST', '/assets/:id/merge', async (ctx) => {
+    ctx.need('admin');
+    const { body } = require('./check');
+    const v = body(ctx.body || {}).str('from', { required: true, max: 120 }).str('reason', { required: true, min: 3, max: 500 }).bool('force', { def: false }).done();
+    return del.merge(ctx.params.id, v, ctx.who);
+  });
   return del;
 }
 

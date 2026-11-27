@@ -39,7 +39,7 @@ tr.rw{cursor:pointer}tr.rw:hover{background:rgba(255,255,255,.03)}.tw{overflow:a
   <label class="sm mut"><input type="checkbox" id="all"> include retired</label><span style="position:relative"><button type="button" class="btn" id="b-cols">Columns</button><div class="colpick" id="cols" hidden></div></span>
   <select class="inp" id="views" aria-label="Saved views"><option value="">Saved views…</option></select><button type="button" class="btn" id="b-savev">Save view</button><button type="button" class="btn pri" id="b-xlsx">Export Excel</button><button type="button" class="btn" id="b-csv">Export CSV</button><button type="button" class="btn" id="b-imp">Import CSV</button><input type="file" id="imp-file" accept=".csv,text/csv" hidden></div>
   <div class="card" id="imp" hidden></div>
-  <div class="bar" id="bulk" hidden><b id="bulkn"></b><select class="inp" id="bk-f"><option value="site">Set site</option><option value="department">Set department</option><option value="owner">Set owner</option><option value="custodian">Set custodian</option></select><input class="inp" id="bk-v" placeholder="value"><button type="button" class="btn pri" id="bk-go">Apply to selected</button><button type="button" class="btn" id="bk-x">Clear selection</button></div>
+  <div class="bar" id="bulk" hidden><b id="bulkn"></b><select class="inp" id="bk-f"><option value="site">Set site</option><option value="department">Set department</option><option value="owner">Set owner</option><option value="custodian">Set custodian</option></select><input class="inp" id="bk-v" placeholder="value"><button type="button" class="btn pri" id="bk-go">Apply to selected</button><button type="button" class="btn" id="bk-merge" title="Two records of the same machine: keep the fuller one, fill its empty fields from the other, then remove the other (administrators)">Merge 2 selected</button><button type="button" class="btn" id="bk-del" style="border-color:#e5484d;color:#ff8a8e" title="Remove the selected records (administrators, with a reason; audited)">Delete selected</button><button type="button" class="btn" id="bk-x">Clear selection</button></div>
   <div class="tw" id="tbl"></div><div class="bar" style="margin-top:8px"><span class="sm mut" id="pg"></span><span class="sp"></span><button type="button" class="btn" id="prev">‹</button><button type="button" class="btn" id="next">›</button></div></div>
   <div class="card"><h2>Data quality</h2><div id="qual"></div></div><div class="card"><h2>Possible duplicates</h2><div id="dups"></div></div></section></div>
 <aside class="drw" id="drw" hidden></aside>
@@ -149,6 +149,23 @@ tr.rw{cursor:pointer}tr.rw:hover{background:rgba(255,255,255,.03)}.tw{overflow:a
   $('tbl').addEventListener('change', function (e) { var s = e.target.closest('[data-sel]'); if (s) { if (s.checked) SEL[s.dataset.sel] = 1; else delete SEL[s.dataset.sel]; drawTable(); return; }
     if (e.target.id === 'selall') { Array.prototype.forEach.call(document.querySelectorAll('[data-sel]'), function (c) { if (e.target.checked) SEL[c.dataset.sel] = 1; else delete SEL[c.dataset.sel]; }); drawTable(); } });
   $('bk-x').addEventListener('click', function () { SEL = {}; drawTable(); });
+  // merge two records of the same machine / delete records (administrators - the server refuses anyone else; both audited)
+  var rowOf = function (id) { return (V.rows || []).filter(function (x) { return x.id === id; })[0] || { id: id, name: id }; };
+  var adminMsg = function (e) { return e.status === 403 ? 'Only an administrator merges or deletes assets' : e.message; };
+  $('bk-merge').addEventListener('click', function () {
+    var ids = Object.keys(SEL); if (ids.length !== 2) { toast('Select exactly the two records of the same machine'); return; }
+    var A = ids.map(rowOf).sort(function (x, y) { return (y.quality || 0) - (x.quality || 0) || (y.ip ? 1 : 0) - (x.ip ? 1 : 0); }), keep = A[0], from = A[1];
+    if (!window.confirm('Keep "' + keep.name + '"' + (keep.ip ? ' (' + keep.ip + ')' : '') + ' and merge "' + from.name + '"' + (from.ip ? ' (' + from.ip + ')' : '') + ' into it?\n\nEmpty fields of the kept record are filled from the other; its links move over; the other record is then removed.')) return;
+    var why = window.prompt('Why are they the same machine? (recorded in the audit)', 'duplicate of the same server'); if (!why || why.trim().length < 3) return;
+    req('POST', '/assets/' + encodeURIComponent(keep.id) + '/merge', { from: from.id, reason: why.trim() }).then(function (r) { toast('Merged into ' + keep.name + (r.filled && r.filled.length ? ' - filled: ' + r.filled.join(', ') : '')); SEL = {}; load(); }, function (e) { toast(adminMsg(e)); });
+  });
+  $('bk-del').addEventListener('click', function () {
+    var ids = Object.keys(SEL); if (!ids.length) return;
+    var names = ids.slice(0, 5).map(function (i) { return rowOf(i).name; }).join(', ') + (ids.length > 5 ? ' and ' + (ids.length - 5) + ' more' : '');
+    if (!window.confirm('Delete ' + ids.length + ' record(s): ' + names + '?\n\nThe record and its links are removed; discovery results go back to review; the audit keeps who deleted what and why.')) return;
+    var why = window.prompt('Reason (recorded in the audit)', 'duplicate record'); if (!why || why.trim().length < 3) return;
+    req('POST', '/bulk/assets/delete', { ids: ids, reason: why.trim(), discovery: 'review' }).then(function (r) { toast(r.ok + ' deleted' + (r.failed ? ' · ' + r.failed + ' not: ' + ((r.results.filter(function (x) { return !x.ok; })[0] || {}).error || '') : '')); SEL = {}; load(); }, function (e) { toast(adminMsg(e)); });
+  });
   $('bk-go').addEventListener('click', function () { var f = $('bk-f').value, v = $('bk-v').value.trim(), ids = Object.keys(SEL); if (!v) { toast('Type the value first'); return; }
     var done = 0, fail = null, next = function (i) { if (i >= ids.length) { toast(done + ' asset(s) updated' + (fail ? ' · stopped: ' + fail : '')); SEL = {}; load(); return; } var r = V.rows.filter(function (x) { return x.id === ids[i]; })[0], b = { if_updated_at: r && r.updated_at }; b[f] = v;
       req('POST', '/assets/' + encodeURIComponent(ids[i]), b).then(function () { done++; next(i + 1); }, function (er) { fail = why(er); next(ids.length); }); }; next(0); });

@@ -92,6 +92,9 @@ const XSS = '<img src=x onerror="window.__xss=1">';
     // bulk set site
     await p.check('[data-sel="w1"]'); await p.check('[data-sel="w2"]'); await p.fill('#bk-v', 'Dammam'); await p.click('#bk-go');
     ok(await wait(p, () => /2 asset\(s\) updated/.test(document.body.innerText)), 'bulk update'); ok(A.get('w1').site === 'Dammam' && A.get('w2').site === 'Dammam', 'stored');
+    // merge and delete are offered on the selection; a merge needs exactly the two records of one machine
+    await p.check('[data-sel="w1"]'); ok(!!(await p.$('#bk-merge')) && !!(await p.$('#bk-del')), 'merge and delete on the selection');
+    await p.click('#bk-merge'); ok(await wait(p, () => /Select exactly the two records/.test(document.body.innerText)), 'a merge needs two records'); await p.click('#bk-x');
     // add
     await p.click('#b-add'); await p.click('#n-save'); ok(/Name is required/.test(await txt(p, 'n-err')), 'add checks the name');
     await p.fill('#n-name', 'LT-NEW-SYN'); await p.selectOption('#n-type', 'laptop'); await p.fill('#n-serial', 'SYNLT1'); await p.click('#n-save');

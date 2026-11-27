@@ -96,7 +96,19 @@ function registerRoutes(srv, app) {
      writer (assets-write.js) decides asynchronously - two requests checked together would both pass and both write */
   let assetWrites = Promise.resolve();
   function oneAtATime(fn) { const run = assetWrites.then(fn, fn); assetWrites = run.then(() => undefined, () => undefined); return run; }
-  srv.route('POST', '/assets', (ctx) => { ctx.need('operator'); return oneAtATime(() => { uniqueOrThrow(ctx.body); return AW ? AW.create(ctx.body, ctx.who) : assets.create(ctx.body, ctx.who, { source: 'manual' }); }); });
+  // the same name (short host name) or the same management IP as an active asset is very likely the same machine: said before a
+  // second record is made, unless the person confirms it is another one (allow_duplicate: true - taken off before the record is written)
+  function sameMachineOrThrow(b) {
+    if (!b || b.allow_duplicate === true) return;
+    const sn = (v) => String(v || '').trim().toLowerCase().split('.')[0], nm = sn(b.name), ip = String(b.mgmt_ip || b.ip || '').trim();
+    if (!nm && !ip) return;
+    for (const a of store.collection('assets').all()) {
+      if (['deleted', 'retired', 'disposed', 'lost'].includes(a.status)) continue;
+      const byName = nm && sn(a.name) === nm, byIp = ip && String(a.mgmt_ip || '') === ip;
+      if (byName || byIp) throw Object.assign(new Error((byName ? 'an asset named ' + a.name : 'the IP ' + ip + ' already belongs to ' + (a.name || a.id)) + ' already exists (' + a.id + ') - open it and update it, or confirm this is a different machine'), { status: 409, code2: 'duplicate_asset', existing: { id: a.id, name: a.name || null, mgmt_ip: a.mgmt_ip || null } });
+    }
+  }
+  srv.route('POST', '/assets', (ctx) => { ctx.need('operator'); return oneAtATime(() => { sameMachineOrThrow(ctx.body); if (ctx.body && 'allow_duplicate' in ctx.body) delete ctx.body.allow_duplicate; uniqueOrThrow(ctx.body); return AW ? AW.create(ctx.body, ctx.who) : assets.create(ctx.body, ctx.who, { source: 'manual' }); }); });
   srv.route('POST', '/assets/:id', (ctx) => { ctx.need('operator'); return oneAtATime(() => { freshOrThrow(ctx.params.id, ctx.body); if ((ctx.body || {}).asset_tag !== undefined || (ctx.body || {}).serial !== undefined) uniqueOrThrow(ctx.body, ctx.params.id); return AW ? AW.edit(ctx.params.id, ctx.body, ctx.who) : assets.edit(ctx.params.id, ctx.body, ctx.who); }); });
   for (const action of ['retire', 'dispose', 'repair', 'restock', 'activate', 'lost', 'found']) {
     srv.route('POST', `/assets/:id/${action}`, async (ctx) => {

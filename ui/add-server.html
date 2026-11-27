@@ -119,7 +119,7 @@ body.win #f > :not(.trow),body.win .net-only,body:not(.win) #winp,body:not(.net)
   var $=function(i){return document.getElementById(i);}, API='/api/itam/discovery';
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
   var ROLE='viewer', USER='', S=null, CREDS=[];
-  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p.indexOf('/api/')===0?p:API+p);x.withCredentials=true;x.timeout=60000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j||{});else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the asset discovery service could not be reached'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
+  function req(m,p,b){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open(m,p.indexOf('/api/')===0?p:API+p);x.withCredentials=true;x.timeout=60000;if(b)x.setRequestHeader('Content-Type','application/json');x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }if(x.status>=200&&x.status<300)ok(j||{});else bad(Object.assign(new Error((j&&j.error)||('HTTP '+x.status)),{status:x.status,code:j&&j.code}));};x.onerror=x.ontimeout=function(){bad(Object.assign(new Error('the asset discovery service could not be reached'),{status:0}));};x.send(b?JSON.stringify(b):null);});}
   function toast(t){var d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.remove();},4500);}
   var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
   var IPV4=/^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
@@ -366,13 +366,14 @@ body.win #f > :not(.trow),body.win .net-only,body:not(.win) #winp,body:not(.net)
   function dview(){var n=$('dtype').value==='network';document.body.classList.toggle('win',$('dtype').value==='windows');document.body.classList.toggle('net',n);document.body.classList.toggle('v3',$('nver').value==='v3');document.body.classList.toggle('nopriv',$('npriv').value==='none');
     document.querySelector('.top h1').textContent=n?'Add a network device':'Add a server';}
   // Windows: register the computer in IT Asset Management now (the agent and Active Directory keep it current)
-  $('wgo').onclick=async function(){var b=this,nm=$('wname').value.trim(),ip=$('wip').value.trim(),role=$('wrole').value,os=$('wos').value.trim(),site=$('wsite').value.trim();
+  $('wgo').onclick=async function(ev,anyway){var b=$('wgo'),nm=$('wname').value.trim(),ip=$('wip').value.trim(),role=$('wrole').value,os=$('wos').value.trim(),site=$('wsite').value.trim();
     if(!/^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/.test(nm)){$('wmsg').textContent='Computer name: letters, digits, . _ - (up to 63)';return;}
     if(ip&&!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)){$('wmsg').textContent='IP address: like 10.0.1.25';return;}
     b.disabled=true;$('wmsg').textContent='Adding…';
-    try{var r=await req('POST','/api/itam/assets',{name:nm,type:role==='workstation'?'workstation':'server',os:os||(role==='workstation'?'Windows':'Windows Server'),mgmt_ip:ip||undefined,site:site||undefined,status:'in_use',tags:['windows'].concat(role==='dc'?['domain-controller']:[])});
+    try{var r=await req('POST','/api/itam/assets',{name:nm,type:role==='workstation'?'workstation':'server',os:os||(role==='workstation'?'Windows':'Windows Server'),mgmt_ip:ip||undefined,site:site||undefined,status:'in_use',tags:['windows'].concat(role==='dc'?['domain-controller']:[]),allow_duplicate:anyway===true?true:undefined});
       var id=(r.asset&&r.asset.id)||r.id;$('wmsg').innerHTML='Added'+(id?' - <a href="inventory.html#asset='+encodeURIComponent(id)+'" style="color:var(--info)">open the record</a>':'')+'. Next: install the asset agent on it.';}
-    catch(e){$('wmsg').textContent=e.message;}b.disabled=false;};
+    catch(e){if(e.code==='duplicate_asset'){var m=/\(([A-Za-z0-9_-]+)\)/.exec(e.message);$('wmsg').innerHTML='<b style="color:#f5b544">Already in the register:</b> '+esc0(e.message)+(m?' - <a href="inventory.html#asset='+encodeURIComponent(m[1])+'" style="color:var(--info)">open it</a>':'')+' <button type="button" class="btn sm" id="wany">Add anyway - it is a different machine</button>';$('wany').onclick=function(){$('wgo').onclick(null,true);};}else $('wmsg').textContent=e.message;}b.disabled=false;};
+  function esc0(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   $('dtype').onchange=dview;$('nver').onchange=dview;$('npriv').onchange=dview;
   $('sshuse').onchange=function(){var nw=this.value==='new';[].forEach.call(document.querySelectorAll('.ssh-new'),function(el){el.style.display=nw?'':'none';});};
   $('f').onsubmit=function(ev){ev.preventDefault();var r=form();if(r.miss.length){$('hint').textContent='Still needed: '+r.miss.join(', ')+'.';return;}$('hint').textContent='';

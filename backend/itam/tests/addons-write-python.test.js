@@ -39,7 +39,7 @@ test('Python-decided Locations and Ownership writes do exactly what Node.js does
   };
   const A = {};
   for (const [k, body] of [['db', { name: 'CORE-DB01', asset_tag: 'ZS-1001', serial: 'SN1', mgmt_ip: '10.1.1.10', site: 'Riyadh HQ' }], ['app', { name: 'CORE-APP01', asset_tag: 'ZS-1002', site: ' riyadh  hq ' }],
-    ['pc', { name: 'PC-7', asset_tag: 'ZS-2001', site: 'Jeddah' }], ['twin1', { name: 'TWIN', asset_tag: 'ZS-3001' }], ['twin2', { name: 'twin', asset_tag: 'ZS-3002' }], ['gone', { name: 'OLD-1', asset_tag: 'ZS-9', site: 'Dammam' }]]) A[k] = (await both('/assets', body, 'operator')).asset.id;
+    ['pc', { name: 'PC-7', asset_tag: 'ZS-2001', site: 'Jeddah' }], ['twin1', { name: 'TWIN', asset_tag: 'ZS-3001' }], ['twin2', { name: 'twin', asset_tag: 'ZS-3002', allow_duplicate: true }], ['gone', { name: 'OLD-1', asset_tag: 'ZS-9', site: 'Dammam' }]]) A[k] = (await both('/assets', body, 'operator')).asset.id;
   await both('/assets/' + A.gone + '/dispose', { reason: 'scrapped' }, 'operator');
   const w0 = i;
   let loc = null;

@@ -13,6 +13,7 @@
  *   AI Compliance Workflow Officer      engine/compliance-copilot.js  remediation overdue, control activities overdue or never done
  *   AI Capacity Planner                 engine/capacity-plan.js    a host group without N+1, memory or a volume full within 30 days
  *   AI Virtual Network Engineer         engine/hyperv-netmap.js    uplinks down, switches missing against the group, duplicates
+ *   AI Asset Register Officer           engine/inventory-intel.js  duplicate records of one machine (serial / MAC strong, host name weak)
  */
 const SEV = (s) => (['critical', 'high', 'medium', 'low'].includes(s) ? s : 'medium');
 const investigateFrom = (it, summary) => ({ summary: summary || it.title, checks: (it.evidence || []).map((e) => ({ name: 'Evidence', status: 'info', detail: String(e) })), causes: [{ cause: it.title, confidence: 'high', fix: it.recommendation }] });
@@ -75,6 +76,12 @@ function adapters(app) {
     const X = A().hypervNetmap; if (!X) return null; const v = X.view(); if (!v.hosts.length) return null;
     return v.findings.filter((f) => f.severity !== 'low').map((f) => ({ key: 'hvnet:' + f.host + ':' + f.code + ':' + f.target, severity: SEV(f.severity), kind: f.code, title: f.host + ' - ' + f.title, evidence: ['virtual network report of ' + f.host], recommendation: f.fix, target: { type: 'hyperv-network', id: f.host + ':' + f.target, name: f.target } }));
   };
+  const dupFind = async () => {
+    const X = A().inventoryIntel; if (!X) return null; const v = X.view({}); if (!v || !v.total) return null;
+    return (v.duplicates || []).map((d) => ({ key: 'dup:' + [d.a, d.b].sort().join('|'), severity: d.strength === 'strong' ? 'high' : 'medium', kind: 'duplicate-asset',
+      title: 'Duplicate asset: ' + d.a_name + ' and ' + d.b_name + ' (same ' + [].concat(d.by).join(' and ') + ')', evidence: ['records ' + d.a + ' and ' + d.b],
+      recommendation: 'On IT Asset Management > Inventory select both and Merge 2 selected (an administrator) - or, if they are two machines, correct the ' + [].concat(d.by).join(' / '), target: { type: 'asset', id: d.a, name: d.a_name } }));
+  };
   return [
     { id: 'voice', name: 'AI Voice Engineer (Cisco CUCM)', findings: cucmFind, investigate: (it) => investigateFrom(it, 'Cisco Unified CM: ' + it.title), verify: verifyBy(cucmFind) },
     { id: 'hyperv', name: 'AI Hyper-V Administrator', findings: hvFind, investigate: (it) => investigateFrom(it, 'Hyper-V: ' + it.title), verify: verifyBy(hvFind) },
@@ -84,6 +91,7 @@ function adapters(app) {
     { id: 'compliance', name: 'AI Compliance Workflow Officer (remediation actions and control activities)', findings: ccpFind, investigate: (it) => investigateFrom(it, 'Compliance: ' + it.title), verify: verifyBy(ccpFind) },
     { id: 'capacity', name: 'AI Capacity Planner (Hyper-V, servers, Azure)', findings: capFind, investigate: (it) => investigateFrom(it, 'Capacity: ' + it.title), verify: verifyBy(capFind) },
     { id: 'hvnet', name: 'AI Virtual Network Engineer (Hyper-V)', findings: netFind, investigate: (it) => investigateFrom(it, 'Hyper-V network: ' + it.title), verify: verifyBy(netFind) },
+    { id: 'register', name: 'AI Asset Register Officer (duplicates)', findings: dupFind, investigate: (it) => investigateFrom(it, 'Asset register: ' + it.title), verify: verifyBy(dupFind) },
   ];
 }
 
