@@ -1,4 +1,4 @@
-<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vulnerability &amp; Testing Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vulnerability &amp; Testing Dashboard</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
 <!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
 <style>
 :root{--d-bg:#0b0d12;--d-panel:#12151c;--d-raise:#181c25;--d-line:#232837;--d-ink:#e7eaf0;--d-mute:#8b93a4;--bad:#ff7b80;--warn:#f5b544;--ok:#5fd27a;--info:#8db0ff}
@@ -44,6 +44,8 @@ pre.snip{background:#0d1017;border:1px solid var(--d-line);border-radius:8px;pad
 .spark{display:block;width:100%;height:70px}.ucid{font:700 12px ui-monospace,Consolas,monospace;color:var(--info)}tr[data-uc]{cursor:pointer}tr[data-uc]:hover td{background:rgba(255,255,255,.03)}.rate{display:flex;align-items:center;gap:6px}.rate .riskbar{width:80px;margin:0}
 .pil{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}.pc{background:var(--d-raise);border:1px solid var(--d-line);border-radius:12px;padding:12px;color:inherit;text-decoration:none;display:block}.pc:hover{border-color:#3d63b5}.pc .sc{font-size:30px;font-weight:800}.pc ul{margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--d-mute)}
 .mx td.n{text-align:center;font-weight:800;border-radius:6px}.pipe{display:flex;gap:8px;flex-wrap:wrap}.pipe a{flex:1;min-width:150px;background:var(--d-raise);border:1px solid var(--d-line);border-radius:10px;padding:8px 10px;color:inherit;text-decoration:none}.pipe a b{font-size:20px;display:block}
+.vg{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:14px}.vg .card{margin:0}.vcv{position:relative;height:260px}.vcv.tall{height:300px}
+.slab{display:flex;flex-direction:column;gap:10px;margin-top:6px}.slab div{display:grid;grid-template-columns:170px 1fr 48px;gap:8px;align-items:center;font-size:12.5px}.slab i{display:block;height:12px;border-radius:7px}.slab .bg{background:rgba(127,140,160,.18);border-radius:7px;overflow:hidden}
 </style></head><body><main data-zyb-fluid>
 <div class="top"><div><div class="eb">Pentest &amp; vulnerability management · overview</div><h1>Vulnerability &amp; Testing Dashboard</h1><div class="mute sm">Everything being tested, what it found, and whether the findings are actually being closed - live from the scanners (Greenbone, Tenable, FireCompass), the testing schedule, application penetration tests and code review.</div></div>
 <div class="sp"></div><span class="mute sm" id="asof"></span><button type="button" class="btn" id="refresh">Refresh</button></div>
@@ -51,6 +53,16 @@ pre.snip{background:#0d1017;border:1px solid var(--d-line);border-radius:8px;pad
 <div id="main" hidden>
 <div class="card"><div class="hero"><div class="ring" id="ring"></div><div><div class="kpis" id="kpis"></div><div class="sm mute" id="iwhy" style="margin-top:8px"></div></div></div></div>
 <div class="card"><h2>Five pillars <span class="c">each scored from its own source, every deduction itemised · a pillar with nothing to measure is left out of the index, never counted as good · click to open</span></h2><div class="pil" id="pil"></div></div>
+<div class="vg">
+<div class="card"><h2>Pillars at a glance <span class="c">score of each measured pillar</span></h2><div class="vcv"><canvas id="cv-radar"></canvas></div></div>
+<div class="card"><h2>Posture over time <span class="c">daily index and open criticals · dashed = 14-day projection (AI / ML trend) · red points = unusual days</span></h2><div class="vcv tall"><canvas id="cv-hist"></canvas></div></div>
+</div>
+<div class="vg">
+<div class="card"><h2>Open findings by severity</h2><div class="vcv"><canvas id="cv-sev"></canvas></div></div>
+<div class="card"><h2>Where the findings are <span class="c">by source</span></h2><div class="vcv"><canvas id="cv-src"></canvas></div></div>
+<div class="card"><h2>Remediation and SLA <span class="c">infrastructure</span></h2><div class="slab" id="sla"></div><div class="vcv" style="height:150px;margin-top:10px"><canvas id="cv-pipe"></canvas></div></div>
+</div>
+<div class="card" id="prc" hidden><h2>Top vulnerabilities by priority <span class="c">severity, internet exposure, exploit and business-critical asset in one explained score</span></h2><div class="vcv"><canvas id="cv-top"></canvas></div></div>
 <div class="g2">
 <div class="card"><h2>Needs attention <span class="c">most urgent first</span></h2><div id="att"></div></div>
 <div class="card"><h2>Open findings by source and severity</h2><div id="mx" style="overflow-x:auto"></div><h3>Testing pipeline</h3><div class="pipe" id="pipe"></div></div>
@@ -79,6 +91,34 @@ pre.snip{background:#0d1017;border:1px solid var(--d-line);border-radius:8px;pad
   var V=null;
   function load(){return req('GET','/vuln-dashboard').then(function(v){V=v;$('err').hidden=true;$('main').hidden=false;draw();$('asof').textContent='as of '+fmt(v.generated_at)+' UTC';})
     .catch(function(e){$('err').hidden=false;$('main').hidden=true;$('err').textContent=e.status===404?'This platform does not have the Vulnerability & Testing Dashboard yet - run the update.':'Could not load the dashboard: '+e.message;});}
+  // the graphics (scores and counts; the priority chart names hosts, so operators only)
+  function drawCharts(){var C=window.zybCharts,Ch=window.Chart;if(!C)return;var P=V.pillars,mx=V.matrix,I=V.infra;
+    var K=Object.keys(P).filter(function(k){return P[k].available;});
+    if(Ch&&K.length>=3){var cv=$('cv-radar'),old=Ch.getChart&&Ch.getChart(cv);if(old)old.destroy();cv.hidden=false;
+      new Ch(cv.getContext('2d'),{type:'radar',data:{labels:K.map(function(k){return P[k].name;}),datasets:[{label:'Score',data:K.map(function(k){return P[k].score;}),borderColor:C.color('acc'),backgroundColor:C.alpha(C.color('acc'),.22),pointBackgroundColor:K.map(function(k){return col(P[k].score);}),pointRadius:5}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,ticks:{display:false,stepSize:25},grid:{color:'rgba(127,140,160,.22)'},angleLines:{color:'rgba(127,140,160,.22)'},pointLabels:{color:C.color('mute'),font:{size:11}}}}}});}
+    else if(K.length)C.bars($('cv-radar'),K.map(function(k){return P[k].name;}),[{label:'Score',data:K.map(function(k){return P[k].score;}),colors:K.map(function(k){return P[k].score>=85?'ok':P[k].score>=60?'warn':'crit';})}],{horizontal:true,title:'Pillars'});else C.empty($('cv-radar'),'No pillar is measured yet.');
+    var H=V.history||[],F=V.forecast||{},fi=F.index||[],fc=F.critical||[];
+    if(H.length){var labels=H.map(function(h){return h.day.slice(5);}).concat(fi.map(function(p){return p.day.slice(5);})),pad=function(a,n){return a.concat(Array(n).fill(null));},n=fi.length;
+      var unusualDays={};(V.learning.unusual||[]).forEach(function(u){if(H.length)unusualDays[u.key]=H.length-1;});
+      var idx=pad(H.map(function(h){return h.index;}),n),cri=pad(H.map(function(h){return h.critical;}),n),pi=Array(Math.max(0,H.length-1)).fill(null).concat([H[H.length-1].index]).concat(fi.map(function(p){return p.value;})),pc=Array(Math.max(0,H.length-1)).fill(null).concat([H[H.length-1].critical]).concat(fc.map(function(p){return p.value;}));
+      if(Ch){var cv2=$('cv-hist'),o2=Ch.getChart&&Ch.getChart(cv2);if(o2)o2.destroy();cv2.hidden=false;
+        new Ch(cv2.getContext('2d'),{type:'line',data:{labels:labels,datasets:[
+          {label:'Posture index',data:idx,borderColor:C.color('acc'),backgroundColor:C.alpha(C.color('acc'),.15),fill:true,tension:.35,yAxisID:'y',pointRadius:idx.map(function(_,i){return unusualDays.index===i?6:0;}),pointBackgroundColor:C.color('crit')},
+          {label:'Index projection',data:fi.length?pi:[],borderColor:C.color('acc'),borderDash:[6,5],pointRadius:0,fill:false,tension:0,yAxisID:'y'},
+          {label:'Open critical',data:cri,borderColor:C.color('crit'),backgroundColor:C.alpha(C.color('crit'),.12),fill:false,tension:.35,yAxisID:'y2',pointRadius:cri.map(function(_,i){return unusualDays.critical===i?6:0;}),pointBackgroundColor:C.color('crit')},
+          {label:'Critical projection',data:fc.length?pc:[],borderColor:C.color('crit'),borderDash:[6,5],pointRadius:0,fill:false,tension:0,yAxisID:'y2'}]},
+          options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:C.color('mute'),boxWidth:12}}},scales:{x:{ticks:{color:C.color('mute'),maxRotation:0,autoSkip:true},grid:{color:'transparent'}},y:{min:0,max:100,position:'left',ticks:{color:C.color('mute')},grid:{color:'rgba(127,140,160,.15)'}},y2:{min:0,position:'right',ticks:{color:C.color('mute'),precision:0},grid:{display:false}}}}});}}
+    else C.empty($('cv-hist'),'The history builds from one snapshot a day - it appears tomorrow.');
+    var SV=['critical','high','medium','low'],tot=SV.map(function(k){return mx.reduce(function(t,m){return t+(m.counts[k]||0);},0);});
+    if(tot.some(function(x){return x;}))C.ring($('cv-sev'),SV,tot,['crit','warn','purple','acc'],{v:tot.reduce(function(a,b){return a+b;},0),l:'open'},{title:'By severity'});else C.empty($('cv-sev'),'No open finding.');
+    if(mx.length)C.bars($('cv-src'),mx.map(function(m){return m.source.replace(/ \(.*\)$/,'');}),SV.map(function(k,i){return {label:k,data:mx.map(function(m){return m.counts[k]||0;}),color:['crit','warn','purple','acc'][i]};}),{stacked:true,horizontal:true,title:'By source'});else C.empty($('cv-src'),'No finding source connected yet.');
+    var rows=I?[['Past SLA now',I.breached,'#e5484d'],['Due in 14 days',I.due_14d,'#f5b544'],['Forecast breaches · 14 d',I.forecast_breaches_14d,'#bc8cff'],['Reopened',I.reopened,'#58a6ff']]:[],mxv=Math.max.apply(null,rows.map(function(r){return r[1]||0;}).concat([1]));
+    $('sla').innerHTML=I?rows.map(function(r){return '<div><span>'+esc(r[0])+'</span><span class="bg"><i style="width:'+Math.round(100*(r[1]||0)/mxv)+'%;background:'+r[2]+'"></i></span><b>'+esc(r[1]==null?'—':r[1])+'</b></div>';}).join('')+'<div class="sm mute" style="display:block">Fix rate: '+esc(I.fix_rate_per_day)+' a day · days to clear critical and high: '+esc(V.learning.clear.days==null?'—':V.learning.clear.days)+'</div>':'<div class="empty">No infrastructure findings source.</div>';
+    var PP=V.pipeline.filter(function(p){return p.n!=null;});if(PP.length)C.bars($('cv-pipe'),PP.map(function(p){return p.label.replace(/ waiting.*| for approval/,'');}),[{label:'Now',data:PP.map(function(p){return p.n;}),color:'teal'}],{title:'Testing pipeline'});else C.empty($('cv-pipe'),'Nothing in the pipeline.');
+    var T=V.can_details&&I?I.top||[]:[];$('prc').hidden=!T.length;
+    if(T.length)C.bars($('cv-top'),T.map(function(f){return (f.title||'').slice(0,46)+' · '+f.host;}),[{label:'Priority',data:T.map(function(f){return f.priority;}),colors:T.map(function(f){return f.severity==='critical'?'crit':f.severity==='high'?'warn':'acc';})}],{horizontal:true,title:'Priority'});
+  }
   function draw(){var P=V.pillars,I=V.infra,mx=V.matrix,tot=function(k){return mx.reduce(function(t,m){return t+(m.counts[k]||0);},0);};
     $('ring').innerHTML=ring(V.index);$('iwhy').textContent=V.index_why+'.';
     var pe=V.pipeline.find(function(p){return /Risk acceptances/.test(p.label);});
@@ -96,6 +136,7 @@ pre.snip{background:#0d1017;border:1px solid var(--d-line);border-radius:8px;pad
     $('learn').innerHTML='<div class="banner inf" style="margin-bottom:8px"><b>Days to clear critical and high:</b> '+(L.clear.days==null?'—':esc(L.clear.days))+' · <span class="sm">'+esc(L.clear.why)+'</span></div>'
       +'<table><thead><tr><th>Measure</th><th>Trend a week</th></tr></thead><tbody>'+Object.keys(T).map(function(k){var t=T[k];return '<tr><td>'+esc(nm[k]||k)+'</td><td>'+(t.per_week==null?'<span class="sm mute">'+esc(t.why)+'</span>':'<span class="pill '+(t.direction==='improving'?'v-ok':t.direction==='worsening'?'v-bad':'v-mute')+'">'+esc(t.direction)+'</span> '+(t.per_week>0?'+':'')+esc(t.per_week))+'</td></tr>';}).join('')+'</tbody></table>'
       +(L.unusual.length?'<h3>Unusual changes</h3>'+L.unusual.map(function(u){return '<div class="att"><span class="dot warn"></span><div><b>'+esc(nm[u.key]||u.key)+'</b> · '+esc(u.why)+'</div></div>';}).join(''):'<div class="sm mute" style="margin-top:6px">Unusual-change detection needs 8 daily snapshots ('+esc(L.snapshots)+' so far).</div>');
+    drawCharts();
     $('ai').innerHTML=RANK[ROLE]<RANK.operator?'<div class="empty">The advisor works for operators and administrators.</div>':!V.ai.enabled?'<div class="empty">Not available: '+esc(V.ai.reason)+'</div>':'<div class="frm"><input id="aiq" style="flex:1" maxlength="2000" placeholder="What should we fix and test first this month?"><button class="btn pri" type="button" id="aigo">Ask</button></div><div id="aiout"></div>';}
   document.addEventListener('click',function(ev){var t=ev.target;
     if(t.id==='aigo'){var q=$('aiq').value.trim(),out=$('aiout');if(q.length<5){out.innerHTML='<div class="empty">Ask a question (5 characters or more).</div>';return;}t.disabled=true;out.innerHTML='<div class="empty">The advisor is reading the testing programme…</div>';

@@ -70,3 +70,14 @@ test('routes: a viewer reads; nothing measurable on an empty platform; the advis
   const r = await e.req('POST', '/vuln-dashboard/ask', { body: { question: 'x' }, ...OP }); assert.equal(r.status, 400); assert.match(r.json.error, /question/);
   assert.equal((await e.req('POST', '/vuln-dashboard/ask', { body: { question: 'what should we fix first?' }, ...OP })).status, 424);
 });
+
+test('charts: daily history and a 14-day projection of the index and the open criticals (3+ snapshots)', async () => {
+  const f = fake(), DAY = 864e5;
+  let v = await f.D.view(OP); assert.equal(v.forecast.index, null, 'nothing to project before 3 snapshots'); assert.deepEqual(v.history, []);
+  for (let d = 0; d < 6; d++) { f.st.crit = 1 + d; await f.D.snapshot(); f.tick(DAY); }   // criticals rise by one a day
+  v = await f.D.view(OP);
+  assert.equal(v.history.length, 6); assert.deepEqual(v.history.map((h) => h.critical), [1, 2, 3, 4, 5, 6]); assert.ok(typeof v.history[0].pillars === 'object');
+  assert.equal(v.forecast.critical.length, 14); assert.equal(v.forecast.critical[0].value, 7, 'the next day on the same line'); assert.equal(v.forecast.critical[13].value, 20);
+  assert.ok(v.forecast.index.every((p) => p.value >= 0 && p.value <= 100), 'the index stays within 0-100'); assert.match(v.forecast.note, /not a promise/);
+  const vv = await f.D.view({ user: 'vera.syn', role: 'viewer' }); assert.equal(vv.history.length, 6, 'counts only - a viewer sees the history too');
+});

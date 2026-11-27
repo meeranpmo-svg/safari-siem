@@ -59,10 +59,13 @@ let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FA
     ok(await p.evaluate(() => !window.__xss && /<img/.test(document.getElementById('top').textContent)), 'a hostile finding name stays text');
     ok(/Days to clear critical and high/.test(await p.textContent('#learn')) && /needs 3 daily snapshots/.test(await p.textContent('#learn')), 'learning: days to clear and the trend rule');
     ok(/Not available: external AI/.test(await p.textContent('#ai')), 'advisor off until allowed');
+    ok((await p.$$('.vg canvas')).length >= 5 && /Past SLA now/.test(await p.textContent('#sla')), 'the graphics: pillars, history, severity, sources, SLA and pipeline');
+    ok(!(await p.$eval('#prc', (x) => x.hidden)), 'an operator sees the priority chart');
     if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT, fullPage: true });   // optional: a picture for review
     WHO = { user: 'vera.syn', role: 'viewer' }; p = await page(ctx, 'vuln-dashboard.html');
     ok(/operators and administrators/.test(await p.textContent('#att')) && !/10\.20\.0\.5/.test(await p.content()), 'a viewer sees no host or finding');
     ok(/Infrastructure exposure/.test(await p.textContent('#pil')), 'a viewer still sees the pillars');
+    ok(await p.$eval('#prc', (x) => x.hidden), 'a viewer gets no priority chart (it names hosts)');
     const nav = fs.readFileSync(path.join(DASH, 'vendor', 'zyb-nav.js'), 'utf8');
     ok(/"h": "vuln-dashboard.html"/.test(nav) && /vuln-dashboard\.html/.test(fs.readFileSync(path.join(DASH, 'install-dashboards.sh'), 'utf8')), 'menu entry and installer');
     ok(/'dash-vuln': 'vuln-dashboard\.html'/.test(fs.readFileSync(path.join(DASH, 'vendor', 'zyb-menu.js'), 'utf8')) && /'dash-vuln': 'vuln-dashboard\.html'/.test(fs.readFileSync(path.join(DASH, 'vendor', 'zyb-early.js'), 'utf8')), 'the portal Vulnerability & Testing Dashboard opens this page');

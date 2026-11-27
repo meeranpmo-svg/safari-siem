@@ -153,7 +153,13 @@ function createVulnDashboard(app, opts = {}) {
     }
     const inf = cur.infra, rate = inf ? inf.fix_rate_per_day : 0, ch = inf ? (inf.counts.critical || 0) + (inf.counts.high || 0) : 0;
     const clear = !inf ? { days: null, why: 'no infrastructure findings source' } : !ch ? { days: 0, why: 'no open critical or high infrastructure finding' } : rate > 0 ? { days: Math.ceil(ch / rate), why: ch + ' open critical / high at ' + rate + ' fixes a day (last 30 days) - a projection, not a promise' } : { days: null, why: ch + ' open critical / high and no fix recorded in the last 30 days - at this rate they are never cleared' };
-    const out = Object.assign({}, cur, { learning: { trend, unusual, clear, snapshots: all.length }, ai: aiStatus(), can_details: (RANK[who.role] || 0) >= RANK.operator });
+    // the charts: the daily snapshots (scores and counts only) and, from 3+ of them, a 14-day projection of the index and of the open
+    // criticals along the same least-squares line as the trend - said as a projection, bounded to 0-100 / >= 0
+    const history = all.map((x) => ({ day: x.id, index: x.index, critical: x.critical, pillars: x.pillars || {} }));
+    const project = (k, lo, hi) => { const pts = series(k).slice(-30); if (pts.length < 3) return null; const n = pts.length, mx = pts.reduce((q, p) => q + p[0], 0) / n, my = pts.reduce((q, p) => q + p[1], 0) / n, b = lsq(pts), a0 = my - b * mx, last = pts[n - 1][0];
+      return Array.from({ length: 14 }, (_, i) => { const d = last + i + 1, v = a0 + b * d; return { day: new Date(d * DAY).toISOString().slice(0, 10), value: Math.round(Math.max(lo, Math.min(hi, v)) * 10) / 10 }; }); };
+    const forecast = { index: project('index', 0, 100), critical: project('critical', 0, 1e6), note: 'a straight-line projection of the last 30 daily snapshots - an indication, not a promise' };
+    const out = Object.assign({}, cur, { learning: { trend, unusual, clear, snapshots: all.length }, history, forecast, ai: aiStatus(), can_details: (RANK[who.role] || 0) >= RANK.operator });
     if (!out.can_details) { out.attention = []; out.infra = inf ? Object.assign({}, inf, { top: [] }) : null; out.details_note = 'Host names, owners and findings are shown to operators and administrators.'; }
     return out;
   }
