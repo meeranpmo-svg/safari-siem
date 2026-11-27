@@ -71,6 +71,13 @@
   // POC mode (vendor/zyb-poc.js): only while the menu's "POC data" switch is on in this browser, or ?poc=1 - pages that have
   // illustrative data draw from it with the POC ribbon, every change is refused; loaded before the page's own requests
   try { var pocOn = /[?&]poc=1(&|$)/.test(location.search) || localStorage.getItem('zyb-poc') === '1'; if (pocOn && !window.zybPoc && document.readyState === 'loading') document.write('<script src="vendor/zyb-poc-data.js?v=' + VER + '"><\/script><script src="vendor/zyb-poc-rec.js?v=' + VER + '"><\/script><script src="vendor/zyb-poc-soc.js?v=' + VER + '"><\/script><script src="vendor/zyb-poc-itam.js?v=' + VER + '"><\/script><script src="vendor/zyb-poc.js?v=' + VER + '"><\/script>'); } catch (e) { /* storage blocked: POC stays off, the page shows live data */ }
+  // every page fits the screen it is on (laptop, tablet, phone): page-header buttons wrap instead of pushing the page wider, charts
+  // and wide figures stay inside their card - found by the screen-width check (tools: fit at 1280 / 1024 / 768 / 390 px)
+  try { var fit = document.createElement('style'); fit.id = 'zyb-fit'; fit.setAttribute('data-zyb-theme', 'skip');
+    fit.textContent = '.row.align-items-center{flex-wrap:wrap;row-gap:8px}.row.align-items-center>.col-auto.ms-auto,.row.align-items-center>.col-auto{display:flex;flex-wrap:wrap;gap:6px;max-width:100%;min-width:0}'
+      + 'canvas{max-width:100%!important}svg{max-width:100%}main,.page,.page-wrapper{min-width:0;max-width:100%}.legend{flex-wrap:wrap}'
+      + '@media(max-width:600px){input,select,textarea,button{max-width:100%!important;min-width:0!important}button{white-space:normal}.tabs,[role=tablist]{flex-wrap:wrap}.top,.so-head{flex-wrap:wrap}.top>*,.so-head>*{max-width:100%}td,th{word-break:break-word}}';
+    (document.head || document.documentElement).appendChild(fit); } catch (e) { /* the page still works, it may scroll sideways on a small screen */ }
   // every Refresh button says it did something: it spins while the page reloads its data and a short note gives the time - a
   // refresh that brings the same figures otherwise looks like a button that does nothing
   try {
