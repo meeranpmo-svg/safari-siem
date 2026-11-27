@@ -7,7 +7,7 @@ const ROOT = path.resolve(__dirname, '..'), P = require(path.join(ROOT, 'tools/b
 test('POC map: up to date, marked, illustrative only', () => {
   const h = fs.readFileSync(path.join(ROOT, 'ui/network-geomap-poc.html'), 'utf8');
   assert.equal(h, P.build(), 'run node tools/build-poc-geomap.js');
-  assert.equal((h.match(/class="poc-r (tl|tr|bl|br)"/g) || []).length, 4, 'a ribbon on every corner');
+  assert.equal((h.match(/class="poc-r br"/g) || []).length, 1, 'the POC ribbon at the bottom right');
   assert.match(h, /<title>Office Connectivity Map \(POC\)<\/title>/); assert.match(h, /not live data/);
   assert.ok(P.data().sites.every((s) => / \(POC\)$/.test(s.name)), 'every office says POC');
   assert.match(h, /nothing is changed from here/); assert.match(h, /S\.can = function \(\) \{ return false; \}/);

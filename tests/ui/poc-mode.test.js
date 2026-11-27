@@ -22,7 +22,7 @@ let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FA
     let p = await ctx.newPage(); p.on('pageerror', (x) => errs.push(x.message)); p.on('dialog', (d) => d.accept());
     await p.goto(base + 'ndr.html?poc=1'); await p.waitForSelector('#charts:not([hidden])', { timeout: 15000 });
     ok(!seen.some((s) => /\/ndr/.test(s)), 'NDR never asked the server in POC mode: ' + seen.join(', '));
-    ok((await p.$$('.zyb-poc-r')).length === 4 && /Illustrative data/.test(await p.textContent('#zyb-poc-banner')), 'the POC ribbon on every corner and the banner');
+    ok((await p.$$('.zyb-poc-r')).length === 1 && (await p.$$('.zyb-poc-r.br')).length === 1 && /Illustrative data/.test(await p.textContent('#zyb-poc-banner')), 'one POC ribbon at the bottom right (the note kept for screen readers)');
     ok(/\(POC\)$/.test(await p.title()), 'the title says POC');
     const kp = (await p.$eval('#kp', (x) => x.innerText)).replace(/\s+/g, ' '); ok(/Hosts at risk \d+/.test(kp) && /Beaconing 3/.test(kp), 'tiles from the illustrative data: ' + kp);
     ok((await p.$$('#charts canvas')).length === 6, 'six charts');

@@ -66,10 +66,11 @@
         + '.zyb-poc-r.tl{top:26px;left:-58px;transform:rotate(-45deg)}.zyb-poc-r.tr{top:26px;right:-58px;transform:rotate(45deg)}.zyb-poc-r.bl{bottom:26px;left:-58px;transform:rotate(45deg)}.zyb-poc-r.br{bottom:26px;right:-58px;transform:rotate(-45deg)}'
         + '.zyb-poc-b{border:2px dashed #f59f00;background:rgba(245,159,0,.1);border-radius:10px;padding:8px 14px;margin:0 0 12px;font-size:13px}.zyb-poc-b b{color:#f59f00;letter-spacing:.1em}';
       document.head.appendChild(st);
-      ['tl', 'tr', 'bl', 'br'].forEach(function (c) { var d = document.createElement('div'); d.className = 'zyb-poc-r ' + c; d.setAttribute('aria-hidden', 'true'); d.textContent = 'POC'; document.body.appendChild(d); });
+      ['br'].forEach(function (c) { var d = document.createElement('div'); d.className = 'zyb-poc-r ' + c; d.setAttribute('aria-hidden', 'true'); d.textContent = 'POC'; document.body.appendChild(d); });
       var b = document.createElement('div'); b.className = 'zyb-poc-b'; b.setAttribute('role', 'note'); b.id = 'zyb-poc-banner';
       b.innerHTML = '<b>POC</b> &nbsp;Illustrative data for presentation - not live, not ' + ((window.ZYB_ORG && window.ZYB_ORG.short) || 'the organisation') + '\'s systems. Nothing can be changed. Switch "POC data" off in the menu for live data.';
-      var main = document.querySelector('main'); if (main) main.insertBefore(b, main.firstChild); else document.body.insertBefore(b, document.body.firstChild);
+      // the ribbon at the bottom right says it on its own; the note stays for screen readers only
+      b.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)'; document.body.appendChild(b);
       [].forEach.call(document.querySelectorAll('.live, [id=live], .badge-live'), function (x) { if (/live/i.test(x.textContent)) { x.textContent = 'POC DATA'; x.hidden = false; x.style.background = '#f59f00'; x.style.color = '#111'; } });
       document.title = document.title.replace(/( \(POC\))?$/, ' (POC)');
     };
