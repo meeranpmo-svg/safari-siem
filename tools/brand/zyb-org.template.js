@@ -25,28 +25,67 @@
   try { mo = new MutationObserver(function (list) { for (var i = 0; i < list.length; i++) { var ad = list[i].addedNodes; for (var j = 0; j < ad.length; j++) doNode(ad[j]); if (list[i].type === 'characterData') doNode(list[i].target); } }); mo.observe(document, { childList: true, subtree: true, characterData: true }); } catch (e) { mo = null; /* no observer: the pass at DOMContentLoaded still fills every token */ }
   var done = function () { if (mo) { var rest = mo.takeRecords(); mo.disconnect(); mo = null; } all(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', done); else done();
-  // frameworks the organisation is not under (SAMA / IA modules switched off): their citations next to another framework
-  // ("SAMA CSF 3.3.5 · NCA ECC 2-2", "(SAMA 3.3.5, NCA ECC 2-2-3)", "SAMA CSF (+ IA)"), SAMA / IA choices in lists and buttons tagged
-  // for them are taken off every page, also what a page draws later. A sentence that names SAMA on its own stays as written.
+  // frameworks the organisation is not under (SAMA / IA modules switched off) and platforms it does not run (brand platforms_off:
+  // vmware, nutanix, oracle-db) are taken off every page, also what a page draws later:
+  //   - a citation or name in a list ("SAMA CSF 3.3.5 · NCA ECC 2-2", "vCenter / Prism", "AD, vCenter, Nutanix, Hyper-V") loses that item
+  //   - a row, list item, option, button, chip or short block that is about one of them is hidden
+  //   - in longer text the sentence that names one is removed
+  //   - options / elements tagged for them (data-fw="sama", option value "sama") are removed
+  // window.zybOffTest(text) / zybOffClean(text) / zybOffScrub(json) are the same rules for scripts (POC data uses zybOffScrub).
   (function () {
-    var off = ORG.frameworks_all ? [] : (ORG.modules_off || []), noS = off.indexOf('fw-sama') >= 0, noI = off.indexOf('fw-ia') >= 0;
-    if (!noS && !noI) return;
-    var W = [], X = 'SAMA(?: CSF| Cyber Security Framework)?(?: \\d+(?:\\.\\d+)*(?:-\\d+)*)?', I = '(?:Insurance Authority|IA)(?: \\d+(?:\\.\\d+)*)?', SEP = '\\s*(?:·|,|/|\\+|&)\\s*';
-    if (noS) W.push(X); if (noI) W.push(I);
-    var lead = new RegExp('\\b(?:' + W.join('|') + ')' + SEP + '(?=[A-Z(])', 'g'), tail = new RegExp(SEP + '(?:' + W.join('|') + ')(?=$|[\\s).,;:])', 'g'), plusIa = /\s*\(\+ IA\)/g;
-    var clean = function (t) { if (typeof t !== 'string') return t; if (t.indexOf('SAMA') < 0 && t.indexOf('Insurance Authority') < 0 && t.indexOf(' IA') < 0) return t; var o = noI ? t.replace(plusIa, '') : t; return o.replace(lead, '').replace(tail, ''); };
+    var off = ORG.frameworks_all ? [] : (ORG.modules_off || []), plat = ORG.frameworks_all ? [] : (ORG.platforms_off || []);
+    var noS = off.indexOf('fw-sama') >= 0, noI = off.indexOf('fw-ia') >= 0, noV = plat.indexOf('vmware') >= 0, noN = plat.indexOf('nutanix') >= 0;
+    if (!noS && !noI && !noV && !noN) return;
+    var W = [], H = [], K = [], NUM = '(?: \\d+(?:\\.\\d+)*(?:-\\d+)*)?';
+    if (noS) { W.push('Saudi Central Bank(?: \\(SAMA\\))?', 'SAMA(?: CSF| Cyber Security Framework| ITGF| BCM| IT Governance Framework)?' + NUM); H.push('SAMA', 'Saudi Central Bank'); K.push('sama'); }
+    if (noI) { W.push('(?:Insurance Authority|IA)' + NUM); H.push('Insurance Authority'); K.push('ia'); }
+    if (noV) { W.push('VMware(?: vCenter| ESXi| vSphere| VMs?| hosts?| per-core| cluster rules)?(?: [\\d.]+)?', 'vCenter(?: Server)?', 'ESXi(?: hosts?)?(?: [\\d.]+)?', 'vSphere(?: Client)?', 'vMotion', 'PowerCLI', 'esxcli'); H.push('VMware', 'vCenter', 'ESXi', 'vSphere', 'vMotion', 'PowerCLI', 'esxcli'); K.push('vmware', 'vcenter', 'esxi', 'vsphere'); }
+    if (noN) { W.push('Nutanix(?: AHV| Prism| Leap| protection domains?| nodes?| clusters?| VMs?)?', 'Prism(?: Central| Element)?', 'AHV(?: hosts?)?', 'acli'); H.push('Nutanix', 'Prism', 'AHV', 'acli'); K.push('nutanix', 'prism', 'ahv'); }
+    var ANY = '(?:' + W.join('|') + ')', SEP = '\\s*(?:·|,|/|\\+|&|\\band\\b|\\bor\\b|↔)\\s*';
+    var lead = new RegExp('\\b' + ANY + SEP + '(?=[A-Za-z(])', 'g'), tail = new RegExp(SEP + ANY + '(?=$|[\\s).,;:])', 'g'), plusIa = /\s*\(\+ IA\)/g, paren = new RegExp('\\s*\\(' + ANY + '\\)', 'g');
+    var HARD = new RegExp('(?:^|[^A-Za-z])(?:' + H.map(function (x) { return x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|') + ')(?![a-z])', 'i');   // any case: module names (sama-ia.js), lower-case labels
+    var KEYS = new RegExp('^(?:' + K.join('|') + ')$', 'i');
+    var test = function (t) { return typeof t === 'string' && HARD.test(t); };
+    var clean = function (t) { if (!test(t)) return t; var o = noI ? t.replace(plusIa, '') : t, prev; do { prev = o; o = o.replace(paren, '').replace(lead, '').replace(tail, ''); } while (o !== prev && test(o)); return o; };
+    // the sentence(s) of a longer text that still name one
+    var drop = function (t) { var c = clean(t); if (!test(c)) return c; var parts = c.split(/(?<=[.!?;])\s+/), keep = parts.filter(function (x) { return !test(x); }); return keep.join(' '); };
+    var REC = /^(TR|LI|OPTION|DT|DD|BUTTON|LABEL|SUMMARY|H1|H2|H3|H4|H5|H6|P|A|FIGCAPTION|LEGEND)$/, CHIP = /(^|\s)(pill|chip|tag|badge|zyb-chip|fw|cf|t|kpi|stat)(\s|$)/;
+    var hide = function (el) { if (!el || el === document.body) return false; if (el.tagName === 'OPTION' && el.parentNode) { el.parentNode.removeChild(el); return true; } el.hidden = true; el.style.display = 'none'; el.setAttribute('data-zyb-off', '1'); return true; };
+    var holder = function (n) {   // the row / item / short block that the text belongs to
+      for (var e = n.parentElement, k = 0; e && e !== document.body && k < 6; e = e.parentElement, k++) {
+        if (e.tagName === 'TD' || e.tagName === 'TH') { var tr = e.parentElement; return tr && tr.parentElement && tr.parentElement.tagName !== 'THEAD' ? tr : null; }
+        if (REC.test(e.tagName) || CHIP.test(' ' + (e.className && e.className.baseVal === undefined ? e.className : '') + ' ')) return (e.textContent || '').length <= 600 ? e : null;
+      }
+      return null;
+    };
+    // a name on its own in an inline tag (<b>SAMA CSF</b>, NCA ECC): the tag goes and so does the separator next to it
+    var ONLY = new RegExp('^[\\s,·/&+]*' + ANY + '[\\s,·/&+]*$'), INL = /^(B|STRONG|EM|I|SPAN|CODE|MARK|SMALL|A|U)$/, SEPS = /^\s*(?:·|,|\/|\+|&|and|or)\s*/, SEPE = /\s*(?:·|,|\/|\+|&|and|or)\s*$/;
+    var tidy = function (el) { var nx = el.nextSibling, pv = el.previousSibling;
+      if (nx && nx.nodeType === 3 && SEPS.test(nx.nodeValue)) nx.nodeValue = nx.nodeValue.replace(SEPS, pv && pv.nodeType === 3 && /\S$/.test(pv.nodeValue) ? ' ' : '');
+      else if (pv && pv.nodeType === 3 && SEPE.test(pv.nodeValue)) pv.nodeValue = pv.nodeValue.replace(SEPE, ''); };
     var walk = function (n) {
-      if (n.nodeType === 3) { var v = n.nodeValue, c = clean(v); if (c !== v) n.nodeValue = c; return; }
-      if (n.nodeType !== 1) return; var tag = n.tagName; if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA') return;
+      if (n.nodeType === 3) { var v = n.nodeValue; if (!test(v)) return;
+        var pe = n.parentElement; if (pe && INL.test(pe.tagName) && ONLY.test(v) && pe.childNodes.length === 1) { pe.hidden = true; pe.style.display = 'none'; pe.setAttribute('data-zyb-off', '1'); tidy(pe); return; } var c = clean(v); if (test(c)) { var h = holder(n); if (h && !/^(MAIN|SECTION|ARTICLE|FORM|TABLE|TBODY)$/.test(h.tagName) && hide(h)) return; c = drop(c); } if (c !== v) n.nodeValue = c; return; }
+      if (n.nodeType !== 1) return; var tag = n.tagName; if (tag === 'SCRIPT' || tag === 'STYLE') return;
+      ['title', 'placeholder', 'aria-label'].forEach(function (a) { var v = n.getAttribute && n.getAttribute(a); if (v && test(v)) { var c = drop(v); if (c) n.setAttribute(a, c); else n.removeAttribute(a); } });
+      if (tag === 'TEXTAREA') return;   // what a person types stays as typed
       var fw = n.getAttribute && (n.getAttribute('data-fw') || (tag === 'OPTION' ? n.getAttribute('value') : null));
-      if (fw && ((noS && /^sama$/i.test(fw)) || (noI && /^ia$/i.test(fw)))) { if (tag === 'OPTION' && n.parentNode) { n.parentNode.removeChild(n); return; } n.hidden = true; n.style.display = 'none'; return; }
-      if (typeof n.title === 'string' && n.title) n.title = clean(n.title);   // a form's "title" can be its input named title: strings only
+      if (fw && KEYS.test(fw)) { hide(n); return; }
       for (var c2 = n.firstChild; c2; c2 = c2.nextSibling) walk(c2);
     };
-    var run = function () { if (document.body) walk(document.body); document.title = clean(document.title); };
-    var start = function () { run(); try { new MutationObserver(function (L) { for (var i = 0; i < L.length; i++) { if (L[i].type === 'characterData') walk(L[i].target); var a = L[i].addedNodes; for (var j = 0; j < a.length; j++) walk(a[j]); } }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (e) { /* no observer: the first pass stands */ } };
+    // JSON (POC data): keys named for them go; list items about them go; other strings are cleaned
+    var scrub = function (v) {
+      if (typeof v === 'string') return test(v) ? drop(v) : v;
+      if (Array.isArray(v)) { var out = []; for (var i = 0; i < v.length; i++) { var x = v[i]; if (x && typeof x === 'object' && !Array.isArray(x) ? aboutIt(x) : typeof x === 'string' && test(clean(x))) continue; out.push(scrub(x)); } return out; }
+      if (v && typeof v === 'object') { var o = {}; for (var k in v) { if (!Object.prototype.hasOwnProperty.call(v, k) || KEYS.test(k)) continue; o[k] = scrub(v[k]); } return o; }
+      return v;
+    };
+    // an object is ABOUT a switched-off thing when one of its short naming fields (id, name, framework, type, source, title...) names it
+    var aboutIt = function (x) { for (var k in x) { var y = x[k]; if (typeof y === 'string' && y.length <= 160 && test(clean(y))) return true; if (typeof y === 'string' && KEYS.test(y)) return true; } return false; };
+    var run = function () { if (document.body) walk(document.body); document.title = drop(document.title); };
+    var start = function () { run(); try { new MutationObserver(function (L) { for (var i = 0; i < L.length; i++) { if (L[i].type === 'characterData') walk(L[i].target); else if (L[i].type === 'attributes') walk(L[i].target); var a = L[i].addedNodes; for (var j = 0; j < a.length; j++) walk(a[j]); } }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['title', 'placeholder', 'aria-label'] }); } catch (e) { /* an old browser: what is drawn later keeps its text */ } };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
-    window.zybFwClean = clean;
+    window.zybFwClean = clean; window.zybOffTest = test; window.zybOffClean = drop; window.zybOffScrub = scrub;
   })();
   // the organisation's own job titles (brand setting "titles", e.g. {"CIO": "GM IT"}): the whole word on every page, also what a
   // page draws later; role ids in the code stay as they are

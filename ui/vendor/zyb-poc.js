@@ -16,13 +16,15 @@
     if (u.pathname.indexOf('/api/') !== 0) return null;
     if (String(method || 'GET').toUpperCase() !== 'GET') return { status: 403, body: { error: 'POC mode: nothing is changed - switch POC data off in the menu to work on live data' } };
     var L = window.ZYB_POC || [];
-    for (var i = 0; i < L.length; i++) { if (L[i].re.test(u.pathname)) { var d = typeof L[i].data === 'function' ? L[i].data(u) : L[i].data; hits++; mark(); return { status: 200, body: JSON.parse(JSON.stringify(d)) }; } }
+    for (var i = 0; i < L.length; i++) { if (L[i].re.test(u.pathname)) { var d = typeof L[i].data === 'function' ? L[i].data(u) : L[i].data; hits++; mark(); return { status: 200, body: off(JSON.parse(JSON.stringify(d))) }; } }
     var R = window.ZYB_POC_REC; if (R && (R.common || []).indexOf(u.pathname) >= 0) return null;   // a platform call every page makes: live
-    if (R && R.map && Object.prototype.hasOwnProperty.call(R.map, u.pathname)) { hits++; mark(); return { status: 200, body: shift(JSON.parse(JSON.stringify(R.map[u.pathname])), R.recorded_at) }; }
+    if (R && R.map && Object.prototype.hasOwnProperty.call(R.map, u.pathname)) { hits++; mark(); return { status: 200, body: off(shift(JSON.parse(JSON.stringify(R.map[u.pathname])), R.recorded_at)) }; }
     // a page that draws from illustrative data never mixes in live answers: what the data does not cover is refused, said plainly
     if (pocPage()) { refused.push(u.pathname); return { status: 503, body: { error: 'POC: no illustrative data for this part of the page' } }; }
     pass++; return null;
   }
+  // what the organisation does not run or is not under (brand: SAMA, VMware, Nutanix...) never appears in the illustrative data either
+  function off(v) { try { return typeof window.zybOffScrub === 'function' ? window.zybOffScrub(v) : v; } catch (e) { return v; /* the page shows the data as recorded */ } }
   function pocPage() {
     var pg = location.pathname.split('/').pop() || 'index.html', R = window.ZYB_POC_REC;
     if (R && R.pages && R.pages[pg]) return true;

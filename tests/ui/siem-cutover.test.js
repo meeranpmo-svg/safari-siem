@@ -53,7 +53,7 @@ const DAY = 864e5, NOW = Date.now(), day = (k) => new Date(NOW - k * DAY + 3 * 3
     await p.fill('#sof [name=note]', 'switch over on Thursday night with rollback'); await p.click('#sof button[type=submit]'); await p.waitForSelector('.toast', { timeout: 8000 });
     ok(/accept_risk/.test(await p.evaluate(() => [].map.call(document.querySelectorAll('.toast'), (t) => t.textContent).join(' '))), 'an open gate needs a written risk');
     await p.fill('#sof [name=accept_risk]', 'the old proxy is retired the same night (synthetic)'); await p.click('#sof button[type=submit]');
-    await p.waitForFunction(() => /proposed/.test(document.getElementById('so').textContent), null, { timeout: 8000 });
+    await p.waitForFunction(() => /Waiting for another administrator/.test(document.getElementById('so').textContent) && document.getElementById('sof').hidden, null, { timeout: 8000 });
     ok(!(await p.$('[data-dec]')) && /Waiting for another administrator/.test(await p.textContent('#so')) && await p.$eval('#sof', (x) => x.hidden), 'the proposer cannot decide'); await p.close();
     WHO = { user: 'syn.ciso', role: 'admin' }; p = await open(); await p.waitForSelector('[data-dec=approve]', { timeout: 15000 }); await p.click('[data-dec=approve]');
     await p.waitForFunction(() => /approved by syn\.ciso/.test(document.getElementById('so').textContent), null, { timeout: 8000 }); ok(audits.some((a) => a.action === 'cutover.approve' && a.user === 'syn.ciso'), 'another administrator approves, audited'); await p.close();

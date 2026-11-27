@@ -42,6 +42,7 @@ const srv = http.createServer((q, r) => { const u = new URL(q.url, 'http://x');
     } catch (e) { found[pg] = ['(page did not load: ' + e.message.split('\n')[0] + ')']; } finally { await p.close(); } } };
   await Promise.all(Array.from({ length: 6 }, work));
   await browser.close(); srv.close();
+  if (process.env.OFF_JSON) fs.writeFileSync(process.env.OFF_JSON, JSON.stringify(found, null, 1));
   const keys = Object.keys(found).sort();
   for (const k of keys) { console.log('\n' + k + ' (' + found[k].length + ')'); for (const h of found[k].slice(0, 12)) console.log('   ' + h); }
   console.log('\n' + keys.length + ' of ' + pages.length + ' pages still name ' + W.join(' / '));

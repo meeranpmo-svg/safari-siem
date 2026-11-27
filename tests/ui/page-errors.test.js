@@ -10,7 +10,7 @@ const DASH = path.resolve(__dirname, '../../ui');
 let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 let MODE = 'fail500'; const reports = [];
 const JOBS = { at: '2026-10-22T10:00:00Z', failing: 1, jobs: [{ name: 'db-health.pass', runs: 12, failures: 4, consecutive: 3, state: 'failing', last_error: 'ORA-01017: invalid username/password', last_error_at: '2026-10-22T09:58:00Z', last_ok: '2026-10-22T08:00:00Z' }, { name: 'virt.tick', runs: 40, failures: 0, consecutive: 0, state: 'ok', last_ok: '2026-10-22T09:59:00Z' }],
-  server: [{ at: '2026-10-22T09:50:00Z', method: 'GET', path: '/api/itam/reconcile', status: 500, error: 'vcenter: socket hang up' }], client: [{ at: '2026-10-22T09:40:00Z', user: 'ali', kind: 'http', status: 502, page: '/dashboards/storage.html', message: 'HTTP 502', ref: 'E-SYNTH1' }], process: { unhandled: 1, uncaught: 0 } };
+  server: [{ at: '2026-10-22T09:50:00Z', method: 'GET', path: '/api/itam/reconcile', status: 500, error: 'hyperv: socket hang up' }], client: [{ at: '2026-10-22T09:40:00Z', user: 'ali', kind: 'http', status: 502, page: '/dashboards/storage.html', message: 'HTTP 502', ref: 'E-SYNTH1' }], process: { unhandled: 1, uncaught: 0 } };
 (async () => {
   const srv = http.createServer((req, res) => { const u = req.url.split('?')[0]; const json = (c, b) => { res.writeHead(c, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(b)); };
     if (u === '/dashboards/whoami.json' || u === '/auth/whoami') return json(200, { user: 'syed', role: 'admin' });
@@ -63,7 +63,7 @@ const JOBS = { at: '2026-10-22T10:00:00Z', failing: 1, jobs: [{ name: 'db-health
   const txt = await p.$eval('#err', (x) => x.innerText);
   ok(/db-health\.pass/.test(txt) && /failing/.test(txt) && /ORA-01017/.test(txt), 'Platform Health lists the failing job with its last error');
   ok(/collect\.m365-graph\.sync/.test(txt), 'and the SIEM jobs');
-  ok(/vcenter: socket hang up/.test(txt) && /E-SYNTH1/.test(txt), 'server errors and page errors with their reference');
+  ok(/hyperv: socket hang up/.test(txt) && /E-SYNTH1/.test(txt), 'server errors and page errors with their reference');
   await p.click('[data-ej="itam:0"]'); await p.waitForTimeout(300);
   ok(/runs again on its schedule/.test(await p.evaluate(() => document.body.innerText)), 'a job row opens its detail');
   await p.close();
