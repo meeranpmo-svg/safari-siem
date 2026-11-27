@@ -30,6 +30,34 @@ function createAdDirectory(app, opts = {}) {
     const c = a.cfg(); if (!(c.bind_enc && (c.servers || []).length && c.base_dn)) return { ok: false, why: 'the directory connection is not set - an administrator sets it in HR Onboarding -> Directory settings (servers, base DN, bind account)' };
     return { ok: true, servers: c.servers, base_dn: c.base_dn };
   }
+  // the domain controllers the SIEM Windows agent reports from (its daily read-only snapshot: os.domain_role 4/5 = backup / primary
+  // DC, and the domain it serves) - so the directory shows as connected through the agent even before the LDAP read is set. Settings
+  // only: no account names leave this function. Cached a minute; a SIEM that does not answer is said, never an error.
+  const SIEM_AS = { user: 'system:itam-ad-directory', role: 'analyst' };
+  let dcCache = null;
+  async function domainControllers() {
+    if (opts.dcs) return opts.dcs();
+    if (dcCache && now() - dcCache.t < 60000) return dcCache.v;
+    const L = app.discovery && app.discovery.siem; let v;
+    if (!L || typeof L.call !== 'function') v = { dcs: [], why: 'the SIEM link is not configured' };
+    else {
+      let r = null;
+      try { r = await L.call('GET', '/hardening/snapshots', SIEM_AS); }
+      catch (e) { if (app.log && app.log.every) app.log.every('ad-directory:dcs', 600000, 'warn', 'domain controller snapshots could not be read from the SIEM', { err: String(e.message).slice(0, 200) }); }
+      if (!r || r.status !== 200) v = { dcs: [], why: r ? 'SIEM hardening snapshots: HTTP ' + r.status : 'the SIEM did not answer' };
+      else {
+        const dcs = ((r.json && r.json.hosts) || []).filter((h) => h && h.settings && h.settings.os && Number(h.settings.os.domain_role) >= 4).map((h) => {
+          const a = h.settings.ad || null;
+          return { host: String(h.host || '').slice(0, 253), ip: String(h.ip || '').slice(0, 64), at: h.at || h.received || null, agent_version: h.agent_version || '', role: Number(h.settings.os.domain_role) === 5 ? 'primary' : 'domain controller',
+            domain: a && a.domain ? String(a.domain).slice(0, 253) : null, domain_mode: a && a.domain_mode ? String(a.domain_mode).slice(0, 60) : null, ad_read: !!(a && !a.error) };
+        }).sort((x, y) => x.host.localeCompare(y.host));
+        v = { dcs, why: null };
+      }
+    }
+    dcCache = { t: now(), v }; return v;
+  }
+  // the page's view: the directory read plus the domain controllers reporting through the agent
+  async function fullView() { const dc = await domainControllers(); return Object.assign(view(), { domain_controllers: dc.dcs, domain_controllers_why: dc.why }); }
   function view() {
     const cn = connection(), last = C().get('last') || null;
     return { connection: cn.ok ? { ok: true, servers: cn.servers, base_dn: cn.base_dn } : cn, settings: settings(), last: last ? { at: last.at, by: last.by, count: last.users.length, truncated: last.truncated, group: last.group } : null,
@@ -67,10 +95,10 @@ function createAdDirectory(app, opts = {}) {
     try { await refresh(SYSTEM, true); return true; } catch (e) { if (app.log && app.log.every) app.log.every('ad-directory:auto', 3600000, 'warn', 'the automatic directory read failed', { err: String(e.message).slice(0, 200) }); return false; }
   }
   if (!(app.noTimers || opts.noTimer)) { const t = setInterval(guardOf(app, 'ad_directory.auto', tick), 10 * 60000); if (t.unref) t.unref(); }
-  return { view, refresh, saveSettings, connection, tick };
+  return { view, refresh, saveSettings, connection, tick, domainControllers, fullView };
 }
 function registerAdDirectory(srv, app, X) {
-  srv.route('GET', '/ad-directory', (ctx) => { ctx.need('operator'); return X.view(); });
+  srv.route('GET', '/ad-directory', (ctx) => { ctx.need('operator'); return X.fullView ? X.fullView() : X.view(); });
   srv.route('POST', '/ad-directory/refresh', (ctx) => { ctx.need('operator'); body(ctx.body).done(); return X.refresh(ctx.who); });
   srv.route('POST', '/ad-directory/settings', (ctx) => { ctx.need('admin'); return X.saveSettings(ctx.body, ctx.who); }, { maxBody: 2048 });
 }

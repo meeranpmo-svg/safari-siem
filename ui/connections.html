@@ -721,9 +721,15 @@
          state:s.enabled?(n?['ok','enabled']:['warn','enabled, but no group mapped to a role']):['warn','configured, not enabled']}];});} },
    { id:'ad', icon:'sitemap',tone:'cyan', name:'Active Directory', group:'Identity, mail & collaboration', api:'/api/itam', detail:'user-management.html', svc:'sentra-itam', setup:'user-management.html', setupLabel:'Directory users',
      add:function(){adWizard(this);}, addLabel:'Connect Active Directory', addIcon:'plug-connected',
-     load:function(){return req(this.api,'GET','/ad-directory').then(function(d){var c=d.connection||{},l=d.last;if(!c.ok&&!l)return [];
+     // the domain controllers the SIEM Windows agent reports from (daily read-only snapshot) are rows too, so a DC with the agent shows
+     // as connected; the directory-users read (LDAPS bind) is its own row once it is set
+     load:function(){return req(this.api,'GET','/ad-directory').then(function(d){var c=d.connection||{},l=d.last;
+       var dcs=(d.domain_controllers||[]).map(function(x){var at=Date.parse(x.at)||0,st=Date.now()-at>2*86400000;
+         return {id:'dc:'+x.host,name:x.host,info:(x.ip||'')+' · '+(x.role==='primary'?'primary domain controller':'domain controller')+(x.domain?' · '+x.domain:'')+(x.domain_mode?' ('+x.domain_mode+')':'')+' · reported by the Windows agent'+(x.agent_version?' '+x.agent_version:'')+(c.ok?'':' · directory users not read yet - press Connect Active Directory to read the users'),
+           cred:'n/a',last:{at:at,errors:[]},stale:st,staleWhy:st?'last agent snapshot '+ago(at)+' - check the Sentra agent service on the DC':''};});
+       if(!c.ok&&!l)return dcs;
        var la=l?Date.parse(l.at):0,stale=!!(la&&Date.now()-la>7*86400000);
-       return [{id:'ad',name:(c.base_dn||'Directory'),info:((c.servers||[]).join(', ')||'')+(l?' · '+l.count+' users'+(l.group?' in '+l.group:''):''),cred:!!c.ok,last:c.ok?(la?{at:la,errors:[]}:null):{at:la||Date.now(),errors:[c.why||'connection not usable']},stale:stale,staleWhy:stale?'users last read '+ago(la)+' - press Read directory on User Management':''}];});} },
+       return dcs.concat([{id:'ad',name:(c.base_dn||'Directory'),info:((c.servers||[]).join(', ')||'')+(l?' · '+l.count+' users'+(l.group?' in '+l.group:''):''),cred:!!c.ok,last:c.ok?(la?{at:la,errors:[]}:null):{at:la||Date.now(),errors:[c.why||'connection not usable']},stale:stale,staleWhy:stale?'users last read '+ago(la)+' - press Read directory on User Management':''}]);});} },
    { id:'admanage', icon:'users-group',tone:'cyan', name:'AD Management (create, disable, reset, delete)', group:'Identity, mail & collaboration', api:'/api/itam', detail:'ad-manage.html', svc:'sentra-itam', setup:'ad-manage.html', setupLabel:'Open AD Management',
      add:function(){admWizard(this);}, addLabel:'Switch on', addIcon:'power',
      load:function(){return req(this.api,'GET','/ad-manage').then(function(d){var c=d.connection||{},s=d.settings||{};if(!c.ok&&!s.enabled)return [];
