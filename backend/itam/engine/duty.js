@@ -284,7 +284,10 @@ function registerDuty(srv, app, opts = {}) {
   // Azure Cloud Servers (engine/azure-cloud.js): Azure VMs read-only through Resource Graph - backup, Defender, patches, exposure,
   // cost - with start / stop / deallocate / restart as four-eyes changes sent with a separate action credential
   const AZC = optional('./azure-cloud');
-  if (AZC) AZC.registerAzureCloud(srv, app, AZC.createAzureCloud(app, { now: opts.now, request: opts.azureRequest, login_base: opts.azureLogin, arm_base: opts.azureArm }), { noTimer: opts.noTimer });
+  if (AZC) { app.addons.azureCloud = AZC.createAzureCloud(app, { now: opts.now, request: opts.azureRequest, login_base: opts.azureLogin, arm_base: opts.azureArm }); AZC.registerAzureCloud(srv, app, app.addons.azureCloud, { noTimer: opts.noTimer }); }
+  // Capacity Planning (engine/capacity-plan.js): Hyper-V host groups with N+1 and Azure right-sizing, from the two modules above
+  const CAPP = optional('./capacity-plan');
+  if (CAPP) CAPP.registerCapacityPlan(srv, app, CAPP.createCapacityPlan(app));
   // Work From Home (engine/remote-work.js): requests, four-eyes approval by the department's approvers, today's board, VPN readiness
   const RWM = optional('./remote-work');
   if (RWM) RWM.registerRemoteWork(srv, app, RWM.createRemoteWork(app, { now: opts.now, noTimer: opts.noTimer }));
