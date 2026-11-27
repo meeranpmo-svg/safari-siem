@@ -24,11 +24,22 @@ const pick = (L) => L[Math.floor(rnd() * L.length)];
   try { require(path.join(ITAM, 'engine/infra-overview')).registerInfraOverview(e.app.srv, e.app); } catch (x) { /* already registered by this engine build */ }
   const ADM = { user: 'admin.poc', role: 'admin' }, tw = TYPES.reduce((s, t) => s + t[2], 0), type = () => { let r = rnd() * tw; for (const t of TYPES) { r -= t[2]; if (r <= 0) return t; } return TYPES[0]; };
   let n = 0;
+  // the site plan: each site registered with its block and the standard layout, so the devices below take addresses inside it
+  const IPS = e.app.addons.ipamSites, IPM = e.app.addons.ipam, ip4 = require(path.join(ITAM, 'engine/discovery/ipv4')), PLAN = {};
+  const kindOf = (s) => (/Head Office/.test(s) ? 'head_office' : /Branch/.test(s) ? 'branch' : /Project Site/.test(s) ? 'project_site' : 'office');
+  for (const [site, oct] of SITES) {
+    const kind = kindOf(site), block = '10.' + oct + '.0.0/' + { head_office: 16, branch: 18, office: 20, project_site: 20 }[kind];
+    await e.req('PUT', '/ipam/sites/' + site.toLowerCase().replace(/[^a-z0-9]+/g, '-'), { user: 'admin.poc', role: 'admin', body: { name: site, kind, city: site.split(' ')[0], block, contact: 'site.supervisor.poc', ends: site === 'Jazan Project Site' ? new Date(Date.now() + 20 * 864e5).toISOString().slice(0, 10) : undefined } });
+    PLAN[site] = IPS.layout(block, kind);
+    for (const x of PLAN[site]) IPM.putSubnet({ cidr: x.cidr, name: site + ' ' + x.name, site, vlan: x.vlan, gateway: x.gateway, dhcp_start: x.dhcp_start || undefined, dhcp_end: x.dhcp_end || undefined, purpose: x.purpose, owner: 'network.poc' }, ADM);
+  }
+  const NET = { workstation: /users/i, laptop: /wi-fi staff|site wi-fi|wi-fi$|users/i, server: /servers|users/i, vm: /servers|users/i, printer: /printers/i, switch: /management/i, firewall: /management/i, access_point: /management/i, cctv: /cctv/i, phone: /voice|users/i };
+  const ipIn = (site, t) => { const L = PLAN[site], sn = L.find((x) => NET[t] && NET[t].test(x.name)) || L[0], [b, bits] = sn.cidr.split('/'), base = ip4.parseIp(b), size = 2 ** (32 - Number(bits)); return ip4.ipStr(base + 2 + Math.floor(rnd() * Math.max(1, Math.min(size - 4, size * 0.7)))); };
   for (const [site, oct, count, quality] of SITES) {
     for (let i = 0; i < count; i++) {
       const [t, code, ] = type(), v = pick(VENDORS[t]), full = rnd() * 100 < quality, abbr = site.split(' ')[0].slice(0, 3).toUpperCase();
       const a = { name: abbr + '-' + code + '-' + String(++n).padStart(4, '0') + '-POC', type: t, site, status: rnd() < 0.9 ? 'in_use' : pick(['in_stock', 'in_repair', 'retired']), vendor: v,
-        mgmt_ip: '10.' + oct + '.' + (1 + Math.floor(rnd() * 30)) + '.' + (10 + Math.floor(rnd() * 230)) };
+        mgmt_ip: ipIn(site, t) };
       if (full) Object.assign(a, { serial: 'POC' + Math.floor(rnd() * 1e9).toString(36).toUpperCase(), model: v + ' ' + pick(['G5', 'G7', '800', 'X1', 'S5130', 'FG-100F']), owner: pick(['a.harbi.poc', 's.qahtani.poc', 'm.shehri.poc', 'k.otaibi.poc', 'site.supervisor.poc']), department: pick(DEPTS), os: /workstation|laptop/.test(t) ? 'Windows 11' : t === 'server' || t === 'vm' ? pick(['Windows Server 2022', 'Windows Server 2019', 'Ubuntu 22.04']) : undefined,
         mac: '02:00:' + [0, 0, 0, 0].map(() => Math.floor(rnd() * 256).toString(16).padStart(2, '0')).join(':'), classification: pick(['internal', 'internal', 'restricted']), cia: { c: 'medium', i: 'medium', a: t === 'server' || t === 'firewall' ? 'high' : 'medium' },
         warranty: (() => { const st = Date.now() - Math.floor(rnd() * 3 * 365) * 864e5, en = st + 3 * 365 * 864e5; return { start: new Date(st).toISOString().slice(0, 10), end: new Date(en).toISOString().slice(0, 10), provider: v }; })(), eol: new Date(Date.now() + Math.floor((rnd() * 5 - 0.3) * 365) * 864e5).toISOString().slice(0, 10) });
@@ -39,6 +50,12 @@ const pick = (L) => L[Math.floor(rnd() * L.length)];
   const r = await e.req('GET', '/itam/overview', { user: 'admin.poc', role: 'admin' });
   if (r.status !== 200) throw new Error('overview ' + r.status + ' ' + r.text);
   const MORE = [];
+  // devices Asset Discovery sees on two crowded subnets (Wi-Fi clients at a project site, printers at head office) - so the plan shows a subnet filling up
+  const DD = e.app.store.collection('disc_devices'), crowd = (site, re, k) => { const sn = PLAN[site].find((x) => re.test(x.name)), [b] = sn.cidr.split('/'), base = ip4.parseIp(b); for (let i = 0; i < k; i++) DD.put({ id: 'dd-poc-' + site.slice(0, 3) + i, ips: [ip4.ipStr(base + 10 + i)], macs: ['02:aa:' + [i >> 8, i & 255, 1, 2].map((x) => x.toString(16).padStart(2, '0')).join(':')], hostname: 'client-' + i + '.poc', last_seen: new Date().toISOString(), status: 'new' }); };
+  crowd('Jubail Project Site', /site wi-fi/i, 225); crowd('Riyadh Head Office', /printers/i, 112); crowd('Jeddah Branch', /^users$/i, 0);
+  // a new project site waiting for a second administrator, then the site plan and the subnet register as the pages read them
+  IPS.propose({ name: 'Rabigh Project Site', kind: 'project_site', city: 'Rabigh', contact: 'site.supervisor.poc', ends: new Date(Date.now() + 200 * 864e5).toISOString().slice(0, 10) }, { user: 'network.poc', role: 'operator' });
+  for (const [u, pg] of [['/ipam/sites', 'ipam-sites.html'], ['/ipam', 'ipam.html']]) { const x = await e.req('GET', u, { user: 'admin.poc', role: 'admin' }); if (x.status === 200) MORE.push(['/api/itam' + u, x.json, pg]); }
   // the IT Infrastructure Manager (infra-manager.html): the IT Asset Management parts from the engine, the SIEM parts (availability,
   // application monitors, change plans) built from the same synthetic servers and devices
   const get = async (u) => { const x = await e.req('GET', u, { user: 'admin.poc', role: 'admin' }); return x.status === 200 ? x.json : null; };

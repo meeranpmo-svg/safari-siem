@@ -1,0 +1,95 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IP Plan by Site</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/zyb-ksa-map.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- IP Plan by Site over /api/itam/ipam/sites (engine/ipam-sites.js) on the subnet register (engine/ipam.js): the head office, branches and
+     project sites with their address blocks on the Saudi map, utilisation per site, conflicts, what the AI noticed; a new site proposed
+     by an operator (next free block, the standard VLAN layout) and approved by a different administrator, which creates the subnets;
+     closing a project site the same way; the standard templates; a site's address plan as CSV. Nothing here changes a device. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:240px}
+.mapg{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px;margin:0 0 12px}@media(max-width:1000px){.mapg{grid-template-columns:1fr}}.mapg .card{margin:0}#ksa{width:100%;height:auto;max-height:480px;display:block}
+.mut{color:#8b93a4}.sm{font-size:12px}.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.crit{background:#ff7b72}.dot.warn{background:#e3b341}.dot.info{background:#58a6ff}
+.ub{display:inline-block;width:110px;height:9px;border-radius:5px;background:rgba(127,140,160,.18);vertical-align:middle;margin-right:6px;overflow:hidden}.ub>i{display:block;height:100%;border-radius:5px}
+.kind{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:600;background:rgba(88,166,255,.15);color:#79b8ff}.kind.project_site{background:rgba(245,159,0,.15);color:#f5a623}.kind.head_office,.kind.data_centre{background:rgba(188,140,255,.18);color:#bc8cff}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+.st{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:600}.st.pending{background:rgba(227,179,65,.2);color:#e3b341}.st.applied{background:rgba(63,185,80,.18);color:#3fb950}.st.rejected{background:rgba(139,147,164,.2);color:#8b93a4}
+tr[data-site]{cursor:pointer}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Network · IP address management · sites</div><h1>IP Plan by Site</h1><div class="mut sm">Head office, branches and project sites - one address block each, the standard VLAN layout, new sites and closures approved by a second person</div></div><span class="sp"></span><span class="muted" id="up"></span><a class="btn" href="ipam.html">Subnets &amp; addresses</a><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+ <div class="k" id="kp"></div>
+ <div class="mapg">
+  <section class="card"><h2>Sites on the map <span class="c">bubble = addresses in use · colour = how full</span></h2><svg id="ksa" role="img" aria-label="Map of Saudi Arabia with each site's address use"></svg></section>
+  <section class="card"><h2>What the AI noticed <span class="c">from the plan and the addresses seen</span></h2><ul class="ins" id="ins"></ul></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>Utilisation by site <span class="c">used of usable addresses</span></h2><div class="cv"><canvas id="cv-util"></canvas></div></section>
+  <section class="card"><h2>Sites by kind</h2><div class="cv"><canvas id="cv-kind"></canvas></div></section>
+  <section class="card"><h2>Free addresses by site</h2><div class="cv"><canvas id="cv-free"></canvas></div></section>
+ </div>
+ <section class="card"><h2>Sites <span class="c" id="sc"></span></h2><div class="tw" id="sites"></div><div id="missing"></div></section>
+ <section class="card" id="newc"><h2>Open a new site <span class="c">the next free block and the standard layout - another administrator approves</span></h2>
+  <form id="nf" class="frm"><label>Site name<input name="sname" required placeholder="Jazan Project Site"></label><label>Kind<select name="kind"></select></label><label>City<input name="city" required placeholder="Jazan"></label><label>Site contact<input name="contact" placeholder="site.supervisor"></label><label>Project ends (optional)<input name="ends" type="date"></label><button type="submit" class="pri">Propose</button></form>
+  <div id="prev" class="sm mut" style="margin-top:8px"></div></section>
+ <section class="card"><h2>Changes &amp; approvals <span class="c">four-eyes: the proposer never approves</span></h2><div class="tw" id="props"></div></section>
+ <section class="card"><h2>Standard layouts <span class="c">VLAN and subnet per kind of site</span></h2><div id="tpl"></div></section>
+ <p class="mut sm" id="note"></p>
+</div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, V = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('IT Asset Management is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 6000); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  var colr = function (p) { return p == null ? '#4f9be9' : p >= 80 ? '#ff5c5c' : p >= 60 ? '#f5a623' : '#2fd47a'; };
+  function draw() {
+    var v = V, K = v.kpis, C = window.zybCharts, act = v.sites.filter(function (s) { return s.status !== 'closed'; });
+    $('up').textContent = 'range ' + v.supernet;
+    $('kp').innerHTML = tile('Sites', K.sites, K.head_office + ' head office · ' + K.branches + ' branches / offices · ' + K.project_sites + ' project sites') + tile('Subnets', K.subnets, 'in the site plans')
+      + tile('Addresses in use', K.used, 'of ' + K.usable + ' usable', '') + tile('Utilisation', K.pct == null ? '–' : K.pct + '%', 'across all sites', K.pct >= 80 ? 'bad' : K.pct >= 60 ? 'warn' : 'ok')
+      + tile('Conflicts', K.conflicts, 'two devices on one address', K.conflicts ? 'bad' : 'ok') + tile('Waiting for approval', K.proposals, 'new sites / closures', K.proposals ? 'warn' : '') + tile('Not registered', K.not_registered, 'site names in use without a plan', K.not_registered ? 'warn' : 'ok');
+    if (window.zybKsaMap) zybKsaMap.draw($('ksa'), act.map(function (s) { return { name: s.city || s.name, label: s.name.replace(/\s*(head ?office|branch|project site|site|office)\s*$/i, ''), value: s.used, level: s.pct == null ? 'info' : s.pct >= 80 ? 'crit' : s.pct >= 60 ? 'warn' : 'ok', sub: s.block + ' · ' + (s.pct == null ? 'no subnet' : s.pct + '% used') }; }), { empty: 'Register the sites below to see them on the map.' });
+    $('ins').innerHTML = v.insights.length ? v.insights.map(function (i) { return '<li><span class="dot ' + esc(i.level) + '"></span><div><b>' + esc(i.title) + '</b><div class="mut sm">' + esc(i.detail) + '</div></div></li>'; }).join('') : '<li><span class="dot info"></span><div>The plan looks healthy.</div></li>';
+    if (C) {
+      var U = act.filter(function (s) { return s.usable; }).sort(function (a, b) { return b.pct - a.pct; });
+      if (U.length) C.bars($('cv-util'), U.map(function (s) { return s.name; }), [{ label: 'Used %', data: U.map(function (s) { return s.pct; }), colors: U.map(function (s) { return s.pct >= 80 ? 'crit' : s.pct >= 60 ? 'warn' : 'ok'; }) }], { horizontal: true, title: 'Utilisation by site' }); else C.empty($('cv-util'), 'No subnet in a site plan yet.');
+      var kinds = {}; act.forEach(function (s) { kinds[s.kind_label] = (kinds[s.kind_label] || 0) + 1; }); var kk = Object.keys(kinds);
+      if (kk.length) C.ring($('cv-kind'), kk, kk.map(function (k) { return kinds[k]; }), ['purple', 'acc', 'teal', 'warn', 'ok', 'mute'], { v: act.length, l: 'sites' }, { title: 'Sites by kind' }); else C.empty($('cv-kind'), 'No site yet.');
+      if (U.length) C.bars($('cv-free'), U.map(function (s) { return s.name; }), [{ label: 'Free', data: U.map(function (s) { return s.free; }), color: 'teal' }], { horizontal: true, title: 'Free addresses' }); else C.empty($('cv-free'), 'No subnet yet.');
+    }
+    $('sc').textContent = act.length + ' active' + (v.sites.length > act.length ? ' · ' + (v.sites.length - act.length) + ' closed' : '');
+    $('sites').innerHTML = v.sites.length ? '<table><thead><tr><th>Site</th><th>Kind</th><th>Block</th><th>Subnets</th><th>Used</th><th>Fullest subnet</th><th>Issues</th><th>Ends</th><th></th></tr></thead><tbody>' + v.sites.map(function (s) {
+      return '<tr><td><b>' + esc(s.name) + '</b><div class="mut sm">' + esc([s.city, s.contact].filter(Boolean).join(' · ')) + (s.status === 'closed' ? ' · closed' : '') + '</div></td><td><span class="kind ' + esc(s.kind) + '">' + esc(s.kind_label) + '</span></td><td class="mono">' + esc(s.block) + '</td><td>' + esc(s.subnets) + '</td>'
+        + '<td>' + (s.usable ? '<span class="ub"><i style="width:' + Math.max(2, s.pct) + '%;background:' + colr(s.pct) + '"></i></span>' + esc(s.used) + ' / ' + esc(s.usable) : '<span class="mut">–</span>') + '</td><td class="sm">' + (s.fullest ? esc(s.fullest.name + ' ' + s.fullest.pct + '%') : '–') + '</td>'
+        + '<td class="sm">' + (s.conflicts ? esc(s.conflicts + ' conflict(s) ') : '') + (s.unknown ? esc(s.unknown + ' unknown device(s) ') : '') + (s.outside_block.length ? esc('outside block: ' + s.outside_block.join(', ')) : '') + '</td><td class="sm">' + esc(s.ends || '') + (s.ends_in_days != null && s.ends_in_days <= 30 && s.status !== 'closed' ? ' <span class="st pending">' + esc(s.ends_in_days) + ' d</span>' : '') + '</td>'
+        + '<td>' + (can('operator') ? '<button type="button" class="sm" data-csv="' + esc(s.id) + '">Plan CSV</button>' + (s.status !== 'closed' ? ' <button type="button" class="sm" data-close="' + esc(s.id) + '">Close…</button>' : '') : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No site registered yet. Register the head office and branches with their blocks, or open a new site below.</div>';
+    $('missing').innerHTML = v.missing.length ? '<p class="sm mut" style="margin-top:8px">In use but not in the register: ' + v.missing.map(function (m) { return '<b>' + esc(m.name) + '</b> (' + m.subnets + ' subnet(s), ' + m.assets + ' asset(s))'; }).join(', ') + '.' + (v.can_manage ? ' An administrator registers each with its block.' : '') + '</p>' : '';
+    $('newc').hidden = !v.can_propose;
+    if (!$('nf').kind.options.length) $('nf').kind.innerHTML = Object.keys(v.kinds).map(function (k) { return '<option value="' + esc(k) + '"' + (k === 'project_site' ? ' selected' : '') + '>' + esc(v.kinds[k]) + ' (/' + v.block_bits[k] + ')</option>'; }).join('');
+    $('props').innerHTML = v.proposals.length ? '<table><thead><tr><th>Change</th><th>Site</th><th>Block</th><th>Proposed by</th><th>State</th><th></th></tr></thead><tbody>' + v.proposals.map(function (p) {
+      var mine = String(p.proposed_by).toLowerCase() === ME.user.toLowerCase();
+      return '<tr><td class="mono">' + esc(p.id) + ' · ' + esc(p.kind === 'open' ? 'open' : 'close') + '</td><td><b>' + esc(p.name) + '</b>' + (p.subnets ? '<div class="mut sm">' + p.subnets.map(function (x) { return esc('VLAN ' + x.vlan + ' ' + x.name + ' ' + x.cidr); }).join(' · ') + '</div>' : '<div class="mut sm">' + esc(p.reason || '') + '</div>') + '</td><td class="mono">' + esc(p.block) + '</td><td>' + esc(p.proposed_by) + '</td><td><span class="st ' + esc(p.state) + '">' + esc(p.state) + '</span>' + (p.decided_by ? '<div class="mut sm">by ' + esc(p.decided_by) + '</div>' : '') + '</td>'
+        + '<td>' + (p.state === 'pending' && v.can_manage && !mine ? '<button type="button" class="sm pri" data-dec="approve" data-id="' + esc(p.id) + '">Approve</button> <button type="button" class="sm" data-dec="reject" data-id="' + esc(p.id) + '">Reject</button>' : p.state === 'pending' && mine ? '<span class="mut sm">another administrator approves</span>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No change proposed.</div>';
+    $('tpl').innerHTML = '<div class="g3" style="margin:0">' + Object.keys(v.templates).map(function (k) { return '<div><b>' + esc(v.kinds[k]) + '</b> <span class="mut sm">block /' + esc(v.block_bits[k]) + '</span><table class="sm"><tbody>' + v.templates[k].map(function (r) { return '<tr><td>VLAN ' + esc(r.vlan) + '</td><td>' + esc(r.name) + '</td><td>/' + esc(r.prefix) + '</td><td>' + (r.dhcp ? 'DHCP' : 'static') + '</td></tr>'; }).join('') + '</tbody></table></div>'; }).join('') + '</div>';
+    $('note').textContent = v.note;
+  }
+  function load() { return req('GET', '/ipam/sites').then(function (j) { V = j; $('main').hidden = false; $('err').innerHTML = ''; draw(); }, function (e) { $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'IP Plan by Site is not installed in IT Asset Management yet - run the update.' : e.message) + '</div></div>'; }); }
+  document.addEventListener('submit', function (e) { if (e.target.getAttribute('id') !== 'nf') return; e.preventDefault(); var f = e.target.elements;
+    req('POST', '/ipam/sites/propose', { name: f.sname.value.trim(), kind: f.kind.value, city: f.city.value.trim(), contact: f.contact.value.trim() || undefined, ends: f.ends.value || undefined }).then(function (p) { $('prev').textContent = p.id + ': ' + p.name + ' gets ' + p.block + ' with ' + p.subnets.length + ' subnets - waiting for another administrator.'; toast('Proposed ' + p.block); e.target.reset(); return load(); }, function (x) { toast(x.message); }); });
+  document.addEventListener('click', function (e) { var t = e.target, a;
+    if ((a = t.closest('[data-dec]'))) { var d = a.getAttribute('data-dec'), note = d === 'reject' ? window.prompt('Why is it rejected?') : ''; if (d === 'reject' && !note) return; a.disabled = true;
+      req('POST', '/ipam/site-proposals/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: d, note: note || undefined }).then(function (p) { toast(p.id + ' ' + p.state + (p.subnets_changed ? ' - ' + p.subnets_changed + ' subnet(s)' : '')); return load(); }, function (x) { a.disabled = false; toast(x.message); }); return; }
+    if ((a = t.closest('[data-close]'))) { var why = window.prompt('Why close this site? (another administrator approves; its subnets are retired)'); if (!why) return; req('POST', '/ipam/sites/' + encodeURIComponent(a.getAttribute('data-close')) + '/close', { reason: why }).then(function () { toast('Closure proposed'); return load(); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-csv]'))) { var id = a.getAttribute('data-csv'); req('GET', '/ipam/sites/' + encodeURIComponent(id) + '/plan').then(function (j) { var l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([j.csv], { type: 'text/csv' })); l.download = 'ip-plan-' + id + '.csv'; document.body.appendChild(l); l.click(); setTimeout(function () { URL.revokeObjectURL(l.href); l.remove(); }, 1000); }, function (x) { toast(x.message); }); return; }
+  });
+  $('rf').addEventListener('click', function () { load(); });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>

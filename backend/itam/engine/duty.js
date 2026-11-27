@@ -466,6 +466,10 @@ function registerDuty(srv, app, opts = {}) {
   // the asset register and Asset Discovery see - utilisation, conflicts, stale / unknown addresses, growth, AI advisor
   const IPM = optional('./ipam');
   if (IPM) { app.addons.ipam = IPM.createIpam(app, { now: opts.now, noTimer: opts.noTimer, sdk: opts.iaSdk, getKey: opts.iaKey }); IPM.registerIpam(srv, app, app.addons.ipam); app.addons.ipam.start(); }
+  // IP Address Management by site (engine/ipam-sites.js): head office, branches and project sites, standard VLAN templates, new sites and
+  // closures proposed by an operator and approved by another administrator, laid out in the subnet register above
+  const IPS = IPM && optional('./ipam-sites');
+  if (IPS) IPS.registerIpamSites(srv, app, IPS.createIpamSites(app, { now: opts.now }));
   const OFM = optional('./offboarding');
   if (OFM) { app.addons.offboarding = OFM.createOffboarding(app, { now: opts.now, noTimer: opts.noTimer, exoRun: opts.exoRun }); OFM.registerOffboarding(srv, app, app.addons.offboarding); }
   // HR movers (engine/movers.js, User Desktops -> HR Movers): group memberships changed on the effective date after the receiving

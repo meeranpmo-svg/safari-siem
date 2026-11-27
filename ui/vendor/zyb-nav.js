@@ -2497,6 +2497,7 @@ window.ZYB_NAV = [
     },
     "g": "Maps & architecture"
    },
+   {"h": "ipam-sites.html", "s": "IP Plan by Site", "t": "IP Plan by Site - head office, branches and project sites with their address blocks, the standard VLAN layout and four-eyes site changes", "d": "One address block per site on the Saudi map with its utilisation, conflicts and what the AI noticed; open a new site (the next free block and the standard VLAN layout laid out) or close a project site, proposed by an operator and approved by another administrator; standard layouts per kind of site; a site's address plan as CSV. Nothing here changes a device."},
    {
     "h": "change-log.html",
     "s": "Change Log & NOC↔SOC Correlation",
