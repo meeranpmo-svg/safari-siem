@@ -60,6 +60,26 @@ function nfWhere(o, extra) {
   if (extra) w += ' AND ' + extra;
   return { w, params };
 }
+// What the AI noticed, from the summary's own numbers (explainable, labelled): minutes far above the window's usual (robust z on
+// median / MAD over the histogram, 3.5+ and 20+ flows) for denied and for all traffic, the deny ratio, one country holding most of
+// the denies, a top talker carrying most of the bytes, a port or application whose share moved most against the previous window.
+function analyse(v) {
+  if (!v || !Array.isArray(v.hist) || !v.hist.length) return Object.assign(v || {}, { anomalies: [], insights: [] });
+  const med = (a) => { const b = a.slice().sort((x, y) => x - y), m = b.length >> 1; return b.length ? (b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2) : 0; };
+  const spikes = (key, label) => { const vals = v.hist.map((h) => (key === 'all' ? h.allow + h.deny : h[key] || 0)), m = med(vals), mad = med(vals.map((x) => Math.abs(x - m))) || Math.max(1, m * 0.1);
+    return v.hist.map((h, i) => ({ i, t: h.t, kind: label, n: vals[i], usual: m, z: Math.round(10 * (vals[i] - m) / (1.4826 * mad)) / 10 })).filter((x) => x.z >= 3.5 && x.n >= 20); };
+  const anomalies = spikes('deny', 'denied').concat(spikes('all', 'all traffic')).sort((a, b) => b.z - a.z).slice(0, 12);
+  const ins = [], total = v.total || 0, denied = v.denied || 0;
+  if (total) ins.push(Math.round(100 * denied / total) + '% of ' + total.toLocaleString('en-US') + ' flows were denied' + (denied / total > 0.5 ? ' - mostly scanning and probing from outside, stopped at the firewall' : ''));
+  const dn = anomalies.filter((x) => x.kind === 'denied');
+  if (dn.length) ins.push(dn.length + ' minute(s) with denied traffic far above usual (up to ' + dn[0].n + ' against usually ' + Math.round(dn[0].usual) + ', robust z ' + dn[0].z + ') - a scan or an attack burst; check the countries and ports at that time');
+  const C = (v.countries || []).slice().sort((a, b) => b.deny - a.deny); if (C.length && denied && C[0].deny / denied >= 0.4) ins.push(C[0].name + ' is the source of ' + Math.round(100 * C[0].deny / denied) + '% of the denied traffic - consider a geo-block on the WAN policies if no business needs it');
+  const T = (v.talkers || []).slice().sort((a, b) => b.bytes - a.bytes), tb = T.reduce((n, x) => n + x.bytes, 0); if (T.length && tb && T[0].bytes / tb >= 0.5) ins.push('One conversation carries ' + Math.round(100 * T[0].bytes / tb) + '% of the top talkers’ bytes (' + T[0].svc + ') - a backup, a sync or an exfiltration; confirm it is expected');
+  for (const d of v.dev || []) { const mv = (d.rows || []).filter((r) => r.before != null).map((r) => ({ v: r.v, d: r.now - r.before })).sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0];
+    if (mv && Math.abs(mv.d) >= 15) ins.push(d.label + ' ' + mv.v + ' went ' + (mv.d > 0 ? 'up' : 'down') + ' by ' + Math.round(Math.abs(mv.d)) + ' points of share against the previous window'); }
+  return Object.assign(v, { anomalies, insights: ins, insights_note: 'Rules over this window’s own numbers (robust z on median / MAD) - indications to check, not verdicts.' });
+}
+
 async function netflowSummary(ch, db, o, withAddresses) {
   const T = `${db}.flow_minute`, base = nfWhere(o), dirW = nfWhere(o, DIR[o.dir]);
   const prev = nfWhere(Object.assign({}, o, { from: o.from - (o.to - o.from) }));
@@ -244,7 +264,7 @@ function register(api, deps) {
   const now = deps.now || Date.now;
   api.route('GET', `${P}/flows/summary`, wrap(deps, null, async (ctx) => {
     const o = options(ctx.query || {}, now()), full = (RANK[ctx.role] || 0) >= RANK.analyst;
-    const r = o.source === 'netflow' ? await netflowSummary(ch, db, o, full) : await summary(ch, db, o, full);
+    const r = analyse(o.source === 'netflow' ? await netflowSummary(ch, db, o, full) : await summary(ch, db, o, full));
     r.source = o.source; r.netflow_available = o.source === 'netflow' ? r.connected : await netflowAvailable(ch, db);
     audit(ctx, 'flows.view', o.fw || 'all', o.source === 'netflow' ? { range: o.range, dir: o.dir, addresses: full, source: 'netflow' } : { range: o.range, dir: o.dir, addresses: full });
     return ctx.ok(r);
@@ -264,4 +284,4 @@ function register(api, deps) {
   }));
 }
 
-module.exports = { register, summary, drill, mailGeo, options, netflowSummary, netflowDrill, netflowAvailable, X, DIR };
+module.exports = { register, analyse, summary, drill, mailGeo, options, netflowSummary, netflowDrill, netflowAvailable, X, DIR };

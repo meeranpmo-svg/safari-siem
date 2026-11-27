@@ -125,6 +125,11 @@ th.n,td.n{text-align:right}
 
   <section class="kpis" id="kpis" aria-label="Summary"></section>
 
+  <section class="panel" id="aiPanel" hidden>
+    <div class="ph"><h2>What the AI noticed</h2><span class="zd-dim" id="aiNote" style="font-size:12px"></span></div>
+    <ul id="aiList" style="list-style:none;margin:0;padding:0"></ul>
+  </section>
+
   <section class="panel">
     <div class="ph">
       <h2 id="mapTitle">Flow map</h2>
@@ -263,6 +268,14 @@ var WORLD={"type":"Topology","objects":{"countries":{"type":"GeometryCollection"
 
   /* ---------- histogram ---------- */
   function lab(D,i){return d3.timeFormat(state.range>=1440?'%d %b %H:%M':'%H:%M')(new Date(D.S.from+i*D.step*1000));}
+  // what the engine's analysis noticed in this window (robust z on the window's own minutes, shares, concentration) - clicking an
+  // unusual minute opens what was behind it, like a bar of the flow-creation chart
+  function drawAi(S){var L=S.insights||[],A=S.anomalies||[],p=document.getElementById('aiPanel');p.hidden=!(L.length||A.length);if(p.hidden)return;
+    document.getElementById('aiNote').textContent=S.insights_note||'';
+    document.getElementById('aiList').innerHTML=L.map(function(t,i){var a=i===1&&A.length?A.filter(function(x){return x.kind==='denied';})[0]||A[0]:null;
+      return '<li style="display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)"><span style="width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none;background:'+(/denied traffic far above|geo-block|exfiltration/.test(t)?CRIT:'#58a6ff')+'"></span><div>'+e(t)
+        +(a?' <button type="button" class="zd-btn" data-ai-bucket="'+a.i+'" style="margin-left:6px;font-size:11px;padding:2px 8px">open that minute</button>':'')+'</div></li>';}).join('');}
+  document.addEventListener('click',function(ev){var b=ev.target.closest&&ev.target.closest('[data-ai-bucket]');if(!b||!D)return;var i=+b.getAttribute('data-ai-bucket'),d=D.hist.filter(function(x){return x.i===i;})[0];if(d)bucket(d);});
   function drawHist(D){
     var svg=d3.select('#hist'), w=svg.node().getBoundingClientRect().width, h=260, m={t:8,r:8,b:26,l:44};
     svg.attr('viewBox','0 0 '+w+' '+h).attr('height',h).selectAll('*').remove();
@@ -272,6 +285,9 @@ var WORLD={"type":"Topology","objects":{"countries":{"type":"GeometryCollection"
     var every=Math.ceil(D.hist.length/6);
     svg.append('g').attr('class','axis').attr('transform','translate(0,'+(h-m.b)+')').call(d3.axisBottom(x).tickValues(x.domain().filter(function(i){return i%every===0;})).tickFormat(function(i){return lab(D,i);}).tickSize(3));
     var bw=x.bandwidth();
+    // the unusual minutes (the engine's robust z): a marker above the bar
+    (D.S.anomalies||[]).forEach(function(a){var d=D.hist.filter(function(q){return q.i===a.i;})[0];if(!d)return;var cx=x(a.i)+bw/2,cy=Math.max(m.t+6,y(d.allow+d.deny)-9);
+      svg.append('path').attr('class','anom').attr('d','M'+(cx-5)+','+(cy-7)+' L'+(cx+5)+','+(cy-7)+' L'+cx+','+cy+' Z').attr('fill',a.kind==='denied'?'#ffb020':'#58a6ff').append('title').text('Unusual '+a.kind+': '+a.n+' against usually '+Math.round(a.usual)+' (robust z '+a.z+')');});
     var g=svg.append('g').selectAll('g').data(D.hist).join('g');
     g.append('rect').attr('x',function(d){return x(d.i);}).attr('width',bw).attr('y',function(d){return y(d.allow);}).attr('height',function(d){return y(0)-y(d.allow);}).attr('fill',GOOD).attr('rx',Math.min(2,bw/3));
     g.append('rect').attr('x',function(d){return x(d.i);}).attr('width',bw).attr('y',function(d){return y(d.allow+d.deny);}).attr('height',function(d){return Math.max(0,y(d.allow)-y(d.allow+d.deny)-2);}).attr('fill',CRIT).attr('rx',Math.min(2,bw/3));
@@ -386,7 +402,7 @@ var WORLD={"type":"Topology","objects":{"countries":{"type":"GeometryCollection"
       if(!S.connected){D=null;showPanels(false);banner.style.display='';if(pill)pill.textContent='Not connected';
         banner.innerHTML='<h2>No firewall traffic logs yet</h2><p>No FortiGate, Palo Alto or other firewall has sent a traffic log to the SIEM in the last 24 hours, so there is nothing to show. Send the firewalls\' traffic logs (allowed and denied) to the SIEM: <a href="soc-sources.html">Log Sources</a>. This page fills itself as soon as they arrive.</p>';return;}
       banner.style.display='none';showPanels(true);if(pill)pill.textContent='Live · '+d3.timeFormat('%H:%M')(new Date(S.to));
-      D=shape(S);drawKpis(D);drawMap(D);drawSankey(D);drawDev(D);drawHist(D);drawZones(D);drawSun('sun1',D.sun1);drawSun('sun2',D.sun2);drawTalk(D);if(mk)mk();
+      D=shape(S);drawKpis(D);drawAi(S);drawMap(D);drawSankey(D);drawDev(D);drawHist(D);drawZones(D);drawSun('sun1',D.sun1);drawSun('sun2',D.sun2);drawTalk(D);if(mk)mk();
     }).catch(function(er){D=null;showPanels(false);banner.style.display='';if(pill)pill.textContent='Unavailable';
       banner.innerHTML='<h2>Network flows could not be loaded</h2><p>'+e(er.message)+'. The SIEM answers this page at '+API+'/flows/summary; if it says "not found", update the SIEM (the flows module arrived in Oct 2026).</p>';});
   }

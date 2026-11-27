@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NOC Summary</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NOC Summary</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
 <style>
 :root{color-scheme:dark;--bg:#0B0C10;--panel:#13151B;--raise:#1A1D25;--border:#2E3440;--edge:#252933;--text:#ECEEF2;--title:#fff;--mute:#8C93A1;--ok:#3fb950;--warn:#e3b341;--bad:#ff7b72;--info:#79b8ff}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
@@ -32,6 +32,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
 .ai{border:1px solid rgba(121,184,255,.35);background:rgba(121,184,255,.06);border-radius:10px;padding:10px 12px}.ai .lbl{font:600 11px ui-monospace,Consolas,monospace;color:var(--info);letter-spacing:.06em}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.tabs button[aria-selected=true]{border-color:var(--info);color:var(--title)}
 @media print{.top button{display:none}body{background:#fff;color:#000}.card,.t{border-color:#ccc;background:#fff}}
+.ng{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px;margin:0 0 12px}.ng .card{margin:0}.ncv{position:relative;height:250px}#ifs{max-height:520px;overflow:auto}
+.nins{list-style:none;margin:0;padding:0}.nins li{display:flex;gap:10px;padding:7px 2px;border-bottom:1px solid rgba(127,140,160,.18);font-size:13px}.nins li:last-child{border-bottom:0}.nins i{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none;background:#58a6ff}
 </style></head><body><main>
 <div class="top"><div><div class="eb">Network · NOC summary · performance (NPM)</div><h1>NOC Summary</h1></div><span class="sp"></span><span class="muted" id="up"></span><button type="button" id="print">🖨 Report</button><button type="button" id="refresh" title="Re-read the latest poll results">⟳ Refresh</button><button type="button" id="pollnow" title="Ping / poll every device now from the engine server (operator)">📡 Poll all now</button></div>
 <div id="why"></div>
@@ -49,6 +51,21 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
     <p class="note" id="nmodel"></p></div>
 </section>
 <div class="k" id="kk"></div>
+<div class="ng">
+  <div class="card"><h2>Site health <span class="c">score per site · a site with a node down drops first</span></h2><div class="ncv"><canvas id="cv-site"></canvas></div></div>
+  <div class="card"><h2>Nodes by site and state</h2><div class="ncv"><canvas id="cv-state"></canvas></div></div>
+  <div class="card"><h2>What the AI noticed <span class="c">from the learned baselines</span></h2><ul class="nins" id="nins"></ul></div>
+</div>
+<div class="ng">
+  <div class="card"><h2>Where the load is <span class="c">CPU and memory per node · bubble = latency</span></h2><div class="ncv"><canvas id="cv-load"></canvas></div></div>
+  <div class="card"><h2>Interface utilisation <span class="c">how many links in each band</span></h2><div class="ncv"><canvas id="cv-band"></canvas></div></div>
+  <div class="card"><h2>Busiest links <span class="c">receive and transmit %</span></h2><div class="ncv"><canvas id="cv-top"></canvas></div></div>
+</div>
+<div class="ng">
+  <div class="card"><h2>Latency by site <span class="c">average and worst round trip (ms)</span></h2><div class="ncv"><canvas id="cv-rtt"></canvas></div></div>
+  <div class="card"><h2>Anomalies by kind <span class="c">a node against its own baseline (robust z)</span></h2><div class="ncv"><canvas id="cv-anom"></canvas></div></div>
+  <div class="card"><h2>Nodes by vendor</h2><div class="ncv"><canvas id="cv-ven"></canvas></div></div>
+</div>
 <div class="grid">
   <div class="card"><h2>All nodes managed by NPM <span class="c">grouped by vendor, status</span></h2>
     <div style="margin-bottom:8px"><input type="search" id="q" placeholder="Filter nodes…" style="width:100%"></div>
@@ -77,7 +94,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
     drawTree();
     var I=V.interfaces||[];$('ifc').textContent=I.length?I.length+' shown':'';
     $('ifs').innerHTML=I.length?'<table><thead><tr><th>Node</th><th>Interface</th><th>Receive</th><th>Transmit</th></tr></thead><tbody>'+I.slice(0,100).map(function(i){return '<tr><td><span class="dot st-'+(i.oper==='up'?'up':'critical')+'"></span>'+esc(i.node)+'</td><td class="mono">'+esc(i.name)+'</td><td>'+ubar(i.rx)+'</td><td>'+ubar(i.tx)+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">'+(V.polled?'No interface utilisation reported. Enable SNMP polling on the devices.':'No SNMP polling yet — add SNMP credentials to the network devices in the AI Network Engineer.')+'</div>';
-    drawHealth();
+    drawHealth();drawGraphs();
     drawMap();
     var P=V.poller||{}, hm=function(t){return new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});};
     $('up').textContent=P.running?'polling the devices now…':P.last_cycle_at?'last poll '+hm(P.last_cycle_at):'not polled yet';
@@ -134,9 +151,36 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;font
   // ---- NOC intelligence: read from the SIEM, drawn here; nothing is computed on the page but colours and words
   var NOC=null,NT='attn',BRIEF=null;
   function scls(v){return v==null?'':v<50?'bad':v<80?'warn':'ok';}
-  function loadNoc(){return req('GET','/noc').then(function(r){NOC=r;drawNoc();}).catch(function(e){NOC=null;
+  function loadNoc(){return req('GET','/noc').then(function(r){NOC=r;drawNoc();drawGraphs();}).catch(function(e){NOC=null;
     $('gauge').innerHTML='<div class="empty">'+esc(e.status===404?'The engine on the server does not have the NOC intelligence yet - run the update.':e.status===403?'Not part of your job role.':e.message)+'</div>';
     $('causes').innerHTML='<div class="empty">Nothing to show until the SIEM answers.</div>';$('npanel').innerHTML='';$('nmodel').textContent='';});}
+  // the graphics, from both answers (NPM: interfaces, vendors; NOC: sites, nodes with their readings, anomalies, flapping)
+  function drawGraphs(){var C=window.zybCharts,Ch=window.Chart;if(!C)return;var N=(NOC&&NOC.nodes)||[],ST=(NOC&&NOC.sites)||[],I=(V&&V.interfaces)||[];
+    var lv=function(s){return s==null?'mute':s<50?'crit':s<80?'warn':'ok';};
+    if(ST.length){var S2=ST.slice().sort(function(a,b){return (a.score==null?101:a.score)-(b.score==null?101:b.score);});C.bars($('cv-site'),S2.map(function(s){return s.site;}),[{label:'Health',data:S2.map(function(s){return s.score;}),colors:S2.map(function(s){return lv(s.score);})}],{horizontal:true,title:'Site health'});}else C.empty($('cv-site'),'No site yet.');
+    if(N.length){var sites=[],by={};N.forEach(function(n){var k=n.site||'(no site)';if(!by[k]){by[k]={up:0,warning:0,critical:0,unknown:0};sites.push(k);}by[k][by[k][n.state]==null?'unknown':n.state]++;});
+      C.bars($('cv-state'),sites,[['up','Up','ok'],['warning','Warning','warn'],['critical','Critical','crit'],['unknown','Unknown','mute']].map(function(x){return {label:x[1],data:sites.map(function(k){return by[k][x[0]];}),color:x[2]};}),{stacked:true,title:'Nodes by site'});
+      if(Ch){var cv=$('cv-load'),o=Ch.getChart&&Ch.getChart(cv);if(o)o.destroy();cv.hidden=false;var em0=cv.parentNode.querySelector('.zyb-chart-empty');if(em0)em0.hidden=true;var pts=N.filter(function(n){return n.cpu!=null&&n.mem!=null;}),SC={up:C.color('ok'),warning:C.color('warn'),critical:C.color('crit')};
+        new Ch(cv.getContext('2d'),{type:'bubble',data:{datasets:[{label:'Nodes',data:pts.map(function(n){return {x:n.cpu,y:n.mem,r:Math.max(4,Math.min(16,4+(n.rtt||0)/4)),n:n};}),backgroundColor:pts.map(function(n){return C.alpha(SC[n.state]||C.color('mute'),.7);}),borderColor:'transparent'}]},
+          options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var n=c.raw.n;return n.name+' · CPU '+n.cpu+'% · memory '+n.mem+'% · '+(n.rtt==null?'':n.rtt+' ms');}}}},
+            scales:{x:{min:0,max:100,title:{display:true,text:'CPU %',color:C.color('mute')},ticks:{color:C.color('mute')},grid:{color:'rgba(127,140,160,.12)'}},y:{min:0,max:100,title:{display:true,text:'Memory %',color:C.color('mute')},ticks:{color:C.color('mute')},grid:{color:'rgba(127,140,160,.12)'}}}}});}
+      var rs={},rl=[];N.forEach(function(n){if(n.rtt==null)return;var k=n.site||'(no site)';if(!rs[k]){rs[k]=[];rl.push(k);}rs[k].push(n.rtt);});
+      if(rl.length)C.bars($('cv-rtt'),rl,[{label:'Average',data:rl.map(function(k){return Math.round(rs[k].reduce(function(a,b){return a+b;},0)/rs[k].length);}),color:'acc'},{label:'Worst',data:rl.map(function(k){return Math.max.apply(null,rs[k]);}),color:'warn'}],{title:'Latency'});else C.empty($('cv-rtt'),'No latency readings yet.');}
+    else{['cv-state','cv-load','cv-rtt'].forEach(function(id){C.empty($(id),'No node readings yet.');});}
+    if(I.length){var bands=[0,0,0,0,0];I.forEach(function(i){bands[Math.min(4,Math.floor((i.util||0)/20))]++;});C.bars($('cv-band'),['0-19%','20-39%','40-59%','60-79%','80-100%'],[{label:'Links',data:bands,colors:['ok','ok','acc','warn','crit']}],{title:'Utilisation bands'});
+      var T=I.slice().sort(function(a,b){return (b.util||0)-(a.util||0);}).slice(0,8);C.bars($('cv-top'),T.map(function(i){return i.node.replace(/-POC$/,'')+' '+i.name;}),[{label:'Receive %',data:T.map(function(i){return i.rx;}),color:'acc'},{label:'Transmit %',data:T.map(function(i){return i.tx;}),color:'purple'}],{horizontal:true,title:'Busiest links'});}
+    else{C.empty($('cv-band'),'No interface readings yet.');C.empty($('cv-top'),'No interface readings yet.');}
+    var A=(NOC&&NOC.anomalies)||[],ak={};A.forEach(function(a){ak[a.metric]=(ak[a.metric]||0)+1;});var AK=Object.keys(ak);
+    if(AK.length)C.ring($('cv-anom'),AK.map(function(k){return {loss:'packet loss',rtt:'latency',cpu:'CPU',mem:'memory',util:'utilisation',err:'errors'}[k]||k;}),AK.map(function(k){return ak[k];}),null,{v:A.length,l:'anomalies'},{title:'Anomalies'});else C.empty($('cv-anom'),'Every node within its own baseline.');
+    var VN=(V&&V.vendors)||[];if(VN.length)C.ring($('cv-ven'),VN.map(function(x){return x.vendor;}),VN.map(function(x){return x.count;}),null,{v:VN.reduce(function(a,b){return a+b.count;},0),l:'nodes'},{title:'Vendors'});else C.empty($('cv-ven'),'No vendor yet.');
+    var ins=[];if(ST.length){var w=ST.slice().sort(function(a,b){return (a.score==null?101:a.score)-(b.score==null?101:b.score);})[0];if(w.score!=null&&w.score<80)ins.push(w.site+' is the least healthy site ('+w.score+'/100'+(w.down?', '+w.down+' node(s) down':'')+').');}
+    if(A.length){var top=A.slice().sort(function(a,b){return b.z-a.z;})[0];ins.push(A.length+' node reading(s) far from their own baseline - the strongest: '+top.name+' '+({loss:'packet loss',rtt:'latency',cpu:'CPU',mem:'memory'}[top.metric]||top.metric)+' '+top.value+' against usually '+top.baseline+'.');}
+    var FL=(NOC&&NOC.flapping)||[];if(FL.length)ins.push(FL.length+' node(s) flapping - '+FL[0].name+' changed link state '+FL[0].flaps+' times; usually a cable, an optic or a duplex mismatch.');
+    var hot=I.filter(function(i){return (i.util||0)>=80;});if(hot.length)ins.push(hot.length+' link(s) at 80% or more - '+hot[0].node+' '+hot[0].name+' at '+hot[0].util+'%; plan capacity before users feel it.');
+    var hiC=N.filter(function(n){return (n.cpu||0)>=85||(n.mem||0)>=90;});if(hiC.length)ins.push(hiC.length+' node(s) running hot on CPU or memory.');
+    if(NOC&&NOC.forecast&&NOC.forecast.items&&!NOC.forecast.items.length&&NOC.forecast.note)ins.push('Capacity forecast: '+NOC.forecast.note+'.');
+    $('nins').innerHTML=(ins.length?ins:['Every site and node is within its usual range.']).map(function(t){return '<li><i></i><div>'+esc(t)+'</div></li>';}).join('');
+  }
   function drawNoc(){var o=NOC,c=o.counts||{},sc=o.estate_score,col=sc==null?'#3b4252':sc<50?'var(--bad)':sc<80?'var(--warn)':'var(--ok)';
     $('gauge').innerHTML='<div class="ring" style="background:conic-gradient('+col+' '+(sc||0)*3.6+'deg,rgba(255,255,255,.07) 0)"><i>'+(sc==null?'—':esc(String(sc)))+'</i></div>'
       +'<div><b style="color:var(--title)">Network health</b><div class="muted" style="font-size:12px">'+(sc==null?'not measured yet - no node has been polled':'weighted by role (core, firewall, router, gateway count double)')+'</div></div>'

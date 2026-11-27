@@ -94,7 +94,7 @@ pre.snip{background:#0d1017;border:1px solid var(--d-line);border-radius:8px;pad
   // the graphics (scores and counts; the priority chart names hosts, so operators only)
   function drawCharts(){var C=window.zybCharts,Ch=window.Chart;if(!C)return;var P=V.pillars,mx=V.matrix,I=V.infra;
     var K=Object.keys(P).filter(function(k){return P[k].available;});
-    if(Ch&&K.length>=3){var cv=$('cv-radar'),old=Ch.getChart&&Ch.getChart(cv);if(old)old.destroy();cv.hidden=false;
+    if(Ch&&K.length>=3){var cv=$('cv-radar'),old=Ch.getChart&&Ch.getChart(cv);if(old)old.destroy();cv.hidden=false;var e_cv=cv.parentNode.querySelector('.zyb-chart-empty');if(e_cv)e_cv.hidden=true;
       new Ch(cv.getContext('2d'),{type:'radar',data:{labels:K.map(function(k){return P[k].name;}),datasets:[{label:'Score',data:K.map(function(k){return P[k].score;}),borderColor:C.color('acc'),backgroundColor:C.alpha(C.color('acc'),.22),pointBackgroundColor:K.map(function(k){return col(P[k].score);}),pointRadius:5}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,ticks:{display:false,stepSize:25},grid:{color:'rgba(127,140,160,.22)'},angleLines:{color:'rgba(127,140,160,.22)'},pointLabels:{color:C.color('mute'),font:{size:11}}}}}});}
     else if(K.length)C.bars($('cv-radar'),K.map(function(k){return P[k].name;}),[{label:'Score',data:K.map(function(k){return P[k].score;}),colors:K.map(function(k){return P[k].score>=85?'ok':P[k].score>=60?'warn':'crit';})}],{horizontal:true,title:'Pillars'});else C.empty($('cv-radar'),'No pillar is measured yet.');
@@ -102,7 +102,7 @@ pre.snip{background:#0d1017;border:1px solid var(--d-line);border-radius:8px;pad
     if(H.length){var labels=H.map(function(h){return h.day.slice(5);}).concat(fi.map(function(p){return p.day.slice(5);})),pad=function(a,n){return a.concat(Array(n).fill(null));},n=fi.length;
       var unusualDays={};(V.learning.unusual||[]).forEach(function(u){if(H.length)unusualDays[u.key]=H.length-1;});
       var idx=pad(H.map(function(h){return h.index;}),n),cri=pad(H.map(function(h){return h.critical;}),n),pi=Array(Math.max(0,H.length-1)).fill(null).concat([H[H.length-1].index]).concat(fi.map(function(p){return p.value;})),pc=Array(Math.max(0,H.length-1)).fill(null).concat([H[H.length-1].critical]).concat(fc.map(function(p){return p.value;}));
-      if(Ch){var cv2=$('cv-hist'),o2=Ch.getChart&&Ch.getChart(cv2);if(o2)o2.destroy();cv2.hidden=false;
+      if(Ch){var cv2=$('cv-hist'),o2=Ch.getChart&&Ch.getChart(cv2);if(o2)o2.destroy();cv2.hidden=false;var e_cv2=cv2.parentNode.querySelector('.zyb-chart-empty');if(e_cv2)e_cv2.hidden=true;
         new Ch(cv2.getContext('2d'),{type:'line',data:{labels:labels,datasets:[
           {label:'Posture index',data:idx,borderColor:C.color('acc'),backgroundColor:C.alpha(C.color('acc'),.15),fill:true,tension:.35,yAxisID:'y',pointRadius:idx.map(function(_,i){return unusualDays.index===i?6:0;}),pointBackgroundColor:C.color('crit')},
           {label:'Index projection',data:fi.length?pi:[],borderColor:C.color('acc'),borderDash:[6,5],pointRadius:0,fill:false,tension:0,yAxisID:'y'},

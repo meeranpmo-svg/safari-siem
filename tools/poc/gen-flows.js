@@ -16,7 +16,7 @@ const IN_C = [['China', 0.22, 0.9], ['Russia', 0.14, 0.95], ['United States', 0.
 const OUT_C = [['United States', 0.3, 0.02], ['Ireland', 0.18, 0.01], ['Saudi Arabia', 0.2, 0.01], ['Netherlands', 0.08, 0.03], ['United Arab Emirates', 0.06, 0.02], ['Germany', 0.05, 0.02], ['Singapore', 0.04, 0.05], ['United Kingdom', 0.04, 0.02], ['Seychelles', 0.01, 0.6], ['Moldova', 0.005, 0.8]];
 const APPS = [['Microsoft.Office.365', 0.24, 0], ['Oracle.Fusion.Cloud', 0.12, 0], ['SSL', 0.12, 0.02], ['DNS', 0.1, 0.01], ['Windows.Update', 0.08, 0], ['Microsoft.Teams', 0.07, 0], ['Google.Services', 0.05, 0.02], ['WhatsApp', 0.04, 0.3], ['YouTube', 0.03, 0.6], ['BitTorrent', 0.01, 1], ['Tor', 0.003, 1], ['Zoom', 0.03, 0]];
 const PORTS = [['tcp', 443, 0.55, 0.01], ['udp', 53, 0.12, 0.01], ['tcp', 80, 0.08, 0.05], ['udp', 443, 0.06, 0.02], ['tcp', 3389, 0.03, 0.97], ['tcp', 22, 0.03, 0.92], ['tcp', 445, 0.02, 0.99], ['tcp', 25, 0.02, 0.2], ['udp', 123, 0.02, 0], ['tcp', 8443, 0.02, 0.1], ['tcp', 1433, 0.01, 1], ['tcp', 23, 0.01, 1]];
-const ZONES = [['wan', 0.45], ['lan', 0.3], ['site-vpn', 0.12], ['dmz', 0.08], ['guest', 0.05]];
+const ZONES = [['wan', 0.45, 0.68], ['lan', 0.3, 0.02], ['site-vpn', 0.12, 0.05], ['dmz', 0.08, 0.2], ['guest', 0.05, 0.15]];
 const DOC = ['203.0.113.', '198.51.100.', '192.0.2.'];
 
 function fakeCh(o) {
@@ -54,7 +54,7 @@ function fakeCh(o) {
   const NOW = Date.now(), S = {}, Dr = {};
   for (const range of [15, 60, 1440, 10080]) for (const dir of ['in', 'out']) {
     const o = F.options({ range: String(range), dir }, NOW), ch = fakeCh(o);
-    const s = await F.summary(ch, 'siem', o, true); s.source = 'fw'; s.netflow_available = false; S[range + dir] = s;
+    const s = F.analyse(await F.summary(ch, 'siem', o, true)); s.source = 'fw'; s.netflow_available = false; S[range + dir] = s;
     Dr[range + dir] = await F.drill(ch, 'siem', o, { country: 'POC' });
   }
   const out = '// Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE.\n'

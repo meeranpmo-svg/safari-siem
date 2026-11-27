@@ -105,3 +105,15 @@ test('mail on the wire: SMTP sessions by country inbound and outbound, sending a
   const empty = harness({});
   r = await empty.call('/flows/mail', {}); assert.equal(r.body.connected, false, 'no firewall logs: not connected'); assert.deepEqual(r.body.inbound.countries, []);
 });
+
+test('analysis: a minute of denies far above the window’s usual, the deny ratio, one country holding the denies, a moved share', () => {
+  const F = require('../engine/soc/flows');
+  const hist = Array.from({ length: 60 }, (_, i) => ({ i, t: i * 60000, allow: 100 + (i % 5), deny: i === 42 ? 900 : 40 + (i % 3), bytes: 1000 }));
+  const total = hist.reduce((n, h) => n + h.allow + h.deny, 0), denied = hist.reduce((n, h) => n + h.deny, 0);
+  const v = F.analyse({ hist, total, denied, countries: [{ name: 'SynLand', allow: 0, deny: Math.round(denied * 0.7), bytes: 0 }, { name: 'Other', allow: 0, deny: 100, bytes: 0 }],
+    talkers: [{ svc: 'tcp/445 backup', bytes: 900 }, { svc: 'tcp/443', bytes: 100 }], dev: [{ label: 'Destination port', rows: [{ v: '3389', now: 30, before: 5 }] }] });
+  assert.equal(v.anomalies[0].i, 42); assert.equal(v.anomalies[0].kind, 'denied'); assert.ok(v.anomalies[0].z >= 3.5);
+  assert.ok(v.insights.some((s) => /minute\(s\) with denied traffic far above usual/.test(s)) && v.insights.some((s) => /SynLand is the source of 70%/.test(s)));
+  assert.ok(v.insights.some((s) => /One conversation carries 90%/.test(s)) && v.insights.some((s) => /Destination port 3389 went up by 25 points/.test(s)));
+  assert.deepEqual(F.analyse({ hist: [] }).anomalies, []);
+});

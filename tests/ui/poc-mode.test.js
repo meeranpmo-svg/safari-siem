@@ -42,6 +42,9 @@ let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FA
     ok((await p2.$$('#ksa .zksa-pt')).length >= 9 && /Jubail Project Site/.test(await p2.textContent('#sitel')), 'assets by site on the Saudi map'); await p2.close();
     // every Refresh button shows it worked
     await p.click('#refresh'); await p.waitForSelector('#zyb-rf-note:not([hidden])', { timeout: 5000 }); ok(/Refreshed/.test(await p.textContent('#zyb-rf-note')), 'Refresh says it refreshed'); await p.close();
+    // Network Flows: what the AI noticed (the engine's analysis over the illustrative flows), the unusual minute marked on flow creation
+    p = await ctx.newPage(); await p.goto(base + 'network-flows.html?poc=1'); await p.waitForSelector('#aiPanel:not([hidden])', { timeout: 15000 });
+    ok(/far above usual/.test(await p.textContent('#aiList')) && (await p.$$('#hist path.anom')).length >= 1 && /wan/.test(await p.textContent('#zones') || ''), 'flows: AI notes, the unusual minute marked, zones filled'); await p.close();
     // POC off: the same page shows the server's answer, no ribbon
     p = await ctx.newPage(); await p.goto(base + 'ndr.html'); await p.waitForTimeout(1500);
     ok(!(await p.$('.zyb-poc-r')) && seen.some((s) => /\/ndr/.test(s)), 'POC off: live request, no ribbon'); await p.close();

@@ -73,6 +73,7 @@ const npm = () => { const ns = UP ? [node('sw-syn-1', 'up', ''), node('sw-syn-2'
     WHO = { user: 'omar.syn', role: 'operator' }; p = await open(); await p.waitForSelector('#causes .cause', { timeout: 10000 });
     ok((await p.textContent('#gauge')).includes('42') && /Down 3/.test(await p.textContent('#gauge')), 'network health score and counts from the SIEM');
     ok(/GW-SYN \(gateway\) is down at Jeddah/.test(await p.textContent('#causes')) && /not counted again/.test(await p.textContent('#causes')), 'one probable cause covers the nodes behind it');
+    await p.waitForTimeout(400); const ngc = (await p.$$('.ng canvas')).length, ids = await p.$$eval('.ng .ncv', (L) => L.map((x) => (x.querySelector('canvas') || {}).id || x.innerHTML.slice(0, 80)).join(' ')), nli = (await p.$$('#nins li')).length; ok(ngc === 8 && nli >= 1, 'eight charts and what the AI noticed: ' + ngc + ' canvases, ' + nli + ' notes; ' + ids);
     ok(!(await p.$('#npanel img')) && /<img src=x/.test(await p.textContent('#npanel')) && /CPU 93 %/.test(await p.textContent('#npanel')), 'needs attention: itemised reasons, a hostile name shown as text');
     ok((await p.getAttribute('#npanel a', 'href')) === 'node-details.html?id=core%3C1%3E', 'a node opens its details (id encoded)');
     await p.click('#ntabs [data-t="anom"]'); ok(/Response time \(ms\)/.test(await p.textContent('#npanel')) && /7\.2/.test(await p.textContent('#npanel')), 'anomaly against the node\'s own normal, with its z');
