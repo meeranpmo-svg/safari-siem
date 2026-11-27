@@ -63,6 +63,14 @@ let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FA
     const pg = await p.evaluate(() => ({ loop: [...document.querySelectorAll('#flow text')].some((t) => t.textContent === 'learns from every decision'), tiles: document.getElementById('kk').textContent, score: document.querySelectorAll('#score .row').length, learn: document.getElementById('learn').textContent, how: document.querySelectorAll('#how li').length, xss: window.__x === 1 || !!document.querySelector('img[src="x"]') }));
     ok(pg.loop && /Stages working/.test(pg.tiles) && pg.score === 7 && /risk unwatched/.test(pg.learn) && /threshold/.test(pg.learn) && pg.how === 7, 'the loop, the tiles, the 7 outcome measures, what it learned, what each stage does');
     ok(!pg.xss, 'record text stays text');
+    // AI / ML band from the Risk Command Center, what the AI noticed, and the company's switches (brand): links only to its pages
+    const ai = await p.evaluate(() => ({ band: !document.getElementById('aiband').hidden, charts: [...document.querySelectorAll('#aiband canvas')].map((c) => c.getAttribute('aria-label') || ''), ins: document.getElementById('ins').innerText,
+      hrefs: [...document.querySelectorAll('#flow a')].map((a) => a.getAttribute('href')), mod: !document.getElementById('modn').hidden, purple: /#a78bfa|#8b7fe0/.test(document.getElementById('flow').innerHTML) }));
+    ok(ai.band && ai.charts.length === 3 && ai.charts.every(Boolean) && /Risks by level/.test(ai.charts[0]) && /What machine learning found/.test(ai.charts[1]) && /proposals/.test(ai.charts[2]), 'AI / ML band: ' + ai.charts.map((c) => c.slice(0, 30)).join(' | '));
+    ok(/Class III \/ IV|outside the appetite|early warning|open risks are rated high|simulated year/.test(ai.ins), 'what the AI noticed: ' + ai.ins.slice(0, 200));
+    const org = JSON.parse(/ZYB_ORG = Object\.freeze\((\{.*?\})\)/.exec(fs.readFileSync(path.join(DASH, 'vendor/zyb-org.js'), 'utf8'))[1]), boff = (org.modules_off || []).includes('brisk');
+    ok(ai.hrefs.every((h) => !(org.pages_off || []).includes(h.replace(/[#?].*$/, '').replace(/\.html$/, ''))) && (!boff || ai.hrefs.includes('risk-command.html')) && !ai.mod, 'links only to pages the company has; no module note while business-risk data is there: ' + ai.hrefs.join(','));
+    ok(!ai.purple, 'company colours, not the old purple');
     if (process.env.SHOTS) { await p.waitForTimeout(300); await p.screenshot({ path: path.join(process.env.SHOTS, 'risk-flow.png'), fullPage: true }); }
     await Promise.all([p.waitForURL(/ai-team\.html/, { timeout: 10000 }).catch(() => null), p.click('#flow a[data-stage="officer"]')]); ok(/ai-team\.html/.test(p.url()), 'a stage opens its page');
     // a viewer reads; Arabic; phone
