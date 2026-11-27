@@ -75,7 +75,12 @@ function registerDiscoveryRoutes(srv, app) {
   srv.route('POST', '/hyperv', (ctx) => {
     const a = app.agentgw.authenticate(ctx.bearer());
     if (!a) throw bad('invalid or revoked agent key', 401);
-    return hvm(ctx.body, D.ingestHyperv(ctx.body, { user: `agent:${a.id}`, role: 'agent', ip: ctx.ip }, { untrusted: true }));
+    // no discovery scope covers this host yet: the host's figures are still kept (Hyper-V Servers) and the answer says why its VMs did
+    // not reach Asset Discovery - a report is never thrown away for that
+    let r;
+    try { r = D.ingestHyperv(ctx.body, { user: `agent:${a.id}`, role: 'agent', ip: ctx.ip }, { untrusted: true }); }
+    catch (e) { if (e.status !== 409) throw e; r = { ok: true, discovery: false, why: e.message }; }
+    return hvm(ctx.body, r);
   }, { agent: true, maxBody: 4 * 1024 * 1024 });
 }
 

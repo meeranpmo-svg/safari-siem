@@ -40,7 +40,7 @@ function lsq(pts) { const k = pts.length; if (k < 5) return null; let sx = 0, sy
 function normMetrics(raw) {
   const b = raw && typeof raw === 'object' ? raw : {}, h = b.host && typeof b.host === 'object' ? b.host : {};
   const name = s(h.name || h.computer_name, 120); if (!name) throw httpErr(400, 'host.name is required');
-  const host = { name, cores: n(h.logical_processors), cpu_pct: n(h.cpu_pct, 100), mem_total_mb: n(h.mem_total_mb), mem_free_mb: n(h.mem_free_mb),
+  const host = { name, ip: /^\d{1,3}(\.\d{1,3}){3}$/.test(s(h.ip, 15)) ? s(h.ip, 15) : null, cores: n(h.logical_processors), cpu_pct: n(h.cpu_pct, 100), mem_total_mb: n(h.mem_total_mb), mem_free_mb: n(h.mem_free_mb),
     volumes: (Array.isArray(h.volumes) ? h.volumes : []).slice(0, 64).map((v) => ({ name: s(v.name, 120), size_gb: n(v.size_gb), free_gb: n(v.free_gb), csv: !!v.csv })).filter((v) => v.name && v.size_gb),
     // network speed: each physical NIC's link speed and its receive / send rate at the time of the report (bits per second)
     nics: (Array.isArray(h.nics) ? h.nics : []).slice(0, 32).map((x) => ({ name: s(x.name, 120), link_mbps: n(x.link_mbps, 1e6), rx_bps: n(x.rx_bps, 1e12), tx_bps: n(x.tx_bps, 1e12) })).filter((x) => x.name),
@@ -131,7 +131,7 @@ function createHypervManager(app, opts = {}) {
   function view() {
     const t = now(), hosts = latest().all().sort((a, b) => a.host.name.localeCompare(b.host.name)).map((r) => {
       const days = daily().all((x) => x.id.startsWith(r.id + '|')).sort((a, b) => a.id.localeCompare(b.id)).slice(-60), sm = samples().all((x) => x.host === r.id && t - x.t <= DAY).sort((a, b) => a.t - b.t), a = assess(r, days, t, sm);
-      return { name: r.host.name, at: r.at, stale: t - Date.parse(r.at) > 2 * 3600000, cores: r.host.cores, cpu_pct: r.host.cpu_pct, mem_total_mb: r.host.mem_total_mb, mem_free_mb: r.host.mem_free_mb, volumes: r.host.volumes, nics: r.host.nics || [], disk: r.host.disk || null,
+      return { name: r.host.name, ip: r.host.ip || null, at: r.at, stale: t - Date.parse(r.at) > 2 * 3600000, cores: r.host.cores, cpu_pct: r.host.cpu_pct, mem_total_mb: r.host.mem_total_mb, mem_free_mb: r.host.mem_free_mb, volumes: r.host.volumes, nics: r.host.nics || [], disk: r.host.disk || null,
         trend: sm.map((x) => ({ t: new Date(x.t).toISOString(), cpu: x.cpu, mem_pct: x.mem_pct, rx_bps: x.rx_bps, tx_bps: x.tx_bps, disk_ms: x.disk_ms })),
         vms: r.vms.map((v) => ({ name: v.name, state: v.state, vcpus: v.vcpus, cpu_pct: v.cpu_pct, mem_assigned_mb: v.mem_assigned_mb, mem_demand_mb: v.mem_demand_mb, heartbeat: v.heartbeat, checkpoints: v.checkpoints.length, replication: v.replication, uptime_s: v.uptime_s, net_rx_bps: v.net_rx_bps == null ? null : v.net_rx_bps, net_tx_bps: v.net_tx_bps == null ? null : v.net_tx_bps })),
         findings: a.findings, capacity: a.capacity, vcpu_ratio: a.vcpu_ratio, snapshots: days.length };
