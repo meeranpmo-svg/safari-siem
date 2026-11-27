@@ -48,6 +48,9 @@ let WHO = { user: 'admin.syn', role: 'admin' }; const POSTS = [];
     await p.selectOption('#sf [name=kind]', 'dc'); await p.fill('#sf [name=sid]', 'dc-hq-01'); await p.selectOption('#sf [name=site]', 'hq'); await p.click('#sf button[type=submit]'); await p.waitForTimeout(500);
     ok(POSTS.some((x) => x[0] === '/api/soc/onboard/sources' && x[1].kind === 'dc' && x[1].id === 'dc-hq-01'), 'a domain controller is created as a DC source');
     ok(/Default Domain Controllers Policy/.test(await p.textContent('#siem')), 'the page says how domain controllers are set up');
+    // the one command: fetched from this portal, the fingerprint checked before anything runs, continuous mode for a DC, the token removed
+    const one = (await p.textContent('#onecmd')) || '', zsha = M.items.find((i) => i.file === 'sentra-siem-windows-agent.zip').sha256.toUpperCase();
+    ok(/\/agent\/packages\/sentra-siem-windows-agent\.zip/.test(one) && one.includes("-ne '" + zsha + "'") && / -SourceId dc-hq-01 /.test(one) && / -Loop;/.test(one) && /Remove-Item \.\\agent\.token/.test(one) && /synthetic-ingest-token/.test(one), 'one command for the DC: ' + one.slice(0, 160));
     await p.waitForSelector('#ag table'); const ag = await p.textContent('#ag');
     ok(/SITE-PC-SYN-01/.test(ag) && /reporting/.test(ag) && /silent/.test(ag) && /2 agents · 1 silent/.test(await p.textContent('#agn')), 'connected agents with the silent one');
     ok(!(await p.evaluate(() => window.PWN)) && /<img src=x/.test(ag), 'a hostile name stays text');

@@ -39,6 +39,22 @@ pre.cmd{white-space:pre-wrap;word-break:break-all;background:rgba(127,140,160,.1
     x.onerror = x.ontimeout = function () { bad(new Error('not reachable')); }; x.send(b ? JSON.stringify(b) : null); }); }
   function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
   function kb(n) { return n > 1048576 ? (Math.round(n / 104857.6) / 10) + ' MB' : Math.round(n / 1024) + ' KB'; }
+  // one PowerShell command for a Windows server / domain controller: fetch the package from this portal (no session needed, no secret
+  // inside), check its SHA-256 against the one this page shows BEFORE anything runs, install with this source's token, remove the token
+  function psq(x) { return "'" + String(x).replace(/'/g, "''") + "'"; }
+  function oneCommand(sid, token, kind) {
+    var h = sha('sentra-siem-windows-agent.zip').toUpperCase();
+    return "[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $ErrorActionPreference='Stop'; "
+      + "$d=Join-Path $env:ProgramData 'SentraAgent-setup'; New-Item -ItemType Directory -Force $d | Out-Null; "
+      + "$p=Invoke-RestMethod " + psq(SERVER + '/agent/packages/sentra-siem-windows-agent.zip') + "; [IO.File]::WriteAllBytes((Join-Path $d 'agent.zip'), [Convert]::FromBase64String($p.b64)); "
+      + "if ((Get-FileHash (Join-Path $d 'agent.zip') -Algorithm SHA256).Hash -ne " + psq(h) + ") { throw 'the downloaded agent does not match its fingerprint - stopped' }; "
+      + "Expand-Archive (Join-Path $d 'agent.zip') $d -Force; Set-Location (Join-Path $d 'sentra-siem-windows-agent'); "
+      + "Set-Content .\\agent.token -Value " + psq(token) + " -NoNewline; "
+      + "powershell -NoProfile -ExecutionPolicy Bypass -File .\\install-agent.ps1 -CollectorUrl " + SERVER + " -SourceId " + sid + " -TokenFile .\\agent.token -SetLogSizes" + (kind === 'dc' ? ' -Loop' : '') + "; "
+      + "Remove-Item .\\agent.token; schtasks /Query /TN SentraAgent";
+  }
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-copy1]'); if (!b) return; var t = document.getElementById(b.getAttribute('data-copy1')).textContent;
+    try { navigator.clipboard.writeText(t).then(function () { b.textContent = 'Copied'; }, function () { b.textContent = 'Select the text and copy it'; }); } catch (x) { b.textContent = 'Select the text and copy it'; } });
   function sha(file) { var i = (M && M.items || []).filter(function (x) { return x.file === file; })[0]; return i ? i.sha256 : ''; }
   function drawPk() {
     var L = (M && M.items) || [];
@@ -71,7 +87,10 @@ pre.cmd{white-space:pre-wrap;word-break:break-all;background:rgba(127,140,160,.1
       (function next() { if (i++ >= n) { $('tout').innerHTML = '<p class="note">Copy these now - they are not shown again. Each works once, until ' + esc(String(out[0].expires_at).slice(0, 16).replace('T', ' ')) + ' UTC.</p><pre class="cmd">' + out.map(function (t) { return esc(t.token); }).join('\n') + '</pre>'; return; }
         req('POST', '/api/itam/settings/agent-tokens', { note: 'Asset agent: ' + site, site: site }).then(function (t) { out.push(t); next(); }, function (er) { $('tout').innerHTML = '<div class="err">' + esc(er.message) + '</div>'; }); })(); return; }
     req('POST', '/api/soc/onboard/sources', { kind: f.kind ? f.kind.value : 'windows', id: f.sid.value.trim(), label: f.label.value.trim() || undefined, site: f.site.value }).then(function (r) {
-      $('sout').innerHTML = '<p class="note">Source <b>' + esc(r.source.id) + '</b> created. The token is shown <b>once</b> - copy it now.</p>' + (r.token ? '<div class="sm">Token</div><pre class="cmd">' + esc(r.token) + '</pre>' : '')
+      var kind = f.kind ? f.kind.value : 'windows', one = r.token && sha('sentra-siem-windows-agent.zip') ? oneCommand(r.source.id, r.token, kind) : '';
+      $('sout').innerHTML = '<p class="note">Source <b>' + esc(r.source.id) + '</b> created. The token is shown <b>once</b> - copy it now.</p>'
+        + (one ? '<div class="sm"><b>Easiest - one command.</b> On the server, open PowerShell <b>as Administrator</b>, paste it and press Enter: it downloads the agent from this portal, checks its fingerprint, installs it' + (kind === 'dc' ? ' in continuous mode with a larger Security log' : '') + ' and removes the token file.</div><pre class="cmd" id="onecmd">' + esc(one) + '</pre><button type="button" class="btn sm" data-copy1="onecmd">Copy the command</button>' + (kind === 'dc' ? '<p class="sm mut">Domain controllers: set the audit policy once for all DCs in the <i>Default Domain Controllers Policy</i> GPO (the subcategories are listed below).</p>' : '') + '<div class="sm mut" style="margin-top:10px">Or step by step:</div>' : '')
+        + (r.token ? '<div class="sm">Token</div><pre class="cmd">' + esc(r.token) + '</pre>' : '')
         + (r.instructions || []).filter(function (x) { return !x.lang || x.lang === 'en'; }).map(function (x) { return '<div class="sm"><b>' + esc(x.title) + '</b></div><pre class="cmd">' + esc(x.body) + '</pre>'; }).join('');
     }, function (er) { $('sout').innerHTML = '<div class="err">' + esc(er.message) + '</div>'; }); });
   var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } start(); }; w.onerror = start; w.send();

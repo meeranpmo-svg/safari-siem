@@ -570,6 +570,9 @@ function registerDuty(srv, app, opts = {}) {
   // Scope Studio (engine/discovery-advisor.js; ML in pyengine/scope_rules.py): Asset Discovery coverage, gaps as proposals, scope
   // health and tuning learned from the platform's own scans, and an agentic AI advisor that drafts proposals a System Admin accepts
   // the name behind an IP for the add-server / add-device forms: reverse DNS confirmed by a forward lookup (engine/net-resolve.js)
+  // the agent packages for a server to fetch itself (one-command installs; no secret inside, the command checks the SHA-256)
+  const APK = optional('./agent-packages');
+  if (APK) APK.registerAgentPackages(srv, app, APK.createAgentPackages({ dir: opts.agentsDir }));
   const NRS = optional('./net-resolve');
   if (NRS) NRS.registerResolve(srv, app, NRS.createResolve({ resolver: opts.dnsResolver }));
   const DAM = optional('./discovery-advisor');
