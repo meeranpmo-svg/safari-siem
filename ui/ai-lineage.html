@@ -1,4 +1,4 @@
-<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Data Lineage</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
+<!doctype html><html lang="en" data-bs-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Data Lineage</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script><link rel="stylesheet" href="vendor/tabler/tabler-icons.min.css">
 <!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
 <style>
 :root{--bg:#0b0e14;--pn:#121722;--rs:#18202d;--ln:#232c3c;--tx:#e8ecf3;--mu:#8c95a8;--cr:#c92a44;--hi:#ef5b6b;--me:#f59f00;--lo:#3ccf91;--ac:#3b82f6}
@@ -22,12 +22,17 @@ main{max-width:1500px;margin:0 auto;padding:16px 16px 60px}
 .note{background:var(--rs);border:1px solid var(--ln);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px}
 a{color:#7fb0ff}
 @media (max-width:1000px){.lay{grid-template-columns:1fr}}@media (max-width:640px){.hero h1{font-size:26px}}
+.lk{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}.lk .t{border:1px solid rgba(127,140,160,.25);border-radius:12px;padding:10px 12px}.lk .l{font-size:12px;opacity:.8}.lk .v{font-size:24px;font-weight:700;margin:2px 0}.lk .s{font-size:12px;opacity:.75}.lk .t.bad .v{color:#ff7b72}.lk .t.warn .v{color:#e3b341}.lk .t.ok .v{color:#3fb950}
+.aig{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:0 0 12px}.aig .card{margin:0}.cv{position:relative;height:220px}.ins{list-style:none;margin:0;padding:0}.ins li{padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
 </style></head><body><main>
 <div class="hero"><h1>AI Data Lineage</h1><p>Which AI can reach which data store, and which classes of data those stores hold: AI apps from the Shadow AI register, Microsoft 365 Copilot when it is licensed, and the platform's own AI engineers. Every line says why it is drawn. An indicator for a person to confirm, not proof that data was misused.</p></div>
 <div id="err"></div>
 <div class="bar1"><label class="sm mu" for="max">Stores shown</label><select class="inp" id="max" aria-label="Stores shown"><option value="8">8</option><option value="14" selected>14</option><option value="24">24</option><option value="40">40</option></select><span class="sp"></span><span class="sm mu" id="gen"></span><button type="button" class="btn" id="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button></div>
 <div id="body" hidden>
  <div id="empty"></div>
+ <div class="lk" id="lk"></div>
+ <div class="aig" id="aiband" hidden><div class="card"><h2>How AI touches the data <span class="sm mu">AI · ML · lines by kind</span></h2><div class="cv"><canvas id="cv-kind"></canvas></div></div><div class="card"><h2>Data classes within AI reach <span class="sm mu">stores an AI can reach that hold them</span></h2><div class="cv"><canvas id="cv-class"></canvas></div></div><div class="card"><h2>Widest reach <span class="sm mu">data stores per AI actor</span></h2><div class="cv"><canvas id="cv-actor"></canvas></div></div></div>
+ <div class="card" id="inscard" hidden><h2>What the AI noticed <span class="sm mu">AI · ML</span></h2><ul class="ins" id="ins"></ul><div class="sm mu" style="margin-top:6px">Indicators for a person to confirm, not proof that data was misused.</div></div>
  <div class="lay">
   <div class="card"><h2>AI actors → data stores → data classes</h2><div class="gw"><svg id="g" role="group" aria-label="AI data lineage graph" xmlns="http://www.w3.org/2000/svg"></svg></div><div class="lgd" id="lgd"></div></div>
   <div class="card det" id="det" aria-live="polite"><div class="mu">Select a node (click, or Tab and Enter) to see what it is and why each line exists.</div></div>
@@ -75,7 +80,36 @@ a{color:#7fb0ff}
     $('empty').innerHTML=G.empty?'<div class="note">'+esc(G.empty)+'</div>':'';
     $('lgd').innerHTML=Object.keys(G.legend).map(function(k){return '<span><i style="border-top-color:'+(KC[k]||'#8c95a8')+(DASH[k]?';border-top-style:dashed':'')+'"></i>'+esc(k)+' <span class="mu">- '+esc(G.legend[k])+'</span></span>';}).join('');
     var N=(G.notes||[]).concat(G.not_drawn||[]);$('notes').hidden=!N.length;$('notes').innerHTML='<h2>Notes</h2><ul>'+N.map(function(x){return '<li class="sm">'+esc(x)+'</li>';}).join('')+'</ul>'+(G.named?'':'<div class="sm mu">Store names are shown to operators and administrators; here each store type is one node.</div>');
-    $('foot').textContent=G.note;if(SEL&&!node(SEL))SEL=null;draw();list();if(SEL)detail(SEL);}
+    $('foot').textContent=G.note;if(SEL&&!node(SEL))SEL=null;draw();list();insights();if(SEL)detail(SEL);}
+  /* AI / ML summary from the graph itself (nodes and edges the engine drew, each with its basis); nothing invented */
+  var SENS=/personal|pii|national id|iqama|health|medical|salary|payroll|bank|card|financial|credential|password|secret/i;
+  function insights(){
+    var N=G.nodes||[],E=G.edges||[],C=window.zybCharts,col=function(c){return N.filter(function(n){return n.column===c;});};
+    var A=col('actor'),S=col('store'),K=col('class'),toStore=E.filter(function(e){var b=node(e.to);return b&&b.column==='store';});
+    var kinds={};toStore.forEach(function(e){kinds[e.kind]=(kinds[e.kind]||0)+1;});
+    var reached={};toStore.forEach(function(e){reached[e.to]=1;});
+    // data classes held by stores an AI reaches (store -> class "holds" edges)
+    var cls={};E.forEach(function(e){if(!reached[e.from])return;var c=node(e.to);if(c&&c.column==='class')cls[c.label]=(cls[c.label]||0)+1;});
+    var CK=Object.keys(cls).sort(function(a,b){return cls[b]-cls[a];}).slice(0,10),sens=CK.filter(function(k){return SENS.test(k);});
+    var per={};toStore.forEach(function(e){per[e.from]=(per[e.from]||0)+1;});var AK=Object.keys(per).sort(function(a,b){return per[b]-per[a];}).slice(0,10);
+    var sent=toStore.filter(function(e){return e.kind==='sent';}),sentA={};sent.forEach(function(e){sentA[e.from]=1;});
+    var T=function(l,v,sub,c){return '<div class="t '+(c||'')+'"><div class="l">'+esc(l)+'</div><div class="v">'+esc(String(v))+'</div><div class="s">'+esc(sub||'')+'</div></div>';};
+    $('lk').innerHTML=N.length?T('AI actors',A.length,A.filter(function(n){return n.type==='ai-app';}).length+' apps · '+A.filter(function(n){return n.type==='ai-engineer';}).length+' engineers')
+      +T('Data stores reached',Object.keys(reached).length,'of '+S.length+' shown',Object.keys(reached).length?'warn':'ok')+T('Data classes in reach',CK.length,sens.length?sens.length+' sensitive':'none sensitive',sens.length?'bad':'ok')
+      +T('Data sent to AI',sent.length,Object.keys(sentA).length+' AI actors',sent.length?'bad':'ok'):'';
+    var draw1=C&&window.Chart&&toStore.length;$('aiband').hidden=!draw1;
+    if(draw1){var KK=Object.keys(kinds).sort(function(a,b){return kinds[b]-kinds[a];}),CM={sent:'crit',allowed:'ok',reach:'acc',reads:'warn',metadata:'mute'};
+      C.ring($('cv-kind'),KK,KK.map(function(k){return kinds[k];}),KK.map(function(k){return CM[k]||'purple';}),{v:toStore.length,l:'lines'},{title:'How AI touches the data'});
+      if(CK.length)C.bars($('cv-class'),CK,[{label:'Stores in AI reach',data:CK.map(function(k){return cls[k];}),colors:CK.map(function(k){return SENS.test(k)?'crit':'teal';})}],{horizontal:true,title:'Data classes within AI reach'});else C.empty($('cv-class'),'No classified data in AI reach.');
+      C.bars($('cv-actor'),AK.map(function(id){var n=node(id);return n?cut(n.label,30):id;}),[{label:'Data stores',data:AK.map(function(id){return per[id];}),color:'purple'}],{horizontal:true,title:'Widest reach'});}
+    var L=[];
+    if(sent.length)L.push('📤 Data was <b>sent</b> to <b>'+Object.keys(sentA).length+'</b> AI actors ('+sent.length+' lines) - confirm each is approved.');
+    if(sens.length)L.push('🔐 Sensitive data classes within AI reach: <b>'+sens.map(esc).join(', ')+'</b> - PDPL: check the purpose and the lawful basis.');
+    var cop=A.filter(function(n){return n.type==='copilot';})[0];if(cop&&per[cop.id])L.push('🧭 Microsoft 365 Copilot can reach <b>'+per[cop.id]+'</b> data stores - check their sharing before more seats are assigned.');
+    if(AK.length){var top=node(AK[0]);L.push('📈 The widest reach is <b>'+esc(top?top.label:AK[0])+'</b> ('+per[AK[0]]+' data stores).');}
+    var un=A.filter(function(n){return n.type==='ai-app'&&/unapproved|shadow|not approved|unsanctioned/i.test(String((n.detail||{}).status||''));}).length;if(un)L.push('🕵️ <b>'+un+'</b> AI apps in the Shadow AI register are not approved.');
+    $('inscard').hidden=!L.length;$('ins').innerHTML=L.map(function(x){return '<li>'+x+'</li>';}).join('');
+  }
   function load(){return req('/ai-lineage?max='+encodeURIComponent($('max').value)).then(function(g){$('err').innerHTML='';G=g;render();},function(e){$('body').hidden=true;
     $('err').innerHTML='<div class="err"><b>AI Data Lineage could not load.</b> '+esc(e.message)+(e.status===404?' - update IT Asset Management (engine/ai-lineage.js).':'')+'</div>';});}
   document.addEventListener('click',function(ev){var t=ev.target;var nd=t.closest&&t.closest('[data-node]');if(nd){detail(nd.getAttribute('data-node'));return;}var b=t.closest&&t.closest('button');if(b&&b.id==='refresh')load();});

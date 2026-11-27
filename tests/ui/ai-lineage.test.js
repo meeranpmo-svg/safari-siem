@@ -57,6 +57,13 @@ const HOSTILE_APP = '<svg onload="window.__pwned=1">GPT-SYN';
     ok(await wait(p, () => document.getElementById('detname').textContent === 'Health' && /holding Health data/.test(document.getElementById('det').textContent)), 'the list view selects a node too');
     ok(/allowed by the Shadow AI register/.test(await p.textContent('#lgd')), 'legend');
     ok(/Other AI engineers/.test(await p.textContent('#notes')), 'what is not drawn is said');
+    // AI / ML summary from the graph itself: tiles, three charts, what the AI noticed (Copilot reach, sensitive classes in reach)
+    const lk = (await p.$eval('#lk', (e) => e.innerText)).replace(/\s+/g, ' ');
+    ok(/AI actors \d+/.test(lk) && /Data stores reached \d+ of \d+ shown/.test(lk) && /Data classes in reach \d+/.test(lk) && /Data sent to AI \d+/.test(lk), 'tiles from the graph: ' + lk);
+    const lab = await p.$$eval('#aiband canvas', (x) => x.map((c) => c.getAttribute('aria-label') || ''));
+    ok(!(await p.$eval('#aiband', (e) => e.hidden)) && lab.length === 3 && /How AI touches the data/.test(lab[0]) && /Data classes within AI reach/.test(lab[1]) && /Health/.test(lab[1]) && /Widest reach/.test(lab[2]), 'three charts: ' + lab.map((l) => l.slice(0, 60)).join(' | '));
+    const ins = (await p.$eval('#ins', (e) => e.innerText)).replace(/\s+/g, ' ');
+    ok(/Microsoft 365 Copilot can reach \d+ data stores/.test(ins) && /Sensitive data classes within AI reach: .*Health/.test(ins) && /PDPL/.test(ins) && /widest reach is/.test(ins), 'what the AI noticed: ' + ins);
     // hostile AI app name stays text
     ok(await p.evaluate((h) => [...document.querySelectorAll('#g .nd text')].some((t) => t.textContent.startsWith(h.slice(0, 20))) && document.getElementById('list').textContent.includes(h) && !document.querySelector('#g svg svg, #list svg') && !window.__pwned, HOSTILE_APP), 'a hostile AI app name stays text');
     // the store limit
