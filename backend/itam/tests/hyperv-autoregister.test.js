@@ -45,4 +45,11 @@ test('a host report with no scope covering it is kept: its figures are recorded,
   const r = await e.req('POST', '/agent/hyperv', { bearer: enr.agent_key, user: null, body: report() });
   assert.equal(r.status, 200, r.text); assert.equal(r.json.discovery, false); assert.match(r.json.why, /no active scope/); assert.equal(r.json.manager.metrics, true);
   const v = await e.req('GET', '/hyperv', ADM); assert.equal(v.json.hosts[0].name, 'HV-SYN-01'); assert.equal(v.json.hosts[0].ip, '10.20.8.10', 'the address is kept for the one-click scope');
+  // one list everywhere: the Connections card (GET /discovery/hyperv/hosts) shows the same host, marked as not in a scope
+  const c = await e.req('GET', '/discovery/hyperv/hosts', { user: 'vera.syn', role: 'viewer' });
+  assert.equal(c.status, 200, c.text); assert.equal(c.json.hosts.length, 1); assert.equal(c.json.hosts[0].host, 'HV-SYN-01'); assert.equal(c.json.hosts[0].scoped, false); assert.equal(c.json.hosts[0].vms, 2);
+  // once a scope covers it, the next report is ONE row (not two), now scoped
+  const sc = await e.req('POST', '/discovery/scopes', { user: 'admin.syn', role: 'admin', body: { name: 'HQ Hyper-V', site: 'Riyadh HQ', targets: ['10.20.8.0/24'], methods: { hyperv: { enabled: true } } } }); assert.equal(sc.status, 200, sc.text);
+  assert.equal((await e.req('POST', '/agent/hyperv', { bearer: enr.agent_key, user: null, body: report() })).status, 200);
+  const c2 = (await e.req('GET', '/discovery/hyperv/hosts', ADM)).json.hosts; assert.equal(c2.length, 1, JSON.stringify(c2)); assert.equal(c2[0].scoped, true);
 });

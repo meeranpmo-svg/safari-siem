@@ -459,7 +459,18 @@ function createDiscovery({ config, store, audit, log, assets, ingest, findings, 
   }
 
   // the Hyper-V hosts that have reported (Integration Hub): newest first; no credentials are involved
-  function hypervHosts() { return { hosts: hvHostsCol.all().sort((a, b) => String(b.at).localeCompare(String(a.at))), scopes: scopesCol.all((s) => s.status === 'active' && s.methods.hyperv && s.methods.hyperv.enabled).map((s) => ({ id: s.id, name: s.name, site: s.site, targets: s.targets, auto_register: !!s.methods.hyperv.auto_register })) }; }
+  // one list everywhere: a host that reports to Hyper-V Servers (hv_latest, kept even when no discovery scope covers it) shows here too,
+  // marked so the page can say its VMs are not yet registered in the inventory
+  function hypervHosts() {
+    const rows = new Map(hvHostsCol.all().map((r) => [r.id, Object.assign({ scoped: true }, r)]));
+    for (const r of store.collection('hv_latest').all()) {
+      const k = String((r.host && r.host.name) || r.id || '').toLowerCase(); if (!k) continue;
+      const cur = rows.get(k);
+      if (cur) { if (String(r.at) > String(cur.at)) cur.at = r.at; if (!cur.ip && r.host.ip) cur.ip = r.host.ip; continue; }
+      rows.set(k, { id: k, host: r.host.name, ip: r.host.ip || null, site: null, vms: (r.vms || []).length, via: 'agent', at: r.at, scoped: false });
+    }
+    return { hosts: [...rows.values()].sort((a, b) => String(b.at).localeCompare(String(a.at))), scopes: scopesCol.all((s) => s.status === 'active' && s.methods.hyperv && s.methods.hyperv.enabled).map((s) => ({ id: s.id, name: s.name, site: s.site, targets: s.targets, auto_register: !!s.methods.hyperv.auto_register })) };
+  }
   function forgetHypervHost(id, who) {
     const k = String(id || '').toLowerCase();
     if (!/^[a-z0-9][a-z0-9._-]{0,119}$/.test(k)) throw bad('host must be a Hyper-V host name', 400);

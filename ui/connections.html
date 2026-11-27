@@ -503,13 +503,16 @@
      // Hyper-V hosts REPORT their VMs (read-only Get-VM / Get-VMNetworkAdapter on the host, posted with an agent key); the platform never logs in to them.
      // A row is a host that has reported; a report older than 2 days is shown as stale.
      load:function(){return req(this.api,'GET','/discovery/hyperv/hosts').then(function(d){HV_SCOPES=d.scopes||[];return (d.hosts||[]).map(function(h){var at=Date.parse(h.at)||0,stale=Date.now()-at>2*86400000;
-       return {id:h.id,name:h.host,info:(h.ip||'')+(h.site?' · '+h.site:'')+' · '+(h.vms||0)+' VMs · '+(h.via==='agent'?'reported by the host':'imported by '+(h.by||'an administrator')),cred:'n/a',last:{at:at,errors:[]},stale:stale,staleWhy:stale?'last report '+ago(at)+' - check the scheduled task on the host':''};});});},
+       return {id:h.id,name:h.host,info:(h.ip||'')+(h.site?' · '+h.site:'')+' · '+(h.vms||0)+' VMs · '+(h.via==='agent'?'reported by the host':'imported by '+(h.by||'an administrator'))+(h.scoped===false?' · on Hyper-V Servers - no discovery scope covers it, so its VMs are not added to the inventory automatically':''),cred:'n/a',scoped:h.scoped!==false,last:{at:at,errors:[]},stale:stale,staleWhy:stale?'last report '+ago(at)+' - check the scheduled task on the host':''};});});},
      // one command per host, made on the Hyper-V page (key, fingerprint check, scheduled task); the older manual guide stays for a host without a network path
      add:function(){location.href='hyperv.html?add=1';},
      guide:function(){hvGuide(this);},
      test:function(){return req(this.api,'GET','/discovery/hyperv/hosts').then(function(d){return (d.hosts||[]).length+' Hyper-V host(s) have reported'+((d.scopes||[]).length?'':' - no active scope accepts Hyper-V reports yet: create one in Asset Discovery');});},
      sync:function(id){return this.test(id);},
-     del:function(id){return req(this.api,'POST','/discovery/hyperv/hosts/'+encodeURIComponent(id)+'/forget').then(function(){return 'Forgotten - the host reappears at its next report';});} },
+     del:function(id){var self=this;return req(self.api,'GET','/discovery/hyperv/hosts').then(function(d){var row=(d.hosts||[]).filter(function(r){return r.id===id;})[0];
+       // a host known only from its Hyper-V Servers reports is removed there (its agent key is revoked); forgetting it here would change nothing
+       if(row&&row.scoped===false){setTimeout(function(){location.href='hyperv.html';},1200);return 'Remove this host under Hyper-V Servers → Hosts added (opening it now)';}
+       return req(self.api,'POST','/discovery/hyperv/hosts/'+encodeURIComponent(id)+'/forget').then(function(){return 'Forgotten - the host reappears at its next report';});});} },
 
    { id:'virt', icon:'server-2',tone:'blue', name:'Virtualization (vCenter / ESXi / Nutanix)', group:'Servers & capacity', api:'/api/itam', detail:'ai-virt-admin.html', svc:'sentra-itam', fix:'sudo bash "$(ls -td ~/sentra-update-*/ | head -n1)sentra-itam/install/add-virt.sh"',
      load:function(){return req(this.api,'GET','/virt').then(function(d){return (d.platforms||[]).map(function(p){
