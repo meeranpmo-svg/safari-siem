@@ -70,7 +70,23 @@
   try { if (document.head && !document.getElementById('zyb-tabler-css')) { var tl = document.createElement('link'); tl.id = 'zyb-tabler-css'; tl.rel = 'stylesheet'; tl.href = 'vendor/zyb-tabler.css?v=' + VER; document.head.appendChild(tl); } } catch (e) { /* original look */ }
   // POC mode (vendor/zyb-poc.js): only while the menu's "POC data" switch is on in this browser, or ?poc=1 - pages that have
   // illustrative data draw from it with the POC ribbon, every change is refused; loaded before the page's own requests
-  try { var pocOn = /[?&]poc=1(&|$)/.test(location.search) || localStorage.getItem('zyb-poc') === '1'; if (pocOn && !window.zybPoc && document.readyState === 'loading') document.write('<script src="vendor/zyb-poc-data.js?v=' + VER + '"><\/script><script src="vendor/zyb-poc-rec.js?v=' + VER + '"><\/script><script src="vendor/zyb-poc.js?v=' + VER + '"><\/script>'); } catch (e) { /* storage blocked: POC stays off, the page shows live data */ }
+  try { var pocOn = /[?&]poc=1(&|$)/.test(location.search) || localStorage.getItem('zyb-poc') === '1'; if (pocOn && !window.zybPoc && document.readyState === 'loading') document.write('<script src="vendor/zyb-poc-data.js?v=' + VER + '"><\/script><script src="vendor/zyb-poc-rec.js?v=' + VER + '"><\/script><script src="vendor/zyb-poc-soc.js?v=' + VER + '"><\/script><script src="vendor/zyb-poc.js?v=' + VER + '"><\/script>'); } catch (e) { /* storage blocked: POC stays off, the page shows live data */ }
+  // every Refresh button says it did something: it spins while the page reloads its data and a short note gives the time - a
+  // refresh that brings the same figures otherwise looks like a button that does nothing
+  try {
+    document.addEventListener('click', function (e) {
+      var b = e.target && e.target.closest && e.target.closest('button'); if (!b) return;
+      var id = b.id || '', tx = (b.textContent || '').trim();
+      if (!/^(refresh|rf|zi-refresh|sv-refresh|rfr|reload)$/i.test(id) && !/^(⟳|↻)\s*Refresh$|^Refresh$/i.test(tx)) return;
+      if (!document.getElementById('zyb-rf-style')) { var st = document.createElement('style'); st.id = 'zyb-rf-style'; st.setAttribute('data-zyb-theme', 'skip');
+        st.textContent = '@keyframes zybspin{to{transform:rotate(360deg)}}button.zyb-rf-busy{opacity:.75}button.zyb-rf-busy::before{content:"";display:inline-block;width:11px;height:11px;margin-right:6px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-1px;animation:zybspin .7s linear infinite}'
+          + '#zyb-rf-note{position:fixed;right:18px;bottom:18px;z-index:99998;background:#13261b;border:1px solid #2f7d4a;color:#9fe2b3;border-radius:9px;padding:7px 12px;font:13px "Segoe UI",system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.35)}';
+        document.head.appendChild(st); }
+      b.classList.add('zyb-rf-busy');
+      setTimeout(function () { b.classList.remove('zyb-rf-busy'); var n = document.getElementById('zyb-rf-note'); if (!n) { n = document.createElement('div'); n.id = 'zyb-rf-note'; n.setAttribute('role', 'status'); document.body.appendChild(n); }
+        n.textContent = '\u2713 Refreshed ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); n.hidden = false; clearTimeout(n._t); n._t = setTimeout(function () { n.hidden = true; }, 2500); }, 900);
+    }, true);
+  } catch (e) { /* no feedback: the buttons still work */ }
   // error handling for the page (vendor/zyb-errors.js): first, so an error while the page draws is already caught
   // menu hide / show (Ctrl+B), full screen and an easy-to-grab menu scrollbar (vendor/zyb-fullview.js)
   try { if (!window.zybFullview) { var zf = document.createElement('script'); zf.src = 'vendor/zyb-fullview.js?v=' + VER; zf.defer = true; (document.head || document.documentElement).appendChild(zf); } } catch (e) { /* the page works without it */ }

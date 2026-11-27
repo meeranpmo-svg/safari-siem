@@ -34,6 +34,11 @@ let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FA
     p = await ctx.newPage(); await p.goto(base + 'attack-surface.html?poc=1'); await p.waitForSelector('#main:not([hidden])', { timeout: 15000 }); await p.waitForTimeout(500);
     ok(/Exposed assets 15/.test((await p.$eval('#kk', (x) => x.innerText)).replace(/\s+/g, ' ')) && (await p.$$('.as4 canvas')).length === 4 && /management or database service/.test(await p.textContent('#ins')), 'attack surface: tiles, four charts, what the AI noticed');
     await p.click('[data-open="as-02"]'); await p.waitForSelector('#dlg[open]'); ok(/CVE-2023-27997/.test(await p.textContent('#dlgb')), 'attack surface: one asset with its required actions'); await p.close();
+    // SOC overview: open alerts by site on the Saudi map, from the real SOC engine's output over synthetic alerts
+    p = await ctx.newPage(); await p.goto(base + 'soc-overview.html?poc=1'); await p.waitForSelector('.zksa-pt', { timeout: 15000 });
+    ok((await p.$$('.zksa-pt')).length >= 8 && /Riyadh Head Office/.test(await p.textContent('#bysite')), 'SOC: open alerts by site on the Saudi map');
+    // every Refresh button shows it worked
+    await p.click('#refresh'); await p.waitForSelector('#zyb-rf-note:not([hidden])', { timeout: 5000 }); ok(/Refreshed/.test(await p.textContent('#zyb-rf-note')), 'Refresh says it refreshed'); await p.close();
     // POC off: the same page shows the server's answer, no ribbon
     p = await ctx.newPage(); await p.goto(base + 'ndr.html'); await p.waitForTimeout(1500);
     ok(!(await p.$('.zyb-poc-r')) && seen.some((s) => /\/ndr/.test(s)), 'POC off: live request, no ribbon'); await p.close();

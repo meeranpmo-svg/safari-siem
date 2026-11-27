@@ -1,9 +1,13 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Security Operations Overview</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-secops.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-copilot.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
-</head><body><main class="so">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Security Operations Overview</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-ksa-map.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-secops.css"><script src="vendor/zyb-soc.js"></script><script src="vendor/zyb-copilot.js"></script><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<style>.so-map{width:100%;height:auto;max-height:470px;display:block}.so-site{display:flex;gap:8px;align-items:center;cursor:pointer}.so-site .b{flex:1;height:8px;border-radius:5px;background:rgba(127,140,160,.18);overflow:hidden}.so-site .b i{display:block;height:100%;border-radius:5px}</style></head><body><main class="so">
 <div class="so-head"><div><div class="eb">Security Operations · Overview</div><h1>Security Operations Centre</h1></div><span class="sp"></span>
  <span id="srcs"></span><span class="so-chip" id="up">loading…</span><button type="button" class="so-btn" id="refresh" aria-label="Refresh">⟳ Refresh</button><a class="so-btn pri" href="soc-alerts.html">Open the Alert Queue →</a></div>
 <div id="err"></div>
 <div class="so-kpis" id="kpis"></div>
+<div class="so-grid">
+ <section class="so-p w8"><h2>Open alerts by location <span class="c">head office, branches and project sites · from the alert addresses and the IP address plan</span></h2><svg id="ksa" class="so-map" role="img" aria-label="Map of Saudi Arabia with open alerts per site"></svg></section>
+ <section class="so-p"><h2>By site <span class="c" id="mapc"></span></h2><ul class="so-list" id="bysite"></ul><p class="so-note" id="mapn"></p></section>
+</div>
 <div class="so-grid">
  <section class="so-p w8"><h2>Alert volume <span class="c">last 14 days · raised vs how they were closed</span></h2><div class="so-ch tall"><canvas id="c-vol"></canvas></div></section>
  <section class="so-p"><h2>Open alerts by priority <span class="c">explainable score</span><a href="soc-alerts.html">queue →</a></h2><div class="so-ch tall"><canvas id="c-band"></canvas></div></section>
@@ -90,7 +94,28 @@
     $('brief').innerHTML='<p class="so-why">The SOC Copilot reads the queue, the incidents and the measures above with read-only tools and writes a short brief for the shift: what needs a person first, what changed, what is quiet that should not be. It proposes; people decide.</p>'
       +(ok?'<button type="button" class="so-btn pri" id="briefme">✦ Brief me for this shift</button>':'<p class="so-note" id="briefna">The SOC Copilot is not available'+(window.zybCopilot?' (no AI key or AI switched off)':'')+' - the figures on this page do not need it.</p>');}
   function loadMl(){if(!S.can('analyst'))return;S.req('GET','/soc/overview/insights').then(drawMl,function(e){$('ml').hidden=false;$('fc').innerHTML=S.errHtml(e,'the overview insights');});}
-  function load(){loadWf();loadMl();
+
+  // ---------- open alerts by location: alert addresses -> the IPAM subnet's site -> the Saudi city in the site name ----------
+  var V4=/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  function ip2n(ip){var m=V4.exec(ip);return m?(((+m[1])<<24)>>>0)+((+m[2])<<16)+((+m[3])<<8)+(+m[4]):null;}
+  function inCidr(n,c){var p=String(c).split('/'),b=ip2n(p[0]),k=Number(p[1]);if(b==null||!(k>=0&&k<=32))return false;var mask=k?((0xffffffff<<(32-k))>>>0):0;return ((n&mask)>>>0)===((b&mask)>>>0);}
+  function ireq(u){return new Promise(function(ok,bad){var x=new XMLHttpRequest();x.open('GET','/api/itam'+u);x.withCredentials=true;x.timeout=60000;x.zybQuiet=true;x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){j=null;/* not JSON: treated as not available */}if(x.status===200&&j)ok(j);else bad(new Error('HTTP '+x.status));};x.onerror=x.ontimeout=function(){bad(new Error('not reachable'));};x.send();});}
+  function loadMap(){
+    if(!window.zybKsaMap)return;
+    Promise.all([S.req('GET','/alerts?status=open&limit=500'),ireq('/ipam').catch(function(){return {subnets:[]};/* no address plan: alerts stay unplaced and the note says what to add */})]).then(function(r){
+      var A=r[0].items||[],SN=(r[1].subnets||[]).filter(function(x){return x.site;}),by={},un=0;
+      A.forEach(function(a){var vals=[];[a.group||{},a.fields||{}].forEach(function(o){for(var k in o)if(typeof o[k]==='string'&&V4.test(o[k]))vals.push(o[k]);});
+        var site=null;for(var i=0;i<vals.length&&!site;i++){var n=ip2n(vals[i]);for(var j=0;j<SN.length;j++)if(inCidr(n,SN[j].cidr)){site=SN[j].site;break;}}
+        if(!site){un++;return;}var s=by[site]=by[site]||{name:site,value:0,max:0,crit:0};s.value++;s.max=Math.max(s.max,a.severity||0);if((a.severity||0)>=3)s.crit++;});
+      var pts=Object.keys(by).map(function(k){var s=by[k];return {name:s.name,label:s.name.replace(/\s*(head ?office|branch|project site|site|office)\s*$/i,''),value:s.value,level:s.max>=4||s.crit>=3?'crit':s.max>=3?'warn':'info',sub:s.crit+' high or critical'};}).sort(function(a,b){return b.value-a.value;});
+      var placed=zybKsaMap.draw($('ksa'),pts,{empty:SN.length?'No open alert at a known site.':'Add the subnets of each site in IP Address Management to place alerts on the map.',onClick:function(p){location.href='soc-alerts.html';}});
+      var mx=Math.max.apply(null,pts.map(function(p){return p.value;}).concat([1]));
+      $('mapc').textContent=pts.length+' site(s)';
+      $('bysite').innerHTML=pts.length?pts.map(function(p){var c={crit:'#ff5c5c',warn:'#f5a623',info:'#4f9be9'}[p.level];return '<li class="so-site" data-site="'+esc(p.name)+'"><b style="min-width:150px">'+esc(p.name)+'</b><span class="b"><i style="width:'+Math.round(100*p.value/mx)+'%;background:'+c+'"></i></span><span>'+esc(p.value)+'</span></li>';}).join(''):'<li class="so-note">No open alert placed at a site.</li>';
+      $('mapn').textContent=(un?un+' open alert(s) have no address in a registered subnet. ':'')+(pts.length>placed?(pts.length-placed)+' site(s) have no Saudi city in their name and are listed but not drawn. ':'')+(SN.length?'':'No subnet has a site yet: IP Address Management.');
+    },function(e){$('bysite').innerHTML='<li class="so-note">'+esc(e.message)+'</li>';});
+  }
+  function load(){loadWf();loadMl();loadMap();
     return S.req('GET','/soc/overview').then(function(o){$('err').innerHTML='';draw(o);}).catch(function(e){$('err').innerHTML=S.errHtml(e,'the Security Operations overview');$('up').textContent='not loaded';});
   }
   function draw(o){
@@ -137,6 +162,7 @@
     $('noisy').innerHTML=li(o.noisy_rules,function(r){return '<li><span class="grow"><b>'+esc(r.rule_name)+'</b> <span class="so-why">'+esc(r.rule_id)+'</span></span><span class="n">'+esc(Math.round(r.noise*100))+'% of '+S.n(r.closed)+' closures · '+esc(r.per_day)+'/day</span></li>';},'No rule has been learned as noisy yet.');
   }
   document.addEventListener('click',function(ev){var x;
+    if((x=ev.target.closest('[data-site]'))){location.href='soc-alerts.html';return;}
     if((x=ev.target.closest('.so-kpi'))){var h=x.getAttribute('data-href').trim();if(h)location.href=h;return;}
     if((x=ev.target.closest('[data-alert]'))){location.href='soc-alerts.html?id='+encodeURIComponent(x.getAttribute('data-alert'));return;}
     if((x=ev.target.closest('[data-q]'))){location.href='soc-alerts.html?q='+encodeURIComponent(x.getAttribute('data-q'));return;}
