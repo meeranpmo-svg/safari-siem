@@ -4362,6 +4362,8 @@
 "Other accent colour":"لون تمييز آخر",
 "Other network device":"جهاز شبكة آخر",
 "Our SIEM vs LogRhythm":"نظام SIEM الخاص بنا مقابل LogRhythm",
+"Our SIEM vs NewEvol":"نظام SIEM الخاص بنا مقابل NewEvol",
+"Our SIEM vs NewEvol - parallel run and cutover":"نظام SIEM الخاص بنا مقابل NewEvol - التشغيل المتوازي والانتقال",
 "Our alerts":"تنبيهاتنا",
 "Our alerts LogRhythm did not raise":"تنبيهاتنا التي لم يُصدرها LogRhythm",
 "Our mail domains":"نطاقات بريدنا",

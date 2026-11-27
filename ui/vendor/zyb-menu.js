@@ -158,7 +158,7 @@
     ['soc-ueba.html', '👤', 'SOC User Behaviour (UEBA)'],
     ['soc-response.html', '✅', 'SOC Response: Playbooks & Approvals'],
     ['soc-xdr.html', '🧩', 'SOC XDR (cross-domain incidents)'],
-    ['soc-lr.html', '⚖️', 'SIEM vs LogRhythm'],
+    ['siem-cutover.html', '⚖️', 'Our SIEM vs NewEvol'],
     ['soc-intel.html', '🌐', 'SOC Threat Intel & After-hours'],
     ['network-engineer.html', '🤖', 'AI Network Engineer'],
     ['windows-admin.html', '🪟', 'AI Windows Server Administrator'],

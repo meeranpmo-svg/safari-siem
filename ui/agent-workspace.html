@@ -1,0 +1,190 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agent Workspace</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css">
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- Agent Workspace over /api/soc/workspace (engine/soc/workspace.js): build AI-agent workflows from a fixed catalogue - a trigger, data
+     steps, conditions, AI agents that WRITE (never act), a person who approves, and governed actions - test them, have a second
+     administrator publish them, run them and see every step's output. Approvals waiting for a person are decided here. -->
+<style>
+.ws{display:grid;grid-template-columns:250px minmax(0,1fr) 320px;gap:12px;align-items:start}@media(max-width:1200px){.ws{grid-template-columns:1fr}}
+.ws .card{margin:0}.pal h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8b93a4;margin:12px 0 6px}
+.blk{display:flex;gap:8px;width:100%;text-align:left;padding:8px;border-radius:8px;border:1px solid rgba(127,140,160,.22);background:rgba(127,140,160,.06);color:inherit;margin:0 0 6px;cursor:pointer;font:inherit}
+.blk:hover,.blk:focus-visible{border-color:#58a6ff;outline:none}.blk b{display:block;font-size:13px}.blk span{display:block;font-size:11px;color:#8b93a4;line-height:1.3}.blk i{font-style:normal;font-size:16px;width:20px;text-align:center}
+.cv{min-height:520px;padding:18px 10px;background:radial-gradient(circle,rgba(127,140,160,.14) 1px,transparent 1px) 0 0/18px 18px;border-radius:10px;display:flex;flex-direction:column;align-items:center}
+.nd{width:min(380px,100%);border:1px solid rgba(127,140,160,.3);border-radius:12px;background:#121826;padding:10px 12px;cursor:pointer;position:relative;text-align:left;color:inherit;font:inherit}
+.nd:hover,.nd:focus-visible{border-color:#58a6ff;outline:none}.nd.sel{border-color:#58a6ff;box-shadow:0 0 0 3px rgba(88,166,255,.2)}
+.nd .nk{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#8b93a4;display:flex;gap:6px;align-items:center}.nd .nk em{font-style:normal;width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+.nd .nt{font-weight:700;margin-top:3px}.nd .ndd{font-size:12px;color:#aab3c2;margin-top:2px}.nd .tg{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.nd .tg span{font-size:10.5px;padding:1px 6px;border-radius:8px;background:rgba(127,140,160,.16)}
+.nd .ops{position:absolute;right:6px;top:6px;display:flex;gap:2px}.nd .ops button{padding:0 6px;font-size:12px;line-height:18px;min-height:0;border-radius:5px}
+.ln{width:2px;height:18px;background:rgba(127,140,160,.45)}.add{width:24px;height:24px;border-radius:50%;padding:0;min-height:0;line-height:22px;font-size:15px}
+.c-trigger .nk em{background:#e5484d}.c-alerts em,.c-rules em{background:#2f81f7}.c-condition em{background:#8b93a4}.c-agent em{background:#a371f7}.c-approval em{background:#e3b341}.c-action em{background:#2fd47a}
+.cfg label{display:block;font-size:12px;color:#aab3c2;margin:10px 0 3px}.cfg input,.cfg select,.cfg textarea{width:100%;box-sizing:border-box}.cfg textarea{min-height:90px}
+.gv{font-size:12px;line-height:1.6}.gv b{color:#e6ecf3}.st{display:inline-block;padding:1px 8px;border-radius:9px;font-size:11px;font-weight:700}.st.draft{background:rgba(127,140,160,.2)}.st.pending{background:rgba(227,179,65,.2);color:#e3b341}.st.published{background:rgba(47,212,122,.18);color:#2fd47a}.st.disabled{background:rgba(255,123,114,.18);color:#ff7b72}
+.wbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.wbar select{min-width:240px}
+.rs{white-space:pre-wrap;font-size:12.5px;background:rgba(127,140,160,.08);border-radius:8px;padding:8px;margin:4px 0 0;max-height:260px;overflow:auto}
+.rstep{border-left:3px solid rgba(127,140,160,.4);padding:4px 10px;margin:8px 0}.rstep.done{border-color:#2fd47a}.rstep.waiting{border-color:#e3b341}.rstep.stopped,.rstep.rejected{border-color:#8b93a4}.rstep.failed{border-color:#ff7b72}
+.wbar [hidden]{display:none!important}.mut{color:#8b93a4}.sm{font-size:12px}.ai-off{font-size:12px;color:#e3b341}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Security operations · automation</div><h1>Agent Workspace</h1><div class="mut sm">Build and govern AI-agent workflows: AI agents read and write, a named person approves, the platform acts</div></div><span class="sp"></span>
+ <span class="muted" id="up"></span><a class="btn" href="sentra-nextgen.html">Next-Gen SIEM</a><a class="btn" href="soar.html">SOAR</a><button type="button" id="refresh">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+ <section class="card"><div class="wbar"><select id="wfsel" aria-label="Workflow"></select><span id="wfst"></span><span class="sp"></span>
+  <button type="button" id="b-save">Save draft</button><button type="button" id="b-test">Test run</button><button type="button" id="b-submit">Submit for approval</button>
+  <button type="button" id="b-publish">Publish</button><button type="button" id="b-reject">Reject</button><button type="button" id="b-run">Run now</button><button type="button" id="b-disable">Disable</button><button type="button" id="b-del">Delete</button></div>
+  <div class="mut sm" id="msg" role="status" style="margin-top:6px"></div></section>
+ <div class="ws" style="margin-top:12px">
+  <section class="card pal"><h2>Build</h2><input id="q" placeholder="Search blocks and templates" aria-label="Search blocks and templates"><div id="pal"></div></section>
+  <section class="card"><h2>Flow <span class="c" id="flowc"></span></h2><div class="cv" id="cv"></div></section>
+  <section class="card cfg"><h2 id="cfgh">Settings</h2><div id="cfg"></div><h2 style="margin-top:16px">Governance</h2><div class="gv" id="gov"></div></section>
+ </div>
+ <section class="card" style="margin-top:12px"><h2>Runs <span class="c">newest first - waiting runs need a person who is neither the author nor the starter</span></h2><div id="runs"></div></section>
+ <section class="card" id="rdc" hidden style="margin-top:12px"><h2 id="rdh">Run</h2><div id="rd"></div></section>
+ <p class="mut sm" id="note"></p>
+</div>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, V = null, CUR = null, SEL = -1, ME = { user: '', role: 'viewer' };
+  var RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, can = function (r) { return (RANK[ME.role] || 0) >= RANK[r]; };
+  var ICON = { trigger: '⚡', alerts: '🔔', rules: '⚙', condition: '◇', agent: '✦', approval: '✋', action: '▶' };
+  var SEV = ['info', 'low', 'medium', 'high', 'critical'];
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, (u.charAt(0) === '/' && u.indexOf('/dashboards') === 0 ? '' : '/api/soc') + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('the SIEM is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : (m !== 'GET' ? '{}' : null)); }); }
+  function say(t, bad) { $('msg').textContent = t; $('msg').style.color = bad ? '#ff7b72' : ''; }
+  var copy = function (x) { return JSON.parse(JSON.stringify(x)); };
+  function blank() { return { id: null, name: 'New workflow', description: '', status: 'new', trigger: { type: 'manual' }, steps: [{ type: 'alerts', window_h: 24, min_severity: 0, status: 'any' }] }; }
+  // ---- what each block shows on the canvas
+  function title(s) { if (s.type === 'alerts') return 'Read alerts'; if (s.type === 'rules') return 'Read detection rules'; if (s.type === 'condition') return 'Condition'; if (s.type === 'agent') return ((V.agents.filter(function (a) { return a.id === s.agent; })[0] || {}).label || 'AI agent');
+    if (s.type === 'approval') return 'Person approves'; return V.actions[s.action] || 'Action'; }
+  function desc(s) { if (s.type === 'alerts') return s.from_trigger ? 'the alerts that started the run' : 'last ' + (s.window_h || 24) + ' h · ' + SEV[s.min_severity || 0] + '+ · ' + (s.status || 'any') + (s.rule ? ' · rule "' + s.rule + '"' : '');
+    if (s.type === 'rules') return 'the ' + (s.top || 10) + ' noisiest rules'; if (s.type === 'condition') return 'go on if ' + (s.field || 'count') + ' ' + (s.op || '>') + ' ' + (s.value == null ? 0 : s.value);
+    if (s.type === 'agent') return s.instructions ? '"' + String(s.instructions).slice(0, 80) + '"' : 'reads the steps above, writes text, decides nothing'; if (s.type === 'approval') return 'a' + (s.role === 'admin' ? 'n administrator' : 'n operator') + ' who is not the author or the starter';
+    return s.action === 'report' ? 'kept with the run' : (s.title || s.note || 'from the alerts found'); }
+  function trigDesc(t) { return t.type === 'schedule' ? 'every ' + (t.every_min >= 60 ? (t.every_min / 60) + ' h' : t.every_min + ' min') : t.type === 'alert' ? 'new ' + SEV[t.min_severity || 0] + '+ alerts' + (t.rule ? ' from "' + t.rule + '"' : '') : 'started by a person'; }
+  function node(kind, t, d, i, extra) { return '<div class="nd c-' + kind + (SEL === i ? ' sel' : '') + '" role="button" tabindex="0" data-sel="' + i + '"><div class="nk"><em>' + ICON[kind] + '</em>' + esc(kind === 'trigger' ? 'Trigger' : (V.catalogue.filter(function (c) { return c.type === kind; })[0] || {}).group || kind) + '</div><div class="nt">' + esc(t) + '</div><div class="ndd">' + esc(d) + '</div>' + (extra || '') + '</div>'; }
+  function canvas() {
+    var ed = editable(), h = node('trigger', 'Trigger', trigDesc(CUR.trigger), -1);
+    CUR.steps.forEach(function (s, i) { var ops = ed ? '<div class="ops"><button type="button" data-up="' + i + '" aria-label="Move up">↑</button><button type="button" data-dn="' + i + '" aria-label="Move down">↓</button><button type="button" data-rm="' + i + '" aria-label="Remove step">×</button></div>' : '';
+      h += '<div class="ln"></div>' + node(s.type, title(s), desc(s), i, ops); });
+    if (ed) h += '<div class="ln"></div><button type="button" class="add" id="b-add" title="Add the selected block from the left" aria-label="Add a step">+</button>';
+    $('cv').innerHTML = h; $('flowc').textContent = CUR.steps.length + ' step(s)' + (ed ? '' : ' · read only');
+  }
+  // ---- the settings form of the selected node
+  function opt(v, list) { return list.map(function (o) { var k = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : o; return '<option value="' + esc(k) + '"' + (String(v) === String(k) ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join(''); }
+  function f(label, html) { return '<label>' + esc(label) + '</label>' + html; }
+  function cfg() {
+    var ed = editable(), dis = ed ? '' : ' disabled', h = '';
+    if (SEL === -1) { var t = CUR.trigger; $('cfgh').textContent = 'Workflow and trigger';
+      h = f('Name', '<input data-w="name" value="' + esc(CUR.name) + '"' + dis + '>') + f('Description', '<textarea data-w="description"' + dis + '>' + esc(CUR.description || '') + '</textarea>')
+        + f('Trigger', '<select data-t="type"' + dis + '>' + opt(t.type, [['manual', 'Started by a person'], ['schedule', 'On a schedule'], ['alert', 'On new alerts']]) + '</select>');
+      if (t.type === 'schedule') h += f('Every', '<select data-t="every_min" data-n="1"' + dis + '>' + opt(t.every_min || 60, V.every.map(function (m) { return [m, m >= 60 ? (m / 60) + ' hour(s)' : m + ' minutes']; })) + '</select>');
+      if (t.type === 'alert') h += f('Minimum severity', '<select data-t="min_severity" data-n="1"' + dis + '>' + opt(t.min_severity == null ? 3 : t.min_severity, SEV.map(function (s, i) { return [i, s]; })) + '</select>') + f('Rule name contains (optional)', '<input data-t="rule" value="' + esc(t.rule || '') + '"' + dis + '>');
+    } else { var s = CUR.steps[SEL]; $('cfgh').textContent = 'Step ' + (SEL + 1) + ' · ' + title(s);
+      if (s.type === 'alerts') h = f('Window (hours)', '<input type="number" min="1" max="720" data-s="window_h" data-n="1" value="' + esc(s.window_h || 24) + '"' + dis + '>') + f('Minimum severity', '<select data-s="min_severity" data-n="1"' + dis + '>' + opt(s.min_severity || 0, SEV.map(function (x, i) { return [i, x]; })) + '</select>')
+        + f('Status', '<select data-s="status"' + dis + '>' + opt(s.status || 'any', [['any', 'any'], ['open', 'open'], ['closed-false-positive', 'closed as false positive'], ['closed-true-positive', 'closed as true positive']]) + '</select>') + f('Rule name contains', '<input data-s="rule" value="' + esc(s.rule || '') + '"' + dis + '>')
+        + '<label><input type="checkbox" data-s="from_trigger" data-b="1"' + (s.from_trigger ? ' checked' : '') + dis + ' style="width:auto"> Only the alerts that started the run</label>';
+      else if (s.type === 'rules') h = f('How many rules', '<input type="number" min="1" max="50" data-s="top" data-n="1" value="' + esc(s.top || 10) + '"' + dis + '>');
+      else if (s.type === 'condition') h = f('Number', '<select data-s="field"' + dis + '>' + opt(s.field || 'count', ['count', 'critical', 'high', 'suppressed', 'matches']) + '</select>') + f('Test', '<select data-s="op"' + dis + '>' + opt(s.op || '>', ['>', '>=', '<', '<=', '=']) + '</select>') + f('Value', '<input type="number" data-s="value" data-n="1" value="' + esc(s.value == null ? 0 : s.value) + '"' + dis + '>');
+      else if (s.type === 'agent') h = f('Agent', '<select data-s="agent"' + dis + '>' + opt(s.agent || 'triage', V.agents.map(function (a) { return [a.id, a.label]; })) + '</select>') + f('Instructions (optional)', '<textarea data-s="instructions" maxlength="1000"' + dis + '>' + esc(s.instructions || '') + '</textarea>')
+        + '<p class="mut sm">The agent reads the steps above and writes text. It has no tools and cannot approve, skip or start anything.</p>' + (V.ai && !V.ai.enabled ? '<p class="ai-off">AI is not available here: ' + esc(V.ai.reason) + '. The step will say so and the run goes on.</p>' : '');
+      else if (s.type === 'approval') h = f('Who approves', '<select data-s="role"' + dis + '>' + opt(s.role || 'operator', [['operator', 'An operator or administrator'], ['admin', 'An administrator']]) + '</select>') + f('What to check (shown to the approver)', '<input data-s="note" value="' + esc(s.note || '') + '"' + dis + '>')
+        + '<p class="mut sm">Never the workflow\'s author or the person who started the run; never a service or AI identity.</p>';
+      else h = f('Action', '<select data-s="action"' + dis + '>' + opt(s.action || 'report', Object.keys(V.actions).map(function (k) { return [k, V.actions[k]]; })) + '</select>')
+        + (s.action === 'create_case' ? f('Case title', '<input data-s="title" value="' + esc(s.title || '') + '"' + dis + '>') + f('Severity (empty = from the alerts)', '<select data-s="severity" data-n="1"' + dis + '>' + opt(s.severity == null ? '' : s.severity, [['', 'from the alerts']].concat(SEV.map(function (x, i) { return [i, x]; }))) + '</select>') : '')
+        + (s.action === 'note_alerts' ? f('Note', '<textarea data-s="note"' + dis + '>' + esc(s.note || '') + '</textarea>') : '') + '<p class="mut sm">A case or a note needs a "Person approves" step before it.</p>';
+    }
+    $('cfg').innerHTML = h;
+  }
+  function gov() {
+    var w = CUR, st = w.status === 'new' ? 'not saved' : w.status;
+    $('wfst').innerHTML = '<span class="st ' + esc(w.status) + '">' + esc(st) + '</span>' + (w.version ? ' <span class="mut sm">v' + esc(w.version) + '</span>' : '');
+    $('gov').innerHTML = w.id ? ['Built by <b>' + esc(w.author) + '</b> · ' + esc(String(w.created || '').slice(0, 16).replace('T', ' ')), w.editor ? 'Last edited by <b>' + esc(w.editor) + '</b>' : '', w.submitted_by && w.status === 'pending' ? 'Submitted by <b>' + esc(w.submitted_by) + '</b> - waiting for a second administrator' : '',
+      w.published_by ? 'Published by <b>' + esc(w.published_by) + '</b>' : '', w.status === 'draft' && w.decided_by && w.comment ? 'Returned by <b>' + esc(w.decided_by) + '</b>: ' + esc(w.comment) : '', w.disabled_by ? 'Disabled by <b>' + esc(w.disabled_by) + '</b>: ' + esc(w.disabled_reason) : '', w.last_run ? 'Last run ' + esc(String(w.last_run).slice(0, 16).replace('T', ' ')) : ''].filter(Boolean).join('<br>')
+      : 'Not saved yet. Save it as a draft, test it, then submit it: a second administrator publishes it.';
+    var s = w.status, show = function (id, on) { $(id).hidden = !on; };
+    show('b-save', can('operator') && (s === 'new' || s === 'draft' || s === 'published' || s === 'disabled')); show('b-test', can('operator') && !!w.id); show('b-submit', can('operator') && s === 'draft');
+    show('b-publish', can('admin') && s === 'pending'); show('b-reject', can('admin') && s === 'pending'); show('b-run', can('operator') && s === 'published' && w.trigger.type !== 'alert');
+    show('b-disable', can('admin') && (s === 'published' || s === 'pending')); show('b-del', can('admin') && (s === 'draft' || s === 'disabled'));
+    $('b-save').textContent = s === 'published' || s === 'disabled' ? 'Edit as new draft' : 'Save draft';
+  }
+  function editable() { return can('operator') && CUR && CUR.status !== 'pending'; }
+  function pal() {
+    var q = ($('q').value || '').toLowerCase(), groups = {};
+    V.catalogue.filter(function (c) { return !q || (c.label + ' ' + c.desc).toLowerCase().indexOf(q) >= 0; }).forEach(function (c) { (groups[c.group] = groups[c.group] || []).push(c); });
+    var h = Object.keys(groups).map(function (g) { return '<h3>' + esc(g) + '</h3>' + groups[g].map(function (c) { return '<button type="button" class="blk" data-blk="' + esc(c.type) + '"' + (editable() ? '' : ' disabled') + '><i>' + ICON[c.type] + '</i><span><b>' + esc(c.label) + '</b><span>' + esc(c.desc) + '</span></span></button>'; }).join(''); }).join('');
+    var T = V.templates.filter(function (t) { return !q || (t.name + ' ' + t.description).toLowerCase().indexOf(q) >= 0; });
+    if (T.length) h += '<h3>Start from a template</h3>' + T.map(function (t) { return '<button type="button" class="blk" data-tpl="' + esc(t.id) + '"' + (can('operator') ? '' : ' disabled') + '><i>❖</i><span><b>' + esc(t.name) + '</b><span>' + esc(t.description) + '</span></span></button>'; }).join('');
+    $('pal').innerHTML = h || '<p class="mut sm">Nothing matches.</p>';
+  }
+  function select() {
+    var o = '<option value="">+ New workflow</option>' + V.workflows.map(function (w) { return '<option value="' + esc(w.id) + '"' + (CUR && CUR.id === w.id ? ' selected' : '') + '>' + esc(w.name) + ' · ' + esc(w.status) + '</option>'; }).join('');
+    $('wfsel').innerHTML = o;
+  }
+  function drawAll() { select(); canvas(); cfg(); gov(); pal(); runs(); }
+  // ---- runs
+  var RS = { running: 'running', waiting: 'waiting for a person', done: 'done', stopped: 'stopped by a condition', rejected: 'rejected', failed: 'failed' };
+  function runs() {
+    var L = V.runs.filter(function (r) { return !CUR || !CUR.id || r.wf === CUR.id; });
+    $('runs').innerHTML = L.length ? '<table><thead><tr><th>Run</th><th>Workflow</th><th>Started</th><th>By</th><th>Steps</th><th>State</th><th></th></tr></thead><tbody>' + L.map(function (r) {
+      return '<tr><td>' + esc(r.id) + (r.test ? ' <span class="st draft">test</span>' : '') + '</td><td>' + esc(r.wf_name) + ' v' + esc(r.version) + '</td><td>' + esc(String(r.started).slice(0, 16).replace('T', ' ')) + '</td><td>' + esc(r.by_user) + '</td><td>' + r.steps.map(function (s) { return ICON[s.type]; }).join(' ') + '</td>'
+        + '<td><span class="st ' + (r.status === 'done' ? 'published' : r.status === 'waiting' ? 'pending' : r.status === 'failed' || r.status === 'rejected' ? 'disabled' : 'draft') + '">' + esc(RS[r.status] || r.status) + '</span></td><td><button type="button" data-run="' + esc(r.id) + '">Open</button></td></tr>'; }).join('') + '</tbody></table>'
+      : '<div class="empty">No run yet' + (CUR && CUR.id ? ' for this workflow' : '') + '. A test run shows what each step would do, without changing anything.</div>';
+  }
+  function showRun(r) {
+    $('rdc').hidden = false; $('rdh').textContent = 'Run ' + r.id + ' · ' + r.wf_name + ' v' + r.version + (r.test ? ' (test)' : '') + ' · ' + (RS[r.status] || r.status);
+    var out = function (s) { var o = s.out || {};
+      if (s.type === 'alerts') return o.count + ' alert(s) · ' + o.critical + ' critical · ' + o.high + ' high' + (o.top_rules && o.top_rules.length ? '<div class="rs">' + o.top_rules.map(function (x) { return esc(x.n + ' × ' + x.rule); }).join('\n') + '</div>' : '');
+      if (s.type === 'rules') return o.count + ' noisy rule(s)<div class="rs">' + (o.rules || []).map(function (x) { return esc(x.name + ': ' + x.matches + ' matches, ' + x.suppressed + ' suppressed (' + x.noise_pct + '%), ' + x.alerts + ' alerts'); }).join('\n') + '</div>';
+      if (s.type === 'condition') return esc(o.field + ' = ' + (o.value == null ? '—' : o.value) + ' ' + o.op + ' ' + o.against + ' → ' + (o.pass ? 'go on' : 'stop'));
+      if (s.type === 'agent') return o.text != null ? (o.flagged ? '<div class="ai-off">The data looked like it carried instructions to the AI - flagged for review; the agent only wrote text.</div>' : '') + '<div class="rs">' + esc(o.text) + '</div>' : '<span class="ai-off">' + esc(o.why) + '</span>';
+      if (s.type === 'approval') return o.would_wait ? 'would wait ' + esc(o.would_wait) : o.approved_by ? 'approved by <b>' + esc(o.approved_by) + '</b>' + (o.comment ? ': ' + esc(o.comment) : '') : o.rejected_by ? 'rejected by <b>' + esc(o.rejected_by) + '</b>: ' + esc(o.comment) : 'waiting for a' + (o.role === 'admin' ? 'n administrator' : 'n operator') + (o.note ? ' - ' + esc(o.note) : '') + ' (not ' + esc((o.not || []).join(', ')) + ')';
+      if (s.type === 'action') return esc(o.would || o.skipped || (o.case_id ? 'case ' + o.case_id + ' opened with ' + o.alerts + ' alert(s)' : o.noted != null ? o.noted + ' alert(s) noted' : o.report ? 'kept as a report' : ''));
+      return ''; };
+    var h = r.steps.map(function (s) { return '<div class="rstep ' + esc(s.status) + '"><b>' + ICON[s.type] + ' Step ' + (s.i + 1) + ' · ' + esc(s.type) + '</b> <span class="mut sm">' + esc(s.status) + '</span><div class="sm">' + (s.error ? '<span style="color:#ff7b72">' + esc(s.error) + '</span>' : out(s)) + '</div></div>'; }).join('');
+    if (r.status === 'waiting' && can('operator')) h += '<div class="wbar" style="margin-top:8px"><input id="rc" placeholder="Comment (needed to reject)" style="flex:1;min-width:220px"><button type="button" data-dec="approve" data-rid="' + esc(r.id) + '">Approve</button><button type="button" data-dec="reject" data-rid="' + esc(r.id) + '">Reject</button></div>';
+    $('rd').innerHTML = h; $('rdc').scrollIntoView({ block: 'nearest' });
+  }
+  // ---- events
+  function setField(el) { var v = el.type === 'checkbox' ? el.checked : el.value; if (el.hasAttribute('data-n') && v !== '') v = Number(v); if (v === '') v = undefined;
+    if (el.hasAttribute('data-w')) CUR[el.getAttribute('data-w')] = v; else if (el.hasAttribute('data-t')) { var k = el.getAttribute('data-t'); CUR.trigger[k] = v; if (k === 'type') { CUR.trigger = { type: v }; if (v === 'schedule') CUR.trigger.every_min = 60; if (v === 'alert') CUR.trigger.min_severity = 3; cfg(); } }
+    else { CUR.steps[SEL][el.getAttribute('data-s')] = v; if (el.getAttribute('data-s') === 'action') cfg(); }
+    canvas(); }
+  $('cfg').addEventListener('change', function (e) { if (e.target.matches('input,select,textarea')) setField(e.target); });
+  $('cfg').addEventListener('input', function (e) { if (e.target.matches('input:not([type=checkbox]),textarea')) setField(e.target); });
+  $('cv').addEventListener('click', function (e) { var b = e.target.closest('button');
+    if (b && b.hasAttribute('data-rm')) { CUR.steps.splice(+b.getAttribute('data-rm'), 1); SEL = -1; canvas(); cfg(); return; }
+    if (b && (b.hasAttribute('data-up') || b.hasAttribute('data-dn'))) { var i = +(b.getAttribute('data-up') || b.getAttribute('data-dn')), j = b.hasAttribute('data-up') ? i - 1 : i + 1; if (j < 0 || j >= CUR.steps.length) return; var t = CUR.steps[i]; CUR.steps[i] = CUR.steps[j]; CUR.steps[j] = t; SEL = j; canvas(); cfg(); return; }
+    if (b && b.id === 'b-add') { say('Pick a block on the left to add it at the end of the flow.'); return; }
+    var n = e.target.closest('[data-sel]'); if (n) { SEL = +n.getAttribute('data-sel'); canvas(); cfg(); } });
+  $('cv').addEventListener('keydown', function (e) { var n = e.target.closest('[data-sel]'); if (n && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); SEL = +n.getAttribute('data-sel'); canvas(); cfg(); } });
+  var DEF = { alerts: { window_h: 24, min_severity: 0, status: 'any' }, rules: { top: 10 }, condition: { field: 'count', op: '>', value: 0 }, agent: { agent: 'triage' }, approval: { role: 'operator' }, action: { action: 'report' } };
+  $('pal').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return;
+    if (b.hasAttribute('data-blk')) { if (CUR.steps.length >= 12) return say('At most 12 steps.', true); CUR.steps.push(Object.assign({ type: b.getAttribute('data-blk') }, copy(DEF[b.getAttribute('data-blk')]))); SEL = CUR.steps.length - 1; canvas(); cfg(); return; }
+    if (b.hasAttribute('data-tpl')) act(function () { return req('POST', '/workspace/workflows', { template: b.getAttribute('data-tpl') }); }, 'Draft made from the template - test it, then submit it'); });
+  $('q').addEventListener('input', pal);
+  $('wfsel').addEventListener('change', function () { var id = this.value; CUR = id ? copy(V.workflows.filter(function (w) { return w.id === id; })[0]) : blank(); SEL = -1; $('rdc').hidden = true; say(''); canvas(); cfg(); gov(); pal(); runs(); });
+  function payload() { return { name: CUR.name, description: CUR.description || '', trigger: CUR.trigger, steps: CUR.steps }; }
+  function act(fn, done) { say('Working…'); return fn().then(function (r) { say(done); return load(r && r.wf ? r.wf : r && r.id && /^WSW-/.test(r.id) ? r.id : CUR && CUR.id).then(function () { if (r && /^WSR-/.test(r.id || '')) showRun(r); }); }, function (e) { say(e.message, true); }); }
+  $('b-save').addEventListener('click', function () { act(function () { return CUR.id ? req('PUT', '/workspace/workflows/' + encodeURIComponent(CUR.id), payload()) : req('POST', '/workspace/workflows', payload()); }, 'Saved as a draft'); });
+  $('b-test').addEventListener('click', function () { act(function () { return req('POST', '/workspace/workflows/' + encodeURIComponent(CUR.id) + '/run', { test: true }); }, 'Test run done - nothing was changed'); });
+  $('b-run').addEventListener('click', function () { act(function () { return req('POST', '/workspace/workflows/' + encodeURIComponent(CUR.id) + '/run', {}); }, 'Run started'); });
+  $('b-submit').addEventListener('click', function () { act(function () { return req('POST', '/workspace/workflows/' + encodeURIComponent(CUR.id) + '/submit'); }, 'Submitted - a second administrator publishes it'); });
+  $('b-publish').addEventListener('click', function () { act(function () { return req('POST', '/workspace/workflows/' + encodeURIComponent(CUR.id) + '/decide', { decision: 'publish' }); }, 'Published'); });
+  $('b-reject').addEventListener('click', function () { var c = window.prompt('Why is it returned? (at least 5 characters)'); if (c == null) return; act(function () { return req('POST', '/workspace/workflows/' + encodeURIComponent(CUR.id) + '/decide', { decision: 'reject', comment: c }); }, 'Returned to its author as a draft'); });
+  $('b-disable').addEventListener('click', function () { var c = window.prompt('Why is it disabled? (at least 5 characters)'); if (c == null) return; act(function () { return req('POST', '/workspace/workflows/' + encodeURIComponent(CUR.id) + '/disable', { reason: c }); }, 'Disabled'); });
+  $('b-del').addEventListener('click', function () { if (!window.confirm('Delete ' + CUR.name + '? Its runs stay in the list.')) return; var id = CUR.id; act(function () { return req('POST', '/workspace/workflows/' + encodeURIComponent(id) + '/delete'); }, 'Deleted').then(function () { CUR = blank(); drawAll(); }); });
+  $('runs').addEventListener('click', function (e) { var b = e.target.closest('[data-run]'); if (b) req('GET', '/workspace/runs/' + encodeURIComponent(b.getAttribute('data-run'))).then(showRun, function (er) { say(er.message, true); }); });
+  $('rd').addEventListener('click', function (e) { var b = e.target.closest('[data-dec]'); if (!b) return; var c = ($('rc') || {}).value || '';
+    act(function () { return req('POST', '/workspace/runs/' + encodeURIComponent(b.getAttribute('data-rid')) + '/decide', { decision: b.getAttribute('data-dec'), comment: c }); }, b.getAttribute('data-dec') === 'approve' ? 'Approved - the run goes on' : 'Rejected - no action taken'); });
+  function load(keep) {
+    return req('GET', '/workspace').then(function (j) { V = j; $('main').hidden = false; $('err').innerHTML = '';
+      var id = keep || (CUR && CUR.id), w = id && V.workflows.filter(function (x) { return x.id === id; })[0];
+      CUR = w ? copy(w) : CUR && !CUR.id ? CUR : V.workflows[0] ? copy(V.workflows[0]) : blank(); if (SEL >= CUR.steps.length) SEL = -1;
+      drawAll(); $('note').textContent = V.note || ''; $('up').textContent = 'updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }, function (e) { $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'The Agent Workspace is not on this server yet - run the platform update.' : e.status === 403 ? 'The Agent Workspace is for analysts, operators and administrators.' : e.message) + '</div></div>'; });
+  }
+  $('refresh').addEventListener('click', function () { load(); });
+  req('GET', '/dashboards/whoami.json').then(function (w) { ME = { user: w.user || '', role: w.role || 'viewer' }; }, function () { /* not signed in here: the SIEM refuses what the role may not do */ }).then(function () { load(); });
+})();
+</script></body></html>
