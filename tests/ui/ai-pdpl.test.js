@@ -47,6 +47,12 @@ const RECS = [{ id: 'PD-ROPA-001', kind: 'ropa', name: 'Claims SYN', legal_basis
     ok(asum.length >= 1 && asum.every((n) => n === 100), 'each PDPL area: four shares adding up to 100: ' + asum.join(','));
     ok(await p.$$eval('#reqs tbody tr', (r) => r.every((x) => /Fully compliant|Partially compliant|Not compliant|Not assessed|Not applicable/.test(x.textContent))), 'every requirement shows its level');
     ok(/12.5%/.test(k) && /Not signed/.test(k), 'KPIs: ' + k);
+    // AI / ML band: requirements by level, compliance by area, the registers; what the AI noticed with figures
+    await p.waitForFunction(() => { const c = document.getElementById('pd-reg'); return c && c.getAttribute('aria-label'); }, null, { timeout: 8000 }).catch(() => {});
+    const pdl = await p.$$eval('#pdband canvas', (x) => x.map((c) => c.getAttribute('aria-label') || ''));
+    ok(!(await p.$eval('#pdband', (e) => e.hidden)) && pdl.length === 3 && /Requirements by level/.test(pdl[0]) && /Compliance by area/.test(pdl[1]) && pdl[2].length > 0, 'AI / ML band: ' + pdl.map((x) => x.slice(0, 40)).join(' | '));
+    const pdi = (await p.$eval('#pdins', (e) => e.innerText)).replace(/\s+/g, ' ');
+    ok(/requirements are not compliant|not assessed yet/.test(pdi) && /weakest area is/.test(pdi) && /compliance statement is not signed/.test(pdi), 'what the AI noticed: ' + pdi);
     ok(await p.$$eval('#reqs img', (a) => a.length) === 0 && /<img src=x/.test(await p.$eval('#reqs', (e) => e.textContent)) && /conflicts with the registers/.test(await p.$eval('#reqs', (e) => e.textContent)), 'requirements escaped, conflict shown');
     await p.selectOption('#filter', 'not_assessed'); ok((await p.$$eval('[data-req]', (a) => a.map((x) => x.dataset.req))).join() === 'P-16', 'filter'); await p.selectOption('#filter', '');
     await p.click('[data-req="P-16"]'); await p.waitForSelector('#cform');
