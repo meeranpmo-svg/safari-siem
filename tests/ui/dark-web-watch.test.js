@@ -71,6 +71,8 @@ const { fakeApi, tmpDir, quietLog } = require(path.join(SIEM, 'tests/soc-fakes')
     WHO = { user: 'vera.syn', role: 'viewer' }; await p.goto(url); await wait(p, () => !document.getElementById('main').hidden);
     ok(/Account names are personal data/.test(await p.textContent('#ex')) && !/omar\.syn/.test(await p.content()), 'a viewer sees counts, no names');
     ok(!(await p.$('#dosync')) && !(await p.$('#saveset')) && !(await p.$('#doimp')), 'and no actions');
+    // the graphics are counts only, so a viewer sees all of them too
+    ok((await p.$$('.dwg canvas')).length === 7 && /of 100/.test(await p.textContent('#gauge')) && (await p.$$('#fun > div')).length === 4 && (await p.$$('#dwins li')).length >= 1, 'gauge, seven charts, the remediation funnel and what the AI noticed');
     WHO = { user: 'syed', role: 'admin' };
     const ph = await browser.newPage({ viewport: { width: 390, height: 900 } }); await ph.goto(url); await wait(ph, () => !document.getElementById('main').hidden);
     ok(await ph.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'phone width: no sideways scroll'); await ph.close();

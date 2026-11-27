@@ -185,6 +185,32 @@ function createDarkweb(deps = {}) {
   }
 
   function list(q = {}) { return E.all((x) => (!q.status || x.status === q.status) && (!q.kind || x.kind === q.kind)).map(enrich).sort((a, b) => b.risk - a.risk || b.first_seen - a.first_seen); }
+  // counts for the page's charts - no account names, so every role may see them
+  function charts(all, t) {
+    const inc = (o, k) => { o[k] = (o[k] || 0) + 1; return o; }, mk = (ms) => new Date(ms + 3 * H).toISOString().slice(0, 7);
+    const by_kind = {}, by_status = {}, by_level = {}, classes = {}, years = {}, risk = [0, 0, 0, 0, 0];
+    const months = []; for (let i = 11; i >= 0; i--) { const d = new Date(t + 3 * H); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - i); months.push({ month: d.toISOString().slice(0, 7), new: 0, stealer: 0, high: 0 }); }
+    const mi = new Map(months.map((m, i) => [m.month, i])), resetDays = [];
+    const rem = { password_in_leak: 0, changed_since_leak: 0, not_changed: 0, disabled: 0, not_in_directory: 0 };
+    for (const x of all) {
+      inc(by_kind, x.kind); inc(by_status, x.status); inc(by_level, x.level || 'low'); risk[Math.min(4, Math.floor((x.risk || 0) / 20))]++;
+      for (const c of x.data_classes || []) inc(classes, c);
+      const bd = x.breach_date || x.added_date; if (bd) inc(years, new Date(bd).getUTCFullYear());
+      const k = mi.get(mk(x.first_seen)); if (k != null) { months[k].new++; if (x.kind === 'stealer') months[k].stealer++; if (x.level === 'high') months[k].high++; }
+      if (x.includes_password) { rem.password_in_leak++; if (!x.directory.matched) rem.not_in_directory++; else if (x.directory.disabled) rem.disabled++; else if (x.directory.changed_since_leak) rem.changed_since_leak++; else rem.not_changed++; }
+      const r = (x.history || []).find((h) => h.action === 'reset'); if (r) resetDays.push((r.at - x.first_seen) / DAY);
+    }
+    // the latest month against the months before it (robust z on median / MAD, 6+ months of history)
+    const prev = months.slice(0, -1).map((m) => m.new).filter((n, i, a) => a.slice(0, i + 1).some((v) => v > 0)), cur = months[months.length - 1].new;
+    let unusual = null;
+    if (prev.length >= 6) { const s0 = prev.slice().sort((a, b) => a - b), md = s0[s0.length >> 1], dev = prev.map((v) => Math.abs(v - md)).sort((a, b) => a - b), mad = dev[dev.length >> 1] || 1, z = Math.round(10 * (cur - md) / (1.4826 * mad)) / 10;
+      if (z >= 3 && cur - md >= 3) unusual = { month: months[months.length - 1].month, exposures: cur, usual: md, z, why: cur + ' new exposures this month against usually ' + md + ' - a new breach or stealer campaign naming the company' }; }
+    const funnel = ['new', 'notified', 'reset', 'closed'].map((st) => ({ status: st, exposures: by_status[st] || 0 }));
+    return { months, by_kind, by_status, by_level, risk_bands: ['0-19', '20-39', '40-59', '60-79', '80-100'].map((b, i) => ({ band: b, exposures: risk[i] })),
+      data_classes: Object.entries(classes).map(([c, n]) => ({ class: c, exposures: n })).sort((a, b) => b.exposures - a.exposures).slice(0, 12),
+      breach_years: Object.entries(years).map(([y, n]) => ({ year: +y, exposures: n })).sort((a, b) => a.year - b.year).slice(-12), remediation: rem, funnel,
+      reset_days: resetDays.length ? Math.round(10 * resetDays.reduce((a, b) => a + b, 0) / resetDays.length) / 10 : null, unusual };
+  }
   function view(named) {
     const all = E.all().map(enrich), open = all.filter((x) => !['closed', 'false_positive'].includes(x.status)), c = cfg(), t = now();
     const cnt = (f) => open.filter(f).length;
@@ -195,6 +221,7 @@ function createDarkweb(deps = {}) {
         privileged: cnt((x) => x.directory.privileged), not_changed: cnt((x) => x.includes_password && x.directory.matched && !x.directory.disabled && !x.directory.changed_since_leak), unmatched: cnt((x) => !x.directory.matched),
         new_30d: all.filter((x) => t - x.first_seen <= 30 * DAY).length },
       sources: Object.entries(bySource).map(([source, n]) => ({ source, exposures: n })).sort((a, b) => b.exposures - a.exposures).slice(0, 15),
+      charts: charts(all, t),
       directory: !!(deps.identity && deps.identity.lookup),
       note: 'From legitimate providers only - Have I Been Pwned and the threat-intelligence provider\'s exports. Passwords are never stored. A finding says an account was exposed, not that it was misused: check sign-ins before acting.' };
   }
@@ -205,7 +232,7 @@ function createDarkweb(deps = {}) {
   const tick = guard('soc.darkweb.sync', async () => { try { if (key() && cfg().domains.length) await syncHibp('system:darkweb'); } finally { arm(); } });
   function start() { if (armed) return; armed = true; arm(); }
   function restart() { arm(); }
-  return { view, list, enrich, syncHibp, importFindings, transition, setSettings, start, csvRows };
+  return { view, list, enrich, syncHibp, importFindings, transition, setSettings, start, csvRows, charts };
 }
 
 function register(api, deps) {

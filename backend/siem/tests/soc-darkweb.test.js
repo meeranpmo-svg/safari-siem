@@ -127,3 +127,23 @@ test('lifecycle: one step at a time, reset verified from the directory or attest
     assert.ok(w.api.audits.some((a) => a.action === 'soc.darkweb.status' && a.detail.evidence === 'attested' && a.user === 'nora.syn'));
   } finally { w.cleanup(); }
 });
+
+test('charts: counts only - by month, kind, status, risk band, data exposed, remediation, reset time, an unusual month', () => {
+  const state = createState({ dir: tmpDir() }), DAY = 864e5, T = Date.parse('2026-11-20T09:00:00Z'); let t = T - 300 * DAY;
+  const users = { 'syn.lina': { sam: 'syn.lina', pwd_last_set: T - 400 * DAY }, 'syn.omar': { sam: 'syn.omar', pwd_last_set: T - 1 * DAY } };
+  const D = DW.createDarkweb({ state, identity: { lookup: (n) => users[String(n).toLowerCase().split('@')[0]] || null }, config: {}, log: quietLog, now: () => t, noTimers: true });
+  D.setSettings({ domains: ['corp.example'] }, 'syn.admin');
+  // one or two a month for most of a year, then a burst in the last month
+  for (let m = 10; m >= 1; m--) { t = T - m * 30 * DAY; D.importFindings({ provider: 'SynIntel', format: 'json', content: JSON.stringify([{ account: 'u' + m + '@corp.example', source: 'SynBreach ' + m, kind: 'breach', breach_date: '2024-0' + (1 + (m % 9)) + '-01', data_classes: ['Email addresses', 'Passwords'], password: 'x' }]) }, 'syn.ops'); }
+  t = T - 2 * DAY;
+  D.importFindings({ provider: 'SynIntel', format: 'json', content: JSON.stringify(Array.from({ length: 9 }, (_, i) => ({ account: (i ? 'v' + i : 'syn.lina') + '@corp.example', source: 'SynStealer', kind: 'stealer', data_classes: ['Cookies'], password: 'x' })).concat([{ account: 'syn.omar@corp.example', source: 'SynBreach', kind: 'breach', breach_date: '2025-06-01', password: 'x' }])) }, 'syn.ops');
+  t = T;
+  const c = D.view(false).charts;
+  assert.equal(c.months.length, 12); assert.equal(c.months[11].new, 10); assert.equal(c.months[11].stealer, 9);
+  assert.equal(c.by_kind.stealer, 9); assert.equal(c.by_status.new, 20); assert.equal(c.risk_bands.reduce((a, b) => a + b.exposures, 0), 20);
+  assert.ok(c.data_classes.some((x) => x.class === 'Cookies' && x.exposures === 9));
+  assert.equal(c.remediation.changed_since_leak, 1, 'syn.omar changed the password after the leak'); assert.equal(c.remediation.not_changed, 1, 'syn.lina did not');
+  assert.ok(c.unusual && c.unusual.exposures === 10 && /new exposures this month/.test(c.unusual.why), JSON.stringify(c.unusual));
+  assert.ok(!JSON.stringify(c).includes('corp.example'), 'no account in the chart data');
+  assert.deepEqual(c.funnel.map((f) => f.status), ['new', 'notified', 'reset', 'closed']);
+});
