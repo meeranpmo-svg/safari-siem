@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IT Asset Management</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IT Asset Management</title><script src="vendor/zyb-ksa-map.js"></script><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script>
 <!-- Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE. -->
 <!-- IT Asset Management overview over /api/itam/itam/overview (read): one view over the ITAM modules' own views - a health score from
      the parts that are measured (each itemised; unmeasured parts are left out, and the score is withheld below three), the next things
@@ -24,12 +24,16 @@ main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
 .hb{display:grid;grid-template-columns:130px 1fr 54px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}.hb .b{height:8px;background:var(--d-raise);border-radius:5px;overflow:hidden}.hb .b i{display:block;height:100%;background:var(--acc)}
 .mods{display:flex;gap:6px;flex-wrap:wrap}.chip{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border:1px solid var(--d-line);border-radius:999px;font-size:12.5px;text-decoration:none;color:var(--d-ink)}.chip i{width:8px;height:8px;border-radius:50%;display:inline-block}
 .empty{color:var(--d-mute);padding:14px;text-align:center}.err{color:var(--bad);font-size:13px}
+.mapg{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;margin:0 0 12px}@media(max-width:1000px){.mapg{grid-template-columns:1fr}}.mapg .card{margin:0}#ksa{width:100%;height:auto;max-height:470px;display:block}.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:6px}.lg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
 </style></head><body><main>
 <div class="top"><div><div class="eb">IT assets · overview</div><h1>IT Asset Management</h1></div><span class="sp"></span><span class="mut sm" id="up"></span><button type="button" class="btn" id="rf">⟳</button></div>
 <div class="card"><div class="mods" id="mods"><span class="mut">Loading…</span></div><div class="err" id="errs"></div></div>
 <div class="hero"><div class="card ring" id="ring"></div><div class="card"><h2>What the score is made of</h2><div id="comp"></div><div class="sm mut" id="cwhy" style="margin-top:6px"></div></div>
   <div class="card"><h2>Do next</h2><div id="acts"></div></div></div>
 <div class="k" id="tiles"></div>
+<div class="mapg"><div class="card"><h2>Assets by location <span class="mut sm">head office, branches and project sites · colour = how complete the records are</span></h2><svg id="ksa" role="img" aria-label="Map of Saudi Arabia with the number of assets per site"></svg>
+  <div class="lg"><span><i style="background:#2fd47a"></i>records 80%+ complete</span><span><i style="background:#f5a623"></i>60-79%</span><span><i style="background:#ff5c5c"></i>below 60%</span><span><i style="background:#4f9be9"></i>not measured</span></div></div>
+  <div class="card"><h2>Sites <span class="mut sm" id="sitec"></span></h2><div id="sitel"></div><div class="sm mut" id="siten" style="margin-top:6px"></div></div></div>
 <div class="g3"><div class="card"><h2>Assets by type</h2><div id="b-type"></div></div><div class="card"><h2>Assets by site</h2><div id="b-site"></div></div><div class="card"><h2>Assets by status</h2><div id="b-status"></div></div>
   <div class="card"><h2>Weakest data fields</h2><div id="b-fields"></div></div><div class="card"><h2>Sites with the weakest records</h2><div id="b-wsites"></div></div><div class="card"><h2>Budget use</h2><div id="b-budget"></div></div></div>
 <div class="card"><h2>Health over time</h2><div id="trend"></div></div>
@@ -46,6 +50,18 @@ main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
     x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('not reachable'), { status: 0 })); }; x.send(null); }); }
   function bars(L, lab, val, max, fmt) { if (!L || !L.length) return '<div class="empty">No data yet.</div>'; var m = max || Math.max.apply(null, L.map(val).concat([1]));
     return L.map(function (r) { var v = val(r); return '<div class="hb"><span title="' + esc(lab(r)) + '" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(lab(r)) + '</span><span class="b"><i style="width:' + Math.round(100 * v / m) + '%;' + (fmt ? 'background:' + colr(v) : '') + '"></i></span><span class="sm">' + esc(fmt ? fmt(v) : v) + '</span></div>'; }).join(''); }
+  // assets per site on the Saudi map: placed by the Saudi city in the site name, coloured by the site's record completeness
+  function drawMap(B) {
+    if (!window.zybKsaMap) return;
+    var all = (B.sites_all && B.sites_all.length ? B.sites_all : B.site) || [], q = {}; (B.sites_quality || B.weakest_sites || []).forEach(function (w) { q[w.site] = w.avg; });
+    var pts = all.filter(function (r) { return r.value && r.value !== '(none)' && r.value !== '-'; }).map(function (r) { var a = q[r.value]; return { name: r.value, label: String(r.value).replace(/\s*(head ?office|branch|project site|site|office)\s*$/i, ''), value: r.count, level: a == null ? 'info' : a >= 80 ? 'ok' : a >= 60 ? 'warn' : 'crit', sub: a == null ? 'completeness not measured' : a + '% complete records' }; });
+    var drawn = zybKsaMap.draw($('ksa'), pts, { empty: 'Give the assets a site (Asset Onboarding) to see them on the map.', onClick: function (p) { location.href = 'inventory.html?site=' + encodeURIComponent(p.name); } });
+    var mx = Math.max.apply(null, pts.map(function (p) { return p.value; }).concat([1]));
+    $('sitec').textContent = pts.length + ' site(s)';
+    $('sitel').innerHTML = pts.length ? pts.map(function (p) { var c = { ok: 'var(--ok)', warn: 'var(--warn)', crit: 'var(--bad)', info: '#4f9be9' }[p.level]; return '<a class="hb" href="inventory.html?site=' + encodeURIComponent(p.name) + '" style="text-decoration:none;color:inherit"><span>' + esc(p.name) + '</span><span class="b"><i style="width:' + Math.round(100 * p.value / mx) + '%;background:' + c + '"></i></span><span>' + esc(p.value) + '</span></a>'; }).join('') : '<div class="empty">No asset has a site yet.</div>';
+    var none = all.filter(function (r) { return !r.value || r.value === '(none)' || r.value === '-'; }).reduce(function (s, r) { return s + r.count; }, 0);
+    $('siten').textContent = (none ? none + ' asset(s) have no site. ' : '') + (pts.length > drawn ? (pts.length - drawn) + ' site(s) have no Saudi city in their name and are listed but not drawn (e.g. "Azure ..." cloud sites).' : '');
+  }
   function paint(V) {
     var H = V.health, s = H.score, C = 2 * Math.PI * 70;
     $('ring').innerHTML = '<svg width="170" height="170" viewBox="0 0 170 170" role="img" aria-label="ITAM health ' + (s == null ? 'withheld' : s) + '"><circle cx="85" cy="85" r="70" fill="none" stroke="#232837" stroke-width="14"/>' + (s == null ? '' : '<circle cx="85" cy="85" r="70" fill="none" stroke="' + colr(s) + '" stroke-width="14" stroke-linecap="round" stroke-dasharray="' + (C * s / 100).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 85 85)"/>') +
@@ -60,6 +76,7 @@ main{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
       ['stocktake.html', 'Last count', t.stocktake_accuracy == null ? '—' : t.stocktake_accuracy + ' %', 'found of expected', t.stocktake_accuracy == null ? '' : t.stocktake_accuracy >= 95 ? 'ok' : 'warn'], ['asset-autofill.html', 'Data proposals', n(t.proposals), 'waiting for a person', '']];
     $('tiles').innerHTML = T.map(function (x) { return '<a class="t ' + x[4] + '" href="' + x[0] + '"><div class="l">' + esc(x[1]) + '</div><div class="v">' + esc(x[2]) + '</div><div class="s">' + esc(x[3]) + '</div></a>'; }).join('');
     var B = V.breakdown, cnt = function (r) { return r.count; }, lv = function (r) { return r.value; };
+    drawMap(B);
     $('b-type').innerHTML = bars(B.type, lv, cnt); $('b-site').innerHTML = bars(B.site, lv, cnt); $('b-status').innerHTML = bars(B.status, lv, cnt);
     $('b-fields').innerHTML = bars(B.weakest_fields, function (r) { return r.field; }, function (r) { return r.pct; }, 100, function (v) { return v + '%'; });
     $('b-wsites').innerHTML = bars(B.weakest_sites, function (r) { return r.site + ' (' + r.assets + ')'; }, function (r) { return r.avg; }, 100, function (v) { return v + '%'; });
