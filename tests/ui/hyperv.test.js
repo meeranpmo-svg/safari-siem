@@ -23,6 +23,8 @@ const posts = [];
     const body = (fn) => { let b = ''; req.on('data', (d) => { b += d; }); req.on('end', () => { const j = b ? JSON.parse(b) : null; posts.push([req.method, u, j]); fn(j); }); };
     if (u === '/dashboards/whoami.json') return json(200, { user: USER, role: ROLE });
     if (u === '/api/itam/hyperv') return json(200, VIEW());
+    if (u === '/api/itam/discovery/hyperv/hosts') return json(200, { hosts: [], scopes: [{ id: 'sc_hq', name: 'HQ Hyper-V (synthetic)', site: 'Riyadh HQ', targets: ['10.20.8.0/24'], auto_register: false }] });
+    if (u === '/api/itam/discovery/scopes/sc_hq') return body((b) => json(200, { scope: { id: 'sc_hq', methods: b.methods } }));
     if (u === '/api/itam/hyperv/onboard' && req.method === 'GET') return ROLE === 'admin' ? json(200, { script: { name: 'hyperv-report.ps1', sha256: 'ab'.repeat(32), bytes: 9000 }, invited: INVITED }) : json(403, { error: 'admin only' });
     if (u === '/api/itam/hyperv/onboard') return body((b) => { INVITED = b.hosts.map((h, i) => ({ id: 'abcd000' + i, host: h, state: 'waiting for the host', created_at: new Date().toISOString(), created_by: USER, expires_at: new Date(Date.now() + 86400000).toISOString() }));
       json(200, { script_sha256: 'ab'.repeat(32), hosts: b.hosts.map((h, i) => ({ host: h, token: 'synthetic' + i + "'tok", expires_at: new Date().toISOString() })) }); });
@@ -75,6 +77,9 @@ const posts = [];
   const ed = posts.find((x) => x[0] === 'PUT'); ok(ed && ed[1] === '/api/itam/hyperv/onboard/abcd0000' && ed[2].host === 'HQPSUPERM01.safari.local' && /computer name/.test(asked), 'Edit: the new name is sent for that key');
   await p.click('[data-hdel="abcd0001"]'); await p.waitForFunction(() => !/HV-SYN-03/.test(document.getElementById('onbinv').textContent));
   ok(/Remove HV-SYN-03\?/.test(asked) && /one-time key is cancelled/.test(asked) && posts.some((x) => x[1] === '/api/itam/hyperv/onboard/abcd0001/remove'), 'Remove: asks first, says what happens, the host leaves the list');
+  // the VMs into the inventory automatically: one switch per scope, saved as the scope's Hyper-V setting
+  await p.waitForSelector('[data-autoreg="sc_hq"]'); await p.check('[data-autoreg="sc_hq"]'); await p.waitForTimeout(400);
+  ok(posts.some((x) => x[1] === '/api/itam/discovery/scopes/sc_hq' && x[2] && x[2].methods.hyperv.auto_register === true && x[2].methods.hyperv.enabled === true), 'switching on automatic adding saves it on the scope');
   await p.close();
   // from Connections (Add connection on the Hyper-V card): ?add=1 opens the set-up for an administrator, not for a viewer
   p = await browser.newPage(); p.on('pageerror', (x) => errs.push(x.message)); await p.goto(URL0 + (URL0.includes('?') ? '&' : '?') + 'add=1');

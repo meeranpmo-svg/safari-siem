@@ -75,6 +75,9 @@ function normMethods(raw, cur, credentials) {
       o.tcp_ports = [...new Set(ports.map((x) => intIn(x, 1, 65535, 'methods.sweep.tcp_ports[]')))].sort((a, b2) => a - b2);
       if (o.tcp_ports.includes(161)) throw bad('UDP 161 is not a TCP port — enable the SNMP method instead (it sends an SNMP get of sysDescr)');
     }
+    // Hyper-V: register the VMs the hosts report straight into the inventory (a VM that looks like an existing record is still left
+    // for a person - see discovery/index.js ingestHyperv)
+    if (k === 'hyperv') o.auto_register = bool(b.auto_register, 'methods.hyperv.auto_register', !!p.auto_register);
     if (k === 'db') {
       const DBE = ['oracle', 'mssql', 'mysql', 'postgres', 'db2', 'mongodb', 'hana'];
       const e = b.engines !== undefined ? b.engines : (p.engines || DBE);

@@ -438,15 +438,28 @@ function createDiscovery({ config, store, audit, log, assets, ingest, findings, 
     const untrusted = opts.untrusted === true;
     devices.observe({ method: 'hyperv', untrusted, ip: rep.host.ip, hostname: rep.host.name, fqdn: rep.host.fqdn, os: rep.host.os, uid: `hyperv-host:${rep.host.name.toLowerCase()}`, extra: { hyperv: { kind: 'host' } } }, ctx);
     let n = 0;
-    for (const v of rep.vms) { if (devices.observe({ method: 'hyperv', untrusted, ips: v.ips, macs: v.macs, hostname: v.name, os: v.os, uid: v.id ? `hyperv:${v.id.toLowerCase()}` : `hyperv:${rep.host.name.toLowerCase()}/${(v.name || '').toLowerCase()}`, extra: { hyperv: { kind: 'vm', host: rep.host.name, state: v.state, generation: v.generation } } }, ctx)) n++; }
+    const vmDevs = [];
+    for (const v of rep.vms) { const dv = devices.observe({ method: 'hyperv', untrusted, ips: v.ips, macs: v.macs, hostname: v.name, os: v.os, uid: v.id ? `hyperv:${v.id.toLowerCase()}` : `hyperv:${rep.host.name.toLowerCase()}/${(v.name || '').toLowerCase()}`, extra: { hyperv: { kind: 'vm', host: rep.host.name, state: v.state, generation: v.generation, fqdn: v.fqdn || null } } }, ctx); if (dv) { n++; vmDevs.push(dv); } }
+    // the scope says new VMs go straight into the inventory: each new one is registered as a VM (with its guest OS when the host could
+    // read it); a VM that looks like an existing record (MAC / serial / host name) is left in Discovery for a person to merge
+    let registered = 0, held = 0;
+    if (scope.methods.hyperv.auto_register) {
+      const sys = { user: 'auto:hyperv-register', role: 'system', ip: '' };
+      for (const dv of vmDevs) {
+        const cur = devices.get(dv.id); if (!cur || cur.status !== 'new') continue;
+        const pub = devices.view(cur, true); if ((pub.duplicates || []).length) { held++; continue; }
+        try { devices.approve(dv.id, sys); registered++; } catch (e) { held++; if (log && typeof log.warn === 'function') log.warn('hyperv: a VM was not registered automatically - left in Discovery', { device: dv.id, err: e.message }); }
+      }
+      if (registered || held) A(who, 'discovery.hyperv.auto_register', rep.host.name, { registered, left_for_review: held });
+    }
     hvHostsCol.put({ id: rep.host.name.toLowerCase(), host: rep.host.name, fqdn: rep.host.fqdn, ip: rep.host.ip, os: rep.host.os, scope_id: scope.id, site: scope.site || null,
       vms: n, via: untrusted ? 'agent' : 'import', by: who.user, at: new Date().toISOString(), collected_at: rep.collected_at || null });
     A(who, 'discovery.hyperv.report', rep.host.name, { scope_id: scope.id, vms: n, untrusted });
-    return { ok: true, scope_id: scope.id, host: rep.host.name, vms: n };
+    return { ok: true, scope_id: scope.id, host: rep.host.name, vms: n, registered, left_for_review: held };
   }
 
   // the Hyper-V hosts that have reported (Integration Hub): newest first; no credentials are involved
-  function hypervHosts() { return { hosts: hvHostsCol.all().sort((a, b) => String(b.at).localeCompare(String(a.at))), scopes: scopesCol.all((s) => s.status === 'active' && s.methods.hyperv && s.methods.hyperv.enabled).map((s) => ({ id: s.id, name: s.name, site: s.site, targets: s.targets })) }; }
+  function hypervHosts() { return { hosts: hvHostsCol.all().sort((a, b) => String(b.at).localeCompare(String(a.at))), scopes: scopesCol.all((s) => s.status === 'active' && s.methods.hyperv && s.methods.hyperv.enabled).map((s) => ({ id: s.id, name: s.name, site: s.site, targets: s.targets, auto_register: !!s.methods.hyperv.auto_register })) }; }
   function forgetHypervHost(id, who) {
     const k = String(id || '').toLowerCase();
     if (!/^[a-z0-9][a-z0-9._-]{0,119}$/.test(k)) throw bad('host must be a Hyper-V host name', 400);

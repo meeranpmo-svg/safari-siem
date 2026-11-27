@@ -75,8 +75,23 @@ try {
   }
 } catch { Write-Warning ('performance counters not read: ' + $_.Exception.Message) }   # the report still goes, without network / disk figures
 
+# the guest OS of a running VM, as its integration services report it (KVP, read-only); empty when the VM is off or KVP is not running
+function Get-GuestInfo($vm) {
+  $o = @{ os = ''; fqdn = '' }
+  try {
+    $cs = Get-CimInstance -Namespace root\virtualization\v2 -ClassName Msvm_ComputerSystem -Filter "Name='$($vm.VMId.Guid.ToUpper())'" -ErrorAction Stop
+    $kvp = Get-CimAssociatedInstance -InputObject $cs -ResultClassName Msvm_KvpExchangeComponent -ErrorAction Stop
+    foreach ($x in @($kvp.GuestIntrinsicExchangeItems)) {
+      $e = [xml]$x; $n = ($e.INSTANCE.PROPERTY | Where-Object { $_.NAME -eq 'Name' }).VALUE; $v = ($e.INSTANCE.PROPERTY | Where-Object { $_.NAME -eq 'Data' }).VALUE
+      if ($n -eq 'OSName') { $o.os = "$v" + $o.os } elseif ($n -eq 'OSVersion') { $o.os = $o.os + " ($v)" } elseif ($n -eq 'FullyQualifiedDomainName') { $o.fqdn = "$v" }
+    }
+  } catch { }   # no KVP for this VM (off, or integration services not running): the report says nothing about its OS
+  return $o
+}
+
 $vms = @(Get-VM | ForEach-Object {
   $vm = $_
+  $gi = Get-GuestInfo $vm
   $na = @(Get-VMNetworkAdapter -VM $vm)
   $hb = (Get-VMIntegrationService -VM $vm | Where-Object { $_.Name -eq 'Heartbeat' } | Select-Object -First 1).PrimaryStatusDescription
   $disks = @(Get-VMHardDiskDrive -VM $vm | ForEach-Object { $p = $_.Path; try { $v = Get-VHD -Path $p; @{ path = $p; size_gb = [math]::Round($v.FileSize / 1GB, 1); max_gb = [math]::Round($v.Size / 1GB, 1) } } catch { @{ path = $p } } })
@@ -84,7 +99,7 @@ $vms = @(Get-VM | ForEach-Object {
   @{ vm_id = $vm.VMId.Guid; name = $vm.Name; state = "$($vm.State)"; generation = $vm.Generation; uptime_s = [int]$vm.Uptime.TotalSeconds; vcpus = $vm.ProcessorCount; cpu_pct = $vm.CPUUsage
      mem_assigned_mb = [int]($vm.MemoryAssigned / 1MB); mem_demand_mb = [int]($vm.MemoryDemand / 1MB); dynamic_memory = $vm.DynamicMemoryEnabled; heartbeat = "$hb"
      ips = @($na.IPAddresses | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' }); macs = @($na.MacAddress); vhds = $disks; checkpoints = $cps
-     replication_state = "$($vm.ReplicationState)"; replication_health = "$($vm.ReplicationHealth)"
+     os = $gi.os.Trim(); fqdn = $gi.fqdn; replication_state = "$($vm.ReplicationState)"; replication_health = "$($vm.ReplicationHealth)"
      net_rx_bps = $(if ($vmNet.ContainsKey($vm.Name.ToLower())) { [math]::Round($vmNet[$vm.Name.ToLower()].rx) } else { $null }); net_tx_bps = $(if ($vmNet.ContainsKey($vm.Name.ToLower())) { [math]::Round($vmNet[$vm.Name.ToLower()].tx) } else { $null }) }
 })
 # virtual networking (read-only): virtual switches and their uplinks (SET or NIC team), the physical NICs, every VM and

@@ -16,7 +16,7 @@
  <label class="sm mut" for="onbh">Host names</label><textarea id="onbh" rows="4" style="width:100%;font-family:Consolas,monospace" placeholder="HV-HOST-01&#10;HV-HOST-02"></textarea>
  <p class="sm mut" style="margin:4px 0 0">Use the Windows computer name (run <code>hostname</code> on the host). An IP address works too: once the command has run, the host is shown with the name it reports under.</p>
  <div style="margin:8px 0"><button type="button" id="onbgo">Create the commands</button> <span class="sm mut" id="onbsha"></span></div>
- <div id="onbout"></div><div id="onbinv"></div></section><div class="k" id="kp"></div><div id="body"></div>
+ <div id="onbout"></div><div id="onbinv"></div><div id="autoreg" style="margin-top:14px"></div></section><div class="k" id="kp"></div><div id="body"></div>
 </main>
 <script>
 (function () {
@@ -89,7 +89,15 @@
   // the one-line check to run on a host that stays "waiting for the host": can it reach and trust the portal?
   function testCmd() { return "[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; Test-NetConnection " + psq(location.hostname) + " -Port " + (location.port || 443) + " | Select-Object ComputerName,RemoteAddress,TcpTestSucceeded; try { (Invoke-WebRequest -UseBasicParsing " + psq(AGENT + '/hyperv/script') + ").StatusCode } catch { 'FAILED: ' + $_ }"; }
 
-  function onbLoad() { req('GET', '/hyperv/onboard').then(function (o) { $('onbsha').textContent = 'script fingerprint ' + o.script.sha256.slice(0, 16) + '…';
+  // the VMs the hosts report go into the inventory automatically - per discovery scope, an administrator's choice; a VM that looks like
+  // an existing record is still left in Discovery for a person (the engine decides that, not this page)
+  function autoLoad() { req('GET', '/discovery/hyperv/hosts').then(function (d) { var S = d.scopes || [];
+    $('autoreg').innerHTML = '<h3 style="margin:0 0 6px">Add the VMs to IT Asset Management automatically</h3>' + (S.length ? '<p class="sm mut">Every VM a host reports becomes an asset (type VM, with its guest OS when the host can read it) at the next report. A VM that looks like an existing record (same name, MAC or serial) is left in Asset Discovery for a person to merge, never duplicated.</p>'
+      + S.map(function (x) { return '<label class="sm" style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-autoreg="' + esc(x.id) + '"' + (x.auto_register ? ' checked' : '') + '> <b>' + esc(x.name) + '</b> <span class="mut">' + esc(x.site || '') + ' · ' + esc((x.targets || []).slice(0, 3).join(', ')) + '</span></label>'; }).join('')
+      : '<p class="sm mut">No discovery scope accepts Hyper-V reports yet - create one in Asset Discovery with the Hyper-V method, covering the hosts\' addresses.</p>'); }, function (er) { $('autoreg').innerHTML = '<p class="sm mut">' + esc(er.message) + '</p>'; }); }
+  document.addEventListener('change', function (ev) { var t = ev.target; if (!t.hasAttribute || !t.hasAttribute('data-autoreg')) return; t.disabled = true;
+    req('POST', '/discovery/scopes/' + encodeURIComponent(t.getAttribute('data-autoreg')), { methods: { hyperv: { enabled: true, auto_register: t.checked } } }).then(function () { toast(t.checked ? 'The VMs will be added to the inventory at the next report' : 'Automatic adding switched off - new VMs wait in Asset Discovery'); }, function (er) { t.checked = !t.checked; toast('Not saved: ' + er.message); }).then(function () { t.disabled = false; }); });
+  function onbLoad() { autoLoad(); req('GET', '/hyperv/onboard').then(function (o) { $('onbsha').textContent = 'script fingerprint ' + o.script.sha256.slice(0, 16) + '…';
     $('onbinv').innerHTML = o.invited.length ? '<h3 style="margin-top:14px">Hosts added</h3><div class="tw"><table><thead><tr><th>Host</th><th>State</th><th>Added</th><th>Key valid until</th><th></th></tr></thead><tbody>' + o.invited.map(function (x) {
       return '<tr><td><b>' + esc(x.host) + '</b>' + (x.reports_as ? ' <span class="sm mut">reports as ' + esc(x.reports_as) + '</span>' : '') + '</td><td>' + pill(x.state, x.state === 'reporting' ? 'ok' : /expired|revoked/.test(x.state) ? 'bad' : 'warn') + '</td><td class="sm">' + esc(String(x.created_at).slice(0, 16).replace('T', ' ')) + ' · ' + esc(x.created_by || '') + '</td><td class="sm">' + esc(String(x.expires_at).slice(0, 16).replace('T', ' ')) + '</td><td style="white-space:nowrap"><button type="button" class="sm" data-hedit="' + esc(x.id) + '" data-host="' + esc(x.host) + '">✎ Edit</button> <button type="button" class="sm" data-hdel="' + esc(x.id) + '" data-host="' + esc(x.host) + '" data-used="' + (/enrolled|reporting/.test(x.state) ? '1' : '') + '">🗑 Remove</button></td></tr>'; }).join('') + '</tbody></table></div>' : '';
     if (o.invited.some(function (x) { return /waiting|expired/.test(x.state); })) {

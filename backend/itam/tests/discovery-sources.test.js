@@ -263,7 +263,7 @@ test('Hyper-V report: normalised and validated (agent / relay ingestion)', () =>
     { name: 'TEST-HV-VM2', state: 3, macs: ['000000000000'] },
   ] });
   assert.deepEqual(r.host, { name: 'TEST-HV01', fqdn: ('test-hv01.' + 'corp-hq.com'), ip: '10.20.0.60', os: 'Windows Server 2022 Datacenter' });
-  assert.deepEqual(r.vms[0], { id: 'B1C2D3E4-0000-0000-0000-000000000001', name: 'TEST-HV-VM1', state: 'on', generation: 2, os: null, ips: ['10.20.0.61'], macs: ['00:15:5d:01:02:03'] });
+  assert.deepEqual(r.vms[0], { id: 'B1C2D3E4-0000-0000-0000-000000000001', name: 'TEST-HV-VM1', state: 'on', generation: 2, os: null, fqdn: null, ips: ['10.20.0.61'], macs: ['00:15:5d:01:02:03'] });
   assert.deepEqual([r.vms[1].state, r.vms[1].macs], ['off', []]);
   assert.throws(() => hv.normReport({ vms: [] }), /host.name/);
   assert.throws(() => hv.normReport({ host: { name: 'x' }, vms: 'no' }), /vms must be a list/);

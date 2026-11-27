@@ -26,7 +26,7 @@ function normReport(body) {
     const ips = (Array.isArray(o.ips) ? o.ips : []).map((x) => str(x, 40)).filter((x) => IP_RE.test(x)).slice(0, 32);
     const macs = (Array.isArray(o.macs) ? o.macs : []).map(normMac).filter(Boolean).slice(0, 16);
     const st = String(o.state == null ? '' : o.state).toLowerCase();
-    return { id: str(o.vm_id || o.id, 64) || null, name: str(o.name, 200) || null, state: STATES[st] || (st ? st.slice(0, 20) : null), generation: Number(o.generation) || null, os: str(o.os, 200) || null, ips: [...new Set(ips)], macs: [...new Set(macs)] };
+    return { id: str(o.vm_id || o.id, 64) || null, name: str(o.name, 200) || null, state: STATES[st] || (st ? st.slice(0, 20) : null), generation: Number(o.generation) || null, os: str(o.os, 200) || null, fqdn: str(o.fqdn, 255).toLowerCase() || null, ips: [...new Set(ips)], macs: [...new Set(macs)] };
   }).filter((v) => v.name || v.id);
   const at = Date.parse(b.collected_at);
   return { host, vms, collected_at: Number.isFinite(at) ? new Date(at).toISOString() : new Date().toISOString() };
