@@ -128,7 +128,7 @@ const ITAM = [eng('desk', 'AI Desktop Support', { open: 3, by_status: { open: 3 
     ok((await (await node(p, 'network')).getAttribute('href')) === 'network-engineer.html', 'a node links to the engineer\'s desk');
     // title menu: one view at a time, remembered in the address, Back works, Everything shows the whole page
     const vis = (sel) => p.evaluate((q) => { const el = document.querySelector(q); return !!el && el.getClientRects().length > 0; }, sel);
-    ok(await vis('#floor') && !(await vis('#kpis')) && !(await vis('#oraov')) && !(await vis('#charters')) && !(await vis('#readiness')), 'opens on Overview, the team picture first');
+    ok(await vis('#teamhome') && !(await vis('#floor')) && !(await vis('#kpis')) && !(await vis('#oraov')) && !(await vis('#charters')) && !(await vis('#readiness')), 'opens on Overview, the team picture first');
     ok(await p.getAttribute('#attabs [data-t="home"]', 'aria-selected') === 'true', 'Overview is selected');
     ok(/Team overview/.test(await p.textContent('#atsub button[aria-selected="true"]')), 'its sub-menu opens on Team overview');
     await p.click('#atsub [data-s="status"]');
