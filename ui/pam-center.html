@@ -1,0 +1,107 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PAM Center</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- PAM Center over /api/itam/pam-center (engine/pam-center.js): PAM maturity, privileged accounts with risk and every point named, the
+     safe for shared / break-glass accounts (sealed), checkouts approved by another person, revealed only to the requester inside the
+     window and shown once, check-in and rotation by the owner, ML on checkout patterns, what the AI noticed, the read-only advisor.
+     Operators and administrators. A revealed password is shown in a dialog for 60 seconds and never kept by the page. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:240px}
+.mut{color:#8b93a4}.sm{font-size:12px}.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}.dot.crit{background:#ff7b72}.dot.warn{background:#e3b341}.dot.info{background:#58a6ff}
+.risk{display:inline-block;min-width:34px;text-align:center;border-radius:6px;padding:1px 6px;font-weight:700;font-size:12px}.risk.h{background:rgba(255,123,114,.2);color:#ff7b72}.risk.m{background:rgba(227,179,65,.2);color:#e3b341}.risk.l{background:rgba(63,185,80,.18);color:#3fb950}
+.st{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:600}.st.pending{background:rgba(227,179,65,.2);color:#e3b341}.st.approved{background:rgba(88,166,255,.18);color:#79b8ff}.st.checked-in{background:rgba(63,185,80,.18);color:#3fb950}.st.expired,.st.rejected{background:rgba(255,123,114,.18);color:#ff7b72}
+.mat{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;align-items:center}@media(max-width:700px){.mat{grid-template-columns:1fr}}.part{display:flex;gap:8px;align-items:center;margin:5px 0;font-size:13px}.part .b{flex:1;height:8px;border-radius:5px;background:rgba(127,140,160,.18);overflow:hidden}.part .b i{display:block;height:100%}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}
+.why{font-size:12px;color:#8b93a4}.spark{display:inline-flex;gap:2px;align-items:flex-end;height:18px}.spark i{display:block;width:4px;background:#58a6ff;border-radius:1px}
+dialog{background:#13151b;color:inherit;border:1px solid #2e3440;border-radius:12px;padding:18px;width:min(520px,94vw)}dialog::backdrop{background:rgba(0,0,0,.6)}.secret{font:600 18px ui-monospace,Consolas,monospace;letter-spacing:.04em;background:#0b0c10;border:1px dashed #f59f00;border-radius:8px;padding:12px;word-break:break-all;margin:10px 0}
+textarea{width:100%;min-height:60px}.ans{white-space:pre-wrap;background:rgba(127,140,160,.08);border-radius:10px;padding:12px;margin-top:8px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">Identity · privileged access · PAM</div><h1>PAM Center</h1><div class="mut sm">Every privileged account with its risk, the safe for shared and break-glass passwords, checkouts approved by a second person - AI / ML on how privilege is used</div></div><span class="sp"></span><span class="muted" id="up"></span><a class="btn" href="privileged-access.html">Just-in-time groups</a><button type="button" id="rf">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+ <div class="k" id="kp"></div>
+ <div class="g3">
+  <section class="card"><h2>PAM maturity <span class="c">from what is measured</span></h2><div class="mat"><div class="cv" style="height:190px"><canvas id="cv-mat"></canvas></div><div id="parts"></div></div></section>
+  <section class="card"><h2>What the AI noticed</h2><ul class="ins" id="ins"></ul></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>Privileged accounts by risk</h2><div class="cv"><canvas id="cv-risk"></canvas></div></section>
+  <section class="card"><h2>Why accounts are at risk <span class="c">reasons across all accounts</span></h2><div class="cv"><canvas id="cv-why"></canvas></div></section>
+  <section class="card"><h2>Safe checkouts <span class="c">per week, 12 weeks</span></h2><div class="cv"><canvas id="cv-co"></canvas></div></section>
+ </div>
+ <section class="card"><h2>Privileged accounts <span class="c" id="ic"></span></h2><div class="tw" id="ids"></div><p class="mut sm" id="notes"></p></section>
+ <section class="card"><h2>The safe <span class="c">shared and break-glass accounts · sealed · one use, then rotate</span></h2><div class="tw" id="safe"></div>
+  <form id="af" class="frm" hidden style="margin-top:12px"><label>System<input name="system" required placeholder="Riyadh DC"></label><label>Account<input name="account" required placeholder="BG-DomainAdmin"></label><label>Kind<select name="kind"></select></label><label>Owner (platform user)<input name="owner" required></label><label>Rotate every (days)<input name="rotate_days" type="number" min="7" max="365" value="90"></label><label>Most hours per checkout<input name="max_hours" type="number" min="1" max="24" value="4"></label><label>Password<input name="secret" type="password" required autocomplete="new-password"></label><button type="submit" class="pri">Add to the safe</button></form></section>
+ <section class="card"><h2>Checkouts <span class="c">four-eyes: the requester never approves; only the requester sees the password</span></h2><div class="tw" id="cos"></div></section>
+ <section class="card"><h2>Ask the advisor <span class="c">read-only · it never sees a password</span></h2><textarea id="q" placeholder="What should we fix first in privileged access?"></textarea><div style="margin-top:6px"><button type="button" id="ask">Ask</button> <span class="mut sm" id="askn"></span></div><div class="ans" id="ans" hidden></div></section>
+</div>
+<dialog id="dlg" aria-labelledby="dlgt"><h2 id="dlgt" style="margin:0;font-size:16px"></h2><div id="dlgb"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="dlgx">Close</button></div></dialog>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { user: '', role: 'viewer' }, RANK = { viewer: 0, analyst: 1, operator: 2, admin: 3 }, V = null, HIDE = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function can(r) { return RANK[ME.role] >= RANK[r]; }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/itam' + u); x.withCredentials = true; x.timeout = 180000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('IT Asset Management is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 6000); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  var rk = function (r) { return '<span class="risk ' + (r >= 50 ? 'h' : r >= 20 ? 'm' : 'l') + '">' + esc(r) + '</span>'; };
+  function draw() {
+    var v = V, K = v.kpis, C = window.zybCharts;
+    $('up').textContent = v.directory && v.directory.read_at ? 'directory read ' + String(v.directory.read_at).replace('T', ' ').slice(0, 16) : 'directory not read';
+    $('kp').innerHTML = tile('PAM maturity', v.maturity == null ? '–' : v.maturity, 'of 100, from what is measured', v.maturity == null ? '' : v.maturity >= 75 ? 'ok' : v.maturity >= 50 ? 'warn' : 'bad') + tile('Privileged accounts', K.privileged, K.standing + ' with standing privilege', K.standing ? 'warn' : 'ok')
+      + tile('High risk', K.high_risk, 'accounts and safe entries at 50+', K.high_risk ? 'bad' : 'ok') + tile('Just-in-time now', K.jit_active, K.jit_pending + ' waiting for approval') + tile('In the safe', K.safe, K.overdue + ' due for rotation', K.overdue ? 'bad' : 'ok')
+      + tile('Checkouts open', K.checkouts_open, K.waiting + ' waiting for approval', K.waiting ? 'warn' : '') + tile('Service accounts', K.service, 'privileged non-human identities');
+    $('parts').innerHTML = v.parts.map(function (p) { var c = p.score == null ? '#4f9be9' : p.score >= 75 ? '#2fd47a' : p.score >= 50 ? '#f5a623' : '#ff5c5c'; return '<div class="part"><span style="width:170px">' + esc(p.name) + '</span><span class="b"><i style="width:' + (p.score == null ? 0 : Math.max(3, p.score)) + '%;background:' + c + '"></i></span><span style="width:52px;text-align:right">' + (p.score == null ? '<span class="mut">n/m</span>' : esc(p.score)) + '</span></div><div class="why" style="margin:-3px 0 4px">' + esc(p.why) + '</div>'; }).join('');
+    $('ins').innerHTML = v.insights.length ? v.insights.map(function (i) { return '<li><span class="dot ' + esc(i.level) + '"></span><div><b>' + esc(i.title) + '</b><div class="mut sm">' + esc(i.detail) + '</div></div></li>'; }).join('') : '<li><span class="dot info"></span><div>Nothing stands out.</div></li>';
+    if (C) {
+      if (v.maturity != null) C.ring($('cv-mat'), ['Maturity', 'Gap'], [v.maturity, 100 - v.maturity], [v.maturity >= 75 ? 'ok' : v.maturity >= 50 ? 'warn' : 'crit', 'mute'], { v: v.maturity, l: 'of 100' }, { title: 'PAM maturity' }); else C.empty($('cv-mat'), 'Not measured yet.');
+      var all = v.identities.map(function (x) { return x.risk; }).concat(v.safe.map(function (x) { return x.risk; })), band = [0, 0, 0, 0]; all.forEach(function (r) { band[r >= 75 ? 3 : r >= 50 ? 2 : r >= 20 ? 1 : 0]++; });
+      if (all.length) C.bars($('cv-risk'), ['Low <20', 'Medium 20-49', 'High 50-74', 'Critical 75+'], [{ label: 'Accounts', data: band, colors: ['ok', 'warn', 'pink', 'crit'] }], { title: 'Accounts by risk' }); else C.empty($('cv-risk'), 'No privileged account read yet.');
+      var why = {}; v.identities.concat(v.safe).forEach(function (x) { x.reasons.forEach(function (r) { var k = r.why.replace(/\d+/g, 'n').replace(/ - .*/, '').slice(0, 40); why[k] = (why[k] || 0) + 1; }); }); var wk = Object.keys(why).sort(function (a, b) { return why[b] - why[a]; }).slice(0, 6);
+      if (wk.length) C.bars($('cv-why'), wk, [{ label: 'Accounts', data: wk.map(function (k) { return why[k]; }), color: 'crit' }], { horizontal: true, title: 'Why at risk' }); else C.empty($('cv-why'), 'No risk found.');
+      var wks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; v.safe.forEach(function (e) { (e.weekly || []).forEach(function (n, i) { wks[i] += n; }); });
+      C.bars($('cv-co'), wks.map(function (_, i) { return i === 11 ? 'this wk' : '-' + (11 - i) + 'w'; }), [{ label: 'Checkouts', data: wks, color: 'acc' }], { title: 'Checkouts per week' });
+    }
+    $('ic').textContent = v.identities.length + ' account(s)';
+    $('ids').innerHTML = v.identities.length ? '<table><thead><tr><th>Risk</th><th>Account</th><th>Kind</th><th>Last sign-in</th><th>Why</th></tr></thead><tbody>' + v.identities.slice(0, 300).map(function (x) {
+      return '<tr><td>' + rk(x.risk) + '</td><td><b>' + esc(x.name) + '</b><div class="mut sm">' + esc(x.display || '') + ' · ' + esc(x.source) + (x.enabled ? '' : ' · disabled') + '</div></td><td>' + esc(x.kind) + '</td><td class="sm">' + esc(x.last_logon ? String(x.last_logon).slice(0, 10) : 'never') + (x.idle_days != null ? ' (' + x.idle_days + ' d)' : '') + '</td><td class="why">' + x.reasons.map(function (r) { return '+' + r.points + ' ' + esc(r.why); }).join('<br>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No privileged account read yet - connect the directory (HR Onboarding -> Directory) and read it (Directory Users).</div>';
+    $('notes').textContent = (v.notes || []).join(' ');
+    $('safe').innerHTML = v.safe.length ? '<table><thead><tr><th>Risk</th><th>System / account</th><th>Kind</th><th>Owner</th><th>Rotation</th><th>12 weeks</th><th>Why</th><th></th></tr></thead><tbody>' + v.safe.map(function (e) {
+      var mx = Math.max.apply(null, (e.weekly || []).concat([1]));
+      return '<tr><td>' + rk(e.risk) + '</td><td><b>' + esc(e.system) + '</b><div class="mono sm">' + esc(e.account) + '</div></td><td>' + esc(e.kind_label) + '</td><td>' + esc(e.owner) + '</td><td class="sm">' + (e.overdue ? '<span class="st expired">due</span> ' : '') + esc(e.rotation_due_at) + '</td>'
+        + '<td><span class="spark" title="checkouts per week">' + (e.weekly || []).map(function (n) { return '<i style="height:' + Math.max(2, Math.round(18 * n / mx)) + 'px"></i>'; }).join('') + '</span>' + (e.learning ? '<div class="mut sm">learning</div>' : '') + '</td><td class="why">' + e.reasons.map(function (r) { return '+' + r.points + ' ' + esc(r.why); }).join('<br>') + '</td>'
+        + '<td>' + (can('operator') ? '<button type="button" class="sm" data-co="' + esc(e.id) + '" data-max="' + esc(e.max_hours) + '">Request…</button>' : '') + ((e.owner || '').toLowerCase() === ME.user.toLowerCase() || can('admin') ? ' <button type="button" class="sm" data-rot="' + esc(e.id) + '">Record rotation…</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">The safe is empty. An administrator adds the break-glass, local admin and network admin accounts below.</div>';
+    $('af').hidden = !v.can_manage; if (!$('af').kind.options.length) $('af').kind.innerHTML = Object.keys(v.kinds).map(function (k) { return '<option value="' + esc(k) + '">' + esc(v.kinds[k]) + '</option>'; }).join('');
+    $('cos').innerHTML = v.checkouts.length ? '<table><thead><tr><th>Request</th><th>System / account</th><th>Requester</th><th>Hours</th><th>Reason</th><th>State</th><th></th></tr></thead><tbody>' + v.checkouts.map(function (c) {
+      var b = ''; if (c.state === 'pending' && can('admin') && !c.mine) b = '<button type="button" class="sm pri" data-dec="approve" data-id="' + esc(c.id) + '">Approve</button> <button type="button" class="sm" data-dec="reject" data-id="' + esc(c.id) + '">Reject</button>';
+      else if (c.state === 'pending' && c.mine) b = '<span class="mut sm">another administrator approves</span>';
+      if (c.state === 'approved' && c.mine) b = '<button type="button" class="sm pri" data-rev="' + esc(c.id) + '">Reveal (' + (3 - c.reveals) + ' left)</button> <button type="button" class="sm" data-in="' + esc(c.id) + '">Check in</button>';
+      else if (c.state === 'approved' && can('admin')) b = '<button type="button" class="sm" data-in="' + esc(c.id) + '">Check in</button>';
+      return '<tr><td class="mono">' + esc(c.id) + '<div class="mut sm">' + esc(String(c.at).replace('T', ' ').slice(0, 16)) + '</div></td><td>' + esc(c.system) + '<div class="mono sm">' + esc(c.account) + '</div></td><td>' + esc(c.requester) + '</td><td>' + esc(c.hours) + '</td><td class="sm">' + esc(c.reason || '') + (c.ticket ? '<div class="mono">' + esc(c.ticket) + '</div>' : '') + '</td><td><span class="st ' + esc(c.state) + '">' + esc(c.state) + '</span>' + (c.until && c.state === 'approved' ? '<div class="mut sm">until ' + esc(String(c.until).slice(11, 16)) + '</div>' : '') + (c.decided_by ? '<div class="mut sm">by ' + esc(c.decided_by) + '</div>' : '') + '</td><td>' + b + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">No checkout yet.</div>';
+  }
+  function load() { return req('GET', '/pam-center').then(function (j) { V = j; $('main').hidden = false; $('err').innerHTML = ''; draw(); }, function (e) { $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 403 ? 'PAM Center names privileged accounts - operators and administrators.' : e.status === 404 ? 'PAM Center is not installed in IT Asset Management yet - run the update.' : e.message) + '</div></div>'; }); }
+  function closeDlg() { clearTimeout(HIDE); $('dlgb').innerHTML = ''; if ($('dlg').open) $('dlg').close(); }
+  document.addEventListener('click', function (e) { var t = e.target, a;
+    if (t.id === 'dlgx') return closeDlg();
+    if ((a = t.closest('[data-co]'))) { var why = window.prompt('Why do you need this account? (the work, at least 10 characters)'); if (!why) return; var hrs = window.prompt('For how many hours? (at most ' + a.getAttribute('data-max') + ')', '2'); if (!hrs) return; var tk = window.prompt('Ticket / change number (optional)', '') || undefined;
+      req('POST', '/pam-center/checkouts', { entry: a.getAttribute('data-co'), hours: Number(hrs), reason: why, ticket: tk }).then(function (c) { toast(c.id + ' requested - another administrator approves'); return load(); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-dec]'))) { var d = a.getAttribute('data-dec'), n = d === 'reject' ? window.prompt('Why is it rejected?') : ''; if (d === 'reject' && !n) return;
+      req('POST', '/pam-center/checkouts/' + encodeURIComponent(a.getAttribute('data-id')) + '/decide', { decision: d, note: n || undefined }).then(function (c) { toast(c.id + ' ' + c.state); return load(); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-rev]'))) { req('POST', '/pam-center/checkouts/' + encodeURIComponent(a.getAttribute('data-rev')) + '/reveal', {}).then(function (r) {
+        $('dlgt').textContent = r.system + ' · ' + r.account; $('dlgb').innerHTML = '<div class="secret" id="sec"></div><p class="mut sm">' + esc(r.note) + ' This window closes in 60 seconds. Valid until ' + esc(String(r.until).slice(11, 16)) + '.</p>'; $('sec').textContent = r.secret; r.secret = null; $('dlg').showModal(); HIDE = setTimeout(closeDlg, 60000); return load(); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-in]'))) { req('POST', '/pam-center/checkouts/' + encodeURIComponent(a.getAttribute('data-in')) + '/checkin', {}).then(function () { toast('Checked in - the owner rotates the password'); return load(); }, function (x) { toast(x.message); }); return; }
+    if ((a = t.closest('[data-rot]'))) { var s = window.prompt('Change the password on the system first, then enter the NEW password here:'); if (!s) return;
+      req('POST', '/pam-center/safe/' + encodeURIComponent(a.getAttribute('data-rot')) + '/rotate', { secret: s }).then(function () { toast('Rotation recorded'); return load(); }, function (x) { toast(x.message); }); return; }
+    if (t.id === 'ask') { var q = $('q').value.trim(); if (!q) return; t.disabled = true; $('askn').textContent = 'Thinking…'; req('POST', '/pam-center/ask', { question: q }).then(function (r) { $('ans').hidden = false; $('ans').textContent = r.answer || r.text || JSON.stringify(r); $('askn').textContent = ''; }, function (x) { $('askn').textContent = x.message; }).then(function () { t.disabled = false; }); return; }
+  });
+  $('dlg').addEventListener('close', function () { clearTimeout(HIDE); $('dlgb').innerHTML = ''; });
+  document.addEventListener('submit', function (e) { if (e.target.getAttribute('id') !== 'af') return; e.preventDefault(); var f = e.target.elements;
+    req('POST', '/pam-center/safe', { system: f.system.value.trim(), account: f.account.value.trim(), kind: f.kind.value, owner: f.owner.value.trim(), rotate_days: Number(f.rotate_days.value), max_hours: Number(f.max_hours.value), secret: f.secret.value }).then(function (r) { f.secret.value = ''; e.target.reset(); toast(r.id + ' added to the safe'); return load(); }, function (x) { f.secret.value = ''; toast(x.message); }); });
+  $('rf').addEventListener('click', function () { load(); });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { user: String(j.user || ''), role: String(j.role || 'viewer').toLowerCase() }; } catch (e) { /* not JSON: viewer */ } load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>

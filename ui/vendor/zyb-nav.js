@@ -2197,6 +2197,7 @@ window.ZYB_NAV = [
     },
     "g": "Identity & access"
    },
+   {"h": "pam-center.html", "s": "PAM Center", "t": "PAM Center - privileged accounts with their risk, the safe for shared and break-glass passwords, checkouts approved by a second person, AI / ML on privileged use", "d": "Privileged directory accounts and service accounts with every risk point named (standing privilege, dormant, shared names, everyday accounts with admin rights); the safe: sealed passwords checked out with another person's approval, revealed only to the requester in the window, rotated after use; checkout patterns against each account's own history; PAM maturity; the read-only advisor."},
    {
     "h": "identity-posture.html",
     "s": "Password & MFA Posture",

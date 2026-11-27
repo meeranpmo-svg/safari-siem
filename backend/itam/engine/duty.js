@@ -484,6 +484,10 @@ function registerDuty(srv, app, opts = {}) {
   // approved by a second person, added at the start and removed at expiry through the same directory settings
   const PAMM = optional('./pam');
   if (PAMM) { app.addons.pam = PAMM.createPam(app, { now: opts.now, noTimer: opts.noTimer }); PAMM.registerPam(srv, app, app.addons.pam); }
+  // PAM Center (engine/pam-center.js): privileged accounts with risk, the safe for shared / break-glass accounts (checkout approved by
+  // another person, reveal to the requester only, rotation after use), ML on checkout patterns, maturity, the read-only advisor
+  const PCTR = optional('./pam-center');
+  if (PCTR) PCTR.registerPamCenter(srv, app, PCTR.createPamCenter(app, { now: opts.now, sdk: opts.pamSdk, getKey: opts.pamKey, sealer: opts.pamSealer }));
   // the guided PDPL self-assessment (engine/pdpl-assessment.js; questions in pyengine/pdpl_assessment.py) - writes back to the requirements above
   const PAM = PD && optional('./pdpl-assessment');
   if (PAM) { app.addons.pdplAssessment = PAM.createPdplAssessment(app, { now: opts.now, python: opts.python }); PAM.registerPdplAssessmentRoutes(srv, app, app.addons.pdplAssessment); }
