@@ -70,7 +70,20 @@
     r.services.filter(function (x) { return x.risk; }).forEach(function (x) { acts.push({ severity: 'high', action: 'Close port ' + x.port + ' (' + x.name + ') or restrict it to the hosts that need it.', why: x.name + ' is a commonly attacked service.', verify: 'Confirm from outside that the port is closed.', finding: null, source: 'Asset Discovery' }); });
     return Object.assign({}, r, { chain_entry: [], actions: acts, actions_note: acts.length ? null : 'No action required.', note: 'POC: illustrative asset. To test an exposed service, file an engagement on the VAPT Workflow (four-eyes).' }); };
 
+  // ---------- CISO briefs (ciso-dashboard.html) and licence sync (licence-audit.html): not registered in the test harness ----------
+  var CB = { briefs: [
+    { id: 'BR-POC-3', at: now - 3 * H, by: 'system:ciso', auto: true, kind: 'ai', headline: 'Two internet-facing services need patching this week; backups healthy; phishing clicks down (POC)', posture_overall: 'amber' },
+    { id: 'BR-POC-2', at: now - 27 * H, by: 'system:ciso', auto: true, kind: 'ai', headline: 'Lateral movement contained at Jeddah; firewall audit found 6 critical rules (POC)', posture_overall: 'amber' },
+    { id: 'BR-POC-1', at: now - 51 * H, by: 'ciso.poc', auto: false, kind: 'rules', headline: 'Board brief: NCA ECC realistic position 62%, PDPL records of processing to finish (POC)', posture_overall: 'amber' }] };
+  var LS = { last: null, running: false, sources: { ssh_logins: 6, oracle_logins: 0, servers_with_auto_facts: 31, m365_records: 412 }, unlicensed: [],
+    not_automatic: ['cores per socket on Windows servers discovery has no login for - enter them on Core-based licences', 'contract cost and purchase details - from the contract, not from the assets'] };
+
   window.ZYB_POC = (window.ZYB_POC || []).concat([
+    { re: /^\/api\/itam\/ciso\/briefs$/, data: CB, pages: ['ciso-dashboard.html'] },
+    { re: /^\/api\/itam\/licence-sync$/, data: LS, pages: ['licence-audit.html'] },
+    { re: /^\/api\/itam\/ciso\/briefs\/[^/]+$/, data: function (u) { var id = decodeURIComponent(u.pathname.split('/').pop()); return CB.briefs.filter(function (b) { return b.id === id; })[0] || CB.briefs[0]; }, pages: ['ciso-dashboard.html'] },
+    // Kaspersky and Zscaler are not used here: the IT audit's change feeds from them are empty
+    { re: /^\/api\/soc\/(ksc|zscaler)\/changes$/, data: { items: [] }, pages: ['it-audit.html'] },
     { re: /^\/api\/itam\/attack-surface$/, data: ASV, pages: ['attack-surface.html'] },
     { re: /^\/api\/itam\/attack-surface\/[^/]+$/, data: asOne, pages: ['attack-surface.html'] },
     { re: /^\/api\/soc\/ndr$/, data: NDR, pages: ['ndr.html'] },

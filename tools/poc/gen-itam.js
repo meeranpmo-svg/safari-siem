@@ -38,6 +38,7 @@ const pick = (L) => L[Math.floor(rnd() * L.length)];
   }
   const r = await e.req('GET', '/itam/overview', { user: 'admin.poc', role: 'admin' });
   if (r.status !== 200) throw new Error('overview ' + r.status + ' ' + r.text);
+  const MORE = [];
   // the IT Infrastructure Manager (infra-manager.html): the IT Asset Management parts from the engine, the SIEM parts (availability,
   // application monitors, change plans) built from the same synthetic servers and devices
   const get = async (u) => { const x = await e.req('GET', u, { user: 'admin.poc', role: 'admin' }); return x.status === 200 ? x.json : null; };
@@ -53,6 +54,12 @@ const pick = (L) => L[Math.floor(rnd() * L.length)];
   if (infra && infra.backup && !infra.backup.available) { const n = (infra.register.servers || {}).total || 80; infra.backup = { available: true, assets: n, protected: Math.round(n * 0.86), stale: Math.round(n * 0.05), failed: Math.round(n * 0.04), none: n - Math.round(n * 0.86) - Math.round(n * 0.05) - Math.round(n * 0.04), exempt: 0, protected_pct: 86 }; }
   if (infra && infra.patch && !infra.patch.available) { const c = all.filter((a) => /workstation|laptop|server|vm/.test(a.type)).length; infra.patch = { available: true, computers: c, reported: c - 12, compliant: Math.round(c * 0.81), critical_missing: Math.round(c * 0.06), compliant_pct: 81, worst: all.filter((a) => a.type === 'server').slice(0, 5).map((a, i) => ({ name: a.name, missing: 9 - i, critical: i < 2 ? 2 : 1, health: i < 2 ? 'highly vulnerable' : 'vulnerable' })) }; }
   // the AI health index (leader-intel) comes from the recorded tests, which carry the backup / patch history and trends
+  // the parts of other dashboards the recorded tests never asked for: answered by the engine over the same synthetic register
+  for (const [u, pg] of [['/ciso/briefs', 'ciso-dashboard.html'], ['/role-workflows/settings', 'my-workflow.html'], ['/overview-intel', 'compliance-overview.html'], ['/assist/learning', 'compliance-assistant.html'],
+    ['/contcomp-intel', 'continuous-compliance.html'], ['/docs-intel', 'compliance-docs.html'], ['/audit-dashboard', 'audit-dashboard.html'], ['/nca-itaudit-intel', 'nca-it-audit.html'], ['/netcfg-intel', 'network-config-audit.html'],
+    ['/licence-sync', 'licence-audit.html'], ['/core-licensing', 'licence-audit.html'], ['/software', 'licence-audit.html'], ['/dns-fix', 'email-route-map.html'], ['/mail-route/troubleshoot', 'email-route-map.html']]) {
+    const j = await get(u); if (j) MORE.push(['/api/itam' + u, j, pg]); else console.log('  not answered here: ' + u);
+  }
   const IM = ['infra-manager.html'];
   const extra = [['/api/itam/infra-overview', infra], ['/api/itam/workflow/attention', attention], ['/api/itam/backup', backup], ['/api/soc/netops/avail', avail], ['/api/soc/db/oracle', { instances: [] }], ['/api/soc/integrations/apm/status', { configured: true, connected: true }], ['/api/soc/integrations/apm/monitors', apps], ['/api/soc/netops/changes', netChanges], ['/api/soc/sysadmin/changes', sysChanges]].filter((x) => x[1]);
   const out = '// Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE.\n'
@@ -61,6 +68,8 @@ const pick = (L) => L[Math.floor(rnd() * L.length)];
     + '  window.ZYB_POC = (window.ZYB_POC || []).concat([{ re: /^\\/api\\/itam\\/itam\\/overview$/, data: function () { var x = JSON.parse(JSON.stringify(O)); x.at = new Date().toISOString(); return x; }, pages: [\'itam-overview.html\'] }]);\n'
     + '  var X = ' + JSON.stringify(extra) + ', at = ' + JSON.stringify(new Date().toISOString()) + ', d = Date.now() - Date.parse(at);\n'
     + '  var mv = function (x) { if (Array.isArray(x)) return x.map(mv); if (x && typeof x === "object") { for (var k in x) { var v = x[k]; if (typeof v === "number" && v > 1.5e12 && v < 2.5e12) x[k] = v + d; else if (v && typeof v === "object") mv(v); } } return x; };\n'
+    + '  var MORE = ' + JSON.stringify(MORE) + ';\n'
+    + '  window.ZYB_POC = window.ZYB_POC.concat(MORE.map(function (e) { var re = new RegExp("^" + e[0].replace(/[.*+?^${}()|[\\]\\\\/]/g, "\\\\$&") + "$"); return { re: re, data: function () { return mv(JSON.parse(JSON.stringify(e[1]))); }, pages: [e[2]] }; }));\n'
     + '  window.ZYB_POC = window.ZYB_POC.concat(X.map(function (e) { var re = new RegExp("^" + e[0].replace(/[.*+?^${}()|[\\]\\\\/]/g, "\\\\$&") + "$"); return { re: re, data: function () { return mv(JSON.parse(JSON.stringify(e[1]))); }, pages: ' + JSON.stringify(IM) + ' }; }));\n})();\n';
   fs.writeFileSync(path.join(ROOT, 'ui/vendor/zyb-poc-itam.js'), out);
   console.log('wrote ui/vendor/zyb-poc-itam.js: ' + n + ' synthetic assets, ' + Math.round(out.length / 1024) + ' KB, sites ' + (r.json.breakdown.sites_all || []).length);
