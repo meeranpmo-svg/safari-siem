@@ -25,9 +25,9 @@ srv.listen(0, async () => {
   const b = await chromium.launch(), rows = [];
   for (const pg of pages) {
     const p = await b.newPage({ viewport: { width: 1400, height: 900 } });
-    let hits = 0;
-    try { await p.goto('http://127.0.0.1:' + srv.address().port + '/dashboards/' + pg + '?poc=1&standalone=1', { timeout: 20000 }); await p.waitForTimeout(2500); hits = await p.evaluate(() => (window.zybPoc ? window.zybPoc.hits() : -1)); } catch (e) { hits = -1; }
-    const miss = [...(live[pg] || [])];
+    let hits = 0, ref = [];
+    try { await p.goto('http://127.0.0.1:' + srv.address().port + '/dashboards/' + pg + '?poc=1&standalone=1', { timeout: 20000 }); await p.waitForTimeout(2500); hits = await p.evaluate(() => (window.zybPoc ? window.zybPoc.hits() : -1)); ref = await p.evaluate(() => (window.zybPoc && window.zybPoc.refused ? window.zybPoc.refused() : [])); } catch (e) { hits = -1; }
+    const miss = [...(live[pg] || [])].filter((x) => !/\/(licence|roles\/me|report-brand|auth\/whoami)$/.test(x)).concat([...new Set(ref)].map((x) => 'REFUSED ' + x));
     rows.push({ pg, hits, miss });
     await p.close();
   }

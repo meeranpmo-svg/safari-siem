@@ -77,7 +77,7 @@
       var tr = a.trend && a.trend.n ? a.trend : null, arrow = tr ? (tr.direction === 'rising' ? '▲' : tr.direction === 'falling' ? '▼' : '■') : '', tc = tr ? (tr.direction === 'rising' ? '#3fb950' : tr.direction === 'falling' ? '#ff7b72' : '#8C93A1') : '#8C93A1';
       return '<div class="ar" title="' + esc(a.why + (a.items || []).map(function (i) { return '\n' + i.label + ' (' + i.points + ')'; }).join('')) + '"><a href="' + esc(a.link || '#') + '" style="color:inherit;text-decoration:none">' + esc(a.name) + '</a>'
         + '<div class="tr">' + (a.measured ? '<i style="width:' + a.score + '%;background:' + col(a.score) + '"></i>' : '') + '</div><span class="s" style="color:' + col(a.score) + '">' + (a.measured ? a.score : '—') + '</span>'
-        + '<span class="d">' + (a.measured ? (tr ? '<span style="color:' + tc + '">' + arrow + ' ' + (tr.slope_per_week > 0 ? '+' : '') + tr.slope_per_week + '/wk</span>' : 'trend after 3 days') : 'not measured') + '</span></div>';
+        + '<span class="d">' + (a.measured ? (tr && tr.slope_per_week != null ? '<span style="color:' + tc + '">' + arrow + ' ' + (tr.slope_per_week > 0 ? '+' : '') + tr.slope_per_week + '/wk</span>' : 'trend after 3 days') : 'not measured') + '</span></div>';
     }).join('');
   }
   function gauge(v, label) {

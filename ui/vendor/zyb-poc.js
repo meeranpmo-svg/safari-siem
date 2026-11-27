@@ -10,7 +10,7 @@
 (function () {
   'use strict';
   if (window.zybPoc) return;
-  var hits = 0, pass = 0;
+  var hits = 0, pass = 0, refused = [];
   function find(method, url) {
     var u; try { u = new URL(url, location.href); } catch (e) { return null; }
     if (u.pathname.indexOf('/api/') !== 0) return null;
@@ -20,7 +20,7 @@
     var R = window.ZYB_POC_REC; if (R && (R.common || []).indexOf(u.pathname) >= 0) return null;   // a platform call every page makes: live
     if (R && R.map && Object.prototype.hasOwnProperty.call(R.map, u.pathname)) { hits++; mark(); return { status: 200, body: shift(JSON.parse(JSON.stringify(R.map[u.pathname])), R.recorded_at) }; }
     // a page that draws from illustrative data never mixes in live answers: what the data does not cover is refused, said plainly
-    if (pocPage()) return { status: 503, body: { error: 'POC: no illustrative data for this part of the page' } };
+    if (pocPage()) { refused.push(u.pathname); return { status: 503, body: { error: 'POC: no illustrative data for this part of the page' } }; }
     pass++; return null;
   }
   function pocPage() {
@@ -70,6 +70,7 @@
       var b = document.createElement('div'); b.className = 'zyb-poc-b'; b.setAttribute('role', 'note'); b.id = 'zyb-poc-banner';
       b.innerHTML = '<b>POC</b> &nbsp;Illustrative data for presentation - not live, not ' + ((window.ZYB_ORG && window.ZYB_ORG.short) || 'the organisation') + '\'s systems. Nothing can be changed. Switch "POC data" off in the menu for live data.';
       var main = document.querySelector('main'); if (main) main.insertBefore(b, main.firstChild); else document.body.insertBefore(b, document.body.firstChild);
+      [].forEach.call(document.querySelectorAll('.live, [id=live], .badge-live'), function (x) { if (/live/i.test(x.textContent)) { x.textContent = 'POC DATA'; x.hidden = false; x.style.background = '#f59f00'; x.style.color = '#111'; } });
       document.title = document.title.replace(/( \(POC\))?$/, ' (POC)');
     };
     if (document.body) go(); else document.addEventListener('DOMContentLoaded', go);
@@ -79,5 +80,5 @@
   window.addEventListener('load', function () { setTimeout(function () { if (hits || document.getElementById('zyb-poc-nodata')) return; var main = document.querySelector('main'); if (!main) return;
     var n = document.createElement('div'); n.id = 'zyb-poc-nodata'; n.className = 'zyb-poc-b'; n.style.cssText = 'border:1px dashed #8b93a4;background:transparent;border-radius:10px;padding:6px 12px;margin:0 0 12px;font-size:12px;color:#8b93a4';
     n.textContent = 'POC data is on, but this page has no illustrative data - it shows LIVE data.'; main.insertBefore(n, main.firstChild); }, 2500); });
-  window.zybPoc = { on: true, hits: function () { return hits; }, live: function () { return pass; } };
+  window.zybPoc = { on: true, hits: function () { return hits; }, live: function () { return pass; }, refused: function () { return refused.slice(); } };
 })();
