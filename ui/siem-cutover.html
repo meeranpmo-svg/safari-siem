@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SIEM Cutover</title><script src="vendor/zyb-org.js"></script><script src="vendor/zyb-dash.js"></script><link rel="stylesheet" href="vendor/zyb-soc.css"><script src="vendor/chart.umd.js"></script><script src="vendor/zyb-charts.js"></script>
+<!-- Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE. -->
+<!-- SIEM cutover over /api/soc/cutover (engine/soc/cutover.js): NewEvol (being replaced) against our SIEM during the parallel run -
+     readiness score and five gates, volumes day by day, each source matched with its parity and unusual days, NewEvol detections we
+     also raise, rules mapped, the blockers ranked, NewEvol's exports imported by an administrator (CSV / JSON, parsed here, checked
+     on the server), and the four-eyes switch: proposed by one administrator, decided by another person. -->
+<style>
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin:0 0 12px}.g3 .card{margin:0}.cv{position:relative;height:250px}
+.mut{color:#8b93a4}.sm{font-size:12px}.ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:7px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none;background:#58a6ff}.dot.crit{background:#ff7b72}.dot.warn{background:#e3b341}
+.gate{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(127,140,160,.15)}.gate:last-child{border-bottom:0}.gate .bar{grid-column:2/4;height:6px;border-radius:4px;background:rgba(127,140,160,.18);overflow:hidden}.gate .bar i{display:block;height:100%}
+.ok{color:#2fd47a}.no{color:#ff7b72}.verdict{font-size:20px;font-weight:800;margin:4px 0 8px}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(127,140,160,.18)}.pill.missing,.pill.gaps{background:rgba(255,123,114,.18);color:#ff7b72}.pill.low,.pill.drift{background:rgba(227,179,65,.18);color:#e3b341}.pill.parity{background:rgba(47,212,122,.15);color:#2fd47a}.pill.high{background:rgba(88,166,255,.15);color:#58a6ff}
+.tw{max-height:460px;overflow:auto}.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;align-items:end}.frm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#8b93a4}textarea{min-height:64px}
+</style></head><body><main>
+<div class="top"><div><div class="eb">SOC · migration · parallel run</div><h1>SIEM Cutover — NewEvol to our SIEM</h1><div class="mut sm">Is our SIEM receiving everything NewEvol receives and raising what it raises? The evidence, the blockers and the switch decision</div></div><span class="sp"></span>
+ <select id="days" aria-label="Window"><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option><option value="60">60 days</option></select><button type="button" id="refresh">⟳ Refresh</button></div>
+<div id="err"></div>
+<div id="main" hidden>
+ <div class="k" id="kp"></div>
+ <div class="g3">
+  <section class="card"><h2>Readiness</h2><div class="verdict" id="verdict"></div><div class="cv" style="height:190px"><canvas id="cv-score"></canvas></div></section>
+  <section class="card"><h2>Gates <span class="c">all five pass = ready</span></h2><div id="gates"></div></section>
+  <section class="card"><h2>What the AI noticed</h2><ul class="ins" id="ins"></ul></section>
+ </div>
+ <div class="g3">
+  <section class="card"><h2>Events a day <span class="c">NewEvol vs ours, matched sources</span></h2><div class="cv"><canvas id="cv-vol"></canvas></div></section>
+  <section class="card"><h2>Sources <span class="c">by parity status</span></h2><div class="cv"><canvas id="cv-src"></canvas></div></section>
+  <section class="card"><h2>Detections a day <span class="c">NewEvol alerts, and those we also raised</span></h2><div class="cv"><canvas id="cv-det"></canvas></div></section>
+ </div>
+ <section class="card"><h2>Blockers <span class="c" id="blc"></span></h2><ul class="ins" id="bl"></ul></section>
+ <section class="card"><h2>Log sources <span class="c" id="srcc"></span></h2><div class="flt"><input id="q" type="search" placeholder="Filter sources" aria-label="Filter sources"><select id="fs" aria-label="Status"><option value="">Any status</option><option>missing</option><option>gaps</option><option>low</option><option>drift</option><option>high</option><option>parity</option></select></div><div class="tw" id="src"></div></section>
+ <div class="g3">
+  <section class="card"><h2>NewEvol detections we miss <span class="c">by rule</span></h2><div class="tw" id="miss"></div></section>
+  <section class="card"><h2>Rules <span class="c" id="rlc"></span></h2><div class="tw" id="rules"></div></section>
+  <section class="card"><h2>Only our SIEM <span class="c">alerts and sources NewEvol did not have</span></h2><div class="tw" id="only"></div></section>
+ </div>
+ <div class="g3">
+  <section class="card" id="impc" hidden><h2>NewEvol exports <span class="c">administrators · CSV or JSON</span></h2><div id="imps" class="sm"></div>
+   <form id="imf" class="frm" style="margin-top:8px"><label>What it is<select name="kind"><option value="sources">Source volumes (source, ip, type, day, events)</option><option value="alerts">Alerts (id, time, rule, severity, host, user, ip, technique)</option><option value="rules">Rules (name, technique, severity, enabled)</option></select></label><label>File<input name="file" type="file" accept=".csv,.json,text/csv,application/json"></label><button type="submit" class="pri">Import</button></form></section>
+  <section class="card"><h2>Cutover decision <span class="c">four-eyes</span></h2><div id="so"></div>
+   <form id="sof" class="frm" hidden style="margin-top:8px"><label>Plan<textarea name="note" maxlength="2000" placeholder="When, who, rollback - e.g. switch on Thursday 22:00, NewEvol kept read-only for 30 days"></textarea></label><label>Risk accepted (needed while a gate is open)<textarea name="accept_risk" maxlength="4000"></textarea></label><button type="submit" class="pri">Propose the cutover</button></form></section>
+ </div>
+ <p class="mut sm" id="note"></p>
+</div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); }, ME = { role: 'viewer', user: '' }, V = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function req(m, u, b) { return new Promise(function (ok, bad) { var x = new XMLHttpRequest(); x.open(m, '/api/soc' + u); x.withCredentials = true; x.timeout = 120000; x.zybQuiet = true; if (b) x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { j = null; /* the status says it */ } if (x.status >= 200 && x.status < 300 && j) ok(j); else bad(Object.assign(new Error((j && j.error) || ('HTTP ' + x.status)), { status: x.status })); };
+    x.onerror = x.ontimeout = function () { bad(Object.assign(new Error('the SIEM is not reachable'), { status: 0 })); }; x.send(b ? JSON.stringify(b) : null); }); }
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 6000); }
+  function tile(l, v, s, c) { return '<div class="t ' + (c || '') + '"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v == null ? '–' : v) + '</div><div class="s">' + esc(s || '') + '</div></div>'; }
+  var num = function (n) { return n == null ? '–' : Number(n).toLocaleString('en-US'); };
+  function table(head, rows, emptyText) { return rows.length ? '<table><thead><tr>' + head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>' : '<div class="empty">' + esc(emptyText) + '</div>'; }
+  var SEV = ['info', 'low', 'medium', 'high', 'critical'];
+  function draw() {
+    var v = V, K = v.kpis, C = window.zybCharts;
+    $('kp').innerHTML = tile('Readiness', v.score + '/100', v.ready ? 'every gate passes' : v.gates.filter(function (g) { return !g.pass; }).length + ' gate(s) open', v.ready ? 'ok' : 'warn')
+      + tile('NewEvol sources', num(K.ne_sources), num(K.missing) + ' not in ours', K.missing ? 'crit' : 'ok') + tile('At parity', num(K.parity) + ' / ' + num(K.matched_sources), 'matched sources')
+      + tile('Detections matched', num(K.matched_alerts) + ' / ' + num(K.ne_alerts), 'NewEvol alerts we also raised') + tile('Rules mapped', num(K.mapped_rules) + ' / ' + num(K.ne_rules), 'enabled NewEvol rules')
+      + tile('Only ours', num(K.ours_only_alerts), 'alerts · ' + num(K.extra_sources) + ' extra sources', 'ok') + tile('Parallel run', num(K.parallel_days), 'days of NewEvol data');
+    $('verdict').innerHTML = v.ready ? '<span class="ok">✓ Ready to switch</span>' : '<span class="no">Not ready yet</span>';
+    $('gates').innerHTML = v.gates.map(function (g) { var pct = g.value == null ? 0 : Math.min(100, g.value / g.target * 100); return '<div class="gate"><span class="' + (g.pass ? 'ok' : 'no') + '">' + (g.pass ? '✓' : '✗') + '</span><span>' + esc(g.label) + '</span><b>' + esc(g.value == null ? '–' : g.value + (g.unit === '%' ? '%' : ' ' + g.unit)) + ' <span class="mut sm">/ ' + esc(g.target + (g.unit === '%' ? '%' : '')) + '</span></b><span class="bar"><i style="width:' + pct + '%;background:' + (g.pass ? '#2fd47a' : '#e3b341') + '"></i></span></div>'; }).join('');
+    $('ins').innerHTML = v.insights.map(function (i) { return '<li><span class="dot"></span><div>' + esc(i) + '</div></li>'; }).join('');
+    if (C) {
+      C.ring($('cv-score'), ['Ready', 'Remaining'], [v.score, 100 - v.score], [v.ready ? 'ok' : 'warn', 'mute'], { v: v.score, l: 'of 100' }, { title: 'Readiness' });
+      var S = v.series; if (S.length) { C.area($('cv-vol'), S.map(function (s) { return s.day.slice(5); }), [{ label: 'NewEvol', data: S.map(function (s) { return s.newevol; }), color: 'purple' }, { label: 'Ours', data: S.map(function (s) { return s.ours; }), color: 'acc' }], { title: 'Events a day' });
+        C.bars($('cv-det'), S.map(function (s) { return s.day.slice(5); }), [{ label: 'Matched', data: S.map(function (s) { return s.matched; }), color: 'ok' }, { label: 'Missed', data: S.map(function (s) { return s.ne_alerts - s.matched; }), color: 'crit' }], { stacked: true, title: 'Detections' }); }
+      else { C.empty($('cv-vol'), 'Import NewEvol\'s source volumes to compare.'); C.empty($('cv-det'), 'Import NewEvol\'s alerts to compare.'); }
+      var st = ['parity', 'high', 'drift', 'low', 'gaps', 'missing'].filter(function (k) { return v.by_status[k]; });
+      if (st.length) C.ring($('cv-src'), st, st.map(function (k) { return v.by_status[k]; }), st.map(function (k) { return { parity: 'ok', high: 'acc', drift: 'warn', low: 'purple', gaps: 'crit', missing: 'crit' }[k]; }), { v: K.ne_sources, l: 'sources' }, { title: 'Sources' }); else C.empty($('cv-src'), 'No sources yet.');
+    }
+    $('blc').textContent = v.blockers.length + ' to close or accept';
+    $('bl').innerHTML = v.blockers.length ? v.blockers.map(function (b) { return '<li><span class="dot ' + esc(b.level) + '"></span><div><b>' + esc(b.what) + '</b><div class="mut sm">' + esc(b.why) + '</div></div></li>'; }).join('') : '<li><span class="dot"></span><div>No blockers.</div></li>';
+    sources();
+    $('miss').innerHTML = table(['Rule', 'Severity', 'Missed'], v.missed_rules.map(function (m) { return '<tr><td>' + esc(m.rule) + '</td><td>' + esc(SEV[m.severity] || m.severity) + '</td><td>' + num(m.missed) + '</td></tr>'; }), 'We raise every NewEvol detection in the window.');
+    $('rlc').textContent = v.kpis.mapped_rules + ' of ' + v.kpis.ne_rules + ' mapped';
+    $('rules').innerHTML = table(['NewEvol rule', 'Ours', 'By'], v.rules.map(function (r) { return '<tr><td>' + esc(r.name) + (r.technique ? ' <span class="mut sm">' + esc(r.technique) + '</span>' : '') + '</td><td>' + (r.mapped ? esc(r.ours.name) : '<span class="no">not mapped</span>') + '</td><td class="sm">' + esc(r.mapped ? r.ours.by : '') + '</td></tr>'; }), 'Import NewEvol\'s rule list.');
+    $('only').innerHTML = table(['Alert / source', 'Detail'], v.ours_only.slice(0, 30).map(function (o) { return '<tr><td>' + esc(o.rule) + '</td><td class="sm">' + esc(o.host || '') + ' ' + esc(new Date(o.at).toLocaleString()) + '</td></tr>'; }).concat(v.extra.slice(0, 20).map(function (x) { return '<tr><td>' + esc(x.source) + ' <span class="mut sm">' + esc(x.src_type || '') + '</span></td><td class="sm">' + num(x.events) + ' events</td></tr>'; })), 'Nothing only ours yet.');
+    var I = v.imported || {}; $('impc').hidden = ME.role !== 'admin';
+    $('imps').innerHTML = ['sources', 'alerts', 'rules'].map(function (k) { var x = I[k]; return '<div>' + esc(k) + ': ' + (x ? '<b>' + num(x.rows) + ' rows</b> from ' + esc(x.file || 'an import') + ' by ' + esc(x.by) + ', ' + esc(new Date(x.imported_at).toLocaleString()) + (x.skipped ? ' · ' + x.skipped + ' skipped' : '') : '<span class="mut">not imported</span>') + '</div>'; }).join('');
+    signoff(); $('note').textContent = v.note + (v.warning ? ' ' + v.warning : '');
+  }
+  function sources() {
+    var q = $('q').value.trim().toLowerCase(), fs = $('fs').value, L = V.sources.filter(function (s) { return (!q || (s.source + ' ' + (s.ip || '') + ' ' + (s.ours || '')).toLowerCase().indexOf(q) >= 0) && (!fs || s.status === fs); });
+    $('srcc').textContent = L.length + ' of ' + V.sources.length;
+    $('src').innerHTML = table(['NewEvol source', 'Type', 'Ours', 'Status', 'NewEvol events', 'Our events', 'Ratio', 'Why'], L.map(function (s) { return '<tr><td><b>' + esc(s.source) + '</b> <span class="mut sm">' + esc(s.ip || '') + '</span></td><td class="sm">' + esc(s.type || '') + '</td><td class="sm">' + esc(s.ours || '–') + '</td><td><span class="pill ' + esc(s.status) + '">' + esc(s.status) + '</span></td><td>' + num(s.ne_events) + '</td><td>' + num(s.our_events) + '</td><td>' + (s.ratio == null ? '–' : Math.round(s.ratio * 100) + '%') + '</td><td class="sm">' + esc(s.why) + '</td></tr>'; }), 'No source matches.');
+  }
+  function signoff() {
+    var L = V.signoff || [], open = L.filter(function (x) { return x.status === 'proposed'; })[0];
+    $('so').innerHTML = L.length ? L.map(function (x) { return '<div class="ins" style="padding:6px 0;border-bottom:1px solid rgba(127,140,160,.15)"><b>' + esc(x.id) + '</b> <span class="pill ' + (x.status === 'approved' ? 'parity' : x.status === 'rejected' ? 'missing' : 'drift') + '">' + esc(x.status) + '</span> <span class="mut sm">score ' + esc(x.score) + ' · proposed by ' + esc(x.by) + ' ' + esc(new Date(x.at).toLocaleString()) + (x.decided_by ? ' · ' + esc(x.status) + ' by ' + esc(x.decided_by) : '') + '</span><div class="sm">' + esc(x.note) + '</div>' + (x.accept_risk ? '<div class="sm mut">Risk accepted: ' + esc(x.accept_risk) + '</div>' : '')
+      + (x.status === 'proposed' && ME.role === 'admin' && ME.user !== x.by ? '<div style="margin-top:6px"><button type="button" class="pri" data-dec="approve" data-id="' + esc(x.id) + '">Approve</button> <button type="button" data-dec="reject" data-id="' + esc(x.id) + '">Reject</button></div>' : x.status === 'proposed' ? '<div class="mut sm">Waiting for another administrator to decide.</div>' : '') + '</div>'; }).join('') : '<div class="empty">No cutover proposed yet.</div>';
+    $('sof').hidden = ME.role !== 'admin' || !!open;
+  }
+  function parseCsv(t) {
+    var rows = [], row = [], f = '', q = false, i, c;
+    for (i = 0; i < t.length; i++) { c = t[i]; if (q) { if (c === '"' && t[i + 1] === '"') { f += '"'; i++; } else if (c === '"') q = false; else f += c; } else if (c === '"') q = true; else if (c === ',' || c === ';' || c === '\t') { row.push(f); f = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(f); f = ''; if (row.some(function (x) { return x !== ''; })) rows.push(row); row = []; } else f += c; }
+    row.push(f); if (row.some(function (x) { return x !== ''; })) rows.push(row);
+    var h = (rows.shift() || []).map(function (x) { return x.trim(); }); return rows.map(function (r) { var o = {}; h.forEach(function (k, j) { o[k] = r[j] == null ? '' : r[j].trim(); }); return o; });
+  }
+  function load() { return req('GET', '/cutover?days=' + encodeURIComponent($('days').value)).then(function (j) { V = j; $('main').hidden = false; $('err').innerHTML = ''; draw(); }, function (e) {
+    $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'The cutover comparison is not on this SIEM yet - run the platform update.' : e.status === 403 ? 'The cutover comparison names hosts and users - analysts and above only.' : e.message) + '</div></div>'; }); }
+  document.addEventListener('submit', function (e) {
+    var id = e.target.getAttribute('id'); if (id !== 'imf' && id !== 'sof') return; e.preventDefault(); var f = e.target.elements;
+    if (id === 'sof') { var b = { note: f.note.value.trim() }; if (f.accept_risk.value.trim()) b.accept_risk = f.accept_risk.value.trim(); req('POST', '/cutover/signoff', b).then(function () { toast('Proposed - another administrator decides'); return load(); }, function (x) { toast(x.message); }); return; }
+    var file = f.file.files && f.file.files[0], kind = f.kind.value; if (!file) { toast('Choose the export file first'); return; }
+    if (file.size > 30 * 1048576) { toast('The file is larger than 30 MB - split it'); return; }
+    file.text().then(function (t) { var rows; try { rows = /\.json$/i.test(file.name) || /^\s*[[{]/.test(t) ? JSON.parse(t) : parseCsv(t); if (rows && !Array.isArray(rows)) rows = rows.rows || rows.items || rows.data || []; } catch (x) { toast('The file is not valid ' + (/\.json$/i.test(file.name) ? 'JSON' : 'CSV')); return; }
+      return req('POST', '/cutover/import', { kind: kind, rows: rows, file: file.name.slice(0, 200) }).then(function (r) { toast('Imported ' + r.rows + ' ' + kind + ' row(s)' + (r.skipped ? ', ' + r.skipped + ' skipped: ' + r.errors.slice(0, 2).join('; ') : '')); return load(); }, function (x) { toast(x.message); }); });
+  });
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-dec]'); if (!b) return; var note = window.prompt(b.getAttribute('data-dec') === 'approve' ? 'Approval note (who, when, conditions)' : 'Why is it rejected?'); if (!note) return;
+    req('POST', '/cutover/signoff/' + encodeURIComponent(b.getAttribute('data-id')) + '/decide', { decision: b.getAttribute('data-dec'), note: note }).then(function () { toast('Decision recorded'); return load(); }, function (x) { toast(x.message); }); });
+  ['q', 'fs'].forEach(function (id) { $(id).addEventListener('input', function () { if (V) sources(); }); });
+  $('days').addEventListener('change', function () { load(); });
+  $('refresh').addEventListener('click', function () { load(); });
+  var w = new XMLHttpRequest(); w.open('GET', '/dashboards/whoami.json'); w.onload = function () { try { var j = JSON.parse(w.responseText); ME = { role: String(j.role || 'viewer').toLowerCase(), user: String(j.user || '') }; } catch (e) { /* not JSON: viewer */ } load(); }; w.onerror = load; w.send();
+})();
+</script></body></html>

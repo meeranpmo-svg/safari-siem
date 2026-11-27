@@ -1434,6 +1434,17 @@ window.ZYB_NAV = [
     "g": "SIEM platform"
    },
    {
+    "h": "siem-cutover.html",
+    "s": "SIEM Cutover (NewEvol)",
+    "t": "SIEM Cutover - NewEvol to our SIEM",
+    "d": "Parallel run against NewEvol: readiness score and five gates, events a day side by side, every log source matched with its volume parity and unusual days (robust z against its own ratio), NewEvol detections we also raise, rules mapped by ATT&CK technique or name, blockers ranked, NewEvol exports imported, and the four-eyes cutover decision",
+    "fw": {
+     "nca": [
+      "2-12"
+     ]
+    }
+   },
+   {
     "h": "soc-lr.html",
     "s": "SIEM vs LogRhythm",
     "t": "SIEM vs LogRhythm",
