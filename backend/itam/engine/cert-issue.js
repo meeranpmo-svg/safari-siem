@@ -94,7 +94,7 @@ function createIssuer(app, C, opts = {}) {
   async function approve(id, who) {
     const q = Q().get(id); if (!q) throw httpErr(404, 'no request ' + id);
     if (q.status !== 'awaiting-approval') throw httpErr(409, 'request ' + id + ' is ' + q.status + ', not waiting for approval');
-    if (q.requested_by === who.user) throw httpErr(403, 'a different person must approve the names - you requested them');
+    if (String(q.requested_by || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw httpErr(403, 'a different person must approve the names - you requested them');
     if (isService(who.user)) throw httpErr(403, 'a service or AI identity cannot approve');
     q.approval = Object.assign({}, q.approval, { by: who.user, at: new Date(now()).toISOString() });
     hist(q, who.user, 'draft', 'names approved by ' + who.user); Q().put(q);

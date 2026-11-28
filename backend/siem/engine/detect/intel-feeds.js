@@ -79,7 +79,13 @@ function createIntelFeeds({ dir, state, config, log, fetch: fetchImpl, now, audi
   const get = (id) => (col ? col.get(id) : mem.get(id)) || null;
   const save = (f) => (col ? col.put(f) : mem.set(f.id, f));
   const all = () => (col ? col.all() : [...mem.values()]);
-  function secrets() { if (!secretsPath) return {}; try { return ((SF.read(secretsPath) || {}).intel_feeds) || {}; } catch (e) { return {}; } }
+  // a secrets file that cannot be read gives no keys - said (never the file's content: a parse error can quote it) and flagged, so the page does not claim "no key"
+  let secretsError = false;
+  function secrets() {
+    if (!secretsPath) return {};
+    try { const o = ((SF.read(secretsPath) || {}).intel_feeds) || {}; secretsError = false; return o; }
+    catch (e) { secretsError = true; L.every ? L.every('intel-feeds:secrets', 600000, 'warn', 'intel feeds: the secrets file could not be read - feed keys are unavailable', { code: e && e.code ? String(e.code) : 'unreadable' }) : L.warn('intel feeds: the secrets file could not be read - feed keys are unavailable', { code: e && e.code ? String(e.code) : 'unreadable' }); return {}; }
+  }
   function setSecret(id, header) {
     if (!secretsPath) throw new FeedError(500, 'secrets path unknown');
     let sec = {}; try { sec = SF.read(secretsPath) || {}; } catch (e) { if (e.code !== 'ENOENT') throw e; }
@@ -90,8 +96,8 @@ function createIntelFeeds({ dir, state, config, log, fetch: fetchImpl, now, audi
   }
   function file(id) { return path.join(dir, 'feed-' + id + '.txt'); }
   function view(f) {
-    const p = PRESETS.find((x) => x.id === f.id);
-    return { id: f.id, name: f.name, url: f.url, preset: !!p, enabled: !!f.enabled, interval_h: f.interval_h, column: f.column || '', header_set: !!secrets()[f.id],
+    const p = PRESETS.find((x) => x.id === f.id), sec = secrets();
+    return { id: f.id, name: f.name, url: f.url, preset: !!p, enabled: !!f.enabled, interval_h: f.interval_h, column: f.column || '', header_set: !!sec[f.id], secrets_error: secretsError,
       last_run: f.last_run || null, last_ok: f.last_ok || null, last_error: f.last_error || '', count: f.count || 0, bytes: f.bytes || 0, file: path.basename(file(f.id)) };
   }
   function list() {

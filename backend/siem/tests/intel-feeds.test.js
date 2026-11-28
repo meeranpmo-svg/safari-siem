@@ -53,3 +53,15 @@ test('download → file in the intel folder → intel.js matches it; failures ke
   F.remove('cert-sa', 'admin'); assert.ok(!fs.existsSync(path.join(dir, 'feed-cert-sa.txt'))); assert.equal(JSON.parse(fs.readFileSync(secrets, 'utf8')).intel_feeds['cert-sa'], undefined);
   for (const a of ['intel.feed.add', 'intel.feed.run', 'intel.upload', 'intel.feed.remove']) assert.ok(audits.includes(a), a);
 });
+
+test('an unreadable secrets file is logged and flagged, never read as "no key"', () => {
+  const dir = tmp(), secrets = path.join(tmp(), 'secrets.json'); fs.writeFileSync(secrets, '{ synthetic-key-text not json', { mode: 0o600 });
+  const logged = [];
+  const F = createIntelFeeds({ dir, secretsPath: secrets, log: { info() {}, warn() {}, error() {}, every: (k, ms, lvl, msg, d) => logged.push({ k, msg, d }) } });
+  const rows = F.list();
+  assert.ok(rows.length && rows.every((r) => r.secrets_error === true && r.header_set === false), 'the view says the secrets file failed');
+  assert.ok(logged.length >= 1 && /secrets file could not be read/.test(logged[0].msg));
+  assert.ok(!JSON.stringify(logged).includes('synthetic-key-text'), 'the file content is never logged');
+  fs.writeFileSync(secrets, '{}', { mode: 0o600 });
+  assert.ok(F.list().every((r) => r.secrets_error === false), 'readable again clears the flag');
+});

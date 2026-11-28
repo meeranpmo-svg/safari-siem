@@ -82,3 +82,20 @@ test('work from home: request, four-eyes approval, policy, board, VPN indicators
   const ra = aud('request'); assert.equal(ra.length, 2); assert.deepEqual(ra.map((x) => x.by).sort(), ['omar.syn', 'sara.syn']); assert.ok(ra.every((x) => x.role === 'viewer')); assert.ok(!JSON.stringify(ra).includes('Family matter'));
   assert.equal(aud('decide').length, 2); assert.equal(aud('cancel').length, 1);
 });
+
+test('work from home: the department comes from the directory when it knows the person, not from the request', async (t) => {
+  const clock = Date.parse('2026-11-29T06:00:00Z');
+  const e = await startApp({ noAi: true }); t.after(() => e.close());
+  registerDuty(e.app.srv, e.app, { noTimer: true, now: () => clock, python: process.env.PYTHON || 'python3' });
+  e.app.addons.adDirectory = { view: () => ({ users: [{ sam: 'Sara.Syn', department: 'Finance' }, { sam: 'omar.syn', department: 'Unknown Dept (synthetic)' }] }) };
+  const call = (m, p, b, who) => e.req(m, p, Object.assign(b !== undefined ? { body: b } : {}, who));
+  // sara is in Finance in the directory: asking as 'it' still files under finance
+  let r = await call('POST', '/remote-work/requests', { from: '2026-12-01', to: '2026-12-01', reason: 'synthetic reason', department: 'it' }, EMP);
+  assert.equal(r.status, 200, r.text); assert.equal(r.json.department, 'finance', 'the directory wins over the body');
+  // a department the register does not hold is refused, not trusted from the body
+  r = await call('POST', '/remote-work/requests', { from: '2026-12-01', to: '2026-12-01', reason: 'synthetic reason', department: 'finance' }, EMP2);
+  assert.equal(r.status, 409); assert.match(r.json.error, /department/);
+  // a person the directory does not know keeps the department asked for
+  r = await call('POST', '/remote-work/requests', { from: '2026-12-01', to: '2026-12-01', reason: 'synthetic reason', department: 'it' }, { user: 'khalid.syn', role: 'viewer' });
+  assert.equal(r.status, 200, r.text); assert.equal(r.json.department, 'it');
+});

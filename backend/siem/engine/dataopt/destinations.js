@@ -28,10 +28,18 @@ function loadMasterKey(file) {
   try { raw = fs.readFileSync(file); }
   catch (e) {
     if (e.code !== 'ENOENT') throw e;
-    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
     const hex = crypto.randomBytes(32).toString('hex');
-    try { fs.writeFileSync(file, hex + '\n', { mode: 0o600, flag: 'wx' }); } catch { fs.writeFileSync(file, hex + '\n', { mode: 0o600 }); }
-    raw = Buffer.from(hex + '\n');
+    try { fs.writeFileSync(file, hex + '\n', { mode: 0o600, flag: 'wx' }); raw = Buffer.from(hex + '\n'); }
+    catch (e2) {
+      // never overwrite: if another process created the key between our read and our write, use ITS key
+      if (e2.code !== 'EEXIST') throw e2;
+      raw = fs.readFileSync(file);
+    }
+  }
+  if (process.platform !== 'win32') {
+    const st = fs.statSync(file);
+    if (st.mode & 0o077) throw new Error(`dataopt master key ${file} is readable by group or other users (mode ${(st.mode & 0o777).toString(8)}) - chmod 600 it`);
   }
   const txt = raw.toString('utf8').trim();
   if (/^[0-9a-fA-F]{64}$/.test(txt)) return Buffer.from(txt, 'hex');

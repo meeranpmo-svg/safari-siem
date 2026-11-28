@@ -215,6 +215,9 @@ function validate(b0) {
     if (u.username || u.password) throw err(400, 'local.base_url must not carry a user or password - the key is set on the server');
     if (u.search || u.hash) throw err(400, 'local.base_url must not carry a query or fragment');
     if (/^\d{1,3}(\.\d{1,3}){3}$/.test(u.hostname) && !PRIVATE.some((r) => r.test(u.hostname))) throw err(400, ('local.base_url is a public address - the local model must be inside ' + ZYB_ORG.short + '\'s network'));
+    // plain http only to this machine or a private (RFC 1918) address - prompts and tool output must not cross a network in clear text
+    if (u.protocol === 'http:' && !(u.hostname === 'localhost' || u.hostname === '[::1]' || /^127\./.test(u.hostname) || /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(u.hostname) && /^\d{1,3}(\.\d{1,3}){3}$/.test(u.hostname)))
+      throw err(400, 'local.base_url must use https:// unless it points at this machine or a private address (10.x, 172.16-31.x, 192.168.x)');
     if (L.base_url.length > 300) throw err(400, 'local.base_url is longer than 300 characters');
   }
   L.model = String(L0.model == null ? '' : L0.model).trim();

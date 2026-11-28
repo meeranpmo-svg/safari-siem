@@ -80,7 +80,7 @@ test('Database Audit report: a user named __proto__ stays a user and pollutes no
 
 test('four-eyes: service and command-line identities never count as a person', () => {
   const { isHuman } = require('../engine/approvers/scopes');
-  for (const u of ['system', 'duty', 'ai', 'sentra-siem-ad@srv01', 'sentra-siem-validate', 'sentra-itam-sync', 'svc-backup', 'ai:soc']) assert.equal(isHuman(u), false, u);
+  for (const u of ['system', 'duty', 'ai', 'sentra-siem-ad@srv01', 'sentra-siem-validate', 'sentra-itam-sync', 'svc-backup', 'ai:soc', 'zyb-update', 'zyb-readiness']) assert.equal(isHuman(u), false, u);
   for (const u of ['nora.syn', 'aisha.syn', 'systemadmin.syn', 'botan.syn', 'sara']) assert.equal(isHuman(u), true, u);
 });
 
@@ -122,4 +122,24 @@ test('AES-GCM decryption requires the full 16-byte tag', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
     for (const m of src.match(/createDecipheriv\('aes-256-gcm'[^;]*/g) || []) assert.match(m, /authTagLength: 16/, f);
   }
+});
+
+test('dataopt master key: an existing key is re-read, never overwritten; a group/world readable key is refused; new folder is 0700', { skip: process.platform === 'win32' }, () => {
+  const { loadMasterKey } = require('../engine/dataopt/destinations');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sentra-mk-')), dir = path.join(root, 'keys'), file = path.join(dir, 'master.key');
+  const k1 = loadMasterKey(file);
+  assert.equal(k1.length, 32); assert.equal((fs.statSync(dir).mode & 0o777).toString(8), '700'); assert.equal((fs.statSync(file).mode & 0o777).toString(8), '600');
+  const before = fs.readFileSync(file, 'utf8');
+  assert.deepEqual(loadMasterKey(file), k1, 'the same key is read again'); assert.equal(fs.readFileSync(file, 'utf8'), before, 'file untouched');
+  // the race: the file appears after the first read failed (EEXIST) - the existing key is used, not replaced
+  const raceFile = path.join(root, 'race.key'), real = fs.readFileSync, other = 'ab'.repeat(32); let n = 0;
+  fs.readFileSync = function (f, ...a) {
+    if (f === raceFile && n++ === 0) { fs.writeFileSync(raceFile, other + '\n', { mode: 0o600 }); const e = new Error('ENOENT'); e.code = 'ENOENT'; throw e; }
+    return real.call(this, f, ...a);
+  };
+  try { assert.equal(loadMasterKey(raceFile).toString('hex'), other, 'the key another process wrote wins'); } finally { fs.readFileSync = real; }
+  assert.equal(real.call(fs, raceFile, 'utf8').trim(), other);
+  fs.chmodSync(file, 0o644);
+  assert.throws(() => loadMasterKey(file), /readable by group or other/);
+  fs.chmodSync(file, 0o640); assert.throws(() => loadMasterKey(file), /readable by group or other/);
 });

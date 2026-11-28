@@ -486,3 +486,36 @@ test('integration: main() with fake ClickHouse — replayed syslog lines are par
     await fake.close();
   }
 });
+
+test('collector-health alerting mode is admin only (operator refused, admin audited)', async () => {
+  const docs = new Map();
+  const state = { collection: () => ({ get: (id) => docs.get(id), put: (d) => { docs.set(d.id, d); return d; }, all: () => [...docs.values()], delete: (id) => docs.delete(id) }) };
+  const audits = [];
+  const api = createApi({ port: 0, audit: (e) => audits.push(e), proxySecret: SECRET });
+  require('../engine/api/lr-import').register(api, { alerts: { raise() {}, all: () => [] }, state });
+  const { port } = await api.start();
+  try {
+    let r = await req(port, 'POST', '/api/soc/lr/collector-health/mode', { body: JSON.stringify({ mode: 'suppress' }), headers: { 'X-Auth-Role': 'operator', 'X-Auth-User': 'op1' } });
+    assert.equal(r.status, 403);
+    assert.equal(docs.size, 0, 'nothing stored');
+    r = await req(port, 'POST', '/api/soc/lr/collector-health/mode', { body: JSON.stringify({ mode: 'suppress' }), headers: { 'X-Auth-Role': 'admin', 'X-Auth-User': 'adm1' } });
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    assert.ok(audits.some((a) => a.action === 'lr.collector_health.mode'));
+  } finally { await api.stop(); }
+});
+
+test('health: a detector whose stats() throws is reported as not running and degraded, with a fixed message', async () => {
+  const fake = await startFakeCH({ respond: (q) => (/version\(\)/.test(q) ? { data: [{ version: '25.3.1' }] } : /FROM batches/.test(q) ? { data: [] } : null) });
+  const writer = { stats: () => ({ seq: 0 }), node: 'test-node' }, spool = { stats: () => ({ files: 0, bytes: 0, mb: 0, dropped_batches: 0 }) };
+  const detector = { stats: () => { throw new Error('boom at /srv/synthetic/rules.json'); } };
+  const { api } = coreSetup(fake, { writer, spool, detector });
+  const { port } = await api.start();
+  try {
+    const r = await req(port, 'GET', '/api/soc/health');
+    assert.equal(r.status, 200);
+    assert.equal(r.json.detector.running, false);
+    assert.equal(r.json.detector.error, 'the detector did not answer');
+    assert.ok(!JSON.stringify(r.json).includes('synthetic/rules.json'), 'the exception text is not exposed');
+    assert.equal(r.json.status, 'degraded'); assert.ok(r.json.degraded_by.includes('detector'));
+  } finally { await api.stop(); await fake.close(); }
+});

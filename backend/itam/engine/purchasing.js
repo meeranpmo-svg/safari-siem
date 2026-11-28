@@ -84,7 +84,7 @@ function createPurchasing(app, opts = {}) {
     const id = param(id0), o = POs().get(id); if (!o) throw httpErr(404, 'order not found');
     const b = body(input).str('note', { max: 500 }).bool('override_budget').done();
     if (status(o) !== 'requested') throw httpErr(409, 'already ' + status(o));
-    if (o.requester === who.user) throw httpErr(403, 'four eyes: the requester cannot approve their own purchase');
+    if (String(o.requester || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw httpErr(403, 'four eyes: the requester cannot approve their own purchase');
     const util = view().budget.lines.find((x) => x.id === o.budget_line);
     if (util && util.remaining != null && total(o) > util.remaining && !b.override_budget) throw httpErr(409, 'over budget: this order (' + total(o) + ') is more than the remaining ' + util.remaining + ' on "' + util.title + '" - approve with override_budget and a note, or move it to another line');
     if (b.override_budget && !b.note) throw httpErr(400, 'note: say why the budget is overridden');

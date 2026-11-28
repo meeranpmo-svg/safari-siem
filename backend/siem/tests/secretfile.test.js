@@ -54,3 +54,15 @@ test('secretfile: no key yet (before the update) keeps working in plaintext', ()
   const f = path.join(d, 'secrets.json'); assert.equal(SF.write(f, { a: 1 }).sealed, false); assert.deepEqual(SF.read(f), { a: 1 });
   delete process.env.SENTRA_SIEM_SECRETS_KEY; SF._reset();
 });
+
+test('secretfile: writing without a key still works but is warned about (never the content)', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'sentra-sec-')), sec = path.join(d, 'secrets.json');
+  process.env.SENTRA_SIEM_SECRETS_KEY = path.join(d, 'absent.key');
+  const SF = require('../engine/secretfile'); SF._reset();
+  const seen = [];
+  const r = SF.write(sec, { m365: { client_secret: 'Synthetic-Secret-1' } }, { log: { every: (k, ms, lvl, msg, det) => seen.push({ lvl, msg, det }) } });
+  assert.equal(r.sealed, false, 'behaviour kept: stored plaintext');
+  assert.equal(seen.length, 1); assert.equal(seen[0].lvl, 'warn'); assert.match(seen[0].msg, /WITHOUT encryption/);
+  assert.ok(!JSON.stringify(seen).includes('Synthetic-Secret-1'));
+  SF.write(sec, { a: 1 }, { plain: true }); assert.equal(seen.length, 1, 'an explicit plain write is not warned about');
+});

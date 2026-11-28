@@ -92,6 +92,7 @@ test('control activities: done with an evidence reference, verified by another p
   r = await call('PUT', '/copilot/duties/' + id, { every_days: 60 }, OP); assert.equal(r.status, 403);
   r = await call('PUT', '/copilot/duties/' + id, { every_days: 2 }, ADM); assert.equal(r.status, 400); assert.match(r.json.error, /every_days/);
   r = await call('PUT', '/copilot/duties/' + id, { every_days: 60, owner_dept: 'it' }, ADM); assert.equal(r.json.every_days, 60);
+  r = await call('PUT', '/copilot/duties/' + id, { every_days: 60, next_due: day(500) }, ADM); assert.equal(r.status, 200, r.text); assert.equal(r.json.next_due, day(90), 'next_due is only set by verification, never by a direct edit');
   assert.ok(e.app.store.auditTail(50).some((x) => x.action === 'copilot.duty.verify' && x.by === 'admin.syn'));
 });
 

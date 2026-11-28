@@ -120,6 +120,7 @@ test('ManageEngine: sync, rules, approvals, ServiceDesk Plus tickets, four-eyes 
   const man = M.manual({ title: 'Replace UPS battery in rack 4', description: 'Battery test failed', asset_id: lap }, OP).ticket;
   assert.equal(man.status, 'pending');
   await assert.rejects(M.approveT(man.id, OP), /second person/);
+  await assert.rejects(M.approveT(man.id, { user: ' ALI ', role: 'operator' }), /second person/);
   assert.equal((await M.approveT(man.id, ADM)).ticket.status, 'open');
 
   // desk status comes back; closed tickets are closed here

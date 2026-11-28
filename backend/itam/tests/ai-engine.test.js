@@ -105,10 +105,14 @@ test('routes: operator reads, admin switches, AI identity refused, validation na
   r = await req('PUT', '/ai-engine', { mode: 'local', local: { base_url: 'http://8.8.8.8:8000/v1', model: 'm' } }, ADM); assert.equal(r.status, 400); assert.match(r.text, /public address/);
   r = await req('PUT', '/ai-engine', { mode: 'local', local: { base_url: 'http://user:pw@10.0.0.1/v1', model: 'm' } }, ADM); assert.equal(r.status, 400); assert.match(r.text, /user or password/);
   r = await req('PUT', '/ai-engine', { mode: 'local', local: { api: 'grpc', base_url: 'http://10.0.0.1/v1', model: 'm' } }, ADM); assert.equal(r.status, 400); assert.match(r.text, /api/);
+  r = await req('PUT', '/ai-engine', { mode: 'local', local: { base_url: 'http://llm.example.test/v1', model: 'm' } }, ADM); assert.equal(r.status, 400); assert.match(r.text, /base_url.*https/);
+  r = await req('PUT', '/ai-engine', { mode: 'local', local: { base_url: 'http://169.254.1.5/v1', model: 'm' } }, ADM); assert.equal(r.status, 400, 'link-local is not private enough for clear text'); assert.match(r.text, /base_url/);
   r = await req('PUT', '/ai-engine', LOCAL, ADM); assert.equal(r.status, 200, r.text);
   assert.equal(r.json.mode, 'local'); assert.equal(r.json.data_leaves_network, false); assert.equal(r.json.local.host, '10.20.0.40:8000'); assert.match(r.json.effective, /nothing leaves the network/);
   const a = e.app.store.auditTail(30).find((x) => x.action === 'ai.engine.save');
   assert.ok(a && a.by === 'syed' && a.detail.from.mode === 'anthropic' && a.detail.to.mode === 'local' && a.detail.to.model === 'synthetic-local-7b');
+  r = await req('PUT', '/ai-engine', { mode: 'local', local: { base_url: 'https://llm.example.test/v1', model: 'm' } }, ADM); assert.equal(r.status, 200, r.text);
+  for (const ok of ['http://127.0.0.1:8000/v1', 'http://localhost:11434/v1', 'http://192.168.4.7/v1', 'http://172.20.1.1/v1']) { r = await req('PUT', '/ai-engine', { mode: 'local', local: { base_url: ok, model: 'm' } }, ADM); assert.equal(r.status, 200, ok + ' ' + r.text); }
 });
 
 test('probe: a plain answer then a tool call; a model that will not call tools is reported; recorded and audited', async (t) => {

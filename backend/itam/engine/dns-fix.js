@@ -91,7 +91,7 @@ function createDnsFix(app, opts = {}) {
     const id = param(id0, 'id'); if (!/^DNS-\d{4,}$/.test(id)) throw httpErr(400, 'id must be a DNS change id (DNS-nnnn)');
     const b = body(input || {}).str('note', { max: 300 }).done();
     const p = col().get(id); if (!p) throw httpErr(404, 'no DNS change ' + id); if (p.status !== 'pending') throw httpErr(409, id + ' is ' + p.status);
-    if (p.requested_by === who.user) throw httpErr(403, 'the person who proposed a change cannot approve it (four-eyes)');
+    if (String(p.requested_by || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw httpErr(403, 'the person who proposed a change cannot approve it (four-eyes)');
     const cur = await readSpf(p.domain);
     if (cur.record_id !== p.record_id || cur.text !== p.before) { p.status = 'stale'; p.stale = { at: new Date(now()).toISOString(), found: cur.text }; col().put(p); audit(who, 'dns-fix.stale', id, { domain: p.domain, expected: p.before, found: cur.text }); throw httpErr(409, 'the SPF record of ' + p.domain + ' changed since this was proposed - nothing was written; propose again'); }
     await cf('PATCH', '/zones/' + p.zone_id + '/dns_records/' + p.record_id, { content: p.quoted ? '"' + p.after + '"' : p.after });

@@ -218,7 +218,7 @@ function createCopilot(app, opts = {}) {
   }
   function dutyPut(id0, b0, who) {
     person(who, 'changes a control activity'); const { c, key, id } = dutyGet(id0);
-    const b = body(b0 || {}).int('every_days', { min: 7, max: 730 }).str('owner_dept', { max: 40, re: /^[a-z0-9_-]*$/, msg: 'owner_dept: a department id' }).bool('active', {}).date('next_due', {}).done();
+    const b = body(b0 || {}).int('every_days', { min: 7, max: 730 }).str('owner_dept', { max: 40, re: /^[a-z0-9_-]*$/, msg: 'owner_dept: a department id' }).bool('active', {}).done();
     const r = dutyRec(c, key); Object.assign(r, b); duties().put(r); audit(who, 'duty.update', id, b); return dutyRows(c).find((d) => d.id === id) || { id, active: false };
   }
 

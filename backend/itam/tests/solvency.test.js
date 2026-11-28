@@ -64,6 +64,7 @@ test('workflow: sign-off, explanation, four eyes, approval by the Risk Head, dow
   r = await call('POST', P + '/' + id + '/explain', { ref: 'c25;', note: 'x' }, OP2); assert.equal(r.status, 400); assert.match(r.text, /ref: a cell/);
   // review before sign-off is allowed, approval is not; the uploader never reviews
   assert.equal((await call('POST', P + '/' + id + '/review', {}, OP)).status, 403, 'the uploader cannot review');
+  { const x = await call('POST', P + '/' + id + '/review', {}, { user: 'NORA.SYN', role: 'operator' }); assert.equal(x.status, 403); assert.match(x.text, /four eyes/, 'the uploader under another spelling of their name'); }
   for (const [row, name, title] of [[4, 'Synthetic CFO', 'CFO'], [6, 'Synthetic CFO', 'CFO'], [7, 'Synthetic Actuary <b>', 'Head of Actuarial'], [8, 'Synthetic CRO', 'CRO']]) {
     r = await call('POST', P + '/' + id + '/signoff', { row, name, title, judgement: row === 7 ? 'synthetic judgement' : '' }, OP2); assert.equal(r.status, 200, r.text);
   }

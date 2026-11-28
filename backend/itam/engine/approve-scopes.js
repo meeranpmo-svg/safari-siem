@@ -36,7 +36,7 @@ for (const [k, v] of Object.entries(ENGINEERS)) SCOPES[k] = `${v[1]}: ${v[2]}`;
 // a person, not a service or an AI engineer acting on its own
 // a service, job or AI identity - never a person who may approve: a known prefix followed by a separator or nothing at all
 // (a bare 'system'), and the engines' own command-line identities (sentra-siem-ad@host, sentra-siem-validate, sentra-itam-…)
-const MACHINE = /^(?:(?:system|duty|core|ai|svc|service|agent|bot)(?:[:._@-]|$)|sentra-(?:siem|itam)(?:[:._@-]|$))/i;
+const MACHINE = /^(?:(?:system|duty|core|ai|svc|service|agent|bot|zyb)(?:[:._@-]|$)|sentra-(?:siem|itam)(?:[:._@-]|$))/i;
 function isHuman(user) { const u = String(user || '').trim(); return !!u && !MACHINE.test(u); }
 
 // the scopes that cover an approval asked for with `scope` (an engineer scope is also covered by its group)

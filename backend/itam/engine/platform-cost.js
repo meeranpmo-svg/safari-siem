@@ -158,7 +158,7 @@ function createPlatformCost(app, opts = {}) {
     const b = body(input || {}).oneOf('decision', ['approve', 'reject'], { required: true }).str('reason', { required: true, max: 1000 }).done();
     const c = CASES.get(id); if (!c) throw httpErr(404, 'business case not found');
     if (c.status !== 'proposed') throw httpErr(409, 'this business case was already ' + c.status);
-    if (c.proposed_by === who.user) throw httpErr(403, 'four-eyes: the person who proposed a business case cannot decide it');
+    if (String(c.proposed_by || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw httpErr(403, 'four-eyes: the person who proposed a business case cannot decide it');
     const next = Object.assign({}, c, { status: b.decision === 'approve' ? 'approved' : 'rejected', decided_by: who.user, decided_at: new Date(now()).toISOString(), reason: b.reason });
     CASES.put(next); app.audit({ by: who.user, role: who.role, ip: who.ip, action: 'platform_cost.case.' + next.status, target: id, detail: { rec: c.rec, proposed_by: c.proposed_by, reason: b.reason } });
     return { ok: true, case: next };

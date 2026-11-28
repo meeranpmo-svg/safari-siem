@@ -78,6 +78,7 @@ test('posture, pause / four-eyes resume through ai-guard, shadow AI and framewor
   assert.equal((await P('approve', { feature: 'itam.claims-synthetic' })).status, 409, 'nothing requested yet');
   r = await P('resume', { feature: 'itam.claims-synthetic', reason: 'tools reviewed (synthetic)' }); assert.equal(r.status, 200, r.raw);
   r = await P('approve', { feature: 'itam.claims-synthetic' }); assert.equal(r.status, 403); assert.match(r.json.error, /four-eyes/);
+  r = await P('approve', { feature: 'itam.claims-synthetic' }, { user: 'SYED', role: 'admin' }); assert.equal(r.status, 403); assert.match(r.json.error, /four-eyes/, 'the requester under another spelling of their name');
   assert.equal((await P('approve', { feature: 'itam.claims-synthetic' }, BOT)).status, 403, 'an AI identity never approves');
   r = await P('approve', { feature: 'itam.claims-synthetic' }, ADM2); assert.equal(r.status, 200, r.raw);
   assert.doesNotThrow(() => B.admit('pz2.syn', 'itam.claims-synthetic', 10), 'resumed');

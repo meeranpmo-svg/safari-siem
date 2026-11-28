@@ -259,7 +259,7 @@ function createVirtNetwork(app, opts = {}) {
     const p = prC().get(id); if (!p) throw httpErr(404, 'there is no proposal "' + id + '"');
     if (p.status !== 'pending') throw httpErr(409, 'the proposal is ' + p.status);
     if (SERVICE.test(String(who.user || ''))) throw httpErr(403, 'only a person approves - ' + who.user + ' is a service / AI identity');
-    if (p.requested_by === who.user) throw httpErr(403, 'four eyes: you asked for this change, another administrator decides it');
+    if (String(p.requested_by || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw httpErr(403, 'four eyes: you asked for this change, another administrator decides it');
     if (b.decision === 'reject' && !b.note) throw httpErr(400, 'note: say why it is rejected');
     const r = Object.assign({}, p, { status: b.decision === 'approve' ? 'approved' : 'rejected', decided_by: who.user, decided_at: iso(), decision_note: b.note || null, history: p.history.concat([{ at: iso(), by: who.user, action: b.decision, note: b.note || null }]) });
     prC().put(r); audit(who, 'virt.network.proposal.' + b.decision, id, { finding: p.finding_id }); return r;

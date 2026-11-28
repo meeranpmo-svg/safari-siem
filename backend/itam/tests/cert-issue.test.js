@@ -188,6 +188,7 @@ test('a new name or a wildcard waits for a different person; dns-01 waits for th
   const r = await post(e, '/certs/requests', { endpoint_id: ep.id, names: ['shop.synthetic.test', '*.shop.synthetic.test'] });
   assert.equal(r.json.status, 'awaiting-approval'); assert.match(r.json.approval.why.join(), /wildcard/);
   assert.equal((await post(e, '/certs/requests/' + r.json.id + '/approve', {})).status, 403, 'the requester cannot approve');
+  const r2 = await post(e, '/certs/requests/' + r.json.id + '/approve', {}, { user: ' Nora.Syn ', role: 'operator' }); assert.equal(r2.status, 403, 'the requester cannot approve under another spelling of their name'); assert.match(r2.json.error, /different person/);
   assert.equal((await post(e, '/certs/requests/' + r.json.id + '/approve', {}, { user: 'svc:auto', role: 'operator' })).status, 403, 'no service identity');
   assert.equal((await post(e, '/certs/requests/' + r.json.id + '/approve', {}, { user: 'v', role: 'viewer' })).status, 403);
   const a = await post(e, '/certs/requests/' + r.json.id + '/approve', {}, OP2);

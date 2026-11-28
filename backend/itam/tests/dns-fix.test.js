@@ -65,6 +65,7 @@ test('SPF proposal, four-eyes approval, write and read-back, reject, undo; valid
   // four-eyes
   assert.equal((await post(e, '/dns-fix/' + p.id + '/approve', {}, OP)).status, 403, 'an operator does not approve');
   const op2 = { user: 'nora.syn', role: 'admin' }; assert.equal((await post(e, '/dns-fix/' + p.id + '/approve', {}, op2)).status, 403, 'the proposer cannot approve');
+  { const x = await post(e, '/dns-fix/' + p.id + '/approve', {}, { user: 'NORA.SYN', role: 'admin' }); assert.equal(x.status, 403); assert.match(x.json.error, /four-eyes/, 'the proposer under another spelling of their name'); }
   assert.equal((await post(e, '/dns-fix/' + p.id + '/approve', {}, { user: 'ai:engineer', role: 'admin' })).status, 403, 'an AI identity never approves');
   r = await post(e, '/dns-fix/' + p.id + '/approve', { note: 'checked with the network team' }, ADM); assert.equal(r.status, 200, r.text);
   assert.equal(r.json.status, 'applied'); assert.equal(r.json.approved_by, 'syed'); assert.equal(st.txt[0], '"v=spf1 include:spf.protection.outlook.com ip4:192.0.2.50 -all"', 'written in the same quoting');

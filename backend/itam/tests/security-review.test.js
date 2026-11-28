@@ -16,7 +16,7 @@ const ADM = { user: 'syed', role: 'admin' };
 
 test('four-eyes: service and command-line identities never count as a person (same rule as the SIEM)', () => {
   const { isHuman } = require('../engine/approve-scopes');
-  for (const u of ['system', 'duty', 'sentra-siem-ad@srv01', 'sentra-itam-sync', 'svc-backup', 'ai:itam']) assert.equal(isHuman(u), false, u);
+  for (const u of ['system', 'duty', 'sentra-siem-ad@srv01', 'sentra-itam-sync', 'svc-backup', 'ai:itam', 'zyb-update', 'zyb-readiness']) assert.equal(isHuman(u), false, u);
   for (const u of ['nora.syn', 'aisha.syn', 'systemadmin.syn', 'sara']) assert.equal(isHuman(u), true, u);
   const a = fs.readFileSync(path.join(__dirname, '../engine/approve-scopes.js'), 'utf8').match(/const MACHINE = .*$/m)[0];
   let b = null; try { b = fs.readFileSync(path.join(process.env.SENTRA_SIEM_DIR || path.join(__dirname, '../../siem'), 'engine/approvers/scopes.js'), 'utf8').match(/const MACHINE = .*$/m); } catch (e) { b = null; /* the SIEM repository is not checked out next to this one: compared when it is */ }

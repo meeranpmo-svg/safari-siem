@@ -157,7 +157,7 @@ function createUpdateGuard(app, opts = {}) {
     r.sandbox.verdict = b.verdict; r.sandbox.verdict_by = who.user; r.sandbox.verdict_at = iso(); r.sandbox.verdict_note = b.note; r.sandbox.final_checks = st; r.status = b.verdict === 'pass' ? 'sandbox_passed' : 'sandbox_failed';
     save(r, who, 'sandbox verdict: ' + b.verdict, { note: b.note }); audit(who, 'sandbox.verdict', id, { verdict: b.verdict, note: b.note }); return { ok: true, status: r.status }; }
   function waveApprove(id, n, input, who) { const r = get(id); const w = r.waves[n]; if (!w) throw httpErr(404, 'no such wave');
-    if (r.created_by === who.user) throw httpErr(403, 'four-eyes: the person who raised the update cannot approve its waves');
+    if (String(r.created_by || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw httpErr(403, 'four-eyes: the person who raised the update cannot approve its waves');
     if (w.status !== 'planned') throw httpErr(409, 'wave ' + (n + 1) + ' is ' + w.status);
     const b = body(input || {}).str('note', { max: 500 }).done();
     w.approved_by = who.user; w.approved_at = iso(); const d = decide(r, n); if (d.decision === 'deny') { delete w.approved_by; delete w.approved_at; throw httpErr(409, 'the guardrails deny this wave: ' + d.results.filter((x) => x.result === 'fail').map((x) => x.id + ' ' + x.reason).join('; ')); }

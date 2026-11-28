@@ -80,10 +80,22 @@ function createRemoteWork(app, opts = {}) {
     .reduce((n, x) => n + x.days.filter((d) => d.slice(0, 7) === month).length, 0);
   function nextId() { let m = 0; for (const x of reqs().all()) { const k = Number(String(x.id).slice(4)); if (k > m) m = k; } return 'WFH-' + String(m + 1).padStart(5, '0'); }
 
+  // the department decides the policy and the approver, so it is not the requester's to choose when the directory knows the person:
+  // the department the AD directory read holds for them wins over the body. A person it does not know (or one with no department
+  // there) keeps the body value, which is still limited to the department register.
+  function directoryDepartment(user, asked) {
+    const D = APP && APP.addons && APP.addons.adDirectory; let rows = [];
+    try { rows = (D && D.view().users) || []; } catch (e) { if (APP && APP.log && APP.log.every) APP.log.every('remote-work:directory', 600000, 'warn', 'work from home: the directory could not be read', { err: String(e.message).slice(0, 200) }); return asked; }
+    const lc = (x) => String(x || '').trim().toLowerCase(), me = rows.find((u) => low(u.sam) === low(user)), dn = me && lc(me.department); if (!dn) return asked;
+    const hit = DEPTS().find((d) => lc(d.id) === dn || lc(d.name) === dn);
+    if (!hit) throw httpErr(409, 'department: the directory lists you in "' + String(me.department).slice(0, 60) + '", which is not in the department register - ask an administrator');
+    return hit.id;
+  }
   function request(b0, who) {
     if (!isHuman(who.user)) throw httpErr(403, 'a person asks for their own work-from-home days');
     const b = body(b0).date('from', { required: true }).date('to', { required: true }).str('reason', { required: true, min: 5, max: 400 })
       .oneOf('department', DEPTS().map((d) => d.id), { required: true }).done();
+    b.department = directoryDepartment(who.user, b.department);
     if (b.to < b.from) throw httpErr(400, 'to: must be on or after from');
     if (b.from < today()) throw httpErr(400, 'from: a day that has passed cannot be asked for');
     if ((Date.parse(b.to) - Date.parse(b.from)) / DAY + 1 > MAX_SPAN) throw httpErr(400, 'to: at most ' + MAX_SPAN + ' days in one request');

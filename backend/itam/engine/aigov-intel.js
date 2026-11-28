@@ -79,7 +79,7 @@ function createAigovIntel(app, opts = {}) {
       ctl().put(Object.assign({}, c, { state: 'resume_requested', resume_by: who.user, resume_at: at, resume_reason: b.reason, history: c.history.concat([{ at, by: who.user, action: 'resume-request', reason: b.reason }]).slice(-50) }));
       K.audit(who, 'resume.request', b.feature, { reason: b.reason }); return { ok: true, message: 'Resume requested - a different administrator approves it' }; }
     if (c.state !== 'resume_requested') throw K.httpErr(409, 'nobody has requested a resume of ' + b.feature);
-    if (c.resume_by === who.user) throw K.httpErr(403, 'you requested this resume - a different administrator approves it (four-eyes)');
+    if (String(c.resume_by || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw K.httpErr(403, 'you requested this resume - a different administrator approves it (four-eyes)');
     ctl().put(Object.assign({}, c, { state: 'running', resumed_by: who.user, resumed_at: at, history: c.history.concat([{ at, by: who.user, action: 'resume-approve' }]).slice(-50) }));
     K.audit(who, 'resume.approve', b.feature, { requested_by: c.resume_by }); return { ok: true, message: b.feature + ' resumed (requested by ' + c.resume_by + ', approved by ' + who.user + ')' };
   }

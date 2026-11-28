@@ -249,7 +249,7 @@ function createSolvency(app, opts = {}) {
   function review(id, input, who) {
     person(who, 'review');
     const b = body(input || {}).str('note', { max: 1000 }).done(), r = get(id); editable(r);
-    if (r.uploaded_by === who.user) throw httpErr(403, 'four eyes: the person who uploaded the return cannot review it');
+    if (String(r.uploaded_by || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw httpErr(403, 'four eyes: the person who uploaded the return cannot review it');
     r.status = 'reviewed'; r.review = { by: who.user, at: iso(), note: b.note || '' }; r.history.push({ at: iso(), by: who.user, action: 'reviewed', note: b.note || '' });
     RET().put(r); audit(who, 'review', id, { note: b.note || '' }); return detail(id);
   }
@@ -257,7 +257,7 @@ function createSolvency(app, opts = {}) {
     person(who, 'approve');
     const b = body(input || {}).str('note', { max: 1000 }).done(), r = get(id);
     if (r.status !== 'reviewed') throw httpErr(409, 'only a reviewed return can be approved (this one is ' + r.status + ')');
-    if (r.uploaded_by === who.user) throw httpErr(403, 'four eyes: the person who uploaded the return cannot approve it');
+    if (String(r.uploaded_by || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw httpErr(403, 'four eyes: the person who uploaded the return cannot approve it');
     const un = r.slots.filter((s) => !r.signoff[s.row]); if (un.length) throw httpErr(409, 'not signed off yet: ' + un.map((s) => s.area + (s.department ? ' (' + s.department + ')' : '')).join('; '));
     const ux = unexplained(r); if (ux.length) throw httpErr(409, 'failed checks without an explanation: ' + ux.map((c) => c.ref + ' ' + c.label).join('; '));
     r.status = 'approved'; r.approval = { by: who.user, role: who.role, at: iso(), note: b.note || '' }; r.history.push({ at: iso(), by: who.user, action: 'approved', note: b.note || '' });

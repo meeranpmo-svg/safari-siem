@@ -135,6 +135,7 @@ test('routes: viewer reads, operator reads now and proposes, a different human a
   assert.equal((await post(e, '/virt-network/proposals/' + id + '/decide', { decision: 'approve' }, OP)).status, 403);
   const own = await post(e, '/virt-network/proposals', { finding: v.findings.find((x) => x.kind === 'security-policy').id }, ADM);
   assert.equal((await post(e, '/virt-network/proposals/' + own.json.id + '/decide', { decision: 'approve' }, ADM)).status, 403, 'four eyes');
+  { const x = await post(e, '/virt-network/proposals/' + own.json.id + '/decide', { decision: 'approve' }, { user: 'SYED', role: 'admin' }); assert.equal(x.status, 403); assert.match(x.json.error, /four eyes/, 'the requester under another spelling of their name'); }
   assert.equal((await post(e, '/virt-network/proposals/' + id + '/decide', { decision: 'approve' }, { user: 'ai:helper', role: 'admin' })).status, 403, 'no AI / service approver');
   assert.equal((await post(e, '/virt-network/proposals/' + own.json.id + '/decide', { decision: 'reject' }, ADM2)).status, 400, 'a rejection needs a reason');
   assert.equal((await post(e, '/virt-network/proposals/' + id + '/done', {}, OP)).status, 409, 'not approved yet');

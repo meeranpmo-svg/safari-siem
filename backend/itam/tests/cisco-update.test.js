@@ -95,6 +95,11 @@ test('plans: validated, four-eyes approval by a person with the scope, reject ne
   assert.equal((await post(e, `/cisco-update/plans/${id}/submit`, {}, OP2)).status, 403, 'only the requester submits');
   assert.equal((await post(e, `/cisco-update/plans/${id}/submit`, {}, OP)).status, 200);
   assert.equal((await post(e, `/cisco-update/plans/${id}/approve`, {}, OP)).status, 403, 'the requester cannot approve');
+  { // an administrator raises a plan of their own (another device): approving it under another spelling of their name is still the same person
+    const p2 = await post(e, '/cisco-update/plans', Object.assign({}, plan, { name: 'Access switch', device_ids: ['sw-acc-3'] }), ADM); assert.equal(p2.status, 200, p2.text);
+    assert.equal((await post(e, `/cisco-update/plans/${p2.json.plan.id}/submit`, {}, ADM)).status, 200);
+    const x = await post(e, `/cisco-update/plans/${p2.json.plan.id}/approve`, {}, { user: ' SYED ', role: 'admin' }); assert.equal(x.status, 403); assert.match(x.text, /second person/);
+  }
   assert.equal((await post(e, `/cisco-update/plans/${id}/approve`, {}, OP2)).status, 403, 'an operator without the network approval scope cannot approve');
   assert.equal((await post(e, `/cisco-update/plans/${id}/approve`, {}, { user: 'duty:network', role: 'admin' })).status, 403, 'an AI / service identity never approves');
   assert.equal((await post(e, `/cisco-update/plans/${id}/reject`, {}, ADM2)).status, 400, 'reject needs a reason');

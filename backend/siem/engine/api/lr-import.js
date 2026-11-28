@@ -124,7 +124,7 @@ function register(api, { alerts, log, state, config } = {}) {
       return ctx.ok ? ctx.ok({ mode: health.getMode(), modes: health.MODES, sources: health.view() }) : { mode: health.getMode(), modes: health.MODES, sources: health.view() };
     });
     api.route('POST', '/api/soc/lr/collector-health/mode', (ctx) => {
-      ctx.need('operator');
+      ctx.need('admin');
       let body = ctx.body;
       if ((body === undefined || body === null) && ctx.rawBody) { try { body = JSON.parse(ctx.rawBody.toString('utf8') || '{}'); } catch { body = {}; } }
       const mode = body && body.mode;

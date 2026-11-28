@@ -94,17 +94,25 @@ function register(api, deps) {
     const mem = process.memoryUsage();
     const p = pipeline.stats();
     const det = deps.detector;
-    let detector = { running: false };
+    let detector = { running: false }, detectorDown = false;
     if (det && typeof det.stats === 'function') {
-      const d = safe(() => det.stats());
-      detector = { running: true, ...d, rules: Array.isArray(d.rules) ? (d.rules_loaded !== undefined ? d.rules_loaded : d.rules.length) : d.rules };
+      try {
+        const d = det.stats() || {};
+        detector = { running: true, ...d, rules: Array.isArray(d.rules) ? (d.rules_loaded !== undefined ? d.rules_loaded : d.rules.length) : d.rules };
+      } catch (e) {
+        // the detail goes to the log, the page gets a fixed sentence (an exception message can carry paths or rule text)
+        detectorDown = true; detector = { running: false, error: 'the detector did not answer' };
+        if (log && log.every) log.every('health:detector', 60000, 'warn', 'health: the detector did not answer its stats call', { err: String(e && e.message).slice(0, 200) });
+      }
     }
     const clickhouse = await chHealth();
     const sp = spool ? spool.stats() : null;
     const ig = await integrity(clickhouse.ok);
-    const degraded = !clickhouse.ok || (sp && sp.bytes > 0) || ig.ok === false;
+    const degraded = !clickhouse.ok || (sp && sp.bytes > 0) || ig.ok === false || detectorDown;
+    const degraded_by = [!clickhouse.ok && 'clickhouse', sp && sp.bytes > 0 && 'spool', ig.ok === false && 'integrity', detectorDown && 'detector'].filter(Boolean);
     return {
       status: degraded ? 'degraded' : 'ok',
+      degraded_by,
       engine: { status: degraded ? 'degraded' : 'ok', version: VERSION, node: process.version, pid: process.pid, uptime_s: Math.round((Date.now() - started) / 1000), rss_mb: Math.round(mem.rss / 1048576), heap_mb: Math.round(mem.heapUsed / 1048576), node_name: config.node_name },
       clickhouse: { ...clickhouse, url: ch.url, client: ch.stats ? ch.stats() : undefined },
       spool: sp,
@@ -202,7 +210,6 @@ function register(api, deps) {
   });
 }
 
-function safe(fn) { try { return fn() || {}; } catch (e) { return { error: e.message }; } }
 function safeArr(fn) { try { const v = fn(); return Array.isArray(v) ? v : []; } catch { return []; } }
 
 module.exports = { register };

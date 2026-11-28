@@ -37,6 +37,7 @@ test('validation, roles, four eyes, budget check', async (t) => {
   const id = r.json.id; assert.equal(r.json.total, 10000); assert.equal(r.json.status, 'requested'); assert.equal(r.json.envelope, 'it_ops'); assert.equal(r.json.extra, undefined);
   assert.equal((await call('POST', '/purchasing/orders', PO({ po_number: 'PO-SYN-1' }), OP)).status, 409, 'duplicate PO number');
   assert.equal((await call('POST', '/purchasing/orders/' + id + '/approve', {}, OP)).status, 403, 'the requester cannot approve');
+  { const x = await call('POST', '/purchasing/orders/' + id + '/approve', {}, { user: 'Buyer.Syn', role: 'operator' }); assert.equal(x.status, 403); assert.match(x.json.error, /four eyes/, 'the requester under another spelling of their name'); }
   assert.equal((await call('POST', '/purchasing/orders/' + id + '/step', { step: 'ordered' }, OP2)).status, 409, 'not approved yet');
   r = await call('POST', '/purchasing/orders/' + id + '/approve', {}, OP2); assert.equal(r.status, 200); assert.equal(r.json.status, 'approved');
   // a big one goes over the line's remaining 90 000

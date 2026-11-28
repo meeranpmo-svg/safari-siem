@@ -41,12 +41,12 @@ const MAX_FILE = 8 * 1024 * 1024;
 // what an auditor accepts as evidence: documents, spreadsheets, images, exported text and mail - never a web page or a program
 const EVIDENCE_TYPES = ['pdf', 'docx', 'xlsx', 'pptx', 'doc', 'xls', 'ppt', 'png', 'jpg', 'jpeg', 'gif', 'csv', 'txt', 'log', 'eml', 'msg', 'json', 'xml'];
 const { fileCheck } = require('./check');
-const MACHINE = /^(system|duty|core|ai|svc|service|agent|bot)[:._-]/i;
+const { isHuman } = require('./approve-scopes');
 
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status, statusCode: status });
 const s = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim().slice(0, n || 200);
 const same = (a, b) => !!String(a || '').trim() && String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
-const human = (u) => { const x = String(u || '').trim(); return !!x && !MACHINE.test(x); };
+const human = isHuman;
 function day(v, name, required) {
   const t = s(v, 10);
   if (!t) { if (required) throw bad(name + ' is required (YYYY-MM-DD)'); return null; }

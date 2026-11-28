@@ -195,7 +195,7 @@ function createCiscoUpdate(app, opts = {}) {
   function submit(id, who) { person(who, 'submits a plan'); const p = mustPlan(id); if (p.created_by !== who.user && !isAdmin(who)) throw bad('only the person who raised the plan (or an administrator) submits it', 403); return transition(id, who, ['draft'], 'submitted', 'submit'); }
   function approve(id, who) {
     person(who, 'approves an update plan'); const p = mustPlan(id);
-    if (p.created_by === who.user) throw bad('a second person has to approve a plan you raised', 403);
+    if (String(p.created_by || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw bad('a second person has to approve a plan you raised', 403);
     return transition(id, who, ['submitted'], 'approved', 'approve', { approved_by: who.user, approved_at: iso(now()) });
   }
   function reject(id, b0, who) {

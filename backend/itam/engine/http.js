@@ -242,6 +242,8 @@ function createServer({ host = '127.0.0.1', port = 9150, prefix = '/api/itam', a
         server.requestTimeout = 120000;
         server.on('upgrade', (req, socket, head) => { onUpgrade(req, socket, head).catch((e) => { if (log) log.error('http: WebSocket upgrade failed', { err: e && e.message }); socket.destroy(); }); });
         server.once('error', reject);
+        // after a successful listen the start-up handler is gone; a later server error is logged here instead of crashing the process
+        server.on('error', (e) => { if (log) log.error('itam http server error', { err: e && e.message }); });
         server.listen({ host, port }, () => { server.removeListener('error', reject); resolve(server.address()); });
       });
     },

@@ -65,6 +65,10 @@ test('sandbox first, ML risk, four-eyes waves, verify, audit', async (t) => {
   assert.equal((await call('POST', '/update-guard/requests/' + id + '/waves/1/approve', {}, REQ)).status, 403);
   assert.equal((await call('POST', '/update-guard/requests/' + id + '/waves/1/approve', {}, BOT)).status, 403);
   assert.equal((await call('POST', '/update-guard/requests/' + id + '/waves/1/approve', {}, VW)).status, 403);
+  { // an administrator's own request: approving its wave under another spelling of their name is still the same person
+    const own = await call('POST', '/update-guard/requests', fwReq, ADM); assert.equal(own.status, 200, own.text);
+    const x = await call('POST', '/update-guard/requests/' + own.json.id + '/waves/1/approve', {}, { user: ' SEC.ADMIN ', role: 'admin' }); assert.equal(x.status, 403, x.text); assert.match(x.text, /four-eyes/);
+  }
   assert.equal((await call('POST', '/update-guard/requests/' + id + '/waves/2/approve', {}, ADM)).status, 409, 'wave 2 before the canary is healthy');
   r = await call('POST', '/update-guard/requests/' + id + '/waves/1/approve', { note: 'ok' }, ADM); assert.equal(r.status, 200); assert.equal(r.json.decision, 'allow with conditions', 'outside the window / no backup → conditions');
   assert.equal((await call('POST', '/update-guard/requests/' + id + '/waves/1/applied', {}, REQ)).status, 400, 'evidence required');

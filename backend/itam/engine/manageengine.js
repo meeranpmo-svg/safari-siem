@@ -380,7 +380,7 @@ function createManageEngine(app, opts = {}) {
   async function approveT(tid, who) {
     const t = mustT(tid);
     if (t.status !== 'pending') throw bad(`this ticket is ${t.status}, not waiting for approval`, 409);
-    if (t.requested_by === who.user) throw bad('a second person has to approve a ticket you asked for', 403);
+    if (String(t.requested_by || '').trim().toLowerCase() === String(who.user || '').trim().toLowerCase()) throw bad('a second person has to approve a ticket you asked for', 403);
     keyOf('sdp');
     tickets.patch(t.id, (x) => { x.status = 'sending'; x.approved_by = who.user; x.approved_at = iso(); hist(x, who, 'approved'); return x; });
     audit({ by: who.user, role: who.role, ip: who.ip, action: 'me.ticket.approve', target: t.id, detail: { title: t.title } });

@@ -73,6 +73,7 @@ test('business cases are four-eyes and audited', async (t) => {
   let r = await call('POST', '/platform-cost/cases', { rec: 'R1', note: 'synthetic' }, OP); assert.equal(r.status, 200, JSON.stringify(r.json)); const id = r.json.case.id;
   assert.equal((await call('POST', '/platform-cost/cases', { rec: 'R1' }, OP)).status, 409, 'one open case per scenario');
   assert.equal((await call('POST', '/platform-cost/cases/' + id + '/decide', { decision: 'approve', reason: 'ok' }, OP)).status, 403, 'operators do not decide');
+  { const x = await call('POST', '/platform-cost/cases/' + id + '/decide', { decision: 'approve', reason: 'ok' }, { user: 'Nora.Syn', role: 'admin' }); assert.equal(x.status, 403); assert.match(x.json.error, /four-eyes/, 'the proposer under another spelling of their name'); }
   assert.equal((await call('POST', '/platform-cost/cases/' + id + '/decide', { decision: 'approve' }, ADM)).status, 400, 'a reason is required');
   assert.equal((await call('POST', '/platform-cost/cases/' + id + '/decide', { decision: 'approve', reason: 'ok' }, { user: 'system:ai', role: 'admin' })).status, 403);
   // the proposer cannot decide: an admin proposes, the same admin is refused

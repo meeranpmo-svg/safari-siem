@@ -103,11 +103,11 @@ function createSnmp(opts = {}) {
   let reqId = crypto.randomInt(1, 0x7fffffff), pending = new Map(), closed = false;
   sock.on('message', (msg, rinfo) => {
     if (rinfo.address.replace(/^::ffff:/, '') !== host || rinfo.port !== port) return; // only answers from the polled device
-    let parsed; try { parsed = v3 ? parseV3(msg) : parseV2(msg); } catch (e) { return; }
+    let parsed; try { parsed = v3 ? parseV3(msg) : parseV2(msg); } catch (e) { return; /* not a valid SNMP reply (stray or malformed datagram): ignored, the request times out */ }
     const p = pending.get(parsed.matchId); if (!p) return;
     pending.delete(parsed.matchId); clearTimeout(p.timer); p.resolve(parsed);
   });
-  sock.on('error', () => {});
+  sock.on('error', () => { /* a socket error (ICMP unreachable, send failure) is not fatal: each pending request ends on its own timeout and is retried / rejected there */ });
   sock.unref();
 
   /* --- v3 state */

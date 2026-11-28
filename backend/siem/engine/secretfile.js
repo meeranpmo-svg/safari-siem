@@ -53,10 +53,21 @@ function read(file) {
   const o = JSON.parse(text);
   return isSealed(o) ? unseal(o, file) : o;
 }
+// no key file: the secrets go to disk as plaintext (0600) - kept so a fresh install still works, but said, at most every 10 minutes per file.
+// This module has no logger of its own: a caller may pass opts.log (with .every); otherwise it goes to stderr (the service journal). Never the content.
+const warned = new Map();
+function warnPlaintext(file, log) {
+  const msg = 'secrets are being stored WITHOUT encryption - no key at ' + keyPath() + ' (run: sentra-siem-secrets keygen, then seal)';
+  if (log && typeof log.every === 'function') { log.every('secretfile:plaintext', 600000, 'warn', msg, { file: path.basename(String(file)) }); return; }
+  const t = Date.now(), k = String(file); if (warned.has(k) && t - warned.get(k) < 600000) return;
+  warned.set(k, t); process.stderr.write('[secretfile] warn: ' + msg + ' (' + path.basename(k) + ')\n');
+}
 function write(file, obj, opts) {
   let st = null; try { st = fs.lstatSync(file); } catch (e) { /* new file */ }
   if (st && st.isSymbolicLink()) throw new Error(`${file} is a symbolic link - refusing to write secrets through it`);
-  const key = opts && opts.plain ? null : loadKey(), body = JSON.stringify(key ? seal(obj, key) : obj, null, key ? 0 : 2) + '\n';
+  const key = opts && opts.plain ? null : loadKey();
+  if (!key && !(opts && opts.plain)) warnPlaintext(file, opts && opts.log);
+  const body = JSON.stringify(key ? seal(obj, key) : obj, null, key ? 0 : 2) + '\n';
   const t = path.join(path.dirname(file), '.' + path.basename(file) + '.tmp-' + crypto.randomBytes(4).toString('hex'));
   const fd = fs.openSync(t, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL, 0o600);
   try { fs.writeSync(fd, body); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
@@ -71,7 +82,7 @@ function status(file) {
   return { file, exists: !!o || err !== 'ENOENT', sealed, key_path: keyPath(), key_present: key, key_error: kerr || undefined, error: err && err !== 'ENOENT' ? err : undefined };
 }
 
-module.exports = { read, write, isSealed, isSecretsPath, status, loadKey, keyPath, _reset: () => { cache = null; } };
+module.exports = { read, write, isSealed, isSecretsPath, status, loadKey, keyPath, _reset: () => { cache = null; warned.clear(); } };
 
 // ---- CLI
 if (require.main === module) {

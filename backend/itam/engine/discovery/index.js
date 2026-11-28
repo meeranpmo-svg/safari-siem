@@ -632,10 +632,11 @@ function createDiscovery({ config, store, audit, log, assets, ingest, findings, 
   }
   function start() {
     const tickMs = Math.max(5, Number(dc.scheduler_tick_s) || 30) * 1000;
-    timer = setInterval(() => { try { tick(); } catch (e) { slog.error('discovery: scheduler tick failed', { err: e.message }); } }, tickMs);
+    // both jobs run through the error register (Platform Health): a failure is counted and logged once a minute, never lost
+    timer = setInterval(require('../errors').guard('discovery.scheduler', () => tick()), tickMs);
     timer.unref();
     const hMs = Math.max(1, Number((dc.siem || {}).health_interval_min) || 5) * 60000;
-    healthTimer = setInterval(() => { if (siem.configured()) siem.health().then(() => logCoverage()).catch((e) => slog.warn('discovery: SIEM health failed', { err: e.message })); }, hMs);
+    healthTimer = setInterval(require('../errors').guard('discovery.siem-health', () => (siem.configured() ? siem.health().then(() => logCoverage()) : undefined)), hMs);
     healthTimer.unref();
   }
   async function stop() {
