@@ -62,17 +62,23 @@ function createDoors({ state, config, log, now, allowHttp } = {}) {
 
   function put(input, by) {
     const b = check(input).str('id', { max: 40 }).str('label', { max: 80 }).str('site', { max: 60 }).str('host', { host: true, max: 253 }).int('port', { min: 1, max: 65535 }).bool('enabled')
-      .str('path_devices', { max: 124 }).str('path_doors', { max: 124 }).str('path_events', { max: 124 }).done();
+      .str('token', { max: 512 }).str('fingerprint256', { max: 100 }).bool('insecure').str('path_devices', { max: 124 }).str('path_doors', { max: 124 }).str('path_events', { max: 124 }).done();
     const id = String(b.id || '').toLowerCase(); if (!ID_RE.test(id)) throw bad(400, 'id: 2-40 lowercase letters, digits and dashes');
     const ex = col.get(id), s = Object.assign({ id, enabled: true, port: 8098, site: 'Unassigned', paths: {} }, ex || {});
     if (b.label !== undefined || !ex) s.label = b.label || id;
     if (b.site !== undefined) s.site = b.site;
     if (b.host !== undefined) s.host = b.host; if (!s.host) throw bad(400, 'host is required');
+    // a new host must not receive the stored API token: the request has to carry the token again (stored for the new host, re-pinned)
+    const moved = !!ex && b.host !== undefined && String(b.host).toLowerCase() !== String(ex.host || '').toLowerCase();
+    if (moved && (secrets()[id] || {}).token && !b.token) throw bad(400, 'token is required when host changes - the stored token is not sent to a new target');
+    if (b.token && b.fingerprint256 && b.fingerprint256.replace(/[^0-9a-f]/gi, '').length !== 64) throw bad(400, 'fingerprint256 must be a SHA-256 certificate fingerprint');
     if (b.port !== undefined) s.port = b.port;
     if (b.enabled !== undefined) s.enabled = b.enabled;
     s.paths = Object.assign({}, s.paths);
     for (const k of ['devices', 'doors', 'events']) { const v = b['path_' + k]; if (v !== undefined) { if (!Z.okPath(v)) throw bad(400, 'path_' + k + ': a path under /api/ (letters, digits, / . _ -)'); s.paths[k] = v; } }
-    s.updated = NOW(); s.updated_by = by; col.put(s); return pub(s);
+    s.updated = NOW(); s.updated_by = by; col.put(s);
+    if (moved && b.token) setToken(id, { token: b.token, fingerprint256: b.fingerprint256, insecure: b.insecure }, by);
+    return pub(s);
   }
   function remove(id, by) { if (!col.get(id)) throw bad(404, 'server not found'); col.remove(id); snaps.delete(id); if (secrets()[id]) setToken(id, null, by); return { removed: id }; }
   function setToken(id, input, by) {

@@ -9,7 +9,8 @@ const http = require('http'), fs = require('fs'), path = require('path');
 const DASH = path.resolve(__dirname, '../../ui');
 let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL', m); } };
 const AV = { summary: { total: 1, online: 1, offline: 0, unknown: 0, reboot_overdue: 0, spof: 0, no_dr: 0, degraded: 0, longest_offline_s: 0 },
-  items: [{ id: 'h1', name: 'syn-app-01', ip: '10.0.0.1', site: 'Riyadh', status: 'online', duration_s: 3600, flags: [], availability: { d1: 100, d7: 99.9, d30: 99.8 }, group: null }], groups: [], settings: { reboot_max_days: 30, subnets: [] }, scanner: { interval_s: 60 } };
+  items: [{ id: 'h1', name: 'syn-app-01', ip: '10.0.0.1', site: 'Riyadh', status: 'online', duration_s: 3600, flags: [], availability: { d1: 100, d7: 99.9, d30: 99.8 }, group: null },
+    { id: 'h2', name: 'syn-dc01', ip: '10.0.0.10', site: 'Riyadh', status: 'offline', duration_s: 60, flags: ['single-server'], availability: { d1: 90, d7: 99, d30: 99.5 }, group: null }], groups: [], settings: { reboot_max_days: 30, subnets: [] }, scanner: { interval_s: 60 } };
 const TYPES = { types: [{ type: 'servers', label: 'Servers', total: 40, up: 38, down: 1, unknown: 1, unmonitored: 0, down_items: [{ name: 'syn-erp-02', ip: '10.0.0.9' }] },
   { type: 'domain_controllers', label: 'Domain controllers', total: 4, up: 4, down: 0, unknown: 0, unmonitored: 0, down_items: [] },
   { type: 'wlcs', label: 'Wireless LAN controllers', total: 0, up: 0, down: 0, unknown: 0, unmonitored: 0, down_items: [] },
@@ -33,7 +34,7 @@ let MODE = 'ok';
   const txt = (p, sel) => p.evaluate((s) => (document.querySelector(s) || {}).textContent || '', sel);
   try {
     let p = await open(); await p.waitForSelector('#hbt-b tr[data-type]');
-    const rows = await p.$$eval('#hbt-b tr[data-type]', (l) => l.map((r) => [...r.cells].slice(0, 6).map((c) => c.textContent.trim()).join('|')));
+    const rows = await p.$$eval('#hbt-b tr[data-type]', (l) => l.map((r) => [...r.cells].slice(0, 6).map((c, i) => (i ? c.textContent : c.querySelector('b').textContent).trim()).join('|')));
     ok(JSON.stringify(rows) === JSON.stringify(['Servers|40|38|1|1|0', 'Domain controllers|4|4|0|0|0', 'Wireless LAN controllers|0|0|0|0|0', 'FC switches|2|1|1|0|0']), 'one row per type: ' + JSON.stringify(rows));
     const fc = await txt(p, '#hbt-b tr[data-type="fc_switches"]');
     ok(/<i>SYN-FC-B<\/i>/.test(fc) && !(await p.$('#hbt-b i')), 'what is down, named and escaped');
@@ -41,6 +42,14 @@ let MODE = 'ok';
     ok(await p.$eval('#hbt-b tr[data-type="fc_switches"] td:last-child .pill.bad', (e) => /snmp: timeout/.test(e.title)), 'why it is down on hover');
     ok(/SYNTHETIC note/.test(await txt(p, '#hbt-b')), 'where the numbers come from');
     await p.waitForSelector('#srv tr[data-k]'); ok(/syn-app-01/.test(await txt(p, '#srv')), 'the server list still works');
+    // clickable: a device-type row shows those in the list (a count shows that status), a tile filters the list, the chip clears it
+    const rowsShown = () => p.$$eval('#srv tr[data-k]', (l) => l.map((r) => r.cells[0].textContent.trim()));
+    await p.click('#hbt-b tr[data-type="domain_controllers"] td:first-child'); ok(JSON.stringify(await rowsShown()) === '["syn-dc01"]' && /Domain controllers/.test(await txt(p, '#fchip')), 'a device-type row shows those servers, the chip says so');
+    await p.click('#fclr'); ok((await rowsShown()).length === 2 && await p.$eval('#fchip', (e) => e.hidden), 'show all clears it');
+    await p.click('#hbt-b tr[data-type="servers"] td[data-st="up"]'); ok(JSON.stringify(await rowsShown()) === '["syn-app-01"]', 'a count shows that status');
+    await p.click('#kpi .t[data-f="single-server"]'); ok(JSON.stringify(await rowsShown()) === '["syn-dc01"]' && /Single point of failure/.test(await txt(p, '#fchip')), 'a tile filters the list and says so');
+    ok(await p.$eval('#hbt-b tr[data-type="wlcs"]', (e) => /open/.test(e.textContent)), 'network devices open their own page');
+    await Promise.all([p.waitForURL(/storage\.html/), p.click('#hbt-b tr[data-type="fc_switches"] td:first-child')]); ok(/storage\.html/.test(p.url()), 'FC switches open Storage');
     await p.close();
     MODE = 'missing'; p = await open(); await p.waitForFunction(() => /not installed in the SIEM engine yet/.test((document.getElementById('hbt-b') || {}).textContent || ''));
     ok(!(await p.$('#hbt-b table')), 'engine without the route: says so, no table'); await p.close();

@@ -22,7 +22,7 @@ function register(api, deps) {
   const EID = /^(user|host|service_account|ai_agent):[^\s/\\]{1,200}$/;
   const eid = (ctx) => { const id = decodeURIComponent(String(ctx.params.id || '')); if (!EID.test(id)) throw new HttpError(400, 'id must be an entity key such as user:alice or host:pc-17'); return id; };
 
-  api.route('GET', `${P}/soc/ueba/insights`, wrap(deps, null, (ctx) => ctx.ok(B.insights())));
+  api.route('GET', `${P}/soc/ueba/insights`, wrap(deps, 'analyst', (ctx) => ctx.ok(B.insights())));
   api.route('GET', `${P}/soc/ueba/assess/:id`, wrap(deps, 'operator', (ctx) => {
     const r = B.lastAssessment(eid(ctx)); if (!r) throw new HttpError(404, 'no AI assessment for this entity yet');
     return ctx.ok(r);

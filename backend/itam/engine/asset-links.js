@@ -31,8 +31,17 @@ function normUrl(raw) {
 }
 
 // addresses a link check never connects to: this host (loopback, unspecified), link-local (incl. 169.254.169.254 metadata)
+// an IPv4-mapped IPv6 address (::ffff:127.0.0.1, its hex form ::ffff:7f00:1 that the URL parser produces, or written out in full) is
+// the IPv4 address it carries - turned back into dotted form before it is checked, so [::ffff:127.0.0.1] cannot reach this server
+function unmap(v) {
+  const m = /^(?:0{0,4}:){0,5}:?ffff:(?:(\d+\.\d+\.\d+\.\d+)|([0-9a-f]{1,4}):([0-9a-f]{1,4}))$/.exec(v);
+  if (!m) return v;
+  if (m[1]) return m[1];
+  const hi = parseInt(m[2], 16), lo = parseInt(m[3], 16);
+  return [hi >> 8, hi & 255, lo >> 8, lo & 255].join('.');
+}
 function blockedAddr(ip) {
-  const v = String(ip || '').toLowerCase().replace(/^::ffff:/, '');
+  const v = unmap(String(ip || '').toLowerCase());
   if (/^127\./.test(v) || v === '0.0.0.0' || /^169\.254\./.test(v) || /^0\./.test(v)) return true;
   if (v === '::1' || v === '::' || /^fe[89ab][0-9a-f]:/.test(v) || /^fd00:ec2::/.test(v)) return true;
   return false;

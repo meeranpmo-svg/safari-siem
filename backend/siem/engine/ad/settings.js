@@ -51,7 +51,7 @@ function createAdSettings({ config, adSync = null, ldap = require('./ldap-client
     return o;
   }
 
-  function readFile(p) { try { if (SF.isSecretsPath(p)) return SF.read(p) || {}; return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return {}; throw Object.assign(new Error(`cannot read ${p}: ${e.message}`), { status: 500 }); } }
+  function readFile(p) { try { if (SF.isSecretsPath(p)) return SF.read(p) || {}; return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return {}; if (log && log.error) log.error('identity settings file cannot be read', { path: p, err: e.message }); throw Object.assign(new Error(`the identity settings file cannot be read - the detail is in the SIEM log`), { status: 500 }); } }
 
   async function save(body, by) {
     body = body || {};

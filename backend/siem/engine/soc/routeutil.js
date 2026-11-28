@@ -36,6 +36,11 @@ function prefixOf(deps) {
  *   Errors with a numeric .code (HttpError / WorkflowError) or .status become ctx.fail(code, message, errors[]) —
  *   the core server replies 4xx as {error, errors:[…]} (the portal lists `errors`).
  */
+// a 5xx message as the browser may see it: absolute paths (/var/lib/..., C:\...) and "at fn (file:line)" stack lines are removed
+function safe5xx(m) {
+  const s = String(m == null ? '' : m).split('\n')[0].replace(/(?:[A-Za-z]:\\|\/)(?:[\w.-]+[\\/])+[\w.-]*/g, '<path>').replace(/\s+at\s+\S+\s*\(.*$/, '').slice(0, 300);
+  return s.trim() || 'internal error';
+}
 function wrap(deps, role, fn) {
   const log = (deps && deps.log) || { error() {} };
   return async (ctx) => {
@@ -53,7 +58,14 @@ function wrap(deps, role, fn) {
       return await fn(ctx);
     } catch (e) {
       const code = e && Number.isInteger(e.code) ? e.code : e && Number.isInteger(e.status) ? e.status : 0;
-      if (code >= 400 && code < 600) return ctx.fail(code, e.message, Array.isArray(e.errors) && e.errors.length ? e.errors.map(String) : [e.message]);
+      if (code >= 400 && code < 500) return ctx.fail(code, e.message, Array.isArray(e.errors) && e.errors.length ? e.errors.map(String) : [e.message]);
+      if (code >= 500 && code < 600) {
+        // a deliberate 5xx says what is wrong ("Exchange Online did not answer"); a server file path or a stack line never reaches
+        // the browser - removed from the message, the full detail kept in the log and the error register
+        const msg = safe5xx(e.message);
+        if (msg !== String(e.message)) { log.error('soc api handler failed', { path: ctx.path, err: e && e.message }); ctx._err = e; }
+        return ctx.fail(code, msg, [msg]);
+      }
       log.error('soc api handler failed', { path: ctx.path, err: e && e.message });
       ctx._err = e;   // the server reports it to the error register (Platform Health) with the real cause
       return ctx.fail(500, 'internal error');
@@ -79,4 +91,4 @@ function timeParam(v, dflt) {
   return t;
 }
 
-module.exports = { HttpError, wrap, audit, body, timeParam, prefixOf, APPROVE_SCOPES, approverAllows };
+module.exports = { safe5xx, HttpError, wrap, audit, body, timeParam, prefixOf, APPROVE_SCOPES, approverAllows };

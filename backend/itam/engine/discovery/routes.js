@@ -75,6 +75,10 @@ function registerDiscoveryRoutes(srv, app) {
   srv.route('POST', '/hyperv', (ctx) => {
     const a = app.agentgw.authenticate(ctx.bearer());
     if (!a) throw bad('invalid or revoked agent key', 401);
+    // an agent reports only as the host it enrolled as: another host's figures and VM list (which approvals are checked against)
+    // cannot be overwritten with a key from a different machine
+    const rh = ctx.body && ctx.body.host && ctx.body.host.name;
+    if (rh && !require('../hyperv-manager').sameHost(rh, a.name)) throw bad('this agent is enrolled as ' + String(a.name).slice(0, 120) + ' and cannot report as ' + String(rh).slice(0, 120), 403);
     // no discovery scope covers this host yet: the host's figures are still kept (Hyper-V Servers) and the answer says why its VMs did
     // not reach Asset Discovery - a report is never thrown away for that
     let r;

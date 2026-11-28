@@ -101,3 +101,20 @@ test('KSC module: not connected until a server exists; configured-but-unread rai
   assert.deepEqual(kscAdapter(undefined), []);
   assert.equal(kscAdapter(K)[0].id, 'ksc');
 });
+
+test('KSC module: changing the host needs the password again; an unchanged host keeps the stored one', () => {
+  const fs = require('fs'), os = require('os'), path = require('path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ksc-syn-')), secFile = path.join(dir, 'secrets.json');
+  const config = { _paths: { secrets: secFile }, secrets: {} };
+  const K = createKsc({ state: memStore(), config, log: { info() {}, warn() {} } });
+  try {
+    K.put({ id: 'k1', label: 'KSC-RUH', host: 'ksc.corp.local', user: 'reader' }, 'tester');
+    K.setCredentials('k1', { password: 'Synthetic-Ksc-Pass-1' }, 'tester');
+    const stored = () => config.secrets.ksc.servers.k1.password;
+    assert.throws(() => K.put({ id: 'k1', host: 'attacker.example.com' }, 'tester'), (e) => e.status === 400 && /password is required when host changes/.test(e.message));
+    assert.equal(K.get('k1').host, 'ksc.corp.local', 'the refused request changed nothing'); assert.equal(stored(), 'Synthetic-Ksc-Pass-1');
+    K.put({ id: 'k1', label: 'KSC Riyadh', host: 'KSC.corp.local' }, 'tester'); assert.equal(stored(), 'Synthetic-Ksc-Pass-1', 'same host (any case) keeps the password');
+    const v = K.put({ id: 'k1', host: 'ksc2.corp.local', password: 'Synthetic-Ksc-Pass-2' }, 'tester');
+    assert.equal(v.host, 'ksc2.corp.local'); assert.equal(stored(), 'Synthetic-Ksc-Pass-2');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

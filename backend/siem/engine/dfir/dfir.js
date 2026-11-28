@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Citynet Work and Zyberon Information Technology, Saudi Arabia. All rights reserved. Proprietary and confidential - see LICENSE.
 'use strict';
+const { isHuman } = require('../approvers/scopes');
 /*
  * DFIR — digital-forensics & incident-response investigation, built on the events the SIEM already holds and the
  * cases the SOC already runs (engine/soc/cases.js). Nothing here changes an endpoint: the timeline and triage are
@@ -200,9 +201,14 @@ function createDfir({ search, state, cases, config, log, now } = {}) {
     const rec = col.get(id); if (!rec) throw Object.assign(new Error('collection request not found'), { code: 404 });
     if (!['approved', 'rejected', 'collected', 'cancelled'].includes(decision)) throw Object.assign(new Error('decision must be approved, rejected, collected or cancelled'), { code: 400 });
     if (decision === 'rejected' && !note) throw Object.assign(new Error('a reason is required to reject'), { code: 400 });
-    // four-eyes: the person who asked for the collection may not approve it (they may still cancel their own request)
-    const me = String((by && by.user) || by || '').trim().toLowerCase();
-    if (decision === 'approved' && me && String(rec.requested_by || '').trim().toLowerCase() === me) throw Object.assign(new Error('four-eyes: the person who requested this collection cannot approve it'), { code: 403 });
+    const refuse = (code, msg) => Object.assign(new Error(msg), { code, status: code });
+    const who = String((by && by.user) || by || '').trim();
+    if (!isHuman(who)) throw refuse(403, 'a person decides a collection, not a service or AI identity');
+    // four-eyes: the person who asked for the collection may only cancel it - never approve, reject or mark it collected
+    if (decision !== 'cancelled' && String(rec.requested_by || '').trim().toLowerCase() === who.toLowerCase()) throw refuse(403, 'four-eyes: the person who requested this collection cannot ' + (decision === 'collected' ? 'mark it collected' : decision === 'rejected' ? 'reject it' : 'approve it'));
+    // strict state machine: requested -> approved | rejected | cancelled; approved -> collected | cancelled; nothing leaves a final state
+    const NEXT = { requested: ['approved', 'rejected', 'cancelled'], approved: ['collected', 'cancelled'] };
+    if (!(NEXT[rec.status] || []).includes(decision)) throw refuse(409, 'this collection is ' + rec.status + ' and cannot become ' + decision);
     rec.status = decision; rec.decision = decision; rec.decided_by = (by && by.user) || by || ''; rec.decided_at = clk(); if (note) rec.note = String(note).slice(0, 1000);
     col.put(rec); if (log) log.info('dfir collection decided', { id, decision, by: rec.decided_by });
     return rec;

@@ -504,10 +504,26 @@ function createUeba(deps = {}) {
     return { total, items: items.slice(offset, offset + limit) };
   }
 
+  // "benign" writes a lasting suppression for the entity and detector, so it is four-eyes: the first mark is a PROPOSAL (nothing is
+  // suppressed), a second named person confirms it; the proposer does not confirm their own, nobody marks a finding about their own
+  // account, a service / AI identity does neither. "confirm" (it is real) only raises the risk and stays one person's call.
   function markFinding(id, action, by, note) {
     const f = findingsCol.get(id);
     if (!f) return { error: 'not found', code: 404 };
     if (action !== 'benign' && action !== 'confirm') return { error: 'action must be benign|confirm', code: 400 };
+    const me = String(by || '').trim().toLowerCase();
+    if (!require('../approvers/scopes').isHuman(me)) return { error: 'only a person reviews a behaviour finding: ' + (by || 'this identity') + ' is a service / AI identity', code: 403 };
+    const ent = String(f.entity_id || '').toLowerCase().replace(/^(user|account|host):/, '');
+    if (ent && (ent === me || ent.split('@')[0] === me.split('@')[0] || ent.split('\\').pop() === me)) return { error: 'a finding about your own account is reviewed by someone else', code: 403 };
+    note = note == null ? '' : String(note).slice(0, 2000);
+    if (action === 'benign' && f.status === 'benign') return { error: 'this finding is already marked benign', code: 409 };
+    if (action === 'benign' && f.status !== 'benign-proposed') {
+      const nowP = now();
+      findingsCol.patch(id, (x) => { x.status = 'benign-proposed'; x.updated = nowP; x.proposed_by = by; x.proposed_note = note; });
+      mirror('ueba_finding', [findingRow(findingsCol.get(id))]);
+      return { finding: findingsCol.get(id), pending: 'a second person confirms it before the detector is tuned for this entity' };
+    }
+    if (action === 'benign' && String(f.proposed_by || '').toLowerCase() === me) return { error: 'four-eyes: who proposed "benign" does not confirm it', code: 403 };
     const nowMs = now();
     const updated = findingsCol.patch(id, (x) => {
       x.status = action === 'benign' ? 'benign' : 'confirmed';
@@ -515,7 +531,7 @@ function createUeba(deps = {}) {
     });
     if (action === 'benign') {
       const tid = `${f.entity_id}\u0001${f.detector}`;
-      const t = tuningCol.get(tid) || { id: tid, entity_id: f.entity_id, detector: f.detector, action: 'benign', values: [], scope: 'value', by: by || '', note: note || '' };
+      const t = tuningCol.get(tid) || { id: tid, entity_id: f.entity_id, detector: f.detector, action: 'benign', values: [], scope: 'value', by: by || '', proposed_by: f.proposed_by || '', note: note || f.proposed_note || '' };
       if (!t.values.includes(f.dedup_key)) t.values.push(f.dedup_key);
       t.action = 'benign'; t.by = by || t.by; t.updated = nowMs;
       tuningCol.put(t);

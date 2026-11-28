@@ -2,12 +2,18 @@
 // Copyright (c) 2026 Zyberon Information Technology. All rights reserved. Proprietary and confidential - see LICENSE.
 'use strict';
 /*
- * build-ksa-map.js - writes ui/vendor/zyb-ksa-map.js: a map of the Kingdom for any page (SOC by location, assets by location, ...),
- * with the outline and the city list taken from the SIEM's office map (backend/siem/engine/netops/geomap.js), so every map in the
- * platform is the same map. window.zybKsaMap:
- *   draw(svg, points, opts)   points [{name, lat?, lng?, value, level: 'crit'|'warn'|'ok'|'info', sub?, id?}] - a point without
- *                             lat / lng is placed by the Saudi city in its name; bubbles sized by value; opts.onClick(point)
+ * build-ksa-map.js - writes ui/vendor/zyb-ksa-map.js: a map of the Kingdom for any page (SOC by location, assets by location, NAC,
+ * IP address management), with the outline and the city list taken from the SIEM's office map (backend/siem/engine/netops/geomap.js),
+ * so every map in the platform is the same map. window.zybKsaMap:
+ *   draw(svg, points, opts)   points [{name, lat?, lng?, value, level: 'crit'|'warn'|'ok'|'info', sub?, id?, label?}] - a point
+ *                             without lat / lng is placed by the Saudi city in its name; bubbles sized by value.
+ *                             opts.onClick(point), opts.empty (text when nothing is placed), opts.links (default true: a line from
+ *                             the head office - the largest point, or opts.hub - to every other site), opts.unit ('assets', 'alerts' ...)
  *   place(name)               {lat, lng, city} of the first Saudi city named in a site name, or null
+ * The look: the land with a soft glow and a dot texture, faint latitude / longitude lines, the seas and neighbours named, glowing
+ * bubbles that pulse gently (critical ones strongly), a thin leader from a bubble moved aside to its true place, flowing links from
+ * the head office, and a legend. No movement for a viewer who asks for reduced motion. Values are numbers and names are set as
+ * text (textContent), never as HTML.
  *   node tools/build-ksa-map.js [--check]
  */
 const fs = require('fs'), path = require('path');
@@ -19,39 +25,90 @@ const body = `// Copyright (c) 2026 Zyberon Information Technology. All rights r
   'use strict';
   var OUTLINE = ${JSON.stringify(OUTLINE)};
   var CITIES = ${JSON.stringify(CITIES)};
-  var NS = 'http://www.w3.org/2000/svg', W = 1000, H = 640, M = 40;
+  var NS = 'http://www.w3.org/2000/svg', W = 1000, H = 640, M = 46, uid = 0;
+  var BOUNDS = (function () { var lo = { x: 1e9, y: 1e9 }, hi = { x: -1e9, y: -1e9 }; OUTLINE.forEach(function (p) { lo.x = Math.min(lo.x, p.lng); hi.x = Math.max(hi.x, p.lng); lo.y = Math.min(lo.y, p.lat); hi.y = Math.max(hi.y, p.lat); }); return { lo: lo, hi: hi }; })();
   function proj() {
-    var lo = { x: 1e9, y: 1e9 }, hi = { x: -1e9, y: -1e9 };
-    OUTLINE.forEach(function (p) { lo.x = Math.min(lo.x, p.lng); hi.x = Math.max(hi.x, p.lng); lo.y = Math.min(lo.y, p.lat); hi.y = Math.max(hi.y, p.lat); });
+    var lo = BOUNDS.lo, hi = BOUNDS.hi;
     var s = Math.min((W - 2 * M) / (hi.x - lo.x), (H - 2 * M) / (hi.y - lo.y)), ox = M + ((W - 2 * M) - s * (hi.x - lo.x)) / 2, oy = M + ((H - 2 * M) - s * (hi.y - lo.y)) / 2;
     return function (lng, lat) { return { x: ox + (lng - lo.x) * s, y: oy + (hi.y - lat) * s }; };
   }
   var P = proj();
   function place(name) { var n = String(name || '').toLowerCase(); for (var i = 0; i < CITIES.length; i++) { var c = CITIES[i]; if (n.indexOf(String(c[0]).toLowerCase()) >= 0) return { lat: c[1], lng: c[2], city: c[0] }; } return null; }
-  var COL = { crit: '#ff5c5c', warn: '#f5a623', ok: '#2fd47a', info: '#4f9be9' };
+  var COL = { crit: '#ff5c6c', warn: '#ffb020', ok: '#2fd47a', info: '#4fa3ff' };
+  var LEVEL = { crit: 'needs action', warn: 'watch', ok: 'healthy', info: 'sites' };
   function el(t, a, p) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+  function txt(p, a, s) { var t = el('text', a, p); t.textContent = s; return t; }
+  var still = function () { try { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; /* no media queries: movement on */ } };
   function draw(svg, points, opts) {
-    opts = opts || {}; svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.innerHTML = '';
-    var defs = el('defs', {}, svg), g = el('linearGradient', { id: 'zksaFill', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
-    el('stop', { offset: '0', 'stop-color': '#16324f' }, g); el('stop', { offset: '1', 'stop-color': '#0b1a2b' }, g);
-    var rg = el('radialGradient', { id: 'zksaGlow' }, defs); el('stop', { offset: '0', 'stop-color': '#fff', 'stop-opacity': '.55' }, rg); el('stop', { offset: '1', 'stop-color': '#fff', 'stop-opacity': '0' }, rg);
-    el('path', { d: OUTLINE.map(function (p, i) { var q = P(p.lng, p.lat); return (i ? 'L' : 'M') + q.x.toFixed(1) + ' ' + q.y.toFixed(1); }).join(' ') + ' Z', fill: 'url(#zksaFill)', stroke: '#3b6a99', 'stroke-width': 1.5 }, svg);
-    var pts = (points || []).map(function (p) { var c = p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : place(p.name); return c ? Object.assign({}, p, { _xy: P(c.lng, c.lat) }) : null; }).filter(Boolean);
-    var max = Math.max.apply(null, pts.map(function (p) { return p.value || 0; }).concat([1])), placedXY = [];
-    pts.sort(function (a, b) { return (b.value || 0) - (a.value || 0); }).forEach(function (p) {
-      // points closer than their bubbles are pushed apart (the east-coast sites sit a few kilometres from each other)
-      for (var tries = 0; tries < 12; tries++) { var hit = placedXY.filter(function (q) { return Math.hypot(q.x - p._xy.x, q.y - p._xy.y) < 44; })[0]; if (!hit) break; var ang = Math.atan2(p._xy.y - hit.y, p._xy.x - hit.x) || (tries * 1.3); p._xy = { x: hit.x + Math.cos(ang + tries * 0.4) * 46, y: hit.y + Math.sin(ang + tries * 0.4) * 46 }; }
-      placedXY.push(p._xy);
-      var r = 7 + 26 * Math.sqrt((p.value || 0) / max), c = COL[p.level] || COL.info, grp = el('g', { class: 'zksa-pt', tabindex: '0', role: 'button', 'aria-label': p.name + ': ' + (p.value || 0) + (p.sub ? ', ' + p.sub : ''), style: 'cursor:pointer' }, svg);
-      if (p.level === 'crit') { var pr = el('circle', { cx: p._xy.x, cy: p._xy.y, r: r, fill: c, opacity: '.35' }, grp); el('animate', { attributeName: 'r', values: r + ';' + (r + 14) + ';' + r, dur: '2s', repeatCount: 'indefinite' }, pr); el('animate', { attributeName: 'opacity', values: '.45;0;.45', dur: '2s', repeatCount: 'indefinite' }, pr); }
-      el('circle', { cx: p._xy.x, cy: p._xy.y, r: r, fill: c, opacity: '.85', stroke: '#0b1a2b', 'stroke-width': 2 }, grp);
-      el('circle', { cx: p._xy.x - r / 3, cy: p._xy.y - r / 3, r: r / 2.5, fill: 'url(#zksaGlow)' }, grp);
-      var t = el('text', { x: p._xy.x, y: p._xy.y + 4, 'text-anchor': 'middle', fill: '#fff', 'font-size': Math.max(11, r * 0.7), 'font-weight': 700, 'pointer-events': 'none' }, grp); t.textContent = p.value || 0;
-      var lb = el('text', { x: p._xy.x, y: p._xy.y + r + 14, 'text-anchor': 'middle', fill: '#c9d6e3', 'font-size': 12, 'pointer-events': 'none' }, grp); lb.textContent = p.label || p.name;
-      el('title', {}, grp).textContent = p.name + ': ' + (p.value || 0) + (p.sub ? ' · ' + p.sub : '');
-      if (opts.onClick) { grp.addEventListener('click', function () { opts.onClick(p); }); grp.addEventListener('keydown', function (e) { if (e.key === 'Enter') opts.onClick(p); }); }
+    opts = opts || {}; svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.innerHTML = ''; var id = 'zk' + (++uid), calm = still();
+    svg.setAttribute('class', ((svg.getAttribute('class') || '').replace(/\\bzksa\\b/g, '') + ' zksa').trim());
+    var defs = el('defs', {}, svg);
+    el('style', {}, defs).textContent = '.zksa .zksa-pt{cursor:pointer;outline:none}.zksa .zksa-pt .zb{transition:stroke-width .15s}.zksa .zksa-pt:hover .zb,.zksa .zksa-pt:focus .zb{stroke:#fff;stroke-width:3}'
+      + '.zksa .zksa-pt:hover .zl,.zksa .zksa-pt:focus .zl{fill:#fff}.zksa .zl{paint-order:stroke;stroke:#07111d;stroke-width:3.5px;stroke-linejoin:round}';
+    var g = el('linearGradient', { id: id + 'f', x1: 0, y1: 0, x2: 0.4, y2: 1 }, defs);
+    el('stop', { offset: '0', 'stop-color': '#1b4166' }, g); el('stop', { offset: '.55', 'stop-color': '#112b47' }, g); el('stop', { offset: '1', 'stop-color': '#0a1a2c' }, g);
+    var sea = el('radialGradient', { id: id + 's', cx: '50%', cy: '45%', r: '75%' }, defs); el('stop', { offset: '0', 'stop-color': '#0e2236' }, sea); el('stop', { offset: '1', 'stop-color': '#060d17' }, sea);
+    var dots = el('pattern', { id: id + 'd', width: 9, height: 9, patternUnits: 'userSpaceOnUse' }, defs); el('circle', { cx: 2, cy: 2, r: 1, fill: '#7fb6ff', 'fill-opacity': '.13' }, dots);
+    var glow = el('filter', { id: id + 'g', x: '-20%', y: '-20%', width: '140%', height: '140%' }, defs); el('feGaussianBlur', { stdDeviation: 7, result: 'b' }, glow);
+    var mg = el('feMerge', {}, glow); el('feMergeNode', { in: 'b' }, mg); el('feMergeNode', { in: 'SourceGraphic' }, mg);
+    Object.keys(COL).forEach(function (k) { var b = el('radialGradient', { id: id + 'b' + k, cx: '35%', cy: '30%', r: '75%' }, defs);
+      el('stop', { offset: '0', 'stop-color': '#ffffff', 'stop-opacity': '.85' }, b); el('stop', { offset: '.28', 'stop-color': COL[k] }, b); el('stop', { offset: '1', 'stop-color': COL[k], 'stop-opacity': '.82' }, b); });
+    // the sea, faint latitude / longitude lines, the seas and neighbours named
+    el('rect', { x: 0, y: 0, width: W, height: H, fill: 'url(#' + id + 's)', rx: 14 }, svg);
+    var grid = el('g', { stroke: '#4f7aa8', 'stroke-opacity': '.12', 'stroke-width': 1 }, svg);
+    for (var lg = 36; lg <= 56; lg += 4) { var a1 = P(lg, BOUNDS.lo.y - 3), a2 = P(lg, BOUNDS.hi.y + 3); el('line', { x1: a1.x, y1: a1.y, x2: a2.x, y2: a2.y }, grid); }
+    for (var lt = 16; lt <= 32; lt += 4) { var b1 = P(BOUNDS.lo.x - 4, lt), b2 = P(BOUNDS.hi.x + 4, lt); el('line', { x1: b1.x, y1: b1.y, x2: b2.x, y2: b2.y }, grid); }
+    var lab = el('g', { 'font-family': 'Inter, system-ui, sans-serif', 'pointer-events': 'none' }, svg);
+    [['Red Sea', 37.2, 21.6, -58], ['Arabian Gulf', 49.75, 28.95, -32]].forEach(function (s) { var q = P(s[1], s[2]); txt(lab, { x: q.x, y: q.y, fill: '#5d9be0', 'fill-opacity': '.55', 'font-size': 15, 'font-style': 'italic', 'letter-spacing': '.12em', 'text-anchor': 'middle', transform: 'rotate(' + s[3] + ' ' + q.x + ' ' + q.y + ')' }, s[0]); });
+    [['JORDAN', 36.4, 31.0], ['IRAQ', 43.3, 31.6], ['KUWAIT', 47.7, 29.45], ['QATAR', 51.2, 25.3], ['UAE', 54.3, 23.6], ['OMAN', 55.9, 20.6], ['YEMEN', 46.2, 16.6]].forEach(function (s) { var q = P(s[1], s[2]);
+      if (q.x > 10 && q.x < W - 10 && q.y > 12 && q.y < H - 6) txt(lab, { x: q.x, y: q.y, fill: '#9fb3c8', 'fill-opacity': '.35', 'font-size': 11, 'letter-spacing': '.2em', 'text-anchor': 'middle' }, s[0]); });
+    // the land: glow, gradient, dot texture, a bright edge
+    var d = OUTLINE.map(function (p, i) { var q = P(p.lng, p.lat); return (i ? 'L' : 'M') + q.x.toFixed(1) + ' ' + q.y.toFixed(1); }).join(' ') + ' Z';
+    el('path', { d: d, fill: '#1f6fd1', 'fill-opacity': '.18', filter: 'url(#' + id + 'g)' }, svg);
+    el('path', { d: d, fill: 'url(#' + id + 'f)' }, svg); el('path', { d: d, fill: 'url(#' + id + 'd)' }, svg);
+    el('path', { d: d, fill: 'none', stroke: '#5aa2ea', 'stroke-opacity': '.75', 'stroke-width': 1.6, 'stroke-linejoin': 'round' }, svg);
+    var cap = P(46.72, 24.69); el('circle', { cx: cap.x, cy: cap.y, r: 2.2, fill: '#cfe3ff', 'fill-opacity': '.5' }, svg);
+    // the points: placed by coordinates or city, pushed apart when bubbles would overlap (a leader line shows the true place)
+    var pts = (points || []).map(function (p) { var c = p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : place(p.name); return c ? Object.assign({}, p, { _xy: P(c.lng, c.lat), _at: P(c.lng, c.lat) }) : null; }).filter(Boolean);
+    var max = Math.max.apply(null, pts.map(function (p) { return p.value || 0; }).concat([1])), placed = [];
+    pts.sort(function (a, b) { return (b.value || 0) - (a.value || 0); });
+    pts.forEach(function (p) { p._r = 9 + 26 * Math.sqrt((p.value || 0) / max);
+      for (var t = 0; t < 16; t++) { var hit = placed.filter(function (q) { return Math.hypot(q._xy.x - p._xy.x, q._xy.y - p._xy.y) < q._r + p._r + 20; })[0]; if (!hit) break;
+        var ang = Math.atan2(p._xy.y - hit._xy.y, p._xy.x - hit._xy.x) || (t * 1.3), dist = hit._r + p._r + 22; p._xy = { x: hit._xy.x + Math.cos(ang + t * 0.35) * dist, y: hit._xy.y + Math.sin(ang + t * 0.35) * dist }; }
+      placed.push(p); });
+    // links from the head office to every site, with a flow along them
+    var hub = opts.hub ? pts.filter(function (p) { return String(p.name).toLowerCase() === String(opts.hub).toLowerCase(); })[0] : pts[0];
+    if (opts.links !== false && hub && pts.length > 1) {
+      var lk = el('g', { 'pointer-events': 'none' }, svg);
+      pts.forEach(function (p, i) { if (p === hub) return; var a = hub._xy, b = p._xy, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1, bend = Math.min(80, len * 0.22);
+        var c = { x: mx - dy / len * bend, y: my + dx / len * bend }, path = 'M' + a.x.toFixed(1) + ' ' + a.y.toFixed(1) + ' Q' + c.x.toFixed(1) + ' ' + c.y.toFixed(1) + ' ' + b.x.toFixed(1) + ' ' + b.y.toFixed(1), col = COL[p.level] || COL.info;
+        el('path', { d: path, fill: 'none', stroke: col, 'stroke-opacity': '.22', 'stroke-width': 1.6 }, lk);
+        var f = el('path', { d: path, fill: 'none', stroke: col, 'stroke-opacity': '.85', 'stroke-width': 2, 'stroke-dasharray': '3 14', 'stroke-linecap': 'round' }, lk);
+        if (!calm) el('animate', { attributeName: 'stroke-dashoffset', values: '34;0', dur: (2.2 + (i % 4) * 0.4) + 's', repeatCount: 'indefinite' }, f); });
+    }
+    pts.forEach(function (p, i) {
+      var r = p._r, c = COL[p.level] || COL.info, k = COL[p.level] ? p.level : 'info', x = p._xy.x, y = p._xy.y, moved = Math.hypot(x - p._at.x, y - p._at.y) > 2;
+      if (moved) { el('line', { x1: p._at.x, y1: p._at.y, x2: x, y2: y, stroke: c, 'stroke-opacity': '.55', 'stroke-width': 1, 'stroke-dasharray': '2 3' }, svg); el('circle', { cx: p._at.x, cy: p._at.y, r: 2.6, fill: c }, svg); }
+      var grp = el('g', { class: 'zksa-pt', tabindex: '0', role: 'button', 'aria-label': p.name + ': ' + (p.value || 0) + (opts.unit ? ' ' + opts.unit : '') + (p.sub ? ', ' + p.sub : '') }, svg);
+      el('circle', { cx: x, cy: y, r: r + 9, fill: c, 'fill-opacity': '.14' }, grp);
+      if (!calm) { var strong = p.level === 'crit', ring = el('circle', { cx: x, cy: y, r: r, fill: 'none', stroke: c, 'stroke-width': strong ? 3 : 1.6, opacity: strong ? '.7' : '.4' }, grp), dur = (strong ? 1.6 : 3.2 + (i % 3) * 0.5) + 's';
+        el('animate', { attributeName: 'r', values: r + ';' + (r + (strong ? 20 : 12)), dur: dur, repeatCount: 'indefinite' }, ring); el('animate', { attributeName: 'opacity', values: (strong ? '.7' : '.4') + ';0', dur: dur, repeatCount: 'indefinite' }, ring); }
+      el('circle', { class: 'zb', cx: x, cy: y, r: r, fill: 'url(#' + id + 'b' + k + ')', stroke: 'rgba(255,255,255,.55)', 'stroke-width': 1.5, filter: 'url(#' + id + 'g)' }, grp);
+      txt(grp, { x: x, y: y + Math.max(4, r * 0.24), 'text-anchor': 'middle', fill: '#fff', 'font-size': Math.max(11, Math.min(22, r * 0.62)), 'font-weight': 800, 'font-family': 'Inter, system-ui, sans-serif', 'pointer-events': 'none', class: 'zl' }, String(p.value || 0));
+      txt(grp, { x: x, y: y + r + 17, 'text-anchor': 'middle', fill: '#d6e4f2', 'font-size': 13, 'font-weight': 600, 'font-family': 'Inter, system-ui, sans-serif', 'pointer-events': 'none', class: 'zl' }, String(p.label || p.name));
+      el('title', {}, grp).textContent = p.name + ': ' + (p.value || 0) + (opts.unit ? ' ' + opts.unit : '') + (p.sub ? ' · ' + p.sub : '');
+      if (opts.onClick) { grp.addEventListener('click', function () { opts.onClick(p); }); grp.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); opts.onClick(p); } }); }
     });
-    if (!pts.length) { var e = el('text', { x: W / 2, y: H / 2, 'text-anchor': 'middle', fill: '#8b93a4', 'font-size': 16 }, svg); e.textContent = opts.empty || 'Nothing to place on the map.'; }
+    // legend: what the size means, and the colours present
+    if (pts.length) {
+      var lgd = el('g', { 'font-family': 'Inter, system-ui, sans-serif', 'pointer-events': 'none' }, svg), lx = 26, ly = H - 92;
+      el('rect', { x: lx - 12, y: ly - 22, width: 232, height: 84, rx: 10, fill: '#07111d', 'fill-opacity': '.72', stroke: '#5aa2ea', 'stroke-opacity': '.25' }, lgd);
+      txt(lgd, { x: lx, y: ly - 4, fill: '#9fb3c8', 'font-size': 11, 'letter-spacing': '.08em' }, 'BUBBLE SIZE' + (opts.unit ? ' = ' + String(opts.unit).toUpperCase() : ''));
+      [[max, 1], [Math.max(1, Math.round(max / 4)), 0.25]].forEach(function (s, i) { var rr = 9 + 26 * Math.sqrt(s[1]) * 0.42, cx = lx + 10 + i * 58; el('circle', { cx: cx, cy: ly + 22, r: rr, fill: 'none', stroke: '#9fb3c8', 'stroke-opacity': '.6' }, lgd); txt(lgd, { x: cx + rr + 4, y: ly + 26, fill: '#c9d6e3', 'font-size': 11 }, String(s[0])); });
+      var lv = Object.keys(COL).filter(function (k) { return pts.some(function (p) { return (COL[p.level] ? p.level : 'info') === k; }); });
+      var lxx = lx + 2; if (lv.length > 1) lv.forEach(function (k) { var cx = lxx; lxx += 16 + LEVEL[k].length * 5.6; el('circle', { cx: cx, cy: ly + 50, r: 4, fill: COL[k] }, lgd); txt(lgd, { x: cx + 7, y: ly + 54, fill: '#c9d6e3', 'font-size': 10 }, LEVEL[k]); });
+    }
+    if (!pts.length) txt(svg, { x: W / 2, y: H / 2, 'text-anchor': 'middle', fill: '#9fb3c8', 'font-size': 16, 'font-family': 'Inter, system-ui, sans-serif' }, opts.empty || 'Nothing to place on the map.');
     return pts.length;
   }
   window.zybKsaMap = { draw: draw, place: place, cities: CITIES.map(function (c) { return c[0]; }) };

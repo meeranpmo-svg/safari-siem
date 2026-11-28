@@ -116,7 +116,15 @@ function createKsc({ state, config, log } = {}) {
     return { servers, findings: f || [], connected: f !== null, poll_min: pollMin, changes_pending: changes.list({ status: 'proposed' }).length };
   }
 
-  function put(input, by) { const ex = input && input.id ? col.get(String(input.id).toLowerCase()) : null; const s = validate(input || {}, ex); s.updated = Date.now(); s.updated_by = by || ''; if (!ex) s.created = s.updated; col.put(s); return view(s); }
+  function put(input, by) {
+    const ex = input && input.id ? col.get(String(input.id).toLowerCase()) : null; const s = validate(input || {}, ex); s.updated = Date.now(); s.updated_by = by || ''; if (!ex) s.created = s.updated;
+    // a new host must not receive the stored password: the request has to carry it again (it is then stored for the new host, re-pinned)
+    const moved = !!ex && input.host !== undefined && s.host.toLowerCase() !== String(ex.host || '').toLowerCase(), pw = input.password ? String(input.password) : '';
+    if (moved && secretOf(ex.id).password && !pw) throw err(400, 'password is required when host changes - the stored password is not sent to a new target');
+    col.put(s);
+    if (moved && pw) setCredentials(s.id, { password: pw, fingerprint256: input.fingerprint256, insecure: input.insecure }, by);
+    return view(s);
+  }
   function remove(id, by) { if (!col.get(id)) throw err(404, 'server not found'); col.remove(id); snaps.delete(id); if (secretsAll()[id]) setCredentials(id, null, by); return { removed: id }; }
   function tlsOf(c) { const tls = {}; if (c.fingerprint256) { const f = String(c.fingerprint256).replace(/[^0-9a-f]/gi, ''); if (f.length !== 64) throw err(400, 'certificate fingerprint must be a SHA-256 fingerprint'); tls.fingerprint256 = f; } if (c.insecure) tls.insecure = true; return tls; }
   function setCredentials(id, creds, by) {

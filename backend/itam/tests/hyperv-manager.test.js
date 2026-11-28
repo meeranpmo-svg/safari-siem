@@ -66,9 +66,13 @@ test('reports, learned findings, capacity, four-eyes actions run by the host scr
   assert.equal((await e.req('GET', '/agent/hyperv/actions?host=HV-SYN-01', { user: '', role: '', bearer: 'bogus' })).status, 401);
   assert.deepEqual((await ag('GET', '/agent/hyperv/actions?host=HV-SYN-01')).json.actions, [], 'nothing before approval');
   assert.equal((await call('POST', `/hyperv/actions/${id}/decide`, { decision: 'approved' }, ADM2)).status, 200);
-  assert.deepEqual((await ag('GET', '/agent/hyperv/actions?host=HV-OTHER')).json.actions, [], 'another host never gets it');
+  assert.equal((await ag('GET', '/agent/hyperv/actions?host=HV-OTHER')).status, 403, 'an agent never takes another host\'s actions');
   assert.deepEqual((await ag('GET', '/agent/hyperv/actions?host=HV-SYN-01')).json.actions, [{ id, vm: 'DB-SYN-01', action: 'restart' }]);
   assert.deepEqual((await ag('GET', '/agent/hyperv/actions?host=HV-SYN-01')).json.actions, [], 'handed out once');
+  { const t2 = (await call('POST', '/settings/agent-tokens', {}, ADM)).json.token, other = (await e.req('POST', '/agent/enrol', { user: '', role: '', body: { token: t2, hostname: 'WS-SYN-77', platform: 'windows' } })).json;
+    const og = (m, p, b) => e.req(m, p, { user: '', role: '', bearer: other.agent_key, body: b });
+    assert.equal((await og('POST', `/agent/hyperv/actions/${id}/result`, { ok: true, message: 'fake done' })).status, 403, 'another agent cannot report the result');
+    assert.equal((await og('POST', '/agent/hyperv', report(14))).status, 403, 'another agent cannot report as HV-SYN-01'); }
   assert.equal((await ag('POST', `/agent/hyperv/actions/${id}/result`, { ok: true, message: 'Restart-VM completed' })).status, 200);
   assert.equal((await call('GET', '/hyperv', undefined, VIEW)).json.actions.find((a) => a.id === id).status, 'done');
   // the agent report route carries the metrics too
@@ -218,4 +222,25 @@ test('Hosts added: edit the name, remove (key cancelled, enrolled host disconnec
   assert.deepEqual(au.map((y) => y.action), ['hyperv.onboard.rename', 'hyperv.onboard.remove', 'hyperv.onboard.remove']);
   assert.equal(au[0].detail.to, 'HQ-HV-SYN.safari.local'); assert.equal(au[2].detail.agent_revoked, true); assert.equal(au[2].by, 'admin.syn');
   const all = JSON.stringify(e.app.store.auditTail(300)); assert.ok(!all.includes(r.hosts[0].token) && !all.includes(enr.agent_key), 'no key in the audit');
+});
+
+test('each VM\'s network card: the switch\'s uplinks added up (a team), lowered by a bandwidth limit, an internal switch stays on the host', async (t) => {
+  const { startApp } = require('./helpers'), { registerDuty } = require('../engine/duty');
+  const e = await startApp({ noAi: true }); t.after(() => e.close());
+  registerDuty(e.app.srv, e.app, { noTimer: true, python: process.env.PYTHON || 'python3' });
+  const ADMN = { user: 'syed.syn', role: 'admin' };
+  const tok = (await e.req('POST', '/settings/agent-tokens', Object.assign({ body: {} }, ADMN))).json.token;
+  const enr = (await e.req('POST', '/agent/enrol', { user: '', role: '', body: { token: tok, hostname: 'HV-NET-01', platform: 'windows' } })).json;
+  const network = { physical: [{ name: 'NIC1', desc: 'Intel X710 #1', status: 'Up', link_mbps: 10000 }, { name: 'NIC2', desc: 'Intel X710 #2', status: 'Up', link_mbps: 10000 }, { name: 'NIC3', desc: 'Broadcom 1G', status: 'Up', link_mbps: 1000 }],
+    switches: [{ name: 'vSwitch-SET', type: 'External', set: true, uplinks: ['Intel X710 #1', 'Intel X710 #2'] }, { name: 'vSwitch-1G', type: 'External', uplinks: ['Broadcom 1G'] }, { name: 'Lab', type: 'Internal', uplinks: [] }],
+    adapters: [{ vm: 'APP-SYN', name: 'Network Adapter', switch: 'vSwitch-SET', vlan_mode: 'Access', vlan: 20 }, { vm: 'BKP-SYN', name: 'Network Adapter', switch: 'vSwitch-1G', max_bps: 500000000 },
+      { vm: 'LAB-SYN', name: 'Network Adapter', switch: 'Lab' }, { vm: 'OFF-SYN', name: 'Network Adapter', switch: '' }] };
+  const rep = { collected_at: new Date().toISOString(), host: { name: 'HV-NET-01', logical_processors: 8, cpu_pct: 20, mem_total_mb: 65536, mem_free_mb: 30000, volumes: [], nics: [], network },
+    vms: ['APP-SYN', 'BKP-SYN', 'LAB-SYN', 'OFF-SYN'].map((name) => ({ name, state: 'Running', vcpus: 2, mem_assigned_mb: 4096 })) };
+  assert.equal((await e.req('POST', '/agent/hyperv', { user: '', role: '', bearer: enr.agent_key, body: rep })).status, 200);
+  const v = (await e.req('GET', '/hyperv', ADMN)).json, vm = (n) => v.hosts[0].vms.find((x) => x.name === n).nics[0];
+  assert.deepEqual([vm('APP-SYN').speed_mbps, vm('APP-SYN').uplinks.length, vm('APP-SYN').vlan], [20000, 2, 20], 'a team of 2 x 10 Gbps');
+  assert.deepEqual([vm('BKP-SYN').link_mbps, vm('BKP-SYN').cap_mbps, vm('BKP-SYN').speed_mbps], [1000, 500, 500], '1 Gbps uplink, capped at 500 Mbps');
+  assert.deepEqual([vm('LAB-SYN').speed_mbps, vm('LAB-SYN').switch_type], [null, 'internal'], 'internal switch: no uplink');
+  assert.equal(vm('OFF-SYN').connected, false, 'not connected to a switch');
 });

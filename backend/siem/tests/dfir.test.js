@@ -103,3 +103,28 @@ test('dfir: requestCollection validates and records a request but never executes
   assert.equal(dec.status, 'approved'); assert.equal(dec.decided_by, 'faisal');
   assert.equal(d.collections({ status: 'approved' }).items.length, 1);
 });
+
+test('dfir: collection decisions follow the state machine; the requester may only cancel; service identities are refused', () => {
+  const mk = (d) => d.requestCollection({ entity: 'PC1', type: 'host', items: ['processes'], rationale: 'synthetic triage' }, { user: 'Rasheed' });
+  const fresh = () => createDfir({ state: { collection: (() => { const m = new Map(); return () => ({ get: (k) => m.get(k), put: (r) => m.set(r.id, r), all: () => [...m.values()] }); })() }, cases: null, log: { info() {}, warn() {} } });
+  const d = fresh(), a = mk(d), code = (c, re) => (e) => e.code === c && e.status === c && re.test(e.message);
+  // the requester may only cancel
+  assert.throws(() => d.decideCollection(a.id, 'rejected', { user: 'rasheed' }, 'no'), code(403, /four-eyes/));
+  assert.throws(() => d.decideCollection(a.id, 'collected', { user: 'RASHEED' }), code(403, /four-eyes/));
+  assert.throws(() => d.decideCollection(a.id, 'collected', { user: 'faisal' }), code(409, /requested and cannot become collected/), 'collected only after approved');
+  assert.equal(d.decideCollection(a.id, 'approved', { user: 'faisal' }).status, 'approved');
+  assert.throws(() => d.decideCollection(a.id, 'collected', { user: 'Rasheed' }), code(403, /cannot mark it collected/), 'the requester cannot mark their own request collected');
+  assert.throws(() => d.decideCollection(a.id, 'rejected', { user: 'faisal' }, 'late'), code(409, /approved and cannot become rejected/));
+  assert.throws(() => d.decideCollection(a.id, 'collected', { user: 'svc-collector' }), code(403, /not a service/));
+  assert.throws(() => d.decideCollection(a.id, 'collected', { user: 'ai:desk' }), code(403, /not a service/));
+  assert.equal(d.decideCollection(a.id, 'collected', { user: 'faisal' }).status, 'collected');
+  assert.throws(() => d.decideCollection(a.id, 'cancelled', { user: 'Rasheed' }), code(409, /collected and cannot become cancelled/), 'collected is final');
+  // rejected is final
+  const r = mk(d); d.decideCollection(r.id, 'rejected', { user: 'faisal' }, 'not justified');
+  assert.throws(() => d.decideCollection(r.id, 'approved', { user: 'omar' }), code(409, /rejected and cannot become approved/));
+  // cancel: the requester may, from requested or approved
+  const c = mk(d); assert.equal(d.decideCollection(c.id, 'cancelled', { user: 'rasheed' }).status, 'cancelled');
+  assert.throws(() => d.decideCollection(c.id, 'approved', { user: 'faisal' }), code(409, /cancelled and cannot become approved/));
+  const s = mk(d); assert.throws(() => d.decideCollection(s.id, 'approved', { user: 'svc-bot' }), code(403, /not a service/));
+  assert.equal(d.collections({ status: 'requested' }).items.length, 1, 'the refused decisions changed nothing');
+});

@@ -83,3 +83,11 @@ test('link check refuses loopback, link-local and metadata addresses', async () 
     for (const v of Object.values(r.json.checked)) assert.match(v.error, /refused/);
   } finally { site.close(); await e.close(); }
 });
+
+test('SSRF: an IPv4-mapped IPv6 address cannot reach this server or cloud metadata (dotted, hex as the URL parser writes it, written out)', () => {
+  const { blockedAddr } = require('../engine/asset-links');
+  const host = (u) => new URL(u).hostname.replace(/^\[|\]$/g, '');
+  for (const u of ['http://[::ffff:127.0.0.1]:8123/', 'http://[::ffff:7f00:1]/', 'http://[::ffff:169.254.169.254]/latest/meta-data/', 'http://[::ffff:a9fe:a9fe]/', 'http://[0:0:0:0:0:ffff:7f00:0001]/'])
+    assert.equal(blockedAddr(host(u)), true, u + ' -> ' + host(u));
+  for (const ok of ['10.0.1.49', '::ffff:a00:131', '2001:db8::1']) assert.equal(blockedAddr(ok), false, ok + ' is an ordinary address');
+});

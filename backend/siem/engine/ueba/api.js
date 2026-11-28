@@ -24,19 +24,19 @@ function register(api, deps) {
   if (!ueba) throw new Error('ueba routes need deps.ueba');
 
   api.route('GET', `${P}/ueba/summary`, wrap(deps, null, (ctx) => ctx.ok(ueba.summary(ctx.query || {}))));
-  api.route('GET', `${P}/ueba/entities`, wrap(deps, null, (ctx) => ctx.ok(ueba.entities(ctx.query || {}))));
-  api.route('GET', `${P}/ueba/entities/:id`, wrap(deps, null, (ctx) => {
+  api.route('GET', `${P}/ueba/entities`, wrap(deps, 'analyst', (ctx) => ctx.ok(ueba.entities(ctx.query || {}))));
+  api.route('GET', `${P}/ueba/entities/:id`, wrap(deps, 'analyst', (ctx) => {
     const e = ueba.entity(ctx.params.id);
     if (!e) throw new HttpError(404, 'entity not found');
     return ctx.ok(e);
   }));
-  api.route('GET', `${P}/ueba/findings`, wrap(deps, null, (ctx) => ctx.ok(ueba.findings(ctx.query || {}))));
+  api.route('GET', `${P}/ueba/findings`, wrap(deps, 'analyst', (ctx) => ctx.ok(ueba.findings(ctx.query || {}))));
 
   const review = (action) => wrap(deps, 'operator', (ctx) => {
     const b = body(ctx);
     const r = ueba.markFinding(ctx.params.id, action, ctx.user, b.note);
     if (r && r.code) throw new HttpError(r.code, r.error);
-    audit(ctx, `ueba.finding.${action}`, ctx.params.id, { note: b.note || '' });
+    audit(ctx, r.pending ? 'ueba.finding.benign_proposed' : `ueba.finding.${action}`, ctx.params.id, { note: String(b.note || '').slice(0, 300) });
     return ctx.ok(r);
   });
   api.route('POST', `${P}/ueba/findings/:id/benign`, review('benign'));

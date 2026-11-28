@@ -14,7 +14,7 @@ const VIEW = () => (HOSTS ? { kpis: { hosts: 1, vms: 2, running: 2, high: 1, sta
   hosts: [{ name: 'HV-SYN-01', at: new Date().toISOString(), stale: false, cores: 8, cpu_pct: 35, mem_total_mb: 262144, mem_free_mb: 60000,
     nics: [{ name: 'Team-SYN-10G', link_mbps: 10000, rx_bps: 8.6e9, tx_bps: 4e8 }, { name: 'Mgmt-SYN', link_mbps: 100, rx_bps: 2e6, tx_bps: 1e6 }], disk: { latency_ms: 23.5, read_bps: 5e7, write_bps: 2e7 },
     trend: Array.from({ length: 6 }, (_, i) => ({ t: new Date(Date.now() - (6 - i) * 900000).toISOString(), cpu: 30 + i, mem_pct: 70, rx_bps: 8e9, tx_bps: 3e8, disk_ms: 20 })), volumes: [{ name: 'C:\\ClusterStorage\\Volume1', size_gb: 2000, free_gb: 800 }], capacity: { memory: 21, volumes: [{ name: 'C:\\ClusterStorage\\Volume1', days: 90 }] }, vcpu_ratio: 5, snapshots: 14,
-    vms: [{ name: 'DB-SYN-01', state: 'running', vcpus: 24, cpu_pct: 40, mem_assigned_mb: 16384, mem_demand_mb: 15800, heartbeat: 'LostCommunication', checkpoints: 0, replication: { state: 'Replicating', health: 'Critical' }, net_rx_bps: 7.2e9, net_tx_bps: 5e7 }, { name: 'APP-SYN-01', state: 'running', vcpus: 16, cpu_pct: 20, mem_assigned_mb: 32768, mem_demand_mb: 6000, heartbeat: 'OkApplicationsHealthy', checkpoints: 1, replication: {} }] }] }
+    vms: [{ name: 'DB-SYN-01', nics: [{ name: 'Network Adapter', switch: 'vSwitch-SET', switch_type: 'external', connected: true, uplinks: [{ name: 'NIC1', link_mbps: 10000 }, { name: 'NIC2', link_mbps: 10000 }], link_mbps: 20000, cap_mbps: 1000, speed_mbps: 1000, vlan: 20 }], state: 'running', vcpus: 24, cpu_pct: 40, mem_assigned_mb: 16384, mem_demand_mb: 15800, heartbeat: 'LostCommunication', checkpoints: 0, replication: { state: 'Replicating', health: 'Critical' }, net_rx_bps: 7.2e9, net_tx_bps: 5e7 }, { name: 'APP-SYN-01', state: 'running', vcpus: 16, cpu_pct: 20, mem_assigned_mb: 32768, mem_demand_mb: 6000, heartbeat: 'OkApplicationsHealthy', checkpoints: 1, replication: {} }] }] }
   : { kpis: { hosts: 0 }, hosts: [], findings: [], actions: [], verbs: VERBS, note: 'No Hyper-V host has reported metrics yet: run install/hyperv-report.ps1 on each host' });
 const posts = [];
 (async () => {
@@ -47,6 +47,7 @@ const posts = [];
   HOSTS = true; p = await open(); await p.waitForSelector('.host');
   ok(!(await p.$('img[src="x"]')), 'hostile text stays text');
   const t = await p.textContent('#body');
+  ok(/1 Gbps/.test(t) && /capped 1 Gbps/.test(t) && /2 × 10 Gbps team/.test(t) && /VLAN 20/.test(t), 'each VM\'s network card: speed, team, cap, VLAN');
   ok(/95 % in ~21 days/.test(t) && /full in ~90 days/.test(t) && /vCPU ratio 5:1/.test(t), 'capacity shown');
   ok(/15800 \/ 16384 MB/.test(t) && /Critical/.test(t), 'VM memory and replication');
   ok(/Team-SYN-10G/.test(t) && /10 Gbps/.test(t) && /8\.6 Gbps/.test(t) && /86 %/.test(t) && /Mgmt-SYN/.test(t) && /100 Mbps\s*slow/.test(t), 'network speed per NIC against its link, a slow link flagged');

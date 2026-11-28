@@ -115,11 +115,17 @@ async function loginPhase({ targets, m, vault, trust, run: runHelper, request, o
   const dbIds = (m.db && m.db.credential_ids) || [], sshId = m.unix && m.unix.credential_id, stId = m.storage && m.storage.credential_id;
   const opened = new Map();
   const open = (id) => { if (!opened.has(id)) opened.set(id, Object.assign(vault.open(id), { label: ((vault.get && vault.get(id)) || {}).label || id })); return opened.get(id); };
-  const S = { db: { tried: 0, ok: 0, auth: 0, failed: 0 }, unix: { tried: 0, ok: 0, auth: 0, failed: 0, pending_trust: 0, key_changed: 0 }, storage: { tried: 0, ok: 0, auth: 0, failed: 0, pending_trust: 0, cert_changed: 0 } };
+  const S = { db: { tried: 0, ok: 0, auth: 0, failed: 0, skipped_unverified: 0 }, unix: { tried: 0, ok: 0, auth: 0, failed: 0, pending_trust: 0, key_changed: 0 }, storage: { tried: 0, ok: 0, auth: 0, failed: 0, pending_trust: 0, cert_changed: 0 } };
   const errs = {};
   const note = (k, e) => { errs[k] = errs[k] || {}; errs[k][e] = (errs[k][e] || 0) + 1; };
   try {
-    const dbCreds = dbIds.map((id) => { try { return open(id); } catch (e) { log.warn('discovery: db credential not usable', { id, err: e.message }); return null; } }).filter(Boolean);
+    // a database login is sent across a whole scope only over TLS with the server's certificate VERIFIED: with tls off or "require"
+    // (certificate not checked) any host in the subnet could answer on the database port and capture the password (cleartext
+    // auth, a self-signed certificate). Such logins are kept for the one-host test (Asset Discovery -> Credentials -> Test) only.
+    const dbAll = dbIds.map((id) => { try { return open(id); } catch (e) { log.warn('discovery: db credential not usable', { id, err: e.message }); return null; } }).filter(Boolean);
+    const dbCreds = dbAll.filter((c) => c.target && c.target.tls === 'verify');
+    S.db.skipped_unverified = dbAll.length - dbCreds.length;
+    if (S.db.skipped_unverified) log.warn('discovery: database logins without a verified TLS connection are not tried across the scope', { skipped: S.db.skipped_unverified });
     const ssh = sshId ? (() => { try { return open(sshId); } catch { return null; } })() : null;
     const st = stId ? (() => { try { return open(stId); } catch { return null; } })() : null;
     await pool(targets, Math.min(concurrency || 4, 8), async (t) => {

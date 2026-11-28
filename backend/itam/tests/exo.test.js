@@ -166,3 +166,14 @@ test('exo.js missing on the server: sentra-itam still starts, the mailbox step i
   assert.equal(o['POST /offboarding/exo/test'].status, 409);
   assert.equal(o.viewer, 403);
 });
+
+test('the program given the certificate password must be one only root can change (a planted binary never gets it)', () => {
+  const { trustedProgram } = require('../engine/exo');
+  const st = (o) => () => Object.assign({ isFile: () => true, uid: 0, mode: 0o100755 }, o);
+  assert.equal(trustedProgram('pwsh'), null, '"pwsh" from the service PATH');
+  assert.equal(trustedProgram('/usr/bin/pwsh', st({})), null, 'root-owned, 755');
+  assert.match(trustedProgram('/tmp/pwsh', st({ uid: 1001 })), /owned by root/);
+  assert.match(trustedProgram('/opt/x/pwsh', st({ mode: 0o100777 })), /writable by group or others/);
+  assert.match(trustedProgram('/opt/x/pwsh', st({ mode: 0o100644 })), /not executable/);
+  assert.match(trustedProgram('/nope/pwsh', () => { throw new Error('ENOENT'); }), /not installed/);
+});

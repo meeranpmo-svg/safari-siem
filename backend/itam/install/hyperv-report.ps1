@@ -115,7 +115,8 @@ try {
     $a = $_; $vl = $null; try { $vl = Get-VMNetworkAdapterVlan -VMNetworkAdapter $a } catch { $vl = $null }   # no VLAN setting readable: shown as untagged
     @{ vm = $(if ($a.IsManagementOs) { '' } else { "$($a.VMName)" }); mgmt_os = [bool]$a.IsManagementOs; name = "$($a.Name)"; switch = "$($a.SwitchName)"; mac = "$($a.MacAddress)"; status = "$($a.Status)"
        ips = @($a.IPAddresses | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' }); vlan_mode = $(if ($vl) { "$($vl.OperationMode)" } else { '' })
-       vlan = $(if ($vl -and $vl.AccessVlanId) { [int]$vl.AccessVlanId } else { $null }); allowed = $(if ($vl) { "$($vl.AllowedVlanIdListString)" } else { '' }); native = $(if ($vl -and $vl.NativeVlanId) { [int]$vl.NativeVlanId } else { $null }) } })
+       vlan = $(if ($vl -and $vl.AccessVlanId) { [int]$vl.AccessVlanId } else { $null }); allowed = $(if ($vl) { "$($vl.AllowedVlanIdListString)" } else { '' }); native = $(if ($vl -and $vl.NativeVlanId) { [int]$vl.NativeVlanId } else { $null })
+       max_bps = $(if ($a.BandwidthSetting -and $a.BandwidthSetting.MaximumBandwidth) { [int64]$a.BandwidthSetting.MaximumBandwidth } else { $null }) } })
   $net = @{ switches = $sw; physical = $phy; adapters = $ad }
 } catch { Write-Warning ('virtual network not read: ' + $_.Exception.Message) }   # the report still goes, without the network map
 

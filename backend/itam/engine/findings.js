@@ -63,23 +63,33 @@ function findingsCore(inp) {
     return out;
 }
 
-function createFindings({ store, audit, settings, assets, getLicences, python }) {
+function createFindings({ store, audit, settings, assets, getLicences, python, log }) {
   const col = store.collection('findings');
   const mkId = () => `fnd_${crypto.randomBytes(6).toString('hex')}`;
   // other engine modules (Asset Discovery: rogue devices, silent SIEM sources) contribute deterministic findings through
   // providers: fn() → [{key, kind, severity, asset_id?, title, detail, evidence, label?}]. They take part in
   // regenerate() (so they are not "resolved" by it) and can be refreshed on their own with syncKinds().
+  // A provider declares the kinds it produces. When it cannot know (its source is down) it returns null, and when it throws the
+  // failure is logged: either way its kinds are UNKNOWN this round and their open findings are left as they are - never resolved
+  // because the source could not be read (a SIEM outage must not close every "no SIEM logs" finding).
   const providers = [];
-  function addProvider(fn) { if (typeof fn === 'function') providers.push(fn); }
+  function addProvider(fn, kinds) { if (typeof fn === 'function') providers.push({ fn, kinds: Array.isArray(kinds) ? kinds : null }); }
   function fromProviders(kinds) {
-    const out = [];
-    for (const p of providers) { let list = []; try { list = p() || []; } catch { list = []; } for (const f of list) if (!kinds || kinds.includes(f.kind)) out.push(f); }
+    const out = []; out.unknown = new Set();
+    for (const p of providers) {
+      let list;
+      try { list = p.fn(); } catch (e) { list = null; if (log && log.every) log.every('findings:provider:' + (p.kinds || ['?']).join(','), 600000, 'warn', 'a findings provider failed - its findings are kept as they are', { kinds: p.kinds, err: String(e && e.message).slice(0, 200) }); }
+      if (list == null) { for (const k of p.kinds || ['*']) out.unknown.add(k); continue; }
+      for (const f of list) if (!kinds || kinds.includes(f.kind)) out.push(f);
+    }
     return out;
   }
+  const keepUnknown = (unknown, e) => unknown && (unknown.has(e.kind) || unknown.has('*'));
 
   // compute the current set of findings as {key, kind, severity, asset_id?, licence_id?, title, detail, evidence}
   const inputs = () => ({ assets: assets.all(), licences: getLicences ? getLicences() : [], settings: settings.get(), now: Date.now() });
-  function compute() { return findingsCore(inputs()).concat(fromProviders(null)); }
+  const withUnknown = (list, prov) => { const r = list.concat(prov); r.unknown = prov.unknown; return r; };
+  function compute() { return withUnknown(findingsCore(inputs()), fromProviders(null)); }
   // the same, with the built-in rules run in Python (pyengine/asset_rules.py; a missing or failing Python → Node.js)
   const py = (() => { try { return python === false ? null : require('./pyengine').createPyEngine({ python: python || undefined, timeoutMs: 5 * 60000 }); } catch (e) { return null; } })();
   const slim = (a) => { const r = {}; for (const k of ['id', 'name', 'asset_tag', 'status', 'type', 'last_seen', 'networked', 'owner', 'custodian', 'site', 'location', 'warranty', 'eol', 'mgmt_ip', 'software']) if (a[k] !== undefined) r[k] = a[k]; if (Array.isArray(a.sources)) r.sources = a.sources.map((x) => ({ source: x && x.source })); return r; };
@@ -87,9 +97,9 @@ function createFindings({ store, audit, settings, assets, getLicences, python })
     const inp = inputs();
     if (py) {
       const r = await py.call('rules.findings', Object.assign({}, inp, { assets: inp.assets.map(slim) }));
-      if (r && Array.isArray(r.findings)) return r.findings.concat(fromProviders(null));
+      if (r && Array.isArray(r.findings)) return withUnknown(r.findings, fromProviders(null));
     }
-    return findingsCore(inp).concat(fromProviders(null));
+    return withUnknown(findingsCore(inp), fromProviders(null));
   }
 
   // refresh only the findings of the given kinds from the providers (no audit noise unless something opened/closed)
@@ -112,7 +122,7 @@ function createFindings({ store, audit, settings, assets, getLicences, python })
         created.push(id);
       }
     }
-    for (const e of existing) if (!byKey.has(e.key) && e.status !== 'dismissed' && e.status !== 'resolved') { col.put(Object.assign({}, e, { status: 'resolved', resolved_at: now })); resolved.push(e.id); }
+    for (const e of existing) if (!byKey.has(e.key) && !keepUnknown(computed.unknown, e) && e.status !== 'dismissed' && e.status !== 'resolved') { col.put(Object.assign({}, e, { status: 'resolved', resolved_at: now })); resolved.push(e.id); }
     if (audit && (created.length || resolved.length)) audit({ by: who ? who.user : 'system', role: who ? who.role : 'system', action: 'findings.sync', target: kinds.join(','), detail: { created: created.length, resolved: resolved.length } });
     return { computed: computed.length, created, resolved };
   }
@@ -146,7 +156,7 @@ function createFindings({ store, audit, settings, assets, getLicences, python })
       }
     }
     for (const e of existing) {
-      if (!byKey.has(e.key) && e.status !== 'dismissed' && e.status !== 'resolved') { col.put(Object.assign({}, e, { status: 'resolved', resolved_at: now })); resolved++; }
+      if (!byKey.has(e.key) && !keepUnknown(computed.unknown, e) && e.status !== 'dismissed' && e.status !== 'resolved') { col.put(Object.assign({}, e, { status: 'resolved', resolved_at: now })); resolved++; }
     }
     if (audit) audit({ by: who ? who.user : 'system', role: who ? who.role : '', action: 'ai.findings.regenerate', target: 'findings', detail: { computed: computed.length, created, resolved } });
     return { computed: computed.length, created, resolved, total_open: col.all((f) => f.status === 'open').length };

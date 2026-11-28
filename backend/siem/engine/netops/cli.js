@@ -160,6 +160,12 @@ function redact(text) {
     // hash / simple = stored in clear) is kept, it is the audit fact; the value is removed
     const cw = comware(l); if (cw !== null) return cw;
     let x = l.replace(/\b(community)\s+(?:\d\s+)?\S+/gi, '$1 <removed>');
+    // a trap / inform receiver carries the community in clear after the address and version: "snmp-server host 10.1.1.1 [traps|informs]
+    // [version 1|2c|3 auth|noauth|priv] <community> ..." (Cisco); Comware "snmp-agent target-host ... params securityname <community>"
+    x = x.replace(/^(\s*snmp-server host\s+\S+(?:\s+(?:traps|informs))?(?:\s+version\s+(?:1|2c|3(?:\s+(?:auth|noauth|priv))?))?)\s+(?!(?:traps|informs|version|vrf)\b)\S+/i, '$1 <removed>');
+    x = x.replace(/\b(securityname)\s+\S+/gi, '$1 <removed>');
+    // wireless keys: "wpa-psk ascii 0 <key>", "wpa2-psk hex 7 <key>", "passphrase <key>" - the format and type digit stay, the key goes
+    x = x.replace(/\b((?:wpa2?-psk|psk-key|passphrase)(?:\s+(?:ascii|hex|raw-key|simple|cipher))?(?:\s+\d)?)\s+\S+/gi, '$1 <removed>');
     x = x.replace(/\b(snmp-server user\s+\S+\s+\S+\s+v3).*$/i, '$1 <auth / priv keys removed>');
     // "(?![-\w])": "service password-encryption" / "password encryption aes" are settings, not secrets, and the auditor reads them
     const m = /\b(secret|password|passwd|key-string|authentication-key|message-digest-key|pre-shared-key|ikev[12] (?:local|remote)-authentication pre-shared-key|key)\b(?![-\w])(?! encryption\b)/i.exec(x);

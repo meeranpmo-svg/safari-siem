@@ -26,6 +26,16 @@ const ORG = /^[A-Za-z0-9-]{1,63}(\.[A-Za-z0-9-]{1,63})+$/;
 const ADDR = /^[A-Za-z0-9._%+'-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/;
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
+function trustedProgram(p, stat) {
+  if (!p || p === 'pwsh') return null;
+  if (!require('path').isAbsolute(p)) return 'pwsh must be "pwsh" or an absolute path';
+  let st; try { st = (stat || require('fs').statSync)(p); } catch (e) { return 'PowerShell 7 (pwsh) is not installed at ' + p; }
+  if (!st.isFile()) return p + ' is not a file';
+  if (st.uid !== 0) return p + ' must be owned by root before the certificate password is given to it';
+  if (st.mode & 0o022) return p + ' must not be writable by group or others (chmod 755)';
+  if (!(st.mode & 0o111)) return p + ' is not executable';
+  return null;
+}
 function createExo(app, opts = {}) {
   const now = opts.now || Date.now, store = app.store;
   const iso = () => new Date(now()).toISOString();
@@ -78,6 +88,9 @@ function createExo(app, opts = {}) {
     if (op === 'disable-inbox-rule' && !/^\d{1,20}$/.test(String(p.rule || ''))) return Promise.resolve({ ok: false, error: 'rule must be the inbox rule id (digits)' });
     if (opts.run) return Promise.resolve(opts.run(op, p));
     const c = cfg();
+    // the program that receives the certificate password must be one only root can change (as netops/pam.js): a planted binary named
+    // in the settings never gets the password. "pwsh" alone is found on the service's PATH.
+    const bad = trustedProgram(c.pwsh, opts.stat); if (bad) return Promise.resolve({ ok: false, error: bad });
     let pass; try { pass = sealer.unseal('pfx', c.pass_enc); } catch (e) { return Promise.resolve({ ok: false, error: 'the certificate password cannot be opened from the vault - save it again' }); }
     return new Promise((resolve) => {
       let out = '', err = '', done = false;
@@ -116,4 +129,4 @@ function registerExoRoutes(srv, app, X) {
   srv.route('POST', '/offboarding/exo/test', (ctx) => { ctx.need('admin'); body(ctx.body).done(); if (/^(duty|system|core|ai|svc|service|agent|bot)[:._-]/i.test(String(ctx.who.user || ''))) throw httpErr(403, 'a person does this'); return X.test(ctx.who); });
 }
 
-module.exports = { createExo, registerExoRoutes, OPS, SPO_OPS, ONEDRIVE };
+module.exports = { createExo, registerExoRoutes, trustedProgram, OPS, SPO_OPS, ONEDRIVE };

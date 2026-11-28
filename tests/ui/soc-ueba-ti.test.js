@@ -91,9 +91,14 @@ const quiet = { info() {}, warn() {}, error() {}, debug() {}, child() { return q
     await p.click('#wsclose');
     await p.click('[data-tab="find"]'); await p.waitForSelector('#finds table', { timeout: 10000 });
     for (let i = 0; i < 3; i++) { await p.click('#finds [data-rev="benign"] >> nth=0'); await p.waitForTimeout(400); }
+    ok(ueba.findings({ status: 'benign-proposed', limit: 50 }).items.length === 3 && ueba.listTuning().length === 0, 'four-eyes: three "benign" marks are proposals, nothing tuned yet');
+    // a second person confirms them from "waiting for a second person"
+    WHO = { user: 'omar.syn', role: 'operator' }; await p.reload(); await p.waitForSelector('[data-tab="find"]', { timeout: 15000 }); await p.waitForTimeout(800); await p.click('[data-tab="find"]');
+    await p.selectOption('#f-st', 'benign-proposed'); await p.waitForSelector('#finds [data-rev="benign"]', { timeout: 10000 });
+    for (let i = 0; i < 3; i++) { await p.click('#finds [data-rev="benign"] >> nth=0'); await p.waitForTimeout(400); }
     await p.click('[data-tab="det"]');
     ok(await wait(p, () => /\d+%/.test(document.getElementById('dets').textContent)), 'precision learned once a detector has 3 reviews');
-    ok(ueba.findings({ status: 'benign', include_benign: true, limit: 50 }).items.some((f) => f.reviewed_by === 'nora.syn'), 'reviews recorded with the analyst\'s name');
+    ok(ueba.findings({ status: 'benign', include_benign: true, limit: 50 }).items.some((f) => f.reviewed_by === 'omar.syn' && f.proposed_by === 'nora.syn'), 'reviews recorded with both names: who proposed, who confirmed');
     await p.click('[data-tab="peer"]'); ok(/user\/default|default/.test(await p.textContent('#peers')), 'peer groups');
     await p.click('[data-tab="dept"]'); ok(await wait(p, () => /attributed/.test(document.getElementById('depts').textContent) || /No alert/.test(document.body.textContent)), 'threats by department tab');
     // ================= Threat Intelligence
@@ -112,9 +117,10 @@ const quiet = { info() {}, warn() {}, error() {}, debug() {}, child() { return q
     WHO = { user: 'syed', role: 'admin' }; await p.reload(); await p.waitForSelector('#sight', { timeout: 15000 }); await p.click('[data-tab="feeds"]');
     await p.click('[data-tog="urlhaus"]'); ok(await wait(p, () => /Switch off/.test((document.querySelector('[data-tog="urlhaus"]') || {}).textContent || '')), 'admin switched a feed on');
     WHO = { user: 'v.syn', role: 'viewer' };
-    await p.goto(base + 'soc-ueba.html?standalone=1&entity=' + encodeURIComponent('user:alice')); await p.waitForSelector('#wsp', { timeout: 15000 });
-    ok(/operator role and above/.test(await p.textContent('#wsp')) && !(await p.$('[data-assess]')), 'a viewer cannot run the AI assessment');
-    await p.click('[data-tab="find"]'); await p.waitForSelector('#finds table', { timeout: 10000 }); ok(!(await p.$('[data-rev]')), 'a viewer cannot review findings');
+    // a viewer sees the totals but no named person's risk (PDPL: analysts and above), and cannot review or run the AI
+    await p.goto(base + 'soc-ueba.html?standalone=1&entity=' + encodeURIComponent('user:alice')); await p.waitForFunction(() => /for analysts/.test((document.getElementById('err') || {}).textContent || ''), null, { timeout: 15000 });
+    ok(!/alice/i.test(await p.textContent('main')) && /analyst/i.test(await p.textContent('main')), 'a viewer sees no named person, and is told it is for analysts');
+    ok(!(await p.$('[data-assess]')) && !(await p.$('[data-rev]')), 'a viewer cannot run the AI assessment or review findings');
     await p.goto(base + 'soc-ti.html?standalone=1'); await p.waitForSelector('#sight', { timeout: 15000 }); await p.click('[data-tab="retro"]'); await p.click('#rf [type=submit]');
     ok(await wait(p, () => /requires role analyst/.test(document.getElementById('rout').textContent)), 'a viewer is refused the traffic retro-hunt');
     ok(await p.evaluate(() => { const a = (window.ZYB_NAV || []).find((x) => x.id === 'soc'); const inv = a ? a.pages.filter((x) => x.g === 'Investigate').map((x) => x.h) : []; return a && a.pages[0].h === 'soc-overview.html' && a.pages[1].h === 'soc-alerts.html' && ['soc-cases.html', 'soc-hunt.html', 'soc-ueba.html', 'soc-ti.html'].every((h) => inv.includes(h)) && !a.pages.some((x) => x.h === 'threats-by-department.html'); }), 'menu: Overview and Alert Queue first, the rebuilt pages under Investigate, Threats by Department folded in');

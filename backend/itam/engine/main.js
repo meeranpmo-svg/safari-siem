@@ -45,7 +45,7 @@ function createApp(opts = {}) {
   const settings = createSettings({ store, audit, config, log });
   const assets = createAssets({ store, audit });
   const licences = createLicences({ store, audit, assets });
-  const findings = createFindings({ store, audit, settings, assets, getLicences: () => licences.active() });
+  const findings = createFindings({ store, audit, settings, assets, getLicences: () => licences.active(), log });
   const ingest = createIngest({ assets, settings, store, audit, log });
   const stocktake = createStocktake({ store, audit, assets });
   const agentgw = createAgentGateway({ store, audit, config });

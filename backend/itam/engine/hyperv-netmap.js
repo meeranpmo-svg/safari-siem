@@ -36,7 +36,7 @@ function normNetwork(raw) {
     const mode = lc(s(a.vlan_mode, 20));
     return { vm: s(a.vm, 200), mgmt_os: !!a.mgmt_os, name: s(a.name, 120), switch: s(a.switch, 120), mac: mac(a.mac), status: s(a.status, 40),
       ips: arr(a.ips, 16).map((x) => s(x, 15)).filter((x) => IPV4.test(x)), mode: mode === 'access' || mode === 'trunk' ? mode : mode === 'untagged' || !mode ? 'untagged' : mode,
-      vlan: n(a.vlan, 4094), allowed: s(a.allowed, 200), native: n(a.native, 4094) };
+      vlan: n(a.vlan, 4094), allowed: s(a.allowed, 200), native: n(a.native, 4094), max_bps: n(a.max_bps, 1e12) };
   }).filter((a) => a.vm || a.mgmt_os);
   return { switches, physical, adapters };
 }

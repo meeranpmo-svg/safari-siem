@@ -27,6 +27,8 @@ const { isHuman } = require('./approve-scopes');
  *   POST /agent/hyperv/actions/:id/result  agent key  {ok, message}
  */
 const DAY = 86400000;
+// the same machine: names compared without case and without the DNS domain (HQPSUPERM01 = hqpsuperm01.safari.com.sa)
+const sameHost = (a, b) => { const k = (x) => String(x || '').trim().toLowerCase().split('.')[0]; return !!k(a) && k(a) === k(b); };
 const ACTIONS = { start: 'Start', shutdown: 'Shut down (guest)', 'turn-off': 'Turn off', restart: 'Restart (reset)', checkpoint: 'Take a checkpoint' };
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 const n = (v, max = 1e9) => { const x = Number(v); return Number.isFinite(x) && x >= 0 && x <= max ? x : null; };
@@ -129,12 +131,27 @@ function createHypervManager(app, opts = {}) {
     for (const o of samples().all((x) => x.host === k && now() - x.t > 2 * DAY)) samples().remove(o.id);
     return { metrics: true, vms: r.vms.length };
   }
+  // the network a VM really has: each of its adapters, the virtual switch it is on, and that switch's physical uplinks - the speed is
+  // the uplinks' link speed added up (a team of 2 x 10 Gbps = 20 Gbps), lowered by a bandwidth limit set on the adapter. An internal
+  // or private switch has no uplink (traffic stays on the host). Nothing is invented: what the host did not report stays empty.
+  function vmNet(r, vmName) {
+    const N = r.host && r.host.network; if (!N || !Array.isArray(N.adapters)) return [];
+    const phy = new Map((N.physical || []).map((p) => [String(p.desc || '').toLowerCase(), p])), byName = new Map((N.physical || []).map((p) => [String(p.name || '').toLowerCase(), p]));
+    return N.adapters.filter((a) => !a.mgmt_os && String(a.vm).toLowerCase() === String(vmName).toLowerCase()).map((a) => {
+      const sw = (N.switches || []).find((w) => w.name === a.switch) || null;
+      const ups = sw ? sw.uplinks.map((u) => phy.get(String(u).toLowerCase()) || byName.get(String(u).toLowerCase())).filter(Boolean) : [];
+      const up = ups.filter((p) => p.link_mbps && !/disconnected|down/i.test(p.status || '')), link = up.reduce((t, p) => t + p.link_mbps, 0) || null;
+      const capMbps = a.max_bps ? Math.round(a.max_bps / 1e6) : null;
+      return { name: a.name, switch: a.switch || null, switch_type: sw ? sw.type : null, uplinks: ups.map((p) => ({ name: p.name, link_mbps: p.link_mbps, status: p.status })),
+        link_mbps: link, cap_mbps: capMbps, speed_mbps: link && capMbps ? Math.min(link, capMbps) : capMbps || link, vlan: a.vlan, connected: !!a.switch };
+    });
+  }
   function view() {
     const t = now(), hosts = latest().all().sort((a, b) => a.host.name.localeCompare(b.host.name)).map((r) => {
       const days = daily().all((x) => x.id.startsWith(r.id + '|')).sort((a, b) => a.id.localeCompare(b.id)).slice(-60), sm = samples().all((x) => x.host === r.id && t - x.t <= DAY).sort((a, b) => a.t - b.t), a = assess(r, days, t, sm);
       return { name: r.host.name, ip: r.host.ip || null, at: r.at, stale: t - Date.parse(r.at) > 2 * 3600000, cores: r.host.cores, cpu_pct: r.host.cpu_pct, mem_total_mb: r.host.mem_total_mb, mem_free_mb: r.host.mem_free_mb, volumes: r.host.volumes, nics: r.host.nics || [], disk: r.host.disk || null,
         trend: sm.map((x) => ({ t: new Date(x.t).toISOString(), cpu: x.cpu, mem_pct: x.mem_pct, rx_bps: x.rx_bps, tx_bps: x.tx_bps, disk_ms: x.disk_ms })),
-        vms: r.vms.map((v) => ({ name: v.name, state: v.state, os: v.os || null, fqdn: v.fqdn || null, ips: v.ips || [], vcpus: v.vcpus, cpu_pct: v.cpu_pct, mem_assigned_mb: v.mem_assigned_mb, mem_demand_mb: v.mem_demand_mb, heartbeat: v.heartbeat, checkpoints: v.checkpoints.length, replication: v.replication, uptime_s: v.uptime_s, net_rx_bps: v.net_rx_bps == null ? null : v.net_rx_bps, net_tx_bps: v.net_tx_bps == null ? null : v.net_tx_bps })),
+        vms: r.vms.map((v) => ({ name: v.name, state: v.state, os: v.os || null, fqdn: v.fqdn || null, ips: v.ips || [], vcpus: v.vcpus, cpu_pct: v.cpu_pct, mem_assigned_mb: v.mem_assigned_mb, mem_demand_mb: v.mem_demand_mb, heartbeat: v.heartbeat, checkpoints: v.checkpoints.length, replication: v.replication, uptime_s: v.uptime_s, net_rx_bps: v.net_rx_bps == null ? null : v.net_rx_bps, net_tx_bps: v.net_tx_bps == null ? null : v.net_tx_bps, nics: vmNet(r, v.name) })),
         findings: a.findings, capacity: a.capacity, vcpu_ratio: a.vcpu_ratio, snapshots: days.length };
     });
     const all = hosts.flatMap((h) => h.findings);
@@ -164,14 +181,16 @@ function createHypervManager(app, opts = {}) {
   // the host's script: approved actions for THAT host only, each handed out once
   function pending(host, agent) {
     const h = s(host, 120).toLowerCase(); if (!h) throw httpErr(400, 'host is required');
-    const out = acts().all((a) => a.status === 'approved' && a.host.toLowerCase() === h).map((a) => acts().patch(a.id, (o) => { o.status = 'taken'; o.taken_at = isoNow(); o.taken_by = agent; return o; }));
+    if (!sameHost(h, agent.name)) throw httpErr(403, 'this agent is enrolled as ' + s(agent.name, 120) + ' and cannot take the actions of ' + h);
+    const out = acts().all((a) => a.status === 'approved' && a.host.toLowerCase() === h).map((a) => acts().patch(a.id, (o) => { o.status = 'taken'; o.taken_at = isoNow(); o.taken_by = agent.id; return o; }));
     return { actions: out.map((a) => ({ id: a.id, vm: a.vm, action: a.action })) };
   }
   function result(id, b0, agent) {
     param(id); const a = acts().get(id); if (!a) throw httpErr(404, 'action not found'); if (a.status !== 'taken') throw httpErr(409, 'this action was not handed out');
+    if (a.taken_by !== agent.id) throw httpErr(403, 'only the agent that took this action reports its result');
     const b = body(b0).bool('ok', { required: true }).str('message', { max: 400 }).done();
     const x = acts().patch(id, (o) => { o.status = b.ok ? 'done' : 'failed'; o.result = b.message || ''; o.done_at = isoNow(); return o; });
-    if (app.audit) app.audit({ by: agent, role: 'agent', ip: '', action: 'hyperv.action.result', target: id, detail: { ok: b.ok, vm: a.vm, action: a.action } });
+    if (app.audit) app.audit({ by: agent.id, role: 'agent', ip: '', action: 'hyperv.action.result', target: id, detail: { ok: b.ok, vm: a.vm, action: a.action } });
     return { id, status: x.status };
   }
   // ---- adding hosts the easy way: an administrator names the hosts, each gets its own one-time enrolment token (agentgw, 24 h)
@@ -253,9 +272,11 @@ function registerHypervManager(srv, app, X) {
   srv.route('POST', '/hyperv/onboard/:id/remove', (ctx) => { ctx.need('admin'); return X.removeHost(ctx.params.id, ctx.who); }, { maxBody: 1024 });
   srv.route('GET', '/hyperv/script', () => X.script(), { agent: true });
   srv.route('POST', '/hyperv/actions/:id/decide', (ctx) => { ctx.need('admin'); return X.decide(ctx.params.id, ctx.body, ctx.who); }, { maxBody: 2048 });
-  const agentOf = (ctx) => { const a = app.agentgw && app.agentgw.authenticate(ctx.bearer()); if (!a) throw httpErr(401, 'invalid or revoked agent key'); return 'agent:' + a.id; };
+  // the calling agent: its id and the host name it enrolled with - an agent acts only for that host (it cannot take another host's
+  // approved actions or report their results)
+  const agentOf = (ctx) => { const a = app.agentgw && app.agentgw.authenticate(ctx.bearer()); if (!a) throw httpErr(401, 'invalid or revoked agent key'); return { id: 'agent:' + a.id, name: a.name }; };
   srv.route('GET', '/hyperv/actions', (ctx) => X.pending((ctx.query || {}).host, agentOf(ctx)), { agent: true });
   srv.route('POST', '/hyperv/actions/:id/result', (ctx) => X.result(ctx.params.id, ctx.body, agentOf(ctx)), { agent: true, maxBody: 2048 });
 }
 
-module.exports = { createHypervManager, registerHypervManager, normMetrics, assess, ACTIONS };
+module.exports = { sameHost, createHypervManager, registerHypervManager, normMetrics, assess, ACTIONS };

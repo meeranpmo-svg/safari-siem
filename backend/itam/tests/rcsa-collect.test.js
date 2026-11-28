@@ -89,3 +89,26 @@ test('RCSA links: campaign, scoped token, public proposal, review/accept, securi
   assert.ok(au.some((x) => x.action === 'rcsa.submit' && /^rcsa-link:/.test(x.by)), 'a public submit is audited as a link, not a user');
 });
 function resp_key(tok) { const p = JSON.parse(Buffer.from(tok.slice(0, tok.indexOf('.')).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()); return p.o; }
+
+test('RCSA links: a revoked link stays dead after the owner is issued a new one; only the newest link works', async (t) => {
+  const e = await startApp({ noAi: true }); t.after(() => e.close());
+  registerDuty(e.app.srv, e.app, { noTimer: true, now: () => Date.parse('2026-11-22T08:00:00Z'), python: process.env.PYTHON || 'python3' });
+  const call = (m, p, b, who) => e.req(m, p, Object.assign(b !== undefined ? { body: b } : {}, who || RISK));
+  e.app.addons.grcRegisters.riskCreate({ title: 'Single-source procurement', description: 'Single-source procurement (synthetic)', category: 'operational', owner: 'proc.head', likelihood: 3, impact: 4, treatment: 'reduce' }, RISK);
+  const id = (await call('POST', '/rcsa', { title: 'RCSA nonce', period: '2026-Q4', due: '2026-12-15' }, RISK)).json.id;
+  const view = (tok) => e.req('GET', '/agent/rcsa/view', { headers: { 'x-rcsa-token': tok } });
+  const A = (await call('POST', '/rcsa/' + id + '/link', { owner: 'proc.head' }, RISK)).json;
+  assert.equal((await view(A.token)).status, 200);
+  assert.equal((await call('POST', '/rcsa/' + id + '/link/' + A.key + '/revoke', {}, RISK)).status, 200);
+  assert.equal((await view(A.token)).status, 403, 'revoked');
+  const B = (await call('POST', '/rcsa/' + id + '/link', { owner: 'proc.head' }, RISK)).json;
+  assert.equal((await view(A.token)).status, 403, 'issuing a new link does not bring the revoked one back');
+  assert.equal((await view(B.token)).status, 200, 'the new link works');
+  const C2 = (await call('POST', '/rcsa/' + id + '/link', { owner: 'proc.head' }, RISK)).json;
+  assert.equal((await view(B.token)).status, 403, 'a superseded link is refused'); assert.equal((await view(C2.token)).status, 200);
+  // a validly signed token without a nonce (the old format) is refused
+  const crypto = require('node:crypto'), camp = e.app.store.collection('rcsa_campaigns').get(id);
+  const p = Buffer.from(JSON.stringify({ c: id, o: C2.key, e: Date.parse('2026-12-15T23:59:59Z') })).toString('base64url');
+  const old = p + '.' + crypto.createHmac('sha256', camp.secret).update(p).digest().toString('base64url');
+  assert.equal((await view(old)).status, 403, 'a correctly signed token with no nonce is refused');
+});

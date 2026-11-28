@@ -45,16 +45,17 @@ const INTEL = {
 
 test('behaviour insights: trend, risk distribution, timelines; detector precision withheld until 3 reviews', async () => {
   const w = world(); try {
-    let r = await w.api.call('GET', '/api/soc/soc/ueba/insights', { role: 'viewer' }); assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal((await w.api.call('GET', '/api/soc/soc/ueba/insights', { role: 'viewer' })).status, 403, 'named people and their risk are for analysts (PDPL)');
+    let r = await w.api.call('GET', '/api/soc/soc/ueba/insights', { role: 'analyst' }); assert.equal(r.status, 200, JSON.stringify(r.body));
     const x = r.body;
     assert.equal(x.series.length, 14); assert.ok(x.series.at(-1).critical + x.series.at(-1).high + x.series.at(-1).medium + x.series.at(-1).low > 0, 'findings today');
     assert.ok(x.detectors.every((d) => d.precision === null), 'no review yet: no precision claimed');
     assert.ok(x.score_histogram.reduce((s, b) => s + b.n, 0) >= 1); assert.equal(x.top[0].id, 'user:alice'); assert.ok(x.top[0].timeline.length >= 1, 'risk timeline for the riskiest');
     assert.match(x.note, /indicators to look into, not proof/);
     const fh = w.ueba.findings({ entity_id: 'user:alice', detector: 'first_seen_host', limit: 10 }).items;
-    for (const f of fh.slice(0, 2)) w.ueba.markFinding(f.id, 'benign', 'nora.syn');
+    for (const f of fh.slice(0, 2)) { w.ueba.markFinding(f.id, 'benign', 'nora.syn'); w.ueba.markFinding(f.id, 'benign', 'omar.syn'); }   // four-eyes: proposed, then confirmed
     w.ueba.markFinding(fh[2].id, 'confirm', 'nora.syn');
-    r = await w.api.call('GET', '/api/soc/soc/ueba/insights', { role: 'viewer' });
+    r = await w.api.call('GET', '/api/soc/soc/ueba/insights', { role: 'analyst' });
     const d = r.body.detectors.find((y) => y.detector === 'first_seen_host');
     assert.equal(d.reviewed, 3); assert.equal(d.precision, 33, '1 confirmed of 3 reviewed');
   } finally { w.cleanup(); }

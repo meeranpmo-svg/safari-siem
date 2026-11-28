@@ -368,7 +368,7 @@ function createDiscovery({ config, store, audit, log, assets, ingest, findings, 
     if (res.sent) for (const r of fresh) devices.col.patch(r.id, (d) => { d.bridged_at = at; });
     return res;
   }
-  if (findings && findings.addProvider) { findings.addProvider(rogueFindings); findings.addProvider(() => siem.silentFindings()); }
+  if (findings && findings.addProvider) { findings.addProvider(rogueFindings, ['rogue_device']); findings.addProvider(() => siem.silentFindings(), ['siem_silent']); }
 
   function results(q = {}) {
     const text = String(q.q || '').toLowerCase();
@@ -578,7 +578,7 @@ function createDiscovery({ config, store, audit, log, assets, ingest, findings, 
   }
   // sync findings provider (reads the cached coverage): a discovered SERVER with no SIEM source is a log-coverage gap
   function coverageFindings() {
-    if (!lastCoverage || !lastCoverage.ok) return [];
+    if (!lastCoverage || !lastCoverage.ok) return null;   // unknown while the SIEM cannot be read: the open findings stay open
     return lastCoverage.assets.filter((p) => p.status === 'absent' && p.is_server).map((p) => ({
       key: `log_coverage_gap:${p.asset_id}`, kind: 'log_coverage_gap', severity: 'medium', asset_id: p.asset_id, label: 'Discovery',
       title: `No SIEM logs from server: ${p.name || p.mgmt_ip || p.asset_id}`,
@@ -586,7 +586,7 @@ function createDiscovery({ config, store, audit, log, assets, ingest, findings, 
       evidence: { mgmt_ip: p.mgmt_ip, site: p.site, type: p.type },
     }));
   }
-  if (findings && findings.addProvider) findings.addProvider(coverageFindings);
+  if (findings && findings.addProvider) findings.addProvider(coverageFindings, ['log_coverage_gap']);
 
   // ---------------- dashboard ----------------
   function dashboard() {

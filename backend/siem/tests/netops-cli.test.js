@@ -237,3 +237,13 @@ test('H3C / HPE Comware: display commands only, Comware secrets removed with the
   if (a.kind === 'missing') return;   // Netmiko not installed here: the import check runs first, the Node-side checks above still hold
   assert.equal(a.kind, 'input', JSON.stringify(a)); assert.equal(b.kind, 'input', JSON.stringify(b)); assert.equal(c.kind, 'input', JSON.stringify(c));
 });
+
+test('redact: SNMP trap / inform communities (Cisco and Comware) and wireless keys leave the configuration text; the facts stay', () => {
+  const { redact } = require('../engine/netops/cli');
+  const cases = [['snmp-server host 10.1.1.1 version 2c SynComm1', 'snmp-server host 10.1.1.1 version 2c <removed>'], ['snmp-server host 10.1.1.1 SynComm2', 'snmp-server host 10.1.1.1 <removed>'],
+    ['snmp-server host 10.1.1.1 informs version 2c SynComm3 udp-port 162', 'snmp-server host 10.1.1.1 informs version 2c <removed> udp-port 162'],
+    ['snmp-agent target-host trap address udp-domain 10.1.1.1 params securityname SynComm4 v2c', 'snmp-agent target-host trap address udp-domain 10.1.1.1 params securityname <removed> v2c'],
+    [' wpa-psk ascii 0 SynWifiKey5', ' wpa-psk ascii 0 <removed>'], ['snmp-server enable traps snmp', 'snmp-server enable traps snmp']];
+  for (const [i, o] of cases) assert.equal(redact(i), o);
+  assert.ok(!/SynComm|SynWifiKey/.test(redact(cases.map((c) => c[0]).join('\n'))), 'no community or key survives');
+});

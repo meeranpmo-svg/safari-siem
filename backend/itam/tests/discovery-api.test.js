@@ -518,7 +518,8 @@ test('ZS-11 rogue suppression ignores agent-reported MACs and agent-key Hyper-V 
   assert.ok(D.rogueDevices().some((r) => r.id === dev.id), 'agent MAC claim does not suppress the rogue alert');
   // Hyper-V report pushed with an agent key is self-asserted → still rogue; the same report imported by an admin is trusted
   const hvScope = (await e.adm('POST', '/discovery/scopes', { name: 'HQ Hyper-V', site: 'Riyadh HQ', targets: ['10.20.8.0/24'], methods: { hyperv: { enabled: true } } })).json.scope;
-  const report = { host: { name: 'ROGUE-HV', ip: '10.20.8.10' }, vms: [{ name: 'ROGUE-VM', vm_id: 'bbbb-1', ips: ['10.20.8.66'], macs: ['02:66:66:66:66:66'] }] };
+  assert.equal((await e.h.req('POST', '/agent/hyperv', { user: '', role: '', bearer: enr.agent_key, body: { host: { name: 'HQ-HV-REAL' }, vms: [] } })).status, 403, 'an agent cannot report as another host');
+  const report = { host: { name: 'liar', ip: '10.20.8.10' }, vms: [{ name: 'ROGUE-VM', vm_id: 'bbbb-1', ips: ['10.20.8.66'], macs: ['02:66:66:66:66:66'] }] };
   assert.equal((await e.h.req('POST', '/agent/hyperv', { user: '', role: '', bearer: enr.agent_key, body: report })).status, 200);
   const vm = () => D.devices.list((d) => (d.macs || []).includes('02:66:66:66:66:66'))[0];
   assert.ok(vm().methods.hyperv.untrusted);
@@ -642,7 +643,7 @@ test('scope logins: DB / SSH / storage credentials log in read-only, only to tru
   const e = await setup({ deps: { banner, invRun, request, connect: fakeConnect({ open: { '10.20.0.3': [111, 6789], '10.20.0.4': [1521, 1433], '10.20.0.2': [3260, 10000] } }) } });
   t.after(() => e.close());
   const mk = async (b) => { const r = await e.adm('POST', '/discovery/credentials', b); assert.equal(r.status, 200, r.text); return r.json.credential; };
-  const ora = await mk({ kind: 'db_login', label: 'Oracle RO', target: { engine: 'oracle', service: 'PRODDB' }, secret: { username: 'itam_ro', password: 'Synthetic-Ora-1' } });
+  const ora = await mk({ kind: 'db_login', label: 'Oracle RO', target: { engine: 'oracle', service: 'PRODDB', tls: 'verify' }, secret: { username: 'itam_ro', password: 'Synthetic-Ora-1' } });
   const pg = await mk({ kind: 'db_login', label: 'PG RO', target: { engine: 'postgres' }, secret: { username: 'ro', password: 'Synthetic-Pg-1' } });
   const ssh = await mk({ kind: 'ssh', label: 'Solaris RO', secret: { username: 'itamro', password: 'Synthetic-Ssh-2' } });
   const st = await mk({ kind: 'storage_api', label: 'NetApp RO', target: { platform: 'ontap' }, secret: { username: 'monitor', password: 'Synthetic-St-1' } });
@@ -654,6 +655,7 @@ test('scope logins: DB / SSH / storage credentials log in read-only, only to tru
   let run = await e.run(sc.id);
   // first scan: database login works (no host key involved); SSH key and storage certificate are only RECORDED
   assert.deepEqual([run.stats.db_login.tried, run.stats.db_login.ok], [1, 1], JSON.stringify(run.stats.db_login));
+  assert.equal(run.stats.db_login.skipped_unverified, 1, 'the PostgreSQL login has no verified TLS: it is not sent across the scope (a host could capture it)');
   assert.equal(calls.filter((c) => c.op === 'db').length, 1, 'only the engine whose listener answered (oracle), not postgres');
   assert.equal(calls.find((c) => c.op === 'db').service, 'PRODDB');
   assert.equal(run.stats.unix_login.pending_trust, 1); assert.equal(run.stats.unix_login.tried, 0);
@@ -693,7 +695,7 @@ test('non-standard database ports: a login\'s own port is probed, the scope can 
   // Oracle listens on 1600 and SQL Server on 51433 only - none of the well-known ports are open
   const e = await setup({ deps: { invRun, connect: fakeConnect({ open: { '10.20.0.4': [1600, 51433] } }) } });
   t.after(() => e.close());
-  const ora = (await e.adm('POST', '/discovery/credentials', { kind: 'db_login', label: 'Oracle RO 1600', target: { engine: 'oracle', port: 1600, service: 'PRODPDB1' }, secret: { username: 'sentra_mon', password: 'Synthetic-Ora-9' } })).json.credential;
+  const ora = (await e.adm('POST', '/discovery/credentials', { kind: 'db_login', label: 'Oracle RO 1600', target: { engine: 'oracle', port: 1600, service: 'PRODPDB1', tls: 'verify' }, secret: { username: 'sentra_mon', password: 'Synthetic-Ora-9' } })).json.credential;
   const base = { name: 'DB on odd ports', site: 'Riyadh HQ', targets: ['10.20.0.4'] };
   for (const bad of [{ oracle: [70000] }, { nosuch: [1] }, [1600], { mssql: Array.from({ length: 17 }, (_, i) => 50000 + i) }]) {
     assert.equal((await e.adm('POST', '/discovery/scopes', Object.assign({}, base, { methods: { db: { enabled: true, ports: bad } } }))).status, 400, JSON.stringify(bad));
@@ -719,11 +721,11 @@ test('credential Test: refused / timeout name the address and port tried, and po
   await e.checklist(sc.id);
   const mk = async (b) => (await e.adm('POST', '/discovery/credentials', b)).json.credential;
   const test1 = async (id) => (await e.adm('POST', `/discovery/credentials/${id}/test`, { host: '10.20.0.4' })).json.result;
-  const def = await mk({ kind: 'db_login', label: 'Oracle default port', target: { engine: 'oracle', service: 'PROD' }, secret: { username: 'sentra_mon', password: 'Synthetic-1' } });
+  const def = await mk({ kind: 'db_login', label: 'Oracle default port', target: { engine: 'oracle', service: 'PROD', tls: 'verify' }, secret: { username: 'sentra_mon', password: 'Synthetic-1' } });
   let r = await test1(def.id);
   assert.equal(r.ok, false);
   assert.match(r.message, /Connection refused at 10\.20\.0\.4:1521/); assert.match(r.message, /default database listener port.*set Port on this credential/);
-  const own = await mk({ kind: 'db_login', label: 'Oracle 1600', target: { engine: 'oracle', port: 1600, service: 'PROD' }, secret: { username: 'sentra_mon', password: 'Synthetic-1' } });
+  const own = await mk({ kind: 'db_login', label: 'Oracle 1600', target: { engine: 'oracle', port: 1600, service: 'PROD', tls: 'verify' }, secret: { username: 'sentra_mon', password: 'Synthetic-1' } });
   r = await test1(own.id);
   assert.match(r.message, /10\.20\.0\.4:1600 - nothing listens there\. Check that the database listener runs on port 1600/);
   answer = { ok: false, error_class: 'timeout', error: 'timed out' };

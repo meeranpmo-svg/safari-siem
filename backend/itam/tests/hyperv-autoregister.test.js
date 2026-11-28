@@ -41,7 +41,7 @@ test('a host report with no scope covering it is kept: its figures are recorded,
   const { registerDuty } = require('../engine/duty');
   const e = await startApp({ noAi: true }); t.after(() => e.close());
   registerDuty(e.app.srv, e.app, { noTimer: true, python: process.env.PYTHON || 'python3' });
-  const tok = e.app.agentgw.issueToken({ note: 'Hyper-V: HV-SYN-09' }, ADM), enr = e.app.agentgw.enrol({ token: tok.token, hostname: 'HV-SYN-09', platform: 'windows' });
+  const tok = e.app.agentgw.issueToken({ note: 'Hyper-V: HV-SYN-01' }, ADM), enr = e.app.agentgw.enrol({ token: tok.token, hostname: 'HV-SYN-01', platform: 'windows' });
   const r = await e.req('POST', '/agent/hyperv', { bearer: enr.agent_key, user: null, body: report() });
   assert.equal(r.status, 200, r.text); assert.equal(r.json.discovery, false); assert.match(r.json.why, /no active scope/); assert.equal(r.json.manager.metrics, true);
   const v = await e.req('GET', '/hyperv', ADM); assert.equal(v.json.hosts[0].name, 'HV-SYN-01'); assert.equal(v.json.hosts[0].ip, '10.20.8.10', 'the address is kept for the one-click scope');

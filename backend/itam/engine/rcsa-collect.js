@@ -57,7 +57,7 @@ function createRcsaCollect(app, opts = {}) {
   function ownersFrom(risks) { const m = new Map(); for (const r of risks) { const o = String(r.owner || '').trim(); if (!o) continue; const k = ownerKey(o); if (!m.has(k)) m.set(k, { key: k, name: o, risks: [] }); m.get(k).risks.push(r.id); } return [...m.values()].sort((a, b) => a.name.localeCompare(b.name)); }
 
   function sign(camp, payload) { return crypto.createHmac('sha256', camp.secret).update(payload).digest(); }
-  function token(camp, key) { const exp = Math.min(Date.parse(camp.due + 'T23:59:59Z'), now() + MAX_EXPIRY_DAYS * DAY); const p = b64u(JSON.stringify({ c: camp.id, o: key, e: exp })); return p + '.' + b64u(sign(camp, p)); }
+  function token(camp, key, nonce) { const exp = Math.min(Date.parse(camp.due + 'T23:59:59Z'), now() + MAX_EXPIRY_DAYS * DAY); const p = b64u(JSON.stringify({ c: camp.id, o: key, e: exp, n: nonce })); return p + '.' + b64u(sign(camp, p)); }
   function verify(tok) {
     const t = String(tok || ''); const dot = t.indexOf('.'); if (dot < 1) throw httpErr(400, 'invalid link');
     let p; try { p = JSON.parse(unb64u(t.slice(0, dot)).toString()); } catch (e) { throw httpErr(400, 'invalid link'); }
@@ -68,6 +68,9 @@ function createRcsaCollect(app, opts = {}) {
     if (!p.e || now() > p.e) throw httpErr(410, 'this link has expired - ask the Risk team for a new one');
     const own = (camp.owners || []).find((o) => o.key === p.o); if (!own) throw httpErr(404, 'this link is not valid');
     if (own.revoked) throw httpErr(403, 'this link was revoked - ask the Risk team for a new one');
+    // every issue rotates the owner's nonce: only the newest link carries it, so a revoked or superseded link never works again
+    const nb = Buffer.from(String(p.n || '')), ob = Buffer.from(String(own.nonce || ''));
+    if (!own.nonce || !p.n || nb.length !== ob.length || !crypto.timingSafeEqual(nb, ob)) throw httpErr(403, 'this link was revoked or replaced - ask the Risk team for a new one');
     return { camp, own };
   }
 
@@ -86,11 +89,11 @@ function createRcsaCollect(app, opts = {}) {
     const b = body(src || {}).str('owner', { required: true, max: 120 }).done(); const key = ownerKey(b.owner);
     let own = (camp.owners || []).find((o) => o.key === key);
     if (!own) { own = { key, name: b.owner.trim(), risks: [], revoked: false, issued_at: null }; camp.owners.push(own); }   // an owner added by hand (e.g. for RAS / RBC)
-    own.revoked = false; own.issued_at = iso(); C().put(camp); const tok = token(camp, key);
+    own.revoked = false; own.nonce = crypto.randomBytes(8).toString('hex'); own.issued_at = iso(); C().put(camp); const tok = token(camp, key, own.nonce);
     audit(who, 'link', camp.id + ':' + key, { owner: own.name }); return { owner: own.name, key, path: '/agent/rcsa/form#t=' + tok, token: tok, expires: iso(Math.min(Date.parse(camp.due + 'T23:59:59Z'), now() + MAX_EXPIRY_DAYS * DAY)) };
   }
   function revoke(id0, key0, who) { human(who, 'revokes a link'); const camp = C().get(param(id0, 'id')); if (!camp) throw httpErr(404, 'campaign not found'); const key = param(key0, 'key'); const own = (camp.owners || []).find((o) => o.key === key); if (!own) throw httpErr(404, 'owner not found');
-    own.revoked = true; C().put(camp); audit(who, 'revoke', camp.id + ':' + key, { owner: own.name }); return detail(camp.id, who); }
+    own.revoked = true; delete own.nonce; C().put(camp); audit(who, 'revoke', camp.id + ':' + key, { owner: own.name }); return detail(camp.id, who); }
   function close(id0, who) { human(who, 'closes a campaign'); const camp = C().get(param(id0, 'id')); if (!camp) throw httpErr(404, 'campaign not found'); C().put(Object.assign({}, camp, { status: 'closed', closed_by: who.user, closed_at: iso() })); audit(who, 'close', camp.id, {}); return detail(camp.id, who); }
 
   function respSummary(campId) { const L = R().all((x) => x.campaign === campId); return { total: L.length, pending: L.filter((x) => x.status === 'pending').length, accepted: L.filter((x) => x.status === 'accepted').length, rejected: L.filter((x) => x.status === 'rejected').length }; }

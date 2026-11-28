@@ -73,6 +73,23 @@ test('directory settings: admin only, validated, password sealed and never retur
   assert.equal((await get('/onboarding')).json.directory.automatic, true);
 });
 
+test('changing the directory target needs the bind password again; an unchanged target keeps it', async (t) => {
+  const { e, post, settings } = await setup(t);
+  assert.equal((await post('/onboarding/ad', settings, ADM)).status, 200);
+  const sealed = () => e.app.store.collection('onboarding_ad').all()[0].bind_enc;
+  const was = JSON.stringify(sealed());
+  let r = await post('/onboarding/ad', { servers: ['ldaps://other-dc.corp-hq.com:636'] }, ADM);
+  assert.equal(r.status, 400); assert.match(r.json.error, /bind_password is required when servers change/);
+  r = await post('/onboarding/ad', { ca_file: '/etc/ssl/other-root.pem' }, ADM); assert.equal(r.status, 400); assert.match(r.json.error, /ca_file/);
+  r = await post('/onboarding/ad', { server_ips: { 'dc01.corp-hq.com': '10.9.9.9' } }, ADM); assert.equal(r.status, 400); assert.match(r.json.error, /server_ips/);
+  assert.equal(JSON.stringify(sealed()), was, 'the stored secret is untouched by the refused requests');
+  r = await post('/onboarding/ad', { servers: ['ldaps://other-dc.corp-hq.com:636'], bind_password: 'Synthetic-New-Pass-1' }, ADM); assert.equal(r.status, 200, r.raw);
+  assert.deepEqual(r.json.servers, ['ldaps://other-dc.corp-hq.com:636']); assert.notEqual(JSON.stringify(sealed()), was);
+  const now = JSON.stringify(sealed());
+  r = await post('/onboarding/ad', { servers: ['ldaps://other-dc.corp-hq.com:636'], ou: OU }, ADM); assert.equal(r.status, 200, r.raw);
+  assert.equal(JSON.stringify(sealed()), now, 'an unchanged target keeps the stored password');
+});
+
 test('created automatically after the four-eyes approval: disabled, temporary password, must change, allowed groups only', async (t) => {
   const { e, dir, ldap, post, get, settings, joiner } = await setup(t);
   await post('/onboarding/ad', settings, ADM);

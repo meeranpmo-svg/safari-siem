@@ -45,13 +45,20 @@ test('review: benign tunes that entity + detector and lowers the score; confirm 
     const before = w.ueba.entity('user:alice').risk.score;
     const priv = w.ueba.findings({ entity_id: 'user:alice', detector: 'privilege_escalation' }).items[0];
     let r = await w.api.call('POST', '/api/soc/ueba/findings/' + priv.id + '/benign', { role: 'viewer', body: {} }); assert.equal(r.status, 403, 'a viewer cannot review');
+    for (const u of ['/api/soc/ueba/entities', '/api/soc/ueba/findings', '/api/soc/ueba/entities/user:alice']) assert.equal((await w.api.call('GET', u, { role: 'viewer', user: 'vera.syn' })).status, 403, 'per-person risk is for analysts (PDPL): ' + u);
+    assert.equal((await w.api.call('GET', '/api/soc/ueba/summary', { role: 'viewer', user: 'vera.syn' })).status, 200, 'the totals stay open');
     r = await w.api.call('POST', '/api/soc/ueba/findings/' + priv.id + '/benign', { role: 'operator', user: 'nora.syn', body: { note: 'planned change CHG-1 (synthetic)' } }); assert.equal(r.status, 200, JSON.stringify(r.body));
-    assert.equal(r.body.finding.status, 'benign'); assert.equal(r.body.tuning.detector, 'privilege_escalation');
+    assert.equal(r.body.finding.status, 'benign-proposed', 'four-eyes: the first mark is a proposal, nothing tuned yet'); assert.equal(w.ueba.listTuning().length, 0);
+    assert.equal((await w.api.call('POST', '/api/soc/ueba/findings/' + priv.id + '/benign', { role: 'operator', user: 'NORA.SYN', body: {} })).status, 403, 'the proposer does not confirm it (any case)');
+    assert.equal((await w.api.call('POST', '/api/soc/ueba/findings/' + priv.id + '/benign', { role: 'admin', user: 'ai:desk', body: {} })).status, 403, 'a service / AI identity does not');
+    assert.equal((await w.api.call('POST', '/api/soc/ueba/findings/' + priv.id + '/benign', { role: 'operator', user: 'alice', body: {} })).status, 403, 'nobody reviews a finding about their own account');
+    r = await w.api.call('POST', '/api/soc/ueba/findings/' + priv.id + '/benign', { role: 'operator', user: 'omar.syn', body: {} }); assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.finding.status, 'benign'); assert.equal(r.body.tuning.detector, 'privilege_escalation'); assert.equal(r.body.tuning.proposed_by, 'nora.syn');
     assert.ok(w.ueba.entity('user:alice').risk.score <= before, 'benign does not raise the score');
     const bf = w.ueba.findings({ entity_id: 'user:alice', detector: 'brute_force_then_success' }).items[0];
     r = await w.api.call('POST', '/api/soc/ueba/findings/' + bf.id + '/confirm', { role: 'operator', user: 'nora.syn', body: {} }); assert.equal(r.body.finding.status, 'confirmed');
     assert.equal((await w.api.call('POST', '/api/soc/ueba/findings/nope/confirm', { role: 'operator', body: {} })).status, 404);
-    assert.ok(w.api.audits.some((a) => a.action === 'ueba.finding.benign' && a.user === 'nora.syn') && w.api.audits.some((a) => a.action === 'ueba.finding.confirm'));
+    assert.ok(w.api.audits.some((a) => a.action === 'ueba.finding.benign_proposed' && a.user === 'nora.syn') && w.api.audits.some((a) => a.action === 'ueba.finding.benign' && a.user === 'omar.syn') && w.api.audits.some((a) => a.action === 'ueba.finding.confirm'));
     assert.equal((await w.api.call('GET', '/api/soc/ueba/settings', { role: 'operator' })).status, 403, 'settings are admin-only');
     assert.equal((await w.api.call('GET', '/api/soc/ueba/summary', { role: 'viewer' })).status, 200);
   } finally { w.cleanup(); }

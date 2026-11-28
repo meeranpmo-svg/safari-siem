@@ -96,7 +96,7 @@ function createPrinters({ state, config, log, ch = null, discovery = null, snmp 
       if (c.version === '2c') { if (typeof x.community !== 'string' || !x.community || x.community.length > 64) throw Object.assign(new Error('SNMP community required (max 64)'), { status: 400 }); c.community = x.community; }
       else { c.user = clean(x.user, 64); if (!c.user) throw Object.assign(new Error('SNMPv3 user required'), { status: 400 }); c.authProto = x.authProto === 'sha256' ? 'sha256' : 'sha'; c.authKey = String(x.authKey || ''); if (c.authKey.length < 8) throw Object.assign(new Error('SNMPv3 auth password: at least 8 characters'), { status: 400 }); if (x.privKey) { c.privProto = 'aes'; c.privKey = String(x.privKey); } }
       const p = config._paths && config._paths.secrets; if (!p || !writeJson) throw Object.assign(new Error('secrets file not available'), { status: 409 });
-      let sec = {}; try { sec = require('../secretfile').read(p) || {}; } catch (e) { throw Object.assign(new Error('secrets file cannot be read: ' + e.message), { status: 500 }); }
+      let sec = {}; try { sec = require('../secretfile').read(p) || {}; } catch (e) { if (log && log.error) log.error('printers: secrets file cannot be read', { err: e.message }); throw Object.assign(new Error('the secrets file cannot be read - the detail is in the SIEM log'), { status: 500 }); }
       sec.printers = Object.assign({}, sec.printers || {}, { snmp: c }); writeJson(p, sec);
       if (config.secrets) config.secrets.printers = Object.assign(config.secrets.printers || {}, { snmp: c });
     }

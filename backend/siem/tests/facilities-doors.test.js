@@ -114,6 +114,22 @@ test('routes: admin settings validated and audited, token sealed and never retur
   assert.equal((await call('DELETE', '/servers/:id', { role: 'admin', params: { id: 'nope' } })).status, 404);
 });
 
+test('changing the host needs the token again; an unchanged host keeps the stored one', async (t) => {
+  const { D, call, secFile, port } = await setup(t);
+  const SRV = { id: 'zk-hq', label: 'ZKBio HQ', site: 'Riyadh HQ', host: '127.0.0.1', port };
+  const ADM = { role: 'admin', user: 'syed' };
+  assert.equal((await call('POST', '/servers', Object.assign({ body: SRV }, ADM))).status, 200);
+  assert.equal((await call('PUT', '/servers/:id/token', Object.assign({ params: { id: 'zk-hq' }, body: { token: TOKEN } }, ADM))).status, 200);
+  const sec = () => require('../engine/secretfile').read(secFile).zkbio.servers['zk-hq'].token;
+  let r = await call('POST', '/servers', Object.assign({ body: Object.assign({}, SRV, { host: 'zk-other.corp.local' }) }, ADM));
+  assert.equal(r.status, 400); assert.match(r.error, /token is required when host changes/);
+  assert.equal(D.get('zk-hq').host, '127.0.0.1', 'the refused request changed nothing');
+  r = await call('POST', '/servers', Object.assign({ body: Object.assign({}, SRV, { label: 'ZKBio Riyadh' }) }, ADM)); assert.equal(r.status, 200, r.error);
+  assert.equal(sec(), TOKEN, 'an unchanged host keeps the stored token');
+  r = await call('POST', '/servers', Object.assign({ body: Object.assign({}, SRV, { host: 'zk-other.corp.local', token: 'zk-syn-token-NEW-987654321' }) }, ADM));
+  assert.equal(r.status, 200, r.error); assert.equal(r.body.host, 'zk-other.corp.local'); assert.equal(sec(), 'zk-syn-token-NEW-987654321');
+});
+
 test('a server not read for three polls: its controllers read "not reported", never online', () => {
   const snap = { at: 0, devices: [{ name: 'C1', online: true }], doors: [], events: [], errors: [] };
   const v = analyse({ servers: [{ id: 's', label: 'S', enabled: true }], snapshot: () => snap, pollMin: 10, now: 31 * 60000 });

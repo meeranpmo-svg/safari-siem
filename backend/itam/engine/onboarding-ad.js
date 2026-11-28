@@ -96,6 +96,11 @@ function createOnboardingAd(app, opts = {}) {
     if (b.ca_pem) { try { const x = new (require('node:crypto').X509Certificate)(b.ca_pem); if (!x.ca) throw httpErr(400, 'ca_pem is not a CA certificate - give the root CA that issued the domain controller certificate'); } catch (e) { if (e.status) throw e; throw httpErr(400, 'ca_pem is not a readable certificate'); } }
     const c = Object.assign({}, cfg());
     for (const k of ['enabled', 'servers', 'server_ips', 'ca_file', 'ca_pem', 'bind_dn', 'base_dn', 'ou', 'upn_suffix', 'allowed_groups', 'leavers_enabled', 'leavers_ou', 'disable_hour', 'scramble_password', 'never_disable', 'movers_enabled']) if (b[k] !== undefined) c[k] = b[k];
+    // changing where the connection points must not carry the stored bind password to the new target: it has to be sent again
+    if (cfg().bind_enc && !b.bind_password) {
+      const before = cfg(), moved = ['servers', 'server_ips', 'ca_pem', 'ca_file'].find((k) => b[k] !== undefined && JSON.stringify(b[k]) !== JSON.stringify(before[k] === undefined ? (k === 'server_ips' ? {} : undefined) : before[k]));
+      if (moved) throw httpErr(400, 'bind_password is required when ' + moved + ' change - the stored password is not sent to a new target');
+    }
     if (c.ou && c.base_dn && !low(c.ou).endsWith(low(c.base_dn))) throw httpErr(400, 'ou must be inside base_dn');
     if (c.leavers_ou && c.base_dn && !low(c.leavers_ou).endsWith(low(c.base_dn))) throw httpErr(400, 'leavers_ou must be inside base_dn');
     if (b.bind_password) { if (!sealer.available()) throw httpErr(503, 'credential vault unavailable: ' + sealer.unavailableReason()); c.bind_enc = sealer.seal('bind', b.bind_password); c.bind_at = iso(); }
