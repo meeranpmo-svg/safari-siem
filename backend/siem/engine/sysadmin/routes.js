@@ -24,7 +24,7 @@
 const { HttpError, wrap, audit, body, prefixOf } = require('../soc/routeutil');
 const { createTargets } = require('./targets');
 const { createRunner } = require('./runner');
-const { createHealth } = require('./health');
+const { createHealth, kindsOf } = require('./health');
 const { createSysAI } = require('./ai');
 const { createChanges } = require('../netops/changes');
 
@@ -39,7 +39,7 @@ function createSysadmin(deps) {
   const changes = createChanges({ state, log, collection: 'sysadmin_changes', prefix: 'SCHG', execution: 'manual — the SIEM never changes servers' });
   const N = deps.netopsInstance || deps.netops, availability = N && N.availability;
   const db = (config && config.clickhouse && config.clickhouse.database) || 'siem';
-  const ai = createSysAI({ config, log, state, sdk: deps.anthropicSdk, tools: { targets, runner, health, changes, ch, db, availability } });
+  const ai = createSysAI({ config, log, state, sdk: deps.anthropicSdk, tools: { targets, runner, health, changes, ch, db, availability, hardening: deps.hardening } });
   return { targets, runner, health, changes, ai };
 }
 
@@ -53,14 +53,23 @@ function register(api, deps) {
   const atLeast = (ctx, r) => { if ((RANK[ctx.role] || 0) < RANK[r]) throw new HttpError(403, `requires ${r} role`); };
   const view = (t) => { const s = health.snapshot(t.id); return Object.assign({}, t, { logins: targets.loginSummary(t), login_profiles: t.logins || {}, certificate: targets.pin(t.id), last_check: s && s.at ? s.at : null, addresses: health.addresses(t.id) }); };
 
+  // the domain controllers the Windows agent's daily snapshot comes from (hardening store): settings only, no account names
+  const agentDcs = () => { const H = deps.hardening; if (!H || typeof H.list !== 'function') return [];
+    return H.list().filter((h) => h && h.settings && h.settings.os && Number(h.settings.os.domain_role) >= 4).map((h) => { const a = h.settings.ad || {};
+      return { host: h.host, ip: h.ip || '', at: h.at || h.received || null, primary: Number(h.settings.os.domain_role) === 5, domain: a.domain || null, domain_mode: a.domain_mode || null, forest_mode: a.forest_mode || null,
+        krbtgt_age_days: a.krbtgt_age_days == null ? null : a.krbtgt_age_days, recycle_bin: a.recycle_bin == null ? null : !!a.recycle_bin, domain_admins: a.groups && a.groups.domain_admins ? a.groups.domain_admins.count : null,
+        pwd_min_length: a.pwd ? a.pwd.min_length : null, lockout_threshold: a.pwd ? a.pwd.lockout_threshold : null }; }).sort((x, y) => String(x.host).localeCompare(String(y.host))); };
   api.route('GET', `${P}/sysadmin/overview`, wrap(deps, null, async (ctx) => {
     const role = roleOf(ctx.query) || 'windows', list = targets.list(role), F = health.findings({ role });
     return { role, servers: list.length, with_login: list.filter((t) => (t.roles || []).some((r) => targets.login(t, r))).length, checked: list.filter((t) => health.snapshot(t.id)).length,
       findings: F.slice(0, 60), by_severity: F.reduce((m, f) => (m[f.severity] = (m[f.severity] || 0) + 1, m), {}), health: health.stats(), helper: await runner.status(), ai: ai.status(),
-      changes_pending: changes.list({ status: 'proposed' }).length, from_itam: list.filter((t) => t.source === 'itam').length };
+      changes_pending: changes.list({ status: 'proposed' }).length, from_itam: list.filter((t) => t.source === 'itam').length,
+      // domain controllers and Hyper-V hosts among the servers, and the DCs the Windows agent reports from (no WinRM login needed)
+      kinds: list.reduce((m, t) => { const k = kindsOf(t, health.snapshot(t.id)); if (k.includes('dc')) m.dc++; if (k.includes('hyperv')) m.hyperv++; if (!k.length) m.member++; return m; }, { dc: 0, hyperv: 0, member: 0 }),
+      agent_dcs: agentDcs() };
   }));
   api.route('GET', `${P}/sysadmin/checks`, wrap(deps, null, (ctx) => ({ items: runner.catalogue(roleOf(ctx.query)) })));
-  api.route('GET', `${P}/sysadmin/targets`, wrap(deps, null, (ctx) => { const role = roleOf(ctx.query), F = health.findings({ role }); return { items: targets.list(role).map((t) => Object.assign(view(t), { findings: F.filter((f) => f.server === t.id).length, worst: (F.find((f) => f.server === t.id) || {}).severity || null })) }; }));
+  api.route('GET', `${P}/sysadmin/targets`, wrap(deps, null, (ctx) => { const role = roleOf(ctx.query), F = health.findings({ role }); return { items: targets.list(role).map((t) => Object.assign(view(t), { kinds: kindsOf(t, health.snapshot(t.id)), findings: F.filter((f) => f.server === t.id).length, worst: (F.find((f) => f.server === t.id) || {}).severity || null })) }; }));
   api.route('GET', `${P}/sysadmin/targets/:id`, wrap(deps, null, (ctx) => {
     const t = targets.get(ctx.params.id); if (!t) throw new HttpError(404, 'server not found');
     return { server: view(t), health: health.snapshot(t.id), findings: health.findings().filter((f) => f.server === t.id) };

@@ -18,6 +18,16 @@ const { guard: guardJob } = require('../util/errors');
  */
 const CHECKS = require('./checks.json').checks;
 const SEVR = { low: 1, medium: 2, high: 3, critical: 4 };
+// what a server is: an administrator's setting first, then what the server itself reports (installed roles, the AD / Hyper-V
+// tools answering), then the name (DC01, ADC2, ASDC1 - the platform's naming rule for domain controllers)
+const DC_RE = /(^|[^a-z])(a|as|ad)?dc\d*([^a-z]|$)|domain controller/i;
+function kindsOf(t, snap) {
+  const R = (snap && snap.results) || {}, k = new Set(Array.isArray(t.kinds) ? t.kinds : []), data = (id) => (R[id] && !R[id].error ? R[id].data : undefined);
+  const roles = [].concat(data('roles') || []).map((r) => String((r && r.name) || ''));
+  if (roles.includes('AD-Domain-Services') || (data('dc_dcdiag') || {}).available === true || DC_RE.test(String(t.name || '')) || DC_RE.test(String(t.id || ''))) k.add('dc');
+  if (roles.includes('Hyper-V') || (data('hv_host') || {}).available === true || Array.isArray(data('hv_vms'))) k.add('hyperv');
+  return [...k];
+}
 
 function evaluate(t, snap, now = Date.now()) {
   const out = [], R = (snap && snap.results) || {};
@@ -43,6 +53,23 @@ function evaluate(t, snap, now = Date.now()) {
   if (si && si.memory_free_pct != null && si.memory_free_pct < 10) add('medium', 'memory', `${t.name}: only ${si.memory_free_pct} % memory free`, [`${si.memory_gb} GB installed`], 'Find the process using it (top_processes) or add memory.');
   for (const c of arr(d('certificates'))) if (c && c.has_private_key && c.days_left != null && c.days_left < 30) add(c.days_left < 0 ? 'critical' : c.days_left < 7 ? 'high' : 'medium', 'certificate', `${t.name}: certificate ${c.days_left < 0 ? 'EXPIRED' : 'expires in ' + c.days_left + ' days'} - ${String(c.subject || '').slice(0, 80)}`, [`thumbprint ${c.thumbprint}`, `not after ${String(c.not_after).slice(0, 10)}`], 'Renew it and bind the new certificate where the old one is used (IIS, RDP, LDAPS, WinRM).');
   // Exchange
+  // domain controllers: dcdiag, AD replication, SYSVOL, the time source
+  const dg = d('dc_dcdiag'); if (dg && dg.available && dg.failed) add('high', 'dc-health', `${t.name}: dcdiag - ${dg.failed} test(s) failed`, arr(dg.tests).filter((x) => x && x.result === 'failed').map((x) => `${x.test} (${x.target})`), 'Run dcdiag /test:<name> /v on the DC for the detail; replication and SYSVOL failures first - ask the AI to explain the output.');
+  const rs = d('dc_replication'); if (rs && rs.summary) { const fails = [...String(rs.summary).matchAll(/^\s*(\S+)\s+.+?\s+(\d+)\s*\/\s*(\d+)\s+\d+/gm)].filter((m) => +m[2] > 0); if (fails.length) add('high', 'dc-replication', `${t.name}: Active Directory replication failing`, fails.slice(0, 6).map((m) => `${m[1]}: ${m[2]} of ${m[3]} failed`), 'repadmin /showrepl on this DC names the partner and the error; check DNS and the network to that partner.'); }
+  for (const f of arr((d('dc_sysvol') || {}).folders)) if (f && f.state != null && f.state !== 4) add(f.state === 5 ? 'critical' : 'high', 'dc-sysvol', `${t.name}: SYSVOL replicated folder ${f.folder || ''} is not in normal state`, [`DFSR state ${f.state} (${['uninitialised', 'initialised', 'initial sync', 'auto recovery', 'normal', 'in error'][f.state] || 'unknown'})`], 'Group Policy and logon scripts differ between DCs until it recovers; look at the DFS Replication event log on this DC.');
+  const tm = d('dc_time'); if (tm) {
+    if (/VM IC Time/i.test(tm.source || '')) add('medium', 'dc-time', `${t.name}: the domain controller takes its time from the Hyper-V host`, [`source: ${tm.source}`], 'Turn off Time synchronization in the VM\'s Integration Services and let the PDC emulator sync from an external NTP source; the other DCs follow the domain hierarchy.');
+    else if (tm.local_clock) add('medium', 'dc-time', `${t.name}: the time source is the local clock`, [`source: ${tm.source}`], 'The PDC emulator should sync from a reliable NTP source (w32tm /config /manualpeerlist:... /syncfromflags:manual /reliable:yes); other DCs from the domain hierarchy.');
+    if (tm.offset_s != null && Math.abs(tm.offset_s) >= 5) add(Math.abs(tm.offset_s) >= 60 ? 'high' : 'medium', 'dc-time', `${t.name}: clock ${tm.offset_s > 0 ? 'ahead of' : 'behind'} its source by ${Math.abs(tm.offset_s)} s`, [`source: ${tm.source}`], 'Kerberos refuses tickets beyond 5 minutes of skew; resync (w32tm /resync) after fixing the source.');
+  }
+  // Hyper-V hosts: VM replication, VMs not running cleanly, old checkpoints, integration services
+  for (const r of arr(d('hv_replication'))) if (r && /critical|warning/i.test(r.health || '')) add(/critical/i.test(r.health) ? 'high' : 'medium', 'hv-replication', `${t.name}: Hyper-V Replica of ${r.vm} is ${r.health}`, [`state ${r.state}, last replication ${r.last || 'never'}`, `${r.primary || ''} -> ${r.replica || ''}`], 'Measure-VMReplication -VMName <vm> shows the reason; check the network and space on the replica server, then Resume-VMReplication (a person runs it).');
+  for (const v of arr(d('hv_vms'))) {
+    if (!v) continue;
+    if (/^(Saved|Paused|Critical|.*Critical)$/i.test(v.state || '')) add(/Critical/i.test(v.state) ? 'high' : 'medium', 'hv-vm-state', `${t.name}: VM ${v.name} is ${v.state}`, [v.status || ''], 'A paused or critical VM usually means its storage is full or unreachable - free space on the volume, then resume it.');
+    if (v.oldest_checkpoint_days != null && v.oldest_checkpoint_days > 7) add('low', 'hv-checkpoint', `${t.name}: VM ${v.name} has a checkpoint ${v.oldest_checkpoint_days} days old`, [`${v.checkpoints} checkpoint(s)`], 'Old checkpoints slow the VM and fill the volume; delete the ones nobody needs (Hyper-V merges them back).');
+    if (/UpdateRequired|update required/i.test(v.integration || '') && v.state === 'Running') add('low', 'hv-integration', `${t.name}: VM ${v.name} - integration services need an update`, [v.integration], 'Update them through Windows Update in the guest (Windows Server 2016 and later) at the next maintenance window.');
+  }
   for (const s of arr(d('ex_service_health'))) if (s && s.all_running === false) add('high', 'ex-service', `${t.name}: Exchange ${s.role} services not running`, arr(s.not_running), 'Start the listed services (Start-Service) and check the Application log for why they stopped.', 'exchange');
   for (const c of arr(d('ex_certificates'))) if (c && c.days_left != null && c.days_left < 30 && /IIS|SMTP|IMAP|POP/i.test(c.services || '')) add(c.days_left < 0 ? 'critical' : 'high', 'ex-certificate', `${t.name}: Exchange certificate for ${c.services} ${c.days_left < 0 ? 'EXPIRED' : 'expires in ' + c.days_left + ' days'}`, [String(c.subject || '').slice(0, 100), `thumbprint ${c.thumbprint}`], 'Renew it, Import-ExchangeCertificate on every server, Enable-ExchangeCertificate -Services IIS,SMTP; update the hybrid / connector TLS settings that name it.', 'exchange');
   for (const q of arr(d('ex_queues'))) if (q && (q.messages > 100 || /retry|suspended/i.test(q.status || ''))) add(q.messages > 1000 ? 'critical' : 'high', 'ex-queue', `Mail queue ${q.queue}: ${q.messages} messages, ${q.status}`, [q.next_hop ? 'next hop ' + q.next_hop : '', q.last_error ? 'last error: ' + q.last_error : ''].filter(Boolean), 'Check the next hop (DNS, smart host, firewall to port 25, certificate on the far side) and the last error; Retry-Queue after fixing.', 'exchange');
@@ -65,7 +92,8 @@ function createHealth({ targets, runner, state, config, log } = {}) {
   const L = log || { info() {}, warn() {} }, store = state.collection('sysadmin_health');
   const cfg = () => (config && config.sysadmin) || {};
   let timer = null, running = null, lastRun = 0;
-  const baseline = (role) => CHECKS.filter((c) => c.baseline && c.scope === role);
+  const baseline = (role) => CHECKS.filter((c) => c.baseline && c.scope === role && !c.when);
+  const roleChecks = (kinds) => CHECKS.filter((c) => c.baseline && c.when && kinds.includes(c.when));
 
   async function pollServer(id, opts = {}) {
     const t = targets.get(id); if (!t) throw Object.assign(new Error('server not found'), { code: 404 });
@@ -78,7 +106,20 @@ function createHealth({ targets, runner, state, config, log } = {}) {
         try { const r = await runner.run(t.id, c.id, {}, { by: opts.by || 'health-check', via: 'health' }); snap.results[c.id] = { at: Date.now(), data: r.data }; }
         catch (e) { snap.results[c.id] = { at: Date.now(), error: String(e.message).slice(0, 300), kind: e.kind || '' }; if (/auth|missing|certificate|no-login/.test(e.kind) || e.code === 503) break; }
       }
+      // what the server is (read once a day), then the checks of that role: domain controller, Hyper-V host
+      if (role !== 'windows') continue;
+      const stop = Object.values(snap.results).some((r) => r && r.error && /auth|missing|certificate|no-login/.test(r.kind || ''));
+      if (stop) continue;
+      if (!snap.results.roles || Date.now() - (snap.results.roles.at || 0) > 864e5) {
+        try { const r = await runner.run(t.id, 'roles', {}, { by: opts.by || 'health-check', via: 'health' }); snap.results.roles = { at: Date.now(), data: r.data }; }
+        catch (e) { snap.results.roles = { at: Date.now(), error: String(e.message).slice(0, 300), kind: e.kind || '' }; }
+      }
+      for (const c of roleChecks(kindsOf(t, snap))) {
+        try { const r = await runner.run(t.id, c.id, {}, { by: opts.by || 'health-check', via: 'health' }); snap.results[c.id] = { at: Date.now(), data: r.data }; }
+        catch (e) { snap.results[c.id] = { at: Date.now(), error: String(e.message).slice(0, 300), kind: e.kind || '' }; }
+      }
     }
+    snap.kinds = kindsOf(t, snap);
     snap.at = Date.now(); store.put(snap); return snap;
   }
   async function pollAll() {
@@ -139,4 +180,4 @@ function createHealth({ targets, runner, state, config, log } = {}) {
   };
 }
 
-module.exports = { createHealth, evaluate };
+module.exports = { createHealth, evaluate, kindsOf, DC_RE };

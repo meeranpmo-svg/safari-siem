@@ -143,7 +143,9 @@
    "id": "dc_replication",
    "scope": "windows",
    "title": "Active Directory replication summary (domain controllers)",
-   "script": "if (Get-Command repadmin -ErrorAction SilentlyContinue) { [pscustomobject]@{summary=((repadmin /replsummary 2>&1) -join \"`n\")} | ConvertTo-Json -Compress } else { [pscustomobject]@{summary='not a domain controller (repadmin not present)'} | ConvertTo-Json -Compress }"
+   "script": "if (Get-Command repadmin -ErrorAction SilentlyContinue) { [pscustomobject]@{summary=((repadmin /replsummary 2>&1) -join \"`n\")} | ConvertTo-Json -Compress } else { [pscustomobject]@{summary='not a domain controller (repadmin not present)'} | ConvertTo-Json -Compress }",
+   "when": "dc",
+   "baseline": true
   },
   {
    "id": "ex_servers",
@@ -468,6 +470,74 @@
     }
    },
    "script": "if (-not (Get-Command Get-GPOReport -ErrorAction SilentlyContinue)) { Import-Module GroupPolicy -ErrorAction SilentlyContinue }; if (-not (Get-Command Get-GPOReport -ErrorAction SilentlyContinue)) { [pscustomobject]@{available=$false; reason='the Group Policy module (GPMC) is not on this server - choose a domain controller'; reports=@()} | ConvertTo-Json -Compress -Depth 4 } else { $g={{guid}}; $l=if ($g) { @(Get-GPO -Guid $g -ErrorAction Stop) } else { @(Get-GPO -All | Where-Object { $_.ModificationTime -gt (Get-Date).AddHours(-{{hours}}) } | Sort-Object ModificationTime -Descending | Select-Object -First 25) }; [pscustomobject]@{available=$true; reports=@($l | ForEach-Object { [pscustomobject]@{guid=$_.Id.ToString().ToUpper(); name=[string]$_.DisplayName; modified=$_.ModificationTime.ToUniversalTime().ToString('o'); computer_version=$_.Computer.DSVersion; user_version=$_.User.DSVersion; xml=[string](Get-GPOReport -Guid $_.Id -ReportType Xml)} })} | ConvertTo-Json -Compress -Depth 4 }"
+  },
+  {
+   "id": "dc_dcdiag",
+   "scope": "windows",
+   "when": "dc",
+   "baseline": true,
+   "title": "Domain controller health (dcdiag: advertising, FSMO, replication, services, SYSVOL, NETLOGON)",
+   "script": "if (-not (Get-Command dcdiag -ErrorAction SilentlyContinue)) { [pscustomobject]@{available=$false; reason='not a domain controller (the AD tools are not present)'} | ConvertTo-Json -Compress } else { $o = (dcdiag /test:Advertising /test:FsmoCheck /test:KnowsOfRoleHolders /test:MachineAccount /test:NetLogons /test:Replications /test:RidManager /test:Services /test:SysVolCheck /test:Topology 2>&1) -join \"`n\"; $t = @([regex]::Matches($o, '\\.+ (\\S+) (passed|failed) test (\\S+)') | ForEach-Object { [pscustomobject]@{target=$_.Groups[1].Value; result=$_.Groups[2].Value; test=$_.Groups[3].Value} }); [pscustomobject]@{available=$true; tests=$t; failed=@($t | Where-Object { $_.result -eq 'failed' }).Count} | ConvertTo-Json -Compress -Depth 4 }"
+  },
+  {
+   "id": "dc_fsmo",
+   "scope": "windows",
+   "when": "dc",
+   "title": "Active Directory: FSMO role holders, functional levels, domain controllers",
+   "script": "if (-not (Get-Module -ListAvailable -Name ActiveDirectory)) { [pscustomobject]@{available=$false; reason='not a domain controller (the AD tools are not present)'} | ConvertTo-Json -Compress } else { Import-Module ActiveDirectory; $d = Get-ADDomain; $f = Get-ADForest; [pscustomobject]@{available=$true; domain=$d.DNSRoot; domain_mode=\"$($d.DomainMode)\"; forest_mode=\"$($f.ForestMode)\"; pdc=$d.PDCEmulator; rid=$d.RIDMaster; infrastructure=$d.InfrastructureMaster; schema=$f.SchemaMaster; naming=$f.DomainNamingMaster; dcs=@(Get-ADDomainController -Filter * | ForEach-Object { [pscustomobject]@{name=$_.HostName; site=$_.Site; ip=$_.IPv4Address; gc=$_.IsGlobalCatalog; read_only=$_.IsReadOnly; os=\"$($_.OperatingSystem)\"} })} | ConvertTo-Json -Compress -Depth 4 }"
+  },
+  {
+   "id": "dc_sysvol",
+   "scope": "windows",
+   "when": "dc",
+   "baseline": true,
+   "title": "SYSVOL replication (DFSR migration state and replicated folder state)",
+   "script": "if (-not (Get-Command dfsrmig -ErrorAction SilentlyContinue)) { [pscustomobject]@{available=$false; reason='not a domain controller (the AD tools are not present)'} | ConvertTo-Json -Compress } else { $m = ((dfsrmig /getmigrationstate 2>&1) -join ' ').Trim(); $s = @(Get-CimInstance -Namespace root\\microsoftdfs -ClassName DfsrReplicatedFolderInfo -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{folder=$_.ReplicatedFolderName; group=$_.ReplicationGroupName; state=[int]$_.State} }); [pscustomobject]@{available=$true; migration=$m; folders=$s} | ConvertTo-Json -Compress -Depth 4 }"
+  },
+  {
+   "id": "dc_dns",
+   "scope": "windows",
+   "when": "dc",
+   "title": "DNS server: service state and zones",
+   "script": "if (-not (Get-Command Get-DnsServerZone -ErrorAction SilentlyContinue)) { [pscustomobject]@{available=$false; reason='the DNS server role is not installed here'} | ConvertTo-Json -Compress } else { $svc = Get-Service DNS -ErrorAction SilentlyContinue; [pscustomobject]@{available=$true; service=\"$($svc.Status)\"; zones=@(Get-DnsServerZone | Where-Object { -not $_.IsAutoCreated } | ForEach-Object { [pscustomobject]@{zone=$_.ZoneName; type=\"$($_.ZoneType)\"; ad_integrated=$_.IsDsIntegrated; dynamic=\"$($_.DynamicUpdate)\"; reverse=$_.IsReverseLookupZone} })} | ConvertTo-Json -Compress -Depth 4 }"
+  },
+  {
+   "id": "dc_time",
+   "scope": "windows",
+   "when": "dc",
+   "baseline": true,
+   "title": "Time service: source and offset (Kerberos needs the clocks within 5 minutes)",
+   "script": "$src = ((w32tm /query /source 2>&1) -join ' ').Trim(); $st = ((w32tm /query /status 2>&1) -join \"`n\"); $off = $null; if ($src -and $src -notmatch 'Local CMOS|Free-running') { $peer = ($src -replace ',0x.*$','').Trim(); $c = ((w32tm /stripchart /computer:$peer /samples:1 /dataonly 2>&1) -join \"`n\"); $m = [regex]::Match($c, '([+-]\\d+\\.\\d+)s'); if ($m.Success) { $off = [double]$m.Groups[1].Value } }; [pscustomobject]@{source=$src; local_clock=[bool]($src -match 'Local CMOS|Free-running'); offset_s=$off; status=$st} | ConvertTo-Json -Compress"
+  },
+  {
+   "id": "hv_host",
+   "scope": "windows",
+   "when": "hyperv",
+   "title": "Hyper-V host: processors, memory, paths, live migration",
+   "script": "if (-not (Get-Command Get-VMHost -ErrorAction SilentlyContinue)) { [pscustomobject]@{available=$false; reason='not a Hyper-V host (the Hyper-V module is not present)'} | ConvertTo-Json -Compress } else { $h = Get-VMHost; [pscustomobject]@{available=$true; name=$h.ComputerName; logical_processors=$h.LogicalProcessorCount; memory_gb=[math]::Round($h.MemoryCapacity/1GB,1); vm_path=$h.VirtualMachinePath; vhd_path=$h.VirtualHardDiskPath; live_migration=$h.VirtualMachineMigrationEnabled; migration_auth=\"$($h.VirtualMachineMigrationAuthenticationType)\"; numa_spanning=$h.NumaSpanningEnabled; vms=@(Get-VM).Count} | ConvertTo-Json -Compress }"
+  },
+  {
+   "id": "hv_vms",
+   "scope": "windows",
+   "when": "hyperv",
+   "baseline": true,
+   "title": "Hyper-V VMs: state, CPU, memory, uptime, checkpoints, integration services, replication",
+   "script": "if (-not (Get-Command Get-VM -ErrorAction SilentlyContinue)) { [pscustomobject]@{available=$false; reason='not a Hyper-V host (the Hyper-V module is not present)'} | ConvertTo-Json -Compress } else { ConvertTo-Json -Compress -Depth 4 -InputObject @(Get-VM | ForEach-Object { $v = $_; $cp = @(Get-VMSnapshot -VM $v -ErrorAction SilentlyContinue | Sort-Object CreationTime); [pscustomobject]@{name=$v.Name; state=\"$($v.State)\"; status=\"$($v.Status)\"; cpu_pct=$v.CPUUsage; vcpus=$v.ProcessorCount; memory_gb=[math]::Round($v.MemoryAssigned/1GB,1); uptime_h=[math]::Round($v.Uptime.TotalHours,1); generation=$v.Generation; version=\"$($v.Version)\"; integration=\"$($v.IntegrationServicesState)\"; replication=\"$($v.ReplicationState)\"; replication_health=\"$($v.ReplicationHealth)\"; checkpoints=$cp.Count; oldest_checkpoint_days=$(if ($cp.Count) { [int]((Get-Date) - $cp[0].CreationTime).TotalDays } else { $null })} }) }"
+  },
+  {
+   "id": "hv_replication",
+   "scope": "windows",
+   "when": "hyperv",
+   "baseline": true,
+   "title": "Hyper-V Replica: state, health, last replication per VM",
+   "script": "if (-not (Get-Command Get-VMReplication -ErrorAction SilentlyContinue)) { [pscustomobject]@{available=$false; reason='not a Hyper-V host (the Hyper-V module is not present)'} | ConvertTo-Json -Compress } else { ConvertTo-Json -Compress -Depth 4 -InputObject @(Get-VMReplication -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{vm=$_.VMName; state=\"$($_.State)\"; health=\"$($_.Health)\"; mode=\"$($_.Mode)\"; primary=$_.PrimaryServer; replica=$_.ReplicaServer; last=$(if ($_.LastReplicationTime) { $_.LastReplicationTime.ToUniversalTime().ToString('o') } else { $null })} }) }"
+  },
+  {
+   "id": "hv_switches",
+   "scope": "windows",
+   "when": "hyperv",
+   "title": "Hyper-V virtual switches and their uplinks",
+   "script": "if (-not (Get-Command Get-VMSwitch -ErrorAction SilentlyContinue)) { [pscustomobject]@{available=$false; reason='not a Hyper-V host (the Hyper-V module is not present)'} | ConvertTo-Json -Compress } else { ConvertTo-Json -Compress -Depth 4 -InputObject @(Get-VMSwitch | ForEach-Object { [pscustomobject]@{name=$_.Name; type=\"$($_.SwitchType)\"; uplink=$_.NetAdapterInterfaceDescription; management_os=$_.AllowManagementOS; embedded_teaming=$_.EmbeddedTeamingEnabled} }) }"
   }
  ]
 }

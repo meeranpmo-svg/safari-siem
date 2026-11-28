@@ -19,6 +19,7 @@ const net = require('node:net');
 const { writeJsonAtomic } = require('../onboard/store');
 
 const ROLES = ['windows', 'exchange'];
+const KINDS = ['dc', 'hyperv'];
 const ID_RE = /^[a-z0-9][a-z0-9-]{1,39}$/, PID_RE = /^[a-z0-9][a-z0-9-]{1,31}$/;
 class TargetError extends Error { constructor(code, msg) { super(msg); this.code = code; this.errors = [msg]; } }
 const clean = (s, max) => String(s == null ? '' : s).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max);
@@ -42,6 +43,12 @@ function validate(input, ex) {
     t.winrm = { ssl, port };
   }
   if (input.logins !== undefined) { const l = {}; for (const r of ROLES) { const v = input.logins && input.logins[r]; if (v) { if (!PID_RE.test(String(v))) throw new TargetError(400, 'login profile id: 2-32 lowercase letters, digits and dashes'); l[r] = String(v); } } t.logins = l; }
+  // what the server is, as an administrator states it (a domain controller, a Hyper-V host); empty = found from the server itself
+  if (input.kinds !== undefined) {
+    const k = [...new Set((Array.isArray(input.kinds) ? input.kinds : []).map(String))];
+    if (k.some((x) => !KINDS.includes(x))) throw new TargetError(400, 'kinds: dc and / or hyperv');
+    t.kinds = k;
+  }
   if (input.notes !== undefined) t.notes = clean(input.notes, 500);
   if (input.source !== undefined) t.source = input.source === 'itam' ? 'itam' : 'manual';
   if (input.asset_id !== undefined) t.asset_id = clean(input.asset_id, 80);

@@ -5219,9 +5219,9 @@ window.ZYB_NAV = [
    },
    {
     "h": "windows-admin.html",
-    "s": "AI Windows Admin",
+    "s": "AI Server Admin (Windows · AD · Hyper-V)",
     "g": "Infrastructure engineers",
-    "t": "AI Windows Server Administrator",
+    "t": "AI Server Administrator - Windows servers, domain controllers and Hyper-V hosts",
     "d": "Disk, services, event errors, patching and pending reboots, certificates, AD replication on every Windows server (read-only WinRM checks, health findings every 15 min); ask the AI, change plans for approval",
     "fw": {
      "nca": [

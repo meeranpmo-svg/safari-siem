@@ -209,3 +209,65 @@ test('addresses: every IPv4 address a server reports is shown (second NIC), refr
   r = await call('GET', '/targets'); assert.deepEqual(r.body.items[0].addresses.items.map((x) => x.interface), ['MAPI', 'Replication']);
   assert.ok(CHECKS.find((c) => c.id === 'network').baseline, 'the 15-minute health round reads the addresses too');
 });
+
+test('domain controllers and Hyper-V hosts: what a server is, the role checks the health poll runs, and their findings', async () => {
+  const { kindsOf, createHealth } = require('../engine/sysadmin/health');
+  const { createState } = require('../engine/soc/state');
+  // what a server is: an administrator's setting, its installed roles, the AD / Hyper-V tools answering, then the name
+  assert.deepEqual(kindsOf({ id: 'adc1', name: 'ADC1' }, {}), ['dc']);
+  assert.deepEqual(kindsOf({ id: 'app1', name: 'APP-SYN-01' }, { results: { roles: { data: [{ name: 'Hyper-V' }] } } }), ['hyperv']);
+  assert.deepEqual(kindsOf({ id: 'x', name: 'X', kinds: ['dc'] }, { results: { roles: { data: [{ name: 'Hyper-V' }] } } }).sort(), ['dc', 'hyperv']);
+  assert.deepEqual(kindsOf({ id: 'file1', name: 'FILE-SYN' }, { results: { roles: { data: [{ name: 'File-Services' }] } } }), []);
+  // the poll: baseline, the roles once, then that role's checks - and nothing of the other role
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sysadm-kinds-')); const state = await createState({ dir, log: { info() {}, warn() {}, error() {} } });
+  const ran = [], T = { id: 'hv01', name: 'HV-SYN-01', roles: ['windows'] };
+  const DATA = { roles: [{ name: 'Hyper-V' }], hv_vms: [{ name: 'DB-SYN', state: 'Running', oldest_checkpoint_days: 40, checkpoints: 2, integration: 'UpdateRequired' }, { name: 'APP-SYN', state: 'Paused-Critical', status: 'disk full' }],
+    hv_replication: [{ vm: 'DB-SYN', state: 'Replicating', health: 'Critical', last: null, primary: 'hv-syn-01', replica: 'hv-syn-dr' }] };
+  const H = createHealth({ targets: { get: () => T, list: () => [T], login: () => true }, runner: { run: async (id, check) => { ran.push(check); return { data: DATA[check] || {} }; }, status: async () => ({ available: true }) }, state, config: {}, log: { info() {}, warn() {} } });
+  const snap = await H.pollServer('hv01');
+  assert.deepEqual(snap.kinds, ['hyperv']); assert.ok(ran.includes('roles') && ran.includes('hv_vms') && ran.includes('hv_replication'), ran.join(','));
+  assert.ok(!ran.some((c) => /^dc_/.test(c)), 'no domain-controller check on a Hyper-V host');
+  const F = evaluate(T, snap), kinds = F.map((f) => f.kind);
+  for (const k of ['hv-replication', 'hv-vm-state', 'hv-checkpoint', 'hv-integration']) assert.ok(kinds.includes(k), k + ' in ' + kinds.join(','));
+  assert.equal(F.find((f) => f.kind === 'hv-replication').severity, 'high');
+  // a domain controller: dcdiag failures, replication failing, SYSVOL in error, time from the Hyper-V host and skewed
+  const D = { id: 'dc01', name: 'DC01', site: 'HQ' };
+  const DF = evaluate(D, { results: {
+    dc_dcdiag: { data: { available: true, failed: 1, tests: [{ target: 'DC01', result: 'failed', test: 'SysVolCheck' }, { target: 'DC01', result: 'passed', test: 'Advertising' }] } },
+    dc_replication: { data: { summary: 'Source DSA          largest delta    fails/total %%   error\n DC01                  05m:12s    0 /   5    0\n DC02                  >60 days    3 /   5   60  (1722) The RPC server is unavailable.' } },
+    dc_sysvol: { data: { available: true, folders: [{ folder: 'SYSVOL Share', group: 'Domain System Volume', state: 5 }] } },
+    dc_time: { data: { source: 'VM IC Time Synchronization Provider', local_clock: false, offset_s: 75.2 } } } });
+  const dk = DF.map((f) => f.kind + ':' + f.severity);
+  for (const k of ['dc-health:high', 'dc-replication:high', 'dc-sysvol:critical', 'dc-time:medium', 'dc-time:high']) assert.ok(dk.includes(k), k + ' in ' + dk.join(','));
+  assert.match(DF.find((f) => f.kind === 'dc-replication').evidence.join(' '), /DC02: 3 of 5 failed/);
+  assert.ok(!dk.some((k) => k.startsWith('dc-replication') && /DC01/.test(DF.find((f) => f.kind === 'dc-replication').evidence.join(' ').replace('DC02', ''))), 'DC01 (0 failures) is not listed');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('the new domain-controller and Hyper-V checks are read-only scripts: no command that changes anything', () => {
+  const C = require('../engine/sysadmin/checks.json').checks.filter((c) => c.when);
+  assert.ok(C.length >= 10);
+  const WRITE = /\b(Set|New|Remove|Start|Stop|Restart|Move|Resize|Enable|Disable|Add|Invoke|Clear|Reset|Rename|Suspend|Resume|Install|Uninstall|Update|Export|Repair|Sync)-[A-Za-z]+|\b(repadmin \/(sync|syncall|kcc)|dcdiag \/fix|w32tm \/(resync|config)|dfsrmig \/setglobalstate|net (stop|start))\b/i;
+  for (const c of C) assert.ok(!WRITE.test(c.script), c.id + ' must only read: ' + (c.script.match(WRITE) || [])[0]);
+});
+
+test('AI: the agent snapshot gives the domain posture as counts - the privileged account names never reach the model; DCs and Hyper-V are in its brief', async () => {
+  let script = []; const calls = [];
+  class FakeAnthropic { constructor() { this.beta = { messages: { create: async (p) => { calls.push(JSON.parse(JSON.stringify(p))); return script.shift(); } } }; this.messages = this.beta.messages; } }
+  const dir = tmp(), state = await createState({ dir: path.join(dir, 'state') }), config = {};
+  Object.defineProperty(config, 'secrets', { value: { netops: { anthropic_api_key: 'sk-test' } }, enumerable: false, writable: true });
+  const hardening = { list: () => [{ host: 'dc-syn-01', at: '2026-11-28T06:00:00Z', agent_version: '1.4.0', settings: { os: { caption: 'Windows Server 2022', domain_role: 5 },
+    ad: { domain: 'corp.syn.test', domain_mode: 'Windows2016Domain', krbtgt_age_days: 1500, recycle_bin: false, pwd: { min_length: 8, lockout_threshold: 0 },
+      groups: { domain_admins: { count: 9, names: ['adm.secret.syn', 'adm.other.syn'] } }, accounts: { pwd_never_expires: { count: 37, names: ['svc.backup.syn'] } } } } }] };
+  const S = routes.createSysadmin({ state, config, log: { info() {}, warn() {}, error() {} }, sysadminExec: fakeExec(), anthropicSdk: FakeAnthropic, hardening });
+  script = [{ stop_reason: 'tool_use', model: 'm', usage: {}, content: [{ type: 'tool_use', id: 'a1', name: 'agent_snapshot', input: { host: 'DC-SYN-01' } }] },
+    { stop_reason: 'end_turn', model: 'm', usage: {}, content: [{ type: 'text', text: 'krbtgt is 1500 days old; 9 domain admins.' }] }];
+  const r = await S.ai.ask({ role: 'windows', question: 'How healthy is our domain?', user: 'alice', userRole: 'analyst' });
+  assert.match(JSON.stringify(r), /krbtgt is 1500 days old/);
+  assert.ok(calls[0].tools.some((t) => t.name === 'agent_snapshot'), 'the tool is offered to the Windows administrator');
+  assert.match(calls[0].system, /DOMAIN CONTROLLERS/); assert.match(calls[0].system, /HYPER-V HOSTS/);
+  const sent = JSON.stringify(calls[1].messages);
+  assert.match(sent, /krbtgt_age_days/); assert.match(sent, /domain_admins[^0-9]+9/);
+  assert.ok(!/adm\.secret\.syn|adm\.other\.syn|svc\.backup\.syn/.test(sent), 'no account name is sent to the model');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
