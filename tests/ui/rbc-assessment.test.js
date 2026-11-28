@@ -59,7 +59,7 @@ let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FA
     ok(!!(await p.$('[data-act="reopen"]')), 'reopen offered after approval');
     // the report opens in a new tab: white, with insights
     const [pop] = await Promise.all([p.waitForEvent('popup'), p.click('[data-act="html"]')]); await pop.waitForLoadState();
-    ok(/RBC Own Funds/.test(await pop.textContent('h1')) && /Insights/.test(await pop.content()), 'report opens'); await pop.close();
+    ok(/RBC Own Funds/.test(await pop.frameLocator('iframe[sandbox]').locator('h1').textContent()) && /Insights/.test(await pop.frameLocator('iframe[sandbox]').locator('html').innerHTML()), 'report opens'); await pop.close();
     // settings (admin): raise the target to 300% and the ratio verdict changes
     await p.click('#setb'); await p.fill('#f-tgt', '300'); await p.click('#dlgok');
     ok(await has(p, '#up', /Target 300%/) && await has(p, '#det', /below the 300% target/), 'settings change the verdict');

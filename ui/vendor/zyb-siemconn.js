@@ -151,7 +151,7 @@
           + Object.keys(firstOf).map(function (k) { return '<h4 style="margin:14px 0 4px">' + E(k) + ' devices: configuration</h4>' + steps(firstOf[k]); }).join('');
         toast(ok + ' devices connected to the SIEM'); return;
       }
-      var r = L[i], k = guessKind(r), tr = document.querySelector('[data-zsc-row="' + r.ip + '"]');
+      var r = L[i], k = guessKind(r), tr = document.querySelector('[data-zsc-row="' + (window.CSS && CSS.escape ? CSS.escape(r.ip) : String(r.ip).replace(/[^\w.-]/g, '\\$&')) + '"]');
       b.textContent = 'Connecting ' + (i + 1) + ' of ' + L.length + '…';
       connectOne(r, SITES.indexOf(r.site) >= 0 ? r.site : fallback, k).then(function (res) { ok++; MAP[r.ip] = { source_id: res.source_id, kind: k, state: 'waiting' }; if (!firstOf[k]) firstOf[k] = res; if (tr) tr.style.color = '#56d364'; },
         function (e) { fail.push(r.name + ' (' + r.ip + '): ' + e.message); if (tr) tr.style.color = '#ff7b72'; }).then(function () { next(i + 1); });

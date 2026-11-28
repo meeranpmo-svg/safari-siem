@@ -19,7 +19,7 @@ body{margin:0;background:#e9ebee;font:13px "Segoe UI",Arial,sans-serif;color:#11
   $('back').addEventListener('click',function(){location.href='oracle-licences.html';});
   var x=new XMLHttpRequest();x.open('GET','/api/itam/oracle-licences/report');x.withCredentials=true;x.timeout=120000;
   x.onload=function(){var j=null;try{j=JSON.parse(x.responseText);}catch(e){ /* not JSON: treated as no data */ }
-    if(x.status===200&&j&&typeof j.html==='string'){$('pg').innerHTML=j.html;$('st').textContent=j.subject;document.title=j.subject;}   // the engine escapes every value it puts in this HTML
+    if(x.status===200&&j&&typeof j.html==='string'){$('pg').textContent='';var fr=document.createElement('iframe');fr.setAttribute('sandbox','allow-modals');fr.title='Oracle licence report';fr.style.cssText='width:100%;min-height:80vh;border:0;background:#fff;display:block';$('pg').appendChild(fr);fr.srcdoc=j.html;$('st').textContent=j.subject;document.title=j.subject;}   // the engine escapes every value it puts in this HTML
     else{$('pg').innerHTML='<p class="err"></p>';$('pg').firstChild.textContent=x.status===404?'The one-page report needs the server update (IT Asset Management).':x.status===403?'Operators and administrators see licence data.':((j&&j.error)||('HTTP '+x.status));$('st').textContent='';}};
   x.onerror=x.ontimeout=function(){$('pg').innerHTML='<p class="err">IT Asset Management could not be reached.</p>';};
   x.send();

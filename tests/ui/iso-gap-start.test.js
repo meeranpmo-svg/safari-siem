@@ -71,7 +71,7 @@ let n = 0, bad = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FA
     ok(await has(p, '#panel', /Signed by lina\.syn/), 'lead signs');
     ok(await has(p, '#panel', /a different person approves/), 'four-eyes note for the signer');
     const [pop] = await Promise.all([p.waitForEvent('popup'), p.click('#r-html')]); await pop.waitForLoadState();
-    ok(/Gap Assessment/.test(await pop.textContent('h1')) && /not a certification audit/.test(await pop.content()), 'report opens'); await pop.close();
+    ok(/Gap Assessment/.test(await pop.frameLocator('iframe[sandbox]').locator('h1').textContent()) && /not a certification audit/.test(await pop.frameLocator('iframe[sandbox]').locator('html').innerHTML()), 'report opens'); await pop.close();
     WHO = { user: 'karim.syn', role: 'operator' }; await p.reload(); await p.waitForSelector('#steps'); await p.click('[data-step="7"]'); await p.click('#r-appr');
     ok(await has(p, '#panel', /Approved by karim\.syn/), 'ISMS manager approves the report');
     ok((await p.$$eval('#steps li.done', (x) => x.length)) === 7, 'every step done');

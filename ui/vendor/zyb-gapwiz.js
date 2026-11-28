@@ -178,7 +178,7 @@
   function report(fmt) { var e = S.e; req('GET', C.base + '/' + encodeURIComponent(e.id) + '/report?format=' + fmt).then(function (r) {
     if (fmt === 'json') { if (!window.zybXlsx) { toast('The Excel writer did not load - refresh the page'); return; } xlsxOf(r); return; }
     if (fmt === 'csv') { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([r.csv], { type: 'text/csv' })); a.download = r.filename; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000); return; }
-    var w = window.open('', '_blank'); if (w) { w.document.open(); w.document.write(r.html); w.document.close(); } }, function (er) { toast(er.message); }); }
+    var w = window.open('', '_blank'); if (w) { var d = w.document; d.title = r.filename || 'Report'; d.body.style.margin = '0'; var fr = d.createElement('iframe'); fr.setAttribute('sandbox', 'allow-modals'); fr.style.cssText = 'border:0;width:100vw;height:100vh;display:block;background:#fff'; d.body.appendChild(fr); fr.srcdoc = r.html; } }, function (er) { toast(er.message); }); }
 
   function xlsxOf(r) {
     var g = r.engagement, cmp = r.compare, sheets = [
