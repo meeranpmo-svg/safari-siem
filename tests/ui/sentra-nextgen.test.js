@@ -26,7 +26,9 @@ function world() {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + srv.address().port + '/dashboards/sentra-nextgen.html';
   const { chromium } = require(process.env.PLAYWRIGHT || 'playwright'); const browser = await chromium.launch(), errs = [];
-  const open = async (q, sel) => { const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); p.on('pageerror', (x) => errs.push(x.message)); await p.goto(base + (q || '?standalone=1')); await p.waitForSelector(sel || '#main:not([hidden])', { timeout: 15000 }); await p.waitForTimeout(200); return p; };
+  const open = async (q, sel) => { const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); p.on('pageerror', (x) => errs.push(x.message)); await p.goto(base + (q || '?standalone=1')); await p.waitForSelector(sel || '#main:not([hidden])', { timeout: 15000 });
+    if (!sel) await p.waitForFunction(() => [].every.call(document.querySelectorAll('#hl .ng-num'), (e) => e.textContent === e.getAttribute('data-to')), null, { timeout: 8000 });   // the figures have counted up
+    await p.waitForTimeout(200); return p; };
   try {
     let p = await open();
     const svg = await p.textContent('#wheel svg');
@@ -36,6 +38,10 @@ function world() {
     const hl = (await p.textContent('#hl')).replace(/\s+/g, ' ');
     ok(/80%/.test(hl) && /Noise removed/.test(hl) && /30 min/.test(hl) && /10%/.test(hl) && /1 of 10 closed/.test(hl) && /12\.5 eps/.test(hl), 'headline figures with their basis: ' + hl.slice(0, 260));
     const pc = await p.textContent('#pillars'); ok(/UNIFY/.test(pc) && /Governed SOAR/.test(pc) && /Switch on the first playbook/.test(pc) && /partial/.test(pc), 'pillar cards: state and next step');
+    ok((await p.$$('#wheel animateMotion')).length >= 6 && (await p.$$('#wheel .ng-orb')).length === 1 && (await p.$$('#wheel .ng-draw')).length === 3, 'movement: pulses on the ring and the flows, the breathing centre, the arcs drawn in');
+    ok((await p.$$('#wheel .ng-flow')).length === 2 * V.segments.filter((x) => x.state !== 'none').length, 'a flow for each section that is set up, none for a section that is not');
+    { const q = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' }); q.on('pageerror', (x) => errs.push(x.message)); await q.goto(base + '?standalone=1'); await q.waitForSelector('#main:not([hidden])');
+      ok((await q.$$('#wheel animateMotion')).length === 0 && (await q.$$('#wheel .ng-draw')).length === 0 && /80%/.test(await q.textContent('#hl')), 'reduced motion: no movement, the figures shown at once'); await q.close(); }
     ok((await p.$$('#caps a')).length === 16 && (await p.getAttribute('#caps a:nth-child(13)', 'href')) === 'soc-hunt.html', 'sixteen capabilities, each to its page');
     for (const h of await p.$$eval('#caps a', (L) => L.map((a) => a.getAttribute('href')))) ok(fs.existsSync(path.join(DASH, h)), 'capability page exists: ' + h);
     ok(!(await p.evaluate(() => window.PWN)), 'hostile text stays text'); await p.close();

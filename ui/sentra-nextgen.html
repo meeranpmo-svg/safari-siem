@@ -21,6 +21,12 @@
 .ng-s .t{display:flex;gap:8px;align-items:center;font-weight:700}.ng-s .t .f{margin-left:auto;font-size:17px}.ng-s .d{font-size:12px;color:#8b93a4;margin-top:2px}.ng-s .n{font-size:12px;margin-top:3px}
 .st{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}.st.ready{background:rgba(47,212,122,.16);color:#2fd47a}.st.partial{background:rgba(227,179,65,.18);color:#e3b341}.st.none{background:rgba(127,140,160,.18);color:#8b93a4}
 .mut{color:#8b93a4}.sm{font-size:12px}
+@keyframes ng-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}@keyframes ng-halo{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:.7;transform:scale(1.06)}}
+@keyframes ng-spin{to{transform:rotate(360deg)}}@keyframes ng-draw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}@keyframes ng-glow{0%,100%{opacity:.55}50%{opacity:1}}
+.ng-orb{transform-box:fill-box;transform-origin:center;animation:ng-breathe 4s ease-in-out infinite}.ng-halo{transform-box:fill-box;transform-origin:center;animation:ng-halo 4s ease-in-out infinite}
+.ng-spin{transform-box:fill-box;transform-origin:center;animation:ng-spin 40s linear infinite}.ng-draw{stroke-dasharray:100;animation:ng-draw 1.8s cubic-bezier(.2,.7,.2,1) both}
+.ng-dot{filter:drop-shadow(0 0 6px #ff4d5e)}.ng-fig{animation:ng-glow 3s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.ng-orb,.ng-halo,.ng-spin,.ng-draw,.ng-fig{animation:none}}
 .ng-cap{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}@media(max-width:1200px){.ng-cap{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:560px){.ng-cap{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ng-cap a{display:flex;flex-direction:column;justify-content:center;min-height:86px;padding:10px 8px;border-radius:10px;text-align:center;text-decoration:none;color:#e6ecf3;font-weight:700;font-size:13.5px;line-height:1.25;background:linear-gradient(160deg,rgba(43,200,185,.16),rgba(88,166,255,.08));border:1px solid rgba(43,200,185,.28);transition:transform .12s,border-color .12s}
 .ng-cap a:hover,.ng-cap a:focus-visible{transform:translateY(-2px);border-color:#2bc8b9;outline:none}.ng-cap a span{display:block;font-weight:400;font-size:11px;color:#8b93a4;margin-top:4px}
@@ -50,35 +56,57 @@
   function arc(r, a0, a1, rev) { var s = P(r, rev ? a1 : a0), e = P(r, rev ? a0 : a1), big = a1 - a0 > 180 ? 1 : 0; return 'M' + s[0].toFixed(1) + ' ' + s[1].toFixed(1) + ' A' + r + ' ' + r + ' 0 ' + big + ' ' + (rev ? 0 : 1) + ' ' + e[0].toFixed(1) + ' ' + e[1].toFixed(1); }
   function lines(t) { var w = String(t).split(' '), out = [], cur = ''; w.forEach(function (x) { if ((cur + ' ' + x).trim().length > 15 && cur) { out.push(cur); cur = x; } else cur = (cur + ' ' + x).trim(); }); if (cur) out.push(cur); return out.slice(0, 3); }
   function wheel(V) {
-    var R = 250, h = '<svg class="ng-wheel" viewBox="0 0 640 640" role="img" aria-label="Sentra Next-Gen SIEM: unify ' + V.pillars.unify + '%, hunt and detect ' + V.pillars.detect + '%, respond ' + V.pillars.respond + '%">'
+    var R = 250, ANG = {}, h = '<svg class="ng-wheel" viewBox="0 0 640 640" role="img" aria-label="Sentra Next-Gen SIEM: unify ' + V.pillars.unify + '%, hunt and detect ' + V.pillars.detect + '%, respond ' + V.pillars.respond + '%">'
       + '<defs><radialGradient id="ng-orb" cx="35%" cy="40%" r="75%"><stop offset="0" stop-color="#ff2a3d"/><stop offset=".55" stop-color="#5a1a2a"/><stop offset="1" stop-color="#1f6f72"/></radialGradient>'
       + '<radialGradient id="ng-glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(255,60,80,.25)"/><stop offset="1" stop-color="rgba(255,60,80,0)"/></radialGradient></defs>'
       + '<circle cx="' + C + '" cy="' + C + '" r="' + (R + 40) + '" fill="url(#ng-glow)"/><circle cx="' + C + '" cy="' + C + '" r="' + R + '" fill="rgba(10,14,22,.55)" stroke="rgba(127,140,160,.18)"/>';
     Object.keys(PIL).forEach(function (k) { var p = PIL[k], sc = V.pillars[k] || 0, rev = k === 'respond';
       h += '<path d="' + arc(R, p.a0 + 1.5, p.a1 - 1.5) + '" fill="none" stroke="' + p.col + '" stroke-opacity=".25" stroke-width="5"/>'
-        + '<path d="' + arc(R, p.a0 + 1.5, p.a0 + 1.5 + (p.a1 - p.a0 - 3) * sc / 100) + '" fill="none" stroke="' + p.col + '" stroke-width="5" stroke-linecap="round"><title>' + esc(p.name + ': ' + sc + '% in place') + '</title></path>'
+        + '<path d="' + arc(R, p.a0 + 1.5, p.a0 + 1.5 + (p.a1 - p.a0 - 3) * sc / 100) + '" fill="none" stroke="' + p.col + '" stroke-width="5" stroke-linecap="round" pathLength="100"' + (FIRST && !RM ? ' class="ng-draw"' : '') + '><title>' + esc(p.name + ': ' + sc + '% in place') + '</title></path>'
         + '<path id="ng-t-' + k + '" d="' + arc(rev ? R + 34 : R + 18, p.a0 + 8, p.a1 - 8, rev) + '" fill="none"/>'
         + '<text class="ng-pl" fill="' + p.col + '"><textPath href="#ng-t-' + k + '" startOffset="50%" text-anchor="middle">' + esc(p.name) + ' · ' + sc + '%</textPath></text>';
       var d = P(R, p.a0); h += '<line x1="' + C + '" y1="' + C + '" x2="' + d[0].toFixed(1) + '" y2="' + d[1].toFixed(1) + '" stroke="rgba(127,140,160,.35)" stroke-width="1.5"/>'; });
     var by = {}; V.segments.forEach(function (s) { (by[s.pillar] = by[s.pillar] || []).push(s); });
     Object.keys(PIL).forEach(function (k) { var p = PIL[k], L = by[k] || [], step = (p.a1 - p.a0) / L.length;
-      L.forEach(function (s, i) { var a = p.a0 + step * (i + 0.5), xy = P(178, a), ls = lines(s.title), y0 = xy[1] - (ls.length * 15 + 22) / 2 + 12;
+      L.forEach(function (s, i) { var a = p.a0 + step * (i + 0.5), _ = (ANG[s.id] = a), xy = P(178, a), ls = lines(s.title), y0 = xy[1] - (ls.length * 15 + 22) / 2 + 12;
         h += '<a href="' + esc(s.page) + '" data-seg="' + esc(s.id) + '" aria-label="' + esc(s.title + ': ' + s.figure + ' ' + s.sub) + '"><title>' + esc(s.title + ' - ' + s.figure + ' ' + s.sub + '. ' + s.next) + '</title>'
           + '<rect class="ng-hit" x="' + (xy[0] - 62).toFixed(1) + '" y="' + (y0 - 18).toFixed(1) + '" width="124" height="' + (ls.length * 15 + 34) + '" rx="10" fill="transparent"/>'
           + ls.map(function (l, j) { return '<text class="ng-lab" x="' + xy[0].toFixed(1) + '" y="' + (y0 + j * 15).toFixed(1) + '" text-anchor="middle">' + esc(l) + '</text>'; }).join('')
           + '<text class="ng-fig" x="' + xy[0].toFixed(1) + '" y="' + (y0 + ls.length * 15 + 9).toFixed(1) + '" text-anchor="middle" fill="' + SC[s.state] + '">' + esc(String(s.figure).length > 10 ? String(s.figure).slice(0, 10) : s.figure) + '</text></a>'; }); });
-    h += '<circle cx="' + C + '" cy="' + C + '" r="92" fill="url(#ng-orb)"/><circle cx="' + C + '" cy="' + C + '" r="92" fill="none" stroke="rgba(255,255,255,.12)"/>'
+    // movement: pulses round the ring, data flowing from the Unify sections into the centre and out from it to Hunt & Detect and
+    // Respond (a section not set up has no flow), at a speed that follows the live events per second; none when the viewer asked for
+    // reduced motion
+    if (!RM) {
+      var eps = (V.headline.filter(function (x) { return x.id === 'eps'; })[0] || {}).value || 0, dur = Math.max(2.2, Math.min(7, 7 - Math.log10(eps + 1) * 1.2));
+      h += '<path id="ng-ring" d="M' + C + ' ' + (C - R) + ' A' + R + ' ' + R + ' 0 1 1 ' + (C - 0.01) + ' ' + (C - R) + '" fill="none"/>';
+      ['#ff4d5e', '#2bc8b9', '#ff4d5e', '#2bc8b9', '#ff4d5e', '#2bc8b9'].forEach(function (col, i) { h += '<circle r="4.5" fill="' + col + '" class="ng-dot"><animateMotion dur="' + (dur * 3).toFixed(1) + 's" repeatCount="indefinite" begin="' + (-i * dur * 0.5).toFixed(2) + 's"><mpath href="#ng-ring"/></animateMotion></circle>'; });
+      V.segments.forEach(function (s, j) { if (s.state === 'none' || ANG[s.id] == null) return;
+        var a = ANG[s.id], inn = s.pillar === 'unify', A0 = P(inn ? 150 : 100, a), A1 = P(inn ? 100 : 150, a), col = PIL[s.pillar].col, d = 'M' + A0[0].toFixed(1) + ' ' + A0[1].toFixed(1) + ' L' + A1[0].toFixed(1) + ' ' + A1[1].toFixed(1);
+        h += '<path d="' + d + '" stroke="' + col + '" stroke-opacity=".22" stroke-width="1.5" stroke-dasharray="3 4" fill="none"/>';
+        for (var q = 0; q < 2; q++) { var bg = (-(j * 0.37 + q * dur / 2)).toFixed(2) + 's';
+          h += '<circle r="3" fill="' + col + '" class="ng-flow"><animateMotion dur="' + dur.toFixed(1) + 's" repeatCount="indefinite" begin="' + bg + '" path="' + d + '"/><animate attributeName="opacity" values="0;1;1;0" dur="' + dur.toFixed(1) + 's" repeatCount="indefinite" begin="' + bg + '"/></circle>'; } });
+      h += '<circle cx="' + C + '" cy="' + C + '" r="118" fill="none" stroke="rgba(255,255,255,.16)" stroke-dasharray="2 9" class="ng-spin"/><circle cx="' + C + '" cy="' + C + '" r="104" fill="none" stroke="#ff4d5e" stroke-opacity=".35" stroke-width="2" class="ng-halo"/>';
+    }
+    h += '<circle class="ng-orb" cx="' + C + '" cy="' + C + '" r="92" fill="url(#ng-orb)"/><circle cx="' + C + '" cy="' + C + '" r="92" fill="none" stroke="rgba(255,255,255,.12)"/>'
       + '<text x="' + C + '" y="' + (C - 6) + '" text-anchor="middle" fill="#fff" font-size="21" font-weight="800">Sentra</text><text x="' + C + '" y="' + (C + 20) + '" text-anchor="middle" fill="#fff" font-size="17" font-weight="700">Next-Gen SIEM</text></svg>';
     $('wheel').innerHTML = h;
   }
+  var RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches), FIRST = true;
+  // the headline figures count up from 0 on the first draw (not on the minute refresh, not with reduced motion)
+  function countUp() { [].forEach.call(document.querySelectorAll('#hl .ng-num'), function (el) { var to = Number(el.getAttribute('data-to')); if (!isFinite(to)) return;
+    var dec = (String(el.getAttribute('data-to')).split('.')[1] || '').length, t0 = null;
+    function f(t) { if (t0 == null) t0 = t; var k = Math.min(1, (t - t0) / 1400), e = 1 - Math.pow(1 - k, 3); el.textContent = (to * e).toFixed(dec); if (k < 1) requestAnimationFrame(f); else el.textContent = el.getAttribute('data-to'); }
+    requestAnimationFrame(f); }); }
   function draw(V) {
     wheel(V);
-    $('hl').innerHTML = V.headline.map(function (x) { return '<div class="h" data-hl="' + esc(x.id) + '"><div class="v' + (x.value == null ? ' na' : '') + '">' + (x.value == null ? '—' : esc(x.value) + '<small>' + esc(x.unit === 'min' ? ' min' : x.unit === 'eps' ? ' eps' : x.unit) + '</small>') + '</div>'
+    $('hl').innerHTML = V.headline.map(function (x) { return '<div class="h" data-hl="' + esc(x.id) + '"><div class="v' + (x.value == null ? ' na' : '') + '">' + (x.value == null ? '—' : '<span class="ng-num" data-to="' + esc(x.value) + '">' + esc(x.value) + '</span><small>' + esc(x.unit === 'min' ? ' min' : x.unit === 'eps' ? ' eps' : x.unit) + '</small>') + '</div>'
       + '<div class="l">' + esc(x.label) + '</div><div class="b">' + esc(x.value == null ? x.why + ' · ' + x.basis : x.basis) + '</div></div>'; }).join('');
     $('pillars').innerHTML = Object.keys(PIL).map(function (k) { var p = PIL[k], sc = V.pillars[k] || 0;
       return '<section class="card"><h2 style="color:' + p.col + '">' + esc(p.name) + '<span class="ng-sc">' + sc + '% in place</span></h2><div class="ng-bar"><i style="width:' + sc + '%;background:' + p.col + '"></i></div>'
         + V.segments.filter(function (s) { return s.pillar === k; }).map(function (s) { return '<a class="ng-s" href="' + esc(s.page) + '"><div class="t"><span class="st ' + esc(s.state) + '">' + esc(s.state === 'none' ? 'not set' : s.state) + '</span>' + esc(s.title) + '<span class="f" style="color:' + SC[s.state] + '">' + esc(s.figure) + '</span></div>'
           + '<div class="d">' + esc(s.sub) + '</div><div class="n">→ ' + esc(s.next) + '</div></a>'; }).join('') + '</section>'; }).join('');
+    if (FIRST && !RM && window.requestAnimationFrame) countUp();
+    FIRST = false;
     $('note').textContent = V.note || '';
     $('up').textContent = 'updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   }
@@ -93,5 +121,7 @@
   $('caps').innerHTML = CAPS.map(function (c) { return '<a href="' + esc(c[1]) + '">' + esc(c[0]) + '<span>' + esc(c[2]) + '</span></a>'; }).join('');
   $('refresh').addEventListener('click', function () { load(); });
   load();
+  // live: the figures are read again every minute while the page is in view
+  (function again() { setTimeout(function () { if (!document.hidden) load().then(again, again); else again(); }, 60000); })();
 })();
 </script></body></html>
