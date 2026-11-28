@@ -38,6 +38,12 @@ function world() {
     ok((await p.$$('canvas')).length === 8, 'eight charts');
     ok(!(await p.$eval('#mvc', (x) => x.hidden)) && /HV-SYN-01/.test(await p.textContent('#mv')) && /HV-SYN-02/.test(await p.textContent('#mv')), 'the move between two hosts of one site');
     await p.selectOption('#fk', 'memory-down'); ok((await p.$$('#rec tbody tr')).length >= 1 && /BIG-SYN/.test(await p.textContent('#rec')), 'filter by kind');
+    await p.click('#rec tr.rx'); await p.waitForSelector('#rec .fx');
+    const fx = await p.textContent('#rec .fx');
+    ok(/CHECK|Check/.test(fx) && /Confirm/.test(fx) && /Set-VMMemory -VMName 'BIG-SYN'/.test(fx) && (await p.$$('#rec .fx-cp')).length >= 2, 'a row opens how to fix it: checks, the change with the VM filled in, how to confirm, copy buttons');
+    await p.context().grantPermissions(['clipboard-read', 'clipboard-write']); await p.click('#rec .fx-cp'); ok(/Copied|Ctrl\+C/.test(await p.textContent('#rec .fx-cp')), 'a command is copied');
+    await p.click('#rec tr.rx'); ok(!(await p.$('#rec .fx')), 'clicked again, it closes');
+    await p.selectOption('#fk', ''); const nr = (await p.$$('#rec tr.rx')).length; for (let i = 0; i < nr; i++) await p.click('#rec tr.rx[data-rx="' + i + '"]'); ok(!(await p.evaluate(() => window.PWN)), 'a hostile VM name in a plan stays text');
     await p.selectOption('#fk', ''); await p.selectOption('#fp', 'high'); ok((await p.$$('#rec tbody tr')).length >= 1, 'filter by priority');
     ok(/CPU %/.test(await p.textContent('#anom')), 'an unusual reading');
     ok(!(await p.evaluate(() => window.PWN)), 'hostile text stays text'); await p.close();

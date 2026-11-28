@@ -27,7 +27,7 @@ function lsq(pts) { const k = pts.length; if (k < 5) return null; let sx = 0, sy
 const zOf = (vals, v) => { if (vals.length < 12 || v == null) return null; const m = med(vals), mad = med(vals.map((x) => Math.abs(x - m))) || Math.max(1, m * 0.05); return Math.round(10 * (v - m) / (1.4826 * mad)) / 10; };
 
 function analyse({ latest = [], daily = [], samples = [], now = Date.now() } = {}) {
-  const R = [], add = (priority, kind, target, host, title, why, gain) => R.push({ priority, kind, target, host, title, why, gain: gain || {} });
+  const R = [], add = (priority, kind, target, host, title, why, gain, detail) => R.push({ priority, kind, target, host, title, why, gain: gain || {}, detail: Object.assign({ host }, detail || {}) });
   const hosts = [], vmsAll = [], volumes = [], nics = [], anomalies = [];
   let memBack = 0, memNeed = 0, vcpuBack = 0, diskBack = 0;
   for (const rep of latest) {
@@ -53,20 +53,20 @@ function analyse({ latest = [], daily = [], samples = [], now = Date.now() } = {
       if (v.state === 'running' && hist.length >= 5) {
         if (v.mem_assigned_mb && memP != null && memP < 0.6 * v.mem_assigned_mb && v.mem_assigned_mb - up512(memP * 1.25) >= 1024) {
           const to = up512(memP * 1.25), back = v.mem_assigned_mb - to; memBack += back; vm.advice = 'memory ' + v.mem_assigned_mb + ' → ' + to + ' MB';
-          add(back >= 8192 ? 'high' : 'medium', 'memory-down', v.name, H.name, v.name + ': give back ' + r1(back / 1024) + ' GB of memory (' + r1(v.mem_assigned_mb / 1024) + ' → ' + r1(to / 1024) + ' GB)', 'its memory demand never went above ' + r1(memP / 1024) + ' GB on 95 % of ' + hist.length + ' days; 25 % headroom kept' + (v.dynamic ? ' (dynamic memory: lower its maximum)' : ''), { mem_gb: r1(back / 1024) });
+          add(back >= 8192 ? 'high' : 'medium', 'memory-down', v.name, H.name, v.name + ': give back ' + r1(back / 1024) + ' GB of memory (' + r1(v.mem_assigned_mb / 1024) + ' → ' + r1(to / 1024) + ' GB)', 'its memory demand never went above ' + r1(memP / 1024) + ' GB on 95 % of ' + hist.length + ' days; 25 % headroom kept' + (v.dynamic ? ' (dynamic memory: lower its maximum)' : ''), { mem_gb: r1(back / 1024) }, { vm: v.name, to_mb: to });
         } else if (v.mem_assigned_mb && memP != null && memP > 0.9 * v.mem_assigned_mb) {
           const to = up512(memP * 1.25), need = to - v.mem_assigned_mb; memNeed += need; vm.advice = 'memory ' + v.mem_assigned_mb + ' → ' + to + ' MB';
-          add('high', 'memory-up', v.name, H.name, v.name + ': short of memory - give it ' + r1(need / 1024) + ' GB more', 'its demand reached ' + Math.round(100 * memP / v.mem_assigned_mb) + '% of what it has on 95 % of ' + hist.length + ' days - it pages to disk and slows down', { mem_gb: -r1(need / 1024) });
+          add('high', 'memory-up', v.name, H.name, v.name + ': short of memory - give it ' + r1(need / 1024) + ' GB more', 'its demand reached ' + Math.round(100 * memP / v.mem_assigned_mb) + '% of what it has on 95 % of ' + hist.length + ' days - it pages to disk and slows down', { mem_gb: -r1(need / 1024) }, { vm: v.name, to_mb: to });
         }
         if (v.vcpus >= 4 && cpuP != null && cpuP < 15) { const to = Math.max(2, Math.floor(v.vcpus / 2)); vcpuBack += v.vcpus - to; vm.advice = (vm.advice ? vm.advice + ' · ' : '') + 'vCPU ' + v.vcpus + ' → ' + to;
-          add('medium', 'vcpu-down', v.name, H.name, v.name + ': ' + v.vcpus + ' → ' + to + ' vCPUs', 'its CPU stayed under ' + Math.ceil(cpuP) + '% on 95 % of ' + hist.length + ' days - idle vCPUs still wait for a free core on a busy host', { vcpu: v.vcpus - to }); }
-        else if (cpuP != null && cpuP > 80) add('high', 'vcpu-up', v.name, H.name, v.name + ': CPU-bound - add vCPUs', 'its CPU was above ' + Math.floor(cpuP) + '% on 95 % of ' + hist.length + ' days', {});
+          add('medium', 'vcpu-down', v.name, H.name, v.name + ': ' + v.vcpus + ' → ' + to + ' vCPUs', 'its CPU stayed under ' + Math.ceil(cpuP) + '% on 95 % of ' + hist.length + ' days - idle vCPUs still wait for a free core on a busy host', { vcpu: v.vcpus - to }, { vm: v.name, to }); }
+        else if (cpuP != null && cpuP > 80) add('high', 'vcpu-up', v.name, H.name, v.name + ': CPU-bound - add vCPUs', 'its CPU was above ' + Math.floor(cpuP) + '% on 95 % of ' + hist.length + ' days', {}, { vm: v.name, to: v.vcpus + 2 });
       }
       if (v.state === 'off' && v.off_since && now - Date.parse(v.off_since) >= 30 * DAY) { diskBack += vm.disk_gb || 0;
-        add('medium', 'idle', v.name, H.name, v.name + ': off for ' + Math.floor((now - Date.parse(v.off_since)) / DAY) + ' days - archive or delete it', (vm.disk_gb ? vm.disk_gb + ' GB of virtual disks' : 'its virtual disks') + ' to reclaim; confirm with the owner first', { disk_gb: vm.disk_gb || 0 }); }
+        add('medium', 'idle', v.name, H.name, v.name + ': off for ' + Math.floor((now - Date.parse(v.off_since)) / DAY) + ' days - archive or delete it', (vm.disk_gb ? vm.disk_gb + ' GB of virtual disks' : 'its virtual disks') + ' to reclaim; confirm with the owner first', { disk_gb: vm.disk_gb || 0 }, { vm: v.name }); }
       const old = (v.checkpoints || []).filter((c) => now - Date.parse(c.created) > 7 * DAY);
-      if (old.length) add('low', 'checkpoint', v.name, H.name, v.name + ': ' + old.length + ' checkpoint(s) older than 7 days', 'the oldest from ' + old.map((c) => c.created).sort()[0].slice(0, 10) + ' - delete them (Hyper-V merges the changes back) to free disk and speed the VM', {});
-      for (const d of v.vhds || []) if (d.max_gb && d.size_gb && d.size_gb / d.max_gb > 0.9) add('medium', 'vhd-full', v.name, H.name, v.name + ': virtual disk ' + d.path.split('\\').pop() + ' is ' + Math.round(100 * d.size_gb / d.max_gb) + '% of its maximum', 'extend it, or clean the guest\'s disk, before the guest runs out of space', {});
+      if (old.length) add('low', 'checkpoint', v.name, H.name, v.name + ': ' + old.length + ' checkpoint(s) older than 7 days', 'the oldest from ' + old.map((c) => c.created).sort()[0].slice(0, 10) + ' - delete them (Hyper-V merges the changes back) to free disk and speed the VM', {}, { vm: v.name });
+      for (const d of v.vhds || []) if (d.max_gb && d.size_gb && d.size_gb / d.max_gb > 0.9) add('medium', 'vhd-full', v.name, H.name, v.name + ': virtual disk ' + d.path.split('\\').pop() + ' is ' + Math.round(100 * d.size_gb / d.max_gb) + '% of its maximum', 'extend it, or clean the guest\'s disk, before the guest runs out of space', {}, { vm: v.name, path: d.path, size_gb: d.size_gb, max_gb: d.max_gb });
     }
     // storage
     for (const vol of H.volumes || []) {
@@ -76,16 +76,16 @@ function analyse({ latest = [], daily = [], samples = [], now = Date.now() } = {
       const root = String(vol.name).toLowerCase(), prov = (rep.vms || []).reduce((t, v) => t + (v.vhds || []).filter((d) => String(d.path).toLowerCase().startsWith(root)).reduce((u, d) => u + (d.max_gb || 0), 0), 0);
       const over = vol.size_gb && prov ? prov / vol.size_gb : null;
       volumes.push({ host: H.name, name: vol.name, size_gb: vol.size_gb, used_gb: r1(used), used_pct: r1(pct), days_to_95: days, provisioned_gb: r1(prov) || null, overcommit: r1(over), csv: !!vol.csv, history: pts.map((p) => r1(p[1])) });
-      if (pct != null && pct >= 90) add('high', 'volume-full', vol.name, H.name, H.name + ' ' + vol.name + ' is ' + Math.round(pct) + '% full', vol.free_gb + ' GB free of ' + vol.size_gb + ' GB', {});
-      else if (days != null && days <= 60) add(days <= 14 ? 'high' : 'medium', 'volume-trend', vol.name, H.name, H.name + ' ' + vol.name + ' reaches 95% in about ' + days + ' days', 'it grows ' + r1(f.b) + ' GB a day over the last ' + pts.length + ' days', {});
-      if (over != null && over > 1.5) add('medium', 'overcommit', vol.name, H.name, H.name + ' ' + vol.name + ': VHDs can grow to ' + Math.round(100 * over) + '% of the volume', 'dynamic disks maximum ' + r1(prov) + ' GB on ' + vol.size_gb + ' GB - if they all grow the volume fills and every VM on it stops', {});
+      if (pct != null && pct >= 90) add('high', 'volume-full', vol.name, H.name, H.name + ' ' + vol.name + ' is ' + Math.round(pct) + '% full', vol.free_gb + ' GB free of ' + vol.size_gb + ' GB', {}, { volume: vol.name, csv: !!vol.csv, free_gb: vol.free_gb, size_gb: vol.size_gb });
+      else if (days != null && days <= 60) add(days <= 14 ? 'high' : 'medium', 'volume-trend', vol.name, H.name, H.name + ' ' + vol.name + ' reaches 95% in about ' + days + ' days', 'it grows ' + r1(f.b) + ' GB a day over the last ' + pts.length + ' days', {}, { volume: vol.name, csv: !!vol.csv, days });
+      if (over != null && over > 1.5) add('medium', 'overcommit', vol.name, H.name, H.name + ' ' + vol.name + ': VHDs can grow to ' + Math.round(100 * over) + '% of the volume', 'dynamic disks maximum ' + r1(prov) + ' GB on ' + vol.size_gb + ' GB - if they all grow the volume fills and every VM on it stops', {}, { volume: vol.name });
     }
     // network: peak of each physical NIC against its link over 48 h
     for (const nic of H.nics || []) {
       const peak = Math.max(0, ...S.map((x) => { const q = (x.nics || {})[nic.name]; return q ? (q.rx_bps || 0) + (q.tx_bps || 0) : 0; }), (nic.rx_bps || 0) + (nic.tx_bps || 0));
       const pct = nic.link_mbps ? 100 * peak / (nic.link_mbps * 1e6 * 2) : null;
       nics.push({ host: H.name, name: nic.name, link_mbps: nic.link_mbps, peak_bps: peak, peak_pct: r1(pct) });
-      if (pct != null && pct >= 70) add(pct >= 90 ? 'high' : 'medium', 'nic-busy', nic.name, H.name, H.name + ' ' + nic.name + ' peaked at ' + Math.round(pct) + '% of its link', 'add a team member or move the busiest VMs to another uplink / host', {});
+      if (pct != null && pct >= 70) add(pct >= 90 ? 'high' : 'medium', 'nic-busy', nic.name, H.name, H.name + ' ' + nic.name + ' peaked at ' + Math.round(pct) + '% of its link', 'add a team member or move the busiest VMs to another uplink / host', {}, { nic: nic.name });
     }
   }
   // balance: the VM that best evens two hosts apart by 25+ points of memory
@@ -102,10 +102,12 @@ function analyse({ latest = [], daily = [], samples = [], now = Date.now() } = {
         const gb = v.mem_assigned_mb / 1024, hiAfter = hi.mem_pct - 100 * gb / hi.mem_total_gb, loAfter = lo.mem_pct + 100 * gb / lo.mem_total_gb; return { v, gb, hiAfter, loAfter, miss: Math.abs(100 * gb / hi.mem_total_gb - gap) }; })
         .filter((c) => c.loAfter <= 85).sort((a, b) => a.miss - b.miss);
       if (cand.length) { const c = cand[0]; move = { vm: c.v.name, from: hi.name, to: lo.name, gb: r1(c.gb), from_after: r1(c.hiAfter), to_after: r1(c.loAfter) };
-        add('medium', 'balance', c.v.name, hi.name, 'Move ' + c.v.name + ' (' + r1(c.gb) + ' GB) from ' + hi.name + ' to ' + lo.name, hi.name + ' memory ' + Math.round(hi.mem_pct) + '% → ' + Math.round(c.hiAfter) + '%, ' + lo.name + ' ' + Math.round(lo.mem_pct) + '% → ' + Math.round(c.loAfter) + '% (live migration; same virtual switch names on both hosts - see the Virtual Network Map)', {}); }
+        add('medium', 'balance', c.v.name, hi.name, 'Move ' + c.v.name + ' (' + r1(c.gb) + ' GB) from ' + hi.name + ' to ' + lo.name, hi.name + ' memory ' + Math.round(hi.mem_pct) + '% → ' + Math.round(c.hiAfter) + '%, ' + lo.name + ' ' + Math.round(lo.mem_pct) + '% → ' + Math.round(c.loAfter) + '% (live migration; same virtual switch names on both hosts - see the Virtual Network Map)', {}, { vm: c.v.name, from: hi.name, to: lo.name }); }
     }
   }
   const PR = { high: 3, medium: 2, low: 1 }; R.sort((a, b) => PR[b.priority] - PR[a.priority]);
+  // each recommendation carries how to fix it: checks, the change, how to confirm (engine/hyperv-fix.js) - a person runs it
+  const { fixOf } = require('./hyperv-fix'); for (const x of R) x.fix = fixOf(x);
   const pts = R.reduce((t, x) => t + (x.priority === 'high' ? 6 : x.priority === 'medium' ? 3 : 1), 0), score = hosts.length ? Math.max(0, 100 - Math.min(100, pts)) : null;
   const ins = [];
   if (memBack) ins.push(r1(memBack / 1024) + ' GB of memory can be given back from VMs that never use it - more than buying it.');

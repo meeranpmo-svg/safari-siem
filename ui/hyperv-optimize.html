@@ -11,7 +11,12 @@
 .ins{list-style:none;margin:0;padding:0}.ins li{display:flex;gap:10px;padding:7px 2px;border-bottom:1px solid rgba(127,140,160,.18)}.ins li:last-child{border-bottom:0}.ins i{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none;background:#58a6ff}
 .mv{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}.mv .h{border:1px solid rgba(127,140,160,.3);border-radius:12px;padding:10px}.mv .bar{height:12px;border-radius:7px;background:rgba(127,140,160,.18);overflow:hidden;position:relative;margin:4px 0}.mv .bar i{display:block;height:100%}.mv .bar b{position:absolute;top:0;height:100%;border-right:2px dashed #fff}
 .pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(127,140,160,.18)}.pill.high{background:rgba(255,123,114,.18);color:#ff7b72}.pill.medium{background:rgba(227,179,65,.18);color:#e3b341}.pill.low{background:rgba(88,166,255,.15);color:#58a6ff}
-.tw{max-height:520px;overflow:auto}.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
+.tw{max-height:520px;overflow:auto}
+tr.rx{cursor:pointer}tr.rx:hover td,tr.rx:focus td{background:rgba(88,166,255,.07)}tr.rx:focus{outline:none}.fx-h{color:#58a6ff;white-space:nowrap;font-weight:600}
+.fxr td{background:rgba(13,17,23,.55);padding:12px 16px}.fx-s{margin:0 0 8px;font-size:13.5px}.fx ol{margin:0 0 8px;padding-left:20px}.fx li{margin:0 0 10px}
+.fx-t{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 7px;border-radius:8px;margin-right:6px}.fx-t.ck{background:rgba(88,166,255,.16);color:#58a6ff}.fx-t.cg{background:rgba(227,179,65,.18);color:#e3b341}.fx-t.vf{background:rgba(47,212,122,.16);color:#2fd47a}
+.fx-c{position:relative;margin-top:5px}.fx-c pre{margin:0;padding:8px 70px 8px 10px;background:#0b0f16;border:1px solid rgba(127,140,160,.25);border-radius:7px;font-size:12px;white-space:pre-wrap;word-break:break-all}.fx-cp{position:absolute;top:5px;right:5px;padding:2px 9px;font-size:11px;min-height:0}
+.fx-r{margin:4px 0;font-size:12.5px;color:#e3b341}.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
 </style></head><body><main>
 <div class="top"><div><div class="eb">Servers & VMs · Hyper-V · optimization</div><h1>Hyper-V Optimization</h1><div class="mut sm">What to give back, move or plan across the Hyper-V hosts - CPU, memory, storage and network - each from the hosts' own history</div></div><span class="sp"></span>
  <span class="muted" id="up"></span><a class="btn" href="hyperv.html">Hyper-V Servers</a><a class="btn" href="capacity.html">Capacity Planning</a><button type="button" id="refresh">⟳ Refresh</button></div>
@@ -90,7 +95,24 @@
   }
   function recs() { var fp = $('fp').value, fk = $('fk').value, L = V.recommendations.filter(function (r) { return (!fp || r.priority === fp) && (!fk || r.kind === fk); });
     $('rc').textContent = L.length + ' of ' + V.recommendations.length + ' · most important first';
-    $('rec').innerHTML = table(['', 'What', 'Why', 'Host'], L.map(function (r) { return '<tr><td><span class="pill ' + esc(r.priority) + '">' + esc(r.priority) + '</span></td><td><b>' + esc(r.title) + '</b></td><td class="sm">' + esc(r.why) + '</td><td class="sm">' + esc(r.host) + '</td></tr>'; }), 'Nothing to optimize in this view.'); }
+    REC = L;
+    $('rec').innerHTML = table(['', 'What', 'Why', 'Host', ''], L.map(function (r, i) { return '<tr class="rx" tabindex="0" role="button" aria-expanded="' + (OPEN === key(r) ? 'true' : 'false') + '" data-rx="' + i + '"><td><span class="pill ' + esc(r.priority) + '">' + esc(r.priority) + '</span></td><td><b>' + esc(r.title) + '</b></td><td class="sm">' + esc(r.why) + '</td><td class="sm">' + esc(r.host) + '</td><td class="sm fx-h">' + (r.fix ? (OPEN === key(r) ? 'Hide ▴' : 'How to fix ▾') : '') + '</td></tr>'
+      + (OPEN === key(r) && r.fix ? '<tr class="fxr"><td colspan="5">' + fixHtml(r.fix) + '</td></tr>' : ''); }), 'Nothing to optimize in this view.'); }
+  // how to fix a recommendation (engine/hyperv-fix.js): checks, the change, how to confirm - commands a person runs, copied from here
+  var REC = [], OPEN = null, TAG = { check: ['Check', 'ck'], change: ['Change', 'cg'], verify: ['Confirm', 'vf'] };
+  function key(r) { return r.kind + '|' + r.target + '|' + r.host + '|' + r.title; }
+  function fixHtml(f) {
+    return '<div class="fx"><p class="fx-s">' + esc(f.summary) + '</p><ol>' + f.steps.map(function (s, j) { var t = TAG[s.kind] || ['Step', 'ck'];
+      return '<li><span class="fx-t ' + t[1] + '">' + t[0] + '</span><b>' + esc(s.title) + '</b><div class="sm">' + esc(s.text) + '</div>' + (s.cmd ? '<div class="fx-c"><pre>' + esc(s.cmd) + '</pre><button type="button" class="fx-cp" data-cp="' + j + '">Copy</button></div>' : '') + '</li>'; }).join('') + '</ol>'
+      + (f.risk ? '<p class="fx-r"><b>Before you start:</b> ' + esc(f.risk) + '</p>' : '') + '<p class="mut sm">The platform runs none of this: a person runs it on the host, in a change window where needed.' + (f.page ? ' <a href="' + esc(f.page) + '">' + (f.page === 'hyperv.html' ? 'Hyper-V Servers (four-eyes VM actions) →' : 'Virtual Network Map →') + '</a>' : '') + '</p></div>'; }
+  function toggle(tr) { var r = REC[+tr.getAttribute('data-rx')]; if (!r) return; OPEN = OPEN === key(r) ? null : key(r); recs(); var t = document.querySelector('#rec tr[data-rx="' + tr.getAttribute('data-rx') + '"]'); if (t) t.focus(); }
+  $('rec').addEventListener('click', function (e) {
+    var cp = e.target.closest('.fx-cp');
+    if (cp) { var pre = cp.parentNode.querySelector('pre'), txt = pre ? pre.textContent : '', done = function () { cp.textContent = 'Copied'; setTimeout(function () { cp.textContent = 'Copy'; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, function () { /* no clipboard permission: select the text so Ctrl+C works */ var s = window.getSelection(), rg = document.createRange(); rg.selectNodeContents(pre); s.removeAllRanges(); s.addRange(rg); cp.textContent = 'Press Ctrl+C'; });
+      else { var s = window.getSelection(), rg = document.createRange(); rg.selectNodeContents(pre); s.removeAllRanges(); s.addRange(rg); cp.textContent = 'Press Ctrl+C'; } return; }
+    var tr = e.target.closest('tr.rx'); if (tr && !e.target.closest('a')) toggle(tr); });
+  $('rec').addEventListener('keydown', function (e) { var tr = e.target.closest('tr.rx'); if (tr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle(tr); } });
   function load() { return req('/hyperv/optimize').then(function (j) { V = j; $('main').hidden = false; $('err').innerHTML = ''; draw(); }, function (e) {
     $('err').innerHTML = '<div class="card"><div class="err">' + esc(e.status === 404 ? 'Hyper-V Optimization is not on this server yet - run the platform update.' : e.message) + '</div></div>'; }); }
   $('fp').addEventListener('change', recs); $('fk').addEventListener('change', recs); $('refresh').addEventListener('click', function () { load(); });
